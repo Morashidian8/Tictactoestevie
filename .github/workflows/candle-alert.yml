@@ -39,6 +39,10 @@ jobs:
         env:
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          # Optional override: set a repository Variable named
+          # ALTERNATION_THRESHOLD to change the alert sensitivity without
+          # touching code. Defaults to 6 when the variable is not set.
+          ALTERNATION_THRESHOLD: ${{ vars.ALTERNATION_THRESHOLD || '6' }}
         run: python check_candles.py
 
       # Save updated state for the next run (unique key always saves).
