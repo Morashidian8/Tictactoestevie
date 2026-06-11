@@ -36,8 +36,8 @@ jobs:
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           # Alert threshold: number of consecutive alternating candles
-          # required to fire (6 candles = 5 color changes / تناوب).
-          ALTERNATION_THRESHOLD: "6"
+          # required to fire (5 alternating candles = 4 color changes).
+          ALTERNATION_THRESHOLD: "5"
           # Poll interval in seconds.
           POLL_SECONDS: "30"
           # Exit a bit before the 350-minute job timeout.
