@@ -1,7 +1,7 @@
 # ربات هشدار تناوب کندل بیت‌کوین (Bitcoin Candle Alternation Alert Bot)
 
 رباتی برای تلگرام که **۲۴ ساعته** کندل‌های **۵ دقیقه‌ای بیت‌کوین** را از
-**کوین‌بیس (Coinbase)** بررسی می‌کند و هرگاه جهت کندل‌ها (سبز/قرمز یا مثبت/منفی)
+**بایننس (Binance)** بررسی می‌کند و هرگاه جهت کندل‌ها (سبز/قرمز یا مثبت/منفی)
 چند بار پشت سر هم **متناوب** شود، روی کندلی که این تناوب را کامل می‌کند برای شما
 یک **هشدار** می‌فرستد.
 
@@ -53,7 +53,7 @@ python bot.py
 |-------|---------|-------|
 | `TELEGRAM_TOKEN` | — | توکن ربات (الزامی) |
 | `TELEGRAM_CHAT_ID` | خالی | در صورت خالی بودن با `/start` خودکار پر می‌شود |
-| `PRODUCT` | `BTC-USD` | نماد معاملاتی کوین‌بیس |
+| `PRODUCT` | `BTCUSDT` | نماد معاملاتی بایننس |
 | `GRANULARITY` | `300` | اندازه کندل به ثانیه (۳۰۰ = ۵ دقیقه) |
 | `ALTERNATION_THRESHOLD` | `6` | تعداد کندل متناوب لازم برای هشدار |
 | `POLL_SECONDS` | `20` | فاصله بررسی کوین‌بیس |
@@ -69,8 +69,8 @@ nohup python bot.py > bot.log 2>&1 &
 
 ## منبع داده
 
-داده‌ها از API عمومی Coinbase Exchange گرفته می‌شوند (بدون نیاز به کلید API):
+داده‌ها از API عمومی بایننس گرفته می‌شوند (بدون نیاز به کلید API):
 
 ```
-https://api.exchange.coinbase.com/products/BTC-USD/candles?granularity=300
+https://data-api.binance.vision/api/v3/klines?symbol=BTCUSDT&interval=5m
 ```

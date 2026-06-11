@@ -1,7 +1,7 @@
 """
 Stateless candle-check for GitHub Actions (runs once per invocation).
 
-Fetches the latest closed BTC 5-minute candles from Coinbase, measures the
+Fetches the latest closed BTC 5-minute candles from Binance, measures the
 trailing alternation streak (green/red/green/...), and if it reaches the
 threshold sends ONE Telegram alert per alternation episode.
 
@@ -111,7 +111,7 @@ def main():
         f"تعداد <b>{streak}</b> کندل ۵ دقیقه‌ای پشت سر هم جهت‌شان "
         "متناوب (سبز/قرمز) شده است.\n\n"
         f"الگو: {pattern}\n"
-        f"نماد: <b>{PRODUCT}</b> (Coinbase)\n"
+        f"نماد: <b>{PRODUCT}</b> (Binance)\n"
         f"کندل بسته‌شده: {when}\n"
         f"قیمت بسته‌شدن: <b>${latest['close']:,.2f}</b>"
     )
