@@ -3,13 +3,13 @@ name: BTC Candle Alert
 on:
   schedule:
     # Fires periodically so there is always a queued successor ready to take
-    # over when the long-running job ends. GitHub cron is unreliable, but we
+    # over when the long-running jobs end. GitHub cron is unreliable, but we
     # only need it to fire occasionally within each ~5.5h window.
     - cron: "0 * * * *"
   workflow_dispatch: {}   # allows manual "Run workflow" from the GitHub UI
 
-# Keep exactly one monitor alive: a new run queues behind the current one and
-# starts the moment it finishes, giving near-continuous coverage.
+# Keep exactly one set of monitors alive: a new run queues behind the current
+# one and starts the moment it finishes, giving near-continuous coverage.
 concurrency:
   group: candle-monitor
   cancel-in-progress: false
@@ -19,6 +19,27 @@ jobs:
     runs-on: ubuntu-latest
     # Stay under the 6h hard limit; the process also self-exits earlier.
     timeout-minutes: 350
+    strategy:
+      fail-fast: false   # one monitor crashing must not stop the other
+      matrix:
+        include:
+          # 5-minute monitor — Polymarket BTC Up/Down series, threshold 5.
+          - name: "5m-polymarket"
+            source: "polymarket"
+            granularity: "300"
+            interval: "5m"
+            threshold: "5"
+            tf_label: "۵ دقیقه‌ای — Polymarket"
+            poly_prefix: "btc-updown-5m"
+          # 15-minute monitor — Binance BTCUSDT klines, threshold 4.
+          - name: "15m-binance"
+            source: "binance"
+            granularity: "900"
+            interval: "15m"
+            threshold: "4"
+            tf_label: "۱۵ دقیقه‌ای — Binance"
+            poly_prefix: "btc-updown-5m"
+    name: monitor-${{ matrix.name }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -35,12 +56,12 @@ jobs:
         env:
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          # Data source: Polymarket "BTC Up/Down 5m" recurring market series.
-          SOURCE: "polymarket"
-          POLY_SLUG_PREFIX: "btc-updown-5m"
-          # Alert threshold: number of consecutive alternating candles
-          # required to fire (5 alternating candles = 4 color changes).
-          ALTERNATION_THRESHOLD: "5"
+          SOURCE: ${{ matrix.source }}
+          GRANULARITY: ${{ matrix.granularity }}
+          INTERVAL: ${{ matrix.interval }}
+          ALTERNATION_THRESHOLD: ${{ matrix.threshold }}
+          TF_LABEL: ${{ matrix.tf_label }}
+          POLY_SLUG_PREFIX: ${{ matrix.poly_prefix }}
           # Poll interval in seconds.
           POLL_SECONDS: "30"
           # Exit a bit before the 350-minute job timeout.

@@ -35,6 +35,9 @@ SOURCE = os.environ.get("SOURCE", "binance").strip().lower()
 PRODUCT = os.environ.get("PRODUCT", "BTCUSDT").strip()
 GRANULARITY = int(os.environ.get("GRANULARITY", "300"))  # 5 minutes
 INTERVAL = os.environ.get("INTERVAL", "5m").strip()  # Binance kline interval
+# Human label for the timeframe, shown in the alert so different monitors
+# (e.g. 5m vs 15m) are never confused.
+TF_LABEL = os.environ.get("TF_LABEL", "").strip()
 # Number of alternating candles required to fire the alert.
 ALTERNATION_THRESHOLD = int(os.environ.get("ALTERNATION_THRESHOLD", "5"))
 POLL_SECONDS = int(os.environ.get("POLL_SECONDS", "20"))
@@ -316,17 +319,19 @@ class Monitor:
             {1: "🟢", -1: "🔴", 0: "⚪️"}[d] for d in self.directions[-streak:]
         )
         flips = streak - 1  # number of color changes (تناوب)
+        minutes = max(1, GRANULARITY // 60)
+        tf = TF_LABEL or f"{minutes} دقیقه‌ای"
         if SOURCE == "polymarket":
-            source_line = f"منبع: <b>Polymarket — BTC Up/Down 5m</b>\n"
+            source_line = f"منبع: <b>Polymarket — BTC Up/Down</b>\n"
             detail_line = f"آخرین نتیجه: {dir_label(self.directions[-1])}"
         else:
             source_line = f"نماد: <b>{PRODUCT}</b> (Binance)\n"
             detail_line = f"قیمت بسته‌شدن: <b>${candle['close']:,.2f}</b>"
         text = (
-            "🚨 <b>هشدار تناوب کندل بیت‌کوین</b> 🚨\n\n"
+            f"🚨 <b>هشدار تناوب — تایم‌فریم {tf}</b> 🚨\n\n"
             f"<b>{flips}</b> بار تناوب (تغییر رنگ) پشت سر هم رخ داده — "
-            f"یعنی <b>{streak}</b> کندل ۵ دقیقه‌ای متوالی جهت‌شان "
-            "یک‌درمیان عوض شده (سبز/قرمز).\n\n"
+            f"یعنی <b>{streak}</b> کندل <b>{minutes} دقیقه‌ای</b> متوالی "
+            "جهت‌شان یک‌درمیان عوض شده (سبز/قرمز).\n\n"
             f"الگو: {pattern}\n"
             f"{source_line}"
             f"کندل بسته‌شده: {when}\n"
