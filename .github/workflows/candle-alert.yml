@@ -35,6 +35,9 @@ jobs:
         env:
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          # Data source: Polymarket "BTC Up/Down 5m" recurring market series.
+          SOURCE: "polymarket"
+          POLY_SLUG_PREFIX: "btc-updown-5m"
           # Alert threshold: number of consecutive alternating candles
           # required to fire (5 alternating candles = 4 color changes).
           ALTERNATION_THRESHOLD: "5"
