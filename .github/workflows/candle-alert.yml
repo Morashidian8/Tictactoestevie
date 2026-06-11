@@ -35,8 +35,9 @@ jobs:
         env:
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          # Override alert sensitivity from a repository Variable (default 6).
-          ALTERNATION_THRESHOLD: ${{ vars.ALTERNATION_THRESHOLD || '6' }}
+          # Alert threshold: number of consecutive alternating candles
+          # required to fire (6 candles = 5 color changes / تناوب).
+          ALTERNATION_THRESHOLD: "6"
           # Poll interval in seconds.
           POLL_SECONDS: "30"
           # Exit a bit before the 350-minute job timeout.
