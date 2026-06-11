@@ -2,18 +2,23 @@ name: BTC Candle Alert
 
 on:
   schedule:
-    # Runs every 5 minutes. GitHub may delay runs under load.
-    - cron: "*/5 * * * *"
+    # Fires periodically so there is always a queued successor ready to take
+    # over when the long-running job ends. GitHub cron is unreliable, but we
+    # only need it to fire occasionally within each ~5.5h window.
+    - cron: "0 * * * *"
   workflow_dispatch: {}   # allows manual "Run workflow" from the GitHub UI
 
-# Prevent overlapping runs.
+# Keep exactly one monitor alive: a new run queues behind the current one and
+# starts the moment it finishes, giving near-continuous coverage.
 concurrency:
-  group: candle-alert
+  group: candle-monitor
   cancel-in-progress: false
 
 jobs:
-  check:
+  monitor:
     runs-on: ubuntu-latest
+    # Stay under the 6h hard limit; the process also self-exits earlier.
+    timeout-minutes: 350
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -26,29 +31,14 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      # Restore the last-alert state from the most recent previous run.
-      - name: Restore state
-        uses: actions/cache/restore@v4
-        with:
-          path: .state
-          key: candle-state-${{ github.run_id }}
-          restore-keys: |
-            candle-state-
-
-      - name: Check candles
+      - name: Run continuous monitor
         env:
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          # Optional override: set a repository Variable named
-          # ALTERNATION_THRESHOLD to change the alert sensitivity without
-          # touching code. Defaults to 6 when the variable is not set.
+          # Override alert sensitivity from a repository Variable (default 6).
           ALTERNATION_THRESHOLD: ${{ vars.ALTERNATION_THRESHOLD || '6' }}
-        run: python check_candles.py
-
-      # Save updated state for the next run (unique key always saves).
-      - name: Save state
-        if: always()
-        uses: actions/cache/save@v4
-        with:
-          path: .state
-          key: candle-state-${{ github.run_id }}
+          # Poll interval in seconds.
+          POLL_SECONDS: "30"
+          # Exit a bit before the 350-minute job timeout.
+          MAX_RUNTIME_SECONDS: "20400"
+        run: python monitor_loop.py

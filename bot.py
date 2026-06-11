@@ -192,8 +192,9 @@ class Monitor:
         log.info("ALERT fired (streak=%d).", streak)
         send_message(self.chat_id, text)
 
-    def run(self):
+    def run(self, max_runtime=None):
         # Prime history without alerting on past data.
+        started = time.time()
         try:
             initial = fetch_candles()
             if initial:
@@ -209,6 +210,9 @@ class Monitor:
 
         backoff = POLL_SECONDS
         while True:
+            if max_runtime is not None and time.time() - started >= max_runtime:
+                log.info("Max runtime (%ss) reached; exiting cleanly.", max_runtime)
+                return
             try:
                 candles = fetch_candles()
                 new = [c for c in candles if c["time"] > self.last_candle_time]
