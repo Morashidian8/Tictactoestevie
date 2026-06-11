@@ -9,6 +9,7 @@ Data source: Binance public market-data API (no API key required).
 """
 
 import os
+import json
 import time
 import threading
 import logging
@@ -28,12 +29,23 @@ except Exception:
 TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN", "").strip()
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "").strip()
 
+# Data source: "binance" (spot candles) or "polymarket" (BTC Up/Down 5m series).
+SOURCE = os.environ.get("SOURCE", "binance").strip().lower()
+
 PRODUCT = os.environ.get("PRODUCT", "BTCUSDT").strip()
 GRANULARITY = int(os.environ.get("GRANULARITY", "300"))  # 5 minutes
 INTERVAL = os.environ.get("INTERVAL", "5m").strip()  # Binance kline interval
 # Number of alternating candles required to fire the alert.
 ALTERNATION_THRESHOLD = int(os.environ.get("ALTERNATION_THRESHOLD", "5"))
 POLL_SECONDS = int(os.environ.get("POLL_SECONDS", "20"))
+
+# --- Polymarket (BTC Up/Down 5-minute recurring market) config ---
+# Each 5-minute window is a separate market whose slug ends with the window's
+# unix start time, e.g. btc-updown-5m-1781198700. We follow the series by
+# building each window's slug and reading its resolved Up/Down outcome.
+GAMMA_URL = "https://gamma-api.polymarket.com/events"
+POLY_SLUG_PREFIX = os.environ.get("POLY_SLUG_PREFIX", "btc-updown-5m").strip()
+POLY_LOOKBACK = int(os.environ.get("POLY_LOOKBACK", "12"))  # windows to scan
 
 # Binance market-data hosts, tried in order. data-api.binance.vision is the
 # public market-data domain and is the most reliable from cloud/CI IPs (some
@@ -83,9 +95,106 @@ def send_message(chat_id: str, text: str) -> bool:
 
 
 # ---------------------------------------------------------------------------
-# Binance candle fetching
+# Candle fetching (Binance spot candles or Polymarket Up/Down series)
 # ---------------------------------------------------------------------------
 def fetch_candles():
+    """Return closed candles oldest -> newest from the configured SOURCE."""
+    if SOURCE == "polymarket":
+        return fetch_candles_polymarket()
+    return fetch_candles_binance()
+
+
+def _poly_parse_list(value):
+    """Gamma returns some fields as JSON-encoded strings; normalize to list."""
+    if value is None:
+        return None
+    if isinstance(value, list):
+        return value
+    if isinstance(value, str):
+        try:
+            return json.loads(value)
+        except (ValueError, TypeError):
+            return None
+    return None
+
+
+def _poly_event_direction(events):
+    """
+    +1 (Up), -1 (Down), or None if the market is missing or not yet resolved.
+    Reads the resolved outcome of a Polymarket BTC Up/Down event.
+    """
+    if not isinstance(events, list) or not events:
+        return None
+    markets = events[0].get("markets") or []
+    if not markets:
+        return None
+    market = markets[0]
+    outcomes = _poly_parse_list(market.get("outcomes"))
+    prices = _poly_parse_list(market.get("outcomePrices"))
+    if not outcomes or not prices or len(outcomes) != len(prices):
+        return None
+    try:
+        pvals = [float(p) for p in prices]
+    except (TypeError, ValueError):
+        return None
+    top = max(pvals)
+    if top < 0.99:  # not resolved yet (still a live probability)
+        return None
+    winner = str(outcomes[pvals.index(top)]).strip().lower()
+    if winner in ("up", "yes"):
+        return 1
+    if winner in ("down", "no"):
+        return -1
+    return None
+
+
+def fetch_candles_polymarket():
+    """
+    Follow the Polymarket BTC Up/Down 5-minute series.
+
+    Each 5-minute window is its own market with slug
+    "<POLY_SLUG_PREFIX>-<window_start_unix>". We scan the last POLY_LOOKBACK
+    *ended* windows, read each resolved Up/Down outcome, and turn it into a
+    candle (Up => green, Down => red) so the alternation logic is unchanged.
+    """
+    now = time.time()
+    # Most recently ENDED window start (a window [ts, ts+300] ends at ts+300).
+    last_ended_start = (int(now // GRANULARITY) - 1) * GRANULARITY
+    candles = []
+    for k in range(POLY_LOOKBACK - 1, -1, -1):
+        ts = last_ended_start - k * GRANULARITY
+        slug = f"{POLY_SLUG_PREFIX}-{ts}"
+        try:
+            resp = requests.get(
+                GAMMA_URL,
+                params={"slug": slug},
+                timeout=15,
+                headers={"User-Agent": "btc-candle-alert-bot/1.0"},
+            )
+            resp.raise_for_status()
+            events = resp.json()
+        except requests.RequestException as exc:
+            log.warning("Polymarket fetch failed for %s: %s", slug, exc)
+            continue
+        direction = _poly_event_direction(events)
+        if direction is None:
+            continue  # window not found or not yet resolved
+        # Encode the direction as open/close so candle_direction() works.
+        c_open, c_close = (0.0, 1.0) if direction > 0 else (1.0, 0.0)
+        candles.append(
+            {
+                "time": ts,
+                "open": c_open,
+                "close": c_close,
+                "low": 0.0,
+                "high": 1.0,
+            }
+        )
+    candles.sort(key=lambda c: c["time"])  # oldest -> newest
+    return candles
+
+
+def fetch_candles_binance():
     """
     Return a list of closed candles oldest -> newest, from Binance.
 
@@ -207,15 +316,21 @@ class Monitor:
             {1: "🟢", -1: "🔴", 0: "⚪️"}[d] for d in self.directions[-streak:]
         )
         flips = streak - 1  # number of color changes (تناوب)
+        if SOURCE == "polymarket":
+            source_line = f"منبع: <b>Polymarket — BTC Up/Down 5m</b>\n"
+            detail_line = f"آخرین نتیجه: {dir_label(self.directions[-1])}"
+        else:
+            source_line = f"نماد: <b>{PRODUCT}</b> (Binance)\n"
+            detail_line = f"قیمت بسته‌شدن: <b>${candle['close']:,.2f}</b>"
         text = (
             "🚨 <b>هشدار تناوب کندل بیت‌کوین</b> 🚨\n\n"
             f"<b>{flips}</b> بار تناوب (تغییر رنگ) پشت سر هم رخ داده — "
             f"یعنی <b>{streak}</b> کندل ۵ دقیقه‌ای متوالی جهت‌شان "
             "یک‌درمیان عوض شده (سبز/قرمز).\n\n"
             f"الگو: {pattern}\n"
-            f"نماد: <b>{PRODUCT}</b> (Binance)\n"
+            f"{source_line}"
             f"کندل بسته‌شده: {when}\n"
-            f"قیمت بسته‌شدن: <b>${candle['close']:,.2f}</b>"
+            f"{detail_line}"
         )
         log.info("ALERT fired (streak=%d).", streak)
         send_message(self.chat_id, text)
@@ -229,9 +344,19 @@ class Monitor:
                 self.directions = [candle_direction(c) for c in initial[-20:]]
                 self.last_candle_time = initial[-1]["time"]
                 log.info(
-                    "Primed with %d candles. Last close=$%.2f",
+                    "Primed with %d candles from %s. Last pattern: %s",
                     len(self.directions),
-                    initial[-1]["close"],
+                    SOURCE,
+                    " ".join(
+                        {1: "🟢", -1: "🔴", 0: "⚪️"}[d]
+                        for d in self.directions[-10:]
+                    ),
+                )
+            else:
+                log.warning(
+                    "Primed with 0 candles from %s — no closed/resolved data "
+                    "returned yet.",
+                    SOURCE,
                 )
         except Exception as exc:
             log.error("Initial fetch failed: %s", exc)
