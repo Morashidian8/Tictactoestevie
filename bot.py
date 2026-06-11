@@ -1,11 +1,11 @@
 """
 Bitcoin 5-minute candle alternation alert bot (Telegram).
 
-Watches BTC-USD 5-minute candles from Coinbase 24/7. When candle direction
+Watches BTCUSDT 5-minute candles from Binance 24/7. When candle direction
 (green = bullish / red = bearish) alternates for several candles in a row,
 it sends a Telegram alert on the candle that completes the streak.
 
-Data source: Coinbase Exchange public API (no API key required).
+Data source: Binance public market-data API (no API key required).
 """
 
 import os
@@ -28,14 +28,28 @@ except Exception:
 TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN", "").strip()
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "").strip()
 
-PRODUCT = os.environ.get("PRODUCT", "BTC-USD").strip()
+PRODUCT = os.environ.get("PRODUCT", "BTCUSDT").strip()
 GRANULARITY = int(os.environ.get("GRANULARITY", "300"))  # 5 minutes
+INTERVAL = os.environ.get("INTERVAL", "5m").strip()  # Binance kline interval
 # Number of alternating candles required to fire the alert.
-# Default 6 => "more than 5 candles alternated, alert on the 6th".
-ALTERNATION_THRESHOLD = int(os.environ.get("ALTERNATION_THRESHOLD", "6"))
+ALTERNATION_THRESHOLD = int(os.environ.get("ALTERNATION_THRESHOLD", "5"))
 POLL_SECONDS = int(os.environ.get("POLL_SECONDS", "20"))
 
-COINBASE_URL = f"https://api.exchange.coinbase.com/products/{PRODUCT}/candles"
+# Binance market-data hosts, tried in order. data-api.binance.vision is the
+# public market-data domain and is the most reliable from cloud/CI IPs (some
+# regions geo-block api.binance.com with HTTP 451).
+BINANCE_HOSTS = [
+    h.strip()
+    for h in os.environ.get(
+        "BINANCE_HOSTS",
+        "https://data-api.binance.vision,"
+        "https://api.binance.com,"
+        "https://api-gcp.binance.com,"
+        "https://api1.binance.com,"
+        "https://api2.binance.com",
+    ).split(",")
+    if h.strip()
+]
 TELEGRAM_API = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}"
 
 logging.basicConfig(
@@ -69,39 +83,54 @@ def send_message(chat_id: str, text: str) -> bool:
 
 
 # ---------------------------------------------------------------------------
-# Coinbase candle fetching
+# Binance candle fetching
 # ---------------------------------------------------------------------------
 def fetch_candles():
     """
-    Return a list of closed candles oldest -> newest.
+    Return a list of closed candles oldest -> newest, from Binance.
 
-    Coinbase returns rows of [time, low, high, open, close, volume],
-    newest first. We drop the most recent row because it is the
-    still-forming (not yet closed) candle.
+    Binance /api/v3/klines returns rows (oldest first) of:
+    [openTime(ms), open, high, low, close, volume, closeTime(ms), ...].
+    The last row is the still-forming candle; we keep only candles whose
+    closeTime has already passed. Several hosts are tried in order so a
+    geo-blocked endpoint (HTTP 451) falls back to a working one.
     """
-    resp = requests.get(
-        COINBASE_URL,
-        params={"granularity": GRANULARITY},
-        timeout=15,
-        headers={"User-Agent": "btc-candle-alert-bot/1.0"},
-    )
-    resp.raise_for_status()
-    rows = resp.json()  # newest first
+    rows = None
+    last_err = None
+    for host in BINANCE_HOSTS:
+        try:
+            resp = requests.get(
+                f"{host}/api/v3/klines",
+                params={"symbol": PRODUCT, "interval": INTERVAL, "limit": 50},
+                timeout=15,
+                headers={"User-Agent": "btc-candle-alert-bot/1.0"},
+            )
+            resp.raise_for_status()
+            rows = resp.json()
+            break
+        except requests.RequestException as exc:
+            last_err = exc
+            log.warning("Binance host %s failed: %s", host, exc)
+            continue
+    if rows is None:
+        raise last_err if last_err else RuntimeError("All Binance hosts failed")
     if not isinstance(rows, list) or not rows:
         return []
 
     now = time.time()
     candles = []
-    for t, low, high, c_open, c_close, vol in rows:
-        # Keep only candles whose window has fully elapsed.
-        if t + GRANULARITY <= now:
+    for row in rows:
+        open_time = int(row[0]) / 1000.0
+        close_time = int(row[6]) / 1000.0
+        # Keep only candles whose window has fully closed.
+        if close_time <= now:
             candles.append(
                 {
-                    "time": int(t),
-                    "open": float(c_open),
-                    "close": float(c_close),
-                    "low": float(low),
-                    "high": float(high),
+                    "time": int(open_time),
+                    "open": float(row[1]),
+                    "high": float(row[2]),
+                    "low": float(row[3]),
+                    "close": float(row[4]),
                 }
             )
     candles.sort(key=lambda c: c["time"])  # oldest -> newest
@@ -184,7 +213,7 @@ class Monitor:
             f"یعنی <b>{streak}</b> کندل ۵ دقیقه‌ای متوالی جهت‌شان "
             "یک‌درمیان عوض شده (سبز/قرمز).\n\n"
             f"الگو: {pattern}\n"
-            f"نماد: <b>{PRODUCT}</b> (Coinbase)\n"
+            f"نماد: <b>{PRODUCT}</b> (Binance)\n"
             f"کندل بسته‌شده: {when}\n"
             f"قیمت بسته‌شدن: <b>${candle['close']:,.2f}</b>"
         )
@@ -255,7 +284,7 @@ def command_listener(monitor: Monitor):
                     send_message(
                         chat_id,
                         "✅ ربات فعال شد.\n"
-                        "کندل‌های ۵ دقیقه‌ای بیت‌کوین (Coinbase) را ۲۴ ساعته "
+                        "کندل‌های ۵ دقیقه‌ای بیت‌کوین (Binance) را ۲۴ ساعته "
                         "بررسی می‌کنم و هنگام تناوب جهت کندل‌ها به شما خبر می‌دهم.\n"
                         f"آستانه هشدار: {ALTERNATION_THRESHOLD} کندل متناوب.",
                     )

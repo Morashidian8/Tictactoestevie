@@ -1,7 +1,7 @@
 """
 Long-running monitor entrypoint for GitHub Actions (public repo => free).
 
-Runs a single continuous process that polls Coinbase every POLL_SECONDS and
+Runs a single continuous process that polls Binance every POLL_SECONDS and
 sends Telegram alerts on candle-direction alternation. It exits cleanly after
 MAX_RUNTIME_SECONDS so the GitHub Actions job stays under the 6-hour limit;
 a queued successor run then takes over for near-continuous 24/7 coverage.
