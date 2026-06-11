@@ -129,7 +129,6 @@ class Monitor:
         self.chat_id = chat_id
         self.last_candle_time = 0
         self.directions = []  # directions of recent candles (oldest->newest)
-        self.alerted_for_streak = False
 
     def _alternation_streak(self) -> int:
         """Length of the trailing run of strictly alternating directions."""
@@ -165,13 +164,11 @@ class Monitor:
             streak,
         )
 
+        # Alert on EVERY new candle while the alternating run meets the
+        # threshold, so a sustained back-and-forth keeps notifying instead of
+        # firing only once. (process_new_candle runs once per closed candle.)
         if streak >= ALTERNATION_THRESHOLD:
-            if not self.alerted_for_streak:
-                self._send_alert(candle, streak)
-                self.alerted_for_streak = True
-        else:
-            # Streak broken; allow alerting again next time.
-            self.alerted_for_streak = False
+            self._send_alert(candle, streak)
 
     def _send_alert(self, candle, streak: int):
         when = datetime.fromtimestamp(candle["time"], tz=timezone.utc).strftime(
@@ -180,10 +177,12 @@ class Monitor:
         pattern = " ".join(
             {1: "🟢", -1: "🔴", 0: "⚪️"}[d] for d in self.directions[-streak:]
         )
+        flips = streak - 1  # number of color changes (تناوب)
         text = (
             "🚨 <b>هشدار تناوب کندل بیت‌کوین</b> 🚨\n\n"
-            f"تعداد <b>{streak}</b> کندل ۵ دقیقه‌ای پشت سر هم جهت‌شان "
-            "متناوب (سبز/قرمز) شده است.\n\n"
+            f"<b>{flips}</b> بار تناوب (تغییر رنگ) پشت سر هم رخ داده — "
+            f"یعنی <b>{streak}</b> کندل ۵ دقیقه‌ای متوالی جهت‌شان "
+            "یک‌درمیان عوض شده (سبز/قرمز).\n\n"
             f"الگو: {pattern}\n"
             f"نماد: <b>{PRODUCT}</b> (Coinbase)\n"
             f"کندل بسته‌شده: {when}\n"
