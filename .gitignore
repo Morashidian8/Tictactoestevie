@@ -1,4 +1,5 @@
 .env
+trader_state.json
 __pycache__/
 *.pyc
 *.log

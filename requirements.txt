@@ -1,2 +1,4 @@
 requests>=2.31.0
 python-dotenv>=1.0.0
+# Only needed for LIVE trading with trade_bot.py (DRY_RUN=false):
+py-clob-client>=0.17.0
