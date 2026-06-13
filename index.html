@@ -105,39 +105,70 @@
         </div>
 
         <div class="hero__visual reveal" aria-hidden="true">
-          <div class="orbit">
-            <div class="orbit__halo"></div>
-            <div class="orbit__ring orbit__ring--1"></div>
-            <div class="orbit__ring orbit__ring--2"></div>
-            <div class="orbit__core">
-              <svg viewBox="0 0 24 24"><path d="M12 23c-4.97 0-8-3.58-8-8 0-3.07 1.64-5.64 3.2-7.53.6-.73 1.8-.3 1.78.65-.02 1.04.18 2.04.83 2.6C10.5 8.6 11 4.6 13.36 1.4c.55-.74 1.73-.4 1.79.52.12 1.77.61 3.42 1.85 4.88C18.5 8.56 20 10.97 20 14c0 4.42-3.03 9-8 9zm0-2.5c1.93 0 3.5-1.57 3.5-3.5 0-1.16-.55-2.1-1.27-3.04-.45-.59-1.33-.44-1.62.24-.24.55-.55 1.07-1.01 1.45-.92.77-1.1-1.05-1.06-1.66.04-.74-.85-1.14-1.36-.6C8.55 14.06 8.5 15.1 8.5 17c0 1.93 1.57 3.5 3.5 3.5z"/></svg>
-            </div>
-            <span class="orbit__icon orbit__icon--1" title="کپسول">
-              <svg viewBox="0 0 24 24"><path d="M17 4h-3V3a1 1 0 0 0-2 0v1h-.5A4.5 4.5 0 0 0 7 8.5V21a1 1 0 0 0 1 1h7a1 1 0 0 0 1-1V8.5A4.5 4.5 0 0 0 13.5 6H13V6h4a1 1 0 0 0 0-2zm-5 4a1 1 0 0 1 1 1v3a1 1 0 0 1-2 0V9a1 1 0 0 1 1-1z"/></svg>
-            </span>
-            <span class="orbit__icon orbit__icon--2" title="دتکتور دود">
-              <svg viewBox="0 0 24 24"><path d="M12 2a7 7 0 0 0-7 7c0 2.4 1.2 4.5 3 5.7V17a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1v-2.3c1.8-1.3 3-3.4 3-5.7a7 7 0 0 0-7-7zm-3 18h6v1a1 1 0 0 1-1 1h-4a1 1 0 0 1-1-1v-1z"/></svg>
-            </span>
-            <span class="orbit__icon orbit__icon--3" title="آژیر اعلام حریق">
-              <svg viewBox="0 0 24 24"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4a1.5 1.5 0 0 0-3 0v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/></svg>
-            </span>
-            <span class="orbit__icon orbit__icon--4" title="حفاظت فردی">
-              <svg viewBox="0 0 24 24"><path d="M12 1 3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/></svg>
-            </span>
+          <!-- آتش واقعی متحرک با فیلتر توربولنس -->
+          <div class="fire-stage">
+            <svg class="fire-svg" viewBox="0 0 200 280" preserveAspectRatio="xMidYMax meet">
+              <defs>
+                <radialGradient id="flameGrad" cx="50%" cy="70%" r="62%">
+                  <stop offset="0%" stop-color="#fff6cf"/>
+                  <stop offset="26%" stop-color="#ffd166"/>
+                  <stop offset="54%" stop-color="#ff7a3c"/>
+                  <stop offset="80%" stop-color="#e8442e"/>
+                  <stop offset="100%" stop-color="#b8271a"/>
+                </radialGradient>
+                <radialGradient id="coreGrad" cx="50%" cy="74%" r="44%">
+                  <stop offset="0%" stop-color="#fffdf2"/>
+                  <stop offset="55%" stop-color="#ffe08a" stop-opacity=".95"/>
+                  <stop offset="100%" stop-color="#ff7a3c" stop-opacity="0"/>
+                </radialGradient>
+                <filter id="fireDisp" x="-40%" y="-40%" width="180%" height="180%">
+                  <feTurbulence type="fractalNoise" baseFrequency="0.013 0.04" numOctaves="2" seed="7" result="noise">
+                    <animate attributeName="baseFrequency" dur="6s"
+                             values="0.013 0.035;0.016 0.052;0.012 0.04;0.013 0.035" repeatCount="indefinite"/>
+                  </feTurbulence>
+                  <feDisplacementMap in="SourceGraphic" in2="noise" scale="17" xChannelSelector="R" yChannelSelector="G"/>
+                </filter>
+              </defs>
+              <g filter="url(#fireDisp)">
+                <path class="flame-outer" d="M100 268 C42 232 56 162 80 130 C95 110 88 84 76 68 C112 82 124 116 119 140 C132 126 134 100 130 86 C156 116 166 172 142 214 C133 236 120 254 100 268 Z" fill="url(#flameGrad)"/>
+              </g>
+              <ellipse class="flame-core" cx="100" cy="212" rx="27" ry="48" fill="url(#coreGrad)"/>
+            </svg>
+            <div class="fire-floor"></div>
           </div>
 
-          <div class="hero-float hero-float--1">
-            <span class="hero-float__ic"><svg viewBox="0 0 24 24"><path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4L9 16.2z"/></svg></span>
-            <span>ایمنی تضمین‌شده</span>
+          <!-- پنل پایش زنده -->
+          <div class="panel">
+            <div class="panel__head">
+              <span class="panel__title"><span class="panel__live"></span> سامانهٔ پایش حریق</span>
+              <span class="panel__badge">آنلاین</span>
+            </div>
+            <svg class="panel__chart" viewBox="0 0 240 64" preserveAspectRatio="none">
+              <defs>
+                <linearGradient id="chartFill" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0" stop-color="rgba(232,68,46,.45)"/>
+                  <stop offset="1" stop-color="rgba(232,68,46,0)"/>
+                </linearGradient>
+              </defs>
+              <path class="panel__area" d="M0 50 L20 44 L40 48 L60 30 L80 36 L100 18 L120 26 L140 12 L160 22 L180 14 L200 28 L220 20 L240 32 L240 64 L0 64 Z" fill="url(#chartFill)"/>
+              <path class="panel__line" d="M0 50 L20 44 L40 48 L60 30 L80 36 L100 18 L120 26 L140 12 L160 22 L180 14 L200 28 L220 20 L240 32" fill="none" stroke="#ff7a3c" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+              <circle class="panel__dot" cx="140" cy="12" r="3.5" fill="#fff"/>
+            </svg>
+            <div class="panel__rows">
+              <div class="panel__row"><span class="led led--ok"></span> دتکتور دود <b>نرمال</b></div>
+              <div class="panel__row"><span class="led led--ok"></span> دمای محیط <b>۲۴°</b></div>
+              <div class="panel__row"><span class="led led--warn"></span> پایش منطقهٔ ۳ <b>فعال</b></div>
+            </div>
           </div>
-          <div class="hero-float hero-float--2">
-            <span class="hero-float__ic hero-float__ic--alt"><svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm1 10.6 4 2.3-1 1.7-5-2.9V7h2z"/></svg></span>
-            <span>پاسخگویی ۲۴/۷</span>
-          </div>
-          <div class="hero-float hero-float--3">
+
+          <div class="hero-float hero-float--rating">
             <strong>۴٫۹</strong>
             <span class="hero-float__stars">★★★★★</span>
             <small>رضایت مشتریان</small>
+          </div>
+          <div class="hero-float hero-float--shield">
+            <span class="hero-float__ic"><svg viewBox="0 0 24 24"><path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4L9 16.2z"/></svg></span>
+            <span>مجوز رسمی</span>
           </div>
         </div>
       </div>

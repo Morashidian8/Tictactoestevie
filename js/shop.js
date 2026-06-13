@@ -131,6 +131,38 @@
 
   var CATEGORIES = ["همه", "کپسول", "اعلام حریق", "تجهیزات اطفاء", "حفاظت فردی", "علائم ایمنی"];
 
+  /* ---------- تصاویر واقعی محصولات (کلیدواژه‌محور) ----------
+     عکس واقعی از سرویس loremflickr بارگذاری می‌شود؛ در صورت در دسترس
+     نبودن، به‌صورت خودکار تصویر برداری اختصاصی هر محصول جایگزین می‌شود. */
+  var PHOTO_KW = {
+    1: "fire,extinguisher", 2: "co2,fire,extinguisher", 3: "fire,extinguisher,red",
+    4: "smoke,detector", 5: "fire,detector,ceiling", 6: "fire,alarm,control",
+    7: "fire,alarm,button", 8: "alarm,siren", 9: "fire,hose,reel",
+    10: "firefighter,helmet", 11: "fire,blanket", 12: "safety,gloves",
+    13: "exit,sign", 14: "first,aid,kit"
+  };
+  var artMap = {};
+  PRODUCTS.forEach(function (p) { artMap[p.id] = p.art; });
+
+  function photoURL(id) {
+    return "https://loremflickr.com/500/500/" + encodeURIComponent(PHOTO_KW[id] || "fire,safety") + "?lock=" + id;
+  }
+  function artHTML(p) {
+    return (
+      '<img class="p-photo" src="' + photoURL(p.id) + '" alt="' + p.name +
+      '" loading="lazy" data-art-id="' + p.id + '">'
+    );
+  }
+  // جایگزینی تصویر با گرافیک برداری در صورت بروز خطا در بارگذاری
+  document.addEventListener("error", function (e) {
+    var img = e.target;
+    if (img && img.classList && img.classList.contains("p-photo")) {
+      var id = img.getAttribute("data-art-id");
+      var wrap = img.parentNode;
+      if (wrap && artMap[id]) wrap.innerHTML = artMap[id];
+    }
+  }, true);
+
   /* ---------- وضعیت ---------- */
   var state = {
     cat: "همه",
@@ -227,7 +259,7 @@
         '<article class="product-card" data-tilt-skip>' +
         (p.badge ? '<span class="p-badge">' + p.badge + "</span>" : "") +
         (off ? '<span class="p-off">٪' + fa(off) + " تخفیف</span>" : "") +
-        '<div class="p-art">' + p.art + "</div>" +
+        '<div class="p-art">' + artHTML(p) + "</div>" +
         '<div class="p-body">' +
         '<span class="p-cat">' + p.cat + "</span>" +
         "<h3>" + p.name + "</h3>" +
@@ -307,7 +339,7 @@
         var qty = state.cart[id];
         return (
           '<div class="cart-item">' +
-          '<div class="cart-item__art">' + p.art + "</div>" +
+          '<div class="cart-item__art">' + artHTML(p) + "</div>" +
           '<div class="cart-item__info">' +
           "<h4>" + p.name + "</h4>" +
           '<span class="cart-item__price">' + formatPrice(p.price) + " تومان</span>" +
