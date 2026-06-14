@@ -12,6 +12,10 @@ on:
     - cron: "0 * * * *"
   workflow_dispatch: {}   # allows manual "Run workflow" from the GitHub UI
 
+# Lets the bot persist its on/off state to a dedicated branch via GITHUB_TOKEN.
+permissions:
+  contents: write
+
 # Keep exactly one predictor alive: a new run queues behind the current one and
 # starts the moment it finishes.
 concurrency:
@@ -39,10 +43,13 @@ jobs:
         env:
           # Dedicated token => a different Telegram bot/chat from the alert bot.
           PREDICT_TELEGRAM_TOKEN: ${{ secrets.PREDICT_TELEGRAM_TOKEN }}
-          # Optional: set this secret so it keeps sending after each restart
-          # without you having to message the bot again.
+          # Optional override; normally the chat id is captured on first /start
+          # and persisted automatically, so this can stay empty.
           PREDICT_TELEGRAM_CHAT_ID: ${{ secrets.PREDICT_TELEGRAM_CHAT_ID }}
-          # Start predicting automatically (cloud restarts every ~5.5h).
+          # Token used to persist on/off state to the predict-bot-state branch.
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Default to ON for the very first run (before any persisted state);
+          # after the first /start, the persisted state takes over.
           PREDICT_AUTOSTART: "1"
           # Send the guess ~60s before each 5-minute candle opens.
           PREDICT_LEAD_SECONDS: "60"
