@@ -48,6 +48,7 @@ except Exception:
     pass
 
 from predictor import predict, explain
+import state_store
 
 # ---------------------------------------------------------------------------
 # Configuration (uses its OWN env vars so it never clashes with bot.py)
@@ -324,18 +325,21 @@ def command_listener(state: State):
                 if not state.chat_id:
                     state.chat_id = chat_id
                     log.info("Captured chat_id: %s", chat_id)
+                    state_store.save(state.active, chat_id)
 
                 if text.startswith("/start"):
                     state.chat_id = chat_id
                     with state.lock:
                         state.active = True
                         state.last_predicted_open = 0  # allow immediate fire
+                    state_store.save(True, chat_id)  # persist across restarts
                     send_message(chat_id, START_TEXT)
                     log.info("Activated by /start (chat_id=%s).", chat_id)
 
                 elif text.startswith("/stop"):
                     with state.lock:
                         state.active = False
+                    state_store.save(False, state.chat_id)  # persist OFF
                     send_message(
                         chat_id,
                         "⏹ متوقف شد. دیگر پیش‌بینی نمی‌فرستم.\n"
@@ -382,9 +386,22 @@ def main():
         )
 
     state = State(TELEGRAM_CHAT_ID)
-    if AUTOSTART:
+    # Restore the on/off state + chat id persisted by a previous run, so the
+    # bot keeps running across cloud restarts and a user's /stop sticks until
+    # they send /start again.
+    remote = state_store.load()
+    if remote is not None:
+        state.active = bool(remote.get("active", AUTOSTART))
+        if remote.get("chat_id"):
+            state.chat_id = str(remote["chat_id"])
+        log.info(
+            "Loaded persisted state: active=%s, chat_id=%s.",
+            state.active,
+            "set" if state.chat_id else "none",
+        )
+    elif AUTOSTART:
         state.active = True
-        log.info("AUTOSTART enabled — predicting without waiting for /start.")
+        log.info("No persisted state; AUTOSTART on — active from launch.")
 
     listener = threading.Thread(
         target=command_listener, args=(state,), daemon=True
