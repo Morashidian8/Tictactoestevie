@@ -55,6 +55,7 @@ import os
 import sys
 import csv
 import time
+from collections import Counter
 from datetime import datetime, timedelta, timezone
 
 import requests
@@ -75,6 +76,45 @@ from bot import (
 ANALYSIS_SOURCE = os.environ.get("ANALYSIS_SOURCE", "polymarket").strip().lower()
 ANALYSIS_DAYS = int(os.environ.get("ANALYSIS_DAYS", "365"))
 ANALYSIS_TZ = os.environ.get("ANALYSIS_TZ", "Asia/Tehran").strip()
+# Window mode for the "lowest alternation" search:
+#   "clock"   -> the 24 on-the-hour buckets (00:00–00:59, 01:00–01:59, ...)
+#   "rolling" -> every 60-minute window starting on a 5-minute boundary
+#                (00:00–01:00, 00:05–01:05, ... 23:55–00:55) = 288 windows/day
+WINDOW_MODE = os.environ.get("WINDOW_MODE", "clock").strip().lower()
+# Query controls (turn this script into a small configurable tool):
+#   ORDER    "lowest" (calmest windows) or "highest" (most alternating)
+#   TOP_N    how many windows to show per weekday
+#   WEEKDAY  "all" or a single day (sat/sun/.../fri, Persian names, or 0-6)
+#   SHOW_HIST whether to print the full value distribution (histogram)
+ORDER = os.environ.get("ORDER", "lowest").strip().lower()
+TOP_N = max(1, int(os.environ.get("TOP_N", "2")))
+WEEKDAY_FILTER = os.environ.get("WEEKDAY", "all").strip().lower()
+SHOW_HIST = os.environ.get("SHOW_HIST", "true").strip().lower() in (
+    "1", "true", "yes", "y", "on",
+)
+
+# Tokens accepted for WEEKDAY (value = Python date.weekday(): Mon=0 ... Sun=6).
+_WD_TOKENS = {
+    "sat": 5, "saturday": 5, "شنبه": 5,
+    "sun": 6, "sunday": 6, "یکشنبه": 6, "یک‌شنبه": 6,
+    "mon": 0, "monday": 0, "دوشنبه": 0,
+    "tue": 1, "tuesday": 1, "سه‌شنبه": 1, "سهشنبه": 1,
+    "wed": 2, "wednesday": 2, "چهارشنبه": 2,
+    "thu": 3, "thursday": 3, "پنج‌شنبه": 3, "پنجشنبه": 3,
+    "fri": 4, "friday": 4, "جمعه": 4,
+}
+
+
+def selected_weekdays():
+    """Resolve WEEKDAY_FILTER to a list of Python weekday numbers."""
+    if WEEKDAY_FILTER in ("", "all", "همه"):
+        return WEEKDAY_DISPLAY_ORDER
+    if WEEKDAY_FILTER in _WD_TOKENS:
+        return [_WD_TOKENS[WEEKDAY_FILTER]]
+    if WEEKDAY_FILTER.isdigit() and 0 <= int(WEEKDAY_FILTER) <= 6:
+        return [int(WEEKDAY_FILTER)]
+    print(f"⚠️  WEEKDAY='{WEEKDAY_FILTER}' شناخته نشد؛ همه‌ی روزها نشان داده می‌شود.")
+    return WEEKDAY_DISPLAY_ORDER
 POLY_MAX_MISSING = int(os.environ.get("POLY_MAX_MISSING", "2016"))  # ~7 days
 POLY_SLEEP = float(os.environ.get("POLY_SLEEP", "0.1"))
 
@@ -485,6 +525,32 @@ def build_hour_samples(candles, tz):
     return samples
 
 
+def build_rolling_samples(candles, tz, win=12):
+    """
+    Returns: samples[weekday][(hour, minute)] = list of per-window flip counts.
+
+    A "window" is `win` consecutive 5-minute candles (default 12 = 60 minutes)
+    starting on any 5-minute boundary. The window is tagged by the local
+    weekday and clock time of its FIRST candle, so a window starting Sunday
+    11:35 (and ending 12:35) lands in samples[Sun][(11, 35)]. Windows with a
+    gap (missing candle) are skipped.
+    """
+    n = len(candles)
+    times = [c["time"] for c in candles]
+    dirs = [candle_direction(c) for c in candles]
+    full_span = (win - 1) * GRANULARITY  # seconds between first & last open
+
+    samples = {wd: {} for wd in range(7)}
+    for i in range(n - win + 1):
+        if times[i + win - 1] - times[i] != full_span:
+            continue  # a candle is missing inside this window -> skip
+        flips = longest_alt_flips(dirs[i : i + win])
+        dt = datetime.fromtimestamp(times[i], tz=timezone.utc).astimezone(tz)
+        key = (dt.hour, dt.minute)
+        samples[dt.weekday()].setdefault(key, []).append(flips)
+    return samples
+
+
 def summarize_hour(values):
     """Return a stats dict for one (weekday, hour) sample list."""
     n = len(values)
@@ -497,6 +563,7 @@ def summarize_hour(values):
         "min_count": values.count(mn),
         "max": mx,
         "max_count": values.count(mx),
+        "hist": sorted(Counter(values).items()),  # [(value, count), ...]
     }
 
 
@@ -505,6 +572,13 @@ def summarize_hour(values):
 # ---------------------------------------------------------------------------
 def hour_label(h):
     return f"{h:02d}:00–{h:02d}:59"
+
+
+def window_label(hour, minute, win_minutes=60):
+    """Label a rolling window by its start and end clock time, e.g. 11:35–12:35."""
+    start = hour * 60 + minute
+    end = (start + win_minutes) % (24 * 60)
+    return f"{hour:02d}:{minute:02d}–{end // 60:02d}:{end % 60:02d}"
 
 
 def main():
@@ -546,43 +620,73 @@ def main():
         )
     print(f"تعداد کندل      : {len(candles):,}")
     print(f"بازه            : {oldest:%Y-%m-%d %H:%M} تا {newest:%Y-%m-%d %H:%M}")
+    if WINDOW_MODE == "rolling":
+        win_desc = "بازه‌های یک‌ساعته‌ی لغزان (شروع هر ۵ دقیقه، مثل ۱۱:۳۵–۱۲:۳۵)"
+        unit = "بازه"
+    else:
+        win_desc = "ساعت‌های راس‌ساعت (۰۰:۰۰–۰۰:۵۹ و ...)"
+        unit = "ساعت"
+    print(f"حالت بازه       : {win_desc}")
     print(
-        "معیار تناوب     : طول بلندترین رشته‌ی متناوب (سبز/قرمز) داخل هر ساعت، "
+        "معیار تناوب     : طول بلندترین رشته‌ی متناوب (سبز/قرمز) داخل هر بازه، "
         "برحسب تعداد تغییر رنگ (flip)"
     )
     print("=" * 64)
 
-    samples = build_hour_samples(candles, tz)
+    # Build (label, stats) pairs per weekday for the chosen window mode.
+    if WINDOW_MODE == "rolling":
+        samples = build_rolling_samples(candles, tz)
 
-    for wd in WEEKDAY_DISPLAY_ORDER:
+        def weekday_buckets(wd):
+            out = []
+            for (h, m), vals in samples[wd].items():
+                out.append((window_label(h, m), summarize_hour(vals)))
+            return out
+
+    else:
+        samples = build_hour_samples(candles, tz)
+
+        def weekday_buckets(wd):
+            out = []
+            for h in range(24):
+                vals = samples[wd][h]
+                if vals:
+                    out.append((hour_label(h), summarize_hour(vals)))
+            return out
+
+    highest = ORDER == "highest"
+    kw = "بیشترین" if highest else "کم‌ترین"
+    print(f"پرسش           : {TOP_N} {unit}ِ «{kw} تناوب» برای هر روز")
+    print("=" * 64)
+
+    for wd in selected_weekdays():
         name = PERSIAN_WEEKDAY[wd]
-        # Rank the 24 hours of this weekday by AVERAGE alternation, ascending.
-        hour_stats = []
-        for h in range(24):
-            vals = samples[wd][h]
-            if not vals:
-                continue
-            hour_stats.append((h, summarize_hour(vals)))
-        if not hour_stats:
+        stats = weekday_buckets(wd)
+        if not stats:
             continue
-        hour_stats.sort(key=lambda x: (x[1]["avg"], x[1]["max"]))
-        lowest_two = hour_stats[:2]
+        # Sort by AVERAGE alternation; ascending for "lowest", descending for
+        # "highest". Tie-break on max then label.
+        stats.sort(key=lambda x: (x[1]["avg"], x[1]["max"], x[0]), reverse=highest)
+        chosen = stats[:TOP_N]
 
         print()
-        print(f"📅 {name}  —  ۲ ساعتِ کم‌ترین تناوب در طول سال")
+        print(f"📅 {name}  —  {TOP_N} {unit}ِ {kw} تناوب در طول سال")
         print("-" * 64)
-        for rank, (h, s) in enumerate(lowest_two, start=1):
-            print(f"  {rank}) ساعت {hour_label(h)}  (به وقت {tz_name})")
-            print(f"       • تعداد تکرار این ساعت در سال : {s['n']} بار")
+        for rank, (label, s) in enumerate(chosen, start=1):
+            print(f"  {rank}) {label}  (به وقت {tz_name})")
+            print(f"       • تعداد تکرار این {unit} در سال : {s['n']} بار")
             print(
                 f"       • کم‌ترین تناوب متوالی        : {s['min']} "
                 f"(در {s['min_count']} بار از {s['n']})"
             )
-            print(f"       • میانگین تناوب در این ساعت   : {s['avg']:.2f}")
+            print(f"       • میانگین تناوب در این {unit}   : {s['avg']:.2f}")
             print(
-                f"       • بیشینه تناوب در این ساعت     : {s['max']} "
+                f"       • بیشینه تناوب در این {unit}     : {s['max']} "
                 f"(در {s['max_count']} بار از {s['n']} تکرار شده)"
             )
+            if SHOW_HIST:
+                dist = " | ".join(f"{v}→{cnt}" for v, cnt in s["hist"])
+                print(f"       • توزیع کامل (تناوب→تعداد)    : {dist}")
         print()
 
     print("=" * 64)
