@@ -331,10 +331,21 @@ def command_listener(state: State):
                     state.chat_id = chat_id
                     with state.lock:
                         state.active = True
-                        state.last_predicted_open = 0  # allow immediate fire
                     state_store.save(True, chat_id)  # persist across restarts
                     send_message(chat_id, START_TEXT)
                     log.info("Activated by /start (chat_id=%s).", chat_id)
+                    # Instant feedback: predict the upcoming candle right away,
+                    # then the scheduler keeps firing ~1 min before each candle.
+                    now = time.time()
+                    target_open = (int(now // GRANULARITY) + 1) * GRANULARITY
+                    with state.lock:
+                        state.last_predicted_open = target_open  # avoid a dup
+                    if not predict_and_send(state, target_open):
+                        send_message(
+                            chat_id,
+                            "⚠️ فعال شدم، اما دریافت دادهٔ بایننس همین لحظه ناموفق "
+                            "بود. سر کندل بعدی دوباره تلاش می‌کنم.",
+                        )
 
                 elif text.startswith("/stop"):
                     with state.lock:
