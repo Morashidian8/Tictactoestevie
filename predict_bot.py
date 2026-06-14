@@ -75,6 +75,15 @@ LEAD_SECONDS = int(os.environ.get("PREDICT_LEAD_SECONDS", "60"))
 # How often the scheduler wakes up to check whether it is prediction time.
 TICK_SECONDS = int(os.environ.get("PREDICT_TICK_SECONDS", "3"))
 
+# Start predicting immediately on launch (no /start needed). Useful for cloud
+# hosts like GitHub Actions that restart the process periodically.
+AUTOSTART = os.environ.get("PREDICT_AUTOSTART", "0").strip().lower() in (
+    "1", "true", "yes", "on",
+)
+# Exit cleanly after this many seconds (0 = never). Lets a GitHub Actions job
+# stay under the 6-hour limit; a queued successor then takes over.
+MAX_RUNTIME_SECONDS = int(os.environ.get("PREDICT_MAX_RUNTIME_SECONDS", "0"))
+
 # Timezone used for the HH:MM shown in the message (user-facing clock time).
 DISPLAY_TZ = os.environ.get("PREDICT_DISPLAY_TZ", "Asia/Tehran").strip()
 # Show Persian-Indic digits (۱۲:۰۵) instead of Latin (12:05).
@@ -248,11 +257,18 @@ def predict_and_send(state: State, target_open: int):
 # ---------------------------------------------------------------------------
 def run_scheduler(state: State):
     log.info(
-        "Scheduler ready | interval=%ds | lead=%ds before each candle open.",
+        "Scheduler ready | interval=%ds | lead=%ds before each candle open. "
+        "(autostart=%s, max_runtime=%ss)",
         GRANULARITY,
         LEAD_SECONDS,
+        AUTOSTART,
+        MAX_RUNTIME_SECONDS,
     )
+    started = time.time()
     while True:
+        if MAX_RUNTIME_SECONDS and time.time() - started >= MAX_RUNTIME_SECONDS:
+            log.info("Max runtime reached; exiting cleanly for a fresh run.")
+            return
         if not state.active:
             time.sleep(TICK_SECONDS)
             continue
@@ -366,6 +382,9 @@ def main():
         )
 
     state = State(TELEGRAM_CHAT_ID)
+    if AUTOSTART:
+        state.active = True
+        log.info("AUTOSTART enabled — predicting without waiting for /start.")
 
     listener = threading.Thread(
         target=command_listener, args=(state,), daemon=True

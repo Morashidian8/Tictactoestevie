@@ -1,0 +1,52 @@
+name: BTC Next-Candle Predictor
+
+# Runs the SEPARATE next-candle color predictor bot (predict_bot.py) 24/7 in
+# the cloud, the same way candle-alert.yml runs the alternation bot. It uses
+# its OWN Telegram token (secret PREDICT_TELEGRAM_TOKEN) so its messages land
+# in a different Telegram chat and never mix with the alternation bot.
+
+on:
+  schedule:
+    # Fires hourly so a successor run is always queued to take over when the
+    # long-running job ends, giving near-continuous coverage.
+    - cron: "0 * * * *"
+  workflow_dispatch: {}   # allows manual "Run workflow" from the GitHub UI
+
+# Keep exactly one predictor alive: a new run queues behind the current one and
+# starts the moment it finishes.
+concurrency:
+  group: predict-bot
+  cancel-in-progress: false
+
+jobs:
+  predict:
+    runs-on: ubuntu-latest
+    # Stay under the 6h hard limit; the process also self-exits earlier.
+    timeout-minutes: 350
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run predictor bot
+        env:
+          # Dedicated token => a different Telegram bot/chat from the alert bot.
+          PREDICT_TELEGRAM_TOKEN: ${{ secrets.PREDICT_TELEGRAM_TOKEN }}
+          # Optional: set this secret so it keeps sending after each restart
+          # without you having to message the bot again.
+          PREDICT_TELEGRAM_CHAT_ID: ${{ secrets.PREDICT_TELEGRAM_CHAT_ID }}
+          # Start predicting automatically (cloud restarts every ~5.5h).
+          PREDICT_AUTOSTART: "1"
+          # Send the guess ~60s before each 5-minute candle opens.
+          PREDICT_LEAD_SECONDS: "60"
+          PREDICT_DISPLAY_TZ: "Asia/Tehran"
+          # Exit a bit before the 350-minute job timeout for a clean handoff.
+          PREDICT_MAX_RUNTIME_SECONDS: "20400"
+        run: python predict_bot.py
