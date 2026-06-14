@@ -29,6 +29,13 @@ on:
         description: "منطقه زمانی برای روز هفته و ساعت"
         type: string
         default: "Asia/Tehran"
+      window:
+        description: "نوع بازه: clock (راس‌ساعت) یا rolling (لغزان هر ۵ دقیقه، مثل 11:35–12:35)"
+        type: choice
+        default: "clock"
+        options:
+          - clock
+          - rolling
 
 jobs:
   analyze:
@@ -63,6 +70,7 @@ jobs:
           ANALYSIS_SOURCE: ${{ inputs.source }}
           ANALYSIS_DAYS: ${{ inputs.days }}
           ANALYSIS_TZ: ${{ inputs.tz }}
+          WINDOW_MODE: ${{ inputs.window }}
           # Small delay keeps us polite while still finishing in one run.
           POLY_SLEEP: "0.05"
         run: |
