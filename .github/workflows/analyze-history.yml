@@ -33,7 +33,9 @@ on:
 jobs:
   analyze:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    # Polymarket needs one request per 5-minute window (~35k for the full
+    # series ≈ 2.5h), so allow plenty of headroom under the 6h hard limit.
+    timeout-minutes: 330
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -46,11 +48,23 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
+      # Persist the fetched-windows cache between runs so a timed-out or
+      # interrupted Polymarket fetch resumes instead of starting over.
+      - name: Restore data cache
+        uses: actions/cache@v4
+        with:
+          path: .cache
+          key: btc-${{ inputs.source }}-cache-${{ github.run_id }}
+          restore-keys: |
+            btc-${{ inputs.source }}-cache-
+
       - name: Run analysis
         env:
           ANALYSIS_SOURCE: ${{ inputs.source }}
           ANALYSIS_DAYS: ${{ inputs.days }}
           ANALYSIS_TZ: ${{ inputs.tz }}
+          # Small delay keeps us polite while still finishing in one run.
+          POLY_SLEEP: "0.05"
         run: |
           set -o pipefail
           if [ "${{ inputs.mode }}" = "probe" ]; then
