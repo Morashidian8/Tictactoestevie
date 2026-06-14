@@ -55,6 +55,7 @@ import os
 import sys
 import csv
 import time
+from collections import Counter
 from datetime import datetime, timedelta, timezone
 
 import requests
@@ -80,6 +81,40 @@ ANALYSIS_TZ = os.environ.get("ANALYSIS_TZ", "Asia/Tehran").strip()
 #   "rolling" -> every 60-minute window starting on a 5-minute boundary
 #                (00:00–01:00, 00:05–01:05, ... 23:55–00:55) = 288 windows/day
 WINDOW_MODE = os.environ.get("WINDOW_MODE", "clock").strip().lower()
+# Query controls (turn this script into a small configurable tool):
+#   ORDER    "lowest" (calmest windows) or "highest" (most alternating)
+#   TOP_N    how many windows to show per weekday
+#   WEEKDAY  "all" or a single day (sat/sun/.../fri, Persian names, or 0-6)
+#   SHOW_HIST whether to print the full value distribution (histogram)
+ORDER = os.environ.get("ORDER", "lowest").strip().lower()
+TOP_N = max(1, int(os.environ.get("TOP_N", "2")))
+WEEKDAY_FILTER = os.environ.get("WEEKDAY", "all").strip().lower()
+SHOW_HIST = os.environ.get("SHOW_HIST", "true").strip().lower() in (
+    "1", "true", "yes", "y", "on",
+)
+
+# Tokens accepted for WEEKDAY (value = Python date.weekday(): Mon=0 ... Sun=6).
+_WD_TOKENS = {
+    "sat": 5, "saturday": 5, "شنبه": 5,
+    "sun": 6, "sunday": 6, "یکشنبه": 6, "یک‌شنبه": 6,
+    "mon": 0, "monday": 0, "دوشنبه": 0,
+    "tue": 1, "tuesday": 1, "سه‌شنبه": 1, "سهشنبه": 1,
+    "wed": 2, "wednesday": 2, "چهارشنبه": 2,
+    "thu": 3, "thursday": 3, "پنج‌شنبه": 3, "پنجشنبه": 3,
+    "fri": 4, "friday": 4, "جمعه": 4,
+}
+
+
+def selected_weekdays():
+    """Resolve WEEKDAY_FILTER to a list of Python weekday numbers."""
+    if WEEKDAY_FILTER in ("", "all", "همه"):
+        return WEEKDAY_DISPLAY_ORDER
+    if WEEKDAY_FILTER in _WD_TOKENS:
+        return [_WD_TOKENS[WEEKDAY_FILTER]]
+    if WEEKDAY_FILTER.isdigit() and 0 <= int(WEEKDAY_FILTER) <= 6:
+        return [int(WEEKDAY_FILTER)]
+    print(f"⚠️  WEEKDAY='{WEEKDAY_FILTER}' شناخته نشد؛ همه‌ی روزها نشان داده می‌شود.")
+    return WEEKDAY_DISPLAY_ORDER
 POLY_MAX_MISSING = int(os.environ.get("POLY_MAX_MISSING", "2016"))  # ~7 days
 POLY_SLEEP = float(os.environ.get("POLY_SLEEP", "0.1"))
 
@@ -528,6 +563,7 @@ def summarize_hour(values):
         "min_count": values.count(mn),
         "max": mx,
         "max_count": values.count(mx),
+        "hist": sorted(Counter(values).items()),  # [(value, count), ...]
     }
 
 
@@ -618,19 +654,25 @@ def main():
                     out.append((hour_label(h), summarize_hour(vals)))
             return out
 
-    for wd in WEEKDAY_DISPLAY_ORDER:
+    highest = ORDER == "highest"
+    kw = "بیشترین" if highest else "کم‌ترین"
+    print(f"پرسش           : {TOP_N} {unit}ِ «{kw} تناوب» برای هر روز")
+    print("=" * 64)
+
+    for wd in selected_weekdays():
         name = PERSIAN_WEEKDAY[wd]
         stats = weekday_buckets(wd)
         if not stats:
             continue
-        # Lowest AVERAGE alternation first; tie-break on lower max then label.
-        stats.sort(key=lambda x: (x[1]["avg"], x[1]["max"], x[0]))
-        lowest_two = stats[:2]
+        # Sort by AVERAGE alternation; ascending for "lowest", descending for
+        # "highest". Tie-break on max then label.
+        stats.sort(key=lambda x: (x[1]["avg"], x[1]["max"], x[0]), reverse=highest)
+        chosen = stats[:TOP_N]
 
         print()
-        print(f"📅 {name}  —  ۲ {unit}ِ کم‌ترین تناوب در طول سال")
+        print(f"📅 {name}  —  {TOP_N} {unit}ِ {kw} تناوب در طول سال")
         print("-" * 64)
-        for rank, (label, s) in enumerate(lowest_two, start=1):
+        for rank, (label, s) in enumerate(chosen, start=1):
             print(f"  {rank}) {label}  (به وقت {tz_name})")
             print(f"       • تعداد تکرار این {unit} در سال : {s['n']} بار")
             print(
@@ -642,6 +684,9 @@ def main():
                 f"       • بیشینه تناوب در این {unit}     : {s['max']} "
                 f"(در {s['max_count']} بار از {s['n']} تکرار شده)"
             )
+            if SHOW_HIST:
+                dist = " | ".join(f"{v}→{cnt}" for v, cnt in s["hist"])
+                print(f"       • توزیع کامل (تناوب→تعداد)    : {dist}")
         print()
 
     print("=" * 64)

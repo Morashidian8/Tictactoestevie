@@ -32,10 +32,32 @@ on:
       window:
         description: "نوع بازه: clock (راس‌ساعت) یا rolling (لغزان هر ۵ دقیقه، مثل 11:35–12:35)"
         type: choice
-        default: "clock"
+        default: "rolling"
         options:
           - clock
           - rolling
+      order:
+        description: "کم‌ترین تناوب یا بیشترین تناوب؟"
+        type: choice
+        default: "lowest"
+        options:
+          - lowest
+          - highest
+      top_n:
+        description: "چند بازه برای هر روز نشان داده شود؟"
+        type: string
+        default: "2"
+      weekday:
+        description: "روز هفته: all یا یکی از sat/sun/mon/tue/wed/thu/fri"
+        type: string
+        default: "all"
+      hist:
+        description: "نمایش توزیع کامل (هیستوگرام تناوب→تعداد)؟"
+        type: choice
+        default: "true"
+        options:
+          - "true"
+          - "false"
 
 jobs:
   analyze:
@@ -71,6 +93,10 @@ jobs:
           ANALYSIS_DAYS: ${{ inputs.days }}
           ANALYSIS_TZ: ${{ inputs.tz }}
           WINDOW_MODE: ${{ inputs.window }}
+          ORDER: ${{ inputs.order }}
+          TOP_N: ${{ inputs.top_n }}
+          WEEKDAY: ${{ inputs.weekday }}
+          SHOW_HIST: ${{ inputs.hist }}
           # Small delay keeps us polite while still finishing in one run.
           POLY_SLEEP: "0.05"
         run: |
