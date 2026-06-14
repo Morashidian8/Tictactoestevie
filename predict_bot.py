@@ -47,7 +47,7 @@ try:
 except Exception:
     pass
 
-from predictor import predict, explain
+from predictor import predict
 import state_store
 
 # ---------------------------------------------------------------------------
@@ -119,14 +119,28 @@ log = logging.getLogger("btc-predict-bot")
 # ---------------------------------------------------------------------------
 # Telegram helper
 # ---------------------------------------------------------------------------
-def send_message(chat_id: str, text: str) -> bool:
+# Persistent start/stop buttons shown at the bottom of the chat. The button
+# captions are sent as plain text, so the listener maps them to /start//stop.
+BTN_START = "▶️ استارت"
+BTN_STOP = "⏹ استاپ"
+KEYBOARD = {
+    "keyboard": [[BTN_START, BTN_STOP]],
+    "resize_keyboard": True,
+    "is_persistent": True,
+}
+
+
+def send_message(chat_id: str, text: str, reply_markup=None) -> bool:
     if not chat_id:
         log.warning("No chat_id set; cannot send message.")
         return False
     try:
+        payload = {"chat_id": chat_id, "text": text, "parse_mode": "HTML"}
+        if reply_markup is not None:
+            payload["reply_markup"] = reply_markup
         resp = requests.post(
             f"{TELEGRAM_API}/sendMessage",
-            json={"chat_id": chat_id, "text": text, "parse_mode": "HTML"},
+            json=payload,
             timeout=15,
         )
         if resp.status_code != 200:
@@ -250,7 +264,7 @@ def predict_and_send(state: State, target_open: int):
         result.get("confidence", 0.0),
         result.get("score", 0.0),
     )
-    return send_message(state.chat_id, label)
+    return send_message(state.chat_id, label, reply_markup=KEYBOARD)
 
 
 # ---------------------------------------------------------------------------
@@ -289,19 +303,25 @@ def run_scheduler(state: State):
 
 
 # ---------------------------------------------------------------------------
-# Telegram command listener
+# Telegram command listener — no chit-chat: only predictions + start/stop button
 # ---------------------------------------------------------------------------
-START_TEXT = (
-    "✅ ربات پیش‌بینی رنگ کندل فعال شد.\n"
-    "حدود <b>۱ دقیقه قبل</b> از باز شدن هر کندل <b>۵ دقیقه‌ای</b> بیت‌کوین، "
-    "حدس می‌زنم کندل بعدی سبز 🟢 یا قرمز 🔴 بسته می‌شود و فقط ساعت + رنگ را "
-    "برایت می‌فرستم. مثال: <code>۱۲:۰۵🟢</code>\n\n"
-    "برای توقف: /stop\n"
-    "وضعیت و جزئیات تحلیل: /status\n"
-    "پیش‌بینی فوری کندل بعدی: /predict\n\n"
-    "⚠️ توجه: رنگ کندل بعدی عملاً نزدیک به شیر یا خط است؛ این فقط بهترین "
-    "حدس مبتنی بر تحلیل تکنیکال است، نه تضمین سود."
-)
+def _is_start(text: str) -> bool:
+    return text.startswith("/start") or "استارت" in text or text == "شروع"
+
+
+def _is_stop(text: str) -> bool:
+    return text.startswith("/stop") or "استاپ" in text or text == "توقف"
+
+
+def _do_predict_now(state: State):
+    """Fire a prediction for the upcoming candle right now (deduped)."""
+    now = time.time()
+    target_open = (int(now // GRANULARITY) + 1) * GRANULARITY
+    with state.lock:
+        state.last_predicted_open = target_open
+    if not predict_and_send(state, target_open):
+        # No data this instant — keep it silent, just keep the buttons visible.
+        send_message(state.chat_id, "⏳", reply_markup=KEYBOARD)
 
 
 def command_listener(state: State):
@@ -327,59 +347,23 @@ def command_listener(state: State):
                     log.info("Captured chat_id: %s", chat_id)
                     state_store.save(state.active, chat_id)
 
-                if text.startswith("/start"):
+                if _is_start(text):
                     state.chat_id = chat_id
                     with state.lock:
                         state.active = True
                     state_store.save(True, chat_id)  # persist across restarts
-                    send_message(chat_id, START_TEXT)
-                    log.info("Activated by /start (chat_id=%s).", chat_id)
-                    # Instant feedback: predict the upcoming candle right away,
-                    # then the scheduler keeps firing ~1 min before each candle.
-                    now = time.time()
-                    target_open = (int(now // GRANULARITY) + 1) * GRANULARITY
-                    with state.lock:
-                        state.last_predicted_open = target_open  # avoid a dup
-                    if not predict_and_send(state, target_open):
-                        send_message(
-                            chat_id,
-                            "⚠️ فعال شدم، اما دریافت دادهٔ بایننس همین لحظه ناموفق "
-                            "بود. سر کندل بعدی دوباره تلاش می‌کنم.",
-                        )
+                    log.info("Activated by start (chat_id=%s).", chat_id)
+                    _do_predict_now(state)  # instant prediction + buttons
 
-                elif text.startswith("/stop"):
+                elif _is_stop(text):
                     with state.lock:
                         state.active = False
                     state_store.save(False, state.chat_id)  # persist OFF
-                    send_message(
-                        chat_id,
-                        "⏹ متوقف شد. دیگر پیش‌بینی نمی‌فرستم.\n"
-                        "برای شروع دوباره: /start",
-                    )
-                    log.info("Stopped by /stop (chat_id=%s).", chat_id)
-
-                elif text.startswith("/status"):
-                    with state.lock:
-                        running = state.active
-                        last = state.last_prediction_label
-                        result = state.last_result
-                    state_line = "🟢 فعال" if running else "🔴 متوقف"
-                    parts = [f"📊 وضعیت ربات: {state_line}"]
-                    if last:
-                        parts.append(f"آخرین پیش‌بینی: <b>{last}</b>")
-                    if result:
-                        parts.append(
-                            "\nجزئیات تحلیل آخر:\n<code>" + explain(result) + "</code>"
-                        )
-                    send_message(chat_id, "\n".join(parts))
+                    log.info("Stopped by stop (chat_id=%s).", chat_id)
+                    send_message(chat_id, "⏹", reply_markup=KEYBOARD)
 
                 elif text.startswith("/predict"):
-                    now = time.time()
-                    target_open = (int(now // GRANULARITY) + 1) * GRANULARITY
-                    send_message(chat_id, "⏳ در حال تحلیل کندل بعدی...")
-                    ok = predict_and_send(state, target_open)
-                    if not ok:
-                        send_message(chat_id, "⚠️ دریافت داده یا ارسال ناموفق بود.")
+                    _do_predict_now(state)
         except requests.RequestException as exc:
             log.error("getUpdates error: %s", exc)
             time.sleep(5)
