@@ -23,18 +23,31 @@ strictly alternating candles ("متوالی") and express it as a flip count:
 So an hour whose 12 candles go 🟢🔴🟢🔴🟢🔴🟢🔴🟢🔴🟢🔴 scores 11 flips, while a
 calm trending hour (🟢🟢🟢🟢...) scores 0.
 
-Data source: Binance public 5-minute klines (no API key), using the same host
-list and helpers as bot.py.
+Data source (ANALYSIS_SOURCE):
+  * "polymarket" (default) — the BTC Up/Down 5-minute series. Each 5-minute
+    window is its own market (slug btc-updown-5m-<unix>) whose resolved
+    Up/Down outcome IS the candle color (Up=green, Down=red). One request per
+    window, so a full year is ~105k requests; results are cached + resumable,
+    and the walk stops automatically once it reaches the start of the series
+    (these markets do not go back a full year).
+  * "binance" — public 5-minute klines (no API key), full year guaranteed.
+
+Both sources feed the exact same alternation analysis, reusing bot.py helpers.
 
 Usage:
-    python analyze_history.py
+    python analyze_history.py                  # Polymarket
+    ANALYSIS_SOURCE=binance python analyze_history.py
 
 Environment variables (all optional):
-    ANALYSIS_DAYS   number of days back to analyze        (default 365)
-    ANALYSIS_TZ     timezone for weekday/hour bucketing   (default Asia/Tehran)
-    PRODUCT         Binance symbol                         (default BTCUSDT)
-    INTERVAL        Binance kline interval                 (default 5m)
-    CACHE_FILE      where to cache raw candles as CSV      (default .cache/klines.csv)
+    ANALYSIS_SOURCE  "polymarket" or "binance"            (default polymarket)
+    ANALYSIS_DAYS    number of days back to analyze        (default 365)
+    ANALYSIS_TZ      timezone for weekday/hour bucketing   (default Asia/Tehran)
+    PRODUCT          Binance symbol                         (default BTCUSDT)
+    INTERVAL         Binance kline interval                 (default 5m)
+    POLY_MAX_MISSING consecutive missing windows before we
+                     decide the series has ended            (default 2016 = 7d)
+    POLY_SLEEP       seconds between Polymarket requests     (default 0.1)
+    CACHE_FILE       where to cache raw candles as CSV      (default auto)
 """
 
 import os
@@ -53,11 +66,24 @@ from bot import (
     PRODUCT,
     INTERVAL,
     GRANULARITY,
+    GAMMA_URL,
+    POLY_SLUG_PREFIX,
+    _poly_event_direction,
 )
 
+ANALYSIS_SOURCE = os.environ.get("ANALYSIS_SOURCE", "polymarket").strip().lower()
 ANALYSIS_DAYS = int(os.environ.get("ANALYSIS_DAYS", "365"))
 ANALYSIS_TZ = os.environ.get("ANALYSIS_TZ", "Asia/Tehran").strip()
-CACHE_FILE = os.environ.get("CACHE_FILE", ".cache/klines.csv").strip()
+POLY_MAX_MISSING = int(os.environ.get("POLY_MAX_MISSING", "2016"))  # ~7 days
+POLY_SLEEP = float(os.environ.get("POLY_SLEEP", "0.1"))
+
+# Default cache file depends on the source so the two never collide.
+_default_cache = (
+    ".cache/poly_updown.csv"
+    if ANALYSIS_SOURCE == "polymarket"
+    else ".cache/klines.csv"
+)
+CACHE_FILE = os.environ.get("CACHE_FILE", _default_cache).strip()
 
 # Persian weekday names, ordered the Iranian way (week starts on Saturday).
 # Mapping is from Python's date.weekday(): Monday=0 ... Sunday=6.
@@ -193,7 +219,7 @@ def save_cache(candles):
         w.writerows(candles)
 
 
-def get_candles():
+def get_candles_binance():
     cached = load_cache()
     if cached:
         newest = datetime.fromtimestamp(cached[-1]["time"], tz=timezone.utc)
@@ -211,6 +237,105 @@ def get_candles():
     if candles:
         save_cache(candles)
     return candles
+
+
+# ---------------------------------------------------------------------------
+# Polymarket BTC Up/Down 5-minute series (one market per 5-minute window)
+# ---------------------------------------------------------------------------
+def _poll_poly_window(ts, retries=2):
+    """+1 (Up), -1 (Down), or None if missing/unresolved/error."""
+    slug = f"{POLY_SLUG_PREFIX}-{ts}"
+    for attempt in range(retries + 1):
+        try:
+            resp = requests.get(
+                GAMMA_URL,
+                params={"slug": slug},
+                timeout=15,
+                headers={"User-Agent": "btc-history-analysis/1.0"},
+            )
+            resp.raise_for_status()
+            return _poly_event_direction(resp.json())
+        except requests.RequestException:
+            if attempt < retries:
+                time.sleep(0.5 * (attempt + 1))
+            continue
+    return None
+
+
+def fetch_year_polymarket(days):
+    """
+    Walk the BTC Up/Down 5-minute markets backwards from the latest ended
+    window. Each resolved window becomes a candle (Up=green, Down=red).
+
+    Resumable: windows already in the cache are not re-requested, and the walk
+    stops after POLY_MAX_MISSING consecutive windows with no resolved market
+    (i.e. we've reached the start of the series — these markets do not extend a
+    full year back).
+    """
+    now = time.time()
+    last_ended = (int(now // GRANULARITY) - 1) * GRANULARITY
+    start = last_ended - days * 86400
+
+    resolved = {c["time"]: c for c in (load_cache() or [])}
+    if resolved:
+        print(f"Resuming from cache: {len(resolved)} windows already stored.")
+
+    missing_streak = 0
+    requests_made = 0
+    ts = last_ended
+    try:
+        while ts >= start:
+            if ts in resolved:
+                missing_streak = 0
+                ts -= GRANULARITY
+                continue
+            direction = _poll_poly_window(ts)
+            requests_made += 1
+            if direction is None:
+                missing_streak += 1
+                if missing_streak >= POLY_MAX_MISSING:
+                    when = datetime.utcfromtimestamp(ts)
+                    print(
+                        f"  reached start of the Up/Down series near "
+                        f"{when:%Y-%m-%d %H:%M} UTC "
+                        f"({missing_streak} empty windows); stopping."
+                    )
+                    break
+            else:
+                missing_streak = 0
+                c_open, c_close = (0.0, 1.0) if direction > 0 else (1.0, 0.0)
+                resolved[ts] = {
+                    "time": ts,
+                    "open": c_open,
+                    "high": 1.0,
+                    "low": 0.0,
+                    "close": c_close,
+                }
+            if requests_made % 200 == 0:
+                save_cache([resolved[k] for k in sorted(resolved)])
+                when = datetime.utcfromtimestamp(ts)
+                print(
+                    f"  ...{requests_made} requests, {len(resolved)} resolved "
+                    f"windows, now at {when:%Y-%m-%d %H:%M} UTC"
+                )
+            ts -= GRANULARITY
+            time.sleep(POLY_SLEEP)
+    except KeyboardInterrupt:
+        print("  interrupted — saving progress; rerun to resume.")
+
+    candles = [resolved[k] for k in sorted(resolved)]
+    save_cache(candles)
+    return candles
+
+
+def get_candles():
+    if ANALYSIS_SOURCE == "polymarket":
+        print(
+            "Source: Polymarket BTC Up/Down 5m. This makes one request per "
+            "5-minute window (slow); progress is cached and resumable."
+        )
+        return fetch_year_polymarket(ANALYSIS_DAYS)
+    return get_candles_binance()
 
 
 # ---------------------------------------------------------------------------
@@ -290,18 +415,29 @@ def main():
     if not candles:
         print(
             "No candles were returned. If you are running inside a restricted "
-            "network, run this where Binance is reachable (locally or in CI)."
+            "network, run this where the data source is reachable (locally/CI)."
         )
         return
 
+    source_label = (
+        "Polymarket — BTC Up/Down 5m"
+        if ANALYSIS_SOURCE == "polymarket"
+        else f"Binance {PRODUCT} ({INTERVAL})"
+    )
     oldest = datetime.fromtimestamp(candles[0]["time"], tz=tz)
     newest = datetime.fromtimestamp(candles[-1]["time"], tz=tz)
+    span_days = (newest - oldest).days
     print()
     print("=" * 64)
     print("تحلیل تاریخی تناوب کندل ۵ دقیقه‌ای بیت‌کوین")
     print("=" * 64)
-    print(f"نماد            : {PRODUCT}  ({INTERVAL})")
+    print(f"منبع            : {source_label}")
     print(f"منطقه زمانی     : {tz_name}")
+    if span_days < ANALYSIS_DAYS - 7:
+        print(
+            f"⚠️  توجه       : داده‌ی موجود فقط {span_days} روزه (نه کامل "
+            f"{ANALYSIS_DAYS} روز) — سری Up/Down پولی‌مارکت به این قدمت نمی‌رسد."
+        )
     print(f"تعداد کندل      : {len(candles):,}")
     print(f"بازه            : {oldest:%Y-%m-%d %H:%M} تا {newest:%Y-%m-%d %H:%M}")
     print(
