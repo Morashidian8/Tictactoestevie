@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0b3d66">
+  <title>تناوب بیت‌کوین</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="apple-touch-icon" href="./icon.svg">
+  <link rel="icon" href="./icon.svg">
+  <style>
+    :root { --blue:#0b3d66; --line:#d6e0ea; --bg:#f4f7fb; }
+    * { box-sizing: border-box; font-family: system-ui, "Segoe UI", Tahoma, sans-serif; }
+    body { margin:0; background:var(--bg); color:#1a1a1a; }
+    header { background:var(--blue); color:#fff; padding:14px 16px;
+             position:sticky; top:0; z-index:5; }
+    header h1 { margin:0; font-size:17px; }
+    header .meta { font-size:11px; opacity:.85; margin-top:4px; line-height:1.6; }
+    .controls { padding:12px 14px; display:grid; grid-template-columns:1fr 1fr;
+                gap:10px; background:#fff; border-bottom:1px solid var(--line); }
+    .ctrl { display:flex; flex-direction:column; gap:4px; }
+    .ctrl label { font-size:12px; color:#555; }
+    select, input[type=number] { padding:9px; border:1px solid var(--line);
+                border-radius:8px; font-size:15px; background:#fff; }
+    .toggles { grid-column:1 / -1; display:flex; gap:18px; flex-wrap:wrap; }
+    .toggles label { font-size:14px; display:flex; align-items:center; gap:6px; }
+    main { padding:12px 14px 40px; }
+    .day { margin-bottom:18px; background:#fff; border:1px solid var(--line);
+           border-radius:12px; overflow:hidden; }
+    .day h2 { margin:0; background:#e8eef5; color:var(--blue); font-size:15px;
+              padding:9px 12px; }
+    .win { padding:10px 12px; border-top:1px solid #eef2f6; }
+    .win .t { font-weight:700; font-size:16px; color:var(--blue); }
+    .win .badge { float:left; background:#0b3d66; color:#fff; border-radius:20px;
+                  font-size:12px; padding:2px 9px; }
+    .row { display:flex; justify-content:space-between; font-size:13px;
+           color:#333; margin-top:6px; gap:8px; }
+    .row b { color:#0b3d66; }
+    .hist { margin-top:8px; }
+    .bar { display:flex; align-items:center; gap:6px; font-size:12px; margin:2px 0; }
+    .bar .k { width:14px; text-align:center; color:#666; }
+    .bar .b { height:12px; background:#3a7bd5; border-radius:3px; min-width:2px; }
+    .bar .c { color:#666; }
+    .hint { font-size:12px; color:#777; padding:0 14px 24px; line-height:1.8; }
+    .star { color:#b8860b; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>📊 تناوب کندل ۵ دقیقه‌ای بیت‌کوین</h1>
+    <div class="meta" id="meta">در حال بارگذاری…</div>
+  </header>
+
+  <div class="controls">
+    <div class="ctrl">
+      <label>نوع بازه</label>
+      <select id="window">
+        <option value="rolling">لغزان (هر ۵ دقیقه)</option>
+        <option value="clock">راس‌ساعت</option>
+      </select>
+    </div>
+    <div class="ctrl">
+      <label>مرتب‌سازی</label>
+      <select id="order">
+        <option value="lowest">کم‌ترین تناوب</option>
+        <option value="highest">بیشترین تناوب</option>
+      </select>
+    </div>
+    <div class="ctrl">
+      <label>روز</label>
+      <select id="weekday"><option value="all">همه‌ی روزها</option></select>
+    </div>
+    <div class="ctrl">
+      <label>تعداد بازه در هر روز</label>
+      <input type="number" id="topn" value="2" min="1" max="12">
+    </div>
+    <div class="toggles">
+      <label><input type="checkbox" id="nooverlap" checked> بدون هم‌پوشانی</label>
+      <label><input type="checkbox" id="hist" checked> نمایش نمودار توزیع</label>
+    </div>
+  </div>
+
+  <main id="out"></main>
+  <div class="hint">
+    «تناوب» = طول بلندترین رشته‌ی یک‌درمیون شدن رنگ (سبز/قرمز) داخل هر بازه‌ی ۶۰ دقیقه‌ای،
+    برحسب تعداد تغییر رنگ. مقدار ۰ یعنی بازه تک‌رنگ بوده. مرتب‌سازی بر اساس «میانگین» است.
+    این اپ آفلاین کار می‌کند — می‌توانید از منوی مرورگر آن را روی صفحه‌ی اصلی نصب کنید.
+  </div>
+
+  <script src="./app.js"></script>
+</body>
+</html>
