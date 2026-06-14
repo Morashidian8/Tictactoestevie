@@ -1,0 +1,77 @@
+name: BTC History Analysis
+
+# Run the one-year candle-alternation analysis (or just probe the Polymarket
+# series start) entirely in the cloud. Trigger it from the GitHub UI with
+# "Run workflow" — the result is printed to the run's Summary page (easy to
+# read on a phone) and also uploaded as a downloadable report.txt artifact.
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "حالت: probe (پیدا کردن تاریخ شروع سری، سریع) یا analyze (تحلیل کامل)"
+        type: choice
+        default: "probe"
+        options:
+          - probe
+          - analyze
+      source:
+        description: "منبع داده"
+        type: choice
+        default: "polymarket"
+        options:
+          - polymarket
+          - binance
+      days:
+        description: "چند روز عقب (مثلاً 365 یا عددی که probe پیشنهاد داد)"
+        type: string
+        default: "365"
+      tz:
+        description: "منطقه زمانی برای روز هفته و ساعت"
+        type: string
+        default: "Asia/Tehran"
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run analysis
+        env:
+          ANALYSIS_SOURCE: ${{ inputs.source }}
+          ANALYSIS_DAYS: ${{ inputs.days }}
+          ANALYSIS_TZ: ${{ inputs.tz }}
+        run: |
+          set -o pipefail
+          if [ "${{ inputs.mode }}" = "probe" ]; then
+            python analyze_history.py --probe | tee report.txt
+          else
+            python analyze_history.py | tee report.txt
+          fi
+
+      - name: Publish result to run summary
+        if: always()
+        run: |
+          {
+            echo "## نتیجه تحلیل (${{ inputs.mode }} / ${{ inputs.source }})"
+            echo '```'
+            cat report.txt 2>/dev/null || echo "no output"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: btc-analysis-report
+          path: report.txt
