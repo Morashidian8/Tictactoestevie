@@ -58,6 +58,13 @@ on:
         options:
           - "true"
           - "false"
+      no_overlap:
+        description: "بازه‌های هر روز هم‌پوشانی نداشته باشند؟"
+        type: choice
+        default: "true"
+        options:
+          - "true"
+          - "false"
 
 jobs:
   analyze:
@@ -97,6 +104,7 @@ jobs:
           TOP_N: ${{ inputs.top_n }}
           WEEKDAY: ${{ inputs.weekday }}
           SHOW_HIST: ${{ inputs.hist }}
+          NO_OVERLAP: ${{ inputs.no_overlap }}
           # Small delay keeps us polite while still finishing in one run.
           POLY_SLEEP: "0.05"
         run: |

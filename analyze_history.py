@@ -92,6 +92,13 @@ WEEKDAY_FILTER = os.environ.get("WEEKDAY", "all").strip().lower()
 SHOW_HIST = os.environ.get("SHOW_HIST", "true").strip().lower() in (
     "1", "true", "yes", "y", "on",
 )
+# When True, the windows chosen for a day must not overlap each other (their
+# 60-minute spans are disjoint), so you get genuinely different times of day.
+NO_OVERLAP = os.environ.get("NO_OVERLAP", "true").strip().lower() in (
+    "1", "true", "yes", "y", "on",
+)
+WIN_MINUTES = 60  # each window spans 12 five-minute candles = 60 minutes
+DAY_MINUTES = 24 * 60
 
 # Tokens accepted for WEEKDAY (value = Python date.weekday(): Mon=0 ... Sun=6).
 _WD_TOKENS = {
@@ -574,6 +581,32 @@ def hour_label(h):
     return f"{h:02d}:00–{h:02d}:59"
 
 
+def pick_windows(sorted_stats, n):
+    """
+    Take the first `n` entries from `sorted_stats` (already ranked best-first).
+    If NO_OVERLAP, skip any window whose 60-minute span overlaps one already
+    chosen, measuring start-time distance circularly so 23:35 and 00:35 count
+    as non-overlapping (they only touch).
+    """
+    chosen = []
+    for item in sorted_stats:
+        if NO_OVERLAP:
+            s = item[0]
+            clash = False
+            for c in chosen:
+                d = abs(s - c[0])
+                d = min(d, DAY_MINUTES - d)  # circular distance
+                if d < WIN_MINUTES:
+                    clash = True
+                    break
+            if clash:
+                continue
+        chosen.append(item)
+        if len(chosen) >= n:
+            break
+    return chosen
+
+
 def window_label(hour, minute, win_minutes=60):
     """Label a rolling window by its start and end clock time, e.g. 11:35–12:35."""
     start = hour * 60 + minute
@@ -633,14 +666,14 @@ def main():
     )
     print("=" * 64)
 
-    # Build (label, stats) pairs per weekday for the chosen window mode.
+    # Build (start_minute, label, stats) tuples per weekday for the chosen mode.
     if WINDOW_MODE == "rolling":
         samples = build_rolling_samples(candles, tz)
 
         def weekday_buckets(wd):
             out = []
             for (h, m), vals in samples[wd].items():
-                out.append((window_label(h, m), summarize_hour(vals)))
+                out.append((h * 60 + m, window_label(h, m), summarize_hour(vals)))
             return out
 
     else:
@@ -651,12 +684,14 @@ def main():
             for h in range(24):
                 vals = samples[wd][h]
                 if vals:
-                    out.append((hour_label(h), summarize_hour(vals)))
+                    out.append((h * 60, hour_label(h), summarize_hour(vals)))
             return out
 
     highest = ORDER == "highest"
     kw = "بیشترین" if highest else "کم‌ترین"
     print(f"پرسش           : {TOP_N} {unit}ِ «{kw} تناوب» برای هر روز")
+    if NO_OVERLAP:
+        print("قید            : بازه‌های انتخابی هر روز با هم هم‌پوشانی ندارند")
     print("=" * 64)
 
     for wd in selected_weekdays():
@@ -665,14 +700,14 @@ def main():
         if not stats:
             continue
         # Sort by AVERAGE alternation; ascending for "lowest", descending for
-        # "highest". Tie-break on max then label.
-        stats.sort(key=lambda x: (x[1]["avg"], x[1]["max"], x[0]), reverse=highest)
-        chosen = stats[:TOP_N]
+        # "highest". Tie-break on max then start time.
+        stats.sort(key=lambda x: (x[2]["avg"], x[2]["max"], x[0]), reverse=highest)
+        chosen = pick_windows(stats, TOP_N)
 
         print()
         print(f"📅 {name}  —  {TOP_N} {unit}ِ {kw} تناوب در طول سال")
         print("-" * 64)
-        for rank, (label, s) in enumerate(chosen, start=1):
+        for rank, (start_min, label, s) in enumerate(chosen, start=1):
             print(f"  {rank}) {label}  (به وقت {tz_name})")
             print(f"       • تعداد تکرار این {unit} در سال : {s['n']} بار")
             print(
