@@ -1,9 +1,21 @@
 """
-Bitcoin 5-minute candle alternation alert bot (Telegram).
+Bitcoin 5-minute next-candle COLOR PREDICTOR bot (Telegram).
 
-Watches BTCUSDT 5-minute candles from Binance 24/7. When candle direction
-(green = bullish / red = bearish) alternates for several candles in a row,
-it sends a Telegram alert on the candle that completes the streak.
+Acts like a short-term scalper: roughly one minute before each new BTCUSDT
+5-minute candle opens, it runs a technical-analysis ensemble (see predictor.py)
+and guesses whether that upcoming candle will close GREEN (🟢) or RED (🔴).
+
+Control it from Telegram:
+    /start  — begin predicting; one message ~1 minute before every 5m candle
+    /stop   — stop predicting
+    /status — show whether it is running + the latest prediction breakdown
+    /predict — fire a one-off prediction for the next candle right now
+
+Each prediction message is intentionally minimal — just the candle's open time
+and the predicted color, e.g.:  ۱۲:۰۵🟢
+
+Honest note: the next candle's color is close to a coin flip; no analysis can
+predict it reliably. This bot makes a disciplined, reproducible best guess.
 
 Data source: Binance public market-data API (no API key required).
 """
@@ -15,6 +27,11 @@ import threading
 import logging
 from datetime import datetime, timezone
 
+try:
+    from zoneinfo import ZoneInfo
+except Exception:  # pragma: no cover - py<3.9 fallback
+    ZoneInfo = None
+
 import requests
 
 try:
@@ -22,6 +39,8 @@ try:
     load_dotenv()
 except Exception:
     pass
+
+from predictor import predict, explain
 
 # ---------------------------------------------------------------------------
 # Configuration
@@ -35,20 +54,26 @@ SOURCE = os.environ.get("SOURCE", "binance").strip().lower()
 PRODUCT = os.environ.get("PRODUCT", "BTCUSDT").strip()
 GRANULARITY = int(os.environ.get("GRANULARITY", "300"))  # 5 minutes
 INTERVAL = os.environ.get("INTERVAL", "5m").strip()  # Binance kline interval
-# Human label for the timeframe, shown in the alert so different monitors
-# (e.g. 5m vs 15m) are never confused.
-TF_LABEL = os.environ.get("TF_LABEL", "").strip()
-# Number of alternating candles required to fire the alert.
-ALTERNATION_THRESHOLD = int(os.environ.get("ALTERNATION_THRESHOLD", "5"))
-POLL_SECONDS = int(os.environ.get("POLL_SECONDS", "20"))
+
+# How many candles to pull for the indicators (more = smoother EMA50/MACD).
+KLINES_LIMIT = int(os.environ.get("KLINES_LIMIT", "200"))
+
+# How many seconds BEFORE the next candle opens to send the prediction.
+LEAD_SECONDS = int(os.environ.get("LEAD_SECONDS", "60"))
+# How often the scheduler wakes up to check whether it is prediction time.
+TICK_SECONDS = int(os.environ.get("TICK_SECONDS", "3"))
+
+# Timezone used for the HH:MM shown in the message (user-facing clock time).
+DISPLAY_TZ = os.environ.get("DISPLAY_TZ", "Asia/Tehran").strip()
+# Show Persian-Indic digits (۱۲:۰۵) instead of Latin (12:05).
+PERSIAN_DIGITS = os.environ.get("PERSIAN_DIGITS", "1").strip().lower() in (
+    "1", "true", "yes", "on",
+)
 
 # --- Polymarket (BTC Up/Down 5-minute recurring market) config ---
-# Each 5-minute window is a separate market whose slug ends with the window's
-# unix start time, e.g. btc-updown-5m-1781198700. We follow the series by
-# building each window's slug and reading its resolved Up/Down outcome.
 GAMMA_URL = "https://gamma-api.polymarket.com/events"
 POLY_SLUG_PREFIX = os.environ.get("POLY_SLUG_PREFIX", "btc-updown-5m").strip()
-POLY_LOOKBACK = int(os.environ.get("POLY_LOOKBACK", "12"))  # windows to scan
+POLY_LOOKBACK = int(os.environ.get("POLY_LOOKBACK", "60"))  # windows to scan
 
 # Binance market-data hosts, tried in order. data-api.binance.vision is the
 # public market-data domain and is the most reliable from cloud/CI IPs (some
@@ -71,7 +96,7 @@ logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s | %(levelname)s | %(message)s",
 )
-log = logging.getLogger("btc-bot")
+log = logging.getLogger("btc-predictor")
 
 
 # ---------------------------------------------------------------------------
@@ -158,10 +183,9 @@ def fetch_candles_polymarket():
     Each 5-minute window is its own market with slug
     "<POLY_SLUG_PREFIX>-<window_start_unix>". We scan the last POLY_LOOKBACK
     *ended* windows, read each resolved Up/Down outcome, and turn it into a
-    candle (Up => green, Down => red) so the alternation logic is unchanged.
+    candle (Up => green, Down => red).
     """
     now = time.time()
-    # Most recently ENDED window start (a window [ts, ts+300] ends at ts+300).
     last_ended_start = (int(now // GRANULARITY) - 1) * GRANULARITY
     candles = []
     for k in range(POLY_LOOKBACK - 1, -1, -1):
@@ -172,7 +196,7 @@ def fetch_candles_polymarket():
                 GAMMA_URL,
                 params={"slug": slug},
                 timeout=15,
-                headers={"User-Agent": "btc-candle-alert-bot/1.0"},
+                headers={"User-Agent": "btc-candle-predictor/1.0"},
             )
             resp.raise_for_status()
             events = resp.json()
@@ -182,7 +206,6 @@ def fetch_candles_polymarket():
         direction = _poly_event_direction(events)
         if direction is None:
             continue  # window not found or not yet resolved
-        # Encode the direction as open/close so candle_direction() works.
         c_open, c_close = (0.0, 1.0) if direction > 0 else (1.0, 0.0)
         candles.append(
             {
@@ -191,6 +214,7 @@ def fetch_candles_polymarket():
                 "close": c_close,
                 "low": 0.0,
                 "high": 1.0,
+                "volume": 1.0,
             }
         )
     candles.sort(key=lambda c: c["time"])  # oldest -> newest
@@ -213,9 +237,9 @@ def fetch_candles_binance():
         try:
             resp = requests.get(
                 f"{host}/api/v3/klines",
-                params={"symbol": PRODUCT, "interval": INTERVAL, "limit": 50},
+                params={"symbol": PRODUCT, "interval": INTERVAL, "limit": KLINES_LIMIT},
                 timeout=15,
-                headers={"User-Agent": "btc-candle-alert-bot/1.0"},
+                headers={"User-Agent": "btc-candle-predictor/1.0"},
             )
             resp.raise_for_status()
             rows = resp.json()
@@ -243,6 +267,7 @@ def fetch_candles_binance():
                     "high": float(row[2]),
                     "low": float(row[3]),
                     "close": float(row[4]),
+                    "volume": float(row[5]),
                 }
             )
     candles.sort(key=lambda c: c["time"])  # oldest -> newest
@@ -263,132 +288,125 @@ def dir_label(d: int) -> str:
 
 
 # ---------------------------------------------------------------------------
-# Monitoring loop
+# Formatting helpers
 # ---------------------------------------------------------------------------
-class Monitor:
+_PERSIAN_MAP = str.maketrans("0123456789", "۰۱۲۳۴۵۶۷۸۹")
+
+
+def _to_persian(text: str) -> str:
+    return text.translate(_PERSIAN_MAP) if PERSIAN_DIGITS else text
+
+
+def format_candle_time(open_unix: int) -> str:
+    """HH:MM of a candle's open time in the configured display timezone."""
+    tz = None
+    if ZoneInfo is not None:
+        try:
+            tz = ZoneInfo(DISPLAY_TZ)
+        except Exception:
+            tz = None
+    dt = datetime.fromtimestamp(open_unix, tz=tz or timezone.utc)
+    return _to_persian(dt.strftime("%H:%M"))
+
+
+# ---------------------------------------------------------------------------
+# Shared state between the scheduler and the Telegram command listener
+# ---------------------------------------------------------------------------
+class State:
     def __init__(self, chat_id: str):
         self.chat_id = chat_id
-        self.last_candle_time = 0
-        self.directions = []  # directions of recent candles (oldest->newest)
+        self.active = False
+        self.last_predicted_open = 0
+        self.last_result = None
+        self.last_prediction_label = None  # e.g. "۱۲:۰۵🟢"
+        self.lock = threading.Lock()
 
-    def _alternation_streak(self) -> int:
-        """Length of the trailing run of strictly alternating directions."""
-        d = self.directions
-        if not d:
-            return 0
-        streak = 1
-        for i in range(len(d) - 1, 0, -1):
-            cur, prev = d[i], d[i - 1]
-            # Alternation requires non-flat candles in opposite directions.
-            if cur != 0 and prev != 0 and cur == -prev:
-                streak += 1
-            else:
-                break
-        return streak
 
-    def process_new_candle(self, candle):
-        direction = candle_direction(candle)
-        self.directions.append(direction)
-        # Keep memory bounded.
-        if len(self.directions) > 50:
-            self.directions = self.directions[-50:]
+# ---------------------------------------------------------------------------
+# Prediction
+# ---------------------------------------------------------------------------
+def make_prediction(target_open: int):
+    """Fetch candles, run the predictor, and return (label, result)."""
+    candles = fetch_candles()
+    if not candles:
+        raise RuntimeError("no candles returned from data source")
+    result = predict(candles)
+    emoji = "🟢" if result["direction"] > 0 else "🔴"
+    label = f"{format_candle_time(target_open)}{emoji}"
+    return label, result
 
-        streak = self._alternation_streak()
-        log.info(
-            "New candle %s | %s | O=%.2f C=%.2f | alternation streak=%d",
-            datetime.fromtimestamp(candle["time"], tz=timezone.utc).strftime(
-                "%Y-%m-%d %H:%M UTC"
-            ),
-            dir_label(direction),
-            candle["open"],
-            candle["close"],
-            streak,
-        )
 
-        # Alert on EVERY new candle while the alternating run meets the
-        # threshold, so a sustained back-and-forth keeps notifying instead of
-        # firing only once. (process_new_candle runs once per closed candle.)
-        if streak >= ALTERNATION_THRESHOLD:
-            self._send_alert(candle, streak)
-
-    def _send_alert(self, candle, streak: int):
-        when = datetime.fromtimestamp(candle["time"], tz=timezone.utc).strftime(
+def predict_and_send(state: State, target_open: int):
+    """Run a prediction for the candle opening at target_open and notify."""
+    try:
+        label, result = make_prediction(target_open)
+    except Exception as exc:
+        log.error("Prediction failed: %s", exc)
+        return False
+    with state.lock:
+        state.last_result = result
+        state.last_prediction_label = label
+    log.info(
+        "Prediction for candle %s -> %s (conf=%.2f score=%+.3f)",
+        datetime.fromtimestamp(target_open, tz=timezone.utc).strftime(
             "%Y-%m-%d %H:%M UTC"
-        )
-        pattern = " ".join(
-            {1: "🟢", -1: "🔴", 0: "⚪️"}[d] for d in self.directions[-streak:]
-        )
-        flips = streak - 1  # number of color changes (تناوب)
-        minutes = max(1, GRANULARITY // 60)
-        tf = TF_LABEL or f"{minutes} دقیقه‌ای"
-        if SOURCE == "polymarket":
-            source_line = f"منبع: <b>Polymarket — BTC Up/Down</b>\n"
-            detail_line = f"آخرین نتیجه: {dir_label(self.directions[-1])}"
-        else:
-            source_line = f"نماد: <b>{PRODUCT}</b> (Binance)\n"
-            detail_line = f"قیمت بسته‌شدن: <b>${candle['close']:,.2f}</b>"
-        text = (
-            f"🚨 <b>هشدار تناوب — تایم‌فریم {tf}</b> 🚨\n\n"
-            f"<b>{flips}</b> بار تناوب (تغییر رنگ) پشت سر هم رخ داده — "
-            f"یعنی <b>{streak}</b> کندل <b>{minutes} دقیقه‌ای</b> متوالی "
-            "جهت‌شان یک‌درمیان عوض شده (سبز/قرمز).\n\n"
-            f"الگو: {pattern}\n"
-            f"{source_line}"
-            f"کندل بسته‌شده: {when}\n"
-            f"{detail_line}"
-        )
-        log.info("ALERT fired (streak=%d).", streak)
-        send_message(self.chat_id, text)
-
-    def run(self, max_runtime=None):
-        # Prime history without alerting on past data.
-        started = time.time()
-        try:
-            initial = fetch_candles()
-            if initial:
-                self.directions = [candle_direction(c) for c in initial[-20:]]
-                self.last_candle_time = initial[-1]["time"]
-                log.info(
-                    "Primed with %d candles from %s. Last pattern: %s",
-                    len(self.directions),
-                    SOURCE,
-                    " ".join(
-                        {1: "🟢", -1: "🔴", 0: "⚪️"}[d]
-                        for d in self.directions[-10:]
-                    ),
-                )
-            else:
-                log.warning(
-                    "Primed with 0 candles from %s — no closed/resolved data "
-                    "returned yet.",
-                    SOURCE,
-                )
-        except Exception as exc:
-            log.error("Initial fetch failed: %s", exc)
-
-        backoff = POLL_SECONDS
-        while True:
-            if max_runtime is not None and time.time() - started >= max_runtime:
-                log.info("Max runtime (%ss) reached; exiting cleanly.", max_runtime)
-                return
-            try:
-                candles = fetch_candles()
-                new = [c for c in candles if c["time"] > self.last_candle_time]
-                for candle in new:
-                    self.last_candle_time = candle["time"]
-                    self.process_new_candle(candle)
-                backoff = POLL_SECONDS
-            except Exception as exc:
-                log.error("Poll error: %s", exc)
-                backoff = min(backoff * 2, 300)
-            time.sleep(backoff)
+        ),
+        label,
+        result.get("confidence", 0.0),
+        result.get("score", 0.0),
+    )
+    return send_message(state.chat_id, label)
 
 
 # ---------------------------------------------------------------------------
-# Telegram command listener (auto-captures chat_id, /start, /status)
+# Scheduler loop — predicts LEAD_SECONDS before each 5-minute candle opens
 # ---------------------------------------------------------------------------
-def command_listener(monitor: Monitor):
-    """Long-poll getUpdates so users can /start the bot and grab chat_id."""
+def run_scheduler(state: State):
+    log.info(
+        "Scheduler ready | interval=%ds | lead=%ds before each candle open.",
+        GRANULARITY,
+        LEAD_SECONDS,
+    )
+    while True:
+        if not state.active:
+            time.sleep(TICK_SECONDS)
+            continue
+
+        now = time.time()
+        # The next candle that has not opened yet.
+        target_open = (int(now // GRANULARITY) + 1) * GRANULARITY
+        fire_at = target_open - LEAD_SECONDS
+
+        # Fire once we are inside the lead window and have not already
+        # predicted this particular candle.
+        with state.lock:
+            already = state.last_predicted_open == target_open
+        if not already and now >= fire_at:
+            with state.lock:
+                state.last_predicted_open = target_open
+            predict_and_send(state, target_open)
+
+        time.sleep(TICK_SECONDS)
+
+
+# ---------------------------------------------------------------------------
+# Telegram command listener (auto-captures chat_id, /start, /stop, /status)
+# ---------------------------------------------------------------------------
+START_TEXT = (
+    "✅ ربات پیش‌بینی رنگ کندل فعال شد.\n"
+    "حدود <b>۱ دقیقه قبل</b> از باز شدن هر کندل <b>۵ دقیقه‌ای</b> بیت‌کوین، "
+    "حدس می‌زنم کندل بعدی سبز 🟢 یا قرمز 🔴 بسته می‌شود و فقط ساعت + رنگ را "
+    "برایت می‌فرستم. مثال: <code>۱۲:۰۵🟢</code>\n\n"
+    "برای توقف: /stop\n"
+    "وضعیت و جزئیات تحلیل: /status\n"
+    "پیش‌بینی فوری کندل بعدی: /predict\n\n"
+    "⚠️ توجه: رنگ کندل بعدی عملاً نزدیک به شیر یا خط است؛ این فقط بهترین "
+    "حدس مبتنی بر تحلیل تکنیکال است، نه تضمین سود."
+)
+
+
+def command_listener(state: State):
+    """Long-poll getUpdates for /start, /stop, /status, /predict."""
     offset = None
     while True:
         try:
@@ -404,33 +422,50 @@ def command_listener(monitor: Monitor):
                 if not msg:
                     continue
                 chat_id = str(msg["chat"]["id"])
-                text = (msg.get("text") or "").strip()
+                text = (msg.get("text") or "").strip().lower()
 
-                if not monitor.chat_id:
-                    monitor.chat_id = chat_id
+                if not state.chat_id:
+                    state.chat_id = chat_id
                     log.info("Captured chat_id: %s", chat_id)
 
                 if text.startswith("/start"):
+                    state.chat_id = chat_id
+                    with state.lock:
+                        state.active = True
+                        state.last_predicted_open = 0  # allow immediate fire
+                    send_message(chat_id, START_TEXT)
+                    log.info("Activated by /start (chat_id=%s).", chat_id)
+
+                elif text.startswith("/stop"):
+                    with state.lock:
+                        state.active = False
                     send_message(
                         chat_id,
-                        "✅ ربات فعال شد.\n"
-                        "کندل‌های ۵ دقیقه‌ای بیت‌کوین (Binance) را ۲۴ ساعته "
-                        "بررسی می‌کنم و هنگام تناوب جهت کندل‌ها به شما خبر می‌دهم.\n"
-                        f"آستانه هشدار: {ALTERNATION_THRESHOLD} کندل متناوب.",
+                        "⏹ متوقف شد. دیگر پیش‌بینی نمی‌فرستم.\n"
+                        "برای شروع دوباره: /start",
                     )
+                    log.info("Stopped by /stop (chat_id=%s).", chat_id)
+
                 elif text.startswith("/status"):
-                    streak = monitor._alternation_streak()
-                    last = (
-                        dir_label(monitor.directions[-1])
-                        if monitor.directions
-                        else "—"
-                    )
-                    send_message(
-                        chat_id,
-                        f"📊 وضعیت:\nآخرین کندل: {last}\n"
-                        f"طول تناوب فعلی: {streak}\n"
-                        f"آستانه هشدار: {ALTERNATION_THRESHOLD}",
-                    )
+                    with state.lock:
+                        running = state.active
+                        last = state.last_prediction_label
+                        result = state.last_result
+                    state_line = "🟢 فعال" if running else "🔴 متوقف"
+                    parts = [f"📊 وضعیت ربات: {state_line}"]
+                    if last:
+                        parts.append(f"آخرین پیش‌بینی: <b>{last}</b>")
+                    if result:
+                        parts.append("\nجزئیات تحلیل آخر:\n<code>" + explain(result) + "</code>")
+                    send_message(chat_id, "\n".join(parts))
+
+                elif text.startswith("/predict"):
+                    now = time.time()
+                    target_open = (int(now // GRANULARITY) + 1) * GRANULARITY
+                    send_message(chat_id, "⏳ در حال تحلیل کندل بعدی...")
+                    ok = predict_and_send(state, target_open)
+                    if not ok:
+                        send_message(chat_id, "⚠️ دریافت داده یا ارسال ناموفق بود.")
         except requests.RequestException as exc:
             log.error("getUpdates error: %s", exc)
             time.sleep(5)
@@ -446,21 +481,22 @@ def main():
             "in your environment or .env file."
         )
 
-    monitor = Monitor(TELEGRAM_CHAT_ID)
+    state = State(TELEGRAM_CHAT_ID)
 
     listener = threading.Thread(
-        target=command_listener, args=(monitor,), daemon=True
+        target=command_listener, args=(state,), daemon=True
     )
     listener.start()
 
     log.info(
-        "Starting BTC candle alternation bot | product=%s granularity=%ds "
-        "threshold=%d",
+        "Starting BTC next-candle color predictor | product=%s interval=%s "
+        "lead=%ds tz=%s",
         PRODUCT,
-        GRANULARITY,
-        ALTERNATION_THRESHOLD,
+        INTERVAL,
+        LEAD_SECONDS,
+        DISPLAY_TZ,
     )
-    monitor.run()
+    run_scheduler(state)
 
 
 if __name__ == "__main__":
