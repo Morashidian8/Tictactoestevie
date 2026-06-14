@@ -1,0 +1,70 @@
+name: Build & Deploy PWA
+
+# Builds the installable web app (precomputes a year of alternation stats into
+# data.json, bundles the PWA shell) and publishes it to GitHub Pages.
+on:
+  workflow_dispatch:
+    inputs:
+      source:
+        description: "منبع داده"
+        type: choice
+        default: "binance"
+        options: [binance, polymarket]
+      days:
+        description: "چند روز عقب"
+        type: string
+        default: "365"
+      tz:
+        description: "منطقه زمانی"
+        type: string
+        default: "Asia/Tehran"
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 330
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -r requirements.txt
+      - name: Restore data cache
+        uses: actions/cache@v4
+        with:
+          path: .cache
+          key: btc-${{ inputs.source }}-cache-${{ github.run_id }}
+          restore-keys: btc-${{ inputs.source }}-cache-
+      - name: Build PWA
+        env:
+          ANALYSIS_SOURCE: ${{ inputs.source }}
+          ANALYSIS_DAYS: ${{ inputs.days }}
+          ANALYSIS_TZ: ${{ inputs.tz }}
+          POLY_SLEEP: "0.05"
+          PWA_OUT: site
+        run: python build_pwa.py
+      - uses: actions/configure-pages@v5
+        with:
+          enablement: true
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

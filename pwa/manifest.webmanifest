@@ -1,0 +1,15 @@
+{
+  "name": "تناوب کندل بیت‌کوین",
+  "short_name": "تناوب BTC",
+  "description": "آمار تناوب کندل ۵ دقیقه‌ای بیت‌کوین برای روزها و ساعت‌های هفته",
+  "lang": "fa",
+  "dir": "rtl",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f4f7fb",
+  "theme_color": "#0b3d66",
+  "icons": [
+    { "src": "./icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
