@@ -36,6 +36,7 @@ Both sources feed the exact same alternation analysis, reusing bot.py helpers.
 
 Usage:
     python analyze_history.py                  # Polymarket
+    python analyze_history.py --probe          # just find when the series starts
     ANALYSIS_SOURCE=binance python analyze_history.py
 
 Environment variables (all optional):
@@ -328,6 +329,103 @@ def fetch_year_polymarket(days):
     return candles
 
 
+def _poly_window_exists(ts, retries=3):
+    """True if a market exists for this window, False if not, None on error."""
+    slug = f"{POLY_SLUG_PREFIX}-{ts}"
+    for attempt in range(retries + 1):
+        try:
+            resp = requests.get(
+                GAMMA_URL,
+                params={"slug": slug},
+                timeout=15,
+                headers={"User-Agent": "btc-history-analysis/1.0"},
+            )
+            resp.raise_for_status()
+            data = resp.json()
+            return isinstance(data, list) and len(data) > 0
+        except requests.RequestException:
+            if attempt < retries:
+                time.sleep(0.5 * (attempt + 1))
+            continue
+    return None
+
+
+def probe_series_start(days, max_back_for_hi=24):
+    """
+    Binary-search the earliest existing btc-updown-5m window within `days`.
+
+    The predicate "a market exists for window ts" is monotonic in ts (false for
+    very old windows, true once the series begins), so ~log2(windows) ≈ 17
+    probes locate the start instead of walking every window.
+    """
+    now = time.time()
+    last_ended = (int(now // GRANULARITY) - 1) * GRANULARITY
+
+    # Find a recent window that definitely exists -> the high anchor.
+    hi = None
+    ts = last_ended
+    for _ in range(max_back_for_hi):
+        if _poly_window_exists(ts):
+            hi = ts
+            break
+        ts -= GRANULARITY
+    if hi is None:
+        print(
+            "نتوانستم هیچ مارکت Up/Down اخیری پیدا کنم. شبکه یا POLY_SLUG_PREFIX "
+            "را بررسی کن."
+        )
+        return None
+
+    lo = last_ended - days * 86400
+    lo -= lo % GRANULARITY
+    if lo >= hi:
+        lo = hi - GRANULARITY
+
+    if _poly_window_exists(lo):
+        when = datetime.utcfromtimestamp(lo)
+        print(
+            f"سری حداقل تا {when:%Y-%m-%d %H:%M} UTC (یعنی دست‌کم {days} روز) "
+            "عقب می‌رود — قدیمی‌تر از بازه‌ی جستجو."
+        )
+        return lo
+
+    # Invariant: exists(lo) = False, exists(hi) = True. Shrink to one window.
+    a, b = lo, hi
+    probes = 0
+    while b - a > GRANULARITY:
+        mid = a + ((b - a) // GRANULARITY // 2) * GRANULARITY
+        ex = _poly_window_exists(mid)
+        probes += 1
+        if ex is None:
+            print("خطای شبکه حین کاوش؛ بعداً دوباره امتحان کن.")
+            return None
+        if ex:
+            b = mid
+        else:
+            a = mid
+
+    start_ts = b
+    when = datetime.utcfromtimestamp(start_ts)
+    age_days = (now - start_ts) / 86400
+    windows = int((last_ended - start_ts) // GRANULARITY) + 1
+    est_minutes = windows * (POLY_SLEEP + 0.15) / 60
+    print()
+    print("=" * 60)
+    print("کاوش سری Polymarket — BTC Up/Down 5m")
+    print("=" * 60)
+    print(f"شروع سری        : {when:%Y-%m-%d %H:%M} UTC")
+    print(f"قدمت سری        : ~{age_days:.1f} روز")
+    print(f"تعداد پنجره‌ها   : ~{windows:,} مارکت ۵ دقیقه‌ای")
+    print(f"درخواست‌های کاوش: {probes + max_back_for_hi} (به‌جای ~{windows:,})")
+    print(f"تخمین زمان fetch کامل: ~{est_minutes:.0f} دقیقه (با POLY_SLEEP={POLY_SLEEP})")
+    print("=" * 60)
+    print(
+        "برای تحلیل، ANALYSIS_DAYS را روی همین قدمت یا کمتر بگذار، مثلاً:\n"
+        f"  ANALYSIS_DAYS={int(age_days) + 1} python analyze_history.py"
+    )
+    return start_ts
+
+
 def get_candles():
     if ANALYSIS_SOURCE == "polymarket":
         print(
@@ -410,6 +508,14 @@ def hour_label(h):
 
 
 def main():
+    # Probe mode: just discover when the Polymarket series begins, then exit.
+    if "--probe" in sys.argv:
+        if ANALYSIS_SOURCE != "polymarket":
+            print("--probe فقط برای منبع polymarket معنی دارد.")
+            return
+        probe_series_start(ANALYSIS_DAYS)
+        return
+
     tz, tz_name = get_tz()
     candles = get_candles()
     if not candles:
