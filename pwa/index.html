@@ -53,9 +53,23 @@
 
   <div class="controls">
     <div class="ctrl">
+      <label>صرافی</label>
+      <select id="exchange">
+        <option value="binance">Binance</option>
+        <option value="coinbase">Coinbase</option>
+      </select>
+    </div>
+    <div class="ctrl">
+      <label>تایم‌فریم</label>
+      <select id="tf">
+        <option value="5m">۵ دقیقه</option>
+        <option value="15m">۱۵ دقیقه</option>
+      </select>
+    </div>
+    <div class="ctrl">
       <label>نوع بازه</label>
       <select id="window">
-        <option value="rolling">لغزان (هر ۵ دقیقه)</option>
+        <option value="rolling">لغزان</option>
         <option value="clock">راس‌ساعت</option>
       </select>
     </div>
