@@ -57,12 +57,14 @@ function render() {
     return;
   }
   const mode = $('window').value;
-  const order = $('order').value;
   const wdSel = $('weekday').value;
   const topn = Math.max(1, parseInt($('topn').value || '2', 10));
   const noOverlap = $('nooverlap').checked;
   const showHist = $('hist').checked;
-  const highest = order === 'highest';
+  // order = "<metric>_<dir>": metric avg|max, dir low|high.
+  const order = $('order').value;
+  const byMax = order.startsWith('max');
+  const high = order.endsWith('high');
   // Window length only applies to rolling windows; clock buckets are 1 hour.
   const winLen = mode === 'rolling' ? parseInt($('winlen').value, 10) : 60;
   $('winlen').disabled = mode !== 'rolling';
@@ -82,8 +84,12 @@ function render() {
       : ds.clock[String(wd)];
     let list = (source || []).slice();
     if (!list.length) continue;
-    list.sort((a, b) => (highest ? b.avg - a.avg : a.avg - b.avg)
-      || (highest ? b.mx - a.mx : a.mx - b.mx) || a.start - b.start);
+    const keyf = byMax ? (x) => x.mx : (x) => x.avg;      // primary metric
+    const tief = byMax ? (x) => x.avg : (x) => x.mx;      // tie-breaker
+    list.sort((a, b) =>
+      (high ? keyf(b) - keyf(a) : keyf(a) - keyf(b)) ||
+      (high ? tief(b) - tief(a) : tief(a) - tief(b)) ||
+      a.start - b.start);
     const chosen = pick(list, topn, noOverlap, winLen);
 
     const card = document.createElement('div');
