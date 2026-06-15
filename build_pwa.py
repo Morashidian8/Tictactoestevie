@@ -30,9 +30,9 @@ CONFIGS = [
     ("coinbase_5m", "Coinbase", "۵ دقیقه", "coinbase", "5m", 300, "BTC-USD"),
     ("coinbase_15m", "Coinbase", "۱۵ دقیقه", "coinbase", "15m", 900, "BTC-USD"),
 ]
-# Rolling-window lengths to precompute (minutes). 120 gives 15m a useful 8
-# candles per window (max alternation 7) instead of only 4.
-WIN_LENGTHS = [60, 120]
+# Rolling-window lengths to precompute (minutes). 120/180 give 15m a useful
+# 8/12 candles per window (max alternation 7/11) instead of only 4.
+WIN_LENGTHS = [60, 120, 180]
 
 
 def pack(stats):

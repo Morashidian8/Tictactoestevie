@@ -67,9 +67,10 @@ function render() {
   const winLen = mode === 'rolling' ? parseInt($('winlen').value, 10) : 60;
   $('winlen').disabled = mode !== 'rolling';
 
+  const winLabel = { 60: '۱ ساعت', 120: '۲ ساعت', 180: '۳ ساعت' }[winLen] || `${winLen} دقیقه`;
   const m = ds.meta;
   $('meta').innerHTML =
-    `${m.exchange} • تایم‌فریم ${m.timeframe} • بازه ${winLen === 120 ? '۲ ساعت' : '۱ ساعت'} • ` +
+    `${m.exchange} • تایم‌فریم ${m.timeframe} • بازه ${winLabel} • ` +
     `${m.candles.toLocaleString('en')} کندل • ${m.oldest} تا ${m.newest} • ${DATA.meta.tz}`;
 
   const days = wdSel === 'all' ? DATA.order : [parseInt(wdSel, 10)];
