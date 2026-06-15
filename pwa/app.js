@@ -127,7 +127,17 @@ async function init() {
 }
 
 if ('serviceWorker' in navigator) {
+  // Auto-reload once when a freshly installed service worker takes control,
+  // so deploys apply without the user manually clearing the cache.
+  let refreshing = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (refreshing || !navigator.serviceWorker.controller) return;
+    refreshing = true;
+    location.reload();
+  });
   window.addEventListener('load', () =>
-    navigator.serviceWorker.register('./sw.js').catch(() => {}));
+    navigator.serviceWorker.register('./sw.js')
+      .then((reg) => reg.update())
+      .catch(() => {}));
 }
 init();

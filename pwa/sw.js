@@ -1,5 +1,5 @@
 // Simple offline-first service worker for the BTC alternation PWA.
-const CACHE = 'btc-tanavob-v3';
+const CACHE = 'btc-tanavob-v4';
 const ASSETS = [
   './',
   './index.html',
@@ -21,16 +21,17 @@ self.addEventListener('activate', (e) => {
   );
 });
 
-// Cache-first, falling back to network (and caching new responses).
+// Network-first: always try the network so a new deploy is picked up
+// immediately; fall back to cache only when offline.
 self.addEventListener('fetch', (e) => {
   if (e.request.method !== 'GET') return;
   e.respondWith(
-    caches.match(e.request).then((hit) =>
-      hit || fetch(e.request).then((res) => {
+    fetch(e.request)
+      .then((res) => {
         const copy = res.clone();
         caches.open(CACHE).then((c) => c.put(e.request, copy)).catch(() => {});
         return res;
-      }).catch(() => hit)
-    )
+      })
+      .catch(() => caches.match(e.request))
   );
 });
