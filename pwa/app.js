@@ -49,6 +49,19 @@ function histBars(hist) {
 
 function render() {
   if (!DATA) return;
+  const key = $('exchange').value + '_' + $('tf').value;
+  const ds = DATA.datasets[key];
+  const out = $('out');
+  if (!ds) {
+    $('meta').textContent = 'برای این ترکیب صرافی/تایم‌فریم داده‌ای موجود نیست.';
+    out.innerHTML = '';
+    return;
+  }
+  const m = ds.meta;
+  $('meta').innerHTML =
+    `${m.exchange} • تایم‌فریم ${m.timeframe} • ` +
+    `${m.candles.toLocaleString('en')} کندل • ${m.oldest} تا ${m.newest} • ${DATA.meta.tz}`;
+
   const mode = $('window').value;
   const order = $('order').value;
   const wdSel = $('weekday').value;
@@ -58,11 +71,10 @@ function render() {
   const highest = order === 'highest';
 
   const days = wdSel === 'all' ? DATA.order : [parseInt(wdSel, 10)];
-  const out = $('out');
   out.innerHTML = '';
 
   for (const wd of days) {
-    let list = (DATA[mode][String(wd)] || []).slice();
+    let list = (ds[mode][String(wd)] || []).slice();
     if (!list.length) continue;
     list.sort((a, b) => (highest ? b.avg - a.avg : a.avg - b.avg)
       || (highest ? b.mx - a.mx : a.mx - b.mx) || a.start - b.start);
@@ -108,13 +120,9 @@ async function init() {
     $('meta').textContent = 'خطا در بارگذاری داده.';
     return;
   }
-  const m = DATA.meta;
-  $('meta').innerHTML =
-    `منبع: ${m.source} • ${m.candles.toLocaleString('en')} کندل • ` +
-    `${m.oldest} تا ${m.newest} • ${m.tz}`;
   fillWeekdays();
-  ['window', 'order', 'weekday', 'topn', 'nooverlap', 'hist'].forEach((id) =>
-    $(id).addEventListener('input', render));
+  ['exchange', 'tf', 'window', 'order', 'weekday', 'topn', 'nooverlap', 'hist']
+    .forEach((id) => $(id).addEventListener('input', render));
   render();
 }
 

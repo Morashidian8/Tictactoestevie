@@ -1,13 +1,13 @@
 """
-Build the static PWA: precompute the full alternation statistics for every
-window (both clock-hour and rolling 5-minute-step) and every weekday over the
-past year into site/data.json, then copy the PWA shell (pwa/*) next to it.
+Build the static PWA data: precompute the full alternation statistics for every
+window (clock-hour and rolling) and every weekday over the past year, for each
+combination of exchange (Binance, Coinbase) and timeframe (5m, 15m), into
+site/data.json. Then copy the PWA shell (pwa/*) next to it.
 
-The heavy work (alternation per window across a year) is done here once; the
-installed web app only sorts/filters the precomputed numbers, so it is instant
-and works offline.
+The installed web app just sorts/filters these precomputed numbers, so it is
+instant and works offline, and lets the user switch exchange + timeframe.
 
-Run (after the data source is reachable, e.g. in CI):
+Run (where the exchanges are reachable, e.g. in CI):
     PWA_OUT=site python build_pwa.py
 """
 
@@ -16,37 +16,47 @@ import json
 import shutil
 from datetime import datetime, timezone
 
-# Sensible defaults for the published app.
-os.environ.setdefault("ANALYSIS_SOURCE", "binance")
-os.environ.setdefault("ANALYSIS_DAYS", "365")
 os.environ.setdefault("ANALYSIS_TZ", "Asia/Tehran")
-
 import analyze_history as A  # noqa: E402  (env must be set first)
 
 OUT = os.environ.get("PWA_OUT", "site").strip()
+DAYS = int(os.environ.get("ANALYSIS_DAYS", "365"))
 HERE = os.path.dirname(os.path.abspath(__file__))
+
+# (key, exchange-label, timeframe-label, source, interval, granularity, product)
+CONFIGS = [
+    ("binance_5m", "Binance", "۵ دقیقه", "binance", "5m", 300, "BTCUSDT"),
+    ("binance_15m", "Binance", "۱۵ دقیقه", "binance", "15m", 900, "BTCUSDT"),
+    ("coinbase_5m", "Coinbase", "۵ دقیقه", "coinbase", "5m", 300, "BTC-USD"),
+    ("coinbase_15m", "Coinbase", "۱۵ دقیقه", "coinbase", "15m", 900, "BTC-USD"),
+]
 
 
 def pack(stats):
-    """Compact one summarize_hour() dict for JSON."""
     return {
         "n": stats["n"],
         "avg": round(stats["avg"], 3),
-        "ap": stats["above_pct"],  # % of occurrences above the average
+        "ap": stats["above_pct"],
         "mx": stats["max"],
         "mxc": stats["max_count"],
         "hist": [[v, c] for v, c in stats["hist"]],
     }
 
 
-def main():
-    tz, tz_name = A.get_tz()
-    candles = A.get_candles()
-    if not candles:
-        raise SystemExit("No candles available — run where the source is reachable.")
+def fetch(source, interval, granularity, product):
+    if source == "coinbase":
+        return A.fetch_coinbase(granularity, DAYS, product)
+    return A.fetch_binance(interval, granularity, DAYS, product)
 
+
+def build_dataset(tz, source, interval, granularity, product, ex_label, tf_label):
+    candles = fetch(source, interval, granularity, product)
+    if not candles:
+        print(f"  ⚠️  no candles for {source} {interval}")
+        return None
+    win = max(2, round(3600 / granularity))  # 60-minute window
     clock = A.build_hour_samples(candles, tz)
-    rolling = A.build_rolling_samples(candles, tz)
+    rolling = A.build_rolling_samples(candles, tz, win=win)
 
     clock_out, rolling_out = {}, {}
     for wd in range(7):
@@ -66,33 +76,74 @@ def main():
 
     oldest = datetime.fromtimestamp(candles[0]["time"], tz=tz)
     newest = datetime.fromtimestamp(candles[-1]["time"], tz=tz)
-    data = {
+    return {
         "meta": {
-            "source": A.ANALYSIS_SOURCE,
-            "candles": len(candles),
-            "tz": tz_name,
+            "exchange": ex_label, "timeframe": tf_label, "source": source,
+            "interval": interval, "candles": len(candles),
             "oldest": oldest.strftime("%Y-%m-%d %H:%M"),
             "newest": newest.strftime("%Y-%m-%d %H:%M"),
-            "generated": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
-            "win_minutes": A.WIN_MINUTES,
         },
-        # Iranian display order, Mon=0..Sun=6 keys, with Persian names.
-        "order": A.WEEKDAY_DISPLAY_ORDER,
-        "names": {str(k): v for k, v in A.PERSIAN_WEEKDAY.items()},
         "clock": clock_out,
         "rolling": rolling_out,
     }
 
+
+def lowest_rolling(ds, wd):
+    """Return (label, avg) of the calmest rolling window for a weekday."""
+    items = ds["rolling"][str(wd)]
+    if not items:
+        return ("—", float("nan"))
+    best = min(items, key=lambda x: x["avg"])
+    return (best["label"], best["avg"])
+
+
+def main():
+    tz, tz_name = A.get_tz()
+    datasets = {}
+    for key, ex_label, tf_label, source, interval, gran, product in CONFIGS:
+        print(f"== building {key} ({ex_label} {tf_label}) ==")
+        try:
+            ds = build_dataset(tz, source, interval, gran, product, ex_label, tf_label)
+        except Exception as exc:  # one exchange failing must not kill the rest
+            print(f"  ⚠️  {key} failed: {exc}")
+            ds = None
+        if ds:
+            datasets[key] = ds
+            print(f"  {key}: {ds['meta']['candles']:,} candles")
+
+    if not datasets:
+        raise SystemExit("No datasets built.")
+
+    # Console comparison: Binance vs Coinbase, calmest rolling window per weekday.
+    for tf in ("5m", "15m"):
+        bk, ck = f"binance_{tf}", f"coinbase_{tf}"
+        if bk in datasets and ck in datasets:
+            print(f"\n--- مقایسه Binance vs Coinbase ({tf}) — آرام‌ترین بازه‌ی هر روز ---")
+            for wd in A.WEEKDAY_DISPLAY_ORDER:
+                bl, ba = lowest_rolling(datasets[bk], wd)
+                cl, ca = lowest_rolling(datasets[ck], wd)
+                print(f"{A.PERSIAN_WEEKDAY[wd]:>9}: Binance {bl}={ba:.2f}  |  "
+                      f"Coinbase {cl}={ca:.2f}  (Δmiang={abs(ba - ca):.2f})")
+
+    data = {
+        "meta": {
+            "tz": tz_name,
+            "generated": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
+            "win_minutes": A.WIN_MINUTES,
+            "days": DAYS,
+        },
+        "order": A.WEEKDAY_DISPLAY_ORDER,
+        "names": {str(k): v for k, v in A.PERSIAN_WEEKDAY.items()},
+        "datasets": datasets,
+    }
+
     os.makedirs(OUT, exist_ok=True)
-    # Copy the PWA shell (index.html, app.js, manifest, sw.js, icons).
     shell = os.path.join(HERE, "pwa")
     for name in os.listdir(shell):
         shutil.copy(os.path.join(shell, name), os.path.join(OUT, name))
     with open(os.path.join(OUT, "data.json"), "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, separators=(",", ":"))
-
-    print(f"PWA built into {OUT}/ — {len(candles):,} candles, "
-          f"{sum(len(v) for v in rolling_out.values())} rolling windows.")
+    print(f"\nPWA built into {OUT}/ with datasets: {', '.join(datasets)}")
 
 
 if __name__ == "__main__":

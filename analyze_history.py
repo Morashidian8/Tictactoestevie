@@ -125,13 +125,23 @@ def selected_weekdays():
 POLY_MAX_MISSING = int(os.environ.get("POLY_MAX_MISSING", "2016"))  # ~7 days
 POLY_SLEEP = float(os.environ.get("POLY_SLEEP", "0.1"))
 
-# Default cache file depends on the source so the two never collide.
-_default_cache = (
-    ".cache/poly_updown.csv"
-    if ANALYSIS_SOURCE == "polymarket"
-    else ".cache/klines.csv"
-)
+# Default cache file depends on the source/interval so they never collide.
+if ANALYSIS_SOURCE == "polymarket":
+    _default_cache = ".cache/poly_updown.csv"
+else:
+    _default_cache = f".cache/{ANALYSIS_SOURCE}_{INTERVAL}.csv"
 CACHE_FILE = os.environ.get("CACHE_FILE", _default_cache).strip()
+
+# Coinbase Exchange public candles host(s). No API key required.
+COINBASE_HOSTS = [
+    h.strip()
+    for h in os.environ.get(
+        "COINBASE_HOSTS",
+        "https://api.exchange.coinbase.com,https://api.pro.coinbase.com",
+    ).split(",")
+    if h.strip()
+]
+COINBASE_PRODUCT = os.environ.get("COINBASE_PRODUCT", "BTC-USD").strip()
 
 # Persian weekday names, ordered the Iranian way (week starts on Saturday).
 # Mapping is from Python's date.weekday(): Monday=0 ... Sunday=6.
@@ -232,6 +242,95 @@ def fetch_year(days):
 
     candles = [out[k] for k in sorted(out)]
     return candles
+
+
+# ---------------------------------------------------------------------------
+# Parametrized fetchers (used by the multi-exchange / multi-timeframe PWA)
+# ---------------------------------------------------------------------------
+def fetch_binance(interval, granularity, days, product="BTCUSDT"):
+    """Binance klines for any interval, oldest -> newest."""
+    now_ms = int(time.time() * 1000)
+    cur = now_ms - days * 86400 * 1000
+    step = granularity * 1000
+    out = {}
+    while cur < now_ms:
+        rows, last_err = None, None
+        for host in BINANCE_HOSTS:
+            try:
+                resp = requests.get(
+                    f"{host}/api/v3/klines",
+                    params={"symbol": product, "interval": interval,
+                            "startTime": cur, "endTime": now_ms, "limit": 1000},
+                    timeout=20, headers={"User-Agent": "btc-history-analysis/1.0"},
+                )
+                resp.raise_for_status()
+                rows = resp.json()
+                break
+            except requests.RequestException as exc:
+                last_err = exc
+        if rows is None:
+            raise last_err if last_err else RuntimeError("all Binance hosts failed")
+        if not rows:
+            break
+        for row in rows:
+            ot, ct = int(row[0]), int(row[6])
+            if ct / 1000.0 > time.time():
+                continue
+            out[ot] = {"time": ot // 1000, "open": float(row[1]),
+                       "high": float(row[2]), "low": float(row[3]),
+                       "close": float(row[4])}
+        nxt = int(rows[-1][0]) + step
+        if nxt <= cur:
+            break
+        cur = nxt
+        if len(rows) < 1000:
+            break
+        time.sleep(0.2)
+    return [out[k] for k in sorted(out)]
+
+
+def fetch_coinbase(granularity, days, product="BTC-USD"):
+    """
+    Coinbase Exchange candles, oldest -> newest. The public endpoint returns at
+    most 300 candles per request as [time, low, high, open, close, volume].
+    """
+    now = int(time.time())
+    seg_start = (now - days * 86400)
+    seg_start -= seg_start % granularity
+    span = 300 * granularity
+    out = {}
+    reqs = 0
+    while seg_start < now:
+        seg_end = min(seg_start + span, now)
+        s_iso = datetime.fromtimestamp(seg_start, tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%S")
+        e_iso = datetime.fromtimestamp(seg_end, tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%S")
+        rows, last_err = None, None
+        for host in COINBASE_HOSTS:
+            try:
+                resp = requests.get(
+                    f"{host}/products/{product}/candles",
+                    params={"granularity": granularity, "start": s_iso, "end": e_iso},
+                    timeout=20, headers={"User-Agent": "btc-history-analysis/1.0"},
+                )
+                resp.raise_for_status()
+                rows = resp.json()
+                break
+            except requests.RequestException as exc:
+                last_err = exc
+        if rows is None:
+            raise last_err if last_err else RuntimeError("all Coinbase hosts failed")
+        for row in rows:  # [time, low, high, open, close, volume]
+            t = int(row[0])
+            if t + granularity > now:
+                continue  # candle not fully closed yet
+            out[t] = {"time": t, "open": float(row[3]), "high": float(row[2]),
+                      "low": float(row[1]), "close": float(row[4])}
+        reqs += 1
+        if reqs % 25 == 0:
+            print(f"  ...coinbase {reqs} requests, {len(out)} candles so far")
+        seg_start = seg_end
+        time.sleep(0.2)
+    return [out[k] for k in sorted(out)]
 
 
 # ---------------------------------------------------------------------------
@@ -480,6 +579,20 @@ def get_candles():
             "5-minute window (slow); progress is cached and resumable."
         )
         return fetch_year_polymarket(ANALYSIS_DAYS)
+    if ANALYSIS_SOURCE == "coinbase":
+        cached = load_cache()
+        if cached:
+            newest = datetime.fromtimestamp(cached[-1]["time"], tz=timezone.utc)
+            age_h = (datetime.now(timezone.utc) - newest).total_seconds() / 3600
+            span_days = (newest - datetime.fromtimestamp(cached[0]["time"], tz=timezone.utc)).days
+            if age_h < 24 and span_days >= ANALYSIS_DAYS - 2:
+                print(f"Using cached Coinbase candles ({len(cached)} rows).")
+                return cached
+        print(f"Downloading ~{ANALYSIS_DAYS} days of {INTERVAL} Coinbase {COINBASE_PRODUCT}...")
+        candles = fetch_coinbase(GRANULARITY, ANALYSIS_DAYS, COINBASE_PRODUCT)
+        if candles:
+            save_cache(candles)
+        return candles
     return get_candles_binance()
 
 
@@ -532,7 +645,7 @@ def build_hour_samples(candles, tz):
     return samples
 
 
-def build_rolling_samples(candles, tz, win=12):
+def build_rolling_samples(candles, tz, win=None):
     """
     Returns: samples[weekday][(hour, minute)] = list of per-window flip counts.
 
@@ -545,7 +658,13 @@ def build_rolling_samples(candles, tz, win=12):
     n = len(candles)
     times = [c["time"] for c in candles]
     dirs = [candle_direction(c) for c in candles]
-    full_span = (win - 1) * GRANULARITY  # seconds between first & last open
+    # Infer the candle step (seconds) from the data so this works for any
+    # timeframe (5m, 15m, ...) regardless of the module-level GRANULARITY.
+    diffs = [times[i + 1] - times[i] for i in range(min(n - 1, 1000))]
+    step = min((d for d in diffs if d > 0), default=GRANULARITY)
+    if win is None:
+        win = max(2, round(3600 / step))  # a 60-minute window
+    full_span = (win - 1) * step  # seconds between first & last open
 
     samples = {wd: {} for wd in range(7)}
     for i in range(n - win + 1):
