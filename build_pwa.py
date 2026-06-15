@@ -30,6 +30,9 @@ CONFIGS = [
     ("coinbase_5m", "Coinbase", "۵ دقیقه", "coinbase", "5m", 300, "BTC-USD"),
     ("coinbase_15m", "Coinbase", "۱۵ دقیقه", "coinbase", "15m", 900, "BTC-USD"),
 ]
+# Rolling-window lengths to precompute (minutes). 120/180 give 15m a useful
+# 8/12 candles per window (max alternation 7/11) instead of only 4.
+WIN_LENGTHS = [60, 120, 180]
 
 
 def pack(stats):
@@ -54,11 +57,8 @@ def build_dataset(tz, source, interval, granularity, product, ex_label, tf_label
     if not candles:
         print(f"  ⚠️  no candles for {source} {interval}")
         return None
-    win = max(2, round(3600 / granularity))  # 60-minute window
     clock = A.build_hour_samples(candles, tz)
-    rolling = A.build_rolling_samples(candles, tz, win=win)
-
-    clock_out, rolling_out = {}, {}
+    clock_out = {}
     for wd in range(7):
         c = []
         for h in range(24):
@@ -68,11 +68,20 @@ def build_dataset(tz, source, interval, granularity, product, ex_label, tf_label
         c.sort(key=lambda x: x["start"])
         clock_out[str(wd)] = c
 
-        r = []
-        for (h, m), vals in rolling[wd].items():
-            r.append({"start": h * 60 + m, "label": A.window_label(h, m), **pack(A.summarize_hour(vals))})
-        r.sort(key=lambda x: x["start"])
-        rolling_out[str(wd)] = r
+    # Rolling windows for each requested length (60, 120 minutes ...).
+    rolling_out = {}
+    for wm in WIN_LENGTHS:
+        win = max(2, round(wm * 60 / granularity))  # candles per window
+        samples = A.build_rolling_samples(candles, tz, win=win)
+        per_wd = {}
+        for wd in range(7):
+            r = []
+            for (h, m), vals in samples[wd].items():
+                r.append({"start": h * 60 + m, "label": A.window_label(h, m, wm),
+                          **pack(A.summarize_hour(vals))})
+            r.sort(key=lambda x: x["start"])
+            per_wd[str(wd)] = r
+        rolling_out[str(wm)] = per_wd
 
     oldest = datetime.fromtimestamp(candles[0]["time"], tz=tz)
     newest = datetime.fromtimestamp(candles[-1]["time"], tz=tz)
@@ -88,9 +97,9 @@ def build_dataset(tz, source, interval, granularity, product, ex_label, tf_label
     }
 
 
-def lowest_rolling(ds, wd):
-    """Return (label, avg) of the calmest rolling window for a weekday."""
-    items = ds["rolling"][str(wd)]
+def lowest_rolling(ds, wd, wm):
+    """Return (label, avg) of the calmest `wm`-minute rolling window for a day."""
+    items = ds["rolling"][str(wm)][str(wd)]
     if not items:
         return ("—", float("nan"))
     best = min(items, key=lambda x: x["avg"])
@@ -115,13 +124,14 @@ def main():
         raise SystemExit("No datasets built.")
 
     # Console comparison: Binance vs Coinbase, calmest rolling window per weekday.
-    for tf in ("5m", "15m"):
+    # 5m uses 60-min windows; 15m uses the new 120-min (8-candle) windows.
+    for tf, wm in (("5m", 60), ("15m", 120)):
         bk, ck = f"binance_{tf}", f"coinbase_{tf}"
         if bk in datasets and ck in datasets:
-            print(f"\n--- مقایسه Binance vs Coinbase ({tf}) — آرام‌ترین بازه‌ی هر روز ---")
+            print(f"\n--- مقایسه Binance vs Coinbase ({tf}, بازه {wm} دقیقه) ---")
             for wd in A.WEEKDAY_DISPLAY_ORDER:
-                bl, ba = lowest_rolling(datasets[bk], wd)
-                cl, ca = lowest_rolling(datasets[ck], wd)
+                bl, ba = lowest_rolling(datasets[bk], wd, wm)
+                cl, ca = lowest_rolling(datasets[ck], wd, wm)
                 print(f"{A.PERSIAN_WEEKDAY[wd]:>9}: Binance {bl}={ba:.2f}  |  "
                       f"Coinbase {cl}={ca:.2f}  (Δmiang={abs(ba - ca):.2f})")
 
@@ -129,7 +139,7 @@ def main():
         "meta": {
             "tz": tz_name,
             "generated": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
-            "win_minutes": A.WIN_MINUTES,
+            "win_lengths": WIN_LENGTHS,
             "days": DAYS,
         },
         "order": A.WEEKDAY_DISPLAY_ORDER,

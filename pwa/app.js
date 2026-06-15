@@ -1,6 +1,5 @@
 'use strict';
 
-const WIN_MINUTES = 60;
 const DAY_MINUTES = 24 * 60;
 let DATA = null;
 
@@ -11,9 +10,9 @@ function fmtTime(min) {
   return String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0');
 }
 
-// Greedy non-overlapping pick: skip a window whose 60-min span overlaps an
-// already-chosen one (circular distance so 23:35 and 00:35 don't overlap).
-function pick(list, n, noOverlap) {
+// Greedy non-overlapping pick: skip a window whose span (winMinutes) overlaps
+// an already-chosen one (circular distance so 23:35 and 00:35 don't overlap).
+function pick(list, n, noOverlap, winMinutes) {
   const chosen = [];
   for (const item of list) {
     if (noOverlap) {
@@ -21,7 +20,7 @@ function pick(list, n, noOverlap) {
       for (const c of chosen) {
         let d = Math.abs(item.start - c.start);
         d = Math.min(d, DAY_MINUTES - d);
-        if (d < WIN_MINUTES) { clash = true; break; }
+        if (d < winMinutes) { clash = true; break; }
       }
       if (clash) continue;
     }
@@ -57,11 +56,6 @@ function render() {
     out.innerHTML = '';
     return;
   }
-  const m = ds.meta;
-  $('meta').innerHTML =
-    `${m.exchange} • تایم‌فریم ${m.timeframe} • ` +
-    `${m.candles.toLocaleString('en')} کندل • ${m.oldest} تا ${m.newest} • ${DATA.meta.tz}`;
-
   const mode = $('window').value;
   const order = $('order').value;
   const wdSel = $('weekday').value;
@@ -69,16 +63,28 @@ function render() {
   const noOverlap = $('nooverlap').checked;
   const showHist = $('hist').checked;
   const highest = order === 'highest';
+  // Window length only applies to rolling windows; clock buckets are 1 hour.
+  const winLen = mode === 'rolling' ? parseInt($('winlen').value, 10) : 60;
+  $('winlen').disabled = mode !== 'rolling';
+
+  const winLabel = { 60: '۱ ساعت', 120: '۲ ساعت', 180: '۳ ساعت' }[winLen] || `${winLen} دقیقه`;
+  const m = ds.meta;
+  $('meta').innerHTML =
+    `${m.exchange} • تایم‌فریم ${m.timeframe} • بازه ${winLabel} • ` +
+    `${m.candles.toLocaleString('en')} کندل • ${m.oldest} تا ${m.newest} • ${DATA.meta.tz}`;
 
   const days = wdSel === 'all' ? DATA.order : [parseInt(wdSel, 10)];
   out.innerHTML = '';
 
   for (const wd of days) {
-    let list = (ds[mode][String(wd)] || []).slice();
+    const source = mode === 'rolling'
+      ? (ds.rolling[String(winLen)] || {})[String(wd)]
+      : ds.clock[String(wd)];
+    let list = (source || []).slice();
     if (!list.length) continue;
     list.sort((a, b) => (highest ? b.avg - a.avg : a.avg - b.avg)
       || (highest ? b.mx - a.mx : a.mx - b.mx) || a.start - b.start);
-    const chosen = pick(list, topn, noOverlap);
+    const chosen = pick(list, topn, noOverlap, winLen);
 
     const card = document.createElement('div');
     card.className = 'day';
@@ -121,13 +127,23 @@ async function init() {
     return;
   }
   fillWeekdays();
-  ['exchange', 'tf', 'window', 'order', 'weekday', 'topn', 'nooverlap', 'hist']
+  ['exchange', 'tf', 'window', 'winlen', 'order', 'weekday', 'topn', 'nooverlap', 'hist']
     .forEach((id) => $(id).addEventListener('input', render));
   render();
 }
 
 if ('serviceWorker' in navigator) {
+  // Auto-reload once when a freshly installed service worker takes control,
+  // so deploys apply without the user manually clearing the cache.
+  let refreshing = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (refreshing || !navigator.serviceWorker.controller) return;
+    refreshing = true;
+    location.reload();
+  });
   window.addEventListener('load', () =>
-    navigator.serviceWorker.register('./sw.js').catch(() => {}));
+    navigator.serviceWorker.register('./sw.js')
+      .then((reg) => reg.update())
+      .catch(() => {}));
 }
 init();
