@@ -563,13 +563,17 @@ def summarize_hour(values):
     n = len(values)
     mn = min(values)
     mx = max(values)
+    avg = sum(values) / n
+    # Share of occurrences whose alternation is strictly above the average.
+    above = sum(1 for v in values if v > avg)
     return {
         "n": n,
-        "avg": sum(values) / n,
+        "avg": avg,
         "min": mn,
         "min_count": values.count(mn),
         "max": mx,
         "max_count": values.count(mx),
+        "above_pct": round(100 * above / n, 1),
         "hist": sorted(Counter(values).items()),  # [(value, count), ...]
     }
 
@@ -710,11 +714,10 @@ def main():
         for rank, (start_min, label, s) in enumerate(chosen, start=1):
             print(f"  {rank}) {label}  (به وقت {tz_name})")
             print(f"       • تعداد تکرار این {unit} در سال : {s['n']} بار")
-            print(
-                f"       • کم‌ترین تناوب متوالی        : {s['min']} "
-                f"(در {s['min_count']} بار از {s['n']})"
-            )
             print(f"       • میانگین تناوب در این {unit}   : {s['avg']:.2f}")
+            print(
+                f"       • احتمال تناوب بالای میانگین   : {s['above_pct']}%"
+            )
             print(
                 f"       • بیشینه تناوب در این {unit}     : {s['max']} "
                 f"(در {s['max_count']} بار از {s['n']} تکرار شده)"

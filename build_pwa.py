@@ -32,8 +32,7 @@ def pack(stats):
     return {
         "n": stats["n"],
         "avg": round(stats["avg"], 3),
-        "mn": stats["min"],
-        "mnc": stats["min_count"],
+        "ap": stats["above_pct"],  # % of occurrences above the average
         "mx": stats["max"],
         "mxc": stats["max_count"],
         "hist": [[v, c] for v, c in stats["hist"]],
