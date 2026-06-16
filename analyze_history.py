@@ -658,6 +658,22 @@ def gaps_for_threshold(runs, threshold):
     return gaps
 
 
+def next_run_stats(runs, threshold):
+    """
+    For every alternation run with length >= threshold, return two aligned
+    lists: the candle GAP until the next run, and the LENGTH (flips) of that
+    next run.
+    """
+    gaps, nexts = [], []
+    for k in range(len(runs) - 1):
+        s, e = runs[k]
+        if (e - s + 1) >= threshold:
+            ns, ne = runs[k + 1]
+            gaps.append(ns - e - 1)
+            nexts.append(ne - ns + 1)
+    return gaps, nexts
+
+
 def gap_summary(gaps, cap=21):
     """Compact stats for a list of candle-gaps (None if empty)."""
     n = len(gaps)
