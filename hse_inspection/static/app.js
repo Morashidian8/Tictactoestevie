@@ -58,7 +58,8 @@ async function init() {
   };
   $("#prevBtn").onclick = () => { saveCurrent(); if (idx > 0) { idx--; renderItem(); } };
   $("#nextBtn").onclick = onNext;
-  $("#photoInput").onchange = onPhotoSelected;
+  $("#cameraInput").onchange = onPhotoSelected;   // عکس با دوربین
+  $("#folderInput").onchange = onPhotoSelected;   // انتخاب از پوشه / گالری
 
   $("#excelBtn").onclick = () => download("/api/export/excel");
   $("#wordBtn").onclick = () => download("/api/export/word");

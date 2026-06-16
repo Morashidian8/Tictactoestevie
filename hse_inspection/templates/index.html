@@ -69,10 +69,16 @@
     </label>
 
     <div class="photo-zone">
-      <label class="upload-btn">
-        📷 افزودن عکس
-        <input id="photoInput" type="file" accept="image/*" capture="environment" multiple hidden>
-      </label>
+      <div class="upload-row">
+        <label class="upload-btn camera">
+          📷 عکس با دوربین
+          <input id="cameraInput" type="file" accept="image/*" capture="environment" multiple hidden>
+        </label>
+        <label class="upload-btn folder">
+          🖼 انتخاب از پوشه / گالری
+          <input id="folderInput" type="file" accept="image/*" multiple hidden>
+        </label>
+      </div>
       <div id="photoList" class="photo-list"></div>
       <div id="uploadStatus" class="upload-status"></div>
     </div>
