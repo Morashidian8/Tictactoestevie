@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>بازدید ایمنی و آتش‌نشانی ساختمان (HSE)</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<div class="app">
+
+  <!-- ============ صفحه شروع: اطلاعات ساختمان ============ -->
+  <section id="startScreen" class="card screen">
+    <h1>چک‌لیست بازدید ایمنی و آتش‌نشانی</h1>
+    <p class="subtitle">ساختمان اداری / تجاری — ویرایش نهایی</p>
+    <div class="grid">
+      <label>نام ساختمان / پروژه
+        <input id="b_name" type="text" placeholder="مثال: برج اداری ...">
+      </label>
+      <label>آدرس
+        <input id="b_address" type="text">
+      </label>
+      <label>تاریخ بازدید
+        <input id="b_date" type="text" placeholder="۱۴۰۵/۰۳/۲۶">
+      </label>
+      <label>بازرس HSE
+        <input id="b_inspector" type="text">
+      </label>
+      <label>کد ساختمان
+        <input id="b_code" type="text">
+      </label>
+      <label>دوره بازدید
+        <input id="b_period" type="text">
+      </label>
+    </div>
+    <div class="actions">
+      <button id="startBtn" class="btn primary">شروع بازدید ▶</button>
+      <button id="resumeBtn" class="btn ghost" style="display:none">ادامه بازدید قبلی</button>
+    </div>
+    <p class="hint">پیشرفت کار به‌صورت خودکار در همین مرورگر ذخیره می‌شود.</p>
+  </section>
+
+  <!-- ============ صفحه ویزارد ============ -->
+  <section id="wizardScreen" class="card screen" style="display:none">
+    <div class="topbar">
+      <span id="sectionTag" class="tag"></span>
+      <span id="counter" class="counter"></span>
+    </div>
+    <div class="progress"><div id="progressBar" class="progress-bar"></div></div>
+
+    <div class="item-box">
+      <div class="row-num">ردیف <span id="rowNum"></span></div>
+      <h2 id="itemText"></h2>
+      <div class="meta">
+        <span id="refTag" class="meta-tag"></span>
+        <span id="prioTag" class="meta-tag prio"></span>
+      </div>
+    </div>
+
+    <div class="status-options">
+      <button class="status-btn ok"   data-status="ok">✅ مطلوب</button>
+      <button class="status-btn warn" data-status="warn">⚠️ نیاز به بهبود</button>
+      <button class="status-btn bad"  data-status="bad">❌ نامطلوب</button>
+      <button class="status-btn na"   data-status="na">N/A کاربرد ندارد</button>
+    </div>
+
+    <label class="note-label">توضیح / شرح مغایرت (اختیاری)
+      <textarea id="noteInput" rows="3" placeholder="توضیحات ناظر در صورت نیاز..."></textarea>
+    </label>
+
+    <div class="photo-zone">
+      <label class="upload-btn">
+        📷 افزودن عکس
+        <input id="photoInput" type="file" accept="image/*" capture="environment" multiple hidden>
+      </label>
+      <div id="photoList" class="photo-list"></div>
+      <div id="uploadStatus" class="upload-status"></div>
+    </div>
+
+    <div class="actions nav">
+      <button id="prevBtn" class="btn ghost">◀ قبلی</button>
+      <button id="nextBtn" class="btn primary">بعدی ▶</button>
+    </div>
+  </section>
+
+  <!-- ============ صفحه پایان ============ -->
+  <section id="finishScreen" class="card screen" style="display:none">
+    <h1>✅ بازدید تکمیل شد</h1>
+    <div id="summaryBox" class="summary"></div>
+    <div class="actions col">
+      <button id="excelBtn" class="btn green">⬇ دانلود خروجی Excel (بدون موارد کاربرد‌ندارد)</button>
+      <button id="wordBtn" class="btn blue">⬇ دانلود گزارش تصویری Word</button>
+      <button id="backWizardBtn" class="btn ghost">بازگشت و ویرایش</button>
+      <button id="resetBtn" class="btn danger">شروع بازدید جدید (پاک‌کردن همه)</button>
+    </div>
+  </section>
+
+  <div id="toast" class="toast"></div>
+</div>
+
+<script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>
