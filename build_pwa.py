@@ -85,15 +85,27 @@ def build_dataset(tz, source, interval, granularity, product, ex_label, tf_label
 
     oldest = datetime.fromtimestamp(candles[0]["time"], tz=tz)
     newest = datetime.fromtimestamp(candles[-1]["time"], tz=tz)
+
+    # Whole-series "gap to next alternation" stats, per threshold N.
+    runs = A.alternation_runs(candles)
+    max_len = max((e - s + 1 for s, e in runs), default=0)
+    gaps_out = {}
+    for N in range(1, min(max_len, 25) + 1):
+        summ = A.gap_summary(A.gaps_for_threshold(runs, N))
+        if summ:
+            gaps_out[str(N)] = summ
+
     return {
         "meta": {
             "exchange": ex_label, "timeframe": tf_label, "source": source,
             "interval": interval, "candles": len(candles),
             "oldest": oldest.strftime("%Y-%m-%d %H:%M"),
             "newest": newest.strftime("%Y-%m-%d %H:%M"),
+            "tf_minutes": granularity // 60,
         },
         "clock": clock_out,
         "rolling": rolling_out,
+        "gaps": gaps_out,
     }
 
 

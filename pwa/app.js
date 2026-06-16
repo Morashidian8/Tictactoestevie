@@ -112,6 +112,52 @@ function render() {
     });
     out.appendChild(card);
   }
+  renderGap();
+}
+
+function renderGap() {
+  if (!DATA) return;
+  const key = $('exchange').value + '_' + $('tf').value;
+  const ds = DATA.datasets[key];
+  const box = $('gapOut');
+  box.innerHTML = '';
+  if (!ds || !ds.gaps) { box.textContent = 'داده‌ای نیست.'; return; }
+  const N = Math.max(1, parseInt($('gapN').value || '6', 10));
+  const s = ds.gaps[String(N)];
+  if (!s) {
+    box.innerHTML = `<div class="gapbig">هیچ تناوبِ ≥ ${N} در کل سال رخ نداده.</div>`;
+    return;
+  }
+  const tfMin = ds.meta.tf_minutes || 5;
+  const big = document.createElement('div');
+  big.className = 'gapbig';
+  big.innerHTML =
+    `بعد از تناوبِ ≥ <b>${N}</b>، معمولاً <b>${s.avg}</b> کندل ` +
+    `(~${Math.round(s.avg * tfMin)} دقیقه) تا تناوب بعدی فاصله بوده.`;
+  box.appendChild(big);
+
+  const info = document.createElement('div');
+  info.innerHTML =
+    `<div class="row"><span>تعداد رخداد در سال</span><b>${s.n} بار</b></div>` +
+    `<div class="row"><span>میانه‌ی فاصله</span><b>${s.med} کندل</b></div>` +
+    `<div class="row"><span>کم‌ترین / بیش‌ترین فاصله</span><b>${s.min} / ${s.max} کندل</b></div>`;
+  box.appendChild(info);
+
+  // Distribution of gaps (last bucket = "21+").
+  const max = Math.max(...s.hist.map((p) => p[1]), 1);
+  const wrap = document.createElement('div');
+  wrap.className = 'hist';
+  for (const [g, c] of s.hist) {
+    const bar = document.createElement('div');
+    bar.className = 'bar';
+    const label = g >= 21 ? '۲۱+' : String(g);
+    bar.innerHTML =
+      `<span class="k">${label}</span>` +
+      `<span class="b" style="width:${Math.round((c / max) * 120) + 2}px"></span>` +
+      `<span class="c">${c}</span>`;
+    wrap.appendChild(bar);
+  }
+  box.appendChild(wrap);
 }
 
 function fillWeekdays() {
@@ -135,6 +181,7 @@ async function init() {
   fillWeekdays();
   ['exchange', 'tf', 'window', 'winlen', 'order', 'weekday', 'topn', 'nooverlap', 'hist']
     .forEach((id) => $(id).addEventListener('input', render));
+  $('gapN').addEventListener('input', renderGap);
   render();
 }
 

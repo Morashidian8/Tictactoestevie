@@ -620,6 +620,62 @@ def longest_alt_flips(directions):
 
 
 # ---------------------------------------------------------------------------
+# Whole-series alternation runs and the gap to the next run
+# ---------------------------------------------------------------------------
+def alternation_runs(candles):
+    """
+    Return a list of (start_flip, end_flip) flip-index spans for every maximal
+    strictly-alternating run across the whole candle series. A run of flips
+    i..j means candles i-1..j alternate; its length (in flips) is j-i+1.
+    """
+    dirs = [candle_direction(c) for c in candles]
+    n = len(dirs)
+    runs = []
+    i = 1
+    while i < n:
+        if dirs[i] != 0 and dirs[i - 1] != 0 and dirs[i] == -dirs[i - 1]:
+            j = i
+            while (j + 1 < n and dirs[j] != 0 and dirs[j + 1] != 0
+                   and dirs[j + 1] == -dirs[j]):
+                j += 1
+            runs.append((i, j))
+            i = j + 1
+        else:
+            i += 1
+    return runs
+
+
+def gaps_for_threshold(runs, threshold):
+    """
+    For every alternation run whose length (flips) >= threshold, the number of
+    non-alternating candles until the NEXT alternation run begins.
+    """
+    gaps = []
+    for k in range(len(runs) - 1):
+        s, e = runs[k]
+        if (e - s + 1) >= threshold:
+            gaps.append(runs[k + 1][0] - e - 1)
+    return gaps
+
+
+def gap_summary(gaps, cap=21):
+    """Compact stats for a list of candle-gaps (None if empty)."""
+    n = len(gaps)
+    if n == 0:
+        return None
+    s = sorted(gaps)
+    hist = Counter(min(g, cap) for g in gaps)  # `cap` means "cap or more"
+    return {
+        "n": n,
+        "avg": round(sum(gaps) / n, 2),
+        "med": s[n // 2],
+        "min": s[0],
+        "max": s[-1],
+        "hist": [[k, hist[k]] for k in sorted(hist)],
+    }
+
+
+# ---------------------------------------------------------------------------
 # Build per (weekday, hour) samples and summarize
 # ---------------------------------------------------------------------------
 def build_hour_samples(candles, tz):
