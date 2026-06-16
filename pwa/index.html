@@ -41,6 +41,13 @@
     .bar .k { width:14px; text-align:center; color:#666; }
     .bar .b { height:12px; background:#3a7bd5; border-radius:3px; min-width:2px; }
     .bar .c { color:#666; }
+    .gap { margin:4px 14px 8px; background:#fff; border:1px solid var(--line);
+           border-radius:12px; padding:12px 14px; }
+    .gap h2 { margin:0 0 6px; font-size:15px; color:var(--blue); }
+    .gaphelp { font-size:12px; color:#666; margin:0 0 10px; line-height:1.7; }
+    .gapctrl { max-width:220px; }
+    .gapbig { font-size:15px; margin:8px 0; }
+    .gapbig b { color:var(--blue); font-size:20px; }
     .hint { font-size:12px; color:#777; padding:0 14px 24px; line-height:1.8; }
     .star { color:#b8860b; }
   </style>
@@ -105,6 +112,17 @@
   </div>
 
   <main id="out"></main>
+
+  <section class="gap">
+    <h2>📏 فاصله تا تناوب بعدی</h2>
+    <p class="gaphelp">بعد از هر تناوبِ بزرگ‌تر-مساویِ آستانه، معمولاً چند کندل طول می‌کشد تا تناوبِ بعدی شروع شود؟ (روی همان صرافی و تایم‌فریم بالا)</p>
+    <div class="ctrl gapctrl">
+      <label>آستانه‌ی تناوب (≥)</label>
+      <input type="number" id="gapN" value="6" min="1" max="25">
+    </div>
+    <div id="gapOut"></div>
+  </section>
+
   <div class="hint">
     «تناوب» = طول بلندترین رشته‌ی یک‌درمیون شدن رنگ (سبز/قرمز) داخل هر بازه‌ی ۶۰ دقیقه‌ای،
     برحسب تعداد تغییر رنگ. مقدار ۰ یعنی بازه تک‌رنگ بوده. مرتب‌سازی بر اساس «میانگین» است.
