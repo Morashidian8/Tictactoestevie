@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#1f4e78">
+  <title>بازدید ایمنی و آتش‌نشانی ساختمان (آفلاین)</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="app">
+
+  <!-- ============ صفحه شروع ============ -->
+  <section id="startScreen" class="card screen">
+    <h1>چک‌لیست بازدید ایمنی و آتش‌نشانی</h1>
+    <p class="subtitle">ساختمان اداری / تجاری — نسخه آفلاین (PWA)</p>
+    <div class="grid">
+      <label>نام ساختمان / پروژه <input id="b_name" type="text"></label>
+      <label>آدرس <input id="b_address" type="text"></label>
+      <label>تاریخ بازدید <input id="b_date" type="text" placeholder="۱۴۰۵/۰۳/۲۶"></label>
+      <label>بازرس HSE <input id="b_inspector" type="text"></label>
+      <label>کد ساختمان <input id="b_code" type="text"></label>
+      <label>دوره بازدید <input id="b_period" type="text"></label>
+    </div>
+    <div class="actions">
+      <button id="startBtn" class="btn primary">شروع بازدید ▶</button>
+      <button id="resumeBtn" class="btn ghost" style="display:none">ادامه بازدید قبلی</button>
+    </div>
+    <p class="hint">همه اطلاعات و عکس‌ها روی همین دستگاه ذخیره می‌شود و کاملاً آفلاین کار می‌کند.</p>
+    <p id="installHint" class="hint" style="display:none">
+      💡 برای نصب روی گوشی: منوی مرورگر ← «افزودن به صفحه اصلی».
+    </p>
+  </section>
+
+  <!-- ============ ویزارد ============ -->
+  <section id="wizardScreen" class="card screen" style="display:none">
+    <div class="topbar">
+      <span id="sectionTag" class="tag"></span>
+      <span id="counter" class="counter"></span>
+    </div>
+    <div class="progress"><div id="progressBar" class="progress-bar"></div></div>
+
+    <div class="item-box">
+      <div class="row-num">ردیف <span id="rowNum"></span></div>
+      <h2 id="itemText"></h2>
+      <div class="meta">
+        <span id="refTag" class="meta-tag"></span>
+        <span id="prioTag" class="meta-tag prio"></span>
+      </div>
+    </div>
+
+    <div class="status-options">
+      <button class="status-btn ok"   data-status="ok">✅ مطلوب</button>
+      <button class="status-btn warn" data-status="warn">⚠️ نیاز به بهبود</button>
+      <button class="status-btn bad"  data-status="bad">❌ نامطلوب</button>
+      <button class="status-btn na"   data-status="na">N/A کاربرد ندارد</button>
+    </div>
+
+    <label class="note-label">توضیح / شرح مغایرت (اختیاری)
+      <textarea id="noteInput" rows="3" placeholder="توضیحات ناظر در صورت نیاز..."></textarea>
+    </label>
+
+    <div class="photo-zone">
+      <div class="upload-row">
+        <label class="upload-btn camera">📷 عکس با دوربین
+          <input id="cameraInput" type="file" accept="image/*" capture="environment" multiple hidden>
+        </label>
+        <label class="upload-btn folder">🖼 انتخاب از پوشه / گالری
+          <input id="folderInput" type="file" accept="image/*" multiple hidden>
+        </label>
+      </div>
+      <div id="photoList" class="photo-list"></div>
+    </div>
+
+    <div class="actions nav">
+      <button id="prevBtn" class="btn ghost">◀ قبلی</button>
+      <button id="nextBtn" class="btn primary">بعدی ▶</button>
+    </div>
+  </section>
+
+  <!-- ============ پایان ============ -->
+  <section id="finishScreen" class="card screen" style="display:none">
+    <h1>✅ بازدید تکمیل شد</h1>
+    <div id="summaryBox" class="summary"></div>
+    <div class="actions col">
+      <button id="excelBtn" class="btn green">⬇ دانلود خروجی Excel (بدون موارد کاربرد‌ندارد)</button>
+      <button id="wordBtn" class="btn blue">⬇ دانلود گزارش تصویری Word</button>
+      <button id="backWizardBtn" class="btn ghost">بازگشت و ویرایش</button>
+      <button id="resetBtn" class="btn danger">شروع بازدید جدید (پاک‌کردن همه)</button>
+    </div>
+  </section>
+
+  <div id="toast" class="toast"></div>
+</div>
+
+<script src="vendor/exceljs.min.js"></script>
+<script src="vendor/docx.umd.js"></script>
+<script src="vendor/FileSaver.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
