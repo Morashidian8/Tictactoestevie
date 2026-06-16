@@ -115,6 +115,23 @@ function render() {
   renderGap();
 }
 
+function distBars(hist, unit) {
+  const max = Math.max(...hist.map((p) => p[1]), 1);
+  const wrap = document.createElement('div');
+  wrap.className = 'hist';
+  for (const [v, c] of hist) {
+    const bar = document.createElement('div');
+    bar.className = 'bar';
+    const label = v >= 21 ? '۲۱+' : String(v);
+    bar.innerHTML =
+      `<span class="k">${label}</span>` +
+      `<span class="b" style="width:${Math.round((c / max) * 120) + 2}px"></span>` +
+      `<span class="c">${c}${unit ? ' ' + unit : ''}</span>`;
+    wrap.appendChild(bar);
+  }
+  return wrap;
+}
+
 function renderGap() {
   if (!DATA) return;
   const key = $('exchange').value + '_' + $('tf').value;
@@ -123,41 +140,45 @@ function renderGap() {
   box.innerHTML = '';
   if (!ds || !ds.gaps) { box.textContent = 'داده‌ای نیست.'; return; }
   const N = Math.max(1, parseInt($('gapN').value || '6', 10));
-  const s = ds.gaps[String(N)];
-  if (!s) {
+  const e = ds.gaps[String(N)];
+  if (!e) {
     box.innerHTML = `<div class="gapbig">هیچ تناوبِ ≥ ${N} در کل سال رخ نداده.</div>`;
     return;
   }
+  const g = e.gap, nx = e.next;
   const tfMin = ds.meta.tf_minutes || 5;
+
   const big = document.createElement('div');
   big.className = 'gapbig';
   big.innerHTML =
-    `بعد از تناوبِ ≥ <b>${N}</b>، معمولاً <b>${s.avg}</b> کندل ` +
-    `(~${Math.round(s.avg * tfMin)} دقیقه) تا تناوب بعدی فاصله بوده.`;
+    `بعد از تناوبِ ≥ <b>${N}</b> (که <b>${g.n}</b> بار رخ داده): معمولاً ` +
+    `<b>${g.avg}</b> کندل (~${Math.round(g.avg * tfMin)} دقیقه) فاصله، و تناوب بعدی ` +
+    `معمولاً <b>${nx.avg}</b> تایی بوده.`;
   box.appendChild(big);
 
-  const info = document.createElement('div');
-  info.innerHTML =
-    `<div class="row"><span>تعداد رخداد در سال</span><b>${s.n} بار</b></div>` +
-    `<div class="row"><span>میانه‌ی فاصله</span><b>${s.med} کندل</b></div>` +
-    `<div class="row"><span>کم‌ترین / بیش‌ترین فاصله</span><b>${s.min} / ${s.max} کندل</b></div>`;
-  box.appendChild(info);
+  // --- Gap to next alternation ---
+  const gh = document.createElement('div');
+  gh.className = 'gsub';
+  gh.textContent = '⏱ فاصله تا تناوب بعدی (کندل)';
+  box.appendChild(gh);
+  const gi = document.createElement('div');
+  gi.innerHTML =
+    `<div class="row"><span>میانگین / میانه</span><b>${g.avg} / ${g.med} کندل</b></div>` +
+    `<div class="row"><span>کم‌ترین / بیش‌ترین</span><b>${g.min} / ${g.max} کندل</b></div>`;
+  box.appendChild(gi);
+  box.appendChild(distBars(g.hist));
 
-  // Distribution of gaps (last bucket = "21+").
-  const max = Math.max(...s.hist.map((p) => p[1]), 1);
-  const wrap = document.createElement('div');
-  wrap.className = 'hist';
-  for (const [g, c] of s.hist) {
-    const bar = document.createElement('div');
-    bar.className = 'bar';
-    const label = g >= 21 ? '۲۱+' : String(g);
-    bar.innerHTML =
-      `<span class="k">${label}</span>` +
-      `<span class="b" style="width:${Math.round((c / max) * 120) + 2}px"></span>` +
-      `<span class="c">${c}</span>`;
-    wrap.appendChild(bar);
-  }
-  box.appendChild(wrap);
+  // --- Length of the next alternation ---
+  const nh = document.createElement('div');
+  nh.className = 'gsub';
+  nh.textContent = '🔁 طول تناوب بعدی';
+  box.appendChild(nh);
+  const ni = document.createElement('div');
+  ni.innerHTML =
+    `<div class="row"><span>میانگین / میانه</span><b>${nx.avg} / ${nx.med}</b></div>` +
+    `<div class="row"><span>کم‌ترین / بیش‌ترین</span><b>${nx.min} / ${nx.max}</b></div>`;
+  box.appendChild(ni);
+  box.appendChild(distBars(nx.hist));
 }
 
 function fillWeekdays() {
