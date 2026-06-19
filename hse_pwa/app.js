@@ -1,11 +1,14 @@
 // ====== HSE Inspection — Offline PWA ======
 let CHECKLIST = null, ITEMS = [], idx = 0;
 const STORE_KEY = "hse_pwa_v1";
-let state = { building: {}, answers: {} };   // answers[row] = {status, note, photoIds:[]}
+const HISTORY_KEY = "hse_pwa_history";
+let state = { building: {}, answers: {} };
 const objURLs = {};
+let isDownloading = false;
+let currentInspectionData = null;
 
 const $ = (s) => document.querySelector(s);
-const screens = ["startScreen", "wizardScreen", "finishScreen"];
+const screens = ["startScreen", "wizardScreen", "finishScreen", "historyScreen"];
 function show(id){ screens.forEach(s=>$("#"+s).style.display = s===id?"block":"none"); scrollTo(0,0); }
 function toast(m, ms=2600){ const t=$("#toast"); t.textContent=m; t.classList.add("show");
   clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove("show"),ms); }
@@ -102,6 +105,43 @@ async function delPhoto(id){ const d=await db(); return new Promise((res)=>{ con
 function persist(){ localStorage.setItem(STORE_KEY, JSON.stringify(state)); }
 function loadLocal(){ try{ const r=localStorage.getItem(STORE_KEY); if(r) return JSON.parse(r);}catch(e){} return null; }
 
+// تاریخچه و آرشیو
+function getHistory(){ try{ const h=localStorage.getItem(HISTORY_KEY); return h ? JSON.parse(h) : []; }catch(e){ return []; } }
+function saveHistory(item){ const h=getHistory(); h.unshift({...item, timestamp: new Date().toLocaleString('fa-IR')}); if(h.length>3) h.pop(); localStorage.setItem(HISTORY_KEY, JSON.stringify(h)); }
+function clearHistory(){ localStorage.removeItem(HISTORY_KEY); }
+function showHistory(){
+  const h=getHistory();
+  const list=$("#historyList");
+  list.innerHTML="";
+  if(h.length===0){ list.innerHTML="<p style='text-align:center;color:#999'>هنوز گزارشی ذخیره نشده</p>"; show("historyScreen"); return; }
+  h.forEach((item,i)=>{
+    const div=document.createElement("div");
+    div.style.cssText="background:#f8fafc;border:1px solid #e5e7eb;border-radius:12px;padding:12px;";
+    const name=item.building?.name || "بدون نام";
+    const pct=item.stats?.pct || 0;
+    div.innerHTML=`
+      <div style="font-weight:bold;color:#1f4e78;">${name}</div>
+      <div style="font-size:0.9rem;color:#666;margin:4px 0;">📅 ${item.timestamp}</div>
+      <div style="font-size:0.9rem;color:#666;margin:4px 0;">📊 ایمنی: ${toFa(pct)}٪</div>
+      <div style="display:flex;gap:8px;margin-top:8px;">
+        <button class="btn primary" style="flex:1;padding:8px;font-size:0.9rem;" onclick="exportFromHistory(${i},'Excel')">📥 Excel</button>
+        <button class="btn blue" style="flex:1;padding:8px;font-size:0.9rem;" onclick="exportFromHistory(${i},'Word')">📥 Word</button>
+      </div>
+    `;
+    list.appendChild(div);
+  });
+  show("historyScreen");
+}
+async function exportFromHistory(index, format){
+  const h=getHistory();
+  if(index<0 || index>=h.length) return;
+  const item=h[index];
+  // بازسازی state برای خروجی
+  state = { building: item.building||{}, answers: item.answers||{} };
+  if(format==="Excel") await exportExcel();
+  else if(format==="Word") await exportWord();
+}
+
 // =================== راه‌اندازی ===================
 async function init(){
   CHECKLIST = await (await fetch("checklist_data.json")).json();
@@ -118,6 +158,8 @@ async function init(){
   $("#b_date_btn") && ($("#b_date_btn").onclick=()=>openCal(dateEl));
 
   $("#startBtn").onclick=()=>{ readBuilding(); idx=0; show("wizardScreen"); renderItem(); };
+  $("#historyBtn").onclick=showHistory;
+  $("#backFromHistory").onclick=()=>show("startScreen");
   $("#prevBtn").onclick=()=>{ saveCurrent(); if(idx>0){idx--; renderItem();} };
   $("#nextBtn").onclick=onNext;
   $("#cameraInput").onchange=onPhotoSelected;
@@ -141,8 +183,19 @@ async function init(){
 
 // اجرای امن خروجی‌ها با نمایش خطا روی صفحه
 async function guard(fn,label){
-  try{ await fn(); }
-  catch(e){ console.error(e); toast(`خطا در ساخت ${label}: ${e.message||e}`, 6000); alert(`خطا در ساخت ${label}:\n${e.message||e}`); }
+  if(isDownloading){ toast("لطفاً منتظر بمانید..."); return; }
+  isDownloading = true;
+  try{
+    await fn();
+  }
+  catch(e){
+    console.error(e);
+    toast(`خطا در ساخت ${label}: ${e.message||e}`, 6000);
+    alert(`خطا در ساخت ${label}:\n${e.message||e}`);
+  }
+  finally{
+    isDownloading = false;
+  }
 }
 
 function readBuilding(){ state.building={ name:$("#b_name").value, address:$("#b_address").value,
@@ -200,6 +253,8 @@ function showFinish(){ persist(); let ok=0,warn=0,bad=0,na=0,sum=0,max=0;
     if(a.status==="ok"){ok++;sum+=3;max+=3;} else if(a.status==="warn"){warn++;sum+=1;max+=3;}
     else if(a.status==="bad"){bad++;max+=3;} else if(a.status==="na"){na++;} });
   const answered=ok+warn+bad+na, pct=max?Math.round(sum/max*1000)/10:0, [lvl,,col]=safety(pct);
+  currentInspectionData = { building: state.building, answers: state.answers, stats: {ok,warn,bad,na,pct,lvl} };
+  saveHistory(currentInspectionData);
   $("#summaryBox").innerHTML=`
     <div>تعداد آیتم پاسخ‌داده‌شده: <b>${toFa(answered)}</b> از ${toFa(ITEMS.length)}</div>
     <div>✅ مطلوب: <b>${toFa(ok)}</b> &nbsp; ⚠️ نیاز به بهبود: <b>${toFa(warn)}</b>
@@ -214,9 +269,17 @@ function collectRows(){ const rows=[]; for(const it of ITEMS){ const a=state.ans
 // دانلود مقاوم برای موبایل
 function downloadBlob(blob, name){
   if(window.saveAs){ try{ window.saveAs(blob, name); return; }catch(e){} }
-  const url=URL.createObjectURL(blob); const a=document.createElement("a");
-  a.href=url; a.download=name; a.rel="noopener"; document.body.appendChild(a); a.click();
-  setTimeout(()=>{ a.remove(); URL.revokeObjectURL(url); }, 1500);
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement("a");
+  a.href=url;
+  a.download=name;
+  a.rel="noopener";
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(()=>{
+    a.remove();
+    URL.revokeObjectURL(url);
+  }, 100);
 }
 
 // =================== خروجی Excel ===================
@@ -285,7 +348,7 @@ async function exportWord(){
     rows:[
       new D.TableRow({children:[...kv("نام ساختمان / پروژه",b.name), ...kv("تاریخ بازدید",b.date)]}),
       new D.TableRow({children:[...kv("آدرس",b.address), ...kv("بازرس HSE",b.inspector)]}),
-      new D.TableRow({children:[...kv("کد ساختمان",b.code), ...kv("دوره بازدید",b.period)]}),
+      new D.TableRow({children:[...kv("نام ساختمان / اداره",b.name), ...kv("دوره بازدید",b.period)]}),
     ] });
 
   // ---- آمار خلاصه ----
@@ -318,8 +381,8 @@ async function exportWord(){
       const sc={bad:C.red,warn:C.amber,ok:C.green}[r.status]||C.gray;
       for(const id of r.photoIds){
         const blob=await getPhoto(id); if(!blob) continue;
-        const buf=await blob.arrayBuffer(); const dim=await imgSize(blob);
-        const w=250, h=Math.max(120, Math.round(w*((dim.h/dim.w)||0.66)));
+        const buf=await blob.arrayBuffer();
+        const w=220, h=220;
         const capRuns=[ R(`تصویر ${toFa(n)} — ردیف ${toFa(r.row)} `,{bold:true,size:20,color:C.blue}),
           R(`(${r.sym} ${r.label})`,{bold:true,size:20,color:sc}) ];
         const cellKids=[
