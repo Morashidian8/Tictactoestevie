@@ -174,13 +174,16 @@ textarea{resize:vertical}
 
   <!-- ============ انتخاب دسته‌بندی ============ -->
   <section id="categoryScreen" class="card screen" style="display:none">
-    <h1>انتخاب دسته‌بندی</h1>
-    <p class="subtitle" id="categorySubtitle">دسته‌بندی‌هایی را که می‌خواهید تکمیل کنید انتخاب کنید</p>
+    <h1>دسته‌بندی‌ها</h1>
+    <p class="subtitle">هر دسته را انتخاب و تکمیل کنید. برای دریافت گزارش، باید همهٔ دسته‌بندی‌ها تکمیل شوند.</p>
 
-    <div id="categoryList" style="max-height:400px;overflow-y:auto"></div>
+    <div class="progress"><div id="catProgressBar" class="progress-bar"></div></div>
+    <p id="catProgressText" class="counter" style="text-align:center;margin-bottom:14px"></p>
+
+    <div id="categoryList" style="max-height:420px;overflow-y:auto"></div>
 
     <div class="actions col" style="margin-top:20px">
-      <button id="proceedCategoryBtn" class="btn primary">ادامه ▶</button>
+      <button id="finishAllBtn" class="btn green">پایان و دریافت گزارش ✓</button>
       <button id="backToCategoryMode" class="btn ghost">◀ بازگشت</button>
     </div>
   </section>
@@ -20432,6 +20435,7 @@ let currentInspectionData = null;
 let completionMode = "sequential"; // "sequential" یا "category"
 let selectedCategories = []; // دسته‌بندی‌های انتخاب‌شده
 let filteredItems = []; // ردیف‌های فیلتر‌شده بر اساس mode
+let currentCategory = null; // دسته‌بندی فعلی در حال تکمیل
 
 const $ = (s) => document.querySelector(s);
 const screens = ["startScreen", "modeScreen", "categoryScreen", "wizardScreen", "finishScreen", "historyScreen"];
@@ -20569,43 +20573,62 @@ async function exportFromHistory(index, format){
 }
 
 // =================== انتخاب دسته‌بندی ===================
+// شمارش ردیف‌های پاسخ‌داده‌شدهٔ یک دسته
+function categoryProgress(section){
+  const items = ITEMS.filter(it => it.section === section);
+  const done = items.filter(it => state.answers[it.row] && state.answers[it.row].status).length;
+  return { total: items.length, done, complete: items.length > 0 && done === items.length };
+}
+// آیا همهٔ ردیف‌های همهٔ دسته‌بندی‌ها پاسخ داده شده‌اند؟
+function allItemsComplete(){
+  return ITEMS.every(it => state.answers[it.row] && state.answers[it.row].status);
+}
+
 function showCategorySelection(){
   const list = $("#categoryList");
   list.innerHTML = "";
 
-  // ایجاد checkbox برای هر دسته‌بندی
+  let completedCats = 0;
   CHECKLIST.sections.forEach((section) => {
+    const p = categoryProgress(section);
+    if(p.complete) completedCats++;
+
     const div = document.createElement("div");
-    div.style.cssText = "background:#f8fafc;border:1px solid #e5e7eb;border-radius:10px;padding:12px;margin-bottom:10px;cursor:pointer;transition:0.15s;";
+    div.style.cssText = "background:#f8fafc;border:1.5px solid #e5e7eb;border-radius:10px;padding:14px;margin-bottom:10px;cursor:pointer;transition:0.15s;display:flex;align-items:center;gap:12px;";
+    if(p.complete){ div.style.background = "#d1fae5"; div.style.borderColor = "#2e8b57"; }
+    else if(p.done > 0){ div.style.background = "#fef3c7"; div.style.borderColor = "#bf8f00"; }
 
-    const isSelected = selectedCategories.includes(section);
-    const itemCount = ITEMS.filter(item => item.section === section).length;
-
-    if(isSelected) div.style.background = "#d1fae5";
-
+    const icon = p.complete ? "✅" : (p.done > 0 ? "🔵" : "⚪");
     div.innerHTML = `
-      <div style="display:flex;align-items:center;gap:10px;">
-        <input type="checkbox" ${isSelected ? 'checked' : ''} style="width:20px;height:20px;cursor:pointer;">
-        <div style="flex:1;">
-          <div style="font-weight:bold;color:#1f4e78;">${section}</div>
-          <div style="font-size:0.85rem;color:#666;">تعداد: ${itemCount} سؤال</div>
-        </div>
+      <div style="font-size:1.4rem;">${icon}</div>
+      <div style="flex:1;">
+        <div style="font-weight:bold;color:#1f4e78;">${section}</div>
+        <div style="font-size:0.85rem;color:#666;">${toFa(p.done)} از ${toFa(p.total)} تکمیل شد</div>
       </div>
+      <div style="color:#2e75b6;font-weight:bold;font-size:0.9rem;">${p.complete ? "ویرایش" : "ورود ◀"}</div>
     `;
-
-    const cb = div.querySelector("input[type=checkbox]");
-    cb.onchange = (e) => {
-      if(e.target.checked){
-        if(!selectedCategories.includes(section)) selectedCategories.push(section);
-        div.style.background = "#d1fae5";
-      } else {
-        selectedCategories = selectedCategories.filter(s => s !== section);
-        div.style.background = "#f8fafc";
-      }
+    div.onclick = () => {
+      currentCategory = section;
+      filteredItems = ITEMS.filter(it => it.section === section);
+      idx = 0;
+      show("wizardScreen");
+      renderItem();
     };
-
     list.appendChild(div);
   });
+
+  // نوار پیشرفت کلی
+  const totalCats = CHECKLIST.sections.length;
+  const pct = totalCats ? Math.round(completedCats / totalCats * 100) : 0;
+  $("#catProgressBar").style.width = pct + "%";
+  $("#catProgressText").textContent = `${toFa(completedCats)} از ${toFa(totalCats)} دسته‌بندی تکمیل شد`;
+
+  // فعال/غیرفعال کردن دکمهٔ پایان
+  const finishBtn = $("#finishAllBtn");
+  const ready = completedCats === totalCats;
+  finishBtn.disabled = !ready;
+  finishBtn.style.opacity = ready ? "1" : "0.5";
+  finishBtn.style.cursor = ready ? "pointer" : "not-allowed";
 
   show("categoryScreen");
 }
@@ -22002,24 +22025,29 @@ async function init(){
   $("#backToStart").onclick=()=>show("startScreen");
   $("#backToCategoryMode").onclick=()=>show("modeScreen");
 
-  // categoryScreen: ادامه دسته‌بندی‌های انتخاب‌شده
-  $("#proceedCategoryBtn").onclick=()=>{
-    if(selectedCategories.length === 0){ toast("حداقل یک دسته‌بندی را انتخاب کنید"); return; }
-    filteredItems = ITEMS.filter(item => selectedCategories.includes(item.section));
-    idx = 0;
-    show("wizardScreen");
-    renderItem();
+  // categoryScreen: پایان و دریافت گزارش — فقط وقتی همهٔ دسته‌بندی‌ها تکمیل شده‌اند
+  $("#finishAllBtn").onclick=()=>{
+    if(!allItemsComplete()){
+      toast("لطفاً ابتدا همهٔ دسته‌بندی‌ها را تکمیل کنید");
+      return;
+    }
+    filteredItems = [...ITEMS]; // گزارش روی همهٔ ردیف‌ها
+    showFinish();
   };
 
   $("#historyBtn").onclick=showHistory;
   $("#backFromHistory").onclick=()=>show("startScreen");
-  $("#prevBtn").onclick=()=>{ saveCurrent(); if(idx>0){idx--; renderItem();} };
+  $("#prevBtn").onclick=()=>{ saveCurrent();
+    if(idx>0){ idx--; renderItem(); }
+    else if(completionMode === "category"){ showCategorySelection(); } };
   $("#nextBtn").onclick=onNext;
   $("#cameraInput").onchange=onPhotoSelected;
   $("#folderInput").onchange=onPhotoSelected;
   $("#excelBtn").onclick=()=>guard(exportExcel,"Excel");
   $("#wordBtn").onclick=()=>guard(exportWord,"Word");
-  $("#backWizardBtn").onclick=()=>{ idx=filteredItems.length-1; show("wizardScreen"); renderItem(); };
+  $("#backWizardBtn").onclick=()=>{
+    if(completionMode === "category"){ showCategorySelection(); return; }
+    idx=filteredItems.length-1; show("wizardScreen"); renderItem(); };
   $("#resetBtn").onclick=async()=>{ if(confirm("همه اطلاعات این بازدید پاک شود؟")){
     localStorage.removeItem(STORE_KEY); const d=await db(); d.transaction("photos","readwrite").objectStore("photos").clear();
     state={building:{},answers:{}}; location.reload(); } };
@@ -22067,23 +22095,37 @@ function renderItem(){
   $("#prioTag").textContent=it.priority?"اولویت: "+it.priority:""; $("#prioTag").style.display=it.priority?"inline-block":"none";
   document.querySelectorAll(".status-btn").forEach(b=>b.classList.toggle("selected", a.status===b.dataset.status));
   $("#noteInput").value=a.note||""; renderPhotos();
-  $("#nextBtn").textContent = idx===filteredItems.length-1 ? "پایان و گزارش ✓" : "بعدی ▶";
-  $("#prevBtn").style.visibility = idx===0 ? "hidden":"visible";
+  const isLast = idx===filteredItems.length-1;
+  if(isLast){
+    $("#nextBtn").textContent = completionMode === "category" ? "تکمیل این دسته ✓" : "پایان و گزارش ✓";
+  } else {
+    $("#nextBtn").textContent = "بعدی ▶";
+  }
+  // در حالت دسته‌بندی، ردیف اول دکمهٔ برگشت به لیست دسته‌بندی‌ها را نشان می‌دهد
+  if(idx===0 && completionMode === "category"){
+    $("#prevBtn").style.visibility = "visible";
+    $("#prevBtn").textContent = "◀ دسته‌بندی‌ها";
+  } else {
+    $("#prevBtn").style.visibility = idx===0 ? "hidden":"visible";
+    $("#prevBtn").textContent = "◀ قبلی";
+  }
 }
 function saveCurrent(){ const row=filteredItems[idx].row; state.answers[row]=state.answers[row]||{photoIds:[]};
   state.answers[row].note=$("#noteInput").value; persist(); }
 function onNext(){ const row=filteredItems[idx].row, a=state.answers[row];
   if(!a||!a.status){ toast("لطفاً وضعیت این ردیف را انتخاب کنید"); return; }
   saveCurrent();
-  // بررسی اینکه تمام ردیف‌های دسته‌بندی انتخاب‌شده پاسخ داده شده‌اند
-  if(completionMode === "category"){
-    const unanswered = filteredItems.filter(item => !state.answers[item.row] || !state.answers[item.row].status);
-    if(unanswered.length > 0 && idx === filteredItems.length - 1){
-      toast("لطفاً تمام ردیف‌های دسته‌بندی انتخاب‌شده را تکمیل کنید");
+  if(idx === filteredItems.length - 1){
+    // آخرین ردیف این بخش
+    if(completionMode === "category"){
+      // این دسته تمام شد — برگرد به لیست دسته‌بندی‌ها (خروجی فقط پس از تکمیل همه)
+      toast("این دسته‌بندی تکمیل شد ✓");
+      showCategorySelection();
       return;
     }
+    showFinish();
+    return;
   }
-  if(idx===filteredItems.length-1){ showFinish(); return; }
   idx++; renderItem();
 }
 
