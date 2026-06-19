@@ -18,23 +18,51 @@
     <h1>چک‌لیست بازدید ایمنی و آتش‌نشانی</h1>
     <p class="subtitle">ساختمان اداری / تجاری — نسخه آفلاین (PWA)</p>
     <div class="grid">
-      <label>نام ساختمان / پروژه <input id="b_name" type="text"></label>
+      <label>نام ساختمان / اداره <input id="b_name" type="text"></label>
       <label>آدرس <input id="b_address" type="text"></label>
       <label>تاریخ بازدید
         <input id="b_date" type="text" readonly placeholder="انتخاب از تقویم">
       </label>
       <label>بازرس HSE <input id="b_inspector" type="text"></label>
-      <label>کد ساختمان <input id="b_code" type="text"></label>
       <label>دوره بازدید <input id="b_period" type="text"></label>
     </div>
     <div class="actions">
       <button id="startBtn" class="btn primary">شروع بازدید ▶</button>
-      <button id="resumeBtn" class="btn ghost" style="display:none">ادامه بازدید قبلی</button>
+      <button id="historyBtn" class="btn ghost">📋 تاریخچه گزارش‌ها</button>
     </div>
     <p class="hint">همه اطلاعات و عکس‌ها روی همین دستگاه ذخیره می‌شود و کاملاً آفلاین کار می‌کند.</p>
     <p id="installHint" class="hint" style="display:none">
       💡 برای نصب روی گوشی: منوی مرورگر ← «افزودن به صفحه اصلی».
     </p>
+  </section>
+
+  <!-- ============ انتخاب نوع تکمیل ============ -->
+  <section id="modeScreen" class="card screen" style="display:none">
+    <h1>نوع تکمیل بازدید</h1>
+    <p class="subtitle">چگونه می‌خواهید فرم را تکمیل کنید؟</p>
+
+    <div style="margin:24px 0">
+      <button id="modeSequential" class="btn primary" style="width:100%;padding:16px;margin-bottom:12px;text-align:center;font-size:1.1rem">
+        📋 ردیف‌به‌ردیف<br><small style="font-size:0.9rem;opacity:0.9">تمام سؤالات یکی‌یکی</small>
+      </button>
+      <button id="modeCategory" class="btn primary" style="width:100%;padding:16px;text-align:center;font-size:1.1rem">
+        🏷️ بر اساس دسته‌بندی<br><small style="font-size:0.9rem;opacity:0.9">دسته‌بندی‌ها را انتخاب کنید</small>
+      </button>
+    </div>
+    <button id="backToStart" class="btn ghost" style="width:100%;margin-top:12px">◀ بازگشت</button>
+  </section>
+
+  <!-- ============ انتخاب دسته‌بندی ============ -->
+  <section id="categoryScreen" class="card screen" style="display:none">
+    <h1>انتخاب دسته‌بندی</h1>
+    <p class="subtitle" id="categorySubtitle">دسته‌بندی‌هایی را که می‌خواهید تکمیل کنید انتخاب کنید</p>
+
+    <div id="categoryList" style="max-height:400px;overflow-y:auto"></div>
+
+    <div class="actions col" style="margin-top:20px">
+      <button id="proceedCategoryBtn" class="btn primary">ادامه ▶</button>
+      <button id="backToCategoryMode" class="btn ghost">◀ بازگشت</button>
+    </div>
   </section>
 
   <!-- ============ ویزارد ============ -->
@@ -81,6 +109,14 @@
       <button id="prevBtn" class="btn ghost">◀ قبلی</button>
       <button id="nextBtn" class="btn primary">بعدی ▶</button>
     </div>
+  </section>
+
+  <!-- ============ تاریخچه گزارش‌ها ============ -->
+  <section id="historyScreen" class="card screen" style="display:none">
+    <h1>📋 تاریخچه گزارش‌ها</h1>
+    <p class="subtitle">آخرین ۳ گزارش تکمیل‌شده</p>
+    <div id="historyList" style="max-height:500px;overflow-y:auto;margin:20px 0"></div>
+    <button id="backFromHistory" class="btn ghost" style="width:100%;margin-top:12px">◀ بازگشت</button>
   </section>
 
   <!-- ============ پایان ============ -->

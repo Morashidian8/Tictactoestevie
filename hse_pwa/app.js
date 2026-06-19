@@ -7,8 +7,13 @@ const objURLs = {};
 let isDownloading = false;
 let currentInspectionData = null;
 
+// Mode selection variables
+let completionMode = "sequential"; // "sequential" یا "category"
+let selectedCategories = []; // دسته‌بندی‌های انتخاب‌شده
+let filteredItems = []; // ردیف‌های فیلتر‌شده بر اساس mode
+
 const $ = (s) => document.querySelector(s);
-const screens = ["startScreen", "wizardScreen", "finishScreen", "historyScreen"];
+const screens = ["startScreen", "modeScreen", "categoryScreen", "wizardScreen", "finishScreen", "historyScreen"];
 function show(id){ screens.forEach(s=>$("#"+s).style.display = s===id?"block":"none"); scrollTo(0,0); }
 function toast(m, ms=2600){ const t=$("#toast"); t.textContent=m; t.classList.add("show");
   clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove("show"),ms); }
@@ -142,10 +147,53 @@ async function exportFromHistory(index, format){
   else if(format==="Word") await exportWord();
 }
 
+// =================== انتخاب دسته‌بندی ===================
+function showCategorySelection(){
+  const list = $("#categoryList");
+  list.innerHTML = "";
+
+  // ایجاد checkbox برای هر دسته‌بندی
+  CHECKLIST.sections.forEach((section, idx) => {
+    const div = document.createElement("div");
+    div.style.cssText = "background:#f8fafc;border:1px solid #e5e7eb;border-radius:10px;padding:12px;margin-bottom:10px;cursor:pointer;transition:0.15s;";
+
+    const isSelected = selectedCategories.includes(section);
+    const itemCount = ITEMS.filter(item => item.section === section).length;
+
+    if(isSelected) div.style.background = "#d1fae5";
+
+    div.innerHTML = `
+      <div style="display:flex;align-items:center;gap:10px;">
+        <input type="checkbox" ${isSelected ? 'checked' : ''} style="width:20px;height:20px;cursor:pointer;">
+        <div style="flex:1;">
+          <div style="font-weight:bold;color:#1f4e78;">${section}</div>
+          <div style="font-size:0.85rem;color:#666;">تعداد: ${itemCount} سؤال</div>
+        </div>
+      </div>
+    `;
+
+    const cb = div.querySelector("input[type=checkbox]");
+    cb.onchange = (e) => {
+      if(e.target.checked){
+        if(!selectedCategories.includes(section)) selectedCategories.push(section);
+        div.style.background = "#d1fae5";
+      } else {
+        selectedCategories = selectedCategories.filter(s => s !== section);
+        div.style.background = "#f8fafc";
+      }
+    };
+
+    list.appendChild(div);
+  });
+
+  show("categoryScreen");
+}
+
 // =================== راه‌اندازی ===================
 async function init(){
   CHECKLIST = await (await fetch("checklist_data.json")).json();
   ITEMS = CHECKLIST.items;
+  filteredItems = [...ITEMS]; // شروع با تمام ردیف‌ها
 
   const saved = loadLocal();
   if(saved && saved.answers && Object.keys(saved.answers).length){
@@ -157,7 +205,43 @@ async function init(){
   dateEl.addEventListener("click",()=>openCal(dateEl));
   $("#b_date_btn") && ($("#b_date_btn").onclick=()=>openCal(dateEl));
 
-  $("#startBtn").onclick=()=>{ readBuilding(); idx=0; show("wizardScreen"); renderItem(); };
+  // startBtn: validation و رفتن به صفحه‌ی انتخاب mode
+  $("#startBtn").onclick=()=>{
+    if(!$("#b_name").value.trim()){ toast("لطفاً نام ساختمان را وارد کنید"); return; }
+    if(!$("#b_date").value){ toast("لطفاً تاریخ را انتخاب کنید"); return; }
+    readBuilding();
+    idx = 0;
+    show("modeScreen");
+  };
+
+  // modeScreen: دکمه‌های انتخاب mode
+  $("#modeSequential").onclick=()=>{
+    completionMode = "sequential";
+    selectedCategories = [];
+    filteredItems = [...ITEMS];
+    idx = 0;
+    show("wizardScreen");
+    renderItem();
+  };
+
+  $("#modeCategory").onclick=()=>{
+    completionMode = "category";
+    selectedCategories = [];
+    showCategorySelection();
+  };
+
+  $("#backToStart").onclick=()=>show("startScreen");
+  $("#backToCategoryMode").onclick=()=>show("modeScreen");
+
+  // categoryScreen: ادامه دسته‌بندی‌های انتخاب‌شده
+  $("#proceedCategoryBtn").onclick=()=>{
+    if(selectedCategories.length === 0){ toast("حداقل یک دسته‌بندی را انتخاب کنید"); return; }
+    filteredItems = ITEMS.filter(item => selectedCategories.includes(item.section));
+    idx = 0;
+    show("wizardScreen");
+    renderItem();
+  };
+
   $("#historyBtn").onclick=showHistory;
   $("#backFromHistory").onclick=()=>show("startScreen");
   $("#prevBtn").onclick=()=>{ saveCurrent(); if(idx>0){idx--; renderItem();} };
@@ -166,14 +250,14 @@ async function init(){
   $("#folderInput").onchange=onPhotoSelected;
   $("#excelBtn").onclick=()=>guard(exportExcel,"Excel");
   $("#wordBtn").onclick=()=>guard(exportWord,"Word");
-  $("#backWizardBtn").onclick=()=>{ idx=ITEMS.length-1; show("wizardScreen"); renderItem(); };
+  $("#backWizardBtn").onclick=()=>{ idx=filteredItems.length-1; show("wizardScreen"); renderItem(); };
   $("#resetBtn").onclick=async()=>{ if(confirm("همه اطلاعات این بازدید پاک شود؟")){
     localStorage.removeItem(STORE_KEY); const d=await db(); d.transaction("photos","readwrite").objectStore("photos").clear();
     state={building:{},answers:{}}; location.reload(); } };
 
   document.querySelectorAll(".status-btn").forEach(b=>{
     b.onclick=()=>{ document.querySelectorAll(".status-btn").forEach(x=>x.classList.remove("selected"));
-      b.classList.add("selected"); const row=ITEMS[idx].row;
+      b.classList.add("selected"); const row=filteredItems[idx].row;
       state.answers[row]=state.answers[row]||{photoIds:[]}; state.answers[row].status=b.dataset.status; persist(); };
   });
 
@@ -199,32 +283,43 @@ async function guard(fn,label){
 }
 
 function readBuilding(){ state.building={ name:$("#b_name").value, address:$("#b_address").value,
-  date:$("#b_date").value, inspector:$("#b_inspector").value, code:$("#b_code").value, period:$("#b_period").value }; persist(); }
+  date:$("#b_date").value, inspector:$("#b_inspector").value, period:$("#b_period").value }; persist(); }
 function fillBuilding(){ const b=state.building||{}; $("#b_name").value=b.name||""; $("#b_address").value=b.address||"";
-  $("#b_date").value=b.date||""; $("#b_inspector").value=b.inspector||""; $("#b_code").value=b.code||""; $("#b_period").value=b.period||""; }
+  $("#b_date").value=b.date||""; $("#b_inspector").value=b.inspector||""; $("#b_period").value=b.period||""; }
 function firstUnanswered(){ for(let i=0;i<ITEMS.length;i++) if(!(state.answers[ITEMS[i].row]&&state.answers[ITEMS[i].row].status)) return i; return 0; }
 
 function renderItem(){
-  const it=ITEMS[idx], a=state.answers[it.row]||{photoIds:[]};
+  const it=filteredItems[idx], a=state.answers[it.row]||{photoIds:[]};
   $("#sectionTag").textContent=it.section;
-  $("#counter").textContent=`${toFa(idx+1)} / ${toFa(ITEMS.length)}`;
-  $("#progressBar").style.width=((idx+1)/ITEMS.length*100)+"%";
+  $("#counter").textContent=`${toFa(idx+1)} / ${toFa(filteredItems.length)}`;
+  $("#progressBar").style.width=((idx+1)/filteredItems.length*100)+"%";
   $("#rowNum").textContent=toFa(it.row); $("#itemText").textContent=it.item;
   $("#refTag").textContent=it.ref?"مرجع: "+it.ref:""; $("#refTag").style.display=it.ref?"inline-block":"none";
   $("#prioTag").textContent=it.priority?"اولویت: "+it.priority:""; $("#prioTag").style.display=it.priority?"inline-block":"none";
   document.querySelectorAll(".status-btn").forEach(b=>b.classList.toggle("selected", a.status===b.dataset.status));
   $("#noteInput").value=a.note||""; renderPhotos();
-  $("#nextBtn").textContent = idx===ITEMS.length-1 ? "پایان و گزارش ✓" : "بعدی ▶";
+  $("#nextBtn").textContent = idx===filteredItems.length-1 ? "پایان و گزارش ✓" : "بعدی ▶";
   $("#prevBtn").style.visibility = idx===0 ? "hidden":"visible";
 }
-function saveCurrent(){ const row=ITEMS[idx].row; state.answers[row]=state.answers[row]||{photoIds:[]};
+function saveCurrent(){ const row=filteredItems[idx].row; state.answers[row]=state.answers[row]||{photoIds:[]};
   state.answers[row].note=$("#noteInput").value; persist(); }
-function onNext(){ const row=ITEMS[idx].row, a=state.answers[row];
+function onNext(){ const row=filteredItems[idx].row, a=state.answers[row];
   if(!a||!a.status){ toast("لطفاً وضعیت این ردیف را انتخاب کنید"); return; }
-  saveCurrent(); if(idx===ITEMS.length-1){ showFinish(); return; } idx++; renderItem(); }
+  saveCurrent();
+  // بررسی اینکه تمام ردیف‌های دسته‌بندی انتخاب‌شده پاسخ داده شده‌اند
+  if(completionMode === "category"){
+    const unanswered = filteredItems.filter(item => !state.answers[item.row] || !state.answers[item.row].status);
+    if(unanswered.length > 0 && idx === filteredItems.length - 1){
+      toast("لطفاً تمام ردیف‌های دسته‌بندی انتخاب‌شده را تکمیل کنید");
+      return;
+    }
+  }
+  if(idx===filteredItems.length-1){ showFinish(); return; }
+  idx++; renderItem();
+}
 
 async function renderPhotos(){
-  const a=state.answers[ITEMS[idx].row]||{photoIds:[]}; const list=$("#photoList"); list.innerHTML="";
+  const a=state.answers[filteredItems[idx].row]||{photoIds:[]}; const list=$("#photoList"); list.innerHTML="";
   for(let i=0;i<(a.photoIds||[]).length;i++){ const id=a.photoIds[i]; let url=objURLs[id];
     if(!url){ const blob=await getPhoto(id); if(blob){ url=URL.createObjectURL(blob); objURLs[id]=url; } }
     const div=document.createElement("div"); div.className="photo-thumb";
@@ -234,7 +329,7 @@ async function renderPhotos(){
     list.appendChild(div); }
 }
 async function onPhotoSelected(e){ const files=[...e.target.files]; e.target.value=""; if(!files.length) return;
-  const row=ITEMS[idx].row; state.answers[row]=state.answers[row]||{photoIds:[]}; state.answers[row].photoIds=state.answers[row].photoIds||[];
+  const row=filteredItems[idx].row; state.answers[row]=state.answers[row]||{photoIds:[]}; state.answers[row].photoIds=state.answers[row].photoIds||[];
   for(const f of files){ const id="p_"+Date.now()+"_"+Math.random().toString(36).slice(2,8);
     const blob=await downscale(f); await putPhoto(id, blob); state.answers[row].photoIds.push(id); }
   persist(); renderPhotos(); }
@@ -248,21 +343,31 @@ const STATUS={ ok:{label:"مطلوب",sym:"✅",score:3}, warn:{label:"نیاز 
   bad:{label:"نامطلوب",sym:"❌",score:0}, na:{label:"کاربرد ندارد",sym:"N/A",score:null} };
 function safety(p){ if(p>=85)return["ایمن – قابل قبول","C6EFCE","#d1fae5"]; if(p>=70)return["متوسط – نیاز به توجه","FFEB9C","#fef3c7"];
   if(p>=50)return["ضعیف – اقدام فوری","FCD5B4","#fed7aa"]; return["بحرانی – مداخله اضطراری","FFC7CE","#fee2e2"]; }
-function showFinish(){ persist(); let ok=0,warn=0,bad=0,na=0,sum=0,max=0;
-  ITEMS.forEach(it=>{ const a=state.answers[it.row]; if(!a||!a.status) return;
+function showFinish(){
+  persist();
+
+  // بررسی کامل بودن تمام ردیف‌های انتخاب‌شده (filteredItems)
+  const unanswered = filteredItems.filter(item => !state.answers[item.row] || !state.answers[item.row].status);
+  if(unanswered.length > 0){
+    toast("لطفاً تمام ردیف‌های انتخاب‌شده را تکمیل کنید");
+    return;
+  }
+
+  let ok=0,warn=0,bad=0,na=0,sum=0,max=0;
+  filteredItems.forEach(it=>{ const a=state.answers[it.row]; if(!a||!a.status) return;
     if(a.status==="ok"){ok++;sum+=3;max+=3;} else if(a.status==="warn"){warn++;sum+=1;max+=3;}
     else if(a.status==="bad"){bad++;max+=3;} else if(a.status==="na"){na++;} });
   const answered=ok+warn+bad+na, pct=max?Math.round(sum/max*1000)/10:0, [lvl,,col]=safety(pct);
   currentInspectionData = { building: state.building, answers: state.answers, stats: {ok,warn,bad,na,pct,lvl} };
   saveHistory(currentInspectionData);
   $("#summaryBox").innerHTML=`
-    <div>تعداد آیتم پاسخ‌داده‌شده: <b>${toFa(answered)}</b> از ${toFa(ITEMS.length)}</div>
+    <div>تعداد آیتم پاسخ‌داده‌شده: <b>${toFa(answered)}</b> از ${toFa(filteredItems.length)}</div>
     <div>✅ مطلوب: <b>${toFa(ok)}</b> &nbsp; ⚠️ نیاز به بهبود: <b>${toFa(warn)}</b>
          &nbsp; ❌ نامطلوب: <b>${toFa(bad)}</b> &nbsp; N/A: <b>${toFa(na)}</b></div>
     <div>درصد ایمنی: <span class="pill" style="background:${col}">${toFa(pct)}٪</span> سطح: <b>${lvl}</b></div>`;
   show("finishScreen");
 }
-function collectRows(){ const rows=[]; for(const it of ITEMS){ const a=state.answers[it.row]; if(!a||!a.status) continue;
+function collectRows(){ const rows=[]; for(const it of filteredItems){ const a=state.answers[it.row]; if(!a||!a.status) continue;
   const sm=STATUS[a.status]; rows.push({ row:it.row, section:it.section, item:it.item, ref:it.ref||"", priority:it.priority||"",
     status:a.status, label:sm.label, sym:sm.sym, score:sm.score, note:(a.note||"").trim(), photoIds:a.photoIds||[] }); } return rows; }
 
