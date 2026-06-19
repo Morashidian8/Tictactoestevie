@@ -95,3 +95,26 @@ textarea{resize:vertical}
   transition:.3s;z-index:50;box-shadow:0 8px 24px rgba(0,0,0,.4)
 }
 .toast.show{transform:translateX(-50%) translateY(0)}
+
+/* ---- تقویم شمسی ---- */
+.jcal{position:absolute;z-index:100;background:#fff;border:1px solid #cbd5e1;border-radius:14px;
+  box-shadow:0 14px 40px rgba(0,0,0,.3);padding:12px;width:300px;font-family:inherit}
+.jcal-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px}
+.jcal-title{display:flex;gap:6px}
+.jcal-title select{font-family:inherit;font-size:.95rem;padding:6px 8px;border:1px solid #d1d5db;border-radius:8px;background:#f8fafc;font-weight:bold}
+.jcal-nav{width:36px;height:36px;border:none;border-radius:9px;background:#eef2f7;color:#1f4e78;font-size:1.2rem;font-weight:bold;cursor:pointer}
+.jcal-nav:active{transform:scale(.94)}
+.jcal-week{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:6px}
+.jcal-week span{text-align:center;font-size:.78rem;font-weight:bold;color:#64748b}
+.jcal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.jcal-grid .jcal-empty{height:36px}
+.jcal-day{height:36px;border:none;border-radius:9px;background:#f1f5f9;color:#0f172a;font-family:inherit;
+  font-size:.95rem;cursor:pointer;font-weight:bold}
+.jcal-day:hover{background:#dbeafe}
+.jcal-day.today{outline:2px solid #2e75b6}
+.jcal-day.sel{background:#1f4e78;color:#fff}
+.jcal-foot{display:flex;gap:8px;margin-top:10px}
+.jcal-foot button{flex:1;padding:9px;border:none;border-radius:10px;font-family:inherit;font-weight:bold;cursor:pointer}
+.jcal-today{background:#2e8b57;color:#fff}
+.jcal-close{background:#eef2f7;color:#374151}
+#b_date{cursor:pointer;background:#f9fafb}
