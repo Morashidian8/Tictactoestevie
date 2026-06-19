@@ -52,6 +52,8 @@ jobs:
           POLY_SLEEP: "0.05"
           PWA_OUT: site
         run: python build_pwa.py
+      - name: Bundle HSE inspection app under /hse/
+        run: cp -r hse_pwa site/hse
       - uses: actions/configure-pages@v5
         with:
           enablement: true
