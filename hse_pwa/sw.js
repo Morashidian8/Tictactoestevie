@@ -1,5 +1,5 @@
 // Service Worker — کش کامل برای کارکرد آفلاین
-const CACHE = "hse-pwa-v1";
+const CACHE = "hse-pwa-v2";
 const ASSETS = [
   "./",
   "./index.html",
