@@ -4,7 +4,6 @@ const STORE_KEY = "hse_pwa_v1";
 const HISTORY_KEY = "hse_pwa_history";
 let state = { building: {}, answers: {} };
 const objURLs = {};
-let isDownloading = false;
 let currentInspectionData = null;
 
 // Mode selection variables
@@ -272,8 +271,8 @@ async function init(){
   $("#nextBtn").onclick=onNext;
   $("#cameraInput").onchange=onPhotoSelected;
   $("#folderInput").onchange=onPhotoSelected;
-  $("#excelBtn").onclick=()=>guard(exportExcel,"Excel");
-  $("#wordBtn").onclick=()=>guard(exportWord,"Word");
+  $("#excelBtn").onclick=()=>guard(exportExcel,"Excel",$("#excelBtn"));
+  $("#wordBtn").onclick=()=>guard(exportWord,"Word",$("#wordBtn"));
   $("#backWizardBtn").onclick=()=>{
     if(completionMode === "category"){ showCategorySelection(); return; }
     idx=filteredItems.length-1; show("wizardScreen"); renderItem(); };
@@ -292,9 +291,16 @@ async function init(){
 }
 
 // اجرای امن خروجی‌ها با نمایش خطا روی صفحه
-async function guard(fn,label){
-  if(isDownloading){ toast("لطفاً منتظر بمانید..."); return; }
-  isDownloading = true;
+// نکته: هر دکمه فقط در حین کار خودش غیرفعال می‌شود (نه قفل سراسری)
+// تا اگر یکی به مشکل خورد، دکمهٔ دیگر هرگز قفل نشود.
+async function guard(fn,label,btn){
+  if(btn){
+    if(btn.disabled) return;          // جلوگیری از کلیک دوباره روی همین دکمه
+    btn.disabled = true; btn.style.opacity = "0.6"; btn.style.cursor = "wait";
+  }
+  // fallback: اگر به هر دلیلی عملیات تمام نشد، دکمه پس از ۳۰ ثانیه آزاد می‌شود
+  const release = ()=>{ if(btn){ btn.disabled=false; btn.style.opacity="1"; btn.style.cursor="pointer"; } };
+  const safety = setTimeout(release, 30000);
   try{
     await fn();
   }
@@ -304,7 +310,8 @@ async function guard(fn,label){
     alert(`خطا در ساخت ${label}:\n${e.message||e}`);
   }
   finally{
-    isDownloading = false;
+    clearTimeout(safety);
+    release();
   }
 }
 
