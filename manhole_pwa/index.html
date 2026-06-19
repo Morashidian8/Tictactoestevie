@@ -1,0 +1,1862 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#1F4E79">
+<link rel="apple-touch-icon" href="data:image/png;base64,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">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="ورود به منهول">
+<title>ارزیابی ورود به منهول</title>
+
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body {
+    font-family: -apple-system, "Segoe UI", Tahoma, Arial, sans-serif;
+    margin: 0; padding: 0;
+    background: #f0f2f5;
+    color: #1a1a1a;
+    line-height: 1.7;
+  }
+  header {
+    background: linear-gradient(135deg, #1F4E79, #2E75B6);
+    color: #fff;
+    padding: 18px 16px;
+    text-align: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  }
+  header h1 { margin: 0; font-size: 19px; }
+  header p { margin: 4px 0 0; font-size: 12px; opacity: 0.85; }
+  .hdr-logo {
+    width: 56px; height: 56px; object-fit: contain;
+    background: #fff; border-radius: 12px; padding: 5px;
+    margin-bottom: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+  }
+  .container { max-width: 520px; margin: 0 auto; padding: 16px; }
+  .card {
+    background: #fff;
+    border-radius: 14px;
+    padding: 16px;
+    margin-bottom: 14px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+  }
+  .field { margin-bottom: 16px; }
+  .field:last-child { margin-bottom: 0; }
+  label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 6px;
+    font-size: 15px;
+  }
+  label .unit { font-weight: 400; color: #666; font-size: 13px; }
+  input[type="number"] {
+    width: 100%;
+    padding: 13px 14px;
+    font-size: 17px;
+    border: 2px solid #d0d7de;
+    border-radius: 10px;
+    text-align: center;
+    direction: ltr;
+    background: #fafbfc;
+    transition: border-color 0.15s;
+  }
+  input[type="number"]:focus {
+    outline: none;
+    border-color: #2E75B6;
+    background: #fff;
+  }
+  .btn {
+    width: 100%;
+    padding: 16px;
+    font-size: 18px;
+    font-weight: 700;
+    color: #fff;
+    background: #1F4E79;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    margin-top: 4px;
+    transition: background 0.15s;
+  }
+  .btn:active { background: #163a5c; }
+  .btn-reset {
+    background: #e8eaed;
+    color: #444;
+    margin-top: 10px;
+    font-size: 15px;
+    padding: 12px;
+  }
+  #result { display: none; margin-top: 4px; }
+  .result-box {
+    border-radius: 14px;
+    padding: 20px 16px;
+    text-align: center;
+    color: #fff;
+    margin-bottom: 12px;
+  }
+  .result-box .icon { font-size: 44px; display: block; margin-bottom: 8px; }
+  .result-box .verdict { font-size: 21px; font-weight: 800; }
+  .result-box .sub { font-size: 14px; opacity: 0.95; margin-top: 6px; }
+  .r-green { background: linear-gradient(135deg,#1e8e3e,#34a853); }
+  .r-orange{ background: linear-gradient(135deg,#e37400,#fb8c00); }
+  .r-red   { background: linear-gradient(135deg,#c5221f,#ea4335); }
+  .reasons {
+    background: #fff;
+    border-radius: 12px;
+    padding: 14px 16px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+  }
+  .reasons h3 { margin: 0 0 10px; font-size: 15px; color: #444; }
+  .reasons .row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid #eee;
+    font-size: 14px;
+  }
+  .reasons .row:last-child { border-bottom: none; }
+  .tag { padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 700; }
+  .tag-ok { background: #e6f4ea; color: #1e8e3e; }
+  .tag-warn { background: #fef0e0; color: #e37400; }
+  .tag-bad { background: #fce8e6; color: #c5221f; }
+  .gas-val { direction: ltr; color: #666; font-size: 13px; }
+  .note { font-size: 11px; color: #999; text-align: center; padding: 8px 16px 24px; }
+  .err { color: #c5221f; font-size: 13px; text-align:center; margin-top:8px; display:none; }
+
+  /* دکمه همبرگری در هدر */
+  .menu-btn {
+    position: absolute; top: 14px; right: 14px;
+    background: rgba(255,255,255,0.18); border: none; color: #fff;
+    width: 42px; height: 42px; border-radius: 10px;
+    font-size: 22px; cursor: pointer; line-height: 1;
+  }
+  .menu-btn:active { background: rgba(255,255,255,0.32); }
+  header { position: relative; }
+
+  /* منوی کشویی (drawer) */
+  .drawer-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.45);
+    opacity: 0; visibility: hidden; transition: 0.25s; z-index: 40;
+  }
+  .drawer-overlay.open { opacity: 1; visibility: visible; }
+  .drawer {
+    position: fixed; top: 0; right: 0; height: 100%;
+    width: 78%; max-width: 300px; background: #fff;
+    box-shadow: -4px 0 18px rgba(0,0,0,0.2);
+    transform: translateX(100%); transition: transform 0.25s ease;
+    z-index: 50; display: flex; flex-direction: column;
+  }
+  .drawer.open { transform: translateX(0); }
+  .drawer-head {
+    display: flex; align-items: center; justify-content: space-between;
+    background: linear-gradient(135deg, #1F4E79, #2E75B6); color: #fff;
+    padding: 18px 18px; font-size: 17px; font-weight: 700;
+  }
+  .drawer-close {
+    background: none; border: none; color: #fff; font-size: 20px;
+    cursor: pointer; width: 34px; height: 34px; border-radius: 8px;
+  }
+  .drawer-close:active { background: rgba(255,255,255,0.2); }
+  nav.menu {
+    display: flex; flex-direction: column;
+    overflow-y: auto; padding: 8px 0;
+  }
+  nav.menu button {
+    background: none; border: none;
+    border-right: 4px solid transparent;
+    padding: 16px 20px; text-align: right;
+    font-size: 16px; font-weight: 600; font-family: inherit;
+    color: #444; cursor: pointer; transition: 0.12s;
+  }
+  nav.menu button:active { background: #f0f4f9; }
+  nav.menu button.active {
+    color: #1F4E79; background: #eaf2fb;
+    border-right-color: #2E75B6;
+  }
+  .page { display: none; }
+  .page.active { display: block; }
+
+  /* بخش انتخاب نوع حریق (چیپ‌ها) */
+  .fire-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+  .ei-rate { margin-top:5px; font-size:12px; color:#1F4E79; background:#eaf2fb; display:inline-block;
+    padding:3px 9px; border-radius:7px; font-weight:700; direction:rtl; }
+  .ei-rate-lbl { font-weight:600; color:#555; }
+  .ei-rate bdi { direction:ltr; font-family:Arial, sans-serif; }
+
+  .fire-chip {
+    display: flex; flex-direction: column; align-items: flex-start;
+    gap: 4px; text-align: right;
+    background: #fafbfc; border: 2px solid #d0d7de; border-radius: 12px;
+    padding: 12px 13px; cursor: pointer; transition: 0.12s; font-family: inherit;
+  }
+  .fire-chip:active { transform: scale(0.98); }
+  .fire-chip.sel { border-color: #2E75B6; background: #eaf2fb; }
+  .fire-chip .fc-top { display: flex; align-items: center; gap: 8px; width: 100%; }
+  .fire-chip .fc-ico { font-size: 22px; }
+  .fire-chip .fc-cls {
+    background: #1F4E79; color: #fff; font-size: 12px; font-weight: 800;
+    border-radius: 7px; padding: 2px 8px; min-width: 26px; text-align: center;
+  }
+  .fire-chip .fc-name { font-size: 14.5px; font-weight: 700; color: #1a1a1a; }
+  .fire-chip .fc-ex { font-size: 11.5px; color: #777; line-height: 1.5; }
+  /* کارت نتیجه کپسول */
+
+  .ext-topnote { background:#fff4e0; border:1.5px solid #e8932a; border-radius:12px;
+    padding:12px 14px; margin:10px 0 4px; font-size:14px; line-height:1.9; color:#8a4b00; font-weight:600; }
+  .ext-topnote .tn-step { display:block; }
+  .ext-block { margin-top: 6px; }
+  .ext-block h3 {
+    font-size: 14px; margin: 14px 0 8px; display: flex; align-items: center; gap: 7px;
+  }
+  .ext-item {
+    display: flex; align-items: center; gap: 10px;
+    background: #fff; border-radius: 11px; padding: 11px 13px; margin-bottom: 8px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.07); border-right: 5px solid #ccc;
+  }
+  .ext-item.ok { border-right-color: #1e8e3e; }
+  .ext-item.caution { border-right-color: #e37400; }
+  .ext-item.danger { border-right-color: #c5221f; }
+  .ext-item .ei-ico { font-size: 20px; }
+  .ext-svg { width: 34px; height: 54px; flex-shrink: 0; }
+  .ext-item .ei-rank {
+    flex-shrink: 0; width: 22px; height: 22px; border-radius: 50%;
+    background: #1F4E79; color: #fff; font-size: 12px; font-weight: 800;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .ext-item .ei-best {
+    background: #e6f4ea; color: #1e8e3e; font-size: 10.5px; font-weight: 700;
+    border-radius: 6px; padding: 1px 7px; margin-right: 6px; vertical-align: middle;
+  }
+  .ext-block h3 .h3-hint { font-size: 11px; color: #999; font-weight: 500; }
+  .ext-item .ei-body { flex: 1; }
+  .ext-item .ei-name { font-weight: 700; font-size: 14.5px; }
+  .ext-item .ei-name .ei-color {
+    font-size: 11px; font-weight: 600; color: #fff; border-radius: 6px;
+    padding: 1px 7px; margin-right: 6px; vertical-align: middle;
+  }
+  .ext-item .ei-desc { font-size: 12px; color: #666; margin-top: 2px; }
+  .ext-empty { font-size: 12.5px; color: #999; padding: 4px 2px; }
+
+  /* بخش تبدیل مقادیر */
+  .conv-select {
+    width: 100%;
+    padding: 12px 14px;
+    font-size: 16px;
+    border: 2px solid #d0d7de;
+    border-radius: 10px;
+    background: #fafbfc;
+    font-family: inherit;
+    color: #1a1a1a;
+  }
+  .conv-results {
+    background: #fff;
+    border-radius: 12px;
+    margin-top: 4px;
+    overflow: hidden;
+  }
+  .conv-results .row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px;
+    border-bottom: 1px solid #eee;
+  }
+  .conv-results .row:last-child { border-bottom: none; }
+  .conv-results .row .lbl { font-size: 14px; color: #555; }
+  .conv-results .row .v { font-size: 19px; font-weight: 800; color: #1F4E79; direction: ltr; }
+  .conv-results .row .u { font-size: 12px; color: #2E75B6; font-weight: 600; }
+  .lel-cfg {
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    font-size: 13px; color: #666; margin-top: 6px;
+  }
+  .lel-cfg input {
+    width: 80px; padding: 8px; font-size: 15px; text-align: center;
+    border: 2px solid #d0d7de; border-radius: 8px; direction: ltr; background: #fafbfc;
+  }
+  .conv-note {
+    font-size: 12px; color: #777; line-height: 1.9;
+    background: #eef4fa; border: 1px solid #d6e4f0;
+    border-radius: 10px; padding: 12px; margin-top: 14px;
+  }
+
+  /* بخش اطلاعات */
+  .about-logo-img {
+    width: 96px; height: 96px; object-fit: contain;
+    margin: 0 auto 14px; display: block;
+    background: #fff; border-radius: 18px; padding: 8px;
+    box-shadow: 0 4px 12px rgba(31,78,121,0.18);
+  }
+  .about-logo {
+    width: 72px; height: 72px; border-radius: 18px; margin: 0 auto 14px;
+    background: linear-gradient(135deg,#1F4E79,#2E75B6);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 38px; box-shadow: 0 4px 12px rgba(31,78,121,0.3);
+  }
+  .about-title { text-align: center; font-size: 18px; font-weight: 800; color: #1F4E79; }
+  .about-ver {
+    text-align: center; font-size: 13px; color: #666; margin-top: 4px;
+    background: #eef4fa; display: inline-block; padding: 3px 12px;
+    border-radius: 20px; direction: ltr;
+  }
+  .about-center { text-align: center; }
+  .about-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 12px 0; border-bottom: 1px solid #eee; font-size: 14px;
+  }
+  .about-row:last-child { border-bottom: none; }
+  .about-row .k { color: #666; }
+  .about-row .val { font-weight: 700; color: #1a1a1a; }
+  .about-sec-title { font-size: 14px; color: #444; font-weight: 700; margin: 0 0 8px; }
+  .dev-name { font-weight: 700; color: #1F4E79; }
+  .dev-line { padding: 10px 0; border-bottom: 1px solid #eee; font-size: 15px; text-align: center; }
+  .dev-line:last-child { border-bottom: none; }
+
+  /* === ابزارهای جدید === */
+  .seg { display:flex; gap:8px; flex-wrap:wrap; }
+  .seg button {
+    flex:1; min-width:90px; padding:11px 8px; font-size:14px; font-weight:600;
+    font-family:inherit; border:2px solid #d0d7de; border-radius:10px;
+    background:#fafbfc; color:#555; cursor:pointer; transition:0.15s;
+  }
+  .seg button.on { border-color:#2E75B6; background:#eaf2fb; color:#1F4E79; }
+  select.inp {
+    width:100%; padding:13px 14px; font-size:16px; border:2px solid #d0d7de;
+    border-radius:10px; background:#fafbfc; font-family:inherit; color:#1a1a1a;
+  }
+  select.inp:focus { outline:none; border-color:#2E75B6; background:#fff; }
+  .req-list { background:#fff; border-radius:12px; padding:14px 16px; box-shadow:0 1px 4px rgba(0,0,0,0.08); margin-top:12px; }
+  .req-list h3 { margin:0 0 10px; font-size:15px; color:#444; }
+  .req-item { display:flex; gap:10px; align-items:flex-start; padding:9px 0; border-bottom:1px solid #eee; font-size:14px; line-height:1.7; }
+  .req-item:last-child { border-bottom:none; }
+  .req-item .ri { flex-shrink:0; }
+  .permit-badge {
+    display:inline-block; padding:5px 14px; border-radius:20px; font-size:14px;
+    font-weight:700; background:#eaf2fb; color:#1F4E79; margin:3px;
+  }
+  .big-num { font-size:26px; font-weight:800; }
+  .big-num small { font-size:13px; font-weight:600; opacity:0.9; }
+  .calc-rows { background:#fff; border-radius:12px; padding:4px 16px; box-shadow:0 1px 4px rgba(0,0,0,0.08); margin-top:12px; }
+  .calc-rows .row2 { display:flex; justify-content:space-between; padding:11px 0; border-bottom:1px solid #eee; font-size:14px; }
+  .calc-rows .row2:last-child { border-bottom:none; }
+  .calc-rows .row2 b { direction:ltr; }
+
+  /* === مرجع گازها و اورژانس === */
+  .gas-card { background:#fff; border-radius:14px; padding:16px; box-shadow:0 1px 4px rgba(0,0,0,0.08); margin-bottom:14px; }
+  .gas-head { display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+  .gas-head .gico { font-size:28px; }
+  .gas-head .gname { font-weight:800; font-size:16px; color:#1F4E79; }
+  .gas-head .gformula { direction:ltr; font-size:13px; color:#888; font-weight:700; }
+  .gas-prop { display:flex; justify-content:space-between; padding:7px 0; border-bottom:1px solid #f0f0f0; font-size:13.5px; }
+  .gas-prop:last-child { border-bottom:none; }
+  .gas-prop .gk { color:#666; }
+  .gas-prop .gv { font-weight:700; color:#1a1a1a; direction:ltr; text-align:left; }
+  .gas-warn { margin-top:10px; background:#fef0e0; border-radius:10px; padding:10px 12px; font-size:13px; color:#a25100; line-height:1.8; }
+  .step-item { display:flex; gap:12px; padding:11px 0; border-bottom:1px solid #eee; font-size:14px; line-height:1.8; }
+  .step-item:last-child { border-bottom:none; }
+  .step-num { flex-shrink:0; width:26px; height:26px; border-radius:50%; background:#1F4E79; color:#fff;
+    display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:800; margin-top:2px; }
+  .danger-banner { background:linear-gradient(135deg,#c5221f,#ea4335); color:#fff; border-radius:12px;
+    padding:13px 15px; font-size:14px; font-weight:700; line-height:1.8; margin-bottom:12px; }
+  .emg-call { display:flex; gap:8px; margin-top:12px; }
+  .emg-call a { flex:1; text-align:center; background:#fff; border:2px solid #c5221f; color:#c5221f;
+    border-radius:12px; padding:12px 6px; text-decoration:none; font-weight:800; font-size:14px; }
+  .emg-call a span { display:block; font-size:20px; direction:ltr; }
+
+  /* === تحلیل ساختمان === */
+  .class-badge { display:inline-flex; align-items:center; justify-content:center;
+    width:64px; height:64px; border-radius:50%; font-size:26px; font-weight:800; color:#fff; margin-bottom:6px; }
+  .sec-block { background:#fff; border-radius:12px; padding:6px 16px; box-shadow:0 1px 4px rgba(0,0,0,0.08); margin-top:12px; }
+  .sec-block h3 { margin:14px 0 8px; font-size:15px; color:#1F4E79; border-bottom:2px solid #eaf2fb; padding-bottom:6px; }
+  .sec-row { display:flex; justify-content:space-between; gap:12px; padding:9px 0; border-bottom:1px solid #f0f0f0; font-size:14px; line-height:1.7; }
+  .sec-row:last-child { border-bottom:none; }
+  .sec-row .sk { color:#555; flex-shrink:0; }
+  .sec-row .sv { font-weight:700; color:#1a1a1a; text-align:left; }
+  .hyd-note { background:#fef0e0; border-radius:10px; padding:10px 12px; font-size:13px; color:#a25100; line-height:1.9; margin-top:10px; }
+</style>
+</head>
+<body>
+<header>
+  <button id="menuBtn" class="menu-btn" aria-label="منو" onclick="toggleMenu(true)">☰</button>
+  <img class="hdr-logo" src="data:image/png;base64,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" alt="آرم شرکت گاز">
+  <h1 id="pageTitle">ورود به منهول</h1>
+  <p>دستورالعمل HSE-IN-S-223 — شرکت گاز استان تهران · v1.0.0</p>
+</header>
+
+<!-- منوی کشویی -->
+<div class="drawer-overlay" id="drawerOverlay" onclick="toggleMenu(false)"></div>
+<aside class="drawer" id="drawer">
+  <div class="drawer-head">
+    <span>منو</span>
+    <button class="drawer-close" aria-label="بستن" onclick="toggleMenu(false)">✕</button>
+  </div>
+  <nav class="menu" id="mainMenu">
+    <button class="active" data-page="assess">ورود به منهول</button>
+    <button data-page="hotcold">کار گرم/سرد</button>
+    <button data-page="extinguisher">انتخاب کپسول آتش‌نشانی مناسب</button>
+    <button data-page="convert">تبدیل مقادیر</button>
+    <button data-page="digging">فاصله ایمن حفاری</button>
+    <button data-page="ptw">راهنمای پرمیت کار</button>
+    <button data-page="purge">محاسبه پرج</button>
+    <button data-page="harim">حریم خطوط گاز</button>
+    <button data-page="evac">شعاع تخلیه نشت گاز</button>
+    <button data-page="gastable">خواص گازها</button>
+    <button data-page="firstaid">اقدامات اولیه حوادث</button>
+    <button data-page="building">تحلیل اطفا و اعلام ساختمان</button>
+    <button data-page="about">اطلاعات</button>
+  </nav>
+</aside>
+
+<!-- ===== صفحه ارزیابی ورود ===== -->
+<div class="page active" id="assess">
+<div class="container">
+  <div class="card">
+    <div class="field">
+      <label>گازهای قابل اشتعال <span class="unit">(LEL ٪)</span></label>
+      <input type="number" id="lel" inputmode="decimal" step="any" placeholder="مثال: 0.5">
+    </div>
+    <div class="field">
+      <label>اکسیژن <span class="unit">(O₂ درصد)</span></label>
+      <input type="number" id="o2" inputmode="decimal" step="any" placeholder="مثال: 20.9">
+    </div>
+    <div class="field">
+      <label>سولفید هیدروژن <span class="unit">(H₂S — ppm)</span></label>
+      <input type="number" id="h2s" inputmode="decimal" step="any" placeholder="مثال: 0">
+    </div>
+    <div class="field">
+      <label>مونواکسید کربن <span class="unit">(CO — ppm)</span></label>
+      <input type="number" id="co" inputmode="decimal" step="any" placeholder="مثال: 0">
+    </div>
+    <button class="btn" onclick="evaluate()">ارزیابی کن</button>
+    <div class="err" id="err">لطفاً همه مقادیر را وارد کنید.</div>
+    <button class="btn btn-reset" onclick="resetForm()">پاک کردن</button>
+  </div>
+
+  <div id="result"></div>
+</div>
+
+<div class="note">این ابزار جهت کمک به ارزیابی است و جایگزین گازسنجی و تأیید مسئول HSE نمی‌باشد.</div>
+</div><!-- /page assess -->
+
+<!-- ===== صفحه کار گرم/سرد ===== -->
+<div class="page" id="hotcold">
+<div class="container">
+  <div class="card">
+    <div class="field">
+      <label>گازهای قابل اشتعال <span class="unit">(LEL ٪)</span></label>
+      <input type="number" id="hcLel" inputmode="decimal" step="any" placeholder="مثال: 3">
+    </div>
+    <button class="btn" onclick="evaluateHotCold()">بررسی کن</button>
+    <div class="err" id="hcErr">لطفاً مقدار گاز قابل اشتعال را وارد کنید.</div>
+    <button class="btn btn-reset" onclick="resetHotCold()">پاک کردن</button>
+  </div>
+
+  <div id="hcResult"></div>
+
+  <div class="conv-note">
+    مبنا (دستورالعمل HSE-IN-S-223):<br>
+    • <b>کار گرم</b> مجاز است اگر گاز قابل اشتعال صفر یا حداکثر ۵٪ LEL باشد (بند ۲-۶-۵).<br>
+    • <b>کار سرد</b> مجاز است اگر گاز قابل اشتعال کمتر از ۱۰٪ LEL باشد (بند ۲-۶-۶).
+  </div>
+</div>
+<div class="note">سنجش باید با دستگاه ۰ تا ۱۰۰٪ LEL مجهز به هشدار دیداری و شنیداری انجام شود. این ابزار جایگزین گازسنجی و تأیید مسئول محوطه نیست.</div>
+</div><!-- /page hotcold -->
+
+<!-- ===== صفحه کپسول اطفا حریق ===== -->
+<div class="page" id="extinguisher">
+<div class="container">
+  <div class="card">
+    <label style="margin-bottom:12px">نوع ماده مشتعل را برای انتخاب کپسول آتش‌نشانی مناسب انتخاب کنید:</label>
+    <div class="fire-grid" id="fireGrid"></div>
+  </div>
+
+  <div id="extResult"></div>
+
+  <div class="conv-note">
+    مبنا: استاندارد اروپایی <b>EN 2</b> (طبقه‌بندی حریق) و <b>EN 3</b> (کپسول‌های دستی).
+    کلاس E مستقل وجود ندارد؛ آتش تجهیزات برق‌دار جداگانه آورده شده است.
+    <br><br>ترتیب اولویت بر اساس <b>قدرت خاموش‌کنندگی (Rating)</b> است: کپسولی که عدد بالاتری دارد،
+    آتش بزرگ‌تری را خاموش می‌کند و در اولویت قرار می‌گیرد. به همین دلیل پودر ABC حتی در حریق جامدات و مایعات،
+    بر فوم و آب اولویت دارد.
+    <br>اعداد بر مبنای جدول ۵-۲-۳ «ضوابط ملاک عمل سامانه‌های اطفای حریق» سازمان آتش‌نشانی تهران
+    (آزمون UL/ULC طبق NFPA 10) محاسبه شده است. کپسول‌های پودری ۱۲ کیلوگرمی در نظر گرفته شده‌اند
+    و قدرت خاموش‌کنندگی آن‌ها تقریباً دو برابر نمونهٔ ۶ کیلوگرمی است. عدد دقیق روی پلاک هر کپسول ملاک نهایی است.
+  </div>
+</div>
+<div class="note">پیش از اطفا، در صورت امکان منبع انرژی/برق قطع شود. این راهنما جایگزین آموزش اطفای حریق و دستورالعمل HSE نیست.</div>
+</div><!-- /page extinguisher -->
+
+<!-- ===== صفحه تبدیل مقادیر ===== -->
+<div class="page" id="convert">
+<div class="container">
+  <div class="card">
+    <div class="field">
+      <label>مقدار ورودی <span class="unit">(گاز متان CH₄)</span></label>
+      <input type="number" id="convInput" inputmode="decimal" step="any" placeholder="عدد را وارد کنید">
+    </div>
+    <div class="field">
+      <label>واحد ورودی</label>
+      <select class="conv-select" id="convUnit">
+        <option value="vol">درصد حجمی (Vol%)</option>
+        <option value="lel">درصد LEL (%LEL)</option>
+        <option value="ppm">پی‌پی‌ام (ppm)</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="conv-results" id="convResults">
+    <div class="row"><span class="lbl">درصد حجمی</span><span><span class="v" id="rVol">—</span> <span class="u">Vol%</span></span></div>
+    <div class="row"><span class="lbl">درصد LEL</span><span><span class="v" id="rLel">—</span> <span class="u">%LEL</span></span></div>
+    <div class="row"><span class="lbl">پی‌پی‌ام</span><span><span class="v" id="rPpm">—</span> <span class="u">ppm</span></span></div>
+  </div>
+
+  <div class="card" style="margin-top:14px">
+    <label>مقدار LEL مبنای متان <span class="unit">(درصد حجمی)</span></label>
+    <div class="lel-cfg">
+      <input type="number" id="lelBase" value="5" step="any">
+      <span>پیش‌فرض استاندارد ۵٪ — در صورت نیاز تغییر دهید (مثلاً ۴.۴٪)</span>
+    </div>
+  </div>
+
+  <div class="conv-note">
+    مبنای محاسبه: ۱۰۰٪ LEL متان برابر <b id="noteLel">۵</b>٪ حجمی، و ۱٪ حجمی برابر ۱۰٬۰۰۰ ppm است.
+    مقدار LEL وارد‌شده در صفحه «ارزیابی ورود» نیز به همین واحد درصد LEL است.
+  </div>
+</div>
+</div><!-- /page convert -->
+
+
+<!-- ===== صفحه فاصله ایمن حفاری ===== -->
+<div class="page" id="digging">
+<div class="container">
+  <div class="card">
+    <div class="field">
+      <label>نوع خط لوله گاز</label>
+      <select class="inp" id="digLine">
+        <option value="">انتخاب کنید…</option>
+        <option value="dist">شبکه توزیع (تا ۶۰ psi)</option>
+        <option value="feed">خط تغذیه (۲۵۰ psi)</option>
+        <option value="trans">خط انتقال (بیش از ۲۵۰ psi)</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>نوع عملیات</label>
+      <div class="seg" id="digOp">
+        <button data-v="mech" onclick="segPick('digOp',this)">حفاری مکانیکی</button>
+        <button data-v="hand" onclick="segPick('digOp',this)">حفاری دستی</button>
+        <button data-v="pile" onclick="segPick('digOp',this)">شمع‌کوبی / دریل</button>
+      </div>
+    </div>
+    <button class="btn" onclick="evalDig()">بررسی کن</button>
+    <div class="err" id="digErr">لطفاً نوع خط و نوع عملیات را انتخاب کنید.</div>
+    <button class="btn btn-reset" onclick="resetDig()">پاک کردن</button>
+  </div>
+  <div id="digResult"></div>
+  <div class="conv-note">
+    ⚠️ مقادیر فاصله بر اساس رویه‌های متداول صنعت گاز تنظیم شده و باید پیش از استفاده عملیاتی
+    با دستورالعمل جاری شرکت تطبیق داده شود. در هر شرایطی، شروع حفاری در مجاورت خطوط گاز
+    مستلزم استعلام مسیر، اخذ پرمیت حفاری و حضور ناظر بهره‌برداری است.
+  </div>
+</div>
+<div class="note">این ابزار جایگزین استعلام رسمی مسیر خطوط و مجوز حفاری نمی‌باشد.</div>
+</div><!-- /page digging -->
+
+<!-- ===== صفحه راهنمای پرمیت ===== -->
+<div class="page" id="ptw">
+<div class="container">
+  <div class="card">
+    <div class="field">
+      <label>چه کاری قرار است انجام شود؟</label>
+      <select class="inp" id="ptwJob" onchange="evalPtw()">
+        <option value="">انتخاب کنید…</option>
+        <option value="weld">جوشکاری / برشکاری / سنگ‌زنی</option>
+        <option value="hottap">عملیات گرم روی خط گازدار (Hot Tap)</option>
+        <option value="cold">تعمیرات مکانیکی سرد (فلنج، شیر، اتصالات)</option>
+        <option value="paint">رنگ‌آمیزی / عایق‌کاری / نظافت صنعتی</option>
+        <option value="confined">ورود به منهول / حوضچه / مخزن</option>
+        <option value="excav">حفاری و خاک‌برداری</option>
+        <option value="elec">کار روی تجهیزات و تابلو برق</option>
+        <option value="height">کار در ارتفاع (بیش از ۱.۲ متر)</option>
+        <option value="radio">پرتونگاری صنعتی (رادیوگرافی)</option>
+        <option value="ptest">تست فشار / نشت‌یابی</option>
+      </select>
+    </div>
+  </div>
+  <div id="ptwResult"></div>
+  <div class="conv-note">
+    شرایط هر پرمیت تابع دستورالعمل سامانه پروانه کار شرکت است؛ این راهنما جنبه یادآوری دارد
+    و صادرکننده پرمیت مرجع نهایی تعیین الزامات است.
+  </div>
+</div>
+<div class="note">پرمیت فقط برای محل، تجهیز و بازه زمانی مشخص‌شده اعتبار دارد.</div>
+</div><!-- /page ptw -->
+
+<!-- ===== صفحه محاسبه پرج ===== -->
+<div class="page" id="purge">
+<div class="container">
+  <div class="card">
+    <div class="field">
+      <label>نوع حجم</label>
+      <div class="seg" id="purgeMode">
+        <button data-v="pipe" class="on" onclick="segPick('purgeMode',this);purgeModeUI()">خط لوله</button>
+        <button data-v="vessel" onclick="segPick('purgeMode',this);purgeModeUI()">مخزن (حجم مستقیم)</button>
+      </div>
+    </div>
+    <div id="pipeFields">
+      <div class="field">
+        <label>قطر داخلی لوله <span class="unit">(اینچ)</span></label>
+        <input type="number" id="pgDia" inputmode="decimal" step="any" placeholder="مثال: 8">
+      </div>
+      <div class="field">
+        <label>طول خط <span class="unit">(متر)</span></label>
+        <input type="number" id="pgLen" inputmode="decimal" step="any" placeholder="مثال: 500">
+      </div>
+    </div>
+    <div id="vesselFields" style="display:none">
+      <div class="field">
+        <label>حجم مخزن <span class="unit">(متر مکعب)</span></label>
+        <input type="number" id="pgVol" inputmode="decimal" step="any" placeholder="مثال: 12">
+      </div>
+    </div>
+    <div class="field">
+      <label>روش پرج با نیتروژن</label>
+      <select class="inp" id="pgMethod">
+        <option value="1.5">جابجایی پیستونی — ۱.۵ برابر حجم</option>
+        <option value="3" selected>رقیق‌سازی — ۳ برابر حجم</option>
+        <option value="4">رقیق‌سازی محافظه‌کارانه — ۴ برابر حجم</option>
+        <option value="5">رقیق‌سازی + اطمینان — ۵ برابر حجم</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>دبی نیتروژن <span class="unit">(متر مکعب بر ساعت)</span></label>
+      <input type="number" id="pgFlow" inputmode="decimal" step="any" placeholder="مثال: 60">
+    </div>
+    <button class="btn" onclick="evalPurge()">محاسبه کن</button>
+    <div class="err" id="pgErr">لطفاً همه مقادیر را به‌درستی وارد کنید.</div>
+    <button class="btn btn-reset" onclick="resetPurge()">پاک کردن</button>
+  </div>
+  <div id="pgResult"></div>
+  <div class="conv-note">
+    پایان عملیات پرج صرفاً با گازسنجی در نقطه تخلیه تأیید می‌شود (نه با اتمام زمان محاسباتی).
+    برای تخلیه گاز: قابل اشتعال کمتر از حد مجاز؛ برای گازدار کردن مجدد: اکسیژن کمتر از حد مجاز دستورالعمل.
+  </div>
+</div>
+<div class="note">زمان محاسبه‌شده تقریبی است و جایگزین پایش پیوسته با گازسنج نمی‌باشد.</div>
+</div><!-- /page purge -->
+
+
+<!-- ===== صفحه حریم خطوط گاز ===== -->
+<div class="page" id="harim">
+<div class="container">
+  <div class="card">
+    <div class="field">
+      <label>نوع خط لوله</label>
+      <select class="inp" id="hrLine" onchange="harimUI()">
+        <option value="">انتخاب کنید…</option>
+        <option value="dist">شبکه توزیع شهری (تا ۶۰ psi)</option>
+        <option value="feed">خط تغذیه (۲۵۰ psi)</option>
+        <option value="trans">خط انتقال (۱۰۵۰ psi)</option>
+      </select>
+    </div>
+    <div class="field" id="hrDiaWrap" style="display:none">
+      <label>قطر خط انتقال</label>
+      <select class="inp" id="hrDia">
+        <option value="16">تا ۱۶ اینچ</option>
+        <option value="30">۱۸ تا ۳۰ اینچ</option>
+        <option value="42">۳۲ تا ۴۲ اینچ</option>
+        <option value="56">۴۸ اینچ و بالاتر</option>
+      </select>
+    </div>
+    <button class="btn" onclick="evalHarim()">نمایش حریم</button>
+    <div class="err" id="hrErr">لطفاً نوع خط را انتخاب کنید.</div>
+    <button class="btn btn-reset" onclick="resetHarim()">پاک کردن</button>
+  </div>
+  <div id="hrResult"></div>
+  <div class="conv-note">
+    ⚠️ مقادیر بر اساس مصوبات و رویه‌های متداول تنظیم شده و ملاک نهایی، استعلام رسمی از
+    امور حریم شرکت گاز و آخرین مصوبه هیئت وزیران درباره حریم خطوط لوله است.
+    هرگونه ساخت‌وساز در حریم بدون مجوز کتبی ممنوع است.
+  </div>
+</div>
+<div class="note">این صفحه جنبه راهنما دارد و جایگزین استعلام رسمی حریم نمی‌باشد.</div>
+</div><!-- /page harim -->
+
+<!-- ===== صفحه شعاع تخلیه نشت گاز ===== -->
+<div class="page" id="evac">
+<div class="container">
+  <div class="card">
+    <div class="field">
+      <label>وضعیت نشت چیست؟</label>
+      <select class="inp" id="evScn" onchange="evalEvac()">
+        <option value="">انتخاب کنید…</option>
+        <option value="indoor">بوی گاز / نشت داخل ساختمان</option>
+        <option value="dist">نشت شبکه توزیع (معبر شهری)</option>
+        <option value="feed">نشت خط تغذیه یا ایستگاه TBS</option>
+        <option value="trans">پارگی / نشت شدید خط انتقال یا CGS</option>
+        <option value="fire">نشت گاز همراه با حریق</option>
+      </select>
+    </div>
+  </div>
+  <div id="evResult"></div>
+  <div class="conv-note">
+    شعاع‌های اعلام‌شده حداقلِ اولیه است؛ فرمانده صحنه بر اساس گازسنجی محیطی (لبه منطقه باید
+    صفر یا کمتر از ۱۰٪ LEL باشد)، جهت باد و توپوگرافی، محدوده را گسترش می‌دهد.
+  </div>
+</div>
+<div class="note">در هر سناریو، اولین تماس: امداد گاز ۱۹۴</div>
+</div><!-- /page evac -->
+
+<!-- ===== صفحه خواص گازها ===== -->
+<div class="page" id="gastable">
+<div class="container">
+  <div class="card" style="padding:12px 16px">
+    <div class="field" style="margin-bottom:0">
+      <label>انتخاب گاز</label>
+      <select class="inp" id="gtPick" onchange="renderGas()">
+        <option value="all">نمایش همه</option>
+      </select>
+    </div>
+  </div>
+  <div id="gtList"></div>
+  <div class="conv-note">
+    حدود مجاز مواجهه (TLV-TWA) بر اساس ACGIH است؛ در صورت تفاوت با حدود مجاز مواجهه شغلی
+    ابلاغی وزارت بهداشت، مقدار سخت‌گیرانه‌تر ملاک عمل قرار گیرد.
+  </div>
+</div>
+<div class="note">چگالی نسبی نسبت به هوا (هوا = ۱) بیان شده است.</div>
+</div><!-- /page gastable -->
+
+<!-- ===== صفحه اقدامات اولیه حوادث ===== -->
+<div class="page" id="firstaid">
+<div class="container">
+  <div class="card">
+    <div class="field" style="margin-bottom:0">
+      <label>نوع حادثه</label>
+      <select class="inp" id="faPick" onchange="renderFA()">
+        <option value="">انتخاب کنید…</option>
+      </select>
+    </div>
+  </div>
+  <div id="faResult"></div>
+  <div class="conv-note">
+    این راهنما برای اقدامات لحظات اولیه تا رسیدن نیروهای امدادی است و جایگزین آموزش
+    کمک‌های اولیه و دستورالعمل واکنش در شرایط اضطراری شرکت نمی‌باشد.
+  </div>
+</div>
+<div class="note">قبل از هر اقدام نجات، ایمنی خودِ نجات‌دهنده در اولویت است.</div>
+</div><!-- /page firstaid -->
+
+
+<!-- ===== صفحه تحلیل اطفا و اعلام ساختمان ===== -->
+<div class="page" id="building">
+<div class="container">
+  <div class="card">
+    <div class="field">
+      <label>کاربری ساختمان</label>
+      <select class="inp" id="bUse" onchange="buildingUI()">
+        <option value="">انتخاب کنید…</option>
+        <option value="r1">مسکونی آپارتمانی / اداری / آموزشی</option>
+        <option value="r2">تجاری / پارکینگ طبقاتی</option>
+        <option value="r3">مسکونی اقامتی (هتل) / تجمعی</option>
+        <option value="r4">درمانی / مراقبتی (بستری ۲۴ ساعته)</option>
+        <option value="r5">صنعتی / انبار / سردخانه</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>زیربنای کل ناخالص <span class="unit">(متر مربع)</span></label>
+      <input type="number" id="bArea" inputmode="decimal" step="any" placeholder="مثال: 6500">
+    </div>
+    <div class="field">
+      <label>ارتفاع ساختمان <span class="unit">(متر، از معبر تا کف آخرین طبقه)</span></label>
+      <input type="number" id="bHeight" inputmode="decimal" step="any" placeholder="مثال: 25">
+    </div>
+    <div class="field">
+      <label>تعداد طبقات روی زمین</label>
+      <input type="number" id="bFloors" inputmode="numeric" step="1" placeholder="مثال: 8">
+    </div>
+    <div class="field">
+      <label>بار تصرف <span class="unit">(تعداد نفرات)</span></label>
+      <input type="number" id="bOcc" inputmode="numeric" step="1" placeholder="مثال: 300">
+    </div>
+    <div class="field">
+      <label>عمق ساختمان (پایین‌ترین کف از تراز تخلیه) <span class="unit">(متر)</span></label>
+      <input type="number" id="bDepth" inputmode="decimal" step="any" placeholder="در صورت نداشتن زیرزمین: 0">
+    </div>
+    <div class="field" id="bHazWrap" style="display:none">
+      <label>سطح خطر تصرف صنعتی/انبار</label>
+      <div class="seg" id="bHaz">
+        <button data-v="low" class="on" onclick="segPick('bHaz',this)">کم‌خطر / معمولی</button>
+        <button data-v="high" onclick="segPick('bHaz',this)">پرخطر / خاص</button>
+      </div>
+    </div>
+    <button class="btn" onclick="analyzeBuilding()">تحلیل کن</button>
+    <div class="err" id="bErr">لطفاً کاربری و مقادیر عددی را کامل وارد کنید.</div>
+    <button class="btn btn-reset" onclick="resetBuilding()">پاک کردن</button>
+  </div>
+  <div id="bResult"></div>
+  <div class="conv-note">
+    مبنا: «ضوابط ملاک عمل سامانه‌های اطفای حریق» (۱۴۰۴) و «ضوابط ملاک عمل سیستم‌های کشف و اعلام حریق»
+    سازمان آتش‌نشانی تهران. این تحلیل کلیات الزامات را تعیین می‌کند و جایگزین طراحی و محاسبات
+    هیدرولیکی توسط مهندس دارای صلاحیت و تأیید سازمان آتش‌نشانی نیست.
+  </div>
+</div>
+<div class="note">دبی و توان دقیق پمپ تابع محاسبات هیدرولیکی است؛ این صفحه بازه و حداقل‌ها را ارائه می‌دهد.</div>
+</div><!-- /page building -->
+
+<!-- ===== صفحه اطلاعات ===== -->
+<div class="page" id="about">
+<div class="container">
+  <div class="card about-center">
+    <img class="about-logo-img" src="data:image/png;base64,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" alt="آرم شرکت گاز">
+    <div class="about-title">ارزیابی ورود به منهول</div>
+    <div><span class="about-ver">نسخه 1.0.0</span></div>
+  </div>
+
+  <div class="card">
+    <div class="about-sec-title">مشخصات برنامه</div>
+    <div class="about-row"><span class="k">نسخه</span><span class="val" style="direction:ltr">1.0.0</span></div>
+    <div class="about-row"><span class="k">مبنای دستورالعمل</span><span class="val">HSE-IN-S-223</span></div>
+    <div class="about-row"><span class="k">سازمان</span><span class="val">شرکت گاز استان تهران</span></div>
+  </div>
+
+  <div class="card">
+    <div class="about-sec-title">توسعه‌دهندگان</div>
+    <div class="dev-line"><span class="dev-name">مازیار مهرشاد</span></div>
+    <div class="dev-line"><span class="dev-name">محمد رشیدیان</span></div>
+  </div>
+
+  <div class="conv-note">
+    این ابزار جهت کمک به ارزیابی است و جایگزین گازسنجی و تأیید مسئول HSE نمی‌باشد.
+  </div>
+</div>
+</div><!-- /page about -->
+
+<script>
+(function(){
+  var input = document.getElementById('convInput');
+  var unit  = document.getElementById('convUnit');
+  var lelBase = document.getElementById('lelBase');
+  var rVol = document.getElementById('rVol');
+  var rLel = document.getElementById('rLel');
+  var rPpm = document.getElementById('rPpm');
+  var noteLel = document.getElementById('noteLel');
+
+  function fmt(n){
+    if(!isFinite(n)) return '—';
+    var s = Math.abs(n) >= 1 ? n.toFixed(4) : n.toPrecision(4);
+    return parseFloat(s).toLocaleString('en-US',{maximumFractionDigits:6});
+  }
+  function calc(){
+    var v = parseFloat(input.value);
+    var LEL = parseFloat(lelBase.value) || 5;
+    noteLel.textContent = LEL.toLocaleString('fa-IR');
+    if(isNaN(v)){ rVol.textContent='—'; rLel.textContent='—'; rPpm.textContent='—'; return; }
+    var vol;
+    if(unit.value==='vol') vol = v;
+    else if(unit.value==='lel') vol = v * LEL / 100;
+    else vol = v / 10000;
+    rVol.textContent = fmt(vol);
+    rLel.textContent = fmt(vol * 100 / LEL);
+    rPpm.textContent = fmt(vol * 10000);
+  }
+  input.addEventListener('input', calc);
+  unit.addEventListener('change', calc);
+  lelBase.addEventListener('input', calc);
+
+  // منوی جابجایی
+  var btns = document.querySelectorAll('nav.menu button');
+  var pages = document.querySelectorAll('.page');
+  btns.forEach(function(b){
+    b.addEventListener('click', function(){
+      btns.forEach(function(x){x.classList.remove('active');});
+      pages.forEach(function(p){p.classList.remove('active');});
+      b.classList.add('active');
+      document.getElementById(b.dataset.page).classList.add('active');
+      document.getElementById('pageTitle').textContent = b.textContent;
+      window.scrollTo({top:0});
+      toggleMenu(false);
+    });
+  });
+})();
+
+// باز/بسته کردن منوی کشویی
+function toggleMenu(open){
+  document.getElementById('drawer').classList.toggle('open', open);
+  document.getElementById('drawerOverlay').classList.toggle('open', open);
+}
+</script>
+
+<script>
+// ===== داده‌های اطفای حریق طبق EN 2 / EN 3 =====
+// رنگ‌بندی برچسب کپسول‌ها مطابق EN 3:
+//  آب=قرمز، فوم=کرم، پودر=آبی، CO₂=مشکی، کلاس F (شیمیایی مرطوب)=زرد، کلاس D=آبی مخصوص
+var EXT_COLORS = {
+  water:   {name:'آب', bg:'#5b86a8', body:'#b8c2cc'},
+  foam:    {name:'فوم', bg:'#b08d57', body:'#b8c2cc'},
+  powder:  {name:'پودر', bg:'#2E75B6'},
+  co2:     {name:'CO₂', bg:'#333'},
+  wet:     {name:'کلاس F', bg:'#e0a800'},
+  classd:  {name:'کلاس D', bg:'#1F4E79'}
+};
+
+// برای هر کلاس حریق: کپسول‌های مجاز (ok)، احتیاطی (caution)، خطرناک/ممنوع (danger)
+// ساختار هر آیتم: [نوع کپسول، توضیح، امتیاز اولویت 1..3]  (۳ = مناسب‌ترین)
+var FIRE_CLASSES = [
+  {
+    id:'A', cls:'A', ico:'🪵', name:'جامدات قابل اشتعال',
+    ex:'چوب، کاغذ، پارچه، پلاستیک، لاستیک، زباله',
+    ok:[
+      ['powder','پودر <bdi>ABC</bdi> ۱۲ کیلوگرمی — بالاترین قدرت خاموش‌کنندگی؛ خاموشی فوری شعله',4,'8A'],
+      ['foam','فوم ۱۰ لیتری — پوشش سطح و خنک‌کنندگی، قدرت بالاتر از آب',3,'3A'],
+      ['water','آب و گاز ۱۰ لیتری — خنک‌کننده، نفوذ در عمق، جلوگیری از اشتعال مجدد',2,'2A']
+    ],
+    caution:[['co2','CO₂ — فقط سطحی، جامد را کامل خاموش نمی‌کند',null,null]],
+    danger:[]
+  },
+  {
+    id:'B', cls:'B', ico:'⛽', name:'مایعات قابل اشتعال',
+    ex:'بنزین، گازوئیل، روغن معدنی، رنگ، حلال، الکل',
+    ok:[
+      ['powder','پودر <bdi>ABC / BC</bdi> ۱۲ کیلوگرمی — بالاترین قدرت خاموش‌کنندگی روی شعله مایع',4,'160B (ABC) · 120B (BC)'],
+      ['foam','فوم AFFF ۱۰ لیتری — لایه پوششی روی مایع، مانع اشتعال مجدد',3,'144B'],
+      ['co2','CO₂ — مؤثر روی شعله ولی بدون اثر ماندگار (اشتعال مجدد محتمل)',2,'20B']
+    ],
+    caution:[],
+    danger:[['water','آب — باعث پاشش و گسترش مایع مشتعل می‌شود',null,null]]
+  },
+  {
+    id:'C', cls:'C', ico:'🔥', name:'گازها',
+    ex:'متان، گاز طبیعی، پروپان، بوتان، هیدروژن',
+    topNote:'اولویت اول: قطع جریان گاز. تا زمانی که نشتی قطع نشده، نباید شعله را خاموش کرد؛ خاموش‌کردن شعله بدون قطع گاز باعث تجمع گاز و خطر انفجار می‌شود. پس از قطع جریان گاز، برای اطفا از کپسول‌های زیر استفاده شود.',
+    ok:[
+      ['powder','پودر <bdi>ABC / BC</bdi> ۱۲ کیلوگرمی — مؤثرترین برای حریق گاز',4,'دارای ریت کلاس C'],
+      ['co2','CO₂ — مؤثر، مناسب فضای بسته',2,'دارای ریت کلاس C']
+    ],
+    caution:[],
+    danger:[]
+  },
+  {
+    id:'D', cls:'D', ico:'⚙️', name:'فلزات قابل اشتعال',
+    ex:'منیزیم، سدیم، پتاسیم، تیتانیوم، لیتیم، آلومینیوم پودری',
+    ok:[['classd','پودر مخصوص کلاس D — تنها گزینه مجاز',4,'دارای ریت کلاس D']],
+    caution:[],
+    danger:[
+      ['water','آب — واکنش انفجاری شدید',null,null],
+      ['co2','CO₂ — بی‌اثر و خطرناک',null,null],
+      ['foam','فوم — حاوی آب، واکنش خطرناک',null,null],
+      ['powder','پودر <bdi>ABC</bdi> معمولی — مناسب نیست',null,null]
+    ]
+  },
+  {
+    id:'F', cls:'F', ico:'🍳', name:'روغن و چربی پخت‌وپز',
+    ex:'روغن و چربی گیاهی/حیوانی در سرخ‌کن و آشپزخانه',
+    ok:[['wet','کپسول کلاس F (شیمیایی مرطوب) — لایه صابونی روی روغن (ساپونیفیکاسیون)',4,'دارای ریت کلاس K']],
+    caution:[['powder','پودر <bdi>ABC</bdi> — شعله را می‌خواباند ولی روغن داغ را خنک نمی‌کند (اشتعال مجدد)',null,null]],
+    danger:[
+      ['water','آب — انفجار بخار و پاشش روغن مشتعل',null,null],
+      ['co2','CO₂ — جریان قوی باعث پاشش روغن می‌شود',null,null]
+    ]
+  },
+  {
+    id:'E', cls:'⚡', ico:'🔌', name:'تجهیزات برق‌دار',
+    ex:'تابلو برق، ترانس، کابل و دستگاه برق‌دار',
+    ok:[
+      ['co2','CO₂ — نارسانا، تمیز، بدون آسیب به تجهیزات',4,'دارای ریت کلاس C'],
+      ['powder','پودر <bdi>ABC</bdi> ۱۲ کیلوگرمی نارسانا — مؤثر ولی پودر باقی می‌گذارد و به برد آسیب می‌زند',3,'دارای ریت کلاس C']
+    ],
+    caution:[],
+    danger:[
+      ['water','آب — خطر برق‌گرفتگی',null,null],
+      ['foam','فوم — رسانا، خطر برق‌گرفتگی',null,null]
+    ],
+    note:'پس از قطع برق، حریق به کلاس ماده پایه (مثلاً A) تبدیل می‌شود و کپسول آن قابل استفاده است.'
+  }
+
+];
+
+// شکل شماتیک کپسول با رنگ بدنه/برچسب طبق EN 3
+// body = رنگ بدنه (همه قرمز سیگنالی طبق EN 3)، band = رنگ نوار شناسایی نوع
+function extSVG(type){
+  var c = EXT_COLORS[type];
+  // بدنه کپسول‌ها طبق EN 3 قرمز است؛ نوار رنگی نوع را مشخص می‌کند
+  // استثنا: نمایش بدنه با ته‌رنگ نوع برای تشخیص سریع‌تر بصری
+  var band = c.bg;
+  return '<svg class="ext-svg" viewBox="0 0 40 64" aria-hidden="true">' +
+    // دسته اهرمی
+    '<rect x="13" y="2" width="14" height="3" rx="1.5" fill="#444"/>' +
+    '<rect x="24" y="0" width="9" height="4" rx="1.5" fill="#666"/>' +
+    // گردنه و شیر
+    '<rect x="16" y="5" width="8" height="6" fill="#777"/>' +
+    // شیلنگ/نازل
+    '<path d="M24 8 q10 0 10 9 v6" stroke="#555" stroke-width="2.2" fill="none"/>' +
+    '<rect x="32" y="22" width="5" height="7" rx="1.5" fill="#333"/>' +
+    // بدنه: قرمز سیگنالی (EN 3) یا استیل برای کپسول‌های آب‌پایه
+    '<rect x="8" y="11" width="24" height="49" rx="7" fill="'+(c.body||'#c5221f')+'"/>' +
+    '<rect x="8" y="11" width="24" height="49" rx="7" fill="none" stroke="rgba(0,0,0,0.15)" stroke-width="1"/>' +
+    // نوار رنگی نوع کپسول
+    '<rect x="8" y="30" width="24" height="13" fill="'+band+'"/>' +
+    // برچسب نام
+    '<text x="20" y="39.5" text-anchor="middle" font-size="8" font-weight="700" fill="'+labelText(band)+'" font-family="Arial">'+c.name+'</text>' +
+    '</svg>';
+}
+// انتخاب رنگ متن روی نوار بر اساس روشنی رنگ
+function labelText(hex){
+  if(hex.length===4){ hex='#'+hex[1]+hex[1]+hex[2]+hex[2]+hex[3]+hex[3]; }
+  var r=parseInt(hex.substr(1,2),16),g=parseInt(hex.substr(3,2),16),b=parseInt(hex.substr(5,2),16);
+  var lum=(0.299*r+0.587*g+0.114*b);
+  return lum>150 ? '#222' : '#fff';
+}
+
+function buildFireGrid(){
+  var g = document.getElementById('fireGrid');
+  g.innerHTML = FIRE_CLASSES.map(function(f, i){
+    return '<button class="fire-chip" data-idx="'+i+'" onclick="selectFire('+i+')">' +
+      '<div class="fc-top"><span class="fc-ico">'+f.ico+'</span>' +
+      '<span class="fc-cls">'+f.cls+'</span></div>' +
+      '<span class="fc-name">'+f.name+'</span>' +
+      '<span class="fc-ex">'+f.ex+'</span></button>';
+  }).join('');
+}
+
+function selectFire(i){
+  document.querySelectorAll('.fire-chip').forEach(function(c){
+    c.classList.toggle('sel', c.dataset.idx == i);
+  });
+  var f = FIRE_CLASSES[i];
+
+  // مرتب‌سازی کپسول‌های مجاز بر اساس امتیاز اولویت (نزولی)
+  var okSorted = f.ok.slice().sort(function(a,b){ return (b[2]||0)-(a[2]||0); });
+
+  function okItems(arr){
+    if(!arr.length) return '<div class="ext-empty">موردی ندارد.</div>';
+    return arr.map(function(x, idx){
+      var c = EXT_COLORS[x[0]];
+      var rank = idx+1;
+      var badge = (rank===1) ? '<span class="ei-best">اولویت اول</span>' : '';
+      var rate = x[3] ? '<div class="ei-rate"><span class="ei-rate-lbl">قدرت خاموش‌کنندگی:</span> <bdi>'+x[3]+'</bdi></div>' : '';
+      return '<div class="ext-item ok">' +
+        '<span class="ei-rank">'+rank+'</span>' +
+        extSVG(x[0]) +
+        '<div class="ei-body"><div class="ei-name">' +
+          '<span class="ei-color" style="background:'+c.bg+';color:'+labelText(c.bg)+'">'+c.name+'</span>' + badge +
+        '</div><div class="ei-desc">'+x[1]+'</div>'+rate+'</div></div>';
+    }).join('');
+  }
+
+  function plainItems(arr, klass, ico){
+    if(!arr.length) return '<div class="ext-empty">موردی ندارد.</div>';
+    return arr.map(function(x){
+      var c = EXT_COLORS[x[0]];
+      var rate = (x[3] && x[3] !== '—') ? '<div class="ei-rate"><span class="ei-rate-lbl">قدرت خاموش‌کنندگی:</span> <bdi>'+x[3]+'</bdi></div>' : '';
+      return '<div class="ext-item '+klass+'">' +
+        extSVG(x[0]) +
+        '<div class="ei-body"><div class="ei-name">' +
+          '<span class="ei-color" style="background:'+c.bg+';color:'+labelText(c.bg)+'">'+c.name+'</span>' +
+        '</div><div class="ei-desc">'+x[1]+'</div>'+rate+'</div></div>';
+    }).join('');
+  }
+
+  var html =
+    '<div class="result-box r-green" style="text-align:right">' +
+      '<div class="verdict" style="font-size:18px">'+f.ico+' حریق کلاس '+f.cls+' — '+f.name+'</div>' +
+      '<div class="sub">'+f.ex+'</div>' +
+    '</div>';
+
+  html += '<div class="ext-block">';
+  if(f.topNote)
+    html += '<div class="ext-topnote">⛔ '+f.topNote+'</div>';
+  html += '<h3>✅ کپسول‌های مجاز <span class="h3-hint">(به ترتیب اولویت)</span></h3>' + okItems(okSorted);
+  if(f.caution && f.caution.length)
+    html += '<h3>⚠️ با احتیاط / محدود</h3>' + plainItems(f.caution, 'caution', '⚠️');
+  html += '<h3>⛔ نباید استفاده شود</h3>' + plainItems(f.danger, 'danger', '⛔');
+  if(f.note)
+    html += '<div class="conv-note" style="margin-top:10px">📌 '+f.note+'</div>';
+  html += '</div>';
+
+  var r = document.getElementById('extResult');
+  r.innerHTML = html;
+  r.style.display = 'block';
+}
+
+function evaluateHotCold() {
+  const lel = parseFloat(document.getElementById('hcLel').value);
+  const err = document.getElementById('hcErr');
+
+  if (isNaN(lel)) {
+    err.style.display = 'block';
+    return;
+  }
+  err.style.display = 'none';
+
+  // کار گرم: مجاز اگر LEL = 0 یا حداکثر ۵٪ (بند ۲-۶-۵)
+  const hotOk = (lel <= 5);
+  // کار سرد: مجاز اگر LEL کمتر از ۱۰٪ (بند ۲-۶-۶)
+  const coldOk = (lel < 10);
+
+  let cls, icon, verdict, sub;
+  if (hotOk && coldOk) {
+    cls = 'r-green'; icon = '✅';
+    verdict = 'کار گرم و کار سرد مجاز است';
+    sub = 'گاز قابل اشتعال در حد مجاز هر دو نوع کار است.';
+  } else if (!hotOk && coldOk) {
+    cls = 'r-orange'; icon = '🔥';
+    verdict = 'فقط کار سرد مجاز است';
+    sub = 'گاز قابل اشتعال بیش از ۵٪ LEL است؛ کار گرم مجاز نیست.';
+  } else {
+    cls = 'r-red'; icon = '⛔';
+    verdict = 'کار گرم و کار سرد مجاز نیست';
+    sub = 'گاز قابل اشتعال ۱۰٪ LEL یا بیشتر است؛ نیاز به تخلیه و تهویه و گازسنجی مجدد.';
+  }
+
+  const rows = [];
+  rows.push(gasRow('کار گرم (حد ۵٪ LEL)', lel + '٪', hotOk ? {c:'tag-ok', t:'مجاز'} : {c:'tag-bad', t:'مجاز نیست'}));
+  rows.push(gasRow('کار سرد (حد ۱۰٪ LEL)', lel + '٪', coldOk ? {c:'tag-ok', t:'مجاز'} : {c:'tag-bad', t:'مجاز نیست'}));
+
+  document.getElementById('hcResult').innerHTML =
+    '<div class="result-box ' + cls + '">' +
+      '<span class="icon">' + icon + '</span>' +
+      '<div class="verdict">' + verdict + '</div>' +
+      '<div class="sub">' + sub + '</div>' +
+    '</div>' +
+    '<div class="reasons"><h3>وضعیت هر نوع کار</h3>' + rows.join('') + '</div>';
+
+  document.getElementById('hcResult').style.display = 'block';
+  document.getElementById('hcResult').scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+function resetHotCold() {
+  document.getElementById('hcLel').value = '';
+  document.getElementById('hcResult').style.display = 'none';
+  document.getElementById('hcErr').style.display = 'none';
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+
+function evaluate() {
+  const lel = parseFloat(document.getElementById('lel').value);
+  const o2  = parseFloat(document.getElementById('o2').value);
+  const h2s = parseFloat(document.getElementById('h2s').value);
+  const co  = parseFloat(document.getElementById('co').value);
+  const err = document.getElementById('err');
+
+  if ([lel,o2,h2s,co].some(v => isNaN(v))) {
+    err.style.display = 'block';
+    return;
+  }
+  err.style.display = 'none';
+
+  // --- منطق طبق جدول‌های دستورالعمل ---
+  // ممنوع مطلق: LEL>10 یا H2S>20 یا CO>250
+  const forbidden = (lel > 10) || (h2s > 20) || (co > 250);
+
+  // شرایط ورود بدون دستگاه تنفسی: LEL<1 و O2>19.5 و H2S<1 و CO<1
+  const noBA = (lel < 1) && (o2 > 19.5) && (h2s < 1) && (co < 1);
+
+  let cls, icon, verdict, sub;
+
+  if (forbidden) {
+    cls = 'r-red'; icon = '⛔';
+    verdict = 'ورود مطلقاً ممنوع';
+    sub = 'باید عملیات تخلیه و تهویه انجام و دوباره گازسنجی شود.';
+  } else if (noBA) {
+    cls = 'r-green'; icon = '✅';
+    verdict = 'ورود بدون دستگاه تنفسی مجاز است';
+    sub = 'شرایط در حد مجاز است.';
+  } else {
+    cls = 'r-orange'; icon = '🫁';
+    verdict = 'ورود فقط با دستگاه تنفسی مجاز است';
+    sub = 'با کپسول هوای فشرده (Breathing Apparatus).';
+  }
+
+  // --- جزئیات هر گاز ---
+  const rows = [];
+  rows.push(gasRow('گازهای اشتعال (LEL)', lel + '٪', lelTag(lel)));
+  rows.push(gasRow('اکسیژن (O₂)', o2 + '٪', o2Tag(o2)));
+  rows.push(gasRow('سولفید هیدروژن (H₂S)', h2s + ' ppm', h2sTag(h2s)));
+  rows.push(gasRow('مونواکسید کربن (CO)', co + ' ppm', coTag(co)));
+
+  document.getElementById('result').innerHTML =
+    '<div class="result-box ' + cls + '">' +
+      '<span class="icon">' + icon + '</span>' +
+      '<div class="verdict">' + verdict + '</div>' +
+      '<div class="sub">' + sub + '</div>' +
+    '</div>' +
+    '<div class="reasons"><h3>وضعیت هر گاز</h3>' + rows.join('') + '</div>';
+
+  document.getElementById('result').style.display = 'block';
+  document.getElementById('result').scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+function gasRow(name, val, tagObj) {
+  return '<div class="row"><span>' + name + '</span>' +
+    '<span><span class="gas-val">' + val + '</span> &nbsp; ' +
+    '<span class="tag ' + tagObj.c + '">' + tagObj.t + '</span></span></div>';
+}
+
+// LEL: <1 عالی، 1..10 نیاز به دستگاه، >10 ممنوع
+function lelTag(v){
+  if (v > 10) return {c:'tag-bad', t:'ممنوع'};
+  if (v >= 1) return {c:'tag-warn', t:'نیاز به دستگاه'};
+  return {c:'tag-ok', t:'مجاز'};
+}
+// O2: >19.5 بدون دستگاه، <=19.5 نیاز به دستگاه
+function o2Tag(v){
+  if (v > 19.5) return {c:'tag-ok', t:'مجاز'};
+  return {c:'tag-warn', t:'نیاز به دستگاه'};
+}
+// H2S: <1 عالی، 1..20 نیاز به دستگاه، >20 ممنوع
+function h2sTag(v){
+  if (v > 20) return {c:'tag-bad', t:'ممنوع'};
+  if (v >= 1) return {c:'tag-warn', t:'نیاز به دستگاه'};
+  return {c:'tag-ok', t:'مجاز'};
+}
+// CO: <1 عالی، 1..250 نیاز به دستگاه، >250 ممنوع
+function coTag(v){
+  if (v > 250) return {c:'tag-bad', t:'ممنوع'};
+  if (v >= 1) return {c:'tag-warn', t:'نیاز به دستگاه'};
+  return {c:'tag-ok', t:'مجاز'};
+}
+
+function resetForm(){
+  ['lel','o2','h2s','co'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('result').style.display = 'none';
+  document.getElementById('err').style.display = 'none';
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+
+
+/* ================= فاصله ایمن حفاری ================= */
+// ⚠️ مقادیر پیش‌فرض — قابل تنظیم بر اساس دستورالعمل شرکت
+const DIG_RULES = {
+  dist:  { name:'شبکه توزیع',  mech:1.0, pile:3,  note:'لوله‌های پلی‌اتیلن در برابر ضربه بسیار آسیب‌پذیرند؛ عمق دفن ممکن است کمتر از حد استاندارد باشد.' },
+  feed:  { name:'خط تغذیه',    mech:2.0, pile:5,  note:'پیش از حفاری مکانیکی، موقعیت دقیق لوله با حفاری آزمایشی دستی (Trial Pit) تعیین شود.' },
+  trans: { name:'خط انتقال',   mech:2.5, pile:15, note:'هرگونه فعالیت در حریم خط انتقال مستلزم مجوز رسمی از منطقه عملیات انتقال گاز است.' }
+};
+
+function segPick(groupId, btn){
+  document.querySelectorAll('#'+groupId+' button').forEach(b => b.classList.remove('on'));
+  btn.classList.add('on');
+}
+function segVal(groupId){
+  const b = document.querySelector('#'+groupId+' button.on');
+  return b ? b.dataset.v : null;
+}
+
+function evalDig(){
+  const line = document.getElementById('digLine').value;
+  const op = segVal('digOp');
+  const err = document.getElementById('digErr');
+  if(!line || !op){ err.style.display='block'; return; }
+  err.style.display='none';
+
+  const r = DIG_RULES[line];
+  let cls, icon, verdict, sub, reqs = [];
+
+  reqs.push('استعلام مسیر و مارک‌کردن خطوط قبل از شروع کار');
+  reqs.push('اخذ پرمیت حفاری از واحد HSE / بهره‌برداری');
+  reqs.push('حضور ناظر بهره‌برداری در طول عملیات');
+
+  if(op==='hand'){
+    cls='r-green'; icon='⛏️';
+    verdict='حفاری دستی — مجاز با احتیاط';
+    sub='در نزدیکی '+r.name+'، حفاری فقط به‌صورت دستی و با ابزار غیرضربه‌ای انجام شود.';
+    reqs.push('در فاصله کمتر از ۰.۵ متر از بدنه لوله: حفاری با بیل دستی، بدون کلنگ و ابزار ضربه‌ای');
+    reqs.push('گازسنجی مستمر داخل ترانشه در صورت بوی گاز یا مشاهده نشتی، توقف فوری کار');
+  } else if(op==='mech'){
+    cls='r-orange'; icon='🚜';
+    verdict='حفاری مکانیکی — حداقل فاصله '+r.mech.toLocaleString('fa')+' متر از لوله';
+    sub='نزدیک‌تر از این فاصله به '+r.name+'، فقط حفاری دستی مجاز است.';
+    reqs.push('تعیین موقعیت دقیق لوله با حفاری آزمایشی دستی پیش از ورود ماشین‌آلات');
+    reqs.push('علامت‌گذاری محدوده ممنوعه ماشین‌آلات با نوار خطر');
+    reqs.push('راهنمای ثابت (Banksman) برای هدایت اپراتور بیل مکانیکی');
+  } else {
+    cls='r-red'; icon='⚠️';
+    verdict='شمع‌کوبی/دریل — حداقل فاصله '+r.pile.toLocaleString('fa')+' متر';
+    sub='عملیات ضربه‌ای و لرزشی در مجاورت '+r.name+' پرریسک‌ترین حالت است.';
+    reqs.push('بررسی و تأیید فاصله توسط واحد مهندسی/بهره‌برداری پیش از صدور پرمیت');
+    reqs.push('در صورت فاصله کمتر، نیاز به ارزیابی ریسک اختصاصی و مصوبه کتبی');
+  }
+
+  reqs.push(r.note);
+
+  document.getElementById('digResult').innerHTML =
+    '<div class="result-box '+cls+'"><span class="icon">'+icon+'</span>'+
+    '<div class="verdict">'+verdict+'</div><div class="sub">'+sub+'</div></div>'+
+    '<div class="req-list"><h3>الزامات</h3>'+
+    reqs.map(t=>'<div class="req-item"><span class="ri">🔹</span><span>'+t+'</span></div>').join('')+
+    '</div>';
+  document.getElementById('digResult').style.display='block';
+  document.getElementById('digResult').scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+function resetDig(){
+  document.getElementById('digLine').value='';
+  document.querySelectorAll('#digOp button').forEach(b=>b.classList.remove('on'));
+  document.getElementById('digResult').innerHTML='';
+  document.getElementById('digErr').style.display='none';
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+
+/* ================= راهنمای پرمیت کار ================= */
+const PTW_DATA = {
+  weld: { permits:['پرمیت کار گرم'], icon:'🔥',
+    reqs:['گازسنجی LEL پیش از شروع و به‌صورت دوره‌ای (کار گرم: حداکثر ۵٪ LEL)','دور‌کردن یا پوشاندن مواد قابل اشتعال در شعاع خطر جرقه','کپسول اطفای حریق آماده در محل + نفر آتش‌پای (Fire Watch)','بررسی مسیر انتشار جرقه (کانال‌ها، منهول‌ها، طبقات پایین)'] },
+  hottap: { permits:['پرمیت کار گرم','مصوبه ویژه Hot Tap'], icon:'⚠️',
+    reqs:['ارزیابی ریسک اختصاصی و تأیید سطوح بالای سازمان','کنترل فشار و دبی خط در محدوده مجاز عملیات','تیم آتش‌نشانی و طرح واکنش اضطراری در محل','اجرا فقط توسط تیم دارای صلاحیت Hot Tap'] },
+  cold: { permits:['پرمیت کار سرد'], icon:'🔧',
+    reqs:['گازسنجی (کار سرد: کمتر از ۱۰٪ LEL)','ایزولاسیون و تخلیه فشار قطعه پیش از باز کردن اتصالات','استفاده از ابزار ضدجرقه (برنجی/برنزی) در محیط گازدار','آماده‌باش برای نشت احتمالی هنگام باز کردن فلنج'] },
+  paint: { permits:['پرمیت کار سرد'], icon:'🎨',
+    reqs:['تهویه مناسب در صورت کار با حلال در فضای محصور','ماسک و حفاظت تنفسی متناسب با MSDS رنگ/حلال','ممنوعیت هم‌زمانی با کار گرم در مجاورت (بخار حلال قابل اشتعال است)'] },
+  confined: { permits:['پرمیت ورود به فضای بسته','+ پرمیت گرم/سرد متناسب با کار'], icon:'🕳️',
+    reqs:['گازسنجی چهارگانه (LEL، O₂، H₂S، CO) قبل از ورود — طبق صفحه «ورود به منهول» همین برنامه','ایزولاسیون کامل ورودی‌های گاز و انرژی (LOTO)','تهویه طبیعی/مکانیکی پیش از ورود و در حین کار','نگهبان ثابت بیرون فضا + تجهیزات نجات (هارنس، طناب، سه‌پایه)','وسیله ارتباطی دائم بین داخل و خارج'] },
+  excav: { permits:['پرمیت حفاری'], icon:'⛏️',
+    reqs:['استعلام و مارک‌کردن کلیه تأسیسات زیرزمینی (گاز، برق، آب، مخابرات)','رعایت فاصله ایمن ماشین‌آلات — طبق صفحه «فاصله ایمن حفاری»','شیب‌بندی یا سپرکوبی ترانشه عمیق‌تر از ۱.۲ متر','حفاظ و علائم هشدار دور محدوده حفاری'] },
+  elec: { permits:['پرمیت کار برقی'], icon:'⚡',
+    reqs:['قطع برق و قفل و برچسب ایمنی (LOTO) توسط فرد مجاز','تست بی‌برق بودن با فازمتر/ولت‌متر پیش از شروع','استفاده از تجهیزات حفاظت فردی عایق (دستکش، کفش، فرش عایق)','در تأسیسات گازی: تجهیزات برقی باید ضدانفجار (Ex) باشد'] },
+  height: { permits:['پرمیت کار در ارتفاع'], icon:'🪜',
+    reqs:['هارنس کامل بدن با دو لنیارد و اتصال به نقطه مطمئن','بازرسی داربست و صدور تگ مجاز (داربست‌بند دارای صلاحیت)','محصورسازی پای کار و جلوگیری از سقوط ابزار','عدم کار در ارتفاع هنگام باد شدید یا بارندگی'] },
+  radio: { permits:['پرمیت پرتونگاری'], icon:'☢️',
+    reqs:['اجرا فقط توسط شرکت دارای مجوز از سازمان انرژی اتمی','تعیین و طناب‌کشی منطقه ممنوعه بر اساس نرخ دز','هماهنگی زمانی — ترجیحاً خارج از ساعت حضور سایر افراد','علائم هشدار پرتو و کنترل تردد در محدوده'] },
+  ptest: { permits:['پرمیت کار سرد','دستورالعمل تست فشار'], icon:'🧪',
+    reqs:['تخلیه افراد غیرمرتبط از محدوده خط تحت تست','استفاده از فشارسنج کالیبره با رنج مناسب','افزایش فشار تدریجی و مرحله‌ای طبق دستورالعمل','ممنوعیت سفت‌کردن اتصالات زیر فشار'] }
+};
+
+function evalPtw(){
+  const v = document.getElementById('ptwJob').value;
+  const box = document.getElementById('ptwResult');
+  if(!v){ box.innerHTML=''; return; }
+  const d = PTW_DATA[v];
+  box.innerHTML =
+    '<div class="result-box r-green" style="background:linear-gradient(135deg,#1F4E79,#2E75B6)">'+
+    '<span class="icon">'+d.icon+'</span>'+
+    '<div class="verdict">پرمیت مورد نیاز</div>'+
+    '<div style="margin-top:10px">'+d.permits.map(p=>'<span class="permit-badge">'+p+'</span>').join('')+'</div></div>'+
+    '<div class="req-list"><h3>پیش‌نیازها و الزامات اصلی</h3>'+
+    d.reqs.map(t=>'<div class="req-item"><span class="ri">✅</span><span>'+t+'</span></div>').join('')+
+    '</div>';
+  box.scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+/* ================= محاسبه پرج ================= */
+function purgeModeUI(){
+  const m = segVal('purgeMode');
+  document.getElementById('pipeFields').style.display = (m==='pipe') ? 'block':'none';
+  document.getElementById('vesselFields').style.display = (m==='vessel') ? 'block':'none';
+}
+
+function evalPurge(){
+  const mode = segVal('purgeMode');
+  const k = parseFloat(document.getElementById('pgMethod').value);
+  const flow = parseFloat(document.getElementById('pgFlow').value);
+  const err = document.getElementById('pgErr');
+  let vol;
+
+  if(mode==='pipe'){
+    const d = parseFloat(document.getElementById('pgDia').value);
+    const L = parseFloat(document.getElementById('pgLen').value);
+    if(!(d>0) || !(L>0) || !(flow>0)){ err.style.display='block'; return; }
+    vol = Math.PI/4 * Math.pow(d*0.0254, 2) * L;
+  } else {
+    vol = parseFloat(document.getElementById('pgVol').value);
+    if(!(vol>0) || !(flow>0)){ err.style.display='block'; return; }
+  }
+  err.style.display='none';
+
+  const n2 = vol * k;
+  const hours = n2 / flow;
+  const hh = Math.floor(hours);
+  const mm = Math.round((hours - hh) * 60);
+  const timeStr = (hh>0 ? hh.toLocaleString('fa')+' ساعت ' : '') + (mm>0 ? mm.toLocaleString('fa')+' دقیقه' : (hh>0?'':'کمتر از ۱ دقیقه'));
+
+  function f(x){ return x.toLocaleString('fa', {maximumFractionDigits:2}); }
+
+  document.getElementById('pgResult').innerHTML =
+    '<div class="result-box" style="background:linear-gradient(135deg,#1F4E79,#2E75B6)">'+
+    '<span class="icon">⏱️</span><div class="verdict">زمان تقریبی پرج</div>'+
+    '<div class="big-num" style="margin-top:8px">'+timeStr+'</div></div>'+
+    '<div class="calc-rows">'+
+    '<div class="row2"><span>حجم سیستم</span><b>'+f(vol)+' m³</b></div>'+
+    '<div class="row2"><span>ضریب تعویض حجم</span><b>×'+f(k)+'</b></div>'+
+    '<div class="row2"><span>نیتروژن مورد نیاز</span><b>'+f(n2)+' m³</b></div>'+
+    '<div class="row2"><span>دبی نیتروژن</span><b>'+f(flow)+' m³/h</b></div>'+
+    '</div>';
+  document.getElementById('pgResult').scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+function resetPurge(){
+  ['pgDia','pgLen','pgVol','pgFlow'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('pgResult').innerHTML='';
+  document.getElementById('pgErr').style.display='none';
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+
+
+/* ================= حریم خطوط گاز ================= */
+// ⚠️ مقادیر پیش‌فرض — با آخرین مصوبه حریم و دستورالعمل امور حریم شرکت تطبیق داده شود
+const HARIM_TRANS = {
+  '16': { ex: 6 },   // حریم اختصاصی از هر طرف محور (متر)
+  '30': { ex: 9 },
+  '42': { ex: 12 },
+  '56': { ex: 15 }
+};
+
+function harimUI(){
+  const v = document.getElementById('hrLine').value;
+  document.getElementById('hrDiaWrap').style.display = (v==='trans') ? 'block' : 'none';
+}
+
+function evalHarim(){
+  const line = document.getElementById('hrLine').value;
+  const err = document.getElementById('hrErr');
+  if(!line){ err.style.display='block'; return; }
+  err.style.display='none';
+
+  let html='', reqs=[];
+
+  if(line==='dist'){
+    html = resBox('r-green','🏘️','شبکه توزیع شهری',
+      'لوله‌گذاری در معابر عمومی انجام می‌شود و حریم به مفهوم خطوط انتقال ندارد، اما فاصله ایمن ساخت‌وساز الزامی است.');
+    reqs = [
+      'احداث هرگونه بنا، دیوار یا فونداسیون روی مسیر لوله ممنوع است',
+      'حداقل فاصله افقی بنا از لوله توزیع: ۱ متر (مقدار پیش‌فرض — طبق ضوابط شرکت تنظیم شود)',
+      'فاصله با سایر تأسیسات (برق، آب، فاضلاب): مطابق جدول تقاطع و توازی شرکت',
+      'علمک گاز نباید داخل ملک، زیر پنجره بازشو یا در محل پارک خودرو محصور شود',
+      'پیش از هر گودبرداری در معبر، استعلام مسیر از منطقه گازرسانی الزامی است'
+    ];
+  } else if(line==='feed'){
+    html = resBox('r-orange','🏭','خط تغذیه (۲۵۰ psi)',
+      'حداقل فاصله ابنیه از محور لوله: ۴ متر از هر طرف (مقدار پیش‌فرض)');
+    reqs = [
+      'در محدوده حریم: ساخت بنا، دیوارکشی، درخت‌کاری عمیق و دپوی مصالح ممنوع',
+      'عبور عرضی تأسیسات از روی خط فقط با مجوز و غلاف‌گذاری',
+      'مسیر خط باید همیشه برای دسترسی اضطراری و نشت‌یابی باز بماند',
+      'هرگونه تغییر کاربری زمین در مجاورت خط، مستلزم استعلام از امور حریم است'
+    ];
+  } else {
+    const d = document.getElementById('hrDia').value;
+    const ex = HARIM_TRANS[d].ex;
+    html = resBox('r-red','🛢️','خط انتقال (۱۰۵۰ psi)',
+      'حریم اختصاصی: '+ex.toLocaleString('fa')+' متر از هر طرف محور لوله (مقدار پیش‌فرض)');
+    reqs = [
+      'در حریم اختصاصی: هرگونه ساخت‌وساز، کشت عمیق، حفر چاه و دپو مطلقاً ممنوع',
+      'احداث اماکن مسکونی و مراکز تجمع در فاصله نزدیک به خط، تابع حریم ایمنی مصوب است که بسته به قطر و فشار به‌مراتب بیشتر از حریم اختصاصی است — از امور حریم منطقه عملیات استعلام شود',
+      'عبور جاده، کانال یا تأسیسات از عرض خط فقط با طرح مصوب و نظارت شرکت',
+      'ماشین‌آلات سنگین بدون مجوز مجاز به تردد از روی خط نیستند',
+      'مشاهده هر فعالیت غیرمجاز در حریم به امداد گاز ۱۹۴ اطلاع داده شود'
+    ];
+  }
+
+  document.getElementById('hrResult').innerHTML = html + reqList('الزامات و محدودیت‌ها', reqs, '🔹');
+  document.getElementById('hrResult').scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+function resetHarim(){
+  document.getElementById('hrLine').value='';
+  document.getElementById('hrDiaWrap').style.display='none';
+  document.getElementById('hrResult').innerHTML='';
+  document.getElementById('hrErr').style.display='none';
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+
+function resBox(cls, icon, verdict, sub){
+  return '<div class="result-box '+cls+'"><span class="icon">'+icon+'</span>'+
+    '<div class="verdict">'+verdict+'</div><div class="sub">'+sub+'</div></div>';
+}
+function reqList(title, arr, mark){
+  return '<div class="req-list"><h3>'+title+'</h3>'+
+    arr.map(t=>'<div class="req-item"><span class="ri">'+mark+'</span><span>'+t+'</span></div>').join('')+'</div>';
+}
+
+/* ================= شعاع تخلیه نشت گاز ================= */
+const EVAC_DATA = {
+  indoor: { cls:'r-orange', icon:'🏠', r:'تخلیه ساختمان و ساختمان‌های مجاور',
+    acts:[
+      'هیچ کلید برق، زنگ، آسانسور یا تلفنی داخل ساختمان استفاده نشود',
+      'درها و پنجره‌ها هنگام خروج باز گذاشته شود (تهویه طبیعی)',
+      'شیر اصلی گاز (کنتور/علمک) بسته شود — فقط اگر بدون خطر در دسترس است',
+      'از فاصله امن با ۱۹۴ تماس گرفته شود',
+      'تا اعلام ایمنی توسط امداد گاز، کسی وارد ساختمان نشود'
+    ]},
+  dist: { cls:'r-orange', icon:'🚧', r:'حداقل ۵۰ متر از محل نشت',
+    acts:[
+      'محدوده با نوار خطر بسته و تردد خودرو و عابر قطع شود',
+      'حذف کلیه منابع جرقه: خودرو روشن، سیگار، موبایل در نقطه نشت',
+      'استقرار از سمت بالادست باد (پشت به باد به نشت نزدیک نشوید)',
+      'گازسنجی پیوسته لبه محدوده — اگر LEL بالا بود، شعاع افزایش یابد',
+      'مسیر ورود اکیپ امداد و آتش‌نشانی باز نگه داشته شود'
+    ]},
+  feed: { cls:'r-red', icon:'⚠️', r:'حداقل ۱۰۰ متر از محل نشت',
+    acts:[
+      'تخلیه فوری ساکنین و کسبه در محدوده',
+      'قطع برق محدوده از خارج منطقه خطر (هماهنگی با اداره برق)',
+      'بستن مسیرهای منتهی به محل با هماهنگی پلیس',
+      'اطلاع هم‌زمان به امداد گاز ۱۹۴ و آتش‌نشانی ۱۲۵',
+      'منتظر اکیپ بهره‌برداری برای ایزولاسیون خط بمانید — شیرها را خودسرانه دستکاری نکنید'
+    ]},
+  trans: { cls:'r-red', icon:'🛑', r:'حداقل ۲۰۰ تا ۸۰۰ متر (بسته به شدت، تا مرز LEL صفر)',
+    acts:[
+      'تخلیه کامل منطقه؛ صدای خروج گاز پرفشار نشانه گستره وسیع ابر گاز است',
+      'هیچ خودرویی وارد ابر گاز نشود — موتور خودرو منبع جرقه است',
+      'اعلام وضعیت اضطراری به مرکز کنترل/دیسپچینگ برای قطع خط از ایستگاه‌های طرفین',
+      'بستن جاده‌های اطراف و ممنوعیت پرواز پهپاد/بالگرد در ارتفاع پایین',
+      'استقرار فرماندهی صحنه در بالادست باد و خارج از محدوده LEL'
+    ]},
+  fire: { cls:'r-red', icon:'🔥', r:'حداقل ۸۰۰ متر برای حریق خط/مخزن تحت فشار',
+    acts:[
+      'شعله گاز را خاموش نکنید مگر جریان گاز قابل قطع باشد — خاموشی بدون قطع، ابر انفجاری می‌سازد',
+      'اولویت: قطع جریان گاز توسط اکیپ بهره‌برداری، سپس کنترل حریق',
+      'خنک‌سازی تجهیزات و مخازن مجاور با آب از فاصله و پشت حفاظ',
+      'در صورت برخورد شعله به مخزن تحت فشار، خطر BLEVE — تخلیه به ۱۶۰۰ متر',
+      'فقط آتش‌نشانان با تجهیزات کامل در محدوده داخلی فعالیت کنند'
+    ]}
+};
+
+function evalEvac(){
+  const v = document.getElementById('evScn').value;
+  const box = document.getElementById('evResult');
+  if(!v){ box.innerHTML=''; return; }
+  const d = EVAC_DATA[v];
+  box.innerHTML =
+    resBox(d.cls, d.icon, 'محدوده تخلیه اولیه', d.r) +
+    reqList('اقدامات فوری', d.acts, '⚡') +
+    '<div class="emg-call">'+
+    '<a href="tel:194">امداد گاز<span>194</span></a>'+
+    '<a href="tel:125">آتش‌نشانی<span>125</span></a>'+
+    '<a href="tel:115">اورژانس<span>115</span></a></div>';
+  box.scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+/* ================= خواص گازهای رایج ================= */
+const GAS_DATA = [
+  { id:'ch4', ico:'🔥', name:'متان (گاز طبیعی)', formula:'CH4',
+    props:[['LEL / UEL','5% / 15%'],['چگالی نسبی','0.55 (سبک‌تر از هوا)'],['حد مجاز','خفه‌کننده ساده'],['بو','بی‌بو (بودار شده با مرکاپتان)']],
+    warn:'به سمت بالا و سقف تجمع می‌کند؛ در فضای بسته با جایگزینی اکسیژن باعث خفگی می‌شود. آشکارسازی فقط با گازسنج.' },
+  { id:'h2s', ico:'☠️', name:'سولفید هیدروژن', formula:'H2S',
+    props:[['LEL / UEL','4% / 44%'],['چگالی نسبی','1.19 (سنگین‌تر از هوا)'],['TLV-TWA','1 ppm'],['STEL','5 ppm'],['IDLH','100 ppm'],['بو','تخم‌مرغ گندیده']],
+    warn:'در غلظت بالای حدود ۱۰۰ ppm حس بویایی فلج می‌شود — از بین رفتن بو یعنی خطر بیشتر، نه رفع خطر. در نقاط پست و گودال‌ها جمع می‌شود.' },
+  { id:'co', ico:'⚠️', name:'مونوکسید کربن', formula:'CO',
+    props:[['LEL / UEL','12.5% / 74%'],['چگالی نسبی','0.97 (تقریباً هم‌چگال هوا)'],['TLV-TWA','25 ppm'],['IDLH','1200 ppm'],['بو','کاملاً بی‌بو']],
+    warn:'محصول احتراق ناقص. بی‌بو و بی‌رنگ — تشخیص فقط با گازسنج. به هموگلوبین ۲۰۰ برابر قوی‌تر از اکسیژن می‌چسبد.' },
+  { id:'merc', ico:'🧪', name:'اتیل مرکاپتان (اودورانت)', formula:'C2H5SH',
+    props:[['LEL / UEL','2.8% / 18%'],['چگالی نسبی','2.1 (سنگین‌تر از هوا)'],['TLV-TWA','0.5 ppm'],['بو','سیر / کلم گندیده — در غلظت بسیار کم محسوس']],
+    warn:'بوی گاز شهری از همین ماده است. هنگام تزریق و جابجایی اودورانت، بخارات سنگین در کف محوطه می‌ماند؛ تماس پوستی و تنفسی کنترل شود.' },
+  { id:'c3h8', ico:'⛽', name:'پروپان (LPG)', formula:'C3H8',
+    props:[['LEL / UEL','2.1% / 9.5%'],['چگالی نسبی','1.56 (سنگین‌تر از هوا)'],['حد مجاز','خفه‌کننده ساده'],['بو','بی‌بو (بودار شده)']],
+    warn:'برخلاف متان در کف، کانال و زیرزمین تجمع می‌کند و دیر پراکنده می‌شود — تهویه نقاط پست در نشت LPG حیاتی است.' },
+  { id:'n2', ico:'💨', name:'نیتروژن', formula:'N2',
+    props:[['اشتعال','غیرقابل اشتعال'],['چگالی نسبی','0.97'],['حد مجاز','خفه‌کننده ساده'],['بو','بی‌بو']],
+    warn:'گاز پرکاربرد پرج؛ عامل اصلی مرگ‌های خاموش در فضای بسته. ورود به فضای پرج‌شده بدون گازسنجی اکسیژن مطلقاً ممنوع.' }
+];
+
+function initGasPage(){
+  const sel = document.getElementById('gtPick');
+  GAS_DATA.forEach(g=>{
+    const o=document.createElement('option'); o.value=g.id; o.textContent=g.name; sel.appendChild(o);
+  });
+  renderGas();
+}
+function renderGas(){
+  const v = document.getElementById('gtPick').value;
+  const list = (v==='all') ? GAS_DATA : GAS_DATA.filter(g=>g.id===v);
+  document.getElementById('gtList').innerHTML = list.map(g=>
+    '<div class="gas-card"><div class="gas-head"><span class="gico">'+g.ico+'</span>'+
+    '<span class="gname">'+g.name+'</span><span class="gformula">'+g.formula+'</span></div>'+
+    g.props.map(p=>'<div class="gas-prop"><span class="gk">'+p[0]+'</span><span class="gv">'+p[1]+'</span></div>').join('')+
+    '<div class="gas-warn">⚠️ '+g.warn+'</div></div>'
+  ).join('');
+}
+
+/* ================= اقدامات اولیه حوادث ================= */
+const FA_DATA = [
+  { id:'gas', name:'مسمومیت با گاز (H₂S / CO / کمبود اکسیژن)', icon:'😵',
+    banner:'وارد فضای آلوده بدون دستگاه تنفسی (SCBA) نشوید — اکثر تلفات ثانویه مربوط به نجات‌دهنده‌های بدون تجهیزات است.',
+    steps:[
+      'اعلام وضعیت و درخواست کمک؛ تماس با اورژانس ۱۱۵',
+      'نجات مصدوم فقط با دستگاه تنفسی و طناب نجات — در غیر این صورت منتظر تیم امداد بمانید',
+      'انتقال مصدوم به هوای آزاد و خنک، دور از منطقه آلوده و در بالادست باد',
+      'بررسی هوشیاری و تنفس؛ در صورت نبود تنفس: شروع CPR (۳۰ ماساژ + ۲ تنفس)',
+      'در صورت تنفس طبیعی ولی بیهوشی: وضعیت ریکاوری (خواباندن به پهلو)',
+      'حتی با بهبود ظاهری، انتقال به مرکز درمانی الزامی است (آسیب تأخیری CO)'
+    ]},
+  { id:'burn', name:'سوختگی حرارتی', icon:'🔥',
+    banner:'ابتدا منبع حرارت/حریق کنترل شود؛ لباس در حال سوختن با غلتاندن مصدوم یا پتو خاموش شود.',
+    steps:[
+      'خنک‌سازی محل سوختگی با آب خنک جاری به مدت ۱۰ تا ۲۰ دقیقه — از یخ استفاده نشود',
+      'جدا کردن ساعت، انگشتر و لباسِ نچسبیده پیش از تورم؛ لباس چسبیده کنده نشود',
+      'پوشاندن سوختگی با پانسمان استریل یا پارچه تمیز و خشک — بدون خمیردندان، روغن یا پماد خانگی',
+      'تاول‌ها نترکد',
+      'سوختگی وسیع، عمیق، صورت/دست/تنفسی: تماس فوری با ۱۱۵ و پایش علائم شوک'
+    ]},
+  { id:'elec', name:'برق‌گرفتگی', icon:'⚡',
+    banner:'تا قطع کامل برق، به مصدوم دست نزنید — در غیر این صورت نفر دوم هم مصدوم می‌شود.',
+    steps:[
+      'قطع برق از کلید/فیوز؛ اگر مقدور نیست، جدا کردن مصدوم با وسیله عایق خشک (چوب، دسته پلاستیکی)',
+      'تماس با اورژانس ۱۱۵',
+      'بررسی هوشیاری و تنفس؛ در صورت ایست قلبی: CPR فوری و ادامه تا رسیدن اورژانس',
+      'بررسی نقاط ورود و خروج جریان (سوختگی الکتریکی) و پانسمان استریل',
+      'هر برق‌گرفتگی حتی با حال عمومی خوب، نیاز به ارزیابی پزشکی دارد (آریتمی تأخیری)'
+    ]},
+  { id:'fall', name:'سقوط از ارتفاع', icon:'🪜',
+    banner:'مصدوم سقوط را جابجا نکنید مگر خطر فوری (حریق، گاز) وجود داشته باشد — احتمال آسیب نخاع.',
+    steps:[
+      'ایمن‌سازی صحنه و تماس با ۱۱۵؛ اعلام ارتفاع سقوط به اورژانس',
+      'ثابت نگه داشتن سر و گردن در همان وضعیت با دو دست',
+      'در صورت ایست تنفسی: باز کردن راه هوایی با مانور jaw thrust (بدون خم کردن گردن) و CPR',
+      'کنترل خونریزی شدید با فشار مستقیم',
+      'گرم نگه داشتن مصدوم و پایش هوشیاری تا رسیدن اورژانس'
+    ]},
+  { id:'eye', name:'پاشش مواد شیمیایی به چشم', icon:'👁️',
+    banner:'هر ثانیه تأخیر در شستشو، آسیب را بیشتر می‌کند — اول شستشو، بعد هر کار دیگر.',
+    steps:[
+      'شستشوی فوری چشم با آب تمیز یا چشم‌شوی اضطراری حداقل ۱۵ تا ۲۰ دقیقه',
+      'پلک‌ها با انگشت باز نگه داشته شود و چشم در همه جهات بچرخد',
+      'جهت شستشو از سمت بینی به بیرون باشد تا چشم سالم آلوده نشود',
+      'لنز تماسی در حین شستشو خارج شود',
+      'بدون مالش چشم، انتقال به مرکز درمانی به همراه MSDS ماده'
+    ]},
+  { id:'bleed', name:'خونریزی شدید / قطع عضو', icon:'🩸',
+    banner:'با دستکش یا لایه حفاظتی کار کنید؛ تماس مستقیم با خون ممنوع.',
+    steps:[
+      'فشار مستقیم و محکم روی محل خونریزی با گاز استریل یا پارچه تمیز',
+      'بالا نگه داشتن عضو خونریزی‌دهنده بالاتر از سطح قلب',
+      'اگر پانسمان خیس شد، لایه جدید روی آن اضافه شود — لایه قبلی برداشته نشود',
+      'در خونریزی غیرقابل کنترل اندام: تورنیکه ۵ تا ۷ سانت بالاتر از زخم + ثبت زمان بستن',
+      'عضو قطع‌شده در کیسه تمیز، داخل ظرف آب و یخ (نه تماس مستقیم با یخ) همراه مصدوم ارسال شود',
+      'پایش علائم شوک: دراز کشاندن مصدوم و گرم نگه داشتن'
+    ]}
+];
+
+function initFAPage(){
+  const sel = document.getElementById('faPick');
+  FA_DATA.forEach(f=>{
+    const o=document.createElement('option'); o.value=f.id; o.textContent=f.name; sel.appendChild(o);
+  });
+}
+function renderFA(){
+  const v = document.getElementById('faPick').value;
+  const box = document.getElementById('faResult');
+  if(!v){ box.innerHTML=''; return; }
+  const d = FA_DATA.find(f=>f.id===v);
+  box.innerHTML =
+    '<div class="danger-banner" style="margin-top:14px">🛑 '+d.banner+'</div>'+
+    '<div class="req-list"><h3>'+d.icon+' گام‌های اقدام</h3>'+
+    d.steps.map((t,i)=>'<div class="step-item"><span class="step-num">'+(i+1).toLocaleString('fa')+'</span><span>'+t+'</span></div>').join('')+
+    '</div>'+
+    '<div class="emg-call">'+
+    '<a href="tel:115">اورژانس<span>115</span></a>'+
+    '<a href="tel:125">آتش‌نشانی<span>125</span></a>'+
+    '<a href="tel:194">امداد گاز<span>194</span></a></div>';
+  box.scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+
+/* ================= تحلیل اطفا و اعلام ساختمان ================= */
+function buildingUI(){
+  var v = document.getElementById('bUse').value;
+  document.getElementById('bHazWrap').style.display = (v==='r5') ? 'block':'none';
+}
+
+// تعیین کلاس S از جدول 59-1 ضوابط اطفا
+function classByArea(area, t1, t2, t3){
+  // t1: زیر 4830 | t2: 4830 تا 10000 | t3: 10000 و بیشتر
+  if(area < 4830) return t1;
+  if(area < 10000) return t2;
+  return t3;
+}
+
+function analyzeBuilding(){
+  var use = document.getElementById('bUse').value;
+  var area = parseFloat(document.getElementById('bArea').value);
+  var h = parseFloat(document.getElementById('bHeight').value);
+  var floors = parseInt(document.getElementById('bFloors').value);
+  var occ = parseInt(document.getElementById('bOcc').value);
+  var depth = parseFloat(document.getElementById('bDepth').value);
+  var err = document.getElementById('bErr');
+
+  if(!use || !(area>0) || !(h>0) || !(floors>0) || isNaN(occ) || isNaN(depth)){
+    err.style.display='block'; return;
+  }
+  err.style.display='none';
+
+  // ---------- تعیین کلاس اطفا S ----------
+  var sClass='', note='';
+
+  if(use==='r5'){
+    var haz = segVal('bHaz');
+    if(area >= 10000){ sClass='S3'; }
+    else if(haz==='high'){ sClass = (area<1000)?'S3':'S3'; }
+    else { sClass = (area<1000)?'S1':'S2'; }
+  } else if(use==='r4'){
+    sClass='S3'; // درمانی/مراقبتی با هر ارتفاع
+  } else if(use==='r1'){
+    if(h<23) sClass=classByArea(area,'S1','S2','S3');
+    else if(h<30) sClass=classByArea(area,'S2','S3','S3');
+    else sClass='S3';
+  } else if(use==='r2'){
+    if(h<12) sClass=classByArea(area,'S1','S2','S3');
+    else sClass='S3';
+  } else if(use==='r3'){
+    if(h<23) sClass=classByArea(area,'S1','S2','S3');
+    else sClass='S3';
+  }
+
+  // قاعده عمق: 18 متر یا بیشتر => S3
+  if(depth>=18 && sClass!=='S3'){ sClass='S3'; note='به دلیل عمق ۱۸ متر یا بیشتر، طبق ضابطه به S3 ارتقا یافت. '; }
+  // استثنای تجاری کوچک
+  if(use==='r2' && floors<=2 && occ<50){ sClass='S1'; note='تجاری حداکثر ۲ طبقه با کمتر از ۵۰ نفر، S1 محسوب می‌شود. '; }
+
+  // ---------- نوع سیستم اعلام حریق (سند اعلام، جدول ص۲۴) ----------
+  var alarm = alarmSystem(use, h, floors, occ, area);
+
+  // ---------- الزامات اطفا بر اساس کلاس ----------
+  var color = sClass==='S1' ? '#2e9e5b' : (sClass==='S2' ? '#e8932a' : '#c5221f');
+
+  var sysReq = [];
+  if(sClass==='S1'){
+    sysReq = [
+      ['اسپرینکلر', 'الزامی (فهرست‌شده)'],
+      ['جعبه آتش‌نشانی + قرقره و نازل', 'الزامی'],
+      ['روش طراحی', 'جداول پیش‌تعیین‌شده مجاز است'],
+      ['پمپ‌خانه', 'دفنی مجاز (حداقل ۹ m²، ارتفاع ۳ متر) یا غیردفنی'],
+    ];
+  } else if(sClass==='S2'){
+    sysReq = [
+      ['اسپرینکلر', 'الزامی (فهرست‌شده)'],
+      ['جعبه آتش‌نشانی', 'الزامی'],
+      ['شیر قطع‌کن نظارتی ابتدای انشعاب طبقات', 'الزامی'],
+      ['روش طراحی', 'جداول پیش‌تعیین یا هیدرولیکی'],
+      ['پمپ‌خانه', 'غیردفنی، مجزا با درب و دیوار، حداقل ۲۰ m²'],
+    ];
+  } else {
+    sysReq = [
+      ['اسپرینکلر', 'الزامی (فهرست‌شده)'],
+      ['لوله ایستاده کلاس ۴ (جعبه)', 'الزامی — به ازای هر ۲ راه خروج حداقل یک لوله ایستاده'],
+      ['شیر OS&Y خط مکش پمپ', 'الزامی'],
+      ['شیر یک‌طرفه هشدار تر (Wet Alarm)', 'الزامی'],
+      ['روش طراحی', 'محاسبات هیدرولیکی اجباری (جداول پیش‌تعیین مجاز نیست)'],
+      ['پمپ', 'پکیج مورد تأیید سازمان آتش‌نشانی'],
+      ['پمپ‌خانه', 'غیردفنی، مجزا با درب و دیوار، حداقل ۲۰ m²'],
+    ];
+  }
+
+  // ---------- پمپ ----------
+  var pumpRows = [
+    ['آرایش پمپ', 'دو پمپ اصلی هرکدام با ظرفیت ۱۰۰٪ (یکی رزرو) + یک پمپ جوکی'],
+    ['جایگزین', 'در صورت استفاده از پمپ فهرست‌شده، یک پمپ اصلی + جوکی کافی است'],
+    ['مبنای دبی', sClass==='S3' ? 'مجموع دبی اسپرینکلر + لوله ایستاده کلاس ۴ (۱۰۰ gpm)' : 'برابر دبی سیستم اسپرینکلر'],
+    ['نوع پمپ', 'گریز از مرکز کوپله مستقیم'],
+  ];
+  if(h>128){
+    pumpRows.push(['ارتفاع ویژه (بالای ۱۲۸ متر)', 'حداقل دو پمپ مجزا (الکتریکی + دیزل) موازی ۱۰۰٪ برای هر زون ارتفاعی']);
+  }
+
+  // ---------- رایزر و کلکتور ----------
+  var riserRows = [
+    ['لوله ایستاده کلاس ۱ و ۳', 'حداقل ۴ اینچ'],
+    ['لوله ایستاده کلاس ۴', 'حداقل ۲ اینچ'],
+    ['رایزر مشترک (اسپرینکلر + لوله ایستاده)', 'حداقل ۴ اینچ'],
+    ['کلکتور خروجی پمپ', 'حداقل ۴ اینچ و یک سایز بزرگ‌تر از بزرگ‌ترین رایزر فعال'],
+    ['کلکتور ورودی پمپ', 'حداقل ۵ اینچ (یک سایز بیشتر از کلکتور خروجی)'],
+    ['لوله مشترک جعبه‌ها', 'حداقل ۲½ اینچ؛ انشعاب هر جعبه حداقل ۱½ اینچ'],
+  ];
+
+  // ---------- مخزن ----------
+  var tankTime = (sClass==='S3') ? '۲۰ دقیقه' : '۱۵ دقیقه';
+  var tankRows = [
+    ['زمان ذخیره‌سازی', tankTime + ' (بر اساس دبی پمپ)'],
+    ['نمونه حجم', 'برای پمپ ۱۵۰gpm ≈ ۸٬۰۰۰ لیتر · ۲۰۰gpm ≈ ۱۱٬۰۰۰ · ۳۰۰gpm ≈ ۲۲٬۰۰۰ لیتر'],
+  ];
+  if(h>128){
+    tankRows.push(['ارتفاع ویژه', 'حداقل دو مخزن مجزا؛ با از دست رفتن یکی، ۵۰٪ ظرفیت تأمین شود']);
+  }
+
+  function rows(arr){
+    return arr.map(function(r){
+      return '<div class="sec-row"><span class="sk">'+r[0]+'</span><span class="sv">'+r[1]+'</span></div>';
+    }).join('');
+  }
+
+  var html =
+    '<div class="result-box" style="background:'+color+'">'+
+    '<div class="class-badge" style="background:rgba(255,255,255,0.25)">'+sClass+'</div>'+
+    '<div class="verdict">کلاس ساختمان از نظر اطفا حریق: '+sClass+'</div>'+
+    (note ? '<div class="sub">'+note+'</div>' : '')+
+    '</div>'+
+    '<div class="sec-block">'+
+    '<h3>🔔 سیستم اعلام حریق</h3>'+ rows(alarm) +
+    '<h3>💧 الزامات سیستم اطفا</h3>'+ rows(sysReq) +
+    '<h3>⚙️ پمپ آتش‌نشانی</h3>'+ rows(pumpRows) +
+    '<h3>📏 رایزر و کلکتور</h3>'+ rows(riserRows) +
+    '<h3>🛢️ مخزن ذخیره آب</h3>'+ rows(tankRows) +
+    '</div>'+
+    '<div class="hyd-note">⚠️ دبی نهایی (gpm) و توان پمپ (kW) تابع محاسبات هیدرولیکی بر اساس سطح خطر اسپرینکلر '+
+    '(کم‌خطر / خطر متوسط / پرخطر)، مساحت عملیاتی و ارتفاع است و باید توسط مهندس مکانیک محاسبه شود. '+
+    (sClass==='S3' ? 'در کلاس S3 محاسبات هیدرولیکی اجباری است. ' : '')+
+    'حجم سوخت دیزل: ۵ لیتر به ازای هر کیلووات توان پمپ + ۱۰٪ ضریب اطمینان.</div>';
+
+  var box = document.getElementById('bResult');
+  box.innerHTML = html;
+  box.scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+// نوع سیستم اعلام حریق طبق ضوابط اعلام (جدول ص ۲۴)
+function alarmSystem(use, h, floors, occ, area){
+  var bolandMartabe = h > 23; // بلندمرتبه
+  var rows = [];
+  var needed = true, addr = false, reason = '';
+
+  if(use==='r1'){ // مسکونی/اداری/آموزشی — اینجا اداری/آموزشی فرض پایه
+    // آدرس‌پذیر اگر >5 طبقه یا >500 نفر
+    if(floors>5 || occ>500){ addr=true; reason='بیش از ۵ طبقه یا بیش از ۵۰۰ نفر'; }
+  } else if(use==='r2'){ // تجاری
+    if(occ>500 || floors>3){ addr=true; reason='بیش از ۵۰۰ نفر یا بیش از ۳ طبقه'; }
+  } else if(use==='r3'){ // اقامتی/تجمعی
+    if(occ>1000 || floors>5){ addr=true; reason='بیش از ۵ طبقه یا بیش از ۱۰۰۰ نفر'; }
+  } else if(use==='r4'){ // درمانی
+    if(floors>5 || occ>500){ addr=true; reason='بیش از ۵ طبقه یا بیش از ۵۰۰ نفر'; }
+  } else if(use==='r5'){ // صنعتی/انبار
+    if(area>5000 || occ>500){ addr=true; reason='بیش از ۵۰۰۰ m² یا بیش از ۵۰۰ نفر'; }
+  }
+
+  // قاعده کلی: بلندمرتبه غیرمسکونی => آدرس‌پذیر اجباری
+  if(bolandMartabe && use!=='r1'){ addr=true; reason = reason || 'ساختمان بلندمرتبه (بالای ۲۳ متر)'; }
+  // بالای 30 متر یا 10000 متر => آدرس‌پذیر آنالوگ + ایزولاتور
+  var analog = (h>30 || area>10000);
+
+  rows.push(['نیاز به سیستم اعلام', needed ? 'الزامی' : 'بر اساس بررسی موردی']);
+  rows.push(['نوع سیستم', addr ? 'آدرس‌پذیر' + (analog?' آنالوگ (با ایزولاتور داخلی)':'') : 'متعارف یا آدرس‌پذیر (متعارف کافی است)']);
+  if(reason) rows.push(['دلیل آدرس‌پذیری', reason]);
+  if(analog) rows.push(['الزام تکمیلی', 'بالای ۳۰ متر یا ۱۰٬۰۰۰ m²: آدرس‌پذیر آنالوگ + همه قطعات دارای ایزولاتور']);
+  rows.push(['محدودیت زون متعارف', 'بیش از ۱۲ زون اعلام حریق: سیستم متعارف مجاز نیست']);
+  rows.push(['ارتباط با اطفا', 'فلوسوئیچ و شیرهای نظارتی اطفا باید به مرکز کنترل اعلام متصل باشند']);
+
+  return rows;
+}
+
+function resetBuilding(){
+  ['bArea','bHeight','bFloors','bOcc','bDepth'].forEach(function(id){ document.getElementById(id).value=''; });
+  document.getElementById('bUse').value='';
+  document.getElementById('bHazWrap').style.display='none';
+  document.getElementById('bResult').innerHTML='';
+  document.getElementById('bErr').style.display='none';
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+
+// ساخت کارت‌های نوع حریق در بارگذاری
+buildFireGrid();
+initGasPage();
+initFAPage();
+
+// ثبت سرویس ورکر برای کارکرد کامل آفلاین
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function(){
+    navigator.serviceWorker.register('sw.js').catch(function(){});
+  });
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,16 @@
+{
+  "name": "ارزیابی ورود به منهول و ابزارهای HSE",
+  "short_name": "ورود به منهول",
+  "description": "جعبه‌ابزار HSE: سنجش گاز ورود به منهول، کار گرم/سرد، انتخاب خاموش‌کننده، مبدل واحد، حریم خطوط گاز، پرمیت کار و... — آفلاین",
+  "lang": "fa",
+  "dir": "rtl",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f0f2f5",
+  "theme_color": "#1F4E79",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

@@ -54,6 +54,8 @@ jobs:
         run: python build_pwa.py
       - name: Bundle HSE inspection app under /hse/
         run: cp -r hse_pwa site/hse
+      - name: Bundle manhole-entry HSE toolkit under /manhole/
+        run: cp -r manhole_pwa site/manhole
       - uses: actions/configure-pages@v5
         with:
           enablement: true
