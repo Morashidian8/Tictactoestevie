@@ -20528,13 +20528,13 @@ async function getPhoto(id){ const d=await db(); return new Promise((res,rej)=>{
 async function delPhoto(id){ const d=await db(); return new Promise((res)=>{ const t=d.transaction("photos","readwrite");
   t.objectStore("photos").delete(id); t.oncomplete=res; }); }
 
-function persist(){ localStorage.setItem(STORE_KEY, JSON.stringify(state)); }
+function persist(){ try{ localStorage.setItem(STORE_KEY, JSON.stringify(state)); }catch(e){} }
 function loadLocal(){ try{ const r=localStorage.getItem(STORE_KEY); if(r) return JSON.parse(r);}catch(e){} return null; }
 
 // تاریخچه و آرشیو
 function getHistory(){ try{ const h=localStorage.getItem(HISTORY_KEY); return h ? JSON.parse(h) : []; }catch(e){ return []; } }
-function saveHistory(item){ const h=getHistory(); h.unshift({...item, timestamp: new Date().toLocaleString('fa-IR')}); if(h.length>3) h.pop(); localStorage.setItem(HISTORY_KEY, JSON.stringify(h)); }
-function clearHistory(){ localStorage.removeItem(HISTORY_KEY); }
+function saveHistory(item){ try{ const h=getHistory(); h.unshift({...item, timestamp: new Date().toLocaleString('fa-IR')}); if(h.length>3) h.pop(); localStorage.setItem(HISTORY_KEY, JSON.stringify(h)); }catch(e){} }
+function clearHistory(){ try{ localStorage.removeItem(HISTORY_KEY); }catch(e){} }
 function showHistory(){
   const h=getHistory();
   const list=$("#historyList");
@@ -20574,7 +20574,7 @@ function showCategorySelection(){
   list.innerHTML = "";
 
   // ایجاد checkbox برای هر دسته‌بندی
-  CHECKLIST.sections.forEach((section, idx) => {
+  CHECKLIST.sections.forEach((section) => {
     const div = document.createElement("div");
     div.style.cssText = "background:#f8fafc;border:1px solid #e5e7eb;border-radius:10px;padding:12px;margin-bottom:10px;cursor:pointer;transition:0.15s;";
 
@@ -21964,9 +21964,10 @@ async function init(){
   filteredItems = [...ITEMS]; // شروع با تمام ردیف‌ها
 
   const saved = loadLocal();
-  if(saved && saved.answers && Object.keys(saved.answers).length){
-    $("#resumeBtn").style.display="inline-block";
-    $("#resumeBtn").onclick=()=>{ state=saved; fillBuilding(); idx=firstUnanswered(); show("wizardScreen"); renderItem(); };
+  const resumeBtn = $("#resumeBtn");
+  if(resumeBtn && saved && saved.answers && Object.keys(saved.answers).length){
+    resumeBtn.style.display="inline-block";
+    resumeBtn.onclick=()=>{ state=saved; fillBuilding(); idx=firstUnanswered(); show("wizardScreen"); renderItem(); };
   }
   // تقویم شمسی روی فیلد تاریخ
   const dateEl=$("#b_date"); dateEl.readOnly=true; dateEl.placeholder="انتخاب از تقویم";
