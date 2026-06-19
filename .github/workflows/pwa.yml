@@ -3,6 +3,13 @@ name: Build & Deploy PWA
 # Builds the installable web app (precomputes a year of alternation stats into
 # data.json, bundles the PWA shell) and publishes it to GitHub Pages.
 on:
+  push:
+    branches: [main]
+    paths:
+      - "hse_pwa/**"
+      - "pwa/**"
+      - "build_pwa.py"
+      - ".github/workflows/pwa.yml"
   workflow_dispatch:
     inputs:
       source:
@@ -44,16 +51,26 @@ jobs:
           path: .cache
           key: btc-${{ inputs.source }}-cache-${{ github.run_id }}
           restore-keys: btc-${{ inputs.source }}-cache-
-      - name: Build PWA
+      - name: Build Bitcoin PWA (best-effort, won't block HSE)
+        continue-on-error: true
         env:
-          ANALYSIS_SOURCE: ${{ inputs.source }}
-          ANALYSIS_DAYS: ${{ inputs.days }}
-          ANALYSIS_TZ: ${{ inputs.tz }}
+          ANALYSIS_SOURCE: ${{ inputs.source || 'binance' }}
+          ANALYSIS_DAYS: ${{ inputs.days || '365' }}
+          ANALYSIS_TZ: ${{ inputs.tz || 'Asia/Tehran' }}
           POLY_SLEEP: "0.05"
           PWA_OUT: site
         run: python build_pwa.py
-      - name: Bundle HSE inspection app under /hse/
-        run: cp -r hse_pwa site/hse
+      - name: Always publish HSE inspection app under /hse/
+        run: |
+          mkdir -p site
+          cp -r hse_pwa site/hse
+          # اگر ساخت اپ بیت‌کوین ناموفق بود و ریشه خالی است،
+          # ریشه را به اپ HSE هدایت کن تا سایت همیشه قابل استفاده باشد.
+          if [ ! -f site/index.html ]; then
+            echo '<!DOCTYPE html><html lang="fa"><head><meta charset="utf-8">' > site/index.html
+            echo '<meta http-equiv="refresh" content="0; url=./hse/"></head>' >> site/index.html
+            echo '<body>در حال انتقال به اپ بازدید ایمنی... <a href="./hse/">ورود</a></body></html>' >> site/index.html
+          fi
       - uses: actions/configure-pages@v5
         with:
           enablement: true
