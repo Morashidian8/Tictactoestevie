@@ -1,5 +1,5 @@
 // Service Worker — کش کامل برای کارکرد آفلاین
-const CACHE = "hse-pwa-v2";
+const CACHE = "hse-pwa-v3";
 const ASSETS = [
   "./",
   "./index.html",
@@ -26,16 +26,15 @@ self.addEventListener("activate", (e) => {
   );
 });
 
-// Cache-first: همه دارایی‌ها از کش خوانده می‌شوند تا آفلاین کار کند
+// Network-first: با هر رفرش آخرین نسخه از شبکه گرفته می‌شود تا آپدیت‌ها فوری
+// دیده شوند؛ در حالت آفلاین از کش استفاده می‌شود.
 self.addEventListener("fetch", (e) => {
   if (e.request.method !== "GET") return;
   e.respondWith(
-    caches.match(e.request).then((hit) =>
-      hit || fetch(e.request).then((res) => {
-        const copy = res.clone();
-        caches.open(CACHE).then((c) => c.put(e.request, copy)).catch(() => {});
-        return res;
-      }).catch(() => hit)
-    )
+    fetch(e.request).then((res) => {
+      const copy = res.clone();
+      caches.open(CACHE).then((c) => c.put(e.request, copy)).catch(() => {});
+      return res;
+    }).catch(() => caches.match(e.request))
   );
 });

@@ -1,5 +1,5 @@
 // Simple offline-first service worker for the BTC alternation PWA.
-const CACHE = 'btc-tanavob-v9';
+const CACHE = 'btc-tanavob-v10';
 const ASSETS = [
   './',
   './index.html',
@@ -25,6 +25,9 @@ self.addEventListener('activate', (e) => {
 // immediately; fall back to cache only when offline.
 self.addEventListener('fetch', (e) => {
   if (e.request.method !== 'GET') return;
+  // The HSE inspection app lives under /hse/ and manages its own service
+  // worker — do not intercept its requests so the two apps never collide.
+  if (new URL(e.request.url).pathname.includes('/hse/')) return;
   e.respondWith(
     fetch(e.request)
       .then((res) => {
