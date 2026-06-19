@@ -1136,6 +1136,8 @@ function resetHotCold() {
   window.scrollTo({top:0, behavior:'smooth'});
 }
 
+let lastAssess = null;
+
 function evaluate() {
   const lel = parseFloat(document.getElementById('lel').value);
   const o2  = parseFloat(document.getElementById('o2').value);
@@ -1173,11 +1175,16 @@ function evaluate() {
   }
 
   // --- جزئیات هر گاز ---
-  const rows = [];
-  rows.push(gasRow('گازهای اشتعال (LEL)', lel + '٪', lelTag(lel)));
-  rows.push(gasRow('اکسیژن (O₂)', o2 + '٪', o2Tag(o2)));
-  rows.push(gasRow('سولفید هیدروژن (H₂S)', h2s + ' ppm', h2sTag(h2s)));
-  rows.push(gasRow('مونواکسید کربن (CO)', co + ' ppm', coTag(co)));
+  const gases = [
+    {name:'گازهای اشتعال (LEL)', val: lel + '٪',   tag: lelTag(lel)},
+    {name:'اکسیژن (O₂)',         val: o2 + '٪',    tag: o2Tag(o2)},
+    {name:'سولفید هیدروژن (H₂S)', val: h2s + ' ppm', tag: h2sTag(h2s)},
+    {name:'مونواکسید کربن (CO)',  val: co + ' ppm',  tag: coTag(co)}
+  ];
+  const rows = gases.map(g => gasRow(g.name, g.val, g.tag));
+
+  // داده‌ی آخرین ارزیابی را برای خروجی تصویری نگه می‌داریم.
+  lastAssess = { cls, icon, verdict, sub, gases, when: new Date() };
 
   document.getElementById('result').innerHTML =
     '<div class="result-box ' + cls + '">' +
@@ -1185,7 +1192,8 @@ function evaluate() {
       '<div class="verdict">' + verdict + '</div>' +
       '<div class="sub">' + sub + '</div>' +
     '</div>' +
-    '<div class="reasons"><h3>وضعیت هر گاز</h3>' + rows.join('') + '</div>';
+    '<div class="reasons"><h3>وضعیت هر گاز</h3>' + rows.join('') + '</div>' +
+    '<button class="btn" style="margin-top:12px" onclick="saveAssessImage()">📷 ذخیره تصویر خروجی</button>';
 
   document.getElementById('result').style.display = 'block';
   document.getElementById('result').scrollIntoView({behavior:'smooth', block:'start'});
@@ -1225,7 +1233,138 @@ function resetForm(){
   ['lel','o2','h2s','co'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('result').style.display = 'none';
   document.getElementById('err').style.display = 'none';
+  lastAssess = null;
   window.scrollTo({top:0, behavior:'smooth'});
+}
+
+/* ===== خروجی تصویری نتیجه ارزیابی ورود به منهول =====
+   نتیجه را روی یک canvas رسم و به‌صورت فایل PNG ذخیره می‌کند.
+   کاملاً آفلاین و بدون هیچ کتابخانه‌ی خارجی. */
+function saveAssessImage(){
+  if (!lastAssess) return;
+  const A = lastAssess;
+  const boxColor = { 'r-green':'#1e8e3e', 'r-orange':'#e37400', 'r-red':'#c5221f' }[A.cls] || '#1F4E79';
+  const tagColors = {
+    'tag-ok':   {bg:'#e6f4ea', fg:'#1e8e3e'},
+    'tag-warn': {bg:'#fef0e0', fg:'#e37400'},
+    'tag-bad':  {bg:'#fce8e6', fg:'#c5221f'}
+  };
+
+  const W = 600, P = 28, scale = 2;
+  const headerH = 96, verdictH = 132, rowH = 56, noteH = 74;
+  const rowsTop = headerH + 24 + verdictH + 24 + 40; // header + gap + verdict + gap + section title
+  const H = rowsTop + A.gases.length * rowH + 20 + noteH;
+
+  const cv = document.createElement('canvas');
+  cv.width = W * scale; cv.height = H * scale;
+  const ctx = cv.getContext('2d');
+  ctx.scale(scale, scale);
+  const FONT = '-apple-system, "Segoe UI", Tahoma, Arial, sans-serif';
+
+  function rr(x, y, w, h, r){
+    ctx.beginPath();
+    ctx.moveTo(x+r, y);
+    ctx.arcTo(x+w, y,   x+w, y+h, r);
+    ctx.arcTo(x+w, y+h, x,   y+h, r);
+    ctx.arcTo(x,   y+h, x,   y,   r);
+    ctx.arcTo(x,   y,   x+w, y,   r);
+    ctx.closePath();
+  }
+
+  // پس‌زمینه
+  ctx.fillStyle = '#f0f2f5';
+  ctx.fillRect(0, 0, W, H);
+
+  // هدر
+  ctx.fillStyle = '#1F4E79';
+  rr(0, 0, W, headerH, 0); ctx.fill();
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#fff';
+  ctx.font = '700 24px ' + FONT;
+  ctx.fillText('ارزیابی ورود به منهول', W/2, 42);
+  ctx.font = '400 14px ' + FONT;
+  ctx.fillStyle = 'rgba(255,255,255,0.85)';
+  ctx.fillText('تاریخ: ' + A.when.toLocaleString('fa-IR'), W/2, 70);
+
+  // کادر حکم
+  const vy = headerH + 24;
+  ctx.fillStyle = boxColor;
+  rr(P, vy, W - 2*P, verdictH, 16); ctx.fill();
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#fff';
+  ctx.font = '38px ' + FONT;
+  ctx.fillText(A.icon, W/2, vy + 48);
+  ctx.font = '700 22px ' + FONT;
+  ctx.fillText(A.verdict, W/2, vy + 88);
+  ctx.font = '400 14px ' + FONT;
+  ctx.fillStyle = 'rgba(255,255,255,0.95)';
+  ctx.fillText(A.sub, W/2, vy + 114);
+
+  // عنوان بخش گازها
+  const sy = vy + verdictH + 24;
+  ctx.textAlign = 'right';
+  ctx.fillStyle = '#444';
+  ctx.font = '700 16px ' + FONT;
+  ctx.fillText('وضعیت هر گاز', W - P, sy + 18);
+
+  // ردیف‌های گاز
+  let y = sy + 40;
+  A.gases.forEach(g => {
+    // نام گاز (راست)
+    ctx.textAlign = 'right';
+    ctx.fillStyle = '#1a1a1a';
+    ctx.font = '600 15px ' + FONT;
+    ctx.fillText(g.name, W - P, y + 28);
+
+    // تگ وضعیت (چپ)
+    const tc = tagColors[g.tag.c] || {bg:'#eee', fg:'#444'};
+    ctx.font = '700 13px ' + FONT;
+    const tw = ctx.measureText(g.tag.t).width + 24;
+    rr(P, y + 12, tw, 30, 15); ctx.fillStyle = tc.bg; ctx.fill();
+    ctx.fillStyle = tc.fg; ctx.textAlign = 'center';
+    ctx.fillText(g.tag.t, P + tw/2, y + 32);
+
+    // مقدار (کنار تگ)
+    ctx.textAlign = 'left';
+    ctx.fillStyle = '#666';
+    ctx.font = '400 13px ' + FONT;
+    ctx.fillText(g.val, P + tw + 12, y + 32);
+
+    // خط جداکننده
+    ctx.strokeStyle = '#e8e8e8'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(P, y + rowH); ctx.lineTo(W - P, y + rowH); ctx.stroke();
+    y += rowH;
+  });
+
+  // یادداشت پایین
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#999';
+  ctx.font = '400 12px ' + FONT;
+  const note = 'این ابزار جهت کمک به ارزیابی است و جایگزین گازسنجی و تأیید مسئول HSE نمی‌باشد.';
+  wrapText(ctx, note, W/2, y + 30, W - 2*P, 18);
+
+  // ذخیره به‌صورت PNG
+  const stamp = A.when.toISOString().slice(0,16).replace(/[:T]/g,'-');
+  cv.toBlob(function(blob){
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'manhole-' + stamp + '.png';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 4000);
+  }, 'image/png');
+}
+
+// شکستن متن بلند به چند خط روی canvas
+function wrapText(ctx, text, x, y, maxWidth, lineH){
+  const words = text.split(' ');
+  let line = '';
+  for (let i = 0; i < words.length; i++){
+    const test = line ? line + ' ' + words[i] : words[i];
+    if (ctx.measureText(test).width > maxWidth && line){
+      ctx.fillText(line, x, y); line = words[i]; y += lineH;
+    } else { line = test; }
+  }
+  ctx.fillText(line, x, y);
 }
 
 
