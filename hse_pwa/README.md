@@ -31,12 +31,18 @@ python3 -m http.server 8000
 ```
 
 ## انتشار برای نصب روی گوشی (GitHub Pages)
-1. این شاخه را در `main` ادغام کنید.
-2. در GitHub: **Settings → Pages → Build and deployment → Source: GitHub Actions**.
-3. workflow `deploy-pwa.yml` به‌طور خودکار اجرا و آدرس HTTPS می‌دهد
-   (`https://<user>.github.io/Tictactoestevie/`).
-4. آن آدرس را روی گوشی باز کنید → منوی مرورگر → **«افزودن به صفحه اصلی»**.
-   پس از نصب، آفلاین کار می‌کند.
+این مخزن **دو اپ** را روی یک سایت Pages میزبانی می‌کند تا با هم تداخل نکنند:
+- اپ تحلیل کندل بیت‌کوین در **ریشه**: `https://<user>.github.io/Tictactoestevie/`
+- اپ ایمنی HSE در زیرمسیر **`/hse/`**: `https://<user>.github.io/Tictactoestevie/hse/`
+
+هر دو توسط یک workflow واحد (`.github/workflows/pwa.yml`) منتشر می‌شوند: ابتدا اپ
+بیت‌کوین در `site/` ساخته و سپس پوشه `hse_pwa` در `site/hse/` کپی می‌شود.
+
+برای انتشار/به‌روزرسانی:
+1. تغییرات را در `main` ادغام کنید.
+2. در GitHub: **Settings → Pages → Source: GitHub Actions** (یک‌بار).
+3. workflow **«Build & Deploy PWA»** را از تب Actions اجرا کنید (Run workflow).
+4. آدرس `/hse/` را روی گوشی باز کنید → **«افزودن به صفحه اصلی»**. پس از نصب آفلاین کار می‌کند.
 
 ## ساختار
 - `index.html` , `styles.css` , `app.js` — رابط و منطق ویزارد + تولید خروجی‌ها
