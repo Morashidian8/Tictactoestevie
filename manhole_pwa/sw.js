@@ -1,5 +1,5 @@
 // Service Worker — کش کامل برای کارکرد آفلاین اپ «ارزیابی ورود به منهول»
-const CACHE = "manhole-pwa-v4";
+const CACHE = "manhole-pwa-v5";
 const ASSETS = [
   "./",
   "./index.html",
@@ -7,7 +7,10 @@ const ASSETS = [
   "./icons/icon-192.png",
   "./icons/apple-touch-icon.png",
   "./icons/favicon-32.png",
-  "./icons/logo.png"
+  "./icons/logo.png",
+  "./fonts/Vazirmatn-Regular.woff2",
+  "./fonts/Vazirmatn-Medium.woff2",
+  "./fonts/Vazirmatn-Bold.woff2"
 ];
 
 self.addEventListener("install", (e) => {
