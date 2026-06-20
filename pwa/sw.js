@@ -1,5 +1,5 @@
 // Simple offline-first service worker for the BTC alternation PWA.
-const CACHE = 'btc-tanavob-v10';
+const CACHE = 'btc-tanavob-v11';
 const ASSETS = [
   './',
   './index.html',
@@ -25,9 +25,11 @@ self.addEventListener('activate', (e) => {
 // immediately; fall back to cache only when offline.
 self.addEventListener('fetch', (e) => {
   if (e.request.method !== 'GET') return;
-  // The HSE inspection app lives under /hse/ and manages its own service
-  // worker — do not intercept its requests so the two apps never collide.
-  if (new URL(e.request.url).pathname.includes('/hse/')) return;
+  // The HSE inspection app (/hse/) and the manhole HSE toolkit (/manhole/)
+  // each manage their own service worker — do not intercept their requests so
+  // the co-hosted apps never collide.
+  const reqPath = new URL(e.request.url).pathname;
+  if (reqPath.includes('/hse/') || reqPath.includes('/manhole/')) return;
   e.respondWith(
     fetch(e.request)
       .then((res) => {
