@@ -837,7 +837,7 @@
       <label>مونواکسید کربن <span class="unit">(CO — ppm)</span></label>
       <input type="number" id="co" inputmode="decimal" step="any" placeholder="مثال: 0">
     </div>
-    <button class="btn" onclick="evaluate()">ارزیابی کن</button>
+    <button class="btn" onclick="evaluateManhole()">ارزیابی کن</button>
     <div class="err" id="err">لطفاً همه مقادیر را وارد کنید.</div>
     <button class="btn btn-reset" onclick="resetForm()">پاک کردن</button>
   </div>
@@ -1591,7 +1591,7 @@ function resetHotCold() {
 
 let lastAssess = null;
 
-function evaluate() {
+function evaluateManhole() {
   const lel = parseFloat(document.getElementById('lel').value);
   const o2  = parseFloat(document.getElementById('o2').value);
   const h2s = parseFloat(document.getElementById('h2s').value);
