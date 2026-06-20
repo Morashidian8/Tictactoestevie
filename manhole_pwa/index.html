@@ -295,10 +295,9 @@
 
   /* بخش اطلاعات */
   .about-logo-img {
-    width: 96px; height: 96px; object-fit: contain;
+    width: 104px; height: 104px; object-fit: contain;
     margin: 0 auto 14px; display: block;
-    background: #fff; border-radius: 18px; padding: 8px;
-    box-shadow: 0 4px 12px rgba(31,78,121,0.18);
+    background: transparent; border-radius: 50%; padding: 0;
   }
   .about-logo {
     width: 72px; height: 72px; border-radius: 18px; margin: 0 auto 14px;
@@ -452,9 +451,9 @@
   }
   header.app-header .brand{ display:flex; align-items:center; gap:11px; flex:1; min-width:0; }
   header.app-header .hdr-logo{
-    width:46px; height:46px; border-radius:13px; padding:3px;
-    background:radial-gradient(circle at 30% 25%, #ffffff, #eaf1fb);
-    box-shadow:0 4px 14px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.12);
+    width:48px; height:48px; border-radius:50%; padding:0;
+    background:transparent;
+    filter:drop-shadow(0 3px 9px rgba(0,0,0,0.5));
     margin:0; flex-shrink:0;
   }
   header.app-header .brand-txt{ display:flex; flex-direction:column; line-height:1.25; min-width:0; }
@@ -592,7 +591,7 @@
   .conv-note{ background:rgba(58,142,224,0.10); border:1px solid var(--line2); color:var(--txt2); }
   .permit-badge{ background:rgba(34,255,136,0.12); color:var(--neon2); }
   .about-ver{ background:rgba(58,142,224,0.14); color:var(--txt); }
-  .about-logo-img{ background:radial-gradient(circle at 30% 25%,#fff,#e9f1fb); box-shadow:0 8px 24px rgba(0,0,0,0.45); }
+  .about-logo-img{ background:transparent; filter:drop-shadow(0 8px 22px rgba(0,0,0,0.5)); }
 
   /* ============================================================
      ====================  داشبورد خانه  ========================
@@ -610,9 +609,9 @@
     pointer-events:none;
   }
   .hero-logo{
-    width:84px; height:84px; border-radius:22px; padding:7px; position:relative;
-    background:radial-gradient(circle at 30% 25%,#fff,#e9f1fb);
-    box-shadow:0 10px 28px rgba(0,0,0,0.45), 0 0 0 1px rgba(255,255,255,0.14);
+    width:104px; height:104px; border-radius:50%; padding:0; position:relative;
+    background:transparent;
+    filter:drop-shadow(0 10px 26px rgba(0,0,0,0.55));
   }
   .hero-title{ font-size:21px; font-weight:800; margin:13px 0 4px; position:relative;
     color:#ffffff; line-height:1.55; letter-spacing:.2px; text-shadow:0 1px 10px rgba(0,0,0,0.3); }
@@ -775,8 +774,8 @@
 
   <div class="hero">
     <img class="hero-logo" src="icons/logo.png" alt="آرم شرکت گاز استان تهران">
-    <div class="hero-title">HSE man</div>
-    <div class="hero-sub">شرکت گاز استان تهران — مرجع ایمنی و آتش‌نشانی</div>
+    <div class="hero-title">شرکت گاز استان تهران</div>
+    <div class="hero-sub">امور HSE</div>
     <div class="hero-badge"><span class="dot"></span> نسخه آفلاین · ۱۴ ابزار فعال</div>
   </div>
 
