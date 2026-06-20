@@ -1,6 +1,6 @@
 {
-  "name": "ارزیابی ورود به منهول و ابزارهای HSE",
-  "short_name": "ورود به منهول",
+  "name": "امور HSE — شرکت گاز استان تهران",
+  "short_name": "امور HSE",
   "description": "جعبه‌ابزار HSE: سنجش گاز ورود به منهول، کار گرم/سرد، انتخاب خاموش‌کننده، مبدل واحد، حریم خطوط گاز، پرمیت کار و... — آفلاین",
   "lang": "fa",
   "dir": "rtl",
@@ -8,8 +8,8 @@
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#f0f2f5",
-  "theme_color": "#1F4E79",
+  "background_color": "#0A1428",
+  "theme_color": "#0A1428",
   "icons": [
     { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" }
   ]
