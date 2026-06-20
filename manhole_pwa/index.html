@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<meta name="theme-color" content="#0A1428">
+<meta name="theme-color" content="#070D18">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
@@ -412,30 +412,27 @@
      بازطراحی کامل ظاهر — تم دارک صنعتی «HSE man شرکت گاز استان تهران»
      ============================================================ */
   :root{
-    --bg:#0A1428; --bg2:#0c1b32; --bg3:#102744;
-    --glass:rgba(255,255,255,0.045);
-    --glass2:rgba(255,255,255,0.075);
-    --line:rgba(255,255,255,0.09);
-    --line2:rgba(148,180,222,0.22);
-    --txt:#e9f0fa; --txt2:#aebfd6; --muted:#7e90ac;
-    --neon:#22FF88; --neon2:#00FF9F; --orange:#FF9500; --red:#FF5A5A; --blue:#3a8ee0;
-    --radius:16px;
+    --bg:#070D18; --bg2:#0c1b32; --bg3:#102744;
+    --glass:rgba(255,255,255,0.035);
+    --glass2:rgba(255,255,255,0.07);
+    --line:rgba(255,255,255,0.07);
+    --line2:rgba(255,255,255,0.10);
+    --txt:#EAF2FF; --txt2:#8A9BB8; --muted:#5f6f8c;
+    --neon:#22FF88; --neon2:#00FF9F; --orange:#FF9500; --red:#FF5A5A;
+    --blue:#3FD0FF; --blue2:#3a8ee0; --purple:#b6a4ff; --green2:#7BE06B;
+    --radius:20px;
   }
-  html{ background:#081021; }
+  html{ background:#05080F; }
   body{
     background:transparent;
     color:var(--txt);
     font-family:"Vazirmatn","Vazir","IRANSans","IRANSansX","Segoe UI",Tahoma,sans-serif;
     min-height:100vh;
   }
-  /* گلوی پس‌زمینه به‌صورت لایه‌ی ثابت سبک (به‌جای background-attachment:fixed
-     که روی موبایل کند است و باعث دیده‌شدن سفیدی پشت صفحه می‌شود) */
+  /* گلوی پس‌زمینه به‌صورت لایه‌ی ثابت سبک */
   body::before{
     content:''; position:fixed; inset:0; z-index:-1; pointer-events:none;
-    background:
-      radial-gradient(1100px 560px at 85% -12%, #143055 0%, rgba(20,48,85,0) 55%),
-      radial-gradient(820px 460px at -12% 8%, #0e2b50 0%, rgba(14,43,80,0) 50%),
-      linear-gradient(180deg,#0A1428 0%, #081021 100%);
+    background:radial-gradient(1200px 700px at 50% -10%, #0E2034 0%, #070D18 55%, #05080F 100%);
   }
   .container{ max-width:560px; }
 
@@ -555,6 +552,7 @@
     font-size:11px; font-weight:800; color:var(--muted);
     padding:14px 20px 4px; letter-spacing:.5px;
   }
+  .menu-sec .ms-dot{ display:inline-block; width:7px; height:7px; border-radius:50%; margin-left:6px; vertical-align:middle; }
 
   /* ---------- عنوان‌های رنگی (تبدیل آبی قدیمی به نئون) ---------- */
   .gas-head .gname, .risk-card>.rc-title, .sec-block h3,
@@ -717,6 +715,173 @@
   .cselect-opt:active{ background:rgba(34,255,136,0.10); }
   .cselect-opt.sel{ color:var(--neon); background:rgba(34,255,136,0.08); }
   .cselect-opt.sel::after{ content:'✓'; color:var(--neon); font-weight:800; flex-shrink:0; }
+
+  /* ============================================================
+     ===============  بازطراحی ۲۰۲۶ — اجزای خانه/آزمون  ==========
+     ============================================================ */
+  @keyframes spin{ to{ transform:rotate(360deg);} }
+  @keyframes pulse{ 0%{box-shadow:0 0 0 0 rgba(34,255,136,0.5);} 70%{box-shadow:0 0 0 7px rgba(34,255,136,0);} 100%{box-shadow:0 0 0 0 rgba(34,255,136,0);} }
+  .dot{ width:7px; height:7px; border-radius:50%; background:var(--neon); display:inline-block; }
+  .dot.pulse{ animation:pulse 1.8s infinite; }
+
+  /* بنر شعار */
+  .hse-banner{ display:flex; align-items:center; gap:13px; background:var(--glass); border:1px solid var(--line);
+    border-radius:var(--radius); padding:14px; margin-bottom:14px; box-shadow:0 16px 38px -18px rgba(0,0,0,0.7); }
+  .hb-ico{ width:50px; height:50px; border-radius:15px; display:flex; align-items:center; justify-content:center; font-size:26px;
+    background:linear-gradient(135deg, rgba(34,255,136,0.22), rgba(34,255,136,0.04)); border:1px solid rgba(34,255,136,0.3); flex-shrink:0; }
+  .hb-title{ font-size:15px; font-weight:800; color:var(--txt); }
+  .hb-slogan{ font-size:11.5px; color:var(--txt2); font-style:italic; margin-top:3px; line-height:1.7; }
+
+  /* کارت وضعیت ایمنی + رینگ بزرگ */
+  .status-card{ position:relative; overflow:hidden; display:flex; align-items:center; justify-content:space-between; gap:14px;
+    background:linear-gradient(150deg, rgba(34,255,136,0.08), var(--glass) 60%); border:1px solid rgba(34,255,136,0.32);
+    border-radius:24px; padding:18px; margin-bottom:18px;
+    box-shadow:0 20px 50px -24px rgba(0,255,159,0.3), 0 16px 38px -18px rgba(0,0,0,0.7); }
+  .sc-glow{ position:absolute; width:260px; height:260px; right:-90px; top:-120px; border-radius:50%; pointer-events:none;
+    background:radial-gradient(circle, rgba(34,255,136,0.16), transparent 70%); animation:spin 22s linear infinite; }
+  .sc-info{ position:relative; z-index:1; }
+  .sc-badge{ display:inline-flex; align-items:center; gap:6px; font-size:11px; font-weight:700; color:var(--neon);
+    background:rgba(34,255,136,0.12); border:1px solid rgba(34,255,136,0.3); border-radius:20px; padding:4px 10px; }
+  .sc-label{ font-size:12px; color:var(--txt2); margin-top:10px; }
+  .sc-big{ font-size:24px; font-weight:800; color:#fff; margin:2px 0 6px; }
+  .sc-sub{ font-size:11.5px; color:var(--txt2); line-height:1.9; }
+  .sc-ring, .res-ring{ position:relative; width:112px; height:112px; flex-shrink:0; z-index:1; }
+  .bigring{ width:112px; height:112px; transform:rotate(-90deg); }
+  .bigring .br-bg{ fill:none; stroke:#13202f; stroke-width:9; }
+  .bigring .br-fg{ fill:none; stroke-width:9; stroke-linecap:round; transition:stroke-dashoffset .9s ease; }
+  .br-center{ position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; }
+  .br-num{ font-size:30px; font-weight:800; color:#fff; line-height:1; }
+  .br-lbl{ font-size:10px; color:var(--txt2); margin-top:3px; }
+
+  /* عنوان بخش */
+  .sec-head{ display:flex; align-items:center; gap:10px; margin:20px 2px 12px; }
+  .sec-head .sh-bar{ width:5px; height:30px; border-radius:3px; flex-shrink:0; box-shadow:0 2px 10px rgba(0,0,0,0.5); }
+  .sec-head .sh-txt{ flex:1; }
+  .sec-head .sh-t{ font-size:15px; font-weight:800; color:var(--txt); }
+  .sec-head .sh-s{ font-size:11px; color:var(--txt2); margin-top:1px; }
+  .sec-head .sh-badge{ font-size:11px; font-weight:700; color:var(--blue); background:rgba(63,208,255,0.12);
+    border:1px solid rgba(63,208,255,0.3); border-radius:20px; padding:4px 11px; }
+
+  /* محورهای HSE */
+  .axes{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .axis{ position:relative; overflow:hidden; display:flex; flex-direction:column; align-items:flex-start; gap:6px; text-align:right;
+    min-height:160px; padding:15px 14px; cursor:pointer; font-family:inherit; color:var(--txt);
+    background:var(--glass); border:1px solid var(--line); border-radius:22px;
+    box-shadow:0 16px 38px -18px rgba(0,0,0,0.7); transition:transform .12s, border-color .12s; }
+  .axis::before{ content:''; position:absolute; inset:0; border-radius:22px; pointer-events:none;
+    background:radial-gradient(150px 120px at 85% 0%, var(--c), transparent 65%); opacity:0.15; }
+  .axis:active{ transform:scale(0.98); border-color:var(--c); }
+  .ax-ghost{ position:absolute; left:-10px; bottom:-16px; font-size:78px; opacity:0.06; line-height:1; pointer-events:none; }
+  .ax-ico{ width:54px; height:54px; border-radius:16px; display:flex; align-items:center; justify-content:center; font-size:27px;
+    background:rgba(255,255,255,0.05); border:1px solid var(--line2); position:relative; z-index:1; box-shadow:0 0 20px -6px var(--c); }
+  .ax-name{ font-size:17px; font-weight:800; color:#fff; position:relative; z-index:1; }
+  .ax-desc{ font-size:11.5px; color:var(--txt2); line-height:1.6; position:relative; z-index:1; flex:1; }
+  .ax-foot{ display:flex; align-items:center; justify-content:space-between; width:100%; position:relative; z-index:1; }
+  .ax-badge{ font-size:10.5px; font-weight:700; color:var(--c); background:rgba(255,255,255,0.06); border-radius:8px; padding:3px 9px; }
+  .ax-arrow{ color:var(--c); font-size:16px; }
+
+  /* آموزش و آگاهی */
+  .edu-card{ position:relative; overflow:hidden; background:linear-gradient(155deg, rgba(182,164,255,0.10), var(--glass) 60%);
+    border:1px solid rgba(182,164,255,0.28); border-radius:22px; padding:16px; margin:8px 0 4px; box-shadow:0 16px 38px -18px rgba(0,0,0,0.7); }
+  .edu-head{ display:flex; align-items:center; gap:11px; margin-bottom:12px; }
+  .edu-ico{ width:48px; height:48px; border-radius:14px; display:flex; align-items:center; justify-content:center; font-size:24px;
+    background:rgba(182,164,255,0.16); border:1px solid rgba(182,164,255,0.3); flex-shrink:0; }
+  .edu-htxt{ flex:1; }
+  .edu-t{ font-size:15px; font-weight:800; color:#fff; }
+  .edu-s{ font-size:11px; color:var(--txt2); margin-top:2px; }
+  .edu-new{ font-size:10.5px; font-weight:700; color:#b6a4ff; background:rgba(182,164,255,0.16); border:1px solid rgba(182,164,255,0.3); border-radius:20px; padding:3px 10px; }
+  .tip-box{ display:flex; gap:9px; align-items:flex-start; background:rgba(255,200,60,0.08); border:1px solid rgba(255,200,60,0.2);
+    border-radius:14px; padding:11px 13px; font-size:12.5px; color:var(--txt); line-height:1.9; margin-bottom:12px; }
+  .tip-ico{ font-size:17px; flex-shrink:0; }
+  .edu-list{ margin-bottom:13px; }
+  .edu-item{ display:flex; align-items:center; gap:9px; padding:9px 0; border-bottom:1px solid var(--line); font-size:13px; }
+  .edu-item:last-child{ border-bottom:none; }
+  .ei-dot{ width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+  .ei-name{ flex:1; color:var(--txt); }
+  .ei-tag{ font-size:10.5px; font-weight:700; color:var(--txt2); background:rgba(255,255,255,0.06); border-radius:7px; padding:2px 8px; }
+  .edu-btn{ width:100%; border:none; border-radius:14px; padding:14px; font-size:15px; font-weight:800; font-family:inherit; cursor:pointer;
+    background:linear-gradient(135deg,#00FF9F,#22FF88); color:#04160d; box-shadow:0 8px 22px -6px rgba(0,255,159,0.4); }
+  .edu-btn:active{ transform:scale(0.98); }
+
+  /* دسترسی سریع */
+  .quick{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:11px; }
+  .q-tile{ display:flex; flex-direction:column; align-items:center; gap:8px; padding:13px 6px; cursor:pointer; font-family:inherit;
+    background:var(--glass); border:1px solid var(--line); border-radius:18px; color:var(--txt); box-shadow:0 12px 30px -16px rgba(0,0,0,0.7); transition:transform .12s; }
+  .q-tile:active{ transform:scale(0.96); }
+  .q-ico{ width:48px; height:48px; border-radius:15px; display:flex; align-items:center; justify-content:center; font-size:24px;
+    background:rgba(255,255,255,0.05); border:1px solid var(--line2); box-shadow:0 0 16px -5px var(--c); }
+  .q-name{ font-size:11.5px; font-weight:600; color:var(--txt2); text-align:center; line-height:1.4; }
+
+  /* گزارش ماهانه */
+  .report-card{ background:var(--glass); border:1px solid var(--line); border-radius:22px; padding:16px; box-shadow:0 16px 38px -18px rgba(0,0,0,0.7); }
+  .rep-stats{ display:grid; grid-template-columns:1fr 1fr; gap:11px; }
+  .rstat{ background:rgba(255,255,255,0.03); border:1px solid var(--line); border-radius:15px; padding:12px; display:flex; flex-direction:column; gap:3px; }
+  .rs-ico{ width:34px; height:34px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:17px;
+    background:rgba(255,255,255,0.05); box-shadow:0 0 14px -5px var(--c); margin-bottom:4px; }
+  .rs-lbl{ font-size:11px; color:var(--txt2); }
+  .rs-num{ font-size:22px; font-weight:800; color:#fff; }
+  .rs-trend{ font-size:11px; font-weight:700; }
+  .rs-trend.up{ color:var(--neon); }
+  .rs-trend.down{ color:var(--orange); }
+  .rep-sub{ font-size:12.5px; font-weight:700; color:var(--txt2); margin:18px 0 12px; }
+  .bars{ display:flex; align-items:flex-end; gap:10px; padding:6px 2px 0; }
+  .bar{ flex:1; display:flex; flex-direction:column; align-items:center; }
+  .bar-v{ font-size:12px; font-weight:800; color:#fff; margin-bottom:6px; }
+  .bar-fill{ width:100%; max-width:40px; border-radius:8px 8px 0 0; background:var(--c); box-shadow:0 0 16px -3px var(--c); min-height:8px; }
+  .bar-l{ font-size:10.5px; color:var(--txt2); text-align:center; margin-top:8px; line-height:1.4; }
+  .donut-wrap{ display:flex; align-items:center; gap:18px; }
+  .donut{ width:122px; height:122px; flex-shrink:0; }
+  .donut .d-bg{ fill:none; stroke:#13202f; stroke-width:11; }
+  .donut .d-seg{ fill:none; stroke-width:11; transform:rotate(-90deg); transform-origin:50% 50%; }
+  .donut .d-num{ font-size:20px; font-weight:800; fill:#fff; text-anchor:middle; }
+  .donut .d-lbl{ font-size:8px; fill:var(--txt2); text-anchor:middle; }
+  .donut-legend{ flex:1; display:flex; flex-direction:column; gap:10px; }
+  .dl{ display:flex; align-items:center; gap:8px; font-size:13px; color:var(--txt); }
+  .dl b{ margin-right:auto; color:#fff; }
+  .dl-c{ width:11px; height:11px; border-radius:3px; flex-shrink:0; }
+
+  /* فلش هایلایت گروه هنگام اسکرول از محور */
+  @keyframes titleflash{ 0%,100%{ text-shadow:none; } 35%,65%{ color:#fff; text-shadow:0 0 16px var(--neon); } }
+  .cat-title.flash{ animation:titleflash 1.3s ease; }
+
+  /* آزمون */
+  .quiz-hero{ text-align:center; padding:18px 10px 4px; }
+  .qh-ico{ font-size:54px; }
+  .qh-title{ font-size:22px; font-weight:800; color:#fff; margin:10px 0 6px; }
+  .qh-desc{ font-size:13px; color:var(--txt2); line-height:1.9; max-width:430px; margin:0 auto; }
+  .quiz-stats3{ display:flex; gap:11px; margin:18px 0; }
+  .qs{ flex:1; background:var(--glass); border:1px solid var(--line); border-radius:16px; padding:14px 6px; text-align:center; }
+  .qs-n{ display:block; font-size:24px; font-weight:800; color:var(--neon); }
+  .qs-l{ font-size:11px; color:var(--txt2); }
+  .qp-top span{ font-size:13px; font-weight:700; color:var(--txt2); }
+  .qp-bar{ height:8px; background:rgba(255,255,255,0.06); border-radius:6px; margin:8px 0 14px; overflow:hidden; }
+  .qp-bar span{ display:block; height:100%; width:0; background:linear-gradient(90deg,#00FF9F,#22FF88); border-radius:6px; transition:width .3s; }
+  .q-card{ background:var(--glass); border:1px solid var(--line); border-radius:20px; padding:18px; box-shadow:0 16px 38px -18px rgba(0,0,0,0.7); }
+  .q-cat{ display:inline-block; font-size:11px; font-weight:700; color:var(--blue); background:rgba(63,208,255,0.12); border-radius:20px; padding:4px 11px; margin-bottom:12px; }
+  .q-text{ font-size:16px; font-weight:700; color:#fff; line-height:2; margin-bottom:16px; }
+  .q-opts{ display:flex; flex-direction:column; gap:10px; }
+  .q-opt{ text-align:right; font-family:inherit; font-size:14.5px; color:var(--txt); cursor:pointer; line-height:1.7;
+    background:rgba(255,255,255,0.04); border:1.5px solid var(--line2); border-radius:13px; padding:13px; display:flex; gap:10px; align-items:center; transition:.12s; }
+  .q-opt:active{ background:rgba(34,255,136,0.10); border-color:var(--neon); }
+  .q-opt .opt-k{ width:27px; height:27px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:13px;
+    background:rgba(255,255,255,0.07); color:var(--txt2); flex-shrink:0; }
+  .res-ring{ margin:6px auto 0; }
+  .res-title{ text-align:center; font-size:20px; font-weight:800; margin:14px 0 8px; }
+  .res-chips{ display:flex; gap:10px; justify-content:center; margin-bottom:16px; }
+  .rchip{ font-size:13px; font-weight:700; border-radius:20px; padding:6px 14px; }
+  .rchip.ok{ color:var(--neon); background:rgba(34,255,136,0.12); }
+  .rchip.bad{ color:var(--red); background:rgba(255,90,90,0.12); }
+  .rev-item{ background:var(--glass); border:1px solid var(--line); border-radius:14px; padding:13px; margin-bottom:10px; }
+  .rev-q{ font-size:13.5px; font-weight:700; color:#fff; line-height:1.9; margin-bottom:8px; }
+  .rev-line{ font-size:12.5px; line-height:1.9; }
+  .rev-bad{ color:var(--red); }
+  .rev-ok{ color:var(--neon); }
+
+  /* توست */
+  .toast{ position:fixed; left:50%; bottom:30px; transform:translateX(-50%) translateY(20px); z-index:90; max-width:84%;
+    background:#13243d; border:1px solid var(--line2); color:var(--txt); font-size:13px; font-weight:600; text-align:center;
+    padding:12px 18px; border-radius:14px; box-shadow:0 16px 40px rgba(0,0,0,0.6); opacity:0; pointer-events:none; transition:.25s; }
+  .toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
 </style>
 </head>
 <body>
@@ -745,25 +910,27 @@
   </div>
   <nav class="menu" id="mainMenu">
     <button class="active" data-page="home">🏠 خانه</button>
-    <div class="menu-sec">ابزارهای عملیاتی</div>
+    <div class="menu-sec"><span class="ms-dot" style="background:#22FF88"></span> ایمنی</div>
     <button data-page="assess">ورود به منهول</button>
     <button data-page="hotcold">کار گرم و سرد</button>
     <button data-page="ptw">راهنمای پرمیت کار</button>
     <button data-page="digging">فاصله ایمن حفاری</button>
     <button data-page="harim">حریم خطوط گاز</button>
-    <div class="menu-sec">محاسبات و گازها</div>
+    <button data-page="firstaid">اقدامات اولیه حوادث</button>
+    <div class="menu-sec"><span class="ms-dot" style="background:#FF9500"></span> ارزیابی ریسک</div>
+    <button data-page="jobrisk">ارزیابی ریسک شغلی</button>
+    <button data-page="facilityrisk">ارزیابی ریسک تأسیسات</button>
+    <div class="menu-sec"><span class="ms-dot" style="background:#3FD0FF"></span> محاسبات و گازها</div>
     <button data-page="convert">تبدیل مقادیر</button>
     <button data-page="purge">محاسبه پرج</button>
     <button data-page="evac">شعاع تخلیه نشت گاز</button>
     <button data-page="gastable">خواص گازها</button>
-    <div class="menu-sec">آتش‌نشانی و ایمنی</div>
+    <div class="menu-sec"><span class="ms-dot" style="background:#FF5A5A"></span> آتش‌نشانی</div>
     <button data-page="extinguisher">انتخاب کپسول آتش‌نشانی مناسب</button>
-    <button data-page="firstaid">اقدامات اولیه حوادث</button>
     <button data-page="building">تحلیل اطفا و اعلام ساختمان</button>
-    <div class="menu-sec">ارزیابی ریسک</div>
-    <button data-page="jobrisk">ارزیابی ریسک شغلی</button>
-    <button data-page="facilityrisk">ارزیابی ریسک تأسیسات</button>
-    <div class="menu-sec">مستندات</div>
+    <div class="menu-sec"><span class="ms-dot" style="background:#b6a4ff"></span> آزمون و آموزش</div>
+    <button data-page="quiz">آزمون و خودآزمایی HSE</button>
+    <div class="menu-sec"><span class="ms-dot" style="background:#8A9BB8"></span> مستندات</div>
     <button data-page="about">اطلاعات</button>
   </nav>
 </aside>
@@ -772,68 +939,166 @@
 <div class="page active" id="home">
 <div class="container">
 
-  <div class="hero">
-    <img class="hero-logo" src="icons/logo.png" alt="آرم شرکت گاز استان تهران">
-    <div class="hero-title">شرکت گاز استان تهران</div>
-    <div class="hero-sub">امور HSE</div>
-    <div class="hero-badge"><span class="dot"></span> نسخه آفلاین · ۱۴ ابزار فعال</div>
-  </div>
-
-  <div class="stats">
-    <div class="stat">
-      <div class="ring-wrap">
-        <svg class="ring" viewBox="0 0 62 62"><circle class="bg" cx="31" cy="31" r="26"/><circle class="fg" cx="31" cy="31" r="26" stroke="#22FF88" stroke-dasharray="163.4" stroke-dashoffset="0"/></svg>
-        <div class="ring-num">۱۴</div>
-      </div>
-      <span class="stat-t">ابزار فعال</span>
-    </div>
-    <div class="stat">
-      <div class="ring-wrap">
-        <svg class="ring" viewBox="0 0 62 62"><circle class="bg" cx="31" cy="31" r="26"/><circle class="fg" cx="31" cy="31" r="26" stroke="#3a8ee0" stroke-dasharray="163.4" stroke-dashoffset="0"/></svg>
-        <div class="ring-num">۵</div>
-      </div>
-      <span class="stat-t">دسته‌بندی</span>
-    </div>
-    <div class="stat">
-      <div class="ring-wrap">
-        <svg class="ring" viewBox="0 0 62 62"><circle class="bg" cx="31" cy="31" r="26"/><circle class="fg" cx="31" cy="31" r="26" stroke="#FF9500" stroke-dasharray="163.4" stroke-dashoffset="0"/></svg>
-        <div class="ring-num">٪۱۰۰</div>
-      </div>
-      <span class="stat-t">پوشش آفلاین</span>
+  <!-- ۱) بنر شعار HSE -->
+  <div class="hse-banner">
+    <div class="hb-ico">🛡️</div>
+    <div class="hb-txt">
+      <div class="hb-title">ایمنی، بهداشت و محیط زیست</div>
+      <div class="hb-slogan">هر حادثه‌ای قابل پیشگیری است — ایمنی انتخاب نیست، الزام است</div>
     </div>
   </div>
 
-  <div class="cat">
-    <div class="cat-title"><span class="ct-ico">🛠️</span> ابزارهای عملیاتی</div>
+  <!-- ۲) وضعیت ایمنی امروز -->
+  <div class="status-card">
+    <div class="sc-glow"></div>
+    <div class="sc-info">
+      <span class="sc-badge"><span class="dot pulse"></span> پایش فعال · بدون هشدار</span>
+      <div class="sc-label">وضعیت ایمنی امروز</div>
+      <div class="sc-big">شرایط ایمن</div>
+      <div class="sc-sub">۱۳ روز بدون حادثه ثبت‌شده<br>آخرین بازرسی ۰۸:۰۰</div>
+    </div>
+    <div class="sc-ring">
+      <svg viewBox="0 0 120 120" class="bigring">
+        <defs><linearGradient id="ringgrad" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stop-color="#00FF9F"/><stop offset="1" stop-color="#22FF88"/></linearGradient></defs>
+        <circle cx="60" cy="60" r="50" class="br-bg"/>
+        <circle cx="60" cy="60" r="50" class="br-fg" stroke="url(#ringgrad)" stroke-dasharray="314.159" stroke-dashoffset="18.8"/>
+      </svg>
+      <div class="br-center"><span class="br-num">۹۴</span><span class="br-lbl">امتیاز ایمنی</span></div>
+    </div>
+  </div>
+
+  <!-- ۳) محورهای اصلی HSE -->
+  <div class="sec-head"><span class="sh-bar" style="background:var(--neon)"></span>
+    <div class="sh-txt"><div class="sh-t">محورهای اصلی HSE</div><div class="sh-s">چهار محور تخصصی</div></div></div>
+  <div class="axes">
+    <button class="axis" style="--c:#22FF88" onclick="axisGo('grp-safety')">
+      <span class="ax-ghost">🛡️</span>
+      <span class="ax-ico">🛡️</span>
+      <span class="ax-name">ایمنی</span>
+      <span class="ax-desc">عملیات، فضای محصور و پرمیت</span>
+      <span class="ax-foot"><span class="ax-badge">۶ ابزار</span><span class="ax-arrow">←</span></span>
+    </button>
+    <button class="axis" style="--c:#3FD0FF" onclick="axisSoon('بهداشت حرفه‌ای و طب کار')">
+      <span class="ax-ghost">💓</span>
+      <span class="ax-ico">💓</span>
+      <span class="ax-name">بهداشت</span>
+      <span class="ax-desc">بهداشت حرفه‌ای و طب کار</span>
+      <span class="ax-foot"><span class="ax-badge">به‌زودی</span><span class="ax-arrow">←</span></span>
+    </button>
+    <button class="axis" style="--c:#7BE06B" onclick="axisSoon('محیط زیست')">
+      <span class="ax-ghost">🌿</span>
+      <span class="ax-ico">🌿</span>
+      <span class="ax-name">محیط زیست</span>
+      <span class="ax-desc">پایش و کنترل آلایندگی</span>
+      <span class="ax-foot"><span class="ax-badge">به‌زودی</span><span class="ax-arrow">←</span></span>
+    </button>
+    <button class="axis" style="--c:#FF9500" onclick="axisSoon('پدافند غیرعامل')">
+      <span class="ax-ghost">🚨</span>
+      <span class="ax-ico">🚨</span>
+      <span class="ax-name">پدافند غیرعامل</span>
+      <span class="ax-desc">حفاظت و مدیریت بحران</span>
+      <span class="ax-foot"><span class="ax-badge">به‌زودی</span><span class="ax-arrow">←</span></span>
+    </button>
+  </div>
+
+  <!-- ۴) آموزش و آگاهی -->
+  <div class="edu-card">
+    <div class="edu-head">
+      <span class="edu-ico">🎓</span>
+      <div class="edu-htxt"><div class="edu-t">آموزش و آگاهی</div><div class="edu-s">دانش ایمنی خود را به‌روز کنید</div></div>
+      <span class="edu-new">جدید</span>
+    </div>
+    <div class="tip-box"><span class="tip-ico">💡</span><div><b>نکته ایمنی روز:</b> پیش از ورود به فضای محصور، همواره گازسنجی سه‌مرحله‌ای (کف، میانه، سقف) انجام دهید.</div></div>
+    <div class="edu-list">
+      <div class="edu-item"><span class="ei-dot" style="background:#3FD0FF"></span><span class="ei-name">شناسایی و کنترل خطرات فضای محصور</span><span class="ei-tag">مقاله</span></div>
+      <div class="edu-item"><span class="ei-dot" style="background:#FF9500"></span><span class="ei-name">الزامات صدور پرمیت کار گرم</span><span class="ei-tag">بخشنامه</span></div>
+      <div class="edu-item"><span class="ei-dot" style="background:#22FF88"></span><span class="ei-name">اصول گازسنجی و تفسیر نتایج</span><span class="ei-tag">آموزش</span></div>
+    </div>
+    <button class="edu-btn" onclick="goPage('quiz')">📝 شروع آزمون خودآزمایی HSE</button>
+  </div>
+
+  <!-- ۵) دسترسی سریع -->
+  <div class="sec-head"><span class="sh-bar" style="background:var(--orange)"></span>
+    <div class="sh-txt"><div class="sh-t">دسترسی سریع</div><div class="sh-s">پرکاربردترین ابزارها</div></div></div>
+  <div class="quick">
+    <button class="q-tile" onclick="goPage('assess')"><span class="q-ico" style="--c:#22FF88">🕳️</span><span class="q-name">ورود به منهول</span></button>
+    <button class="q-tile" onclick="goPage('hotcold')"><span class="q-ico" style="--c:#FF9500">🔥</span><span class="q-name">کار گرم و سرد</span></button>
+    <button class="q-tile" onclick="goPage('convert')"><span class="q-ico" style="--c:#3FD0FF">🔄</span><span class="q-name">تبدیل مقادیر</span></button>
+    <button class="q-tile" onclick="goPage('extinguisher')"><span class="q-ico" style="--c:#FF5A5A">🧯</span><span class="q-name">کپسول آتش‌نشانی</span></button>
+    <button class="q-tile" onclick="goPage('ptw')"><span class="q-ico" style="--c:#b6a4ff">📋</span><span class="q-name">پرمیت کار</span></button>
+    <button class="q-tile" onclick="goPage('digging')"><span class="q-ico" style="--c:#7BE06B">🪏</span><span class="q-name">فاصله حفاری</span></button>
+  </div>
+
+  <!-- ۶) گزارش ماهانه HSE -->
+  <div class="sec-head"><span class="sh-bar" style="background:var(--blue)"></span>
+    <div class="sh-txt"><div class="sh-t">گزارش ماهانه HSE</div><div class="sh-s">عملکرد واحد عملیات</div></div>
+    <span class="sh-badge">خرداد ۱۴۰۵</span></div>
+  <div class="report-card">
+    <div class="rep-stats">
+      <div class="rstat"><span class="rs-ico" style="--c:#3FD0FF">📋</span><span class="rs-lbl">پرمیت صادرشده</span><span class="rs-num">۸۴</span><span class="rs-trend up">▲ ۱۲٪</span></div>
+      <div class="rstat"><span class="rs-ico" style="--c:#22FF88">🕳️</span><span class="rs-lbl">بازدید شیر منهول</span><span class="rs-num">۱۴۶</span><span class="rs-trend up">▲ ۸٪</span></div>
+      <div class="rstat"><span class="rs-ico" style="--c:#FF9500">🏭</span><span class="rs-lbl">بازدید ایستگاه تقلیل</span><span class="rs-num">۳۸</span><span class="rs-trend down">▼ ۳٪</span></div>
+      <div class="rstat"><span class="rs-ico" style="--c:#b6a4ff">🧪</span><span class="rs-lbl">گازسنجی انجام‌شده</span><span class="rs-num">۲۱۰</span><span class="rs-trend up">▲ ۱۵٪</span></div>
+    </div>
+
+    <div class="rep-sub">بازدیدهای میدانی ماه</div>
+    <div class="bars">
+      <div class="bar"><span class="bar-v">۱۴۶</span><span class="bar-fill" style="height:130px; --c:#22FF88"></span><span class="bar-l">شیر منهول</span></div>
+      <div class="bar"><span class="bar-v">۹۴</span><span class="bar-fill" style="height:91px; --c:#b6a4ff"></span><span class="bar-l">انشعابات</span></div>
+      <div class="bar"><span class="bar-v">۶۲</span><span class="bar-fill" style="height:68px; --c:#FF9500"></span><span class="bar-l">خط انتقال</span></div>
+      <div class="bar"><span class="bar-v">۳۸</span><span class="bar-fill" style="height:43px; --c:#3FD0FF"></span><span class="bar-l">ایستگاه تقلیل</span></div>
+    </div>
+
+    <div class="rep-sub">تفکیک پرمیت‌های صادرشده</div>
+    <div class="donut-wrap">
+      <svg viewBox="0 0 100 100" class="donut">
+        <circle cx="50" cy="50" r="42" class="d-bg"/>
+        <circle cx="50" cy="50" r="42" class="d-seg" stroke="#22FF88" stroke-dasharray="144.49 119.40" stroke-dashoffset="0"/>
+        <circle cx="50" cy="50" r="42" class="d-seg" stroke="#FF9500" stroke-dasharray="81.65 182.24" stroke-dashoffset="-144.49"/>
+        <circle cx="50" cy="50" r="42" class="d-seg" stroke="#FF5A5A" stroke-dasharray="37.70 226.19" stroke-dashoffset="-226.14"/>
+        <text x="50" y="47" class="d-num">۸۴</text><text x="50" y="60" class="d-lbl">پرمیت</text>
+      </svg>
+      <div class="donut-legend">
+        <div class="dl"><span class="dl-c" style="background:#22FF88"></span> کار سرد <b>۴۶</b></div>
+        <div class="dl"><span class="dl-c" style="background:#FF9500"></span> کار گرم <b>۲۶</b></div>
+        <div class="dl"><span class="dl-c" style="background:#FF5A5A"></span> فضای محصور <b>۱۲</b></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ۷) گروه‌های ابزار -->
+  <div class="cat" id="grp-safety">
+    <div class="cat-title"><span class="ct-ico">🛡️</span> ایمنی</div>
     <div class="tiles">
       <button class="tile" style="--accent:#22FF88" onclick="goPage('assess')"><span class="t-ico">🕳️</span><span class="t-name">ورود به منهول</span></button>
       <button class="tile" style="--accent:#FF9500" onclick="goPage('hotcold')"><span class="t-ico">🔥</span><span class="t-name">کار گرم و سرد</span></button>
-      <button class="tile" style="--accent:#3a8ee0" onclick="goPage('ptw')"><span class="t-ico">📋</span><span class="t-name">راهنمای پرمیت کار</span></button>
-      <button class="tile" style="--accent:#caa24a" onclick="goPage('digging')"><span class="t-ico">🪏</span><span class="t-name">فاصله ایمن حفاری</span></button>
-      <button class="tile wide" style="--accent:#22FF88" onclick="goPage('harim')"><span class="t-ico">📏</span><span class="t-name">حریم خطوط گاز</span></button>
+      <button class="tile" style="--accent:#3FD0FF" onclick="goPage('ptw')"><span class="t-ico">📋</span><span class="t-name">راهنمای پرمیت کار</span></button>
+      <button class="tile" style="--accent:#7BE06B" onclick="goPage('digging')"><span class="t-ico">🪏</span><span class="t-name">فاصله ایمن حفاری</span></button>
+      <button class="tile" style="--accent:#3a8ee0" onclick="goPage('harim')"><span class="t-ico">📏</span><span class="t-name">حریم خطوط گاز</span></button>
+      <button class="tile" style="--accent:#FF5A5A" onclick="goPage('firstaid')"><span class="t-ico">🚑</span><span class="t-name">اقدامات اولیه حوادث</span></button>
     </div>
   </div>
 
-  <div class="cat">
+  <div class="cat" id="grp-calc">
     <div class="cat-title"><span class="ct-ico">🧮</span> محاسبات و گازها</div>
     <div class="tiles">
-      <button class="tile" style="--accent:#3a8ee0" onclick="goPage('convert')"><span class="t-ico">🔄</span><span class="t-name">تبدیل مقادیر</span></button>
+      <button class="tile" style="--accent:#3FD0FF" onclick="goPage('convert')"><span class="t-ico">🔄</span><span class="t-name">تبدیل مقادیر</span></button>
       <button class="tile" style="--accent:#22FF88" onclick="goPage('purge')"><span class="t-ico">💨</span><span class="t-name">محاسبه پرج</span></button>
       <button class="tile" style="--accent:#FF9500" onclick="goPage('evac')"><span class="t-ico">📡</span><span class="t-name">شعاع تخلیه نشت گاز</span></button>
-      <button class="tile" style="--accent:#caa24a" onclick="goPage('gastable')"><span class="t-ico">🧪</span><span class="t-name">خواص گازها</span></button>
+      <button class="tile" style="--accent:#b6a4ff" onclick="goPage('gastable')"><span class="t-ico">🧪</span><span class="t-name">خواص گازها</span></button>
     </div>
   </div>
 
-  <div class="cat">
+  <div class="cat" id="grp-fire">
     <div class="cat-title"><span class="ct-ico">🧯</span> آتش‌نشانی و ایمنی</div>
     <div class="tiles">
       <button class="tile" style="--accent:#FF5A5A" onclick="goPage('extinguisher')"><span class="t-ico">🧯</span><span class="t-name">انتخاب کپسول آتش‌نشانی</span></button>
-      <button class="tile" style="--accent:#FF9500" onclick="goPage('firstaid')"><span class="t-ico">🚑</span><span class="t-name">اقدامات اولیه حوادث</span></button>
-      <button class="tile wide" style="--accent:#3a8ee0" onclick="goPage('building')"><span class="t-ico">🏢</span><span class="t-name">تحلیل اطفا و اعلام ساختمان</span></button>
+      <button class="tile" style="--accent:#3a8ee0" onclick="goPage('building')"><span class="t-ico">🏢</span><span class="t-name">تحلیل اطفا و اعلام ساختمان</span></button>
     </div>
   </div>
 
-  <div class="cat">
+  <div class="cat" id="grp-risk">
     <div class="cat-title"><span class="ct-ico">⚠️</span> ارزیابی ریسک</div>
     <div class="tiles">
       <button class="tile" style="--accent:#FF9500" onclick="goPage('jobrisk')"><span class="t-ico">👷</span><span class="t-name">ارزیابی ریسک شغلی</span></button>
@@ -841,7 +1106,7 @@
     </div>
   </div>
 
-  <div class="cat">
+  <div class="cat" id="grp-docs">
     <div class="cat-title"><span class="ct-ico">📄</span> مستندات</div>
     <div class="tiles">
       <button class="tile wide" style="--accent:#22FF88" onclick="goPage('about')"><span class="t-ico">ℹ️</span><span class="t-name">درباره و اطلاعات اپ</span></button>
@@ -849,8 +1114,51 @@
   </div>
 
 </div>
-<div class="note">HSE man شرکت گاز استان تهران · ابزار کمک‌آموزشی و عملیاتی — جایگزین دستورالعمل‌های رسمی و تأیید کارشناس نیست.</div>
+<div class="note">امور HSE — شرکت گاز استان تهران · ابزار کمک‌آموزشی و عملیاتی، جایگزین دستورالعمل‌های رسمی و تأیید کارشناس HSE نیست.</div>
 </div><!-- /page home -->
+
+<!-- ===== صفحه آزمون و خودآزمایی ===== -->
+<div class="page" id="quiz">
+<div class="container">
+
+  <div id="quizStart" class="quiz-pane">
+    <div class="quiz-hero">
+      <div class="qh-ico">🧠</div>
+      <div class="qh-title">آزمون تصادفی HSE</div>
+      <div class="qh-desc">۲۰ سؤال تصادفی از بانک سؤالات؛ در پایان نمره و پاسخِ صحیحِ اشتباهات نمایش داده می‌شود.</div>
+    </div>
+    <div class="quiz-stats3">
+      <div class="qs"><span class="qs-n">۲۰</span><span class="qs-l">سؤال</span></div>
+      <div class="qs"><span class="qs-n">۴</span><span class="qs-l">گزینه</span></div>
+      <div class="qs"><span class="qs-n" id="qsBank">۵۰</span><span class="qs-l">بانک سؤال</span></div>
+    </div>
+    <button class="btn" onclick="quizStart()">شروع آزمون</button>
+  </div>
+
+  <div id="quizRun" class="quiz-pane" style="display:none">
+    <div class="qp-top"><span id="qProg">سؤال ۱ از ۲۰</span><div class="qp-bar"><span id="qBar"></span></div></div>
+    <div class="q-card">
+      <span class="q-cat" id="qCat"></span>
+      <div class="q-text" id="qText"></div>
+      <div class="q-opts" id="qOpts"></div>
+    </div>
+  </div>
+
+  <div id="quizResult" class="quiz-pane" style="display:none">
+    <div class="res-ring">
+      <svg viewBox="0 0 120 120" class="bigring"><circle cx="60" cy="60" r="50" class="br-bg"/>
+        <circle cx="60" cy="60" r="50" class="br-fg" id="resFg" stroke="#22FF88" stroke-dasharray="314.159" stroke-dashoffset="314.159"/></svg>
+      <div class="br-center"><span class="br-num" id="resScore">۰</span><span class="br-lbl">از ۲۰</span></div>
+    </div>
+    <div class="res-title" id="resTitle"></div>
+    <div class="res-chips"><span class="rchip ok" id="resOk"></span><span class="rchip bad" id="resBad"></span></div>
+    <div class="res-review" id="resReview"></div>
+    <button class="btn" onclick="quizStart()">🔄 آزمون مجدد</button>
+    <button class="btn btn-reset" onclick="goHome()">بازگشت به خانه</button>
+  </div>
+
+</div>
+</div><!-- /page quiz -->
 
 <!-- ===== صفحه ارزیابی ورود ===== -->
 <div class="page" id="assess">
@@ -2776,6 +3084,141 @@ function refreshCSelect(id){
 document.addEventListener('click', function(){
   document.querySelectorAll('.cselect.open').forEach(function(w){ w.classList.remove('open'); });
 });
+
+/* ================= محورها / توست ================= */
+function axisGo(id){
+  var el=document.getElementById(id); if(!el) return;
+  el.scrollIntoView({behavior:'smooth', block:'start'});
+  var t=el.querySelector('.cat-title');
+  if(t){ t.classList.remove('flash'); void t.offsetWidth; t.classList.add('flash'); }
+}
+function axisSoon(name){ showToast('محور «'+name+'» به‌زودی تکمیل می‌شود'); }
+var _toastT;
+function showToast(msg){
+  var el=document.getElementById('toast');
+  if(!el){ el=document.createElement('div'); el.id='toast'; el.className='toast'; document.body.appendChild(el); }
+  el.textContent=msg; el.classList.add('show');
+  clearTimeout(_toastT); _toastT=setTimeout(function(){ el.classList.remove('show'); }, 2600);
+}
+
+/* ================= آزمون و خودآزمایی HSE ================= */
+function faDigits(n){ return String(n).replace(/[0-9]/g, function(d){ return '۰۱۲۳۴۵۶۷۸۹'[d]; }); }
+function qShuffle(a){ for(var i=a.length-1;i>0;i--){ var j=Math.floor(Math.random()*(i+1)); var t=a[i]; a[i]=a[j]; a[j]=t; } return a; }
+
+var QUIZ_BANK = [
+  {q:'حداقل درصد اکسیژن مجاز برای ورود به فضای محصور بدون دستگاه تنفسی چقدر است؟', opts:['۱۹٫۵٪','۱۶٪','۲۵٪','۱۰٪'], a:0, cat:'فضای محصور'},
+  {q:'حداکثر درصد اکسیژن مجاز (مرز خطر اغنای اکسیژن) چقدر است؟', opts:['۲۳٫۵٪','۳۰٪','۲۱٪','۱۹٫۵٪'], a:0, cat:'فضای محصور'},
+  {q:'LEL در سنجش گاز به چه معناست؟', opts:['حد پایین قابلیت اشتعال','حد بالای قابلیت اشتعال','حد مجاز سمیت','حد اکسیژن'], a:0, cat:'گازها'},
+  {q:'UEL به چه معناست؟', opts:['حد بالای قابلیت اشتعال','حد پایین قابلیت اشتعال','حد بویایی','حد انفجار اکسیژن'], a:0, cat:'گازها'},
+  {q:'حداکثر LEL مجاز برای ورود به فضای محصور چقدر است؟', opts:['کمتر از ۱۰٪','۵۰٪','۲۵٪','۱۰۰٪'], a:0, cat:'فضای محصور'},
+  {q:'گاز سولفید هیدروژن (H₂S) چه بویی دارد؟', opts:['تخم‌مرغ گندیده','بی‌بو','شیرین','ترش'], a:0, cat:'گازها'},
+  {q:'حد مجاز مواجهه شغلی با H₂S (TLV-TWA) تقریباً چقدر است؟', opts:['۱۰ ppm','۱۰۰ ppm','۵۰۰ ppm','۱ ppm'], a:0, cat:'گازها'},
+  {q:'خطرناک‌ترین ویژگی گاز مونوکسیدکربن (CO) چیست؟', opts:['بی‌رنگ و بی‌بو بودن','بوی تند','رنگ زرد','حل‌شدن در آب'], a:0, cat:'گازها'},
+  {q:'حد مجاز مواجهه با CO تقریباً چقدر است؟', opts:['۳۵ ppm','۳۵۰ ppm','۵ ppm','۱۰۰۰ ppm'], a:0, cat:'گازها'},
+  {q:'گاز طبیعی (متان) نسبت به هوا چگونه رفتار می‌کند؟', opts:['سبک‌تر است و به بالا می‌رود','سنگین‌تر است و ته می‌نشیند','هم‌وزن هواست','در آب حل می‌شود'], a:0, cat:'گازها'},
+  {q:'حد پایین انفجار (LEL) متان تقریباً چند درصد حجمی است؟', opts:['۵٪','۱۵٪','۱٪','۵۰٪'], a:0, cat:'گازها'},
+  {q:'حریق مواد جامد مانند چوب و کاغذ در کدام کلاس قرار می‌گیرد؟', opts:['کلاس A','کلاس B','کلاس C','کلاس D'], a:0, cat:'آتش‌نشانی'},
+  {q:'حریق مایعات قابل اشتعال در کدام کلاس است؟', opts:['کلاس B','کلاس A','کلاس C','کلاس K'], a:0, cat:'آتش‌نشانی'},
+  {q:'حریق گازها در کدام کلاس قرار می‌گیرد؟', opts:['کلاس C','کلاس A','کلاس B','کلاس D'], a:0, cat:'آتش‌نشانی'},
+  {q:'حریق فلزات قابل اشتعال در کدام کلاس است؟', opts:['کلاس D','کلاس C','کلاس B','کلاس A'], a:0, cat:'آتش‌نشانی'},
+  {q:'در حریق گاز، اولین و مهم‌ترین اقدام چیست؟', opts:['قطع جریان گاز','خاموش‌کردن فوری شعله','پاشیدن آب','تخلیه کامل'], a:0, cat:'آتش‌نشانی'},
+  {q:'مخفف PASS در کار با خاموش‌کننده دستی یعنی چه؟', opts:['کشیدن ضامن، نشانه‌گیری به پای شعله، فشردن اهرم، جاروب‌کردن','فشار، ایمنی، سرعت، استاندارد','پایش، ارزیابی، اقدام، ثبت','هیچ‌کدام'], a:0, cat:'آتش‌نشانی'},
+  {q:'برای حریق تجهیزات برقی زیر بار از کدام خاموش‌کننده استفاده می‌شود؟', opts:['CO₂ یا پودر','آب','فوم','کلاس D'], a:0, cat:'آتش‌نشانی'},
+  {q:'کدام مورد جزو «کار گرم» محسوب می‌شود؟', opts:['جوشکاری و برشکاری','نقاشی با قلم‌مو','حمل بار','بازرسی چشمی'], a:0, cat:'کار گرم'},
+  {q:'پیش از کار گرم روی خط گازدار چه باید کرد؟', opts:['تخلیه (Purge) و گازسنجی تا صفر','فقط بازکردن شیر','افزایش فشار خط','هیچ اقدام خاصی لازم نیست'], a:0, cat:'کار گرم'},
+  {q:'پرمیت کار (Work Permit) چیست؟', opts:['مجوز کتبی برای انجام کار خطرناک','قرارداد استخدام','بیمه‌نامه','گواهی آموزش'], a:0, cat:'پرمیت'},
+  {q:'وظیفه نگهبان فضای محصور (Hole Watch) چیست؟', opts:['پایش دائم و ارتباط با فرد داخل','انجام کار در داخل','صدور پرمیت','فقط گازسنجی نهایی'], a:0, cat:'فضای محصور'},
+  {q:'حداقل فاصله ایمن حفاری مکانیکی از خط گاز معمولاً چگونه تعیین می‌شود؟', opts:['بر اساس دستورالعمل و نوع خط','حدس اپراتور','عمق دلخواه','رنگ خاک'], a:0, cat:'حفاری'},
+  {q:'پیش از حفاری مکانیکی نزدیک خطوط گاز چه اقدامی لازم است؟', opts:['تعیین موقعیت خط با حفاری دستی آزمایشی','شروع فوری حفاری','افزایش سرعت','هیچ اقدامی'], a:0, cat:'حفاری'},
+  {q:'ریزش دیواره ترانشه با کدام روش کنترل می‌شود؟', opts:['شیب‌دارکردن یا شمع‌کوبی دیواره','انباشت خاک روی لبه','حفر عمیق‌تر','هیچ روشی'], a:0, cat:'حفاری'},
+  {q:'شماره تلفن امداد گاز چند است؟', opts:['۱۹۴','۱۲۵','۱۱۵','۱۱۰'], a:0, cat:'اضطراری'},
+  {q:'شماره تلفن آتش‌نشانی چند است؟', opts:['۱۲۵','۱۹۴','۱۱۵','۱۱۰'], a:0, cat:'اضطراری'},
+  {q:'شماره تلفن اورژانس چند است؟', opts:['۱۱۵','۱۲۵','۱۹۴','۱۱۲'], a:0, cat:'اضطراری'},
+  {q:'هنگام استشمام بوی گاز در فضای بسته چه کاری را نباید انجام داد؟', opts:['زدن کلید برق یا ایجاد جرقه','بازکردن در و پنجره','خارج‌کردن افراد','قطع جریان گاز'], a:0, cat:'اضطراری'},
+  {q:'اولین اقدام در مواجهه با فرد دچار برق‌گرفتگی چیست؟', opts:['قطع جریان برق','لمس فوری فرد','پاشیدن آب','هیچ اقدامی'], a:0, cat:'اضطراری'},
+  {q:'سطح ریسک در روش ماتریسی با کدام رابطه به‌دست می‌آید؟', opts:['احتمال × شدت','احتمال + شدت','شدت ÷ احتمال','فقط شدت'], a:0, cat:'ارزیابی ریسک'},
+  {q:'هدف اصلی ارزیابی ریسک چیست؟', opts:['شناسایی و کنترل خطرات پیش از حادثه','گزارش پس از حادثه','افزایش تولید','کاهش هزینه'], a:0, cat:'ارزیابی ریسک'},
+  {q:'در سلسله‌مراتب کنترل خطر، مؤثرترین اقدام کدام است؟', opts:['حذف خطر','تجهیزات حفاظت فردی','نصب علائم هشدار','آموزش'], a:0, cat:'ارزیابی ریسک'},
+  {q:'تجهیزات حفاظت فردی (PPE) در سلسله‌مراتب کنترل کجا قرار دارد؟', opts:['آخرین و کم‌اثرترین لایه','اولین و مؤثرترین لایه','تنها روش کنترل','بی‌اثر'], a:0, cat:'ارزیابی ریسک'},
+  {q:'SCBA چیست؟', opts:['دستگاه تنفسی هوای فشرده مستقل','نوعی گازسنج','نوعی کپسول آتش‌نشانی','لباس کار'], a:0, cat:'فضای محصور'},
+  {q:'گازسنجی فضای محصور باید در چند تراز انجام شود؟', opts:['کف، میانه و سقف','فقط کف','فقط سقف','یک نقطه'], a:0, cat:'فضای محصور'},
+  {q:'چرا گازسنجی باید چندنقطه‌ای (چندتراز) باشد؟', opts:['چون گازها چگالی متفاوت دارند','برای سرعت بیشتر','برای صرفه‌جویی','فقط الزام قانونی'], a:0, cat:'گازها'},
+  {q:'۱ درصد حجمی برابر چند ppm است؟', opts:['۱۰٬۰۰۰ ppm','۱٬۰۰۰ ppm','۱۰۰ ppm','۱۰۰٬۰۰۰ ppm'], a:0, cat:'تبدیل مقادیر'},
+  {q:'اگر LEL متان ۵٪ باشد، ۵۰٪ LEL معادل چند درصد حجمی است؟', opts:['۲٫۵٪','۵٪','۱٪','۱۰٪'], a:0, cat:'تبدیل مقادیر'},
+  {q:'رسیدن نشانگر به ۱۰۰٪ LEL یعنی چه؟', opts:['غلظت گاز به حد پایین انفجار رسیده است','محیط کاملاً ایمن است','گاز صفر است','حد بالای انفجار'], a:0, cat:'گازها'},
+  {q:'بهداشت حرفه‌ای عمدتاً به چه می‌پردازد؟', opts:['پیشگیری از بیماری‌های شغلی','اطفای حریق','حفاری','امور مالی'], a:0, cat:'بهداشت'},
+  {q:'مواجهه طولانی‌مدت با صدای زیاد چه عارضه‌ای دارد؟', opts:['کاهش شنوایی','بهبود تمرکز','افزایش دید','بی‌اثر است'], a:0, cat:'بهداشت'},
+  {q:'حد آستانه صدا که نیازمند حفاظت شنوایی است تقریباً چقدر است؟', opts:['۸۵ دسی‌بل','۴۰ دسی‌بل','۲۰۰ دسی‌بل','۱۰ دسی‌بل'], a:0, cat:'بهداشت'},
+  {q:'هدف از رعایت حریم خطوط انتقال گاز چیست؟', opts:['حفاظت خط و ایمنی عمومی','زیبایی منظر','عبور خودرو','کشاورزی'], a:0, cat:'خطوط لوله'},
+  {q:'حفاظت کاتدیک روی خطوط لوله برای چیست؟', opts:['جلوگیری از خوردگی لوله','افزایش فشار','گرمایش لوله','رنگ‌آمیزی'], a:0, cat:'خطوط لوله'},
+  {q:'تهویه پیش از ورود به منهول برای چیست؟', opts:['خروج گاز و تأمین اکسیژن کافی','خنک‌کردن','تمیزکردن','تأمین روشنایی'], a:0, cat:'فضای محصور'},
+  {q:'مثلث آتش از کدام سه عنصر تشکیل می‌شود؟', opts:['سوخت، اکسیژن، حرارت','آب، خاک، باد','گاز، برق، فشار','دود، شعله، خاکستر'], a:0, cat:'آتش‌نشانی'},
+  {q:'خاموش‌کننده CO₂ کدام ضلع مثلث آتش را حذف می‌کند؟', opts:['اکسیژن','سوخت','نور','صدا'], a:0, cat:'آتش‌نشانی'},
+  {q:'کپسول پودر ABC مناسب کدام کلاس‌های حریق است؟', opts:['A و B و C','فقط D','فقط K','هیچ‌کدام'], a:0, cat:'آتش‌نشانی'},
+  {q:'مهم‌ترین اصل هنگام هر حادثه گازی چیست؟', opts:['حفظ جان افراد و قطع منبع گاز','ادامه کار','فقط ثبت گزارش','عکس‌گرفتن'], a:0, cat:'اضطراری'}
+];
+
+var quizQs=[], quizIdx=0, quizAns=[];
+function quizStart(){
+  goPage('quiz');
+  var bank = qShuffle(QUIZ_BANK.slice()).slice(0,20);
+  quizQs = bank.map(function(item){
+    var opts = item.opts.map(function(t,i){ return {t:t, correct:i===item.a}; });
+    qShuffle(opts);
+    var ai=0; opts.forEach(function(o,i){ if(o.correct) ai=i; });
+    return {q:item.q, opts:opts.map(function(o){return o.t;}), a:ai, cat:item.cat};
+  });
+  quizIdx=0; quizAns=[];
+  document.getElementById('quizStart').style.display='none';
+  document.getElementById('quizResult').style.display='none';
+  document.getElementById('quizRun').style.display='block';
+  renderQ(); window.scrollTo({top:0});
+}
+function renderQ(){
+  var item=quizQs[quizIdx];
+  document.getElementById('qProg').textContent='سؤال '+faDigits(quizIdx+1)+' از '+faDigits(quizQs.length);
+  document.getElementById('qBar').style.width=(quizIdx/quizQs.length*100)+'%';
+  document.getElementById('qCat').textContent=item.cat;
+  document.getElementById('qText').textContent=item.q;
+  var keys=['الف','ب','ج','د'];
+  document.getElementById('qOpts').innerHTML = item.opts.map(function(t,i){
+    return '<button class="q-opt" onclick="quizAnswer('+i+')"><span class="opt-k">'+keys[i]+'</span><span>'+t+'</span></button>';
+  }).join('');
+}
+function quizAnswer(i){
+  quizAns.push(i);
+  if(quizIdx < quizQs.length-1){ quizIdx++; renderQ(); window.scrollTo({top:0}); }
+  else quizFinish();
+}
+function quizFinish(){
+  var correct=0, wrong=[];
+  quizQs.forEach(function(item,idx){
+    if(quizAns[idx]===item.a) correct++; else wrong.push({item:item, you:quizAns[idx]});
+  });
+  document.getElementById('quizRun').style.display='none';
+  document.getElementById('quizResult').style.display='block';
+  var total=quizQs.length, C=314.159;
+  var color = correct>=14?'#22FF88':(correct>=10?'#FF9500':'#FF5A5A');
+  var fg=document.getElementById('resFg'); fg.setAttribute('stroke', color);
+  fg.setAttribute('stroke-dashoffset', C);
+  setTimeout(function(){ fg.setAttribute('stroke-dashoffset', C*(1-correct/total)); }, 80);
+  var rs=document.getElementById('resScore'); rs.textContent=faDigits(correct); rs.style.color=color;
+  var t=document.getElementById('resTitle');
+  t.textContent = correct>=14?'عالی! دانش ایمنی خوبی داری':(correct>=10?'قابل قبول — کمی مرور لازم است':'نیاز به مطالعه‌ی بیشتر');
+  t.style.color=color;
+  document.getElementById('resOk').textContent='✓ '+faDigits(correct)+' صحیح';
+  document.getElementById('resBad').textContent='✕ '+faDigits(total-correct)+' اشتباه';
+  var rev = wrong.length
+    ? '<div class="rep-sub">مرور اشتباهات ('+faDigits(wrong.length)+')</div>'+wrong.map(function(w){
+        var you = (w.you==null||w.you<0)?'—':w.item.opts[w.you];
+        return '<div class="rev-item"><div class="rev-q">'+w.item.q+'</div>'+
+          '<div class="rev-line rev-bad">پاسخ شما: '+you+'</div>'+
+          '<div class="rev-line rev-ok">پاسخ صحیح: '+w.item.opts[w.item.a]+'</div></div>';
+      }).join('')
+    : '<div class="rev-item" style="text-align:center;color:var(--neon)">بدون اشتباه! آفرین 🎉</div>';
+  document.getElementById('resReview').innerHTML=rev;
+  window.scrollTo({top:0});
+}
 
 // ساخت کارت‌های نوع حریق در بارگذاری
 buildFireGrid();
