@@ -682,6 +682,36 @@
   }
   .img-modal .im-dl{ background:linear-gradient(135deg,#00FF9F,#22FF88); color:#04160d; }
   .img-modal .im-close{ background:var(--glass2); color:var(--txt2); border:1px solid var(--line2); }
+
+  /* ---------- دراپ‌داون سفارشی هم‌استایل اپ (جایگزین select بومی) ---------- */
+  .cselect{ position:relative; }
+  .cselect > select{ position:absolute; opacity:0; width:1px; height:1px; pointer-events:none; }
+  .cselect-trigger{
+    width:100%; display:flex; align-items:center; justify-content:space-between; gap:10px;
+    padding:13px 14px; font-size:16px; font-family:inherit; cursor:pointer; text-align:right;
+    background:rgba(255,255,255,0.05); border:1.5px solid var(--line2); border-radius:10px; color:var(--txt);
+  }
+  .cselect-trigger .cs-label{ flex:1; text-align:right; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .cselect-trigger .cs-label.cs-ph{ color:var(--muted); }
+  .cselect-trigger .cs-arrow{ color:var(--neon2); transition:transform .2s; flex-shrink:0; font-size:13px; }
+  .cselect.open .cselect-trigger{ border-color:var(--neon); box-shadow:0 0 0 3px rgba(34,255,136,0.16); background:rgba(34,255,136,0.06); }
+  .cselect.open .cs-arrow{ transform:rotate(180deg); }
+  .cselect-panel{
+    position:absolute; z-index:60; top:calc(100% + 6px); right:0; left:0;
+    background:#0e1f3a; border:1px solid var(--line2); border-radius:12px;
+    max-height:300px; overflow-y:auto; display:none;
+    box-shadow:0 18px 44px rgba(0,0,0,0.55);
+  }
+  .cselect.open .cselect-panel{ display:block; }
+  .cselect-opt{
+    padding:13px 14px; font-size:15px; color:var(--txt2); cursor:pointer;
+    border-bottom:1px solid var(--line); line-height:1.6;
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+  }
+  .cselect-opt:last-child{ border-bottom:none; }
+  .cselect-opt:active{ background:rgba(34,255,136,0.10); }
+  .cselect-opt.sel{ color:var(--neon); background:rgba(34,255,136,0.08); }
+  .cselect-opt.sel::after{ content:'✓'; color:var(--neon); font-weight:800; flex-shrink:0; }
 </style>
 </head>
 <body>
@@ -2654,6 +2684,7 @@ function onJobRole(){
   if (!role || !JOB_RISKS[role]) { wrap.style.display = 'none'; actSel.innerHTML = ''; return; }
   var acts = JOB_RISKS[role].acts;
   actSel.innerHTML = Object.keys(acts).map(function(a){ return '<option value="'+a+'">'+a+'</option>'; }).join('');
+  refreshCSelect('jrActivity');
   wrap.style.display = 'block';
   renderJobRisk();
 }
@@ -2684,11 +2715,69 @@ function initRiskPages(){
     Object.keys(FACILITY_RISKS).map(function(t){ return '<option value="'+t+'">'+(FACILITY_RISKS[t].icon||'')+' '+t+'</option>'; }).join('');
 }
 
+/* ===== دراپ‌داون سفارشی هم‌استایل اپ =====
+   select بومی پنهان می‌شود ولی برای منطق نگه داشته می‌شود؛ انتخاب کاربر مقدار
+   آن را تنظیم و رویداد change را شلیک می‌کند تا همه‌ی onchangeها کار کنند. */
+function enhanceSelects(){
+  document.querySelectorAll('select.inp, select.conv-select').forEach(function(sel){
+    if (sel.parentNode && sel.parentNode.classList.contains('cselect')) return;
+    var wrap = document.createElement('div'); wrap.className = 'cselect';
+    sel.parentNode.insertBefore(wrap, sel);
+    wrap.appendChild(sel);
+    var trig = document.createElement('button');
+    trig.type = 'button'; trig.className = 'cselect-trigger';
+    trig.innerHTML = '<span class="cs-label"></span><span class="cs-arrow">▼</span>';
+    var panel = document.createElement('div'); panel.className = 'cselect-panel';
+    wrap.appendChild(trig); wrap.appendChild(panel);
+    var lblEl = trig.querySelector('.cs-label');
+
+    function label(){
+      var o = sel.options[sel.selectedIndex];
+      lblEl.textContent = o ? o.textContent : '';
+      lblEl.className = 'cs-label' + (o && o.value === '' ? ' cs-ph' : '');
+    }
+    function build(){
+      panel.innerHTML = '';
+      Array.prototype.forEach.call(sel.options, function(o, i){
+        var d = document.createElement('div');
+        d.className = 'cselect-opt' + (i === sel.selectedIndex ? ' sel' : '');
+        d.appendChild(document.createTextNode(o.textContent));
+        d.addEventListener('click', function(ev){
+          ev.stopPropagation();
+          sel.selectedIndex = i;
+          sel.dispatchEvent(new Event('change', {bubbles:true}));
+          label(); wrap.classList.remove('open');
+        });
+        panel.appendChild(d);
+      });
+    }
+    trig.addEventListener('click', function(e){
+      e.stopPropagation();
+      var isOpen = wrap.classList.contains('open');
+      document.querySelectorAll('.cselect.open').forEach(function(w){ w.classList.remove('open'); });
+      if (!isOpen) { build(); wrap.classList.add('open'); }
+    });
+    sel.addEventListener('change', label);
+    sel._csLabel = label;
+    label();
+  });
+}
+// به‌روزرسانی متن دراپ‌داون پس از تغییر برنامه‌ای گزینه‌ها
+function refreshCSelect(id){
+  var s = document.getElementById(id);
+  if (s && s._csLabel) s._csLabel();
+}
+// بستن با کلیک بیرون
+document.addEventListener('click', function(){
+  document.querySelectorAll('.cselect.open').forEach(function(w){ w.classList.remove('open'); });
+});
+
 // ساخت کارت‌های نوع حریق در بارگذاری
 buildFireGrid();
 initGasPage();
 initFAPage();
 initRiskPages();
+enhanceSelects();
 
 // ثبت سرویس ورکر برای کارکرد کامل آفلاین
 if ('serviceWorker' in navigator) {
