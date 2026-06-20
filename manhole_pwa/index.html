@@ -414,17 +414,21 @@
     --neon:#22FF88; --neon2:#00FF9F; --orange:#FF9500; --red:#FF5A5A; --blue:#3a8ee0;
     --radius:16px;
   }
-  html,body{
-    background:
-      radial-gradient(1200px 600px at 80% -10%, #143055 0%, rgba(20,48,85,0) 55%),
-      radial-gradient(900px 500px at -10% 10%, #0e2b50 0%, rgba(14,43,80,0) 50%),
-      linear-gradient(180deg,#0A1428 0%, #081021 100%);
-    background-attachment:fixed;
-    color:var(--txt);
-  }
+  html{ background:#081021; }
   body{
+    background:transparent;
+    color:var(--txt);
     font-family:"Vazirmatn","Vazir","IRANSans","IRANSansX","Segoe UI",Tahoma,sans-serif;
     min-height:100vh;
+  }
+  /* گلوی پس‌زمینه به‌صورت لایه‌ی ثابت سبک (به‌جای background-attachment:fixed
+     که روی موبایل کند است و باعث دیده‌شدن سفیدی پشت صفحه می‌شود) */
+  body::before{
+    content:''; position:fixed; inset:0; z-index:-1; pointer-events:none;
+    background:
+      radial-gradient(1100px 560px at 85% -12%, #143055 0%, rgba(20,48,85,0) 55%),
+      radial-gradient(820px 460px at -12% 8%, #0e2b50 0%, rgba(14,43,80,0) 50%),
+      linear-gradient(180deg,#0A1428 0%, #081021 100%);
   }
   .container{ max-width:560px; }
 
@@ -477,11 +481,10 @@
   /* ---------- کارت‌ها / سطوح شیشه‌ای ---------- */
   .card, .reasons, .req-list, .calc-rows, .conv-results, .gas-card, .sec-block,
   .risk-card, .ext-item{
-    background:var(--glass);
+    background:rgba(19,34,60,0.66);
     border:1px solid var(--line);
     border-radius:var(--radius);
-    box-shadow:0 10px 30px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.04);
-    -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px);
+    box-shadow:0 8px 22px rgba(0,0,0,0.32), inset 0 1px 0 rgba(255,255,255,0.04);
   }
   label{ color:var(--txt); }
   label .unit{ color:var(--txt2); }
