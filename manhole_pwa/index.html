@@ -877,8 +877,58 @@
   .rev-bad{ color:var(--red); }
   .rev-ok{ color:var(--neon); }
 
+  /* بنر دسته (بالای صفحه دسته) */
+  .cat-banner{ position:relative; overflow:hidden; display:flex; align-items:center; justify-content:space-between; gap:14px;
+    border-radius:22px; padding:18px; margin:4px 0 16px; border:1px solid var(--line);
+    background:var(--glass); box-shadow:0 16px 38px -18px rgba(0,0,0,0.7); }
+  .cat-banner::before{ content:''; position:absolute; inset:0; border-radius:22px; pointer-events:none;
+    background:radial-gradient(220px 160px at 12% 0%, var(--c), transparent 60%); opacity:0.16; }
+  .cat-banner{ border-color:color-mix(in srgb, var(--c) 35%, var(--line)); }
+  .cb-txt{ position:relative; z-index:1; }
+  .cb-title{ font-size:22px; font-weight:800; color:#fff; }
+  .cb-desc{ font-size:12.5px; color:var(--txt2); margin-top:5px; line-height:1.7; }
+  .cb-ico{ position:relative; z-index:1; width:60px; height:60px; border-radius:18px; flex-shrink:0;
+    display:flex; align-items:center; justify-content:center; font-size:30px;
+    background:rgba(255,255,255,0.05); border:1px solid var(--line2); box-shadow:0 0 24px -6px var(--c); }
+
+  /* ردیف ابزار (لیست عمودی) */
+  .toolrows{ display:flex; flex-direction:column; gap:11px; }
+  .toolrow{ display:flex; align-items:center; gap:13px; text-align:right; cursor:pointer; font-family:inherit; width:100%;
+    background:var(--glass); border:1px solid var(--line); border-radius:18px; padding:14px 15px; color:var(--txt);
+    box-shadow:0 12px 30px -18px rgba(0,0,0,0.7); transition:transform .12s, border-color .12s; }
+  .toolrow:active{ transform:scale(0.985); border-color:var(--line2); }
+  .tr-ico{ width:50px; height:50px; border-radius:15px; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:24px;
+    background:rgba(255,255,255,0.05); border:1px solid var(--line2); box-shadow:0 0 18px -6px var(--c); }
+  .tr-txt{ flex:1; display:flex; flex-direction:column; gap:3px; min-width:0; }
+  .tr-name{ font-size:15.5px; font-weight:800; color:#fff; }
+  .tr-desc{ font-size:11.5px; color:var(--txt2); line-height:1.6; }
+  .tr-arrow{ color:var(--muted); font-size:22px; flex-shrink:0; }
+
+  /* اطلاعیه‌ها */
+  .alerts-list{ display:flex; flex-direction:column; gap:11px; }
+  .alert-item{ display:flex; gap:12px; background:var(--glass); border:1px solid var(--line); border-radius:16px; padding:14px;
+    box-shadow:0 12px 30px -18px rgba(0,0,0,0.7); }
+  .al-dot{ width:9px; height:9px; border-radius:50%; flex-shrink:0; margin-top:6px; box-shadow:0 0 8px currentColor; }
+  .al-body{ flex:1; }
+  .al-title{ font-size:14px; font-weight:800; color:#fff; line-height:1.7; }
+  .al-desc{ font-size:12px; color:var(--txt2); line-height:1.8; margin:4px 0 6px; }
+  .al-date{ font-size:10.5px; color:var(--muted); }
+
+  /* نوار ناوبری پایین */
+  body{ padding-bottom:0; }
+  .page{ padding-bottom:92px; }
+  .bottom-nav{ position:fixed; left:0; right:0; bottom:0; z-index:36; display:flex;
+    background:rgba(7,13,24,0.94); -webkit-backdrop-filter:blur(18px); backdrop-filter:blur(18px);
+    border-top:1px solid var(--line); padding:9px 6px calc(9px + env(safe-area-inset-bottom,0px)); }
+  .bn-item{ flex:1; display:flex; flex-direction:column; align-items:center; gap:4px; background:none; border:none;
+    color:var(--txt2); font-family:inherit; font-size:11px; font-weight:700; cursor:pointer; padding:4px 2px; transition:color .15s; }
+  .bn-item svg{ width:23px; height:23px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+  .bn-item.active{ color:var(--neon); }
+  .bn-item.active svg{ filter:drop-shadow(0 0 7px rgba(34,255,136,0.55)); }
+  .bn-item:active{ transform:scale(0.94); }
+
   /* توست */
-  .toast{ position:fixed; left:50%; bottom:30px; transform:translateX(-50%) translateY(20px); z-index:90; max-width:84%;
+  .toast{ position:fixed; left:50%; bottom:90px; transform:translateX(-50%) translateY(20px); z-index:90; max-width:84%;
     background:#13243d; border:1px solid var(--line2); color:var(--txt); font-size:13px; font-weight:600; text-align:center;
     padding:12px 18px; border-radius:14px; box-shadow:0 16px 40px rgba(0,0,0,0.6); opacity:0; pointer-events:none; transition:.25s; }
   .toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
@@ -890,11 +940,10 @@
   <div class="brand">
   <img class="hdr-logo" src="icons/logo.png" alt="آرم شرکت گاز استان تهران">
     <div class="brand-txt">
-      <span class="brand-title">HSE man</span>
+      <span class="brand-title">امور HSE</span>
       <span class="brand-sub">شرکت گاز استان تهران</span>
     </div>
   </div>
-  <button class="home-btn" onclick="goHome()" aria-label="خانه">⌂</button>
 </header>
 <div class="subbar" id="subbar" style="display:none">
   <button class="back-btn" onclick="goHome()">‹ خانه</button>
@@ -972,7 +1021,7 @@
   <div class="sec-head"><span class="sh-bar" style="background:var(--neon)"></span>
     <div class="sh-txt"><div class="sh-t">محورهای اصلی HSE</div><div class="sh-s">چهار محور تخصصی</div></div></div>
   <div class="axes">
-    <button class="axis" style="--c:#22FF88" onclick="axisGo('grp-safety')">
+    <button class="axis" style="--c:#22FF88" onclick="goPage('cat-safety')">
       <span class="ax-ghost">🛡️</span>
       <span class="ax-ico">🛡️</span>
       <span class="ax-name">ایمنی</span>
@@ -1067,52 +1116,6 @@
     </div>
   </div>
 
-  <!-- ۷) گروه‌های ابزار -->
-  <div class="cat" id="grp-safety">
-    <div class="cat-title"><span class="ct-ico">🛡️</span> ایمنی</div>
-    <div class="tiles">
-      <button class="tile" style="--accent:#22FF88" onclick="goPage('assess')"><span class="t-ico">🕳️</span><span class="t-name">ورود به منهول</span></button>
-      <button class="tile" style="--accent:#FF9500" onclick="goPage('hotcold')"><span class="t-ico">🔥</span><span class="t-name">کار گرم و سرد</span></button>
-      <button class="tile" style="--accent:#3FD0FF" onclick="goPage('ptw')"><span class="t-ico">📋</span><span class="t-name">راهنمای پرمیت کار</span></button>
-      <button class="tile" style="--accent:#7BE06B" onclick="goPage('digging')"><span class="t-ico">🪏</span><span class="t-name">فاصله ایمن حفاری</span></button>
-      <button class="tile" style="--accent:#3a8ee0" onclick="goPage('harim')"><span class="t-ico">📏</span><span class="t-name">حریم خطوط گاز</span></button>
-      <button class="tile" style="--accent:#FF5A5A" onclick="goPage('firstaid')"><span class="t-ico">🚑</span><span class="t-name">اقدامات اولیه حوادث</span></button>
-    </div>
-  </div>
-
-  <div class="cat" id="grp-calc">
-    <div class="cat-title"><span class="ct-ico">🧮</span> محاسبات و گازها</div>
-    <div class="tiles">
-      <button class="tile" style="--accent:#3FD0FF" onclick="goPage('convert')"><span class="t-ico">🔄</span><span class="t-name">تبدیل مقادیر</span></button>
-      <button class="tile" style="--accent:#22FF88" onclick="goPage('purge')"><span class="t-ico">💨</span><span class="t-name">محاسبه پرج</span></button>
-      <button class="tile" style="--accent:#FF9500" onclick="goPage('evac')"><span class="t-ico">📡</span><span class="t-name">شعاع تخلیه نشت گاز</span></button>
-      <button class="tile" style="--accent:#b6a4ff" onclick="goPage('gastable')"><span class="t-ico">🧪</span><span class="t-name">خواص گازها</span></button>
-    </div>
-  </div>
-
-  <div class="cat" id="grp-fire">
-    <div class="cat-title"><span class="ct-ico">🧯</span> آتش‌نشانی و ایمنی</div>
-    <div class="tiles">
-      <button class="tile" style="--accent:#FF5A5A" onclick="goPage('extinguisher')"><span class="t-ico">🧯</span><span class="t-name">انتخاب کپسول آتش‌نشانی</span></button>
-      <button class="tile" style="--accent:#3a8ee0" onclick="goPage('building')"><span class="t-ico">🏢</span><span class="t-name">تحلیل اطفا و اعلام ساختمان</span></button>
-    </div>
-  </div>
-
-  <div class="cat" id="grp-risk">
-    <div class="cat-title"><span class="ct-ico">⚠️</span> ارزیابی ریسک</div>
-    <div class="tiles">
-      <button class="tile" style="--accent:#FF9500" onclick="goPage('jobrisk')"><span class="t-ico">👷</span><span class="t-name">ارزیابی ریسک شغلی</span></button>
-      <button class="tile" style="--accent:#FF5A5A" onclick="goPage('facilityrisk')"><span class="t-ico">🏭</span><span class="t-name">ارزیابی ریسک تأسیسات</span></button>
-    </div>
-  </div>
-
-  <div class="cat" id="grp-docs">
-    <div class="cat-title"><span class="ct-ico">📄</span> مستندات</div>
-    <div class="tiles">
-      <button class="tile wide" style="--accent:#22FF88" onclick="goPage('about')"><span class="t-ico">ℹ️</span><span class="t-name">درباره و اطلاعات اپ</span></button>
-    </div>
-  </div>
-
 </div>
 <div class="note">امور HSE — شرکت گاز استان تهران · ابزار کمک‌آموزشی و عملیاتی، جایگزین دستورالعمل‌های رسمی و تأیید کارشناس HSE نیست.</div>
 </div><!-- /page home -->
@@ -1159,6 +1162,80 @@
 
 </div>
 </div><!-- /page quiz -->
+
+<!-- ===== صفحه دسته «ایمنی» ===== -->
+<div class="page" id="cat-safety">
+<div class="container">
+  <div class="cat-banner" style="--c:#22FF88">
+    <div class="cb-txt"><div class="cb-title">ایمنی</div><div class="cb-desc">دستورالعمل‌ها و ابزارهای اجرای عملیات ایمن</div></div>
+    <div class="cb-ico">🛡️</div>
+  </div>
+  <div class="toolrows">
+    <button class="toolrow" onclick="goPage('assess')"><span class="tr-ico" style="--c:#22FF88">🕳️</span><span class="tr-txt"><span class="tr-name">ورود به منهول</span><span class="tr-desc">نظارت گاز و چک‌لیست ورود به فضای محصور</span></span><span class="tr-arrow">‹</span></button>
+    <button class="toolrow" onclick="goPage('hotcold')"><span class="tr-ico" style="--c:#FF9500">🔥</span><span class="tr-txt"><span class="tr-name">کار گرم و سرد</span><span class="tr-desc">فرم پرمیت و الزامات ایمنی</span></span><span class="tr-arrow">‹</span></button>
+    <button class="toolrow" onclick="goPage('ptw')"><span class="tr-ico" style="--c:#3FD0FF">📋</span><span class="tr-txt"><span class="tr-name">راهنمای پرمیت کار</span><span class="tr-desc">مراحل و انواع مجوز کار</span></span><span class="tr-arrow">‹</span></button>
+    <button class="toolrow" onclick="goPage('digging')"><span class="tr-ico" style="--c:#FF9500">🪏</span><span class="tr-txt"><span class="tr-name">فاصله ایمن حفاری</span><span class="tr-desc">محاسبه فاصله مجاز از خطوط</span></span><span class="tr-arrow">‹</span></button>
+    <button class="toolrow" onclick="goPage('harim')"><span class="tr-ico" style="--c:#22FF88">📏</span><span class="tr-txt"><span class="tr-name">حریم خطوط گاز</span><span class="tr-desc">حریم قانونی خطوط انتقال</span></span><span class="tr-arrow">‹</span></button>
+    <button class="toolrow" onclick="goPage('firstaid')"><span class="tr-ico" style="--c:#FF5A5A">🚑</span><span class="tr-txt"><span class="tr-name">اقدامات اولیه حوادث</span><span class="tr-desc">پروتکل واکنش اضطراری</span></span><span class="tr-arrow">‹</span></button>
+  </div>
+</div>
+</div><!-- /page cat-safety -->
+
+<!-- ===== صفحه «ابزارها» (فهرست کامل) ===== -->
+<div class="page" id="tools">
+<div class="container">
+  <div class="sec-head"><span class="sh-bar" style="background:#22FF88"></span><div class="sh-txt"><div class="sh-t">ایمنی</div><div class="sh-s">۶ ابزار</div></div></div>
+  <div class="toolrows">
+    <button class="toolrow" onclick="goPage('assess')"><span class="tr-ico" style="--c:#22FF88">🕳️</span><span class="tr-txt"><span class="tr-name">ورود به منهول</span><span class="tr-desc">نظارت گاز و چک‌لیست فضای محصور</span></span><span class="tr-arrow">‹</span></button>
+    <button class="toolrow" onclick="goPage('hotcold')"><span class="tr-ico" style="--c:#FF9500">🔥</span><span class="tr-txt"><span class="tr-name">کار گرم و سرد</span><span class="tr-desc">فرم پرمیت و الزامات ایمنی</span></span><span class="tr-arrow">‹</span></button>
+    <button class="toolrow" onclick="goPage('ptw')"><span class="tr-ico" style="--c:#3FD0FF">📋</span><span class="tr-txt"><span class="tr-name">راهنمای پرمیت کار</span><span class="tr-desc">مراحل و انواع مجوز کار</span></span><span class="tr-arrow">‹</span></button>
+    <button class="toolrow" onclick="goPage('digging')"><span class="tr-ico" style="--c:#FF9500">🪏</span><span class="tr-txt"><span class="tr-name">فاصله ایمن حفاری</span><span class="tr-desc">محاسبه فاصله مجاز از خطوط</span></span><span class="tr-arrow">‹</span></button>
+    <button class="toolrow" onclick="goPage('harim')"><span class="tr-ico" style="--c:#22FF88">📏</span><span class="tr-txt"><span class="tr-name">حریم خطوط گاز</span><span class="tr-desc">حریم قانونی خطوط انتقال</span></span><span class="tr-arrow">‹</span></button>
+    <button class="toolrow" onclick="goPage('firstaid')"><span class="tr-ico" style="--c:#FF5A5A">🚑</span><span class="tr-txt"><span class="tr-name">اقدامات اولیه حوادث</span><span class="tr-desc">پروتکل واکنش اضطراری</span></span><span class="tr-arrow">‹</span></button>
+  </div>
+
+  <div class="sec-head"><span class="sh-bar" style="background:#3FD0FF"></span><div class="sh-txt"><div class="sh-t">محاسبات و گازها</div><div class="sh-s">۴ ابزار</div></div></div>
+  <div class="toolrows">
+    <button class="toolrow" onclick="goPage('convert')"><span class="tr-ico" style="--c:#3FD0FF">🔄</span><span class="tr-txt"><span class="tr-name">تبدیل مقادیر</span><span class="tr-desc">تبدیل ٪حجمی، ppm و ٪LEL</span></span><span class="tr-arrow">‹</span></button>
+    <button class="toolrow" onclick="goPage('purge')"><span class="tr-ico" style="--c:#22FF88">💨</span><span class="tr-txt"><span class="tr-name">محاسبه پرج</span><span class="tr-desc">زمان و حجم پاکسازی خط</span></span><span class="tr-arrow">‹</span></button>
+    <button class="toolrow" onclick="goPage('evac')"><span class="tr-ico" style="--c:#FF9500">📡</span><span class="tr-txt"><span class="tr-name">شعاع تخلیه نشت گاز</span><span class="tr-desc">برآورد محدوده خطر</span></span><span class="tr-arrow">‹</span></button>
+    <button class="toolrow" onclick="goPage('gastable')"><span class="tr-ico" style="--c:#b6a4ff">🧪</span><span class="tr-txt"><span class="tr-name">خواص گازها</span><span class="tr-desc">جدول مرجع گازهای صنعتی</span></span><span class="tr-arrow">‹</span></button>
+  </div>
+
+  <div class="sec-head"><span class="sh-bar" style="background:#FF5A5A"></span><div class="sh-txt"><div class="sh-t">آتش‌نشانی</div><div class="sh-s">۲ ابزار</div></div></div>
+  <div class="toolrows">
+    <button class="toolrow" onclick="goPage('extinguisher')"><span class="tr-ico" style="--c:#FF5A5A">🧯</span><span class="tr-txt"><span class="tr-name">انتخاب کپسول آتش‌نشانی</span><span class="tr-desc">خاموش‌کننده مناسب هر کلاس حریق</span></span><span class="tr-arrow">‹</span></button>
+    <button class="toolrow" onclick="goPage('building')"><span class="tr-ico" style="--c:#3a8ee0">🏢</span><span class="tr-txt"><span class="tr-name">تحلیل اطفا و اعلام ساختمان</span><span class="tr-desc">الزامات اطفا و اعلام حریق</span></span><span class="tr-arrow">‹</span></button>
+  </div>
+
+  <div class="sec-head"><span class="sh-bar" style="background:#FF9500"></span><div class="sh-txt"><div class="sh-t">ارزیابی ریسک</div><div class="sh-s">۲ ابزار</div></div></div>
+  <div class="toolrows">
+    <button class="toolrow" onclick="goPage('jobrisk')"><span class="tr-ico" style="--c:#FF9500">👷</span><span class="tr-txt"><span class="tr-name">ارزیابی ریسک شغلی</span><span class="tr-desc">ماتریس ریسک بر اساس سمت و فعالیت</span></span><span class="tr-arrow">‹</span></button>
+    <button class="toolrow" onclick="goPage('facilityrisk')"><span class="tr-ico" style="--c:#FF5A5A">🏭</span><span class="tr-txt"><span class="tr-name">ارزیابی ریسک تأسیسات</span><span class="tr-desc">ماتریس ریسک انواع تأسیسات</span></span><span class="tr-arrow">‹</span></button>
+  </div>
+
+  <div class="sec-head"><span class="sh-bar" style="background:#8A9BB8"></span><div class="sh-txt"><div class="sh-t">مستندات</div><div class="sh-s">درباره اپ</div></div></div>
+  <div class="toolrows">
+    <button class="toolrow" onclick="goPage('about')"><span class="tr-ico" style="--c:#22FF88">ℹ️</span><span class="tr-txt"><span class="tr-name">درباره و اطلاعات اپ</span><span class="tr-desc">نسخه، منابع و توضیحات</span></span><span class="tr-arrow">‹</span></button>
+  </div>
+</div>
+</div><!-- /page tools -->
+
+<!-- ===== صفحه «اطلاعیه‌ها» ===== -->
+<div class="page" id="alerts">
+<div class="container">
+  <div class="cat-banner" style="--c:#3FD0FF">
+    <div class="cb-txt"><div class="cb-title">اطلاعیه‌ها</div><div class="cb-desc">آخرین بخشنامه‌ها و اعلان‌های ایمنی</div></div>
+    <div class="cb-ico">🔔</div>
+  </div>
+  <div class="alerts-list">
+    <div class="alert-item"><span class="al-dot" style="background:#FF5A5A"></span><div class="al-body"><div class="al-title">الزام گازسنجی سه‌مرحله‌ای پیش از ورود به فضای محصور</div><div class="al-desc">گازسنجی باید در سه تراز کف، میانه و سقف انجام و در پرمیت ثبت شود.</div><div class="al-date">۱۴۰۵/۰۳/۱۸ · بخشنامه ایمنی</div></div></div>
+    <div class="alert-item"><span class="al-dot" style="background:#FF9500"></span><div class="al-body"><div class="al-title">به‌روزرسانی دستورالعمل کار گرم روی خطوط گازدار</div><div class="al-desc">پیش از هر کار گرم، تخلیه و گازسنجی تا صفر و استقرار مأمور آتش‌نشان الزامی است.</div><div class="al-date">۱۴۰۵/۰۳/۱۰ · دستورالعمل</div></div></div>
+    <div class="alert-item"><span class="al-dot" style="background:#22FF88"></span><div class="al-body"><div class="al-title">دوره آموزشی فضای محصور — خرداد ۱۴۰۵</div><div class="al-desc">ثبت‌نام دوره بازآموزی ورود ایمن به فضای محصور آغاز شد.</div><div class="al-date">۱۴۰۵/۰۳/۰۵ · آموزش</div></div></div>
+    <div class="alert-item"><span class="al-dot" style="background:#3FD0FF"></span><div class="al-body"><div class="al-title">یادآوری شماره‌های اضطراری</div><div class="al-desc">امداد گاز ۱۹۴ · آتش‌نشانی ۱۲۵ · اورژانس ۱۱۵</div><div class="al-date">۱۴۰۵/۰۳/۰۱ · اطلاعیه</div></div></div>
+  </div>
+</div>
+</div><!-- /page alerts -->
 
 <!-- ===== صفحه ارزیابی ورود ===== -->
 <div class="page" id="assess">
@@ -1661,6 +1738,7 @@
 })();
 
 // جابجایی بین صفحه‌ها (منو + کارت‌های داشبورد)
+var PAGE_TITLES = { 'cat-safety':'ایمنی', 'tools':'ابزارها', 'alerts':'اطلاعیه‌ها', 'quiz':'آزمون و خودآزمایی' };
 function goPage(id){
   document.querySelectorAll('.page').forEach(function(p){ p.classList.remove('active'); });
   document.querySelectorAll('nav.menu button').forEach(function(b){ b.classList.remove('active'); });
@@ -1673,8 +1751,12 @@ function goPage(id){
     subbar.style.display = 'none';
   } else {
     subbar.style.display = 'flex';
-    document.getElementById('pageTitle').textContent = btn ? btn.textContent.replace(/^🏠\s*/, '') : '';
+    var title = PAGE_TITLES[id] || (btn ? btn.textContent.replace(/^🏠\s*/, '') : '');
+    document.getElementById('pageTitle').textContent = title;
   }
+  // حالت فعال نوار پایین
+  var nav = (id==='home')?'home':(id==='quiz')?'quiz':(id==='alerts')?'alerts':'tools';
+  document.querySelectorAll('.bn-item').forEach(function(b){ b.classList.toggle('active', b.dataset.nav===nav); });
   window.scrollTo({top:0});
   toggleMenu(false);
 }
@@ -3234,6 +3316,18 @@ if ('serviceWorker' in navigator) {
   });
 }
 </script>
+
+<!-- نوار ناوبری پایین -->
+<nav class="bottom-nav" id="bottomNav">
+  <button class="bn-item active" data-nav="home" onclick="goPage('home')">
+    <svg viewBox="0 0 24 24"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg><span>خانه</span></button>
+  <button class="bn-item" data-nav="tools" onclick="goPage('tools')">
+    <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg><span>ابزارها</span></button>
+  <button class="bn-item" data-nav="quiz" onclick="goPage('quiz')">
+    <svg viewBox="0 0 24 24"><path d="M22 10L12 5 2 10l10 5 10-5z"/><path d="M6 12v5c0 1.5 2.7 3 6 3s6-1.5 6-3v-5"/></svg><span>آموزش</span></button>
+  <button class="bn-item" data-nav="alerts" onclick="goPage('alerts')">
+    <svg viewBox="0 0 24 24"><path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 01-3.4 0"/></svg><span>اطلاعیه‌ها</span></button>
+</nav>
 
 <!-- مودال خروجی تصویر -->
 <div class="img-modal" id="imgModal">
