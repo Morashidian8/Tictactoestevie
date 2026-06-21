@@ -1,7 +1,8 @@
 <!DOCTYPE html>
-<html lang="fa" dir="rtl">
+<html lang="fa" dir="rtl" data-theme="dark">
 <head>
 <meta charset="UTF-8">
+<script>try{var _t=localStorage.getItem('hse-theme');if(_t)document.documentElement.setAttribute('data-theme',_t);}catch(e){}</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="theme-color" content="#070D18">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
@@ -461,13 +462,15 @@
   }
   header.app-header .brand-sub{ font-size:11px; color:var(--txt2); margin-top:1px; }
   header.app-header .menu-btn,
-  header.app-header .home-btn{
+  header.app-header .home-btn,
+  header.app-header .theme-btn{
     position:static; width:42px; height:42px; border-radius:12px;
     background:var(--glass2); border:1px solid var(--line2); color:var(--txt);
-    font-size:20px; flex-shrink:0; display:flex; align-items:center; justify-content:center;
+    font-size:20px; flex-shrink:0; display:flex; align-items:center; justify-content:center; cursor:pointer;
   }
   header.app-header .menu-btn:active,
-  header.app-header .home-btn:active{ background:rgba(34,255,136,0.16); border-color:var(--neon); }
+  header.app-header .home-btn:active,
+  header.app-header .theme-btn:active{ background:rgba(34,255,136,0.16); border-color:var(--neon); }
 
   /* نوار عنوان صفحه (زیر هدر) */
   .subbar{
@@ -927,6 +930,84 @@
   .bn-item.active svg{ filter:drop-shadow(0 0 7px rgba(34,255,136,0.55)); }
   .bn-item:active{ transform:scale(0.94); }
 
+  /* ============================================================
+     =====================  حالت روشن (Light)  ==================
+     ============================================================ */
+  html[data-theme="light"]{ background:#E3E9F2; }
+  html[data-theme="light"]{
+    --bg:#EEF2F8;
+    --glass:#FFFFFF; --glass2:#F1F5FA;
+    --line:rgba(16,27,46,0.10); --line2:rgba(16,27,46,0.16);
+    --txt:#0E1B2E; --txt2:#52617A; --muted:#8A99AD;
+    --neon:#0FAE66; --neon2:#0CA85A;
+  }
+  html[data-theme="light"] body::before{
+    background:radial-gradient(1200px 700px at 50% -10%, #FFFFFF 0%, #EEF2F8 55%, #E3E9F2 100%);
+  }
+  /* متن‌های سفیدِ تأکیدی → تیره */
+  html[data-theme="light"] .br-num,
+  html[data-theme="light"] .ax-name,
+  html[data-theme="light"] .edu-t,
+  html[data-theme="light"] .rs-num,
+  html[data-theme="light"] .bar-v,
+  html[data-theme="light"] .dl b,
+  html[data-theme="light"] .qh-title,
+  html[data-theme="light"] .q-text,
+  html[data-theme="light"] .rev-q,
+  html[data-theme="light"] .cb-title,
+  html[data-theme="light"] .tr-name,
+  html[data-theme="light"] .al-title,
+  html[data-theme="light"] .sc-big,
+  html[data-theme="light"] .hb-title{ color:#0E1B2E; }
+  html[data-theme="light"] .donut .d-num{ fill:#0E1B2E; }
+  /* عنوان برند (گرادیان متن) → تیره */
+  html[data-theme="light"] header.app-header .brand-title{
+    background:none; color:#0E1B2E; -webkit-text-fill-color:#0E1B2E;
+  }
+  /* پس‌زمینه‌های تیره/سطوح شیشه‌ای */
+  html[data-theme="light"] header.app-header{ background:rgba(255,255,255,0.88); }
+  html[data-theme="light"] .bottom-nav{ background:rgba(255,255,255,0.94); }
+  html[data-theme="light"] .drawer{ background:#FFFFFF; border-left-color:var(--line); }
+  html[data-theme="light"] .cselect-panel{ background:#FFFFFF; }
+  html[data-theme="light"] .cselect-opt{ color:var(--txt2); }
+  html[data-theme="light"] .toast{ background:#FFFFFF; color:var(--txt); }
+  html[data-theme="light"] select.inp option, html[data-theme="light"] .conv-select option{ background:#fff; color:var(--txt); }
+  /* حلقه‌ها و دونات */
+  html[data-theme="light"] .bigring .br-bg,
+  html[data-theme="light"] .donut .d-bg{ stroke:#DDE4EE; }
+  /* باکس‌های آیکونِ کوچک و ورودی‌ها (شفافِ سفید روی سفید نامرئی می‌شد) */
+  html[data-theme="light"] .ax-ico,
+  html[data-theme="light"] .q-ico,
+  html[data-theme="light"] .tr-ico,
+  html[data-theme="light"] .cb-ico,
+  html[data-theme="light"] .rs-ico,
+  html[data-theme="light"] .q-opt .opt-k,
+  html[data-theme="light"] .ri-chip{ background:rgba(16,27,46,0.05); }
+  html[data-theme="light"] input[type="number"],
+  html[data-theme="light"] input[type="text"],
+  html[data-theme="light"] select.inp,
+  html[data-theme="light"] .conv-select,
+  html[data-theme="light"] .lel-cfg input,
+  html[data-theme="light"] .cselect-trigger,
+  html[data-theme="light"] .q-opt,
+  html[data-theme="light"] .fire-chip,
+  html[data-theme="light"] .seg button,
+  html[data-theme="light"] .rstat,
+  html[data-theme="light"] .risk-item{ background:#F4F7FB; }
+  /* تگ‌ها — متن تیره‌تر برای کنتراست روی سفید */
+  html[data-theme="light"] .tag-ok{ background:rgba(15,174,102,0.14); color:#0a8f52; }
+  html[data-theme="light"] .tag-warn{ background:rgba(255,149,0,0.16); color:#b96b00; }
+  html[data-theme="light"] .tag-bad{ background:rgba(229,57,53,0.14); color:#c5221f; }
+  /* عنوان‌های نئونی که روی سفید کم‌رنگ‌اند */
+  html[data-theme="light"] .gas-head .gname,
+  html[data-theme="light"] .risk-card>.rc-title,
+  html[data-theme="light"] .sec-block h3,
+  html[data-theme="light"] .about-title,
+  html[data-theme="light"] .conv-results .row .v{ color:#0a8f52 !important; }
+  html[data-theme="light"] .reasons h3, html[data-theme="light"] .req-list h3{ color:var(--txt2); }
+  /* لوگو: روی هدر روشن هاله‌ی نرم‌تر */
+  html[data-theme="light"] header.app-header .hdr-logo{ filter:drop-shadow(0 2px 8px rgba(0,0,0,0.18)); }
+
   /* توست */
   .toast{ position:fixed; left:50%; bottom:90px; transform:translateX(-50%) translateY(20px); z-index:90; max-width:84%;
     background:#13243d; border:1px solid var(--line2); color:var(--txt); font-size:13px; font-weight:600; text-align:center;
@@ -944,6 +1025,7 @@
       <span class="brand-sub">شرکت گاز استان تهران</span>
     </div>
   </div>
+  <button class="theme-btn" id="themeBtn" onclick="toggleTheme()" aria-label="تغییر حالت روشن/تاریک">☀️</button>
 </header>
 <div class="subbar" id="subbar" style="display:none">
   <button class="back-btn" onclick="goHome()">‹ خانه</button>
@@ -3304,12 +3386,26 @@ function quizFinish(){
   window.scrollTo({top:0});
 }
 
+// ===== تم روشن/تاریک =====
+function applyTheme(t){
+  document.documentElement.setAttribute('data-theme', t);
+  try{ localStorage.setItem('hse-theme', t); }catch(e){}
+  var b=document.getElementById('themeBtn'); if(b) b.textContent = (t==='light') ? '🌙' : '☀️';
+  var m=document.querySelector('meta[name="theme-color"]'); if(m) m.setAttribute('content', t==='light' ? '#EEF2F8' : '#070D18');
+}
+function toggleTheme(){
+  var cur = document.documentElement.getAttribute('data-theme')==='light' ? 'light' : 'dark';
+  applyTheme(cur==='light' ? 'dark' : 'light');
+}
+
 // ساخت کارت‌های نوع حریق در بارگذاری
 buildFireGrid();
 initGasPage();
 initFAPage();
 initRiskPages();
 enhanceSelects();
+// اعمال تم ذخیره‌شده و هماهنگ‌کردن آیکون دکمه
+applyTheme(document.documentElement.getAttribute('data-theme')==='light' ? 'light' : 'dark');
 
 // ثبت سرویس ورکر برای کارکرد کامل آفلاین
 if ('serviceWorker' in navigator) {
