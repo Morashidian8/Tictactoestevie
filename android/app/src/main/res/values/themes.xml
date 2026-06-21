@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Base activity theme; the actual colours come from the Compose PolyBotTheme. -->
+    <style name="Theme.PolyBot" parent="android:Theme.Material.Light.NoActionBar" />
+</resources>
