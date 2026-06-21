@@ -483,7 +483,13 @@
     font-family:inherit; cursor:pointer;
   }
   .subbar .back-btn:active{ background:rgba(34,255,136,0.16); }
-  .subbar #pageTitle{ font-size:17px; font-weight:800; color:var(--txt); }
+  .subbar #pageTitle{ flex:1; font-size:17px; font-weight:800; color:var(--txt); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .subbar .home-link{
+    background:var(--glass2); border:1px solid var(--line2); color:var(--txt);
+    border-radius:10px; width:38px; height:34px; font-size:16px; cursor:pointer; flex-shrink:0;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .subbar .home-link:active{ background:rgba(34,255,136,0.16); border-color:var(--neon); }
 
   /* ---------- کارت‌ها / سطوح شیشه‌ای ---------- */
   .card, .reasons, .req-list, .calc-rows, .conv-results, .gas-card, .sec-block,
@@ -1028,8 +1034,9 @@
   <button class="theme-btn" id="themeBtn" onclick="toggleTheme()" aria-label="تغییر حالت روشن/تاریک">☀️</button>
 </header>
 <div class="subbar" id="subbar" style="display:none">
-  <button class="back-btn" onclick="goHome()">‹ خانه</button>
+  <button class="back-btn" onclick="goBack()">‹ بازگشت</button>
   <span id="pageTitle"></span>
+  <button class="home-link" onclick="goHome()" aria-label="خانه">🏠</button>
 </div>
 
 <!-- منوی کشویی -->
@@ -1823,7 +1830,11 @@
 
 // جابجایی بین صفحه‌ها (منو + کارت‌های داشبورد)
 var PAGE_TITLES = { 'cat-safety':'ایمنی', 'tools':'ابزارها', 'alerts':'اطلاعیه‌ها', 'quiz':'آزمون و خودآزمایی' };
-function goPage(id){
+var navStack = [];
+var currentPage = 'home';
+function goPage(id, isBack){
+  if (!isBack && currentPage && currentPage !== id) navStack.push(currentPage);
+  currentPage = id;
   document.querySelectorAll('.page').forEach(function(p){ p.classList.remove('active'); });
   document.querySelectorAll('nav.menu button').forEach(function(b){ b.classList.remove('active'); });
   var page = document.getElementById(id);
@@ -1844,7 +1855,8 @@ function goPage(id){
   window.scrollTo({top:0});
   toggleMenu(false);
 }
-function goHome(){ goPage('home'); }
+function goHome(){ navStack = []; goPage('home', true); }
+function goBack(){ var prev = navStack.length ? navStack.pop() : 'home'; goPage(prev, true); }
 
 // باز/بسته کردن منوی کشویی
 function toggleMenu(open){
