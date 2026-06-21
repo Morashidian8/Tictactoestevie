@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>PolyBot — UI preview</title>
+<style>
+  :root{
+    --bg:#0E1117; --surface:#161A23; --surfaceVar:#1E2430;
+    --green:#16C784; --red:#EA3943; --indigo:#818CF8;
+    --muted:#8b93a7; --text:#E6E9EF;
+  }
+  *{box-sizing:border-box;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+  body{margin:0;background:#05070b;color:var(--text);padding:24px;display:flex;gap:28px;flex-wrap:wrap;justify-content:center}
+  .phone{width:340px;background:var(--bg);border-radius:34px;padding:14px;border:8px solid #1b1f2a;box-shadow:0 20px 60px rgba(0,0,0,.6)}
+  .screen{padding:8px 4px 0}
+  h1{font-size:13px;letter-spacing:.4px;color:var(--muted);text-align:center;margin:2px 0 12px}
+  .banner{background:rgba(22,199,132,.15);border-radius:12px;padding:11px 12px;font-size:12.5px;font-weight:600;margin-bottom:12px}
+  .card{background:var(--surface);border-radius:16px;padding:18px;margin-bottom:12px}
+  .label{color:var(--muted);font-size:13px}
+  .equity{font-size:34px;font-weight:800;margin:4px 0}
+  .pnl{color:var(--green);font-weight:700}
+  .row{display:flex;align-items:center;gap:10px}
+  .small{color:var(--muted);font-size:13px}
+  .dot{width:11px;height:11px;border-radius:50%}
+  .stats{display:flex;gap:10px;margin-bottom:12px}
+  .stat{flex:1;background:var(--surface);border-radius:14px;padding:13px}
+  .stat .v{font-size:19px;font-weight:800;margin-top:3px}
+  .controls{display:flex;gap:10px;margin-bottom:14px}
+  .btn{flex:1;text-align:center;padding:12px;border-radius:24px;font-weight:700;font-size:14px}
+  .btn.primary{background:var(--indigo);color:#0b0d12}
+  .btn.outline{border:1px solid #3a4150;color:var(--text)}
+  .section{font-weight:700;margin:6px 2px 10px}
+  .trade{background:var(--surface);border-radius:12px;padding:11px 14px;display:flex;align-items:center;gap:12px;margin-bottom:8px;font-size:14px}
+  .chip{font-size:11px;font-weight:800;padding:3px 8px;border-radius:6px}
+  .chip.up{color:var(--green);background:rgba(22,199,132,.18)}
+  .chip.down{color:var(--red);background:rgba(234,57,67,.18)}
+  .spacer{flex:1}
+  .won{color:var(--green);font-weight:700}
+  .lost{color:var(--red);font-weight:700}
+  .open{color:var(--muted);font-weight:700}
+  .navbar{display:flex;gap:8px;margin-top:8px;border-top:1px solid #222838;padding-top:10px}
+  .nav{flex:1;text-align:center;font-size:12px;color:var(--muted)}
+  .nav.active{color:var(--indigo);font-weight:700}
+  /* strategy screen */
+  .setting{background:var(--surface);border-radius:14px;padding:16px;margin-bottom:12px}
+  .setting .t{font-weight:700;margin-bottom:6px}
+  .setting .d{color:var(--muted);font-size:12.5px;margin-bottom:10px}
+  .seg{display:flex;gap:8px}
+  .pill{padding:7px 14px;border-radius:18px;border:1px solid #3a4150;font-size:13px}
+  .pill.sel{background:var(--indigo);color:#0b0d12;border-color:var(--indigo);font-weight:700}
+  .track{height:4px;background:#2a3142;border-radius:3px;position:relative;margin:14px 4px}
+  .track .fill{position:absolute;left:0;top:0;height:4px;border-radius:3px;background:var(--indigo)}
+  .track .knob{position:absolute;top:-6px;width:16px;height:16px;border-radius:50%;background:var(--indigo)}
+  .switch{width:42px;height:24px;border-radius:14px;background:var(--green);position:relative}
+  .switch::after{content:"";position:absolute;right:3px;top:3px;width:18px;height:18px;border-radius:50%;background:#fff}
+  .warn{color:var(--red);font-size:12px}
+</style>
+</head>
+<body>
+
+  <!-- DASHBOARD -->
+  <div class="phone"><div class="screen">
+    <h1>PolyBot · Dashboard</h1>
+    <div class="banner">PAPER MODE — simulated money. No real funds at risk.</div>
+
+    <div class="card">
+      <div class="label">Equity</div>
+      <div class="equity">$112.40</div>
+      <div class="row"><span class="pnl">+$12.40 PnL</span><span class="small">from $100</span></div>
+      <div class="row" style="margin-top:10px">
+        <span class="dot" style="background:var(--red)"></span>
+        <span class="small">Last candle • BTC $64,875</span>
+      </div>
+    </div>
+
+    <div class="stats">
+      <div class="stat"><div class="label">Win rate</div><div class="v">58%</div></div>
+      <div class="stat"><div class="label">W / L</div><div class="v">7 / 5</div></div>
+      <div class="stat"><div class="label">Martingale</div><div class="v">x2</div></div>
+    </div>
+
+    <div class="controls">
+      <div class="btn primary">Stop</div>
+      <div class="btn outline">Reset</div>
+    </div>
+
+    <div class="section">Recent trades</div>
+    <div class="trade"><span class="chip down">DOWN</span><b>$4.00</b><span class="spacer"></span><span class="won">WON +$3.80</span></div>
+    <div class="trade"><span class="chip down">DOWN</span><b>$2.00</b><span class="spacer"></span><span class="lost">LOST -$2.00</span></div>
+    <div class="trade"><span class="chip up">UP</span><b>$1.00</b><span class="spacer"></span><span class="won">WON +$0.95</span></div>
+
+    <div class="navbar"><div class="nav active">📈 Dashboard</div><div class="nav">⚙︎ Strategy</div></div>
+  </div></div>
+
+  <!-- STRATEGY -->
+  <div class="phone"><div class="screen">
+    <h1>PolyBot · Strategy</h1>
+
+    <div class="setting">
+      <div class="t">Direction rule</div>
+      <div class="d">Follow the last candle: red closed → bet DOWN, green → bet UP.</div>
+      <div class="seg"><span class="pill sel">Follow</span><span class="pill">Fade</span></div>
+    </div>
+
+    <div class="setting">
+      <div class="t">Trigger: minimum streak = 1</div>
+      <div class="d">Only act after this many same-colour candles in a row.</div>
+      <div class="track"><div class="fill" style="width:0%"></div><div class="knob" style="left:0%"></div></div>
+    </div>
+
+    <div class="setting">
+      <div class="row"><div style="flex:1">
+        <div class="t">Martingale (double on loss)</div>
+        <div class="warn">⚠️ High risk — a losing streak can wipe the balance.</div>
+      </div><div class="switch"></div></div>
+      <div style="margin-top:10px" class="d">Max doublings: 6</div>
+      <div class="track"><div class="fill" style="width:55%"></div><div class="knob" style="left:55%"></div></div>
+    </div>
+
+    <div class="setting">
+      <div class="t">Stakes</div>
+      <div class="d">Base stake: $1</div>
+      <div class="track"><div class="fill" style="width:5%"></div><div class="knob" style="left:5%"></div></div>
+      <div class="d" style="margin-top:8px">Starting balance: $100</div>
+      <div class="track"><div class="fill" style="width:10%"></div><div class="knob" style="left:10%"></div></div>
+    </div>
+
+    <div class="navbar"><div class="nav">📈 Dashboard</div><div class="nav active">⚙︎ Strategy</div></div>
+  </div></div>
+
+</body>
+</html>
