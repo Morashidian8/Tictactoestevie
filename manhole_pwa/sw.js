@@ -1,5 +1,5 @@
 // Service Worker — کش کامل برای کارکرد آفلاین اپ «ارزیابی ورود به منهول»
-const CACHE = "manhole-pwa-v15";
+const CACHE = "manhole-pwa-v16";
 const ASSETS = [
   "./",
   "./index.html",

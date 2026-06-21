@@ -1005,8 +1005,8 @@
       <span class="ax-ghost">🛡️</span>
       <span class="ax-ico">🛡️</span>
       <span class="ax-name">ایمنی</span>
-      <span class="ax-desc">عملیات، فضای محصور و پرمیت</span>
-      <span class="ax-foot"><span class="ax-badge">۶ ابزار</span><span class="ax-arrow">←</span></span>
+      <span class="ax-desc">عملیات، فضای محصور، آتش‌نشانی و ریسک</span>
+      <span class="ax-foot"><span class="ax-badge">۱۴ ابزار</span><span class="ax-arrow">←</span></span>
     </button>
     <button class="axis" style="--c:#3FD0FF" onclick="axisSoon('بهداشت حرفه‌ای و طب کار')">
       <span class="ax-ghost">💓</span>
@@ -1147,9 +1147,11 @@
 <div class="page" id="cat-safety">
 <div class="container">
   <div class="cat-banner" style="--c:#22FF88">
-    <div class="cb-txt"><div class="cb-title">ایمنی</div><div class="cb-desc">دستورالعمل‌ها و ابزارهای اجرای عملیات ایمن</div></div>
+    <div class="cb-txt"><div class="cb-title">ایمنی</div><div class="cb-desc">همه ابزارها و دستورالعمل‌های اجرای عملیات ایمن</div></div>
     <div class="cb-ico">🛡️</div>
   </div>
+
+  <div class="sec-head"><span class="sh-bar" style="background:#22FF88"></span><div class="sh-txt"><div class="sh-t">عملیات و فضای محصور</div><div class="sh-s">۶ ابزار</div></div></div>
   <div class="toolrows">
     <button class="toolrow" onclick="goPage('assess')"><span class="tr-ico" style="--c:#22FF88">🕳️</span><span class="tr-txt"><span class="tr-name">ورود به منهول</span><span class="tr-desc">نظارت گاز و چک‌لیست ورود به فضای محصور</span></span><span class="tr-arrow">‹</span></button>
     <button class="toolrow" onclick="goPage('hotcold')"><span class="tr-ico" style="--c:#FF9500">🔥</span><span class="tr-txt"><span class="tr-name">کار گرم و سرد</span><span class="tr-desc">فرم پرمیت و الزامات ایمنی</span></span><span class="tr-arrow">‹</span></button>
@@ -1157,6 +1159,26 @@
     <button class="toolrow" onclick="goPage('digging')"><span class="tr-ico" style="--c:#FF9500">🪏</span><span class="tr-txt"><span class="tr-name">فاصله ایمن حفاری</span><span class="tr-desc">محاسبه فاصله مجاز از خطوط</span></span><span class="tr-arrow">‹</span></button>
     <button class="toolrow" onclick="goPage('harim')"><span class="tr-ico" style="--c:#22FF88">📏</span><span class="tr-txt"><span class="tr-name">حریم خطوط گاز</span><span class="tr-desc">حریم قانونی خطوط انتقال</span></span><span class="tr-arrow">‹</span></button>
     <button class="toolrow" onclick="goPage('firstaid')"><span class="tr-ico" style="--c:#FF5A5A">🚑</span><span class="tr-txt"><span class="tr-name">اقدامات اولیه حوادث</span><span class="tr-desc">پروتکل واکنش اضطراری</span></span><span class="tr-arrow">‹</span></button>
+  </div>
+
+  <div class="sec-head"><span class="sh-bar" style="background:#3FD0FF"></span><div class="sh-txt"><div class="sh-t">محاسبات و گازها</div><div class="sh-s">۴ ابزار</div></div></div>
+  <div class="toolrows">
+    <button class="toolrow" onclick="goPage('convert')"><span class="tr-ico" style="--c:#3FD0FF">🔄</span><span class="tr-txt"><span class="tr-name">تبدیل مقادیر</span><span class="tr-desc">تبدیل ٪حجمی، ppm و ٪LEL</span></span><span class="tr-arrow">‹</span></button>
+    <button class="toolrow" onclick="goPage('purge')"><span class="tr-ico" style="--c:#22FF88">💨</span><span class="tr-txt"><span class="tr-name">محاسبه پرج</span><span class="tr-desc">زمان و حجم پاکسازی خط</span></span><span class="tr-arrow">‹</span></button>
+    <button class="toolrow" onclick="goPage('evac')"><span class="tr-ico" style="--c:#FF9500">📡</span><span class="tr-txt"><span class="tr-name">شعاع تخلیه نشت گاز</span><span class="tr-desc">برآورد محدوده خطر</span></span><span class="tr-arrow">‹</span></button>
+    <button class="toolrow" onclick="goPage('gastable')"><span class="tr-ico" style="--c:#b6a4ff">🧪</span><span class="tr-txt"><span class="tr-name">خواص گازها</span><span class="tr-desc">جدول مرجع گازهای صنعتی</span></span><span class="tr-arrow">‹</span></button>
+  </div>
+
+  <div class="sec-head"><span class="sh-bar" style="background:#FF5A5A"></span><div class="sh-txt"><div class="sh-t">آتش‌نشانی</div><div class="sh-s">۲ ابزار</div></div></div>
+  <div class="toolrows">
+    <button class="toolrow" onclick="goPage('extinguisher')"><span class="tr-ico" style="--c:#FF5A5A">🧯</span><span class="tr-txt"><span class="tr-name">انتخاب کپسول آتش‌نشانی</span><span class="tr-desc">خاموش‌کننده مناسب هر کلاس حریق</span></span><span class="tr-arrow">‹</span></button>
+    <button class="toolrow" onclick="goPage('building')"><span class="tr-ico" style="--c:#3a8ee0">🏢</span><span class="tr-txt"><span class="tr-name">تحلیل اطفا و اعلام ساختمان</span><span class="tr-desc">الزامات اطفا و اعلام حریق</span></span><span class="tr-arrow">‹</span></button>
+  </div>
+
+  <div class="sec-head"><span class="sh-bar" style="background:#FF9500"></span><div class="sh-txt"><div class="sh-t">ارزیابی ریسک</div><div class="sh-s">۲ ابزار</div></div></div>
+  <div class="toolrows">
+    <button class="toolrow" onclick="goPage('jobrisk')"><span class="tr-ico" style="--c:#FF9500">👷</span><span class="tr-txt"><span class="tr-name">ارزیابی ریسک شغلی</span><span class="tr-desc">ماتریس ریسک بر اساس سمت و فعالیت</span></span><span class="tr-arrow">‹</span></button>
+    <button class="toolrow" onclick="goPage('facilityrisk')"><span class="tr-ico" style="--c:#FF5A5A">🏭</span><span class="tr-txt"><span class="tr-name">ارزیابی ریسک تأسیسات</span><span class="tr-desc">ماتریس ریسک انواع تأسیسات</span></span><span class="tr-arrow">‹</span></button>
   </div>
 </div>
 </div><!-- /page cat-safety -->
