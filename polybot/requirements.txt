@@ -1,0 +1,7 @@
+# PolyBot backend dependencies
+requests>=2.31.0      # live candle feed (Binance)
+# --- Phase 2 (control API for the Android app) ---
+fastapi>=0.110.0
+uvicorn>=0.29.0
+# --- dev ---
+pytest>=8.0.0

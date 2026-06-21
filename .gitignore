@@ -8,3 +8,6 @@ __pycache__/
 *.prover
 *.verifier
 outputs/
+__pycache__/
+*.pyc
+.pytest_cache/
