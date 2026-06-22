@@ -30,6 +30,42 @@ You define a strategy; the bot evaluates each closed candle and places the match
 4. **Custody & secrets.** Live trading needs a funded Polygon wallet + USDC + signing keys.
    These live on the **server**, never in the Android app. Region restrictions may apply.
 
+## Privacy-aware design (Phase 4)
+
+Goal: make a successful strategy **hard to copy or track**, while being honest that
+on-chain trades are public and can never be made fully invisible. The user handles
+wallet funding/cash-out independently; the bot provides the operational pieces.
+
+- **Daily wallet rotation.** A wallet manager rotates the active trading wallet on a
+  schedule or when a daily profit/volume cap is hit. Only the day's working balance is
+  ever hot (this also caps blast radius if a key leaks — see security below).
+- **Behaviour randomisation.** Jitter the entry timing (no fixed "fraction of a second
+  after the candle") and randomise stake within a band, so the on-chain footprint is not
+  a clean, clusterable signature.
+- **Daily profit cap.** User-set ceiling; once reached, stop for the day / rotate.
+- **Honest limits.** Funding-source and cash-out linkage, plus behavioural clustering,
+  can still associate wallets. This design defeats leaderboard/copy-trading, not a
+  determined chain-analysis adversary. Multi-wallet use may also conflict with
+  Polymarket's terms / regional rules — the user's responsibility.
+
+## Fund safety & security threat model (Phase 4)
+
+The bot can lose funds two ways: **market losses** (strategy/martingale — see Risks) and
+**security failures**. The latter and their mitigations:
+
+| Threat | Mitigation |
+| ------ | ---------- |
+| **Private-key compromise** (server breach, leaked env/logs, bad dependency) — drains the whole wallet | Keys in a secrets manager/KMS or a separate signer; never in code, logs, or the app. Keep only the day's balance hot (rotation limits the loss). |
+| **Order-sizing bug** (decimal/units error, runaway loop, martingale past intent) | Hard caps enforced *below* the executor: max stake per trade, max daily loss, max open exposure, max bets/min. Kill-switch + circuit breaker. |
+| **Wrong-market / wrong-outcome bet** | Verify market id + outcome token before signing; assert the candle window matches. |
+| **Over-broad ERC-20 approvals** (USDC) | Approve exact/limited amounts to the known CLOB contract only; no infinite approvals. |
+| **Exposed control API** (the app's backend) | Authenticated + TLS, not publicly reachable; least privilege; the app never holds keys. |
+| **Supply-chain / dependency** | Pin and audit deps; minimal surface; reproducible builds. |
+| **Protocol/counterparty risk** | Polymarket contract risk is outside our control — size accordingly. |
+
+Rollout: testnet → tiny real canary with caps → scale slowly. The kill-switch and caps
+ship **before** any live key is loaded.
+
 ## Architecture
 
 ```
