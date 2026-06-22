@@ -98,6 +98,41 @@ def fetch_binance_candles(
     return _rows_to_candles(rows, only_closed=only_closed)
 
 
+class SyntheticFeed:
+    """Streaming random-walk candle generator for the live paper loop / demos."""
+
+    def __init__(
+        self,
+        start_price: float = 65_000.0,
+        interval_seconds: int = 300,
+        volatility: float = 60.0,
+        seed: Optional[int] = None,
+    ) -> None:
+        import random
+        self._rng = random.Random(seed)
+        self._price = start_price
+        self._interval = interval_seconds
+        self._vol = volatility
+        self._t = 0
+
+    def next(self) -> Candle:
+        o = self._price
+        c = o + self._rng.uniform(-self._vol, self._vol)
+        hi = max(o, c) + self._rng.uniform(0, self._vol / 2)
+        lo = min(o, c) - self._rng.uniform(0, self._vol / 2)
+        candle = Candle(
+            open_time=self._t,
+            close_time=self._t + self._interval,
+            open=o,
+            high=hi,
+            low=lo,
+            close=c,
+        )
+        self._price = c
+        self._t += self._interval
+        return candle
+
+
 def _rows_to_candles(rows, *, only_closed: bool) -> List[Candle]:
     """Convert Binance kline rows to Candle objects.
 

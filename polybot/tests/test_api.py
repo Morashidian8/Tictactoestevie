@@ -1,0 +1,75 @@
+"""Tests for the FastAPI control API and BotRunner."""
+
+from __future__ import annotations
+
+import pytest
+
+from polybot.api import BotConfig, BotRunner, RiskModel, create_app
+
+fastapi = pytest.importorskip("fastapi")
+from fastapi.testclient import TestClient  # noqa: E402
+
+
+def test_runner_ticks_and_trades():
+    runner = BotRunner()
+    runner.start(BotConfig(base_stake=1.0, starting_balance=100.0))
+    for _ in range(40):
+        runner.tick()
+    snap = runner.snapshot()
+    assert snap["running"] in (True, False)
+    assert snap["portfolio"]["trades"] >= 1
+    assert "balance" in snap["portfolio"]
+
+
+def test_runner_kill_switch_blocks_new_trades():
+    runner = BotRunner()
+    runner.start(BotConfig(base_stake=1.0))
+    runner.tick()
+    runner.tick()
+    before = runner.snapshot()["portfolio"]["trades"]
+    runner.kill()
+    for _ in range(10):
+        runner.tick()
+    after = runner.snapshot()
+    assert after["portfolio"]["trades"] <= before + 1   # no new bets after kill
+    assert after["risk"]["killed"] is True
+
+
+def test_runner_respects_max_stake_cap():
+    cfg = BotConfig(
+        base_stake=1.0,
+        sizing="martingale",
+        risk=RiskModel(max_stake_per_trade=3.0),
+    )
+    runner = BotRunner()
+    runner.start(cfg)
+    for _ in range(60):
+        runner.tick()
+    trades = runner.engine.portfolio.trades
+    assert all(t.stake <= 3.0 + 1e-9 for t in trades)
+
+
+def test_rest_endpoints():
+    client = TestClient(create_app())
+
+    assert client.get("/status").json()["running"] is False
+
+    cfg = BotConfig(base_stake=2.0, starting_balance=50.0).model_dump()
+    set_resp = client.post("/config", json=cfg)
+    assert set_resp.status_code == 200
+    assert set_resp.json()["portfolio"]["starting_balance"] == 50.0
+
+    assert client.get("/config").json()["base_stake"] == 2.0
+
+    killed = client.post("/kill").json()
+    assert killed["risk"]["killed"] is True
+
+    reset = client.post("/reset").json()
+    assert reset["risk"]["killed"] is False
+
+
+def test_websocket_pushes_snapshot():
+    client = TestClient(create_app())
+    with client.websocket_connect("/ws") as ws:
+        snap = ws.receive_json()
+        assert "running" in snap

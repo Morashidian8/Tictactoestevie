@@ -13,8 +13,9 @@ for the full architecture, decisions, and risks.
 | Phase | What | State |
 | ----- | ---- | ----- |
 | 1 | Paper-trading core (candles, strategy engine, sizing, executor, engine, backtest, tests) | ✅ done |
-| 2 | FastAPI control API + WebSocket for the app | ⏳ next |
-| 3 | Android app (Kotlin/Compose) — strategy builder + dashboard | ⏳ planned |
+| 2 | FastAPI control API + WebSocket for the app | ✅ done |
+| 3 | Android app (Kotlin/Compose) — strategy builder + dashboard (in-app paper engine) | ✅ done |
+| 3.5 | Wire the Android app to the control API (replace the in-app engine) | ⏳ next |
 | 4 | Live Polymarket executor (py-clob-client, wallet/secrets on server) | ⏳ planned |
 
 ## Quick start
@@ -30,6 +31,38 @@ python -m polybot.backtest --demo --limit 500 --balance 100 --stake 1
 
 # Backtest on real Binance BTC candles
 python -m polybot.backtest --interval 5m --limit 500 --balance 100 --stake 1 --min-streak 1
+```
+
+## Control API (Phase 2)
+
+The bot is served over REST + WebSocket so the Android app (or any client) can drive it.
+
+```bash
+pip install -r polybot/requirements.txt
+uvicorn polybot.api:app --reload      # http://127.0.0.1:8000  · interactive docs at /docs
+```
+
+| Method | Path | Purpose |
+| ------ | ---- | ------- |
+| GET  | `/status` | current portfolio + risk + wallet + recent trades |
+| GET/POST | `/config` | read / set the bot config (strategy, sizing, risk, privacy) |
+| POST | `/start` | build (optional config in body) and start the tick loop |
+| POST | `/stop` | pause the loop |
+| POST | `/reset` | rebuild from current config |
+| POST | `/kill` | trip the kill switch (panic stop) |
+| WS   | `/ws` | live state pushed every tick |
+
+Example config body (`POST /start`):
+
+```json
+{
+  "strategy": "same_color", "min_streak": 1,
+  "sizing": "martingale", "base_stake": 1, "max_steps": 6,
+  "starting_balance": 100, "stake_jitter": 0.15, "rotate_wallet": true,
+  "risk": {"max_stake_per_trade": 5, "max_daily_loss": 20, "daily_profit_target": 15,
+           "max_consecutive_losses": 5},
+  "tick_seconds": 1.0
+}
 ```
 
 ## Defining a strategy

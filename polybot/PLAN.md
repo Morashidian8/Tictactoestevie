@@ -99,10 +99,13 @@ ship **before** any live key is loaded.
 
 ## Phases
 
-1. **Backend paper-trading core** (this milestone) — candles, strategy engine, martingale
-   sizing, paper executor, engine, backtest, tests. ✅ buildable & testable with no funds.
-2. **Control API** — FastAPI endpoints + WebSocket for the app.
-3. **Android app** — Kotlin/Compose: strategy builder, dashboard, start/stop, live trades.
+1. ✅ **Backend paper-trading core** — candles, strategy engine, martingale sizing, paper
+   executor, engine, backtest, safety layer (caps/kill-switch/wallet rotation), tests.
+2. ✅ **Control API** — FastAPI REST + WebSocket (`polybot/api.py`); start/stop/kill/config
+   and live state streaming. Tested.
+3. ✅ **Android app** — Kotlin/Compose: strategy builder, dashboard, safety controls
+   (runs an in-app paper engine).
+3.5. **Wire the app to the API** — replace the in-app engine with a client of the control API.
 4. **Live Polymarket executor** — py-clob-client integration, wallet/secrets on server,
    small-stake canary, kill-switch. Only after paper results are understood.
 ```
