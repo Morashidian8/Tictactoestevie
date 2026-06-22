@@ -59,6 +59,42 @@ strategy = RuleStrategy.from_dict({
 DSL conditions: `last_color`, `streak_at_least`/`streak_equals`, `alternation_at_least`,
 `sma_cross`, combined with `all`/`any`/`not`. Signals: `up`, `down`, `same`, `opposite`, `none`.
 
+## Safety layer (caps · kill switch · wallet rotation)
+
+A `RiskManager` sits **below** the strategy — even a buggy strategy or sizer can't place
+a bet it rejects. A `WalletManager` rotates the active wallet (daily / on a profit cap) so
+only a small balance is ever exposed. Both run in paper mode and are unit-tested.
+
+```python
+from polybot import (TradingEngine, Portfolio, MartingaleSizer, PaperExecutor,
+                     SameColorStrategy, RiskManager, RiskLimits, WalletManager)
+
+risk = RiskManager(RiskLimits(
+    max_stake_per_trade=5,        # hard cap per bet (beats a runaway martingale)
+    max_daily_loss=20,            # halt for the day after losing this much
+    daily_profit_target=15,      # stop/rotate once the day is green enough
+    max_consecutive_losses=5,    # circuit breaker
+    max_trades_per_window=10, window_seconds=60,   # runaway protection
+    min_balance=1,
+))
+
+engine = TradingEngine(
+    strategy=SameColorStrategy(min_streak=1),
+    sizer=MartingaleSizer(base_stake=1, max_steps=6),
+    portfolio=Portfolio(starting_balance=100),
+    executor=PaperExecutor(),
+    risk=risk,
+    wallet=WalletManager(daily_profit_cap=15),   # privacy / blast-radius
+    stake_jitter=0.15,                            # randomise stake to blur the footprint
+)
+
+risk.trip_kill_switch()   # panic stop — no new bets until reset_kill_switch()
+```
+
+When the risk layer blocks a bet, `engine.last_halt_reason` says why
+(`kill_switch`, `daily_loss`, `daily_profit_target`, `max_consecutive_losses`,
+`rate_limit`, `min_balance`). See PLAN.md for the full threat model.
+
 ## Wiring it together
 
 ```python

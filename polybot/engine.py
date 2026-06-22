@@ -14,14 +14,17 @@ matches how the up/down markets work.
 
 from __future__ import annotations
 
+import random
 from dataclasses import dataclass
 from typing import List, Optional, Sequence
 
 from .candles import Candle
 from .execution import Executor, PaperExecutor
 from .portfolio import Portfolio, Trade
+from .risk import RiskManager
 from .sizing import Sizer
 from .strategy import Signal, Strategy
+from .wallet import WalletManager
 
 
 @dataclass
@@ -39,20 +42,36 @@ class TradingEngine:
         executor: Optional[Executor] = None,
         *,
         min_stake: float = 1e-6,
+        risk: Optional[RiskManager] = None,
+        wallet: Optional[WalletManager] = None,
+        stake_jitter: float = 0.0,
+        rng: Optional[random.Random] = None,
     ) -> None:
+        if not 0.0 <= stake_jitter < 1.0:
+            raise ValueError("stake_jitter must be in [0, 1)")
         self.strategy = strategy
         self.sizer = sizer
         self.portfolio = portfolio
         self.executor = executor or PaperExecutor()
         self.min_stake = min_stake
+        self.risk = risk
+        self.wallet = wallet
+        self.stake_jitter = stake_jitter
+        self._rng = rng or random.Random()
 
         self._history: List[Candle] = []
         self._pending: Optional[_PendingBet] = None
         self._last_won: Optional[bool] = None
+        self.last_halt_reason: Optional[str] = None
 
     @property
     def history(self) -> Sequence[Candle]:
         return self._history
+
+    @property
+    def halted(self) -> bool:
+        """True if the risk layer is currently blocking new bets."""
+        return self.risk is not None and self.risk.killed
 
     def on_candle(self, candle: Candle) -> None:
         """Process one newly-closed candle."""
@@ -65,21 +84,38 @@ class TradingEngine:
             self.portfolio.settle(trade, won)
             self._last_won = won
             self._pending = None
+            if self.risk is not None:
+                self.risk.post_settlement(candle.open_time, trade.pnl)
+            if self.wallet is not None:
+                self.wallet.record(candle.open_time, trade.pnl)
 
         # 2. Record history and ask the strategy what to do next.
         self._history.append(candle)
+        next_open_time = candle.close_time  # the next candle opens when this one closes
+        if self.wallet is not None:
+            self.wallet.advance(next_open_time)  # rotate the active wallet on a new day
+
         signal = self.strategy.decide(self._history)
         if signal is Signal.NONE:
             return
 
-        # 3. Size and place the next bet (rides on the *next* candle).
+        # 3. Size the bet, then run it past the risk layer (which can clamp or block).
         stake = self.sizer.next_stake(self.portfolio.balance, self._last_won)
+        if self.stake_jitter:
+            stake *= 1.0 + self._rng.uniform(-self.stake_jitter, self.stake_jitter)
         stake = min(stake, self.portfolio.balance)
+
+        if self.risk is not None:
+            decision = self.risk.pre_trade(next_open_time, self.portfolio.balance, stake)
+            if not decision.allowed:
+                self.last_halt_reason = decision.reason
+                return  # risk layer blocked this bet
+            stake = decision.stake
+
         if stake < self.min_stake:
             return  # not enough balance to keep going
 
         payout = getattr(self.executor, "payout_multiple", 1.95)
-        next_open_time = candle.close_time  # the next candle opens when this one closes
         trade = Trade(
             candle_open_time=next_open_time,
             signal=signal,
@@ -88,6 +124,8 @@ class TradingEngine:
         )
         self.portfolio.open_trade(trade)
         self.executor.place(signal, stake, next_open_time)
+        if self.risk is not None:
+            self.risk.register_trade(next_open_time)
         self._pending = _PendingBet(trade=trade, signal=signal)
 
     def run(self, candles: Sequence[Candle]) -> Portfolio:

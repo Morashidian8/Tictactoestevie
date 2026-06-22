@@ -10,6 +10,8 @@ from .strategy import Signal, Strategy, SameColorStrategy, RuleStrategy
 from .sizing import FixedSizer, MartingaleSizer, PercentSizer
 from .portfolio import Portfolio, Trade
 from .execution import PaperExecutor
+from .risk import RiskLimits, RiskManager, RiskDecision
+from .wallet import Wallet, WalletManager
 from .engine import TradingEngine
 
 __all__ = [
@@ -25,5 +27,10 @@ __all__ = [
     "Portfolio",
     "Trade",
     "PaperExecutor",
+    "RiskLimits",
+    "RiskManager",
+    "RiskDecision",
+    "Wallet",
+    "WalletManager",
     "TradingEngine",
 ]
