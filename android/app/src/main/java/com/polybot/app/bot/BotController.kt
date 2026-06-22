@@ -47,16 +47,30 @@ data class BotUiState(
     val haltReason: String? = null,
     val walletId: String = "—",
     val walletRotations: Int = 0,
+    // --- connection (remote mode) ---
+    val serverUrl: String = "http://10.0.2.2:8000",
+    val connected: Boolean = false,
 )
+
+/** Common surface the UI drives, implemented by the local and remote controllers. */
+interface BotControl {
+    val state: StateFlow<BotUiState>
+    fun updateConfig(transform: (StrategyConfig) -> StrategyConfig)
+    fun start()
+    fun stop()
+    fun reset()
+    fun killSwitch()
+    fun setServerUrl(url: String) {}
+}
 
 /**
  * Drives the paper-trading demo: every tick it pulls a synthetic candle, feeds
  * the engine, and republishes a [BotUiState]. PAPER MODE ONLY — no real money.
  */
-class BotController : ViewModel() {
+class BotController : ViewModel(), BotControl {
 
     private val _state = MutableStateFlow(BotUiState())
-    val state: StateFlow<BotUiState> = _state.asStateFlow()
+    override val state: StateFlow<BotUiState> = _state.asStateFlow()
 
     private var loop: Job? = null
     private var engine: TradingEngine? = null
@@ -67,17 +81,17 @@ class BotController : ViewModel() {
     // resets and wallet rotation are visible within a short demo run.
     private val demoDaySeconds = 3_600L
 
-    fun updateConfig(transform: (StrategyConfig) -> StrategyConfig) {
+    override fun updateConfig(transform: (StrategyConfig) -> StrategyConfig) {
         _state.update { it.copy(config = transform(it.config)) }
     }
 
     /** Panic stop — blocks all new bets immediately until restarted. */
-    fun killSwitch() {
+    override fun killSwitch() {
         risk?.tripKillSwitch()
         _state.update { it.copy(killed = true, haltReason = "kill_switch") }
     }
 
-    fun start() {
+    override fun start() {
         if (_state.value.running) return
         val cfg = _state.value.config
 
@@ -158,14 +172,14 @@ class BotController : ViewModel() {
         }
     }
 
-    fun stop() {
+    override fun stop() {
         loop?.cancel()
         loop = null
         _state.update { it.copy(running = false) }
     }
 
-    fun reset() {
+    override fun reset() {
         stop()
-        _state.update { BotUiState(config = it.config) }
+        _state.update { BotUiState(config = it.config, serverUrl = it.serverUrl) }
     }
 }

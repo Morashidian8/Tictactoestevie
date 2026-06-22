@@ -15,7 +15,7 @@ for the full architecture, decisions, and risks.
 | 1 | Paper-trading core (candles, strategy engine, sizing, executor, engine, backtest, tests) | ✅ done |
 | 2 | FastAPI control API + WebSocket for the app | ✅ done |
 | 3 | Android app (Kotlin/Compose) — strategy builder + dashboard (in-app paper engine) | ✅ done |
-| 3.5 | Wire the Android app to the control API (replace the in-app engine) | ⏳ next |
+| 3.5 | Wire the Android app to the control API (Local/Server mode toggle) | ✅ done |
 | 4 | Live Polymarket executor (py-clob-client, wallet/secrets on server) | ⏳ planned |
 
 ## Quick start

@@ -59,6 +59,8 @@
   .field{display:flex;align-items:center;justify-content:space-between;border:1px solid #3a4150;border-radius:10px;padding:12px 14px;margin-top:10px}
   .field .flabel{color:var(--muted);font-size:13px}
   .field .fval{font-size:16px;font-weight:700}
+  .connbar{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+  .connbar .pill{border:1px solid #3a4150;border-radius:16px}
 </style>
 </head>
 <body>
@@ -66,6 +68,11 @@
   <!-- DASHBOARD -->
   <div class="phone"><div class="screen">
     <h1>PolyBot · Dashboard</h1>
+    <div class="connbar">
+      <b style="font-size:15px">PolyBot</b>
+      <span class="pill sel" style="padding:5px 12px">Local</span>
+      <span class="pill" style="padding:5px 12px">Server</span>
+    </div>
     <div class="banner">PAPER MODE — simulated money. No real funds at risk.</div>
 
     <div class="card">

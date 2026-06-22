@@ -2,9 +2,13 @@
 
 The control & monitoring app for PolyBot (Phase 3). Kotlin + Jetpack Compose (Material 3).
 
-It ships with a **self-contained paper-trading engine** (a Kotlin port of the `polybot`
-core) so it runs and shows live trades **without a backend**. The networked version that
-talks to the FastAPI backend comes later.
+It runs in two modes, switchable from the top bar:
+
+- **Local** — a self-contained paper engine (Kotlin port of `polybot`) that runs and shows
+  live trades **without a backend**. Great for trying the UI offline.
+- **Server** — drives the FastAPI backend (`polybot/api.py`): REST for commands, WebSocket
+  for live state. Enter the server URL in the bar (emulator → `http://10.0.2.2:8000`,
+  which maps to your machine's `localhost`).
 
 > ⚠️ **PAPER MODE ONLY** — simulated money, no real funds. The default martingale sizing
 > can wipe the (simulated) balance; that's intentional and visible. Not financial advice.
@@ -43,8 +47,15 @@ the `@Preview` panes in Android Studio.
 Kotlin 1.9.24 · AGP 8.5.2 · Compose BOM 2024.09 · Material 3 · minSdk 26 · targetSdk 34 ·
 Gradle 8.9 (wrapper included) · version catalog (`gradle/libs.versions.toml`).
 
+## Networking
+
+`net/PolyBotApi.kt` is an OkHttp + kotlinx.serialization client for the control API
+(`/start`, `/stop`, `/reset`, `/kill`, `/status`, and the `/ws` snapshot stream).
+`bot/RemoteBotController.kt` maps it onto the same `BotControl` surface the UI uses, so the
+local and server controllers are interchangeable. Requires the `INTERNET` permission;
+`usesCleartextTraffic` is enabled for local `http://` dev servers.
+
 ## Next
 
-- Replace the synthetic feed with a `RemoteCandleFeed` + `RemoteBot` client hitting the
-  FastAPI backend (Phase 2) over REST/WebSocket.
-- Strategy DSL editor mapping to the backend's rule engine.
+- A full strategy DSL editor mapping to the backend's rule engine.
+- Auth on the control API + HTTPS before any non-local use.
