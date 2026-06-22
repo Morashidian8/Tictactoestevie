@@ -169,6 +169,10 @@ class TradingEngine(
     private val sizer: Sizer,
     val portfolio: Portfolio,
     private val executor: PaperExecutor = PaperExecutor(),
+    private val risk: RiskManager? = null,
+    private val wallet: WalletManager? = null,
+    private val stakeJitter: Double = 0.0,
+    private val rng: kotlin.random.Random = kotlin.random.Random.Default,
     private val minStake: Double = 1e-6,
 ) {
     private val history = mutableListOf<Candle>()
@@ -176,29 +180,45 @@ class TradingEngine(
     private var pendingSignal: Signal = Signal.NONE
     private var lastWon: Boolean? = null
 
+    var lastHaltReason: String? = null
+        private set
+
     fun onCandle(candle: Candle) {
         pending?.let { trade ->
             val won = executor.resolve(pendingSignal, candle)
             portfolio.settle(trade, won)
             lastWon = won
             pending = null
+            risk?.postSettlement(candle.openTime, trade.pnl)
+            wallet?.record(candle.openTime, trade.pnl)
         }
 
         history.add(candle)
+        val nextOpenTime = candle.openTime + 1
+        wallet?.advance(nextOpenTime)
+
         val signal = strategy.decide(history)
         if (signal == Signal.NONE) return
 
         var stake = sizer.nextStake(portfolio.balance, lastWon)
+        if (stakeJitter > 0.0) stake *= 1.0 + rng.nextDouble(-stakeJitter, stakeJitter)
         stake = minOf(stake, portfolio.balance)
+
+        risk?.let {
+            val decision = it.preTrade(nextOpenTime, portfolio.balance, stake)
+            if (!decision.allowed) { lastHaltReason = decision.reason; return }
+            stake = decision.stake
+        }
         if (stake < minStake) return
 
         val trade = Trade(
-            candleOpenTime = candle.openTime + 1,
+            candleOpenTime = nextOpenTime,
             signal = signal,
             stake = stake,
             payoutMultiple = executor.payoutMultiple,
         )
         portfolio.openTrade(trade)
+        risk?.registerTrade(nextOpenTime)
         pending = trade
         pendingSignal = signal
     }

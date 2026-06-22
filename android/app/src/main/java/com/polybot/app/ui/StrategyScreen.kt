@@ -147,6 +147,72 @@ fun StrategyScreen(
                 onValue = { v -> onChange { it.copy(startingBalance = v) } },
             )
         }
+
+        SettingCard("Safety limits") {
+            Text(
+                "Hard caps the bot can never exceed. 0 = off. These run below the " +
+                    "strategy — even a bug can't place a bet past them.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            NumberField(
+                label = "Max stake per trade ($) — 0 = off",
+                value = config.maxStakePerTrade,
+                enabled = !running,
+                allowZero = true,
+                onValue = { v -> onChange { it.copy(maxStakePerTrade = v) } },
+            )
+            NumberField(
+                label = "Daily loss cap ($) — 0 = off",
+                value = config.dailyLossCap,
+                enabled = !running,
+                allowZero = true,
+                onValue = { v -> onChange { it.copy(dailyLossCap = v) } },
+            )
+            NumberField(
+                label = "Daily profit target ($) — 0 = off",
+                value = config.dailyProfitTarget,
+                enabled = !running,
+                allowZero = true,
+                onValue = { v -> onChange { it.copy(dailyProfitTarget = v) } },
+            )
+            NumberField(
+                label = "Max losses in a row — 0 = off",
+                value = config.maxConsecutiveLosses.toDouble(),
+                enabled = !running,
+                allowZero = true,
+                onValue = { v -> onChange { it.copy(maxConsecutiveLosses = v.toInt()) } },
+            )
+        }
+
+        SettingCard("Privacy") {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("Rotate wallet", fontWeight = FontWeight.SemiBold)
+                    Text(
+                        "New wallet each day / when the profit target is hit, so only a " +
+                            "small balance is ever exposed.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Switch(
+                    checked = config.rotateWallet,
+                    onCheckedChange = { onChange { c -> c.copy(rotateWallet = it) } },
+                    enabled = !running,
+                )
+            }
+            Text(
+                "Stake randomisation: ±${(config.stakeJitter * 100).toInt()}%",
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            Slider(
+                value = config.stakeJitter.toFloat(),
+                onValueChange = { onChange { c -> c.copy(stakeJitter = it.toDouble()) } },
+                valueRange = 0f..0.5f,
+                enabled = !running,
+            )
+        }
     }
 }
 
@@ -158,6 +224,7 @@ private fun NumberField(
     value: Double,
     enabled: Boolean,
     onValue: (Double) -> Unit,
+    allowZero: Boolean = false,
 ) {
     var text by remember {
         mutableStateOf(if (value % 1.0 == 0.0) value.toInt().toString() else value.toString())
@@ -167,7 +234,8 @@ private fun NumberField(
         onValueChange = { raw ->
             val cleaned = raw.filter { it.isDigit() || it == '.' }
             text = cleaned
-            cleaned.toDoubleOrNull()?.let { if (it > 0) onValue(it) }
+            val parsed = cleaned.toDoubleOrNull() ?: if (allowZero) 0.0 else null
+            parsed?.let { if (it > 0 || allowZero) onValue(it) }
         },
         label = { Text(label) },
         singleLine = true,

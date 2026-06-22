@@ -19,6 +19,13 @@ data class StrategyConfig(
     val maxSteps: Int = 6,
     val startingBalance: Double = 100.0,
     val tickMillis: Long = 1_000,          // demo speed (one candle per second)
+    // --- safety layer (0 / off disables a limit) ---
+    val maxStakePerTrade: Double = 0.0,    // hard cap per bet
+    val dailyLossCap: Double = 0.0,        // halt for the "day" after losing this much
+    val dailyProfitTarget: Double = 0.0,   // stop / rotate once this profit is reached
+    val maxConsecutiveLosses: Int = 0,     // circuit breaker
+    val stakeJitter: Double = 0.15,        // randomise stake +/- this fraction
+    val rotateWallet: Boolean = true,      // privacy: rotate wallet on new day / profit cap
 )
 
 data class BotUiState(
@@ -35,6 +42,11 @@ data class BotUiState(
     val lastPrice: Double = 0.0,
     val recentTrades: List<Trade> = emptyList(),
     val config: StrategyConfig = StrategyConfig(),
+    // --- safety state ---
+    val killed: Boolean = false,
+    val haltReason: String? = null,
+    val walletId: String = "—",
+    val walletRotations: Int = 0,
 )
 
 /**
@@ -49,9 +61,20 @@ class BotController : ViewModel() {
     private var loop: Job? = null
     private var engine: TradingEngine? = null
     private var feed: CandleFeed? = null
+    private var risk: RiskManager? = null
+
+    // "Day" length on the demo clock (candles step 300s), shortened so daily
+    // resets and wallet rotation are visible within a short demo run.
+    private val demoDaySeconds = 3_600L
 
     fun updateConfig(transform: (StrategyConfig) -> StrategyConfig) {
         _state.update { it.copy(config = transform(it.config)) }
+    }
+
+    /** Panic stop — blocks all new bets immediately until restarted. */
+    fun killSwitch() {
+        risk?.tripKillSwitch()
+        _state.update { it.copy(killed = true, haltReason = "kill_switch") }
     }
 
     fun start() {
@@ -65,7 +88,31 @@ class BotController : ViewModel() {
             FixedSizer(cfg.baseStake)
         }
         val portfolio = Portfolio(cfg.startingBalance)
-        val engine = TradingEngine(strategy, sizer, portfolio).also { this.engine = it }
+
+        val riskManager = RiskManager(
+            RiskLimits(
+                maxStakePerTrade = cfg.maxStakePerTrade.takeIf { it > 0 },
+                maxDailyLoss = cfg.dailyLossCap.takeIf { it > 0 },
+                dailyProfitTarget = cfg.dailyProfitTarget.takeIf { it > 0 },
+                maxConsecutiveLosses = cfg.maxConsecutiveLosses.takeIf { it > 0 },
+                daySeconds = demoDaySeconds,
+            )
+        ).also { this.risk = it }
+        val walletManager = if (cfg.rotateWallet) {
+            WalletManager(
+                dailyProfitCap = cfg.dailyProfitTarget.takeIf { it > 0 },
+                daySeconds = demoDaySeconds,
+            )
+        } else null
+
+        val engine = TradingEngine(
+            strategy = strategy,
+            sizer = sizer,
+            portfolio = portfolio,
+            risk = riskManager,
+            wallet = walletManager,
+            stakeJitter = cfg.stakeJitter,
+        ).also { this.engine = it }
         val sizerRef = sizer
         feed = SyntheticCandleFeed()
 
@@ -96,6 +143,10 @@ class BotController : ViewModel() {
                         lastColor = candle.color,
                         lastPrice = candle.close,
                         recentTrades = p.trades.takeLast(12).asReversed(),
+                        killed = riskManager.killed,
+                        haltReason = engine.lastHaltReason,
+                        walletId = walletManager?.current?.id ?: "—",
+                        walletRotations = walletManager?.rotations ?: 0,
                     )
                 }
                 if (p.equity <= 0.01) {       // wiped out — stop honestly

@@ -50,6 +50,7 @@ fun PolyBotApp(controller: BotController = viewModel()) {
                 onStart = controller::start,
                 onStop = controller::stop,
                 onReset = controller::reset,
+                onKill = controller::killSwitch,
                 modifier = Modifier.padding(padding),
             )
             Tab.Strategy -> StrategyScreen(

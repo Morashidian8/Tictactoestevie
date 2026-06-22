@@ -29,6 +29,7 @@
   .controls{display:flex;gap:10px;margin-bottom:14px}
   .btn{flex:1;text-align:center;padding:12px;border-radius:24px;font-weight:700;font-size:14px}
   .btn.primary{background:var(--indigo);color:#0b0d12}
+  .btn.danger{background:var(--red);color:#fff;margin-bottom:4px}
   .btn.outline{border:1px solid #3a4150;color:var(--text)}
   .section{font-weight:700;margin:6px 2px 10px}
   .trade{background:var(--surface);border-radius:12px;padding:11px 14px;display:flex;align-items:center;gap:12px;margin-bottom:8px;font-size:14px}
@@ -80,14 +81,15 @@
     <div class="stats">
       <div class="stat"><div class="label">Win rate</div><div class="v">58%</div></div>
       <div class="stat"><div class="label">W / L</div><div class="v">7 / 5</div></div>
-      <div class="stat"><div class="label">Martingale</div><div class="v">x2</div></div>
+      <div class="stat"><div class="label">Wallet</div><div class="v">↻1</div></div>
     </div>
 
     <div class="controls">
-      <div class="btn primary">▶ Start</div>
+      <div class="btn outline">Stop</div>
       <div class="btn outline">Reset</div>
     </div>
-    <div class="small" style="text-align:center;margin:-4px 0 12px">هر وقت خواستی Start بزن — موقع اجرا به «Stop» تبدیل می‌شه</div>
+    <div class="btn danger">■ PANIC — Kill switch</div>
+    <div class="small" style="text-align:center;margin:8px 0 12px">وقتی متوقفه، دکمه‌ی بالا به «▶ Start» تغییر می‌کنه</div>
 
     <div class="section">Recent trades</div>
     <div class="trade"><span class="chip down">DOWN</span><b>$4.00</b><span class="spacer"></span><span class="won">WON +$3.80</span></div>
@@ -127,6 +129,24 @@
       <div class="d">با چند دلار معامله کنه — تایپ کن.</div>
       <div class="field"><span class="flabel">Amount per trade ($)</span><span class="fval">5</span></div>
       <div class="field"><span class="flabel">Starting balance ($)</span><span class="fval">100</span></div>
+    </div>
+
+    <div class="setting">
+      <div class="t">Safety limits</div>
+      <div class="d">سقف‌های سختی که ربات هیچ‌وقت ازشون رد نمی‌شه. ۰ = خاموش.</div>
+      <div class="field"><span class="flabel">Max stake per trade ($)</span><span class="fval">5</span></div>
+      <div class="field"><span class="flabel">Daily loss cap ($)</span><span class="fval">20</span></div>
+      <div class="field"><span class="flabel">Daily profit target ($)</span><span class="fval">15</span></div>
+      <div class="field"><span class="flabel">Max losses in a row</span><span class="fval">5</span></div>
+    </div>
+
+    <div class="setting">
+      <div class="row"><div style="flex:1">
+        <div class="t">Privacy — Rotate wallet</div>
+        <div class="d" style="margin:4px 0 0">هر روز / با رسیدن به سقفِ سود، کیف‌پول عوض می‌شه تا فقط موجودیِ کم در معرض باشه.</div>
+      </div><div class="switch"></div></div>
+      <div class="d" style="margin-top:10px">Stake randomisation: ±15%</div>
+      <div class="track"><div class="fill" style="width:30%"></div><div class="knob" style="left:30%"></div></div>
     </div>
 
     <div class="navbar"><div class="nav">📈 Dashboard</div><div class="nav active">⚙︎ Strategy</div></div>

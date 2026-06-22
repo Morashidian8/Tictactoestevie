@@ -15,6 +15,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
@@ -43,6 +44,7 @@ fun DashboardScreen(
     onStart: () -> Unit,
     onStop: () -> Unit,
     onReset: () -> Unit,
+    onKill: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -53,15 +55,25 @@ fun DashboardScreen(
     ) {
         PaperModeBanner()
 
+        state.haltReason?.let { HaltBanner(it, killed = state.killed) }
+
         EquityCard(state)
 
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             StatCard("Win rate", "${(state.winRate * 100).format(0)}%", Modifier.weight(1f))
             StatCard("W / L", "${state.wins} / ${state.losses}", Modifier.weight(1f))
-            StatCard("Martingale", "x${state.martingaleStep}", Modifier.weight(1f))
+            StatCard("Wallet", "↻${state.walletRotations}", Modifier.weight(1f))
         }
 
         ControlRow(running = state.running, onStart = onStart, onStop = onStop, onReset = onReset)
+
+        if (state.running) {
+            Button(
+                onClick = onKill,
+                colors = ButtonDefaults.buttonColors(containerColor = Red),
+                modifier = Modifier.fillMaxWidth(),
+            ) { Text("■  PANIC — Kill switch") }
+        }
 
         Text("Recent trades", style = MaterialTheme.typography.titleMedium)
         if (state.recentTrades.isEmpty()) {
@@ -91,6 +103,32 @@ private fun PaperModeBanner() {
             fontWeight = FontWeight.SemiBold,
         )
     }
+}
+
+@Composable
+private fun HaltBanner(reason: String, killed: Boolean) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = Red.copy(alpha = 0.18f)),
+        shape = RoundedCornerShape(12.dp),
+    ) {
+        Text(
+            (if (killed) "KILL SWITCH ACTIVE — " else "TRADING HALTED — ") + reasonText(reason),
+            modifier = Modifier.padding(12.dp),
+            style = MaterialTheme.typography.labelLarge,
+            color = Red,
+            fontWeight = FontWeight.Bold,
+        )
+    }
+}
+
+private fun reasonText(reason: String): String = when (reason) {
+    "kill_switch" -> "panic stop pressed"
+    "daily_loss" -> "daily loss cap reached"
+    "daily_profit_target" -> "daily profit target reached"
+    "max_consecutive_losses" -> "too many losses in a row"
+    "rate_limit" -> "too many trades too fast"
+    "min_balance" -> "balance floor reached"
+    else -> reason
 }
 
 @Composable
@@ -214,13 +252,14 @@ private fun DashboardPreview() {
         martingaleStep = 2,
         lastColor = CandleColor.RED,
         lastPrice = 64875.0,
+        walletRotations = 1,
         recentTrades = listOf(
-            Trade(3, Signal.DOWN, 4.0, 1.95, won = true, pnl = 3.8),
-            Trade(2, Signal.DOWN, 2.0, 1.95, won = false, pnl = -2.0),
-            Trade(1, Signal.UP, 1.0, 1.95, won = true, pnl = 0.95),
+            Trade(3L, Signal.DOWN, 4.0, 1.95, won = true, pnl = 3.8),
+            Trade(2L, Signal.DOWN, 2.0, 1.95, won = false, pnl = -2.0),
+            Trade(1L, Signal.UP, 1.0, 1.95, won = true, pnl = 0.95),
         ),
     )
     PolyBotTheme(darkTheme = true) {
-        DashboardScreen(demo, {}, {}, {})
+        DashboardScreen(demo, {}, {}, {}, {})
     }
 }
