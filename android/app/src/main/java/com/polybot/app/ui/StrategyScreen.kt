@@ -8,17 +8,24 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.polybot.app.bot.StrategyConfig
@@ -122,24 +129,52 @@ fun StrategyScreen(
         }
 
         SettingCard("Stakes") {
-            Text("Base stake: $${"%.0f".format(config.baseStake)}", style = MaterialTheme.typography.bodyMedium)
-            Slider(
-                value = config.baseStake.toFloat(),
-                onValueChange = { onChange { c -> c.copy(baseStake = it.toDouble()) } },
-                valueRange = 1f..20f,
-                steps = 18,
-                enabled = !running,
+            Text(
+                "How many dollars to trade with.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            Text("Starting balance: $${"%.0f".format(config.startingBalance)}", style = MaterialTheme.typography.bodyMedium)
-            Slider(
-                value = config.startingBalance.toFloat(),
-                onValueChange = { onChange { c -> c.copy(startingBalance = it.toDouble()) } },
-                valueRange = 50f..1000f,
-                steps = 18,
+            NumberField(
+                label = "Amount per trade ($)",
+                value = config.baseStake,
                 enabled = !running,
+                onValue = { v -> onChange { it.copy(baseStake = v) } },
+            )
+            NumberField(
+                label = "Starting balance ($)",
+                value = config.startingBalance,
+                enabled = !running,
+                onValue = { v -> onChange { it.copy(startingBalance = v) } },
             )
         }
     }
+}
+
+/** A numeric text field bound to a Double in the config; keeps a local text buffer
+ *  so partial input (empty / trailing dot) doesn't fight the user. */
+@Composable
+private fun NumberField(
+    label: String,
+    value: Double,
+    enabled: Boolean,
+    onValue: (Double) -> Unit,
+) {
+    var text by remember {
+        mutableStateOf(if (value % 1.0 == 0.0) value.toInt().toString() else value.toString())
+    }
+    OutlinedTextField(
+        value = text,
+        onValueChange = { raw ->
+            val cleaned = raw.filter { it.isDigit() || it == '.' }
+            text = cleaned
+            cleaned.toDoubleOrNull()?.let { if (it > 0) onValue(it) }
+        },
+        label = { Text(label) },
+        singleLine = true,
+        enabled = enabled,
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+        modifier = Modifier.fillMaxWidth(),
+    )
 }
 
 @Composable

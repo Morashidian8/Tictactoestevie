@@ -55,6 +55,9 @@
   .switch{width:42px;height:24px;border-radius:14px;background:var(--green);position:relative}
   .switch::after{content:"";position:absolute;right:3px;top:3px;width:18px;height:18px;border-radius:50%;background:#fff}
   .warn{color:var(--red);font-size:12px}
+  .field{display:flex;align-items:center;justify-content:space-between;border:1px solid #3a4150;border-radius:10px;padding:12px 14px;margin-top:10px}
+  .field .flabel{color:var(--muted);font-size:13px}
+  .field .fval{font-size:16px;font-weight:700}
 </style>
 </head>
 <body>
@@ -81,9 +84,10 @@
     </div>
 
     <div class="controls">
-      <div class="btn primary">Stop</div>
+      <div class="btn primary">▶ Start</div>
       <div class="btn outline">Reset</div>
     </div>
+    <div class="small" style="text-align:center;margin:-4px 0 12px">هر وقت خواستی Start بزن — موقع اجرا به «Stop» تبدیل می‌شه</div>
 
     <div class="section">Recent trades</div>
     <div class="trade"><span class="chip down">DOWN</span><b>$4.00</b><span class="spacer"></span><span class="won">WON +$3.80</span></div>
@@ -120,10 +124,9 @@
 
     <div class="setting">
       <div class="t">Stakes</div>
-      <div class="d">Base stake: $1</div>
-      <div class="track"><div class="fill" style="width:5%"></div><div class="knob" style="left:5%"></div></div>
-      <div class="d" style="margin-top:8px">Starting balance: $100</div>
-      <div class="track"><div class="fill" style="width:10%"></div><div class="knob" style="left:10%"></div></div>
+      <div class="d">با چند دلار معامله کنه — تایپ کن.</div>
+      <div class="field"><span class="flabel">Amount per trade ($)</span><span class="fval">5</span></div>
+      <div class="field"><span class="flabel">Starting balance ($)</span><span class="fval">100</span></div>
     </div>
 
     <div class="navbar"><div class="nav">📈 Dashboard</div><div class="nav active">⚙︎ Strategy</div></div>
