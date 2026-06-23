@@ -70,6 +70,7 @@
       <button class="ghost" onclick="cmd('reset')">Reset</button>
       <button class="danger" onclick="cmd('kill')">■ PANIC — Kill switch</button>
     </div>
+    <div id="msg" class="muted" style="margin-top:8px;text-align:center"></div>
   </div>
 
   <details>
@@ -142,8 +143,11 @@ async function api(path, method='GET', body=null) {
   const opt = { method, headers: { 'Content-Type': 'application/json' } };
   if (body) opt.body = JSON.stringify(body);
   const r = await fetch(base() + path, opt);
-  return r.json();
+  const text = await r.text();
+  try { return JSON.parse(text); }
+  catch (e) { throw new Error('server-not-ready'); }   // Replit returned an HTML wake-up page
 }
+function msg(t){ const m=document.getElementById('msg'); if(m){ m.textContent=t||''; } }
 function buildConfig() {
   const num = id => parseFloat(document.getElementById(id).value) || 0;
   const poly = document.getElementById('usePoly').checked;
@@ -170,11 +174,22 @@ function buildConfig() {
   };
 }
 async function startBot() {
-  try { render(await api('/start', 'POST', buildConfig())); connect(); }
-  catch (e) { alert('Start failed: ' + e); }
+  msg('در حال شروع…');
+  try {
+    render(await api('/start', 'POST', buildConfig()));
+    connect(); msg('');
+  } catch (e) {
+    // Replit hiccup — retry once automatically after a short wait.
+    msg('سرور در حال آماده‌شدن… چند ثانیه صبر کن.');
+    setTimeout(async () => {
+      try { render(await api('/start', 'POST', buildConfig())); connect(); msg(''); }
+      catch (e2) { msg('هنوز آماده نیست — چند لحظه بعد دوباره Start بزن.'); }
+    }, 4000);
+  }
 }
 async function cmd(name) {
-  try { render(await api('/' + name, 'POST')); } catch (e) { alert(e); }
+  try { render(await api('/' + name, 'POST')); msg(''); }
+  catch (e) { msg('یک لحظه صبر کن و دوباره امتحان کن.'); }
 }
 function fmt(n, d=2){ return (n==null?0:n).toLocaleString(undefined,{minimumFractionDigits:d,maximumFractionDigits:d}); }
 function dotColor(c){ return c==='green'?'var(--green)':c==='red'?'var(--red)':'var(--muted)'; }
