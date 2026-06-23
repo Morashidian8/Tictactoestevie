@@ -1,0 +1,9 @@
+android/
+.git/
+**/__pycache__/
+*.pyc
+.pytest_cache/
+hse_*/
+manhole_pwa/
+pwa/
+*.zip

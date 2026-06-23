@@ -1,0 +1,14 @@
+# Render Blueprint — deploy the PolyBot control API.
+# In Render: New + → Blueprint → connect this repo → Apply. See DEPLOY.md.
+services:
+  - type: web
+    name: polybot-api
+    runtime: python
+    plan: free            # free sleeps after ~15 min idle; pick a paid instance for always-on
+    buildCommand: pip install -r polybot/requirements.txt
+    startCommand: uvicorn polybot.api:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /status
+    autoDeploy: true
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11.9"

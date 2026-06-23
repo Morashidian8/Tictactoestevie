@@ -103,6 +103,8 @@ private fun StrategyConfig.toDto(): BotConfigDto = BotConfigDto(
         maxConsecutiveLosses = maxConsecutiveLosses.takeIf { it > 0 },
     ),
     runMinutes = runMinutes.takeIf { it > 0 },
+    source = if (usePolymarketData) "polymarket" else "synthetic",
+    marketTokenId = marketTokenId.takeIf { it.isNotBlank() },
 )
 
 private fun parseColor(c: String?): Color = when (c) {

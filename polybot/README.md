@@ -16,7 +16,9 @@ for the full architecture, decisions, and risks.
 | 2 | FastAPI control API + WebSocket for the app | ✅ done |
 | 3 | Android app (Kotlin/Compose) — strategy builder + dashboard (in-app paper engine) | ✅ done |
 | 3.5 | Wire the Android app to the control API (Local/Server mode toggle) | ✅ done |
-| 4 | Live Polymarket executor (py-clob-client, wallet/secrets on server) | ⏳ planned |
+| 3.6 | Read-only Polymarket data (discover markets, real odds) + real-price feed | ✅ done |
+| 3.7 | Cloud deploy (Render blueprint / Dockerfile) — see `DEPLOY.md` | ✅ done |
+| 4 | Live Polymarket **execution** (py-clob-client, wallet/secrets on server) — real money, **gated** | ⏳ planned |
 
 ## Quick start
 

@@ -96,3 +96,45 @@ def test_websocket_pushes_snapshot():
     with client.websocket_connect("/ws") as ws:
         snap = ws.receive_json()
         assert "running" in snap
+
+
+class _FakeMarket:
+    def __init__(self):
+        self.question = "Bitcoin Up or Down?"
+        self.slug = "btc-up-or-down"
+        self.condition_id = "0x1"
+        self.token_ids = ["10", "11"]
+        self.outcomes = ["Up", "Down"]
+        self.active = True
+        self.closed = False
+        self.end_date = None
+
+
+class _FakePoly:
+    def find_btc_updown_markets(self):
+        from dataclasses import dataclass
+        # Return an object dataclasses.asdict can handle.
+        from polybot.polymarket import Market
+        return [Market(question="Bitcoin Up or Down?", slug="btc-up-or-down",
+                       condition_id="0x1", token_ids=["10", "11"],
+                       outcomes=["Up", "Down"], active=True, closed=False)]
+
+    def midpoint(self, token_id):
+        return 0.53
+
+    def price(self, token_id, side="buy"):
+        return 0.55 if side == "buy" else 0.51
+
+
+def test_polymarket_endpoints_with_injected_client():
+    app = create_app()
+    app.state.polymarket = _FakePoly()
+    client = TestClient(app)
+
+    markets = client.get("/polymarket/markets").json()
+    assert markets["count"] == 1
+    assert markets["markets"][0]["outcomes"] == ["Up", "Down"]
+
+    prices = client.get("/polymarket/prices/10").json()
+    assert prices["midpoint"] == 0.53
+    assert prices["buy"] == 0.55

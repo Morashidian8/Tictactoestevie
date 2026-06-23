@@ -87,3 +87,32 @@ def test_prices_endpoints():
     assert api.midpoint("10") == 0.53
     assert api.price("10", "buy") == 0.55
     assert len(api.prices_history("10", interval="1h")) == 2
+
+
+class _FakeData:
+    """Minimal stand-in for PolymarketData with a scripted midpoint series."""
+
+    def __init__(self, prices):
+        self._prices = list(prices)
+        self._i = 0
+
+    def midpoint(self, token_id):
+        v = self._prices[min(self._i, len(self._prices) - 1)]
+        self._i += 1
+        return v
+
+    def price(self, token_id, side="buy"):
+        return None
+
+
+def test_sampled_feed_builds_candles_from_prices():
+    from polybot.polymarket import PolymarketSampledFeed
+
+    feed = PolymarketSampledFeed(_FakeData([0.50, 0.55, 0.52]), token_id="10", interval_seconds=300)
+    c1 = feed.next()   # first sample: open == close == 0.50
+    c2 = feed.next()   # 0.50 -> 0.55 : green (up)
+    c3 = feed.next()   # 0.55 -> 0.52 : red (down)
+    assert c1.close == 0.50
+    assert c2.open == 0.50 and c2.close == 0.55 and c2.color.value == "green"
+    assert c3.open == 0.55 and c3.close == 0.52 and c3.color.value == "red"
+    assert c2.close_time == c2.open_time + 300

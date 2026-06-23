@@ -85,6 +85,8 @@ data class BotConfigDto(
     @SerialName("rotate_wallet") val rotateWallet: Boolean = true,
     val risk: RiskConfigDto = RiskConfigDto(),
     @SerialName("run_minutes") val runMinutes: Double? = null,
+    val source: String = "synthetic",
+    @SerialName("market_token_id") val marketTokenId: String? = null,
     @SerialName("tick_seconds") val tickSeconds: Double = 1.0,
 )
 

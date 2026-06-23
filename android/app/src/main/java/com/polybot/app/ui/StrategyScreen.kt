@@ -148,6 +148,35 @@ fun StrategyScreen(
             )
         }
 
+        SettingCard("Data source (Server mode)") {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("Use real Polymarket prices", fontWeight = FontWeight.SemiBold)
+                    Text(
+                        "Off = offline demo prices. On = sample a real Polymarket market " +
+                            "(needs the server deployed). Paste a token id from /polymarket/markets.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Switch(
+                    checked = config.usePolymarketData,
+                    onCheckedChange = { onChange { c -> c.copy(usePolymarketData = it) } },
+                    enabled = !running,
+                )
+            }
+            if (config.usePolymarketData) {
+                OutlinedTextField(
+                    value = config.marketTokenId,
+                    onValueChange = { v -> onChange { it.copy(marketTokenId = v) } },
+                    label = { Text("Market token id") },
+                    singleLine = true,
+                    enabled = !running,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+        }
+
         SettingCard("Session") {
             Text(
                 "Press Start to begin and Stop to end any time. Optionally auto-stop " +

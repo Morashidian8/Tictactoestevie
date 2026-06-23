@@ -27,6 +27,9 @@ data class StrategyConfig(
     val stakeJitter: Double = 0.15,        // randomise stake +/- this fraction
     val rotateWallet: Boolean = true,      // privacy: rotate wallet on new day / profit cap
     val runMinutes: Double = 0.0,          // optional auto-stop after N minutes (0 = manual only)
+    // data source (Server mode): real Polymarket prices vs. the offline demo feed
+    val usePolymarketData: Boolean = false,
+    val marketTokenId: String = "",
 )
 
 data class BotUiState(

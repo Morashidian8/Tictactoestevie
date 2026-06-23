@@ -66,7 +66,10 @@ class BotConfig(BaseModel):
     stake_jitter: float = 0.0
     # session: auto-stop after this many minutes of wall-clock time (None = until stopped)
     run_minutes: Optional[float] = None
-    # demo loop
+    # data source: "synthetic" (offline demo) or "polymarket" (real, needs network)
+    source: str = "synthetic"
+    market_token_id: Optional[str] = None
+    # loop
     tick_seconds: float = 1.0
     candle_interval_seconds: int = 300
 
@@ -128,7 +131,15 @@ class BotRunner:
             wallet=self.wallet,
             stake_jitter=config.stake_jitter,
         )
-        self.feed = SyntheticFeed(interval_seconds=config.candle_interval_seconds)
+        if config.source == "polymarket":
+            if not config.market_token_id:
+                raise ValueError("source 'polymarket' requires 'market_token_id'")
+            from .polymarket import PolymarketData, PolymarketSampledFeed
+            self.feed = PolymarketSampledFeed(
+                PolymarketData(), config.market_token_id, config.candle_interval_seconds
+            )
+        else:
+            self.feed = SyntheticFeed(interval_seconds=config.candle_interval_seconds)
         self.last_candle = None
 
     def tick(self) -> None:
@@ -281,6 +292,36 @@ def create_app(runner: Optional[BotRunner] = None):
     def kill():
         r().kill()
         return r().snapshot()
+
+    # -- read-only Polymarket data (needs network; works on the deployed host) -- #
+
+    def poly():
+        if getattr(app.state, "polymarket", None) is None:
+            from .polymarket import PolymarketData
+            app.state.polymarket = PolymarketData()
+        return app.state.polymarket
+
+    @app.get("/polymarket/markets")
+    def polymarket_markets():
+        try:
+            from dataclasses import asdict
+            markets = poly().find_btc_updown_markets()
+            return {"count": len(markets), "markets": [asdict(m) for m in markets]}
+        except Exception as exc:  # noqa: BLE001 - surface network/host issues to the client
+            return {"error": str(exc), "markets": []}
+
+    @app.get("/polymarket/prices/{token_id}")
+    def polymarket_prices(token_id: str):
+        try:
+            api = poly()
+            return {
+                "token_id": token_id,
+                "midpoint": api.midpoint(token_id),
+                "buy": api.price(token_id, "buy"),
+                "sell": api.price(token_id, "sell"),
+            }
+        except Exception as exc:  # noqa: BLE001
+            return {"error": str(exc)}
 
     @app.websocket("/ws")
     async def ws_endpoint(websocket: WebSocket):

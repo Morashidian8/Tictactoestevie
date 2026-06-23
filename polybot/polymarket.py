@@ -133,6 +133,49 @@ def _as_float(value: Any) -> Optional[float]:
 
 
 # --------------------------------------------------------------------------- #
+# Live feed adapter
+# --------------------------------------------------------------------------- #
+
+class PolymarketSampledFeed:
+    """Builds candles by sampling a Polymarket token's live price each tick.
+
+    Generic and honest: point it at the token you want the bot to react to —
+    confirm *which* token (the market's underlying vs. an outcome token) via the
+    `discover` endpoint on the first real run. Each `next()` reads the current
+    price and forms a candle from the move since the previous sample, so the
+    engine's up/down logic runs on **real Polymarket data**, not a simulation.
+
+    Same `.next() -> Candle` shape as `SyntheticFeed`, so the engine is unchanged.
+    """
+
+    def __init__(self, data: "PolymarketData", token_id: str, interval_seconds: int = 300) -> None:
+        from .candles import Candle  # local import to avoid a cycle
+        self._Candle = Candle
+        self._data = data
+        self._token = token_id
+        self._interval = interval_seconds
+        self._t = 0
+        self._last: Optional[float] = None
+
+    def next(self):
+        price = self._data.midpoint(self._token)
+        if price is None:
+            price = self._data.price(self._token) or self._last or 0.5
+        open_ = self._last if self._last is not None else price
+        candle = self._Candle(
+            open_time=self._t,
+            close_time=self._t + self._interval,
+            open=open_,
+            high=max(open_, price),
+            low=min(open_, price),
+            close=price,
+        )
+        self._last = price
+        self._t += self._interval
+        return candle
+
+
+# --------------------------------------------------------------------------- #
 # CLI (run where network is open)
 # --------------------------------------------------------------------------- #
 
