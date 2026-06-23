@@ -37,6 +37,22 @@ For short attended sessions that's usually fine — while the app holds the WebS
 service stays awake. For guaranteed no‑downtime, change `plan: free` → a paid instance in
 `render.yaml` (≈$7/mo), or use a usage‑based host (below) and only pay for the hours you run.
 
+## Option C — Replit (no credit card, phone-friendly)
+
+Replit doesn't ask for a card and imports straight from GitHub.
+
+1. Open **replit.com** and sign up (Google/GitHub login).
+2. Tap **Create** (or **+**) → **Import from GitHub**.
+3. Paste the repo URL: `https://github.com/Morashidian8/Tictactoestevie` → **Import**.
+4. Replit reads `.replit` and runs `start.sh` (installs deps + starts the server).
+   Tap the green **Run** button.
+5. Wait for it to install and start. A **Webview** opens with a URL like
+   `https://tictactoestevie.<your-user>.repl.co`.
+6. Open that URL → the PolyBot web panel. Verify real data at `…/polymarket/markets`.
+
+> Free Repls sleep when you close the tab and wake on the next visit — fine for short
+> sessions. Keep the tab open while a session runs.
+
 ## Option B — Usage-based (cheapest for a few hours/day): Railway or Fly.io
 
 Both can deploy the included **`Dockerfile`** and bill per running time, so a couple of
