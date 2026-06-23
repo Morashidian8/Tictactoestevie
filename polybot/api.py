@@ -13,7 +13,8 @@ PAPER MODE only — no real funds. Live execution stays Phase 4.
 from __future__ import annotations
 
 import asyncio
-from typing import Any, Dict, List, Optional, Set
+import time
+from typing import Any, Callable, Dict, List, Optional, Set
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel, Field
@@ -63,6 +64,8 @@ class BotConfig(BaseModel):
     risk: RiskModel = RiskModel()
     rotate_wallet: bool = True
     stake_jitter: float = 0.0
+    # session: auto-stop after this many minutes of wall-clock time (None = until stopped)
+    run_minutes: Optional[float] = None
     # demo loop
     tick_seconds: float = 1.0
     candle_interval_seconds: int = 300
