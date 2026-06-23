@@ -13,11 +13,16 @@ PAPER MODE only — no real funds. Live execution stays Phase 4.
 from __future__ import annotations
 
 import asyncio
+import pathlib
 import time
 from typing import Any, Callable, Dict, List, Optional, Set
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field
+
+_WEBUI = pathlib.Path(__file__).parent / "webui" / "index.html"
 
 from .candles import Candle, SyntheticFeed
 from .engine import TradingEngine
@@ -254,9 +259,23 @@ class BotRunner:
 def create_app(runner: Optional[BotRunner] = None):
     app = FastAPI(title="PolyBot Control API", version="0.1.0")
     app.state.runner = runner or BotRunner()
+    # Personal paper tool: allow the web UI to talk to the API from any origin.
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
     def r() -> BotRunner:
         return app.state.runner
+
+    @app.get("/", response_class=HTMLResponse)
+    def home():
+        # The browser control panel — no install needed, just open this URL.
+        if _WEBUI.exists():
+            return _WEBUI.read_text(encoding="utf-8")
+        return "<h1>PolyBot</h1><p>Web UI not found. API docs at <a href='/docs'>/docs</a>.</p>"
 
     @app.get("/status")
     def status():

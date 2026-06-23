@@ -72,6 +72,13 @@ def test_runner_respects_max_stake_cap():
     assert all(t.stake <= 3.0 + 1e-9 for t in trades)
 
 
+def test_home_serves_web_ui():
+    client = TestClient(create_app())
+    resp = client.get("/")
+    assert resp.status_code == 200
+    assert "PolyBot" in resp.text
+
+
 def test_rest_endpoints():
     client = TestClient(create_app())
 

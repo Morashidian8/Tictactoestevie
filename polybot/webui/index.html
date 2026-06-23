@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>PolyBot</title>
+<style>
+  :root{
+    --bg:#0E1117; --surface:#161A23; --surfaceVar:#1E2430; --line:#2a3142;
+    --green:#16C784; --red:#EA3943; --indigo:#818CF8; --muted:#8b93a7; --text:#E6E9EF;
+  }
+  *{box-sizing:border-box;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+  body{margin:0;background:var(--bg);color:var(--text);padding:14px;max-width:560px;margin:0 auto}
+  h2{margin:18px 2px 8px;font-size:15px;color:var(--muted);font-weight:700}
+  .card{background:var(--surface);border-radius:14px;padding:16px;margin-bottom:12px}
+  .row{display:flex;align-items:center;gap:10px}
+  .between{justify-content:space-between}
+  .muted{color:var(--muted);font-size:13px}
+  .banner{border-radius:12px;padding:10px 12px;font-weight:600;font-size:13px;margin-bottom:10px}
+  .paper{background:rgba(22,199,132,.15)}
+  .halt{background:rgba(234,57,67,.18);color:var(--red);display:none}
+  .equity{font-size:32px;font-weight:800;margin:2px 0}
+  .stats{display:flex;gap:8px;margin:10px 0}
+  .stat{flex:1;background:var(--surfaceVar);border-radius:10px;padding:10px}
+  .stat .v{font-size:18px;font-weight:800;margin-top:2px}
+  label{display:block;font-size:13px;color:var(--muted);margin:10px 0 4px}
+  input,select{width:100%;background:#0f131b;border:1px solid var(--line);color:var(--text);
+    border-radius:10px;padding:11px;font-size:15px}
+  .switch{display:flex;align-items:center;gap:8px}
+  .btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
+  button{flex:1;min-width:110px;border:0;border-radius:22px;padding:13px;font-size:15px;
+    font-weight:700;color:#0b0d12;background:var(--indigo)}
+  button.ghost{background:transparent;color:var(--text);border:1px solid var(--line)}
+  button.danger{background:var(--red);color:#fff;flex-basis:100%}
+  .chip{font-size:11px;font-weight:800;padding:3px 8px;border-radius:6px}
+  .up{color:var(--green);background:rgba(22,199,132,.18)}
+  .down{color:var(--red);background:rgba(234,57,67,.18)}
+  .trade{display:flex;align-items:center;gap:10px;border-top:1px solid var(--line);padding:9px 0;font-size:14px}
+  .spacer{flex:1}
+  .dot{width:10px;height:10px;border-radius:50%;background:var(--muted);display:inline-block}
+  .mkt{border:1px solid var(--line);border-radius:10px;padding:10px;margin-top:8px;font-size:13px}
+  .mkt code{cursor:pointer;color:var(--indigo);word-break:break-all}
+  .hidden{display:none}
+  details summary{cursor:pointer;color:var(--muted);font-weight:700;margin:6px 0}
+</style>
+</head>
+<body>
+
+  <div class="row between">
+    <h2 style="font-size:20px;color:var(--text);margin:6px 2px">PolyBot</h2>
+    <span class="muted"><span id="dot" class="dot"></span> <span id="connText">connecting…</span></span>
+  </div>
+
+  <div class="banner paper">PAPER MODE — simulated money. No real funds at risk.</div>
+  <div id="haltBanner" class="banner halt"></div>
+
+  <!-- Dashboard -->
+  <div class="card">
+    <div class="muted">Equity</div>
+    <div class="equity" id="equity">$—</div>
+    <div class="muted"><span id="pnl">$0.00</span> PnL · last candle <span id="candleDot" class="dot"></span> <span id="lastPrice"></span></div>
+    <div class="stats">
+      <div class="stat"><div class="muted">Win rate</div><div class="v" id="winrate">—</div></div>
+      <div class="stat"><div class="muted">W / L</div><div class="v" id="wl">0 / 0</div></div>
+      <div class="stat"><div class="muted">Wallet</div><div class="v" id="wallet">↻0</div></div>
+    </div>
+    <div class="btns">
+      <button id="startBtn" onclick="startBot()">▶ Start</button>
+      <button class="ghost" onclick="cmd('stop')">Stop</button>
+      <button class="ghost" onclick="cmd('reset')">Reset</button>
+      <button class="danger" onclick="cmd('kill')">■ PANIC — Kill switch</button>
+    </div>
+  </div>
+
+  <details>
+    <summary>Connection</summary>
+    <div class="card">
+      <label>Server URL (leave blank = this server)</label>
+      <input id="serverUrl" placeholder="https://polybot-api-xxxx.onrender.com" />
+      <div class="btns"><button class="ghost" onclick="reconnect()">Reconnect</button></div>
+    </div>
+  </details>
+
+  <h2>Strategy</h2>
+  <div class="card">
+    <label>Direction</label>
+    <select id="direction">
+      <option value="follow">Follow last candle (red→DOWN, green→UP)</option>
+      <option value="fade">Fade last candle (red→UP, green→DOWN)</option>
+    </select>
+    <label>Minimum streak (act after N same-colour candles)</label>
+    <input id="minStreak" type="number" value="1" min="1" />
+    <div class="switch" style="margin-top:12px">
+      <input type="checkbox" id="martingale" checked style="width:auto" />
+      <span>Martingale (double after a loss) — ⚠️ risky</span>
+    </div>
+    <label>Amount per trade ($)</label>
+    <input id="baseStake" type="number" value="1" min="0" />
+    <label>Starting balance ($)</label>
+    <input id="startBalance" type="number" value="100" min="1" />
+  </div>
+
+  <h2>Session</h2>
+  <div class="card">
+    <div class="muted">Start to begin, Stop to end any time.</div>
+    <label>Auto-stop after (minutes) — 0 = off</label>
+    <input id="runMinutes" type="number" value="0" min="0" />
+  </div>
+
+  <h2>Safety limits (0 = off)</h2>
+  <div class="card">
+    <label>Max stake per trade ($)</label><input id="maxStake" type="number" value="0" min="0" />
+    <label>Daily loss cap ($)</label><input id="dailyLoss" type="number" value="0" min="0" />
+    <label>Daily profit target ($)</label><input id="dailyProfit" type="number" value="0" min="0" />
+    <label>Max losses in a row</label><input id="maxLosses" type="number" value="0" min="0" />
+  </div>
+
+  <h2>Data source</h2>
+  <div class="card">
+    <div class="switch">
+      <input type="checkbox" id="usePoly" style="width:auto" onchange="togglePoly()" />
+      <span>Use real Polymarket prices</span>
+    </div>
+    <div id="polyBox" class="hidden">
+      <label>Market token id</label>
+      <input id="tokenId" placeholder="paste from the list below" />
+      <div class="btns"><button class="ghost" onclick="loadMarkets()">Load BTC markets</button></div>
+      <div id="markets"></div>
+    </div>
+  </div>
+
+  <p class="muted" style="text-align:center;margin:18px 0">Not financial advice. Strategies have no guaranteed edge.</p>
+
+<script>
+let ws = null;
+
+function base() {
+  const v = document.getElementById('serverUrl').value.trim();
+  return v ? v.replace(/\/+$/,'') : window.location.origin;
+}
+async function api(path, method='GET', body=null) {
+  const opt = { method, headers: { 'Content-Type': 'application/json' } };
+  if (body) opt.body = JSON.stringify(body);
+  const r = await fetch(base() + path, opt);
+  return r.json();
+}
+function buildConfig() {
+  const num = id => parseFloat(document.getElementById(id).value) || 0;
+  const poly = document.getElementById('usePoly').checked;
+  return {
+    strategy: 'same_color',
+    min_streak: Math.max(1, num('minStreak')),
+    invert: document.getElementById('direction').value === 'fade',
+    sizing: document.getElementById('martingale').checked ? 'martingale' : 'fixed',
+    base_stake: num('baseStake') || 1,
+    max_steps: 6,
+    starting_balance: num('startBalance') || 100,
+    stake_jitter: 0.15,
+    rotate_wallet: true,
+    run_minutes: num('runMinutes') || null,
+    source: poly ? 'polymarket' : 'synthetic',
+    market_token_id: poly ? (document.getElementById('tokenId').value.trim() || null) : null,
+    risk: {
+      max_stake_per_trade: num('maxStake') || null,
+      max_daily_loss: num('dailyLoss') || null,
+      daily_profit_target: num('dailyProfit') || null,
+      max_consecutive_losses: parseInt(document.getElementById('maxLosses').value) || null,
+    },
+    tick_seconds: 1.0,
+  };
+}
+async function startBot() {
+  try { render(await api('/start', 'POST', buildConfig())); connect(); }
+  catch (e) { alert('Start failed: ' + e); }
+}
+async function cmd(name) {
+  try { render(await api('/' + name, 'POST')); } catch (e) { alert(e); }
+}
+function fmt(n, d=2){ return (n==null?0:n).toLocaleString(undefined,{minimumFractionDigits:d,maximumFractionDigits:d}); }
+function dotColor(c){ return c==='green'?'var(--green)':c==='red'?'var(--red)':'var(--muted)'; }
+
+function render(s) {
+  if (!s || !s.portfolio) return;
+  const p = s.portfolio;
+  document.getElementById('equity').textContent = '$' + fmt(p.equity);
+  const pnl = document.getElementById('pnl');
+  pnl.textContent = (p.realised_pnl>=0?'+':'') + '$' + fmt(p.realised_pnl);
+  pnl.style.color = p.realised_pnl>=0 ? 'var(--green)' : 'var(--red)';
+  document.getElementById('winrate').textContent = Math.round((p.win_rate||0)*100) + '%';
+  document.getElementById('wl').textContent = (p.wins||0) + ' / ' + (p.losses||0);
+  document.getElementById('wallet').textContent = '↻' + ((s.wallet&&s.wallet.rotations)||0);
+  document.getElementById('startBtn').textContent = s.running ? '● Running' : '▶ Start';
+  if (s.last_candle) {
+    document.getElementById('candleDot').style.background = dotColor(s.last_candle.color);
+    document.getElementById('lastPrice').textContent = '· ' + s.last_candle.close;
+  }
+  const hb = document.getElementById('haltBanner');
+  if (s.halt_reason) { hb.style.display='block'; hb.textContent='HALTED — ' + s.halt_reason; }
+  else hb.style.display='none';
+}
+
+function connect() {
+  try { if (ws) ws.close(); } catch(e){}
+  const url = base().replace(/^http/, 'ws') + '/ws';
+  ws = new WebSocket(url);
+  const dot = document.getElementById('dot'), t = document.getElementById('connText');
+  ws.onopen = () => { dot.style.background='var(--green)'; t.textContent='connected'; };
+  ws.onclose = () => { dot.style.background='var(--red)'; t.textContent='disconnected'; };
+  ws.onerror = () => { dot.style.background='var(--red)'; t.textContent='error'; };
+  ws.onmessage = (e) => { try { render(JSON.parse(e.data)); } catch(err){} };
+}
+function reconnect(){ connect(); }
+
+function togglePoly(){
+  document.getElementById('polyBox').classList.toggle('hidden', !document.getElementById('usePoly').checked);
+}
+async function loadMarkets(){
+  const box = document.getElementById('markets');
+  box.innerHTML = '<div class="muted">loading…</div>';
+  try {
+    const d = await api('/polymarket/markets');
+    if (d.error) { box.innerHTML = '<div class="muted">'+d.error+'</div>'; return; }
+    if (!d.markets || !d.markets.length) { box.innerHTML = '<div class="muted">no BTC up/down markets found</div>'; return; }
+    box.innerHTML = d.markets.map(m => {
+      const toks = m.token_ids.map((id,i)=>`${m.outcomes[i]||'?'}: <code onclick="pick('${id}')">${id}</code>`).join('<br>');
+      return `<div class="mkt"><b>${m.question}</b><br>${toks}</div>`;
+    }).join('');
+  } catch(e){ box.innerHTML = '<div class="muted">'+e+'</div>'; }
+}
+function pick(id){ document.getElementById('tokenId').value = id; }
+
+// initial load
+api('/status').then(render).catch(()=>{});
+connect();
+</script>
+</body>
+</html>

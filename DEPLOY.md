@@ -23,9 +23,13 @@ below can be done from a mobile browser.
   This is the proof that real Polymarket data is flowing. Each market lists its
   `token_ids` and `outcomes` (e.g. `Up`, `Down`).
 
-### Point the app at it
-- Install the APK (from the GitHub Actions **Artifacts**, `polybot-debug-apk`).
-- In the app, switch the top bar to **Server**, paste your Render URL, and press **Start**.
+### Use it — no install needed ✅
+- **Just open your Render URL in the phone browser.** The server serves a full
+  **web control panel** at `/` — configure the strategy, Start/Stop, kill switch, live
+  dashboard, and the Polymarket market list. Nothing to install, no antivirus prompt.
+- (Optional) The native Android app is also available as an APK from the GitHub Actions
+  **Artifacts** (`polybot-debug-apk`) — switch its top bar to **Server** and paste the URL.
+  Use the web panel if the APK is blocked by antivirus/Play Protect.
 
 ### About "always on"
 Render's **free** plan sleeps after ~15 min idle (≈1‑min cold start on the next request).
