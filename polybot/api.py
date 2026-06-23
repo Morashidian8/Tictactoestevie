@@ -305,7 +305,8 @@ def create_app(runner: Optional[BotRunner] = None):
         return r().snapshot()
 
     @app.post("/start")
-    def start(config: Optional[BotConfig] = None):
+    async def start(config: Optional[BotConfig] = None):
+        # async so ensure_loop() can schedule the tick task on the running loop.
         run = r()
         run.start(config)
         run.ensure_loop()

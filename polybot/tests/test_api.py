@@ -72,6 +72,15 @@ def test_runner_respects_max_stake_cap():
     assert all(t.stake <= 3.0 + 1e-9 for t in trades)
 
 
+def test_start_endpoint_runs_loop_without_error():
+    # Regression: the /start HTTP path schedules an asyncio task; it must not 500.
+    client = TestClient(create_app())
+    res = client.post("/start", json={"base_stake": 1, "tick_seconds": 0.01})
+    assert res.status_code == 200
+    assert res.json()["running"] is True
+    client.post("/stop")
+
+
 def test_home_serves_web_ui():
     client = TestClient(create_app())
     resp = client.get("/")

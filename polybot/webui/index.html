@@ -211,6 +211,13 @@ function connect() {
 }
 function reconnect(){ connect(); }
 
+function setConn(ok){
+  document.getElementById('dot').style.background = ok ? 'var(--green)' : 'var(--red)';
+  document.getElementById('connText').textContent = ok ? 'connected' : 'disconnected';
+}
+// Fallback: poll status every 2s so the dashboard updates even if WebSocket is blocked.
+function poll(){ api('/status').then(s => { render(s); setConn(true); }).catch(() => setConn(false)); }
+
 function togglePoly(){
   document.getElementById('polyBox').classList.toggle('hidden', !document.getElementById('usePoly').checked);
 }
@@ -229,9 +236,10 @@ async function loadMarkets(){
 }
 function pick(id){ document.getElementById('tokenId').value = id; }
 
-// initial load
-api('/status').then(render).catch(()=>{});
+// initial load + live updates (WebSocket, with a 2s polling fallback)
+poll();
 connect();
+setInterval(poll, 2000);
 </script>
 </body>
 </html>
