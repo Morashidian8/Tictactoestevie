@@ -105,6 +105,17 @@ class _FakeData:
         return None
 
 
+def test_history_to_candles():
+    from polybot.polymarket import history_to_candles
+
+    hist = [{"t": 0, "p": 0.50}, {"t": 300, "p": 0.55}, {"t": 600, "p": 0.52}]
+    candles = history_to_candles(hist, interval_seconds=300)
+    assert len(candles) == 3
+    assert candles[0].open == 0.50 and candles[0].close == 0.50
+    assert candles[1].open == 0.50 and candles[1].close == 0.55 and candles[1].color.value == "green"
+    assert candles[2].color.value == "red"
+
+
 def test_sampled_feed_builds_candles_from_prices():
     from polybot.polymarket import PolymarketSampledFeed
 

@@ -79,6 +79,51 @@ class BotConfig(BaseModel):
     candle_interval_seconds: int = 300
 
 
+class BacktestRequest(BaseModel):
+    token_id: str
+    interval: str = "1h"          # 1m / 1h / 6h / 1d / max
+    config: BotConfig = BotConfig()
+
+
+# --------------------------------------------------------------------------- #
+# Engine construction (shared by the live runner and the backtest)
+# --------------------------------------------------------------------------- #
+
+def make_engine(config: BotConfig):
+    """Build a TradingEngine + risk + wallet from a config. No data feed attached."""
+    if config.strategy == "rule":
+        if not config.rules:
+            raise ValueError("strategy 'rule' requires a non-empty 'rules' list")
+        strategy = RuleStrategy(rules=config.rules)
+    else:
+        strategy = SameColorStrategy(min_streak=config.min_streak, invert=config.invert)
+
+    sizer = (
+        MartingaleSizer(base_stake=config.base_stake, max_steps=config.max_steps)
+        if config.sizing == "martingale"
+        else FixedSizer(config.base_stake)
+    )
+    risk = RiskManager(config.risk.to_limits())
+    wallet = (
+        WalletManager(
+            daily_profit_cap=config.risk.daily_profit_target,
+            day_seconds=config.risk.day_seconds,
+        )
+        if config.rotate_wallet
+        else None
+    )
+    engine = TradingEngine(
+        strategy=strategy,
+        sizer=sizer,
+        portfolio=Portfolio(config.starting_balance),
+        executor=PaperExecutor(payout_multiple=config.payout_multiple),
+        risk=risk,
+        wallet=wallet,
+        stake_jitter=config.stake_jitter,
+    )
+    return engine, risk, wallet
+
+
 # --------------------------------------------------------------------------- #
 # Runner
 # --------------------------------------------------------------------------- #
@@ -104,38 +149,7 @@ class BotRunner:
 
     def build(self, config: BotConfig) -> None:
         self.config = config
-
-        if config.strategy == "rule":
-            if not config.rules:
-                raise ValueError("strategy 'rule' requires a non-empty 'rules' list")
-            strategy = RuleStrategy(rules=config.rules)
-        else:
-            strategy = SameColorStrategy(min_streak=config.min_streak, invert=config.invert)
-
-        sizer = (
-            MartingaleSizer(base_stake=config.base_stake, max_steps=config.max_steps)
-            if config.sizing == "martingale"
-            else FixedSizer(config.base_stake)
-        )
-
-        self.risk = RiskManager(config.risk.to_limits())
-        self.wallet = (
-            WalletManager(
-                daily_profit_cap=config.risk.daily_profit_target,
-                day_seconds=config.risk.day_seconds,
-            )
-            if config.rotate_wallet
-            else None
-        )
-        self.engine = TradingEngine(
-            strategy=strategy,
-            sizer=sizer,
-            portfolio=Portfolio(config.starting_balance),
-            executor=PaperExecutor(payout_multiple=config.payout_multiple),
-            risk=self.risk,
-            wallet=self.wallet,
-            stake_jitter=config.stake_jitter,
-        )
+        self.engine, self.risk, self.wallet = make_engine(config)
         if config.source == "polymarket":
             if not config.market_token_id:
                 raise ValueError("source 'polymarket' requires 'market_token_id'")
@@ -328,6 +342,31 @@ def create_app(runner: Optional[BotRunner] = None):
             return {"count": len(markets), "markets": [asdict(m) for m in markets]}
         except Exception as exc:  # noqa: BLE001 - surface network/host issues to the client
             return {"error": str(exc), "markets": []}
+
+    @app.post("/backtest")
+    def backtest(req: BacktestRequest):
+        """Run the strategy over real Polymarket price history and return the result."""
+        try:
+            from .polymarket import history_to_candles
+            hist = poly().prices_history(req.token_id, interval=req.interval)
+            candles = history_to_candles(hist, req.config.candle_interval_seconds)
+            if not candles:
+                return {"error": "no price history for that token/interval", "candles": 0}
+            engine, _, _ = make_engine(req.config)
+            engine.run(candles)
+            p = engine.portfolio
+            return {
+                "candles": len(candles),
+                "interval": req.interval,
+                "portfolio": p.summary(),
+                "trades": [
+                    {"signal": t.signal.value, "stake": round(t.stake, 4),
+                     "won": t.won, "pnl": round(t.pnl, 4)}
+                    for t in p.trades[-50:]
+                ],
+            }
+        except Exception as exc:  # noqa: BLE001
+            return {"error": str(exc), "candles": 0}
 
     @app.get("/polymarket/prices/{token_id}")
     def polymarket_prices(token_id: str):

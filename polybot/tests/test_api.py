@@ -118,6 +118,10 @@ class _FakeMarket:
 
 
 class _FakePoly:
+    def prices_history(self, token_id, interval="1h", fidelity=1):
+        # Alternating up/down series so the strategy produces trades.
+        return [{"t": i * 300, "p": 0.50 + (0.04 if i % 2 else -0.04)} for i in range(30)]
+
     def find_btc_updown_markets(self):
         from dataclasses import dataclass
         # Return an object dataclasses.asdict can handle.
@@ -145,3 +149,14 @@ def test_polymarket_endpoints_with_injected_client():
     prices = client.get("/polymarket/prices/10").json()
     assert prices["midpoint"] == 0.53
     assert prices["buy"] == 0.55
+
+
+def test_backtest_over_real_history():
+    app = create_app()
+    app.state.polymarket = _FakePoly()
+    client = TestClient(app)
+    body = {"token_id": "10", "interval": "1h",
+            "config": {"base_stake": 1, "starting_balance": 100}}
+    res = client.post("/backtest", json=body).json()
+    assert res["candles"] == 30
+    assert "portfolio" in res and res["portfolio"]["trades"] >= 1

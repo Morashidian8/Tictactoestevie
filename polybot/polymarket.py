@@ -132,6 +132,37 @@ def _as_float(value: Any) -> Optional[float]:
         return None
 
 
+def history_to_candles(history: List[Dict[str, Any]], interval_seconds: int = 300) -> list:
+    """Convert a CLOB price-history series ([{t, p}, ...]) into candles.
+
+    Each successive price point becomes a candle (open = previous price, close =
+    current price), so the engine's up/down logic runs over **real Polymarket
+    history**. Used by the historical backtest.
+    """
+    from .candles import Candle
+    candles = []
+    prev = None
+    for i, pt in enumerate(history):
+        price = _as_float(pt.get("p", pt.get("price")))
+        if price is None:
+            continue
+        t = pt.get("t", pt.get("timestamp"))
+        open_time = int(t) if t is not None else i * interval_seconds
+        open_ = prev if prev is not None else price
+        candles.append(
+            Candle(
+                open_time=open_time,
+                close_time=open_time + interval_seconds,
+                open=open_,
+                high=max(open_, price),
+                low=min(open_, price),
+                close=price,
+            )
+        )
+        prev = price
+    return candles
+
+
 # --------------------------------------------------------------------------- #
 # Live feed adapter
 # --------------------------------------------------------------------------- #
