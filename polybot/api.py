@@ -78,7 +78,7 @@ class BotConfig(BaseModel):
 class BotRunner:
     """Owns the engine and the (optional) async tick loop, and broadcasts state."""
 
-    def __init__(self) -> None:
+    def __init__(self, clock: Callable[[], float] = time.monotonic) -> None:
         self.config = BotConfig()
         self.running = False
         self.engine: Optional[TradingEngine] = None
@@ -88,6 +88,9 @@ class BotRunner:
         self.last_candle: Optional[Candle] = None
         self._task: Optional[asyncio.Task] = None
         self._clients: Set[Any] = set()
+        self._clock = clock
+        self._deadline: Optional[float] = None   # wall-clock auto-stop, if run_minutes set
+        self.stop_reason: Optional[str] = None
 
     # -- lifecycle --------------------------------------------------------- #
 
@@ -132,19 +135,32 @@ class BotRunner:
         """Advance one candle. Synchronous core so it is unit-testable."""
         if not self.running or self.engine is None or self.feed is None:
             return
+        # Optional session cap: auto-stop once the run duration is reached.
+        if self._deadline is not None and self._clock() >= self._deadline:
+            self.running = False
+            self.stop_reason = "duration_reached"
+            return
         candle = self.feed.next()
         self.engine.on_candle(candle)
         self.last_candle = candle
         if self.engine.portfolio.equity <= 0.01:
             self.running = False
+            self.stop_reason = "balance_exhausted"
 
     def start(self, config: Optional[BotConfig] = None) -> None:
         if config is not None or self.engine is None:
             self.build(config or self.config)
         self.running = True
+        self.stop_reason = None
+        self._deadline = (
+            self._clock() + self.config.run_minutes * 60
+            if self.config.run_minutes
+            else None
+        )
 
     def stop(self) -> None:
         self.running = False
+        self.stop_reason = "manual"
 
     def reset(self) -> None:
         self.running = False
@@ -160,9 +176,15 @@ class BotRunner:
         if self.engine is None:
             return {"running": False, "configured": False}
         p = self.engine.portfolio
+        remaining = None
+        if self.running and self._deadline is not None:
+            remaining = max(0.0, round(self._deadline - self._clock(), 1))
         return {
             "running": self.running,
             "configured": True,
+            "run_minutes": self.config.run_minutes,
+            "remaining_seconds": remaining,
+            "stop_reason": self.stop_reason,
             "portfolio": p.summary(),
             "risk": self.risk.status() if self.risk else None,
             "halt_reason": self.engine.last_halt_reason,

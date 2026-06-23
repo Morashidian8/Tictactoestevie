@@ -148,6 +148,22 @@ fun StrategyScreen(
             )
         }
 
+        SettingCard("Session") {
+            Text(
+                "Press Start to begin and Stop to end any time. Optionally auto-stop " +
+                    "after some minutes (0 = manual only).",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            NumberField(
+                label = "Auto-stop after (minutes) — 0 = off",
+                value = config.runMinutes,
+                enabled = !running,
+                allowZero = true,
+                onValue = { v -> onChange { it.copy(runMinutes = v) } },
+            )
+        }
+
         SettingCard("Safety limits") {
             Text(
                 "Hard caps the bot can never exceed. 0 = off. These run below the " +

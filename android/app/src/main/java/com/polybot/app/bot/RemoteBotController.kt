@@ -102,6 +102,7 @@ private fun StrategyConfig.toDto(): BotConfigDto = BotConfigDto(
         dailyProfitTarget = dailyProfitTarget.takeIf { it > 0 },
         maxConsecutiveLosses = maxConsecutiveLosses.takeIf { it > 0 },
     ),
+    runMinutes = runMinutes.takeIf { it > 0 },
 )
 
 private fun parseColor(c: String?): Color = when (c) {

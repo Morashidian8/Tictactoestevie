@@ -84,6 +84,7 @@ data class BotConfigDto(
     @SerialName("stake_jitter") val stakeJitter: Double = 0.0,
     @SerialName("rotate_wallet") val rotateWallet: Boolean = true,
     val risk: RiskConfigDto = RiskConfigDto(),
+    @SerialName("run_minutes") val runMinutes: Double? = null,
     @SerialName("tick_seconds") val tickSeconds: Double = 1.0,
 )
 

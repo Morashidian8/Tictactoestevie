@@ -21,6 +21,29 @@ def test_runner_ticks_and_trades():
     assert "balance" in snap["portfolio"]
 
 
+def test_runner_manual_stop():
+    runner = BotRunner()
+    runner.start(BotConfig(base_stake=1.0))
+    runner.tick()
+    runner.stop()
+    assert runner.running is False
+    assert runner.snapshot()["stop_reason"] == "manual"
+
+
+def test_runner_auto_stops_after_run_minutes():
+    # Fake clock we advance by hand; run for 1 minute (60s).
+    now = {"t": 0.0}
+    runner = BotRunner(clock=lambda: now["t"])
+    runner.start(BotConfig(base_stake=1.0, run_minutes=1.0))
+    for _ in range(5):
+        runner.tick()
+    assert runner.running is True            # still within the minute
+    now["t"] = 61.0                          # past the deadline
+    runner.tick()
+    assert runner.running is False
+    assert runner.snapshot()["stop_reason"] == "duration_reached"
+
+
 def test_runner_kill_switch_blocks_new_trades():
     runner = BotRunner()
     runner.start(BotConfig(base_stake=1.0))

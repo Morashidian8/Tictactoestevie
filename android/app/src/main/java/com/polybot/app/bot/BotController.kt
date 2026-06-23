@@ -26,6 +26,7 @@ data class StrategyConfig(
     val maxConsecutiveLosses: Int = 0,     // circuit breaker
     val stakeJitter: Double = 0.15,        // randomise stake +/- this fraction
     val rotateWallet: Boolean = true,      // privacy: rotate wallet on new day / profit cap
+    val runMinutes: Double = 0.0,          // optional auto-stop after N minutes (0 = manual only)
 )
 
 data class BotUiState(
@@ -140,8 +141,16 @@ class BotController : ViewModel(), BotControl {
             )
         }
 
+        val deadline = if (cfg.runMinutes > 0) {
+            System.currentTimeMillis() + (cfg.runMinutes * 60_000).toLong()
+        } else null
+
         loop = viewModelScope.launch {
             while (_state.value.running) {
+                if (deadline != null && System.currentTimeMillis() >= deadline) {
+                    _state.update { it.copy(running = false, haltReason = "duration_reached") }
+                    break
+                }
                 val candle = feed!!.next()
                 engine.onCandle(candle)
                 val p = engine.portfolio
