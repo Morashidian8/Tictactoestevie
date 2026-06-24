@@ -36,6 +36,10 @@ object AppModule {
     @Provides @Singleton fun inspectionDao(db: FacilityDatabase) = db.inspectionDao()
     @Provides @Singleton fun faultDao(db: FacilityDatabase) = db.faultDao()
     @Provides @Singleton fun workOrderDao(db: FacilityDatabase) = db.workOrderDao()
+    @Provides @Singleton fun sparePartDao(db: FacilityDatabase) = db.sparePartDao()
+    @Provides @Singleton fun hseDao(db: FacilityDatabase) = db.hseDao()
+    @Provides @Singleton fun complianceDao(db: FacilityDatabase) = db.complianceDao()
+    @Provides @Singleton fun utilityDao(db: FacilityDatabase) = db.utilityDao()
     @Provides @Singleton fun syncDao(db: FacilityDatabase) = db.syncDao()
 
     @Provides

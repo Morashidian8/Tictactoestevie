@@ -2,11 +2,13 @@ package io.facilityos.app.core.database
 
 import io.facilityos.app.core.model.BuildingStatus
 import io.facilityos.app.core.model.ChecklistItemDef
+import io.facilityos.app.core.model.ComplianceStatus
 import io.facilityos.app.core.model.Criticality
 import io.facilityos.app.core.model.FaultStatus
 import io.facilityos.app.core.model.Priority
 import io.facilityos.app.core.model.ResponseType
 import io.facilityos.app.core.model.SyncState
+import io.facilityos.app.core.model.WorkOrderStatus
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -92,16 +94,71 @@ class DatabaseSeeder @Inject constructor(
             ),
         )
 
-        // --- A couple of open faults to make status counts realistic ----------------------
+        // Mark one critical asset down to make availability/status realistic.
+        val assetsFinal = assets.map {
+            if (it.id == "a-b2-4") it.copy(statusLabel = "Down") else it
+        }
+
+        // --- Faults: open ones (counts) + resolved ones (so MTTR computes) ----------------
         val faults = listOf(
-            FaultEntity("f1", "a-b2-4", "Fire pump fails weekly test", Priority.CRITICAL.name, FaultStatus.OPEN.name, now - day, SyncState.SYNCED.name),
-            FaultEntity("f2", "a-b2-0", "Elevator 1 door re-opening", Priority.HIGH.name, FaultStatus.ASSIGNED.name, now - 3 * day, SyncState.SYNCED.name),
-            FaultEntity("f3", "a-b3-2", "UPS battery alarm", Priority.MEDIUM.name, FaultStatus.OPEN.name, now - 6 * day, SyncState.SYNCED.name),
+            FaultEntity("f1", "a-b2-4", "Fire pump fails weekly test", Priority.CRITICAL.name, FaultStatus.OPEN.name, now - day, null, SyncState.SYNCED.name),
+            FaultEntity("f2", "a-b2-0", "Elevator 1 door re-opening", Priority.HIGH.name, FaultStatus.ASSIGNED.name, now - 3 * day, null, SyncState.SYNCED.name),
+            FaultEntity("f3", "a-b3-2", "UPS battery alarm", Priority.MEDIUM.name, FaultStatus.OPEN.name, now - 6 * day, null, SyncState.SYNCED.name),
+            FaultEntity("f4", "a-b1-3", "Chiller low refrigerant", Priority.HIGH.name, FaultStatus.CLOSED.name, now - 20 * day, now - 18 * day, SyncState.SYNCED.name),
+            FaultEntity("f5", "a-b4-1", "Generator battery replaced", Priority.MEDIUM.name, FaultStatus.CLOSED.name, now - 30 * day, now - 29 * day, SyncState.SYNCED.name),
         )
 
+        // --- Work orders: PM + CM, mix of completed / overdue (drives PM compliance) ------
+        val workOrders = listOf(
+            WorkOrderEntity("w1", "WO-1001", "pm", "Monthly PM — Elevator", WorkOrderStatus.COMPLETED.name, "a-b1-0", now - 4 * day, 320.0),
+            WorkOrderEntity("w2", "WO-1002", "pm", "Monthly PM — Generator", WorkOrderStatus.COMPLETED.name, "a-b1-1", now - 2 * day, 280.0),
+            WorkOrderEntity("w3", "WO-1003", "pm", "Quarterly PM — Chiller", WorkOrderStatus.SCHEDULED.name, "a-b1-3", now - 1 * day, 450.0),
+            WorkOrderEntity("w4", "WO-1004", "cm", "Repair fire pump", WorkOrderStatus.IN_PROGRESS.name, "a-b2-4", now + 1 * day, 1200.0),
+            WorkOrderEntity("w5", "WO-1005", "pm", "Annual PM — UPS", WorkOrderStatus.ASSIGNED.name, "a-b3-2", now + 5 * day, 600.0),
+            WorkOrderEntity("w6", "WO-1006", "pm", "Monthly PM — AHU", WorkOrderStatus.SCHEDULED.name, "a-b5-5", now - 8 * day, 180.0),
+        )
+
+        // --- Spare parts (one below reorder level → low-stock alert) ----------------------
+        val parts = listOf(
+            SparePartEntity("p1", "FLT-AHU-22", "AHU air filter G4", 24.0, 10.0, "WH-A · Rack 3", 18.0),
+            SparePartEntity("p2", "BLT-V-1250", "V-belt 1250mm", 6.0, 8.0, "WH-A · Rack 1", 12.5),
+            SparePartEntity("p3", "BAT-UPS-12", "UPS battery 12V 9Ah", 40.0, 20.0, "WH-B · Rack 5", 45.0),
+            SparePartEntity("p4", "OIL-GEN-15W40", "Engine oil 15W40 (L)", 3.0, 20.0, "WH-A · Bay 2", 6.0),
+        )
+
+        // --- HSE incidents ----------------------------------------------------------------
+        val incidents = listOf(
+            HseIncidentEntity("h1", "b2", "near_miss", "low", "Slippery floor near pump room", "investigating", now - 2 * day),
+            HseIncidentEntity("h2", "b1", "unsafe_condition", "medium", "Missing machine guard on AHU", "open", now - 5 * day),
+            HseIncidentEntity("h3", "b4", "accident", "high", "Minor electrical burn during panel work", "capa", now - 12 * day),
+        )
+
+        // --- Fire compliance items --------------------------------------------------------
+        val compliance = listOf(
+            ComplianceItemEntity("c1", "a-b2-4", "Fire pump", now - 5 * day, now + 60 * day, ComplianceStatus.OVERDUE.name),
+            ComplianceItemEntity("c2", "a-b1-4", "Fire pump", now + 20 * day, now + 200 * day, ComplianceStatus.COMPLIANT.name),
+            ComplianceItemEntity("c3", "a-b3-4", "Sprinkler system", now + 10 * day, now + 25 * day, ComplianceStatus.DUE_SOON.name),
+            ComplianceItemEntity("c4", "a-b4-4", "Extinguishers", now - 15 * day, now - 3 * day, ComplianceStatus.NON_COMPLIANT.name),
+        )
+
+        // --- Utility readings (last 6 months, per building/utility) -----------------------
+        val months = listOf("2026-01", "2026-02", "2026-03", "2026-04", "2026-05", "2026-06")
+        val utilities = buildList {
+            buildings.forEach { b ->
+                months.forEachIndexed { mi, m ->
+                    val base = 12000 + b.id.last().code * 50
+                    add(UtilityReadingEntity("u-${b.id}-e$mi", b.id, "electricity", m, base + mi * 300.0, (base + mi * 300.0) * 0.08))
+                    add(UtilityReadingEntity("u-${b.id}-w$mi", b.id, "water", m, 800 + mi * 20.0, (800 + mi * 20.0) * 0.5))
+                }
+            }
+        }
+
         // Recompute denormalised counts on the buildings from the seeded data.
-        val openByBuilding = faults.groupingBy { it.assetId.substringBeforeLast('-').removePrefix("a-") }.eachCount()
-        val assetsByBuilding = assets.groupingBy { it.buildingId }.eachCount()
+        val openByBuilding = faults
+            .filter { it.status != FaultStatus.CLOSED.name }
+            .groupingBy { it.assetId.substringBeforeLast('-').removePrefix("a-") }
+            .eachCount()
+        val assetsByBuilding = assetsFinal.groupingBy { it.buildingId }.eachCount()
         val withCounts = buildings.map { b ->
             b.copy(
                 assetCount = assetsByBuilding[b.id] ?: 0,
@@ -110,8 +167,13 @@ class DatabaseSeeder @Inject constructor(
         }
 
         buildingDao.upsertAll(withCounts)
-        assetDao.upsertAll(assets)
+        assetDao.upsertAll(assetsFinal)
         inspectionDao.upsertTemplates(listOf(template))
         faultDao.upsertAll(faults)
+        db.workOrderDao().upsertAll(workOrders)
+        db.sparePartDao().upsertAll(parts)
+        db.hseDao().upsertAll(incidents)
+        db.complianceDao().upsertAll(compliance)
+        db.utilityDao().upsertAll(utilities)
     }
 }

@@ -16,10 +16,14 @@ import androidx.room.TypeConverters
         InspectionEntity::class,
         FaultEntity::class,
         WorkOrderEntity::class,
+        SparePartEntity::class,
+        HseIncidentEntity::class,
+        ComplianceItemEntity::class,
+        UtilityReadingEntity::class,
         SyncOperationEntity::class,
         SyncCursorEntity::class,
     ],
-    version = 1,
+    version = 2,
     exportSchema = false,
 )
 @TypeConverters(Converters::class)
@@ -29,5 +33,9 @@ abstract class FacilityDatabase : RoomDatabase() {
     abstract fun inspectionDao(): InspectionDao
     abstract fun faultDao(): FaultDao
     abstract fun workOrderDao(): WorkOrderDao
+    abstract fun sparePartDao(): SparePartDao
+    abstract fun hseDao(): HseDao
+    abstract fun complianceDao(): ComplianceDao
+    abstract fun utilityDao(): UtilityDao
     abstract fun syncDao(): SyncDao
 }

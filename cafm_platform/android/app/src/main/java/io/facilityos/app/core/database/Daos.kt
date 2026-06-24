@@ -37,6 +37,12 @@ interface AssetDao {
     @Query("SELECT * FROM asset WHERE qrUid = :qrUid LIMIT 1")
     suspend fun findByQr(qrUid: String): AssetEntity?
 
+    @Query("SELECT * FROM asset")
+    fun observeAll(): Flow<List<AssetEntity>>
+
+    @Query("SELECT COUNT(*) FROM asset")
+    fun observeCount(): Flow<Int>
+
     @Upsert
     suspend fun upsertAll(items: List<AssetEntity>)
 }
@@ -67,17 +73,59 @@ interface FaultDao {
     @Query("SELECT * FROM fault WHERE assetId = :assetId ORDER BY reportedAt DESC")
     fun observeForAsset(assetId: String): Flow<List<FaultEntity>>
 
+    @Query("SELECT * FROM fault ORDER BY reportedAt DESC")
+    fun observeAll(): Flow<List<FaultEntity>>
+
     @Upsert
     suspend fun upsertAll(items: List<FaultEntity>)
 }
 
 @Dao
 interface WorkOrderDao {
-    @Query("SELECT * FROM work_order WHERE status != 'CLOSED' ORDER BY dueDate")
+    @Query("SELECT * FROM work_order WHERE status NOT IN ('CLOSED','CANCELLED') ORDER BY dueDate")
     fun observeOpen(): Flow<List<WorkOrderEntity>>
+
+    @Query("SELECT * FROM work_order ORDER BY dueDate")
+    fun observeAll(): Flow<List<WorkOrderEntity>>
 
     @Upsert
     suspend fun upsertAll(items: List<WorkOrderEntity>)
+}
+
+@Dao
+interface SparePartDao {
+    @Query("SELECT * FROM spare_part ORDER BY description")
+    fun observeAll(): Flow<List<SparePartEntity>>
+
+    @Upsert
+    suspend fun upsertAll(items: List<SparePartEntity>)
+}
+
+@Dao
+interface HseDao {
+    @Query("SELECT * FROM hse_incident ORDER BY occurredAt DESC")
+    fun observeAll(): Flow<List<HseIncidentEntity>>
+
+    @Upsert
+    suspend fun upsertAll(items: List<HseIncidentEntity>)
+}
+
+@Dao
+interface ComplianceDao {
+    @Query("SELECT * FROM compliance_item ORDER BY nextInspection")
+    fun observeAll(): Flow<List<ComplianceItemEntity>>
+
+    @Upsert
+    suspend fun upsertAll(items: List<ComplianceItemEntity>)
+}
+
+@Dao
+interface UtilityDao {
+    @Query("SELECT * FROM utility_reading ORDER BY periodLabel")
+    fun observeAll(): Flow<List<UtilityReadingEntity>>
+
+    @Upsert
+    suspend fun upsertAll(items: List<UtilityReadingEntity>)
 }
 
 @Dao

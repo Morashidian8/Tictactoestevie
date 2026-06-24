@@ -89,6 +89,7 @@ data class Fault(
     val priority: Priority,
     val status: FaultStatus,
     val reportedAt: Long,
+    val resolvedAt: Long?,
     val syncState: SyncState,
 )
 
@@ -100,4 +101,58 @@ data class WorkOrder(
     val status: WorkOrderStatus,
     val assetId: String?,
     val dueDate: Long?,
+    val cost: Double?,
+)
+
+enum class ComplianceStatus { COMPLIANT, DUE_SOON, OVERDUE, NON_COMPLIANT }
+
+data class SparePart(
+    val id: String,
+    val partNumber: String,
+    val description: String,
+    val qty: Double,
+    val minQty: Double,
+    val location: String,
+    val unitCost: Double,
+) {
+    val lowStock: Boolean get() = qty <= minQty
+}
+
+data class HseIncident(
+    val id: String,
+    val buildingId: String,
+    val type: String,        // near_miss|unsafe_act|unsafe_condition|accident|property_damage
+    val severity: String,
+    val description: String,
+    val status: String,      // open|investigating|capa|closed
+    val occurredAt: Long,
+)
+
+data class ComplianceItem(
+    val id: String,
+    val assetId: String,
+    val deviceType: String,
+    val nextInspection: Long?,
+    val certExpiry: Long?,
+    val status: ComplianceStatus,
+)
+
+data class UtilityReading(
+    val id: String,
+    val buildingId: String,
+    val utility: String,     // electricity|water|gas|diesel
+    val periodLabel: String, // e.g. "2026-05"
+    val consumption: Double,
+    val cost: Double,
+)
+
+enum class NotificationSeverity { CRITICAL, WARNING, INFO }
+
+/** Alerts derived from local data — overdue, expiry, low stock, critical faults. */
+data class AppNotification(
+    val id: String,
+    val type: String,
+    val title: String,
+    val body: String,
+    val severity: NotificationSeverity,
 )

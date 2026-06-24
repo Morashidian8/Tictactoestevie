@@ -9,15 +9,26 @@ product. It demonstrates the offline-first plumbing end to end so feature module
 
 ## What's implemented
 
-- **App shell**: Hilt application + WorkManager factory, Compose theme with status colors, Nav graph.
-- **Buildings**: list (search + sync pill) → detail with asset list. Offline-first repository.
+All screens run **fully offline** from seeded Room data, reachable via a 5-tab bottom nav
+(Home · Buildings · Work · Status · More).
+
+- **App shell**: Hilt application + WorkManager factory, Compose theme with status colors, bottom-nav
+  Nav graph.
+- **Dashboards (Home)**: four role views (Technician / Supervisor / Manager / Executive) with KPIs
+  computed live from Room — asset health score, PM compliance, availability, MTBF/MTTR, risk score,
+  asset value, maintenance & deferred cost, critical-fault and open-WO lists.
+- **Building Status Center**: per-building subsystem health-light grid (elevators, generators,
+  mechanical, fire alarm, PM, inspections).
+- **Buildings**: list (search + sync pill) → detail with asset list.
 - **Assets**: detail (identification, criticality, open faults) with Inspect / Report-fault actions.
 - **QR scan**: resolve a code to an asset (manual entry now; CameraX + ML Kit wiring noted).
 - **Dynamic inspection engine**: renders a checklist template (pass/fail/NA, numeric, text) and
   submits **offline** — writes to Room + queues an idempotent `sync_operation`.
-- **Corrective maintenance**: report a fault offline (local write + queued op).
+- **Work**: tabbed work orders + faults (corrective maintenance), reported offline.
+- **More hub**: Inventory (low-stock alerts) · HSE incidents · Fire compliance (status badges) ·
+  Utilities (consumption bars) · Notifications (derived alerts) · Map (offline building list).
 - **Sync engine**: `SyncWorker` runs the push/pull delta protocol against `/sync/*`
-  (`../docs/09-offline-sync.md`); periodic + on-demand via `SyncScheduler`.
+  (`../docs/09-offline-sync.md`); periodic + on-demand via `SyncScheduler`. Disabled in offline mode.
 
 ## Package layout (`io.facilityos.app`)
 
@@ -65,5 +76,5 @@ Requires Android SDK (compileSdk 34, JDK 17).
 ## Not yet wired (next steps)
 
 Auth/MFA screens, real CameraX scanner, media capture + presigned upload, SQLCipher encryption,
-conflict-resolution UI, dashboards, PM calendar, inventory/HSE/compliance modules, and the
-remaining feature screens from `../docs/05-mobile-screens-ux.md`.
+conflict-resolution UI, PM calendar, contractor module, document management, RCA/CAPA detail forms,
+data-entry forms for the read-only module screens, and report (PDF/Excel) generation.

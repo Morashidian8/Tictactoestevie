@@ -69,6 +69,7 @@ data class FaultEntity(
     val priority: String,
     val status: String,
     val reportedAt: Long,
+    val resolvedAt: Long? = null,
     val syncState: String,
 )
 
@@ -81,6 +82,49 @@ data class WorkOrderEntity(
     val status: String,
     val assetId: String?,
     val dueDate: Long?,
+    val cost: Double? = null,
+)
+
+@Entity(tableName = "spare_part")
+data class SparePartEntity(
+    @PrimaryKey val id: String,
+    val partNumber: String,
+    val description: String,
+    val qty: Double,
+    val minQty: Double,
+    val location: String,
+    val unitCost: Double,
+)
+
+@Entity(tableName = "hse_incident", indices = [Index("buildingId")])
+data class HseIncidentEntity(
+    @PrimaryKey val id: String,
+    val buildingId: String,
+    val type: String,
+    val severity: String,
+    val description: String,
+    val status: String,
+    val occurredAt: Long,
+)
+
+@Entity(tableName = "compliance_item", indices = [Index("assetId")])
+data class ComplianceItemEntity(
+    @PrimaryKey val id: String,
+    val assetId: String,
+    val deviceType: String,
+    val nextInspection: Long?,
+    val certExpiry: Long?,
+    val status: String,
+)
+
+@Entity(tableName = "utility_reading", indices = [Index("buildingId")])
+data class UtilityReadingEntity(
+    @PrimaryKey val id: String,
+    val buildingId: String,
+    val utility: String,
+    val periodLabel: String,
+    val consumption: Double,
+    val cost: Double,
 )
 
 /**
