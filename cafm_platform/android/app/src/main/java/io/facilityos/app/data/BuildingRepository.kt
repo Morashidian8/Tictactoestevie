@@ -1,5 +1,6 @@
 package io.facilityos.app.data
 
+import io.facilityos.app.core.config.AppConfig
 import io.facilityos.app.core.database.BuildingDao
 import io.facilityos.app.core.model.Building
 import io.facilityos.app.core.network.FacilityApi
@@ -11,11 +12,13 @@ import javax.inject.Singleton
 
 /**
  * Offline-first: the UI always observes Room; [refresh] pulls the network and updates the cache.
+ * In offline-only mode [refresh] is a no-op and the cache (seeded locally) is the only source.
  */
 @Singleton
 class BuildingRepository @Inject constructor(
     private val dao: BuildingDao,
     private val api: FacilityApi,
+    private val config: AppConfig,
 ) {
     fun observe(query: String): Flow<List<Building>> =
         dao.observe(query).map { list -> list.map { it.toModel() } }
@@ -24,6 +27,7 @@ class BuildingRepository @Inject constructor(
         dao.observeById(id).map { it?.toModel() }
 
     suspend fun refresh(): Result<Unit> = runCatching {
+        if (!config.remoteSyncEnabled) return@runCatching
         dao.upsertAll(api.buildings().map { it.toEntity() })
     }
 }

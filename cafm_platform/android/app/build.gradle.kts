@@ -20,6 +20,10 @@ android {
 
         // Backend base URL — override per build/flavor in a real setup.
         buildConfigField("String", "API_BASE_URL", "\"https://api.facilityos.io/api/v1/\"")
+        // Offline-only mode: when false the app never touches the network and runs entirely
+        // from the local Room database (seeded on first launch). Flip to true once a backend
+        // is available to enable the sync engine.
+        buildConfigField("boolean", "REMOTE_SYNC_ENABLED", "false")
     }
 
     buildTypes {

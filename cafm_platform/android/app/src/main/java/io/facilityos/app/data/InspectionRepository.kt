@@ -1,5 +1,6 @@
 package io.facilityos.app.data
 
+import io.facilityos.app.core.config.AppConfig
 import io.facilityos.app.core.database.InspectionDao
 import io.facilityos.app.core.database.InspectionEntity
 import io.facilityos.app.core.database.SyncDao
@@ -38,10 +39,12 @@ class InspectionRepository @Inject constructor(
     private val api: FacilityApi,
     private val scheduler: SyncScheduler,
     private val json: Json,
+    private val config: AppConfig,
 ) {
-    /** Load a template from cache; fetch + cache from network on a miss. */
+    /** Load a template from cache; fetch + cache from network on a miss (online mode only). */
     suspend fun template(id: String): ChecklistTemplate? {
         dao.template(id)?.let { return it.toModel() }
+        if (!config.remoteSyncEnabled) return null
         return runCatching {
             val entity = api.template(id).toEntity()
             dao.upsertTemplates(listOf(entity))

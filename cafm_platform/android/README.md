@@ -37,6 +37,22 @@ navigation/      FacilityOsNavGraph + Routes
 A single `:app` module for clarity; split into `:core:*` / `:feature:*` Gradle modules per
 `../docs/14-source-code-structure.md` as the team grows.
 
+## Offline-only mode (current default)
+
+The app ships in **fully offline** mode — it never touches the network and runs entirely from the
+local Room database:
+
+- `REMOTE_SYNC_ENABLED = false` (`app/build.gradle.kts`) gates every network path. The sync
+  scheduler and all repository `refresh()` / QR network-fallback calls become no-ops.
+- On first launch `DatabaseSeeder` populates the database with sample data — 5 buildings, assets
+  across categories (each with a QR code like `QR-TWR-A-002`), a monthly checklist template, and a
+  few open faults — so every screen is usable with no backend.
+- Inspections and faults you record are written to Room and queued as `sync_operation`s (the sync
+  pill shows the pending count); they simply wait until remote sync is turned on.
+
+To go online later, flip `REMOTE_SYNC_ENABLED` to `true` and point `API_BASE_URL` at a backend —
+no code changes needed; the sync engine then hydrates and pushes the queue.
+
 ## Build
 
 ```bash
@@ -44,9 +60,7 @@ cd cafm_platform/android
 ./gradlew assembleDebug
 ```
 
-Requires Android SDK (compileSdk 34, JDK 17). Without a backend, the inspection runner falls back
-to a built-in demo template so the offline submit path is exercisable. Set the API base URL via the
-`API_BASE_URL` `buildConfigField` in `app/build.gradle.kts`.
+Requires Android SDK (compileSdk 34, JDK 17).
 
 ## Not yet wired (next steps)
 

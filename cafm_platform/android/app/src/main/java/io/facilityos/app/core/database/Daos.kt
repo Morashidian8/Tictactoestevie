@@ -19,6 +19,9 @@ interface BuildingDao {
     @Query("SELECT * FROM building WHERE id = :id")
     fun observeById(id: String): Flow<BuildingEntity?>
 
+    @Query("SELECT COUNT(*) FROM building")
+    suspend fun count(): Int
+
     @Upsert
     suspend fun upsertAll(items: List<BuildingEntity>)
 }

@@ -9,6 +9,7 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import dagger.hilt.android.qualifiers.ApplicationContext
+import io.facilityos.app.core.config.AppConfig
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -16,13 +17,15 @@ import javax.inject.Singleton
 @Singleton
 class SyncScheduler @Inject constructor(
     @ApplicationContext private val context: Context,
+    private val config: AppConfig,
 ) {
     private val networkConstraint = Constraints.Builder()
         .setRequiredNetworkType(NetworkType.CONNECTED)
         .build()
 
-    /** Background heartbeat sync, only when connected. */
+    /** Background heartbeat sync, only when connected. Disabled in offline-only mode. */
     fun schedulePeriodicSync() {
+        if (!config.remoteSyncEnabled) return
         val request = PeriodicWorkRequestBuilder<SyncWorker>(15, TimeUnit.MINUTES)
             .setConstraints(networkConstraint)
             .build()
@@ -35,6 +38,7 @@ class SyncScheduler @Inject constructor(
 
     /** Kick an immediate sync (e.g. right after the user completes an inspection). */
     fun syncNow() {
+        if (!config.remoteSyncEnabled) return
         val request = OneTimeWorkRequestBuilder<SyncWorker>()
             .setConstraints(networkConstraint)
             .build()
