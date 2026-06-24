@@ -32,10 +32,10 @@ CONFIGS = [
     ("coinbase_15m", "Coinbase", "۱۵ دقیقه", "coinbase", "15m", 900, "BTC-USD"),
     ("coinbase_1h", "Coinbase", "۱ ساعت", "coinbase", "1h", 3600, "BTC-USD"),
 ]
-# Rolling-window lengths to precompute (minutes), 1h … 10h. A window is only
+# Rolling-window lengths to precompute (minutes), 30m … 10h. A window is only
 # built for a timeframe when it spans at least 2 candles (so 1h windows are
-# skipped on the 1-hour timeframe, etc.).
-WIN_LENGTHS = [60, 120, 180, 240, 300, 360, 480, 600]
+# skipped on the 1-hour timeframe, 30m only applies to 5m/15m, etc.).
+WIN_LENGTHS = [30, 60, 120, 180, 240, 300, 360, 480, 600]
 
 
 def pack(stats):
@@ -144,6 +144,18 @@ def main():
 
     if not datasets:
         raise SystemExit("No datasets built.")
+
+    # Real-data verification: highest 1-hour-window alternation actually seen
+    # per weekday on Binance 5m, with where/how often — so the deploy log
+    # proves the stats capture high alternations (e.g. 7).
+    bds = datasets.get("binance_5m")
+    if bds and "60" in bds["rolling"]:
+        print("\n--- بازرسی داده‌ی واقعی: بیشترین تناوبِ بازه‌ی ۱ساعته در هر روز (Binance 5m) ---")
+        for wd in A.WEEKDAY_DISPLAY_ORDER:
+            wins = bds["rolling"]["60"][str(wd)]
+            top = max(wins, key=lambda w: w["mx"])
+            print(f"{A.PERSIAN_WEEKDAY[wd]:>9}: بیشینه‌ی واقعی={top['mx']} "
+                  f"(در بازه {top['label']}، {top['mxc']} بار طی سال)")
 
     # Console comparison: Binance vs Coinbase, calmest rolling window per weekday.
     # 5m uses 60-min windows; 15m uses the new 120-min (8-candle) windows.
