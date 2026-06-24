@@ -1,0 +1,350 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>FacilityOS — UI Preview</title>
+<style>
+  :root{
+    --ok:#2E7D32; --warn:#F9A825; --crit:#C62828; --unk:#9E9E9E;
+    --bg:#0E1117; --panel:#161b22; --card:#1f2632; --ink:#e6edf3; --muted:#9aa4b2;
+    --primary:#1565C0; --primary2:#4DD0E1;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:linear-gradient(160deg,#0b0e13,#11161f);color:var(--ink);
+    font-family:'Segoe UI',Roboto,Inter,system-ui,sans-serif}
+  header{padding:28px 20px 8px;text-align:center}
+  header h1{margin:0;font-size:26px;letter-spacing:.5px}
+  header p{margin:6px 0 0;color:var(--muted);font-size:14px}
+  .legend{display:flex;gap:16px;justify-content:center;flex-wrap:wrap;margin:14px 0 6px;font-size:12px;color:var(--muted)}
+  .legend span{display:inline-flex;align-items:center;gap:6px}
+  .dot{width:11px;height:11px;border-radius:50%;display:inline-block}
+  .gallery{display:flex;flex-wrap:wrap;gap:26px;justify-content:center;padding:24px 16px 60px}
+  .phone{width:300px;background:#000;border-radius:34px;padding:10px;box-shadow:0 18px 50px rgba(0,0,0,.55)}
+  .screen{background:var(--bg);border-radius:26px;height:600px;overflow:hidden;display:flex;flex-direction:column}
+  .appbar{background:var(--panel);padding:14px 16px;font-weight:600;font-size:15px;
+    display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #222b38}
+  .appbar .pill{font-size:10px;font-weight:700;padding:3px 9px;border-radius:20px;color:#fff}
+  .body{padding:12px;overflow:auto;flex:1}
+  .scr-title{position:absolute;margin-top:-26px;font-size:11px;color:var(--muted)}
+  .caption{text-align:center;color:var(--muted);font-size:12px;margin-top:8px}
+  .card{background:var(--card);border-radius:14px;padding:13px 14px;margin-bottom:9px}
+  .row{display:flex;align-items:center;gap:10px}
+  .between{display:flex;align-items:center;justify-content:space-between}
+  .muted{color:var(--muted);font-size:12px}
+  .small{font-size:11px}
+  .b{font-weight:600}
+  .chip{font-size:10px;font-weight:700;padding:3px 9px;border-radius:20px;color:#fff;white-space:nowrap}
+  .kpis{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+  .kpi{background:var(--card);border-radius:14px;padding:12px}
+  .kpi .v{font-size:24px;font-weight:800;line-height:1}
+  .kpi .l{font-size:11px;color:var(--muted);margin-top:4px}
+  .tabs{display:flex;border-bottom:1px solid #222b38}
+  .tabs div{flex:1;text-align:center;padding:10px;font-size:13px;color:var(--muted)}
+  .tabs div.active{color:var(--ink);border-bottom:2px solid var(--primary2);font-weight:600}
+  .fab{position:absolute;margin-top:512px;margin-left:185px;background:var(--primary);
+    color:#fff;border-radius:18px;padding:10px 16px;font-size:12px;font-weight:700;box-shadow:0 6px 16px rgba(0,0,0,.5)}
+  .bottomnav{display:flex;background:var(--panel);border-top:1px solid #222b38}
+  .bottomnav div{flex:1;text-align:center;padding:8px 2px;font-size:9px;color:var(--muted)}
+  .bottomnav div.active{color:var(--primary2)}
+  .bottomnav .ic{font-size:16px;display:block}
+  .seg{display:flex;gap:6px;margin-bottom:10px;overflow:auto}
+  .seg div{font-size:11px;padding:5px 11px;border-radius:20px;background:#222b38;color:var(--muted);white-space:nowrap}
+  .seg div.active{background:var(--primary);color:#fff;font-weight:600}
+  .bar{height:8px;border-radius:20px;background:#2b3543;margin:4px 0 10px;overflow:hidden}
+  .bar>i{display:block;height:8px;border-radius:20px}
+  .opt{font-size:10px;font-weight:700;padding:5px 10px;border-radius:8px;border:1px solid #33404f;color:var(--muted)}
+  .opt.sel{background:var(--crit);color:#fff;border-color:var(--crit)}
+  .field{background:#0c1117;border:1px solid #2b3543;border-radius:8px;padding:8px 10px;font-size:12px;color:var(--ink)}
+  .btn{background:var(--primary);color:#fff;text-align:center;border-radius:10px;padding:11px;font-size:13px;font-weight:700;margin-top:8px}
+  .btn.ghost{background:transparent;border:1px solid #33404f;color:var(--ink)}
+</style>
+</head>
+<body>
+<header>
+  <h1>FacilityOS — CMMS + CAFM</h1>
+  <p>Offline Android UI preview · seeded data · status colors match the app</p>
+  <div class="legend">
+    <span><i class="dot" style="background:var(--ok)"></i>OK</span>
+    <span><i class="dot" style="background:var(--warn)"></i>Attention</span>
+    <span><i class="dot" style="background:var(--crit)"></i>Critical</span>
+    <span><i class="dot" style="background:var(--unk)"></i>Unknown / NA</span>
+  </div>
+</header>
+
+<div class="gallery">
+
+  <!-- 1. MANAGER DASHBOARD -->
+  <div>
+  <div class="phone"><div class="screen">
+    <div class="appbar"><span>Dashboard</span><span class="pill" style="background:var(--ok)">Synced</span></div>
+    <div class="body">
+      <div class="seg"><div>Technician</div><div class="active">Manager</div><div>Supervisor</div><div>Executive</div></div>
+      <div class="kpis">
+        <div class="kpi"><div class="v" style="color:var(--ok)">87</div><div class="l">Asset health / 100</div></div>
+        <div class="kpi"><div class="v" style="color:var(--warn)">40%</div><div class="l">PM compliance</div></div>
+        <div class="kpi"><div class="v" style="color:var(--crit)">1</div><div class="l">Critical faults</div></div>
+        <div class="kpi"><div class="v" style="color:var(--ok)">96%</div><div class="l">Availability</div></div>
+        <div class="kpi"><div class="v">5</div><div class="l">Buildings</div></div>
+        <div class="kpi"><div class="v">30</div><div class="l">Assets</div></div>
+      </div>
+      <div class="b" style="margin:12px 0 8px">Critical faults (1)</div>
+      <div class="card between"><span>Fire pump fails weekly test</span><span class="chip" style="background:var(--crit)">CRITICAL</span></div>
+    </div>
+    <div class="bottomnav">
+      <div class="active"><span class="ic">▦</span>Home</div><div><span class="ic">🏢</span>Buildings</div>
+      <div><span class="ic">🗂</span>Work</div><div><span class="ic">❤</span>Status</div><div><span class="ic">⋯</span>More</div>
+    </div>
+  </div></div>
+  <div class="caption">Manager dashboard</div>
+  </div>
+
+  <!-- 2. EXECUTIVE DASHBOARD -->
+  <div>
+  <div class="phone"><div class="screen">
+    <div class="appbar"><span>Dashboard</span><span class="pill" style="background:var(--ok)">Synced</span></div>
+    <div class="body">
+      <div class="seg"><div>Technician</div><div>Manager</div><div>Supervisor</div><div class="active">Executive</div></div>
+      <div class="kpis">
+        <div class="kpi"><div class="v">$3.0M</div><div class="l">Asset value</div></div>
+        <div class="kpi"><div class="v">$600</div><div class="l">Maint. cost</div></div>
+        <div class="kpi"><div class="v" style="color:var(--warn)">$2k</div><div class="l">Deferred cost</div></div>
+        <div class="kpi"><div class="v">96%</div><div class="l">Availability</div></div>
+        <div class="kpi"><div class="v">540d</div><div class="l">MTBF</div></div>
+        <div class="kpi"><div class="v">36h</div><div class="l">MTTR</div></div>
+        <div class="kpi"><div class="v" style="color:var(--ok)">30</div><div class="l">Risk score</div></div>
+        <div class="kpi"><div class="v" style="color:var(--ok)">87</div><div class="l">Health</div></div>
+      </div>
+    </div>
+    <div class="bottomnav">
+      <div class="active"><span class="ic">▦</span>Home</div><div><span class="ic">🏢</span>Buildings</div>
+      <div><span class="ic">🗂</span>Work</div><div><span class="ic">❤</span>Status</div><div><span class="ic">⋯</span>More</div>
+    </div>
+  </div></div>
+  <div class="caption">Executive dashboard</div>
+  </div>
+
+  <!-- 3. BUILDINGS -->
+  <div>
+  <div class="phone"><div class="screen">
+    <div class="appbar"><span>Buildings</span><span class="pill" style="background:var(--ok)">Synced</span></div>
+    <div class="body">
+      <div class="field" style="margin-bottom:10px">🔍 Search buildings…</div>
+      <div class="card"><div class="row"><i class="dot" style="background:var(--ok)"></i>
+        <div style="flex:1"><div class="b">Tower A</div><div class="muted">King Fahd Rd</div></div>
+        <div style="text-align:right"><div class="small">6 assets</div></div></div></div>
+      <div class="card"><div class="row"><i class="dot" style="background:var(--crit)"></i>
+        <div style="flex:1"><div class="b">Mall B</div><div class="muted">Olaya St</div></div>
+        <div style="text-align:right"><div class="small">6 assets</div><div class="small" style="color:var(--crit)">⚠ 2 open</div></div></div></div>
+      <div class="card"><div class="row"><i class="dot" style="background:var(--warn)"></i>
+        <div style="flex:1"><div class="b">Clinic C</div><div class="muted">Takhassusi St</div></div>
+        <div style="text-align:right"><div class="small">6 assets</div><div class="small" style="color:var(--crit)">⚠ 1 open</div></div></div></div>
+      <div class="card"><div class="row"><i class="dot" style="background:var(--ok)"></i>
+        <div style="flex:1"><div class="b">Office D</div><div class="muted">Imam Saud Rd</div></div>
+        <div style="text-align:right"><div class="small">6 assets</div></div></div></div>
+      <div class="card"><div class="row"><i class="dot" style="background:var(--ok)"></i>
+        <div style="flex:1"><div class="b">Warehouse E</div><div class="muted">Industrial Area 2</div></div>
+        <div style="text-align:right"><div class="small">6 assets</div></div></div></div>
+    </div>
+    <div class="fab">＋ Scan</div>
+    <div class="bottomnav">
+      <div><span class="ic">▦</span>Home</div><div class="active"><span class="ic">🏢</span>Buildings</div>
+      <div><span class="ic">🗂</span>Work</div><div><span class="ic">❤</span>Status</div><div><span class="ic">⋯</span>More</div>
+    </div>
+  </div></div>
+  <div class="caption">Buildings list</div>
+  </div>
+
+  <!-- 4. STATUS CENTER -->
+  <div>
+  <div class="phone"><div class="screen">
+    <div class="appbar"><span>Building Status Center</span></div>
+    <div class="body">
+      <div class="card">
+        <div class="row"><i class="dot" style="background:var(--crit)"></i><span class="b">Mall B</span>
+          <span class="small" style="color:var(--crit);margin-left:6px">2 open</span></div>
+        <div class="kpis" style="margin-top:8px">
+          <div class="row"><i class="dot" style="background:var(--crit)"></i><span class="small">Elevators</span></div>
+          <div class="row"><i class="dot" style="background:var(--ok)"></i><span class="small">Generators</span></div>
+          <div class="row"><i class="dot" style="background:var(--warn)"></i><span class="small">Mechanical</span></div>
+          <div class="row"><i class="dot" style="background:var(--crit)"></i><span class="small">Fire alarm</span></div>
+          <div class="row"><i class="dot" style="background:var(--warn)"></i><span class="small">PM</span></div>
+          <div class="row"><i class="dot" style="background:var(--ok)"></i><span class="small">Inspections</span></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="row"><i class="dot" style="background:var(--ok)"></i><span class="b">Tower A</span></div>
+        <div class="kpis" style="margin-top:8px">
+          <div class="row"><i class="dot" style="background:var(--ok)"></i><span class="small">Elevators</span></div>
+          <div class="row"><i class="dot" style="background:var(--ok)"></i><span class="small">Generators</span></div>
+          <div class="row"><i class="dot" style="background:var(--ok)"></i><span class="small">Mechanical</span></div>
+          <div class="row"><i class="dot" style="background:var(--ok)"></i><span class="small">Fire alarm</span></div>
+          <div class="row"><i class="dot" style="background:var(--ok)"></i><span class="small">PM</span></div>
+          <div class="row"><i class="dot" style="background:var(--ok)"></i><span class="small">Inspections</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="bottomnav">
+      <div><span class="ic">▦</span>Home</div><div><span class="ic">🏢</span>Buildings</div>
+      <div><span class="ic">🗂</span>Work</div><div class="active"><span class="ic">❤</span>Status</div><div><span class="ic">⋯</span>More</div>
+    </div>
+  </div></div>
+  <div class="caption">Building Status Center</div>
+  </div>
+
+  <!-- 5. ASSET DETAIL -->
+  <div>
+  <div class="phone"><div class="screen">
+    <div class="appbar"><span>‹ Diesel Generator 2</span></div>
+    <div class="body">
+      <div class="card">
+        <div class="row" style="margin-bottom:6px"><span class="chip" style="background:var(--crit)">CRITICAL</span><span class="muted">In service</span></div>
+        <div class="b">MALL-B-002</div>
+        <div class="muted">Caterpillar · 3512C</div>
+        <div class="small muted">S/N SN-MALL-B-1001</div>
+      </div>
+      <div class="row" style="gap:9px">
+        <div class="btn" style="flex:1">🩺 Inspect</div>
+        <div class="btn ghost" style="flex:1">⚠ Fault</div>
+      </div>
+      <div class="b" style="margin:12px 0 8px">Open faults</div>
+      <div class="card between"><span class="small">Fire pump fails weekly test</span><span class="chip" style="background:var(--crit)">CRITICAL</span></div>
+    </div>
+    <div class="bottomnav">
+      <div><span class="ic">▦</span>Home</div><div class="active"><span class="ic">🏢</span>Buildings</div>
+      <div><span class="ic">🗂</span>Work</div><div><span class="ic">❤</span>Status</div><div><span class="ic">⋯</span>More</div>
+    </div>
+  </div></div>
+  <div class="caption">Asset detail (QR target)</div>
+  </div>
+
+  <!-- 6. CHECKLIST -->
+  <div>
+  <div class="phone"><div class="screen">
+    <div class="appbar"><span>Monthly PM — Generic</span></div>
+    <div class="body">
+      <div class="card"><div class="b small">General condition acceptable?</div>
+        <div class="row" style="margin-top:8px"><span class="opt sel">PASS</span><span class="opt">FAIL</span><span class="opt">N/A</span></div></div>
+      <div class="card"><div class="b small">No abnormal noise/vibration?</div>
+        <div class="row" style="margin-top:8px"><span class="opt sel">PASS</span><span class="opt">FAIL</span><span class="opt">N/A</span></div></div>
+      <div class="card"><div class="b small">Operating temperature</div>
+        <div class="field" style="margin-top:8px">78.5 °C</div><div class="small" style="color:var(--warn)">Max 80</div></div>
+      <div class="card"><div class="b small">Control panel photo</div>
+        <div class="field" style="margin-top:8px">📷  Capture / attach</div></div>
+      <div class="btn">Complete inspection</div>
+    </div>
+  </div></div>
+  <div class="caption">Dynamic checklist (saved offline)</div>
+  </div>
+
+  <!-- 7. WORK -->
+  <div>
+  <div class="phone"><div class="screen">
+    <div class="appbar"><span>My Work</span></div>
+    <div class="tabs"><div class="active">Work orders (6)</div><div>Faults (5)</div></div>
+    <div class="body">
+      <div class="card"><div class="b small">WO-1003 · Quarterly PM — Chiller</div><div class="muted">PM · scheduled</div><div class="small muted">Est. $450</div></div>
+      <div class="card"><div class="b small">WO-1004 · Repair fire pump</div><div class="muted">CM · in progress</div><div class="small muted">Est. $1200</div></div>
+      <div class="card"><div class="b small">WO-1005 · Annual PM — UPS</div><div class="muted">PM · assigned</div><div class="small muted">Est. $600</div></div>
+      <div class="card"><div class="b small">WO-1001 · Monthly PM — Elevator</div><div class="muted">PM · completed</div><div class="small muted">Est. $320</div></div>
+    </div>
+    <div class="bottomnav">
+      <div><span class="ic">▦</span>Home</div><div><span class="ic">🏢</span>Buildings</div>
+      <div class="active"><span class="ic">🗂</span>Work</div><div><span class="ic">❤</span>Status</div><div><span class="ic">⋯</span>More</div>
+    </div>
+  </div></div>
+  <div class="caption">Work orders + faults</div>
+  </div>
+
+  <!-- 8. INVENTORY -->
+  <div>
+  <div class="phone"><div class="screen">
+    <div class="appbar"><span>‹ Spare Parts & Inventory</span></div>
+    <div class="body">
+      <div class="b small" style="color:var(--crit);margin-bottom:8px">⚠ 2 item(s) below reorder level</div>
+      <div class="card between"><div><div class="b small">AHU air filter G4</div><div class="muted">FLT-AHU-22 · WH-A · Rack 3</div></div><div class="b" style="color:var(--ok)">24 / 10</div></div>
+      <div class="card between"><div><div class="b small">V-belt 1250mm</div><div class="muted">BLT-V-1250 · WH-A · Rack 1</div></div><div class="b" style="color:var(--crit)">6 / 8</div></div>
+      <div class="card between"><div><div class="b small">UPS battery 12V 9Ah</div><div class="muted">BAT-UPS-12 · WH-B · Rack 5</div></div><div class="b" style="color:var(--ok)">40 / 20</div></div>
+      <div class="card between"><div><div class="b small">Engine oil 15W40 (L)</div><div class="muted">OIL-GEN · WH-A · Bay 2</div></div><div class="b" style="color:var(--crit)">3 / 20</div></div>
+    </div>
+  </div></div>
+  <div class="caption">Inventory (low-stock alerts)</div>
+  </div>
+
+  <!-- 9. COMPLIANCE -->
+  <div>
+  <div class="phone"><div class="screen">
+    <div class="appbar"><span>‹ Fire Compliance</span></div>
+    <div class="body">
+      <div class="card between"><div><div class="b small">Fire pump</div><div class="muted">Next: 2026-06-19 · Cert: 2026-08</div></div><span class="chip" style="background:var(--crit)">OVERDUE</span></div>
+      <div class="card between"><div><div class="b small">Fire pump</div><div class="muted">Next: 2026-07-14 · Cert: 2027-01</div></div><span class="chip" style="background:var(--ok)">COMPLIANT</span></div>
+      <div class="card between"><div><div class="b small">Sprinkler system</div><div class="muted">Next: 2026-07-04 · Cert: 2026-07</div></div><span class="chip" style="background:var(--warn)">DUE SOON</span></div>
+      <div class="card between"><div><div class="b small">Extinguishers</div><div class="muted">Next: 2026-06-09 · Cert: 2026-06</div></div><span class="chip" style="background:var(--crit)">NON COMPLIANT</span></div>
+    </div>
+  </div></div>
+  <div class="caption">Fire compliance status</div>
+  </div>
+
+  <!-- 10. UTILITIES -->
+  <div>
+  <div class="phone"><div class="screen">
+    <div class="appbar"><span>‹ Utility Management</span></div>
+    <div class="body">
+      <div class="card">
+        <div class="b">Electricity</div><div class="muted" style="margin-bottom:6px">Total cost: $34,920</div>
+        <div class="small">2026-01  60500</div><div class="bar"><i style="width:84%;background:var(--warn)"></i></div>
+        <div class="small">2026-03  63500</div><div class="bar"><i style="width:90%;background:var(--warn)"></i></div>
+        <div class="small">2026-06  68000</div><div class="bar"><i style="width:100%;background:var(--warn)"></i></div>
+      </div>
+      <div class="card">
+        <div class="b">Water</div><div class="muted" style="margin-bottom:6px">Total cost: $2,640</div>
+        <div class="small">2026-01  4000</div><div class="bar"><i style="width:80%;background:var(--ok)"></i></div>
+        <div class="small">2026-06  4500</div><div class="bar"><i style="width:100%;background:var(--ok)"></i></div>
+      </div>
+    </div>
+  </div></div>
+  <div class="caption">Utility consumption trends</div>
+  </div>
+
+  <!-- 11. NOTIFICATIONS -->
+  <div>
+  <div class="phone"><div class="screen">
+    <div class="appbar"><span>‹ Notifications (8)</span></div>
+    <div class="body">
+      <div class="card row"><i class="dot" style="background:var(--crit)"></i><div><div class="b small">Critical fault open</div><div class="muted">Fire pump fails weekly test</div></div></div>
+      <div class="card row"><i class="dot" style="background:var(--crit)"></i><div><div class="b small">Compliance overdue</div><div class="muted">Fire pump requires attention</div></div></div>
+      <div class="card row"><i class="dot" style="background:var(--crit)"></i><div><div class="b small">Compliance non_compliant</div><div class="muted">Extinguishers requires attention</div></div></div>
+      <div class="card row"><i class="dot" style="background:var(--warn)"></i><div><div class="b small">Inspection due soon</div><div class="muted">Sprinkler system</div></div></div>
+      <div class="card row"><i class="dot" style="background:var(--warn)"></i><div><div class="b small">Low stock</div><div class="muted">V-belt 1250mm (6/8)</div></div></div>
+      <div class="card row"><i class="dot" style="background:var(--warn)"></i><div><div class="b small">Low stock</div><div class="muted">Engine oil 15W40 (3/20)</div></div></div>
+    </div>
+  </div></div>
+  <div class="caption">Auto-derived alerts</div>
+  </div>
+
+  <!-- 12. MAP -->
+  <div>
+  <div class="phone"><div class="screen">
+    <div class="appbar"><span>‹ Map</span></div>
+    <div class="body">
+      <div class="muted small" style="margin-bottom:10px">Offline mode: interactive map mounts here when online. Buildings & coordinates below.</div>
+      <div class="card row"><i class="dot" style="background:var(--ok)"></i><div style="flex:1"><div class="b small">Tower A</div><div class="muted">24.7136, 46.6753</div></div></div>
+      <div class="card row"><i class="dot" style="background:var(--crit)"></i><div style="flex:1"><div class="b small">Mall B</div><div class="muted">24.6900, 46.6850</div></div></div>
+      <div class="card row"><i class="dot" style="background:var(--warn)"></i><div style="flex:1"><div class="b small">Clinic C</div><div class="muted">24.7200, 46.6400</div></div></div>
+      <div class="card row"><i class="dot" style="background:var(--ok)"></i><div style="flex:1"><div class="b small">Office D</div><div class="muted">24.6500, 46.7100</div></div></div>
+    </div>
+    <div class="bottomnav">
+      <div><span class="ic">▦</span>Home</div><div><span class="ic">🏢</span>Buildings</div>
+      <div><span class="ic">🗂</span>Work</div><div><span class="ic">❤</span>Status</div><div class="active"><span class="ic">⋯</span>More</div>
+    </div>
+  </div></div>
+  <div class="caption">Map (offline list)</div>
+  </div>
+
+</div>
+
+<p style="text-align:center;color:#5b6573;font-size:12px;padding-bottom:40px">
+  Static mockup of the FacilityOS Android app · values mirror the seeded offline database.
+</p>
+</body>
+</html>
