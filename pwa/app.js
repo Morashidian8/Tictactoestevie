@@ -46,6 +46,32 @@ function histBars(hist) {
   return wrap;
 }
 
+function winLabel(min) {
+  const h = min / 60;
+  return Number.isInteger(h) ? `${h.toLocaleString('fa')} ساعت` : `${min} دقیقه`;
+}
+
+// Rebuild the window-length dropdown from the lengths the dataset actually has.
+function syncWinlen(ds) {
+  const sel = $('winlen');
+  const want = Object.keys(ds.rolling).map(Number).sort((a, b) => a - b);
+  const current = sel.value;
+  const have = Array.from(sel.options).map((o) => Number(o.value));
+  const same = have.length === want.length && have.every((v, i) => v === want[i]);
+  if (!same) {
+    sel.innerHTML = '';
+    for (const wm of want) {
+      const o = document.createElement('option');
+      o.value = String(wm);
+      o.textContent = winLabel(wm);
+      sel.appendChild(o);
+    }
+    // Keep the previous choice if still available, else prefer 60, else first.
+    sel.value = want.includes(Number(current)) ? current
+      : (want.includes(60) ? '60' : String(want[0]));
+  }
+}
+
 function render() {
   if (!DATA) return;
   const key = $('exchange').value + '_' + $('tf').value;
@@ -65,18 +91,26 @@ function render() {
   const order = $('order').value;
   const byMax = order.startsWith('max');
   const high = order.endsWith('high');
-  // Window length only applies to rolling windows; clock buckets are 1 hour.
+
+  // Window length: options come from the dataset's available rolling lengths.
+  syncWinlen(ds);
   const winLen = mode === 'rolling' ? parseInt($('winlen').value, 10) : 60;
   $('winlen').disabled = mode !== 'rolling';
 
-  const winLabel = { 60: '۱ ساعت', 120: '۲ ساعت', 180: '۳ ساعت' }[winLen] || `${winLen} دقیقه`;
   const m = ds.meta;
   $('meta').innerHTML =
-    `${m.exchange} • تایم‌فریم ${m.timeframe} • بازه ${winLabel} • ` +
+    `${m.exchange} • تایم‌فریم ${m.timeframe} • بازه ${winLabel(winLen)} • ` +
     `${m.candles.toLocaleString('en')} کندل • ${m.oldest} تا ${m.newest} • ${DATA.meta.tz}`;
 
-  const days = wdSel === 'all' ? DATA.order : [parseInt(wdSel, 10)];
   out.innerHTML = '';
+  // Clock mode is unavailable on the 1-hour timeframe (one candle per hour).
+  if (mode === 'clock' && Object.keys(ds.clock).length === 0) {
+    out.innerHTML = '<div class="day"><div class="win">حالت «راس‌ساعت» برای تایم‌فریم ۱ ساعته معنی ندارد؛ از حالت «لغزان» استفاده کن.</div></div>';
+    renderGap();
+    return;
+  }
+
+  const days = wdSel === 'all' ? DATA.order : [parseInt(wdSel, 10)];
 
   for (const wd of days) {
     const source = mode === 'rolling'
