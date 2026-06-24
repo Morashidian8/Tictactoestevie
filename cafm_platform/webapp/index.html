@@ -1,0 +1,593 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#0E1117" />
+<title>سامانه نگهداری و تعمیرات</title>
+<style>
+  :root{
+    --ok:#2E7D32; --warn:#F9A825; --crit:#C62828; --unk:#9E9E9E;
+    --bg:#0E1117; --panel:#161b22; --card:#1f2632; --ink:#e6edf3; --muted:#9aa4b2;
+    --primary:#1565C0; --primary2:#4DD0E1; --line:#222b38;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{background:var(--bg);color:var(--ink);
+    font-family:Vazirmatn,'Segoe UI',Tahoma,Roboto,system-ui,sans-serif;
+    -webkit-tap-highlight-color:transparent}
+  #app{max-width:480px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column;
+    background:var(--bg);position:relative}
+  .appbar{background:var(--panel);padding:14px 16px;font-weight:700;font-size:16px;
+    display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line);
+    position:sticky;top:0;z-index:10}
+  .appbar .back{cursor:pointer;font-size:20px;padding:0 6px}
+  .body{flex:1;overflow:auto;padding:12px;padding-bottom:80px}
+  .pill{font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;color:#fff;white-space:nowrap}
+  .card{background:var(--card);border-radius:14px;padding:14px;margin-bottom:9px}
+  .card.tap{cursor:pointer}
+  .row{display:flex;align-items:center;gap:10px}
+  .between{display:flex;align-items:center;justify-content:space-between;gap:8px}
+  .col{display:flex;flex-direction:column}
+  .grow{flex:1}
+  .muted{color:var(--muted);font-size:12px}
+  .small{font-size:11px}
+  .b{font-weight:700}
+  .dot{width:12px;height:12px;border-radius:50%;flex:none}
+  .chip{font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;color:#fff;white-space:nowrap}
+  .kpis{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+  .kpi{background:var(--card);border-radius:14px;padding:13px}
+  .kpi .v{font-size:25px;font-weight:800;line-height:1}
+  .kpi .l{font-size:12px;color:var(--muted);margin-top:5px}
+  .seg{display:flex;gap:6px;overflow:auto;margin-bottom:12px;padding-bottom:2px}
+  .seg div{font-size:12px;padding:6px 12px;border-radius:20px;background:#222b38;color:var(--muted);
+    white-space:nowrap;cursor:pointer}
+  .seg div.active{background:var(--primary);color:#fff;font-weight:700}
+  .tabs{display:flex;border-bottom:1px solid var(--line);margin:-12px -12px 12px}
+  .tabs div{flex:1;text-align:center;padding:12px;font-size:14px;color:var(--muted);cursor:pointer}
+  .tabs div.active{color:var(--ink);border-bottom:2px solid var(--primary2);font-weight:700}
+  .title{font-weight:700;font-size:15px;margin:14px 0 8px}
+  .bar{height:9px;border-radius:20px;background:#2b3543;margin:4px 0 10px;overflow:hidden}
+  .bar>i{display:block;height:9px;border-radius:20px}
+  label{display:block;font-size:13px;color:var(--muted);margin:10px 0 5px}
+  input,select,textarea{width:100%;background:#0c1117;border:1px solid #2b3543;border-radius:10px;
+    padding:11px;font-size:14px;color:var(--ink);font-family:inherit}
+  input:focus,select,textarea:focus{outline:none;border-color:var(--primary2)}
+  .opts{display:flex;gap:8px;flex-wrap:wrap}
+  .opt{font-size:13px;font-weight:700;padding:8px 12px;border-radius:10px;border:1px solid #33404f;
+    color:var(--muted);cursor:pointer}
+  .opt.sel{background:var(--primary);color:#fff;border-color:var(--primary)}
+  .opt.fail.sel{background:var(--crit);border-color:var(--crit)}
+  .opt.pass.sel{background:var(--ok);border-color:var(--ok)}
+  .btn{display:block;width:100%;background:var(--primary);color:#fff;text-align:center;border:none;
+    border-radius:12px;padding:13px;font-size:15px;font-weight:700;cursor:pointer;margin-top:16px;font-family:inherit}
+  .btn:disabled{opacity:.45}
+  .btn.ghost{background:transparent;border:1px solid #33404f;color:var(--ink)}
+  .btnrow{display:flex;gap:10px}
+  .nav{position:fixed;bottom:0;left:0;right:0;max-width:480px;margin:0 auto;display:flex;
+    background:var(--panel);border-top:1px solid var(--line)}
+  .nav div{flex:1;text-align:center;padding:9px 2px;font-size:10px;color:var(--muted);cursor:pointer}
+  .nav div.active{color:var(--primary2)}
+  .nav .ic{font-size:19px;display:block;margin-bottom:2px}
+  .fab{position:fixed;bottom:78px;left:50%;transform:translateX(-50%);max-width:480px;width:auto}
+  .fab button{background:var(--primary);color:#fff;border:none;border-radius:30px;padding:12px 22px;
+    font-size:14px;font-weight:700;box-shadow:0 6px 18px rgba(0,0,0,.5);cursor:pointer;font-family:inherit}
+  .center{display:flex;flex-direction:column;justify-content:center;min-height:80vh;padding:8px}
+  .h1{font-size:22px;font-weight:800;text-align:center}
+  .sub{color:var(--muted);font-size:13px;text-align:center;margin:8px 0 22px}
+  .badge{position:absolute;top:8px;left:14px;background:var(--crit);color:#fff;font-size:10px;
+    font-weight:700;border-radius:20px;padding:2px 7px}
+  .empty{color:var(--muted);text-align:center;padding:40px 0;font-size:13px}
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+//=================== utilities ===================
+const FA = ['۰','۱','۲','۳','۴','۵','۶','۷','۸','۹'];
+const fa = s => String(s).replace(/[0-9]/g, d => FA[+d]);
+const money = v => v>=1e6 ? '$'+(v/1e6).toFixed(1)+'M' : v>=1000 ? '$'+Math.round(v/1000)+'k' : '$'+Math.round(v);
+const DAY = 86400000, now = () => Date.now();
+const uid = () => 'x'+Math.random().toString(36).slice(2,9);
+const esc = s => String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const lightOf = st => ({OPERATIONAL:'var(--ok)',PARTIAL:'var(--warn)',CRITICAL:'var(--crit)',CLOSED:'var(--unk)'}[st]||'var(--unk)');
+
+const CRIT_FA = {CRITICAL:'بحرانی',HIGH:'بالا',MEDIUM:'متوسط',LOW:'پایین'};
+const CRIT_COLOR = {CRITICAL:'var(--crit)',HIGH:'#EF6C00',MEDIUM:'var(--warn)',LOW:'var(--unk)'};
+const FAULT_FA = {OPEN:'باز',ASSIGNED:'ارجاع‌شده',IN_PROGRESS:'در حال انجام',WAITING_PARTS:'منتظر قطعه',COMPLETED:'تکمیل‌شده',CLOSED:'بسته‌شده'};
+const WO_FA = {SCHEDULED:'زمان‌بندی‌شده',ASSIGNED:'ارجاع‌شده',IN_PROGRESS:'در حال انجام',ON_HOLD:'متوقف',COMPLETED:'تکمیل‌شده',CLOSED:'بسته‌شده',CANCELLED:'لغوشده'};
+const WO_TYPE_FA = {pm:'پیشگیرانه',cm:'اصلاحی'};
+const CMP_FA = {COMPLIANT:'منطبق',DUE_SOON:'نزدیک',OVERDUE:'معوق',NON_COMPLIANT:'نامنطبق'};
+const CMP_COLOR = {COMPLIANT:'var(--ok)',DUE_SOON:'var(--warn)',OVERDUE:'var(--crit)',NON_COMPLIANT:'var(--crit)'};
+const HSE_TYPE_FA = {near_miss:'شبه‌حادثه',unsafe_act:'عمل ناایمن',unsafe_condition:'شرایط ناایمن',accident:'حادثه',property_damage:'خسارت مالی'};
+const UTIL_FA = {electricity:'برق',water:'آب',gas:'گاز',diesel:'گازوئیل'};
+const fmtDate = ts => ts ? fa(new Date(ts).toISOString().slice(0,10)) : '—';
+
+//=================== store + seed ===================
+const KEY = 'facilityos_v1';
+let DB = null;
+function save(){ localStorage.setItem(KEY, JSON.stringify(DB)); }
+function load(){
+  const raw = localStorage.getItem(KEY);
+  if(raw){ DB = JSON.parse(raw); return; }
+  DB = seed(); save();
+}
+function seed(){
+  const n = now();
+  const buildings = [
+    {id:'b1',code:'TWR-A',name:'برج A',address:'خیابان ملک فهد',lat:24.7136,lng:46.6753,floors:18,lastInsp:n-2*DAY,status:'OPERATIONAL'},
+    {id:'b2',code:'MALL-B',name:'مرکز خرید B',address:'خیابان العلیا',lat:24.69,lng:46.685,floors:4,lastInsp:n-21*DAY,status:'CRITICAL'},
+    {id:'b3',code:'CLN-C',name:'کلینیک C',address:'خیابان تخصصی',lat:24.72,lng:46.64,floors:6,lastInsp:n-5*DAY,status:'PARTIAL'},
+    {id:'b4',code:'OFF-D',name:'ساختمان اداری D',address:'خیابان امام سعود',lat:24.65,lng:46.71,floors:12,lastInsp:n-9*DAY,status:'OPERATIONAL'},
+    {id:'b5',code:'WHS-E',name:'انبار E',address:'شهرک صنعتی ۲',lat:24.6,lng:46.8,floors:2,lastInsp:n-40*DAY,status:'OPERATIONAL'},
+  ];
+  const specs = [
+    {cat:'حمل‌ونقل عمودی',name:'آسانسور مسافری',mfr:'KONE',model:'MonoSpace 500',crit:'HIGH'},
+    {cat:'برقی',name:'دیزل ژنراتور',mfr:'کاترپیلار',model:'3512C',crit:'CRITICAL'},
+    {cat:'برقی',name:'سیستم UPS',mfr:'اشنایدر',model:'Galaxy VS',crit:'HIGH'},
+    {cat:'مکانیکی',name:'چیلر',mfr:'Trane',model:'RTAC 140',crit:'MEDIUM'},
+    {cat:'اعلام و اطفاء حریق',name:'پمپ آتش‌نشانی',mfr:'Grundfos',model:'NK 80-250',crit:'CRITICAL'},
+    {cat:'مکانیکی',name:'هواساز',mfr:'Daikin',model:'AHU-M 22',crit:'LOW'},
+  ];
+  const assets = [];
+  buildings.forEach(b => specs.forEach((s,i)=>{
+    const code = `${b.code}-${String(i+1).padStart(3,'0')}`;
+    assets.push({id:`a-${b.id}-${i}`,buildingId:b.id,cat:s.cat,name:`${s.name} ${i+1}`,code,
+      qr:`QR-${code}`,mfr:s.mfr,model:s.model,serial:`SN-${b.code}-${1000+i}`,crit:s.crit,
+      warrantyEnd:n+(180+i*30)*DAY,status: (b.id==='b2'&&i===4)?'خارج از سرویس':'در سرویس'});
+  }));
+  const faults = [
+    {id:'f1',assetId:'a-b2-4',title:'ناموفقی پمپ آتش‌نشانی در تست هفتگی',priority:'CRITICAL',status:'OPEN',reportedAt:n-DAY,resolvedAt:null},
+    {id:'f2',assetId:'a-b2-0',title:'بازشدن مجدد درب آسانسور ۱',priority:'HIGH',status:'ASSIGNED',reportedAt:n-3*DAY,resolvedAt:null},
+    {id:'f3',assetId:'a-b3-2',title:'هشدار باتری UPS',priority:'MEDIUM',status:'OPEN',reportedAt:n-6*DAY,resolvedAt:null},
+    {id:'f4',assetId:'a-b1-3',title:'کمبود مبرّد چیلر',priority:'HIGH',status:'CLOSED',reportedAt:n-20*DAY,resolvedAt:n-18*DAY},
+    {id:'f5',assetId:'a-b4-1',title:'تعویض باتری ژنراتور',priority:'MEDIUM',status:'CLOSED',reportedAt:n-30*DAY,resolvedAt:n-29*DAY},
+  ];
+  const workOrders = [
+    {id:'w1',no:'WO-1001',type:'pm',title:'نگهداری ماهانه — آسانسور',status:'COMPLETED',due:n-4*DAY,cost:320},
+    {id:'w2',no:'WO-1002',type:'pm',title:'نگهداری ماهانه — ژنراتور',status:'COMPLETED',due:n-2*DAY,cost:280},
+    {id:'w3',no:'WO-1003',type:'pm',title:'نگهداری فصلی — چیلر',status:'SCHEDULED',due:n-DAY,cost:450},
+    {id:'w4',no:'WO-1004',type:'cm',title:'تعمیر پمپ آتش‌نشانی',status:'IN_PROGRESS',due:n+DAY,cost:1200},
+    {id:'w5',no:'WO-1005',type:'pm',title:'نگهداری سالانه — UPS',status:'ASSIGNED',due:n+5*DAY,cost:600},
+    {id:'w6',no:'WO-1006',type:'pm',title:'نگهداری ماهانه — هواساز',status:'SCHEDULED',due:n-8*DAY,cost:180},
+  ];
+  const parts = [
+    {id:'p1',pn:'FLT-AHU-22',desc:'فیلتر هوای هواساز G4',qty:24,min:10,loc:'انبار A · قفسه ۳',cost:18},
+    {id:'p2',pn:'BLT-V-1250',desc:'تسمه V ۱۲۵۰ میلی‌متر',qty:6,min:8,loc:'انبار A · قفسه ۱',cost:12.5},
+    {id:'p3',pn:'BAT-UPS-12',desc:'باتری UPS ۱۲ ولت ۹ آمپرساعت',qty:40,min:20,loc:'انبار B · قفسه ۵',cost:45},
+    {id:'p4',pn:'OIL-GEN',desc:'روغن موتور 15W40 (لیتر)',qty:3,min:20,loc:'انبار A · ردیف ۲',cost:6},
+  ];
+  const incidents = [
+    {id:'h1',buildingId:'b2',type:'near_miss',severity:'کم',desc:'کف لغزنده نزدیک اتاق پمپ',status:'investigating',at:n-2*DAY},
+    {id:'h2',buildingId:'b1',type:'unsafe_condition',severity:'متوسط',desc:'نبود حفاظ ماشین روی هواساز',status:'open',at:n-5*DAY},
+    {id:'h3',buildingId:'b4',type:'accident',severity:'زیاد',desc:'سوختگی جزئی برقی هنگام کار روی تابلو',status:'capa',at:n-12*DAY},
+  ];
+  const compliance = [
+    {id:'c1',device:'پمپ آتش‌نشانی',next:n-5*DAY,cert:n+60*DAY,status:'OVERDUE'},
+    {id:'c2',device:'پمپ آتش‌نشانی',next:n+20*DAY,cert:n+200*DAY,status:'COMPLIANT'},
+    {id:'c3',device:'سیستم اسپرینکلر',next:n+10*DAY,cert:n+25*DAY,status:'DUE_SOON'},
+    {id:'c4',device:'کپسول‌های اطفاء',next:n-15*DAY,cert:n-3*DAY,status:'NON_COMPLIANT'},
+  ];
+  const months = ['۱۴۰۵/۰۱','۱۴۰۵/۰۲','۱۴۰۵/۰۳','۱۴۰۵/۰۴','۱۴۰۵/۰۵','۱۴۰۵/۰۶'];
+  const utilities = [];
+  buildings.forEach(b=>months.forEach((m,i)=>{
+    const base=12000+i*300;
+    utilities.push({id:uid(),buildingId:b.id,utility:'electricity',period:m,consumption:base,cost:Math.round(base*0.08)});
+    utilities.push({id:uid(),buildingId:b.id,utility:'water',period:m,consumption:800+i*20,cost:Math.round((800+i*20)*0.5)});
+  }));
+  const template = {id:'tmpl',name:'نگهداری پیشگیرانهٔ ماهانه — عمومی',items:[
+    {id:'i1',prompt:'وضعیت کلی قابل قبول است؟',type:'pfn'},
+    {id:'i2',prompt:'صدا/لرزش غیرعادی وجود ندارد؟',type:'pfn'},
+    {id:'i3',prompt:'دمای کارکرد',type:'num',unit:'°C',max:80},
+    {id:'i4',prompt:'توضیحات',type:'text'},
+  ]};
+  return {user:null,buildings,assets,faults,workOrders,parts,incidents,compliance,utilities,template,inspections:[]};
+}
+
+//=================== computed ===================
+function openFaults(){ return DB.faults.filter(f=>f.status!=='CLOSED'&&f.status!=='COMPLETED'); }
+function buildingAssetCount(id){ return DB.assets.filter(a=>a.buildingId===id).length; }
+function buildingOpenFaults(id){
+  const ids = DB.assets.filter(a=>a.buildingId===id).map(a=>a.id);
+  return openFaults().filter(f=>ids.includes(f.assetId)).length;
+}
+function dashboard(){
+  const opens = openFaults();
+  const crit = opens.filter(f=>f.priority==='CRITICAL');
+  const down = DB.assets.filter(a=>a.status==='خارج از سرویس').length;
+  const overdueInsp = DB.buildings.filter(b=>b.lastInsp < now()-30*DAY).length;
+  const pm = DB.workOrders.filter(w=>w.type==='pm');
+  const pmDone = pm.filter(w=>w.status==='COMPLETED'||w.status==='CLOSED').length;
+  const pmPct = pm.length ? Math.round(pmDone*100/pm.length) : 100;
+  const term = ['COMPLETED','CLOSED','CANCELLED'];
+  const overdueWo = DB.workOrders.filter(w=>w.due<now()&&!term.includes(w.status)).length;
+  const resolved = DB.faults.filter(f=>f.resolvedAt).map(f=>f.resolvedAt-f.reportedAt);
+  const mttr = resolved.length ? Math.round(resolved.reduce((a,b)=>a+b,0)/resolved.length/3600000) : null;
+  const mtbf = DB.faults.length ? Math.round(DB.assets.length*90/DB.faults.length) : null;
+  const health = Math.max(0,Math.min(100,100-(crit.length*5+(opens.length-crit.length)*2+overdueInsp+down*3)));
+  const avail = DB.assets.length ? Math.round((DB.assets.length-down)*100/DB.assets.length) : 100;
+  const risk = Math.min(100,crit.length*20+overdueWo*5);
+  const maint = DB.workOrders.filter(w=>['COMPLETED','CLOSED'].includes(w.status)).reduce((s,w)=>s+(w.cost||0),0);
+  const deferred = DB.workOrders.filter(w=>!term.includes(w.status)).reduce((s,w)=>s+(w.cost||0),0);
+  const value = DB.assets.reduce((s,a)=>s+({CRITICAL:2e5,HIGH:8e4,MEDIUM:3e4,LOW:1e4}[a.crit]||1e4),0);
+  return {buildings:DB.buildings.length,assets:DB.assets.length,openFaults:opens.length,critical:crit.length,
+    overdueInsp,overdueWo,pmPct,health,avail,mttr,mtbf,risk,maint,deferred,value,
+    topFaults:opens.slice(0,5),openWos:DB.workOrders.filter(w=>!term.includes(w.status)).slice(0,8)};
+}
+function notifications(){
+  const out=[];
+  openFaults().filter(f=>f.priority==='CRITICAL').forEach(f=>out.push({sev:'C',t:'خرابی بحرانی باز',b:f.title}));
+  DB.compliance.forEach(c=>{
+    if(c.status==='OVERDUE') out.push({sev:'C',t:'تطابق معوق',b:c.device+' نیازمند رسیدگی است'});
+    else if(c.status==='NON_COMPLIANT') out.push({sev:'C',t:'عدم تطابق',b:c.device+' نیازمند رسیدگی است'});
+    else if(c.status==='DUE_SOON') out.push({sev:'W',t:'بازرسی نزدیک',b:c.device});
+  });
+  DB.parts.filter(p=>p.qty<=p.min).forEach(p=>out.push({sev:'W',t:'کمبود موجودی',b:`${p.desc} (${fa(p.qty)}/${fa(p.min)})`}));
+  DB.assets.filter(a=>a.warrantyEnd&&a.warrantyEnd<now()+90*DAY).forEach(a=>out.push({sev:'W',t:'انقضای گارانتی',b:`${a.name} (${a.code})`}));
+  return out.sort((a,b)=> (a.sev==='C'?0:1)-(b.sev==='C'?0:1));
+}
+
+//=================== router ===================
+let route='login', params={};
+function go(r,p={}){ route=r; params=p; window.scrollTo(0,0); render(); }
+const app = () => document.getElementById('app');
+
+function render(){
+  if(!DB.user && route!=='login'){ route='login'; }
+  app().innerHTML = ({
+    login:Login, home:Home, buildings:Buildings, building:Building, asset:Asset,
+    inspect:Inspect, reportFault:ReportFault, work:Work, status:StatusCenter, more:More,
+    inventory:Inventory, addPart:AddPart, hse:Hse, addIncident:AddIncident,
+    compliance:Compliance, utilities:Utilities, addReading:AddReading,
+    notifications:Notifs, reports:Reports, settings:Settings,
+  }[route]||Home)();
+  bind();
+}
+
+//=================== shared bits ===================
+const bar = (title,opt={}) => `<div class="appbar">
+  <div class="row">${opt.back?`<span class="back" data-go="${opt.back}">›</span>`:''}<span>${title}</span></div>
+  <div class="row">${opt.right||''}</div></div>`;
+const navbar = active => {
+  const items=[['home','▦','خانه'],['buildings','🏢','ساختمان‌ها'],['work','🗂','کارها'],['status','❤','پایش'],['more','⋯','بیشتر']];
+  return `<div class="nav">${items.map(([r,i,l])=>`<div class="${active===r?'active':''}" data-go="${r}"><span class="ic">${i}</span>${l}</div>`).join('')}</div>`;
+};
+const syncPill = `<span class="pill" style="background:var(--ok)">همگام</span>`;
+
+//=================== screens ===================
+function Login(){
+  const roles=['مدیر سیستم','مدیر','سرپرست','تکنسین','مشاهده‌گر'];
+  return `<div class="body center">
+    <div class="h1">سامانه نگهداری و تعمیرات</div>
+    <div class="sub">ورود (حالت آفلاین — داده‌ها در همین مرورگر ذخیره می‌شود)</div>
+    <label>نام کاربر</label><input id="lname" placeholder="مثلاً علی رضایی"/>
+    <label>نقش</label>
+    <div class="opts" id="lroles">${roles.map((r,i)=>`<div class="opt ${i===3?'sel':''}" data-role="${r}">${r}</div>`).join('')}</div>
+    <button class="btn" id="loginBtn">ورود</button>
+  </div>`;
+}
+function Home(){
+  const d=dashboard();
+  const roles=[['تکنسین','tech'],['مدیر','mgr'],['سرپرست','sup'],['مدیرعامل','exec']];
+  const role=DB._dashRole||'mgr';
+  const kpiset={
+    tech:[['دستورکارهای باز',d.openWos.length],['معوق',d.overdueWo,d.overdueWo?'var(--crit)':'var(--ok)'],['خرابی‌های باز',d.openFaults],['بحرانی',d.critical,d.critical?'var(--crit)':'var(--ok)']],
+    sup:[['دستورکارهای باز',d.openWos.length],['بازرسی معوق',d.overdueInsp,d.overdueInsp?'var(--warn)':'var(--ok)'],['خرابی‌های باز',d.openFaults],['تطابق PM',d.pmPct+'٪',d.pmPct>=90?'var(--ok)':'var(--warn)']],
+    mgr:[['سلامت دارایی',d.health,healthC(d.health)],['تطابق PM',d.pmPct+'٪',d.pmPct>=90?'var(--ok)':'var(--warn)'],['خرابی بحرانی',d.critical,d.critical?'var(--crit)':'var(--ok)'],['در دسترس بودن',d.avail+'٪',d.avail>=95?'var(--ok)':'var(--warn)'],['ساختمان‌ها',d.buildings],['تجهیزات',d.assets]],
+    exec:[['ارزش دارایی',money(d.value)],['هزینهٔ نگهداری',money(d.maint)],['هزینهٔ معوق',money(d.deferred),'var(--warn)'],['در دسترس بودن',d.avail+'٪'],['MTBF',d.mtbf?fa(d.mtbf)+' روز':'—'],['MTTR',d.mttr?fa(d.mttr)+' ساعت':'—'],['امتیاز ریسک',d.risk,d.risk>=40?'var(--crit)':'var(--ok)'],['سلامت',d.health,healthC(d.health)]],
+  }[role];
+  return bar('داشبورد',{right:syncPill})+`<div class="body">
+    <div class="seg">${roles.map(([l,k])=>`<div class="${role===k?'active':''}" data-role2="${k}">${l}</div>`).join('')}</div>
+    <div class="kpis">${kpiset.map(([l,v,c])=>`<div class="kpi"><div class="v" style="color:${c||'var(--ink)'}">${fa(v)}</div><div class="l">${l}</div></div>`).join('')}</div>
+    ${d.critical?`<div class="title">خرابی‌های بحرانی (${fa(d.critical)})</div>`+d.topFaults.map(f=>`<div class="card between"><span class="small">${esc(f.title)}</span>${critChip(f.priority)}</div>`).join(''):''}
+    ${(role==='tech'||role==='sup')?`<div class="title">دستورکارهای باز (${fa(d.openWos.length)})</div>`+d.openWos.map(woRow).join(''):''}
+  </div>`+navbar('home');
+}
+function Buildings(){
+  return bar('ساختمان‌ها',{right:syncPill})+`<div class="body">
+    <input id="bsearch" placeholder="🔍 جستجوی ساختمان‌ها" style="margin-bottom:12px"/>
+    <div id="blist">${buildingRows(DB.buildings)}</div></div>
+    <div class="fab"><button data-go="scan">＋ اسکن / یافتن تجهیز</button></div>`+navbar('buildings');
+}
+function buildingRows(list){
+  if(!list.length) return `<div class="empty">موردی یافت نشد</div>`;
+  return list.map(b=>{
+    const af=buildingOpenFaults(b.id), ac=buildingAssetCount(b.id);
+    return `<div class="card tap" data-go="building" data-id="${b.id}"><div class="row">
+      <span class="dot" style="background:${lightOf(b.status)}"></span>
+      <div class="grow"><div class="b">${esc(b.name)}</div><div class="muted">${esc(b.address)}</div></div>
+      <div class="col" style="align-items:flex-start">
+        <div class="small">${fa(ac)} تجهیز</div>
+        ${af?`<div class="small" style="color:var(--crit)">⚠ ${fa(af)} باز</div>`:''}
+      </div></div></div>`;
+  }).join('');
+}
+function Building(){
+  const b=DB.buildings.find(x=>x.id===params.id); if(!b) return Buildings();
+  const assets=DB.assets.filter(a=>a.buildingId===b.id);
+  return bar(b.name,{back:'buildings'})+`<div class="body">
+    <div class="card"><div class="muted">کد ${fa(b.code)}</div>
+      <div>${fa(b.floors)} طبقه · ${fa(assets.length)} تجهیز</div>
+      <div style="color:var(--crit)">${fa(buildingOpenFaults(b.id))} خرابی باز</div></div>
+    <div class="title">تجهیزات</div>
+    ${assets.map(a=>`<div class="card tap between" data-go="asset" data-id="${a.id}">
+      <div><div class="b">${esc(a.name)}</div><div class="muted">${esc(a.cat)} · ${fa(a.code)}</div></div>
+      ${critChip(a.crit)}</div>`).join('')}
+  </div>`+navbar('buildings');
+}
+function Asset(){
+  const a=DB.assets.find(x=>x.id===params.id); if(!a) return Buildings();
+  const fs=DB.faults.filter(f=>f.assetId===a.id&&f.status!=='CLOSED');
+  return bar(a.name,{back:'building#'+a.buildingId})+`<div class="body">
+    <div class="card">
+      <div class="row" style="margin-bottom:6px">${critChip(a.crit)}<span class="muted">${esc(a.status)}</span></div>
+      <div class="b">${fa(a.code)}</div>
+      <div class="muted">${esc(a.mfr)} · ${esc(a.model)}</div>
+      <div class="small muted">شماره سریال ${fa(a.serial)}</div>
+      <div class="small muted">پایان گارانتی ${fmtDate(a.warrantyEnd)}</div>
+    </div>
+    <div class="btnrow">
+      <button class="btn" data-go="inspect" data-id="${a.id}">🩺 بازرسی</button>
+      <button class="btn ghost" data-go="reportFault" data-id="${a.id}">⚠ ثبت خرابی</button>
+    </div>
+    ${fs.length?`<div class="title">خرابی‌های باز</div>`+fs.map(f=>`<div class="card between"><span class="small">${esc(f.title)}</span>${critChip(f.priority)}</div>`).join(''):''}
+  </div>`+navbar('buildings');
+}
+function Inspect(){
+  const a=DB.assets.find(x=>x.id===params.id); if(!a) return Buildings();
+  const phase=DB._inspPhase||'id';
+  if(phase==='id'){
+    return bar('مشخصات بازرس',{back:'asset#'+a.id})+`<div class="body">
+      <div class="muted">لطفاً پیش از شروع چک‌لیست، مشخصات خود را وارد کنید.</div>
+      <label>نام</label><input id="ifn"/>
+      <label>نام خانوادگی</label><input id="iln"/>
+      <label>کد ملی (۱۰ رقم)</label><input id="inid" inputmode="numeric" maxlength="10"/>
+      <label>سمت</label><input id="ipos"/>
+      <button class="btn" id="toChecklist">ادامه به چک‌لیست</button>
+    </div>`;
+  }
+  const t=DB.template;
+  return bar(t.name,{back:'asset#'+a.id})+`<div class="body" id="clbody">
+    ${t.items.map(it=>`<div class="card"><div class="b small" style="margin-bottom:8px">${esc(it.prompt)}</div>
+      ${it.type==='pfn'?`<div class="opts" data-item="${it.id}">
+        <div class="opt pass" data-val="pass">تأیید</div><div class="opt fail" data-val="fail">رد</div><div class="opt" data-val="na">نامربوط</div></div>`:''}
+      ${it.type==='num'?`<input data-item="${it.id}" inputmode="decimal" placeholder="${it.unit||'مقدار'}"/>${it.max?`<div class="small" style="color:var(--warn)">حداکثر ${fa(it.max)}</div>`:''}`:''}
+      ${it.type==='text'?`<textarea data-item="${it.id}" rows="2" placeholder="توضیحات"></textarea>`:''}
+    </div>`).join('')}
+    <button class="btn" id="submitInsp">تکمیل بازرسی</button>
+  </div>`;
+}
+function ReportFault(){
+  const a=DB.assets.find(x=>x.id===params.id); if(!a) return Buildings();
+  const pr=['CRITICAL','HIGH','MEDIUM','LOW'];
+  return bar('ثبت خرابی',{back:'asset#'+a.id})+`<div class="body">
+    <div class="muted">${esc(a.name)} · ${fa(a.code)}</div>
+    <label>شرح خرابی</label><textarea id="ftitle" rows="3"></textarea>
+    <label>اولویت</label>
+    <div class="opts" id="fpr">${pr.map((p,i)=>`<div class="opt ${i===2?'sel':''}" data-pr="${p}">${CRIT_FA[p]}</div>`).join('')}</div>
+    <button class="btn" id="saveFault">ثبت خرابی</button>
+  </div>`;
+}
+function Work(){
+  const tab=DB._workTab||'wo';
+  return bar('کارهای من')+`<div class="body">
+    <div class="tabs"><div class="${tab==='wo'?'active':''}" data-wtab="wo">دستورکارها (${fa(DB.workOrders.length)})</div>
+      <div class="${tab==='f'?'active':''}" data-wtab="f">خرابی‌ها (${fa(DB.faults.length)})</div></div>
+    ${tab==='wo'?DB.workOrders.map(woRow).join(''):DB.faults.map(f=>`<div class="card between">
+      <div><div class="b small">${esc(f.title)}</div><div class="muted">${FAULT_FA[f.status]}</div></div>${critChip(f.priority)}</div>`).join('')}
+  </div>`+navbar('work');
+}
+function StatusCenter(){
+  return bar('مرکز پایش ساختمان‌ها')+`<div class="body">${DB.buildings.map(b=>{
+    const of=buildingOpenFaults(b.id);
+    const crit=b.status==='CRITICAL'||of>=3, att=b.status==='PARTIAL'||(of>=1&&of<3);
+    const overdueI=b.lastInsp<now()-30*DAY;
+    const subs=[['آسانسورها',crit?'CRITICAL':'OPERATIONAL'],['ژنراتورها','OPERATIONAL'],['مکانیکی',att?'PARTIAL':'OPERATIONAL'],
+      ['اعلام حریق',crit?'CRITICAL':'OPERATIONAL'],['تطابق PM',att?'PARTIAL':'OPERATIONAL'],['بازرسی‌ها',overdueI?'CRITICAL':'OPERATIONAL']];
+    return `<div class="card"><div class="row"><span class="dot" style="background:${lightOf(b.status)}"></span>
+      <span class="b">${esc(b.name)}</span>${of?`<span class="small" style="color:var(--crit)">${fa(of)} باز</span>`:''}</div>
+      <div class="kpis" style="margin-top:8px">${subs.map(([n,s])=>`<div class="row"><span class="dot" style="background:${lightOf(s)}"></span><span class="small">${n}</span></div>`).join('')}</div>
+    </div>`;
+  }).join('')}</div>`+navbar('status');
+}
+function More(){
+  const items=[['inventory','📦','قطعات یدکی و انبار'],['hse','⛑','مدیریت HSE (ایمنی)'],['compliance','🔥','تطابق آتش‌نشانی'],
+    ['utilities','⚡','مدیریت انرژی و مصارف'],['reports','📄','گزارش‌ها'],['notifications','🔔','اعلان‌ها'],['settings','⚙','تنظیمات']];
+  return bar('بیشتر')+`<div class="body">${items.map(([r,i,l])=>`<div class="card tap between" data-go="${r}">
+    <div class="row"><span style="font-size:18px">${i}</span><span class="b">${l}</span></div><span style="color:var(--muted)">‹</span></div>`).join('')}</div>`+navbar('more');
+}
+function Inventory(){
+  const low=DB.parts.filter(p=>p.qty<=p.min).length;
+  return bar('قطعات یدکی و انبار',{back:'more'})+`<div class="body">
+    ${low?`<div class="b small" style="color:var(--crit);margin-bottom:8px">⚠ ${fa(low)} قلم زیر حد سفارش مجدد</div>`:''}
+    ${DB.parts.map(p=>`<div class="card between"><div><div class="b small">${esc(p.desc)}</div><div class="muted">${fa(p.pn)} · ${esc(p.loc)}</div></div>
+      <div class="b" style="color:${p.qty<=p.min?'var(--crit)':'var(--ok)'}">${fa(p.qty)} / حداقل ${fa(p.min)}</div></div>`).join('')}
+  </div><div class="fab"><button data-go="addPart">＋ افزودن قطعه</button></div>`+navbar('more');
+}
+function AddPart(){
+  return bar('افزودن قطعه',{back:'inventory'})+`<div class="body">
+    <label>کد قطعه</label><input id="pn"/><label>شرح قطعه</label><input id="pdesc"/>
+    <label>موجودی</label><input id="pqty" inputmode="numeric"/><label>حداقل موجودی</label><input id="pmin" inputmode="numeric"/>
+    <label>محل نگهداری</label><input id="ploc"/><label>قیمت واحد</label><input id="pcost" inputmode="numeric"/>
+    <button class="btn" id="savePart">ذخیره</button></div>`;
+}
+function Hse(){
+  return bar('مدیریت HSE (ایمنی)',{back:'more'})+`<div class="body">
+    ${DB.incidents.map(i=>`<div class="card"><div class="b small">${HSE_TYPE_FA[i.type]||i.type}</div>
+      <div class="muted">${esc(i.desc)}</div><div class="small" style="color:var(--muted)">شدت ${esc(i.severity)} · ${esc(i.status)}</div></div>`).join('')}
+  </div><div class="fab"><button data-go="addIncident">＋ ثبت حادثه</button></div>`+navbar('more');
+}
+function AddIncident(){
+  const types=Object.keys(HSE_TYPE_FA);
+  return bar('ثبت حادثهٔ HSE',{back:'hse'})+`<div class="body">
+    <label>ساختمان</label><select id="hb">${DB.buildings.map(b=>`<option value="${b.id}">${esc(b.name)}</option>`).join('')}</select>
+    <label>نوع حادثه</label><select id="htype">${types.map(t=>`<option value="${t}">${HSE_TYPE_FA[t]}</option>`).join('')}</select>
+    <label>شدت</label><select id="hsev"><option>کم</option><option selected>متوسط</option><option>زیاد</option></select>
+    <label>شرح حادثه</label><textarea id="hdesc" rows="3"></textarea>
+    <button class="btn" id="saveIncident">ثبت حادثه</button></div>`;
+}
+function Compliance(){
+  return bar('تطابق آتش‌نشانی',{back:'more'})+`<div class="body">${DB.compliance.map(c=>`<div class="card between">
+    <div><div class="b small">${esc(c.device)}</div><div class="muted">بعدی: ${fmtDate(c.next)} · گواهی: ${fmtDate(c.cert)}</div></div>
+    <span class="chip" style="background:${CMP_COLOR[c.status]}">${CMP_FA[c.status]}</span></div>`).join('')}</div>`+navbar('more');
+}
+function Utilities(){
+  const byU={};
+  DB.utilities.forEach(u=>{(byU[u.utility]=byU[u.utility]||[]).push(u);});
+  return bar('مدیریت انرژی و مصارف',{back:'more'})+`<div class="body">${Object.entries(byU).map(([u,list])=>{
+    const byM={}; list.forEach(r=>byM[r.period]=(byM[r.period]||0)+r.consumption);
+    const max=Math.max(...Object.values(byM)); const cost=list.reduce((s,r)=>s+r.cost,0);
+    const color=u==='electricity'?'var(--warn)':'var(--ok)';
+    return `<div class="card"><div class="b">${UTIL_FA[u]||u}</div><div class="muted" style="margin-bottom:6px">هزینهٔ کل: ${fa(cost)}$</div>
+      ${Object.entries(byM).map(([m,v])=>`<div class="small">${m}  ${fa(Math.round(v))}</div><div class="bar"><i style="width:${Math.round(v/max*100)}%;background:${color}"></i></div>`).join('')}</div>`;
+  }).join('')}</div><div class="fab"><button data-go="addReading">＋ ثبت قرائت</button></div>`+navbar('more');
+}
+function AddReading(){
+  return bar('ثبت قرائت کنتور',{back:'utilities'})+`<div class="body">
+    <label>ساختمان</label><select id="rb">${DB.buildings.map(b=>`<option value="${b.id}">${esc(b.name)}</option>`).join('')}</select>
+    <label>نوع انرژی</label><select id="rutil">${Object.entries(UTIL_FA).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select>
+    <label>دوره (مثلاً ۱۴۰۵/۰۴)</label><input id="rper"/>
+    <label>مصرف</label><input id="rcons" inputmode="numeric"/><label>هزینه</label><input id="rcost" inputmode="numeric"/>
+    <button class="btn" id="saveReading">ذخیره</button></div>`;
+}
+function Notifs(){
+  const ns=notifications();
+  return bar('اعلان‌ها ('+fa(ns.length)+')',{back:'more'})+`<div class="body">${ns.length?ns.map(n=>`<div class="card row">
+    <span class="dot" style="background:${n.sev==='C'?'var(--crit)':'var(--warn)'}"></span>
+    <div><div class="b small">${esc(n.t)}</div><div class="muted">${esc(n.b)}</div></div></div>`).join(''):'<div class="empty">اعلانی نیست</div>'}</div>`+navbar('more');
+}
+function Reports(){
+  return bar('گزارش‌ها',{back:'more'})+`<div class="body">
+    <div class="muted">گزارش‌ها به‌صورت آفلاین از داده‌های همین مرورگر تولید می‌شوند.</div>
+    <div class="card tap" id="repHtml"><div class="b">گزارش وضعیت ساختمان‌ها</div><div class="muted">باز کردن و چاپ به PDF</div></div>
+    <div class="card tap" id="repCsv"><div class="b">خروجی تجهیزات (Excel/CSV)</div><div class="muted">دانلود فایل</div></div>
+  </div>`+navbar('more');
+}
+function Settings(){
+  const u=DB.user||{};
+  return bar('تنظیمات',{back:'more'})+`<div class="body">
+    <div class="card"><div class="b">${esc(u.name||'—')}</div><div class="muted">${esc(u.role||'')}</div></div>
+    <div class="card"><div class="muted">حالت اتصال</div><div class="b">آفلاین (مرورگر)</div></div>
+    <div class="card"><div class="muted">زبان</div><div class="b">فارسی (راست‌به‌چپ)</div></div>
+    <div class="card"><div class="muted">نسخه</div><div class="b">${fa('0.1.0')} وب</div></div>
+    <button class="btn ghost" id="resetBtn">بازنشانی داده‌های نمونه</button>
+    <button class="btn" id="logoutBtn">خروج از حساب</button>
+  </div>`+navbar('more');
+}
+
+//=================== helpers for rows ===================
+function critChip(c){ return `<span class="chip" style="background:${CRIT_COLOR[c]||'var(--unk)'}">${CRIT_FA[c]||c}</span>`; }
+function healthC(s){ return s>=85?'var(--ok)':s>=60?'var(--warn)':'var(--crit)'; }
+function woRow(w){ return `<div class="card"><div class="b small">${fa(w.no)} · ${esc(w.title)}</div>
+  <div class="muted">${WO_TYPE_FA[w.type]||w.type} · ${WO_FA[w.status]||w.status}</div>
+  ${w.cost?`<div class="small muted">تخمین ${fa(w.cost)}$</div>`:''}</div>`; }
+
+//=================== event binding ===================
+function bind(){
+  // generic navigation
+  document.querySelectorAll('[data-go]').forEach(e=>e.onclick=()=>{
+    const r=e.getAttribute('data-go'); const id=e.getAttribute('data-id');
+    if(r==='scan'){ const code=prompt('کد یا QR تجهیز را وارد کنید:'); if(code){const a=DB.assets.find(x=>x.qr===code.trim()||x.code===code.trim()); if(a) go('asset',{id:a.id}); else alert('تجهیزی با این کد یافت نشد');} return; }
+    if(r.includes('#')){ const [rr,pid]=r.split('#'); go(rr,{id:pid}); return; }
+    if(r==='inspect') DB._inspPhase='id';
+    go(r, id?{id}:{});
+  });
+  // login
+  const lroles=document.getElementById('lroles');
+  if(lroles){ let role='تکنسین';
+    lroles.querySelectorAll('[data-role]').forEach(d=>d.onclick=()=>{lroles.querySelectorAll('.opt').forEach(x=>x.classList.remove('sel'));d.classList.add('sel');role=d.getAttribute('data-role');});
+    document.getElementById('loginBtn').onclick=()=>{const name=document.getElementById('lname').value.trim();if(!name){alert('نام را وارد کنید');return;}DB.user={name,role};save();go('home');};
+  }
+  // dashboard role
+  document.querySelectorAll('[data-role2]').forEach(d=>d.onclick=()=>{DB._dashRole=d.getAttribute('data-role2');render();});
+  // building search
+  const bs=document.getElementById('bsearch');
+  if(bs) bs.oninput=()=>{const q=bs.value.trim();document.getElementById('blist').innerHTML=buildingRows(DB.buildings.filter(b=>b.name.includes(q)||b.code.includes(q)));bindGo();};
+  // work tabs
+  document.querySelectorAll('[data-wtab]').forEach(d=>d.onclick=()=>{DB._workTab=d.getAttribute('data-wtab');render();});
+  // inspect identity → checklist
+  const toCl=document.getElementById('toChecklist');
+  if(toCl) toCl.onclick=()=>{
+    const fn=val('ifn'),ln=val('iln'),nid=val('inid'),pos=val('ipos');
+    if(!fn||!ln||!pos){alert('همهٔ فیلدها را پر کنید');return;}
+    if(!/^\d{10}$/.test(nid)){alert('کد ملی باید ۱۰ رقم باشد');return;}
+    DB._inspector={fn,ln,nid,pos}; DB._inspPhase='checklist'; render();
+  };
+  // checklist pfn options
+  document.querySelectorAll('[data-item] .opt, #clbody [data-item]').forEach(()=>{});
+  document.querySelectorAll('.opts[data-item]').forEach(g=>g.querySelectorAll('.opt').forEach(o=>o.onclick=()=>{
+    g.querySelectorAll('.opt').forEach(x=>x.classList.remove('sel'));o.classList.add('sel');
+  }));
+  const subIns=document.getElementById('submitInsp');
+  if(subIns) subIns.onclick=()=>{
+    DB.inspections.push({id:uid(),assetId:params.id,inspector:DB._inspector,at:now()});
+    DB._inspPhase='id'; save(); alert('بازرسی با موفقیت ثبت شد ✅'); go('asset',{id:params.id});
+  };
+  // report fault
+  const fpr=document.getElementById('fpr');
+  if(fpr){ let pr='MEDIUM';
+    fpr.querySelectorAll('[data-pr]').forEach(d=>d.onclick=()=>{fpr.querySelectorAll('.opt').forEach(x=>x.classList.remove('sel'));d.classList.add('sel');pr=d.getAttribute('data-pr');});
+    document.getElementById('saveFault').onclick=()=>{const t=val('ftitle');if(!t){alert('شرح خرابی را وارد کنید');return;}
+      DB.faults.unshift({id:uid(),assetId:params.id,title:t,priority:pr,status:'OPEN',reportedAt:now(),resolvedAt:null});save();alert('خرابی ثبت شد ✅');go('asset',{id:params.id});};
+  }
+  // add part
+  const sp=document.getElementById('savePart');
+  if(sp) sp.onclick=()=>{const pn=val('pn'),desc=val('pdesc');if(!pn||!desc){alert('کد و شرح الزامی است');return;}
+    DB.parts.push({id:uid(),pn,desc,qty:+val('pqty')||0,min:+val('pmin')||0,loc:val('ploc'),cost:+val('pcost')||0});save();go('inventory');};
+  // add incident
+  const si=document.getElementById('saveIncident');
+  if(si) si.onclick=()=>{const desc=val('hdesc');if(!desc){alert('شرح حادثه الزامی است');return;}
+    DB.incidents.unshift({id:uid(),buildingId:val('hb'),type:val('htype'),severity:val('hsev'),desc,status:'open',at:now()});save();go('hse');};
+  // add reading
+  const sr=document.getElementById('saveReading');
+  if(sr) sr.onclick=()=>{const per=val('rper');if(!per){alert('دوره را وارد کنید');return;}
+    DB.utilities.push({id:uid(),buildingId:val('rb'),utility:val('rutil'),period:per,consumption:+val('rcons')||0,cost:+val('rcost')||0});save();go('utilities');};
+  // reports
+  const rh=document.getElementById('repHtml'); if(rh) rh.onclick=openHtmlReport;
+  const rc=document.getElementById('repCsv'); if(rc) rc.onclick=downloadCsv;
+  // settings
+  const lo=document.getElementById('logoutBtn'); if(lo) lo.onclick=()=>{DB.user=null;save();go('login');};
+  const rs=document.getElementById('resetBtn'); if(rs) rs.onclick=()=>{if(confirm('داده‌ها به حالت نمونه بازنشانی شود؟')){localStorage.removeItem(KEY);load();go('home');}};
+}
+function bindGo(){ document.querySelectorAll('#blist [data-go]').forEach(e=>e.onclick=()=>go('building',{id:e.getAttribute('data-id')})); }
+const val = id => (document.getElementById(id)?.value||'').trim();
+
+//=================== reports ===================
+function openHtmlReport(){
+  const d=dashboard();
+  const kpis=[['ساختمان‌ها',d.buildings],['تجهیزات',d.assets],['خرابی‌های باز',d.openFaults],['خرابی بحرانی',d.critical],
+    ['تطابق PM',d.pmPct+'٪'],['در دسترس بودن',d.avail+'٪'],['سلامت دارایی',d.health+' از ۱۰۰'],['امتیاز ریسک',d.risk]];
+  const rows=DB.buildings.map(b=>`<tr><td><span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:${lightOf(b.status).replace('var(--ok)','#2E7D32').replace('var(--warn)','#F9A825').replace('var(--crit)','#C62828').replace('var(--unk)','#9E9E9E')}"></span></td>
+    <td>${esc(b.name)}</td><td>${fa(b.code)}</td><td>${fa(buildingAssetCount(b.id))}</td><td>${fa(buildingOpenFaults(b.id))}</td></tr>`).join('');
+  const html=`<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><title>گزارش ساختمان‌ها</title>
+  <style>body{font-family:Tahoma,sans-serif;margin:24px;color:#11161f}h1{font-size:20px}.sub{color:#666;font-size:13px;margin-bottom:18px}
+  .kpis{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:20px}.kpi{border:1px solid #ddd;border-radius:10px;padding:10px 14px;min-width:120px}
+  .kpi .v{font-size:22px;font-weight:bold}.kpi .l{font-size:12px;color:#666}table{width:100%;border-collapse:collapse}
+  th,td{border:1px solid #ddd;padding:8px;text-align:right;font-size:13px}th{background:#f3f4f6}
+  @media print{.noprint{display:none}}</style></head><body>
+  <h1>گزارش وضعیت ساختمان‌ها — سامانه نگهداری و تعمیرات</h1>
+  <div class="sub">تاریخ: ${fa(new Date().toLocaleString('fa-IR'))}</div>
+  <div class="kpis">${kpis.map(([l,v])=>`<div class="kpi"><div class="v">${fa(v)}</div><div class="l">${l}</div></div>`).join('')}</div>
+  <h3>ساختمان‌ها</h3><table><thead><tr><th>وضعیت</th><th>نام</th><th>کد</th><th>تعداد تجهیزات</th><th>خرابی باز</th></tr></thead><tbody>${rows}</tbody></table>
+  <button class="noprint" onclick="window.print()" style="margin-top:20px;padding:10px 20px;font-size:15px">چاپ / ذخیره PDF</button>
+  </body></html>`;
+  const w=window.open('','_blank');
+  if(w){ w.document.write(html); w.document.close(); }
+  else { const blob=new Blob([html],{type:'text/html'}); const url=URL.createObjectURL(blob); location.href=url; }
+}
+function downloadCsv(){
+  const bmap={}; DB.buildings.forEach(b=>bmap[b.id]=b.name);
+  let csv='﻿'+'کد تجهیز,نام,دسته,ساختمان,بحرانیت,وضعیت\n';
+  DB.assets.forEach(a=>{const q=s=>'"'+String(s).replace(/"/g,'""')+'"';
+    csv+=[q(a.code),q(a.name),q(a.cat),q(bmap[a.buildingId]||''),q(CRIT_FA[a.crit]||a.crit),q(a.status)].join(',')+'\n';});
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8'}); const url=URL.createObjectURL(blob);
+  const a=document.createElement('a'); a.href=url; a.download='assets.csv'; a.click(); URL.revokeObjectURL(url);
+}
+
+//=================== boot ===================
+load();
+go(DB.user?'home':'login');
+</script>
+</body>
+</html>
