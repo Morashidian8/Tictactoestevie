@@ -37,13 +37,17 @@ class UtilitiesViewModel @Inject constructor(repository: UtilityRepository) : Vi
 }
 
 @Composable
-fun UtilitiesScreen(onBack: () -> Unit, viewModel: UtilitiesViewModel = hiltViewModel()) {
+fun UtilitiesScreen(
+    onBack: () -> Unit,
+    onAdd: () -> Unit,
+    viewModel: UtilitiesViewModel = hiltViewModel(),
+) {
     val readings by viewModel.readings.collectAsStateWithLifecycle()
 
     // Portfolio totals per utility per month.
     val byUtility = readings.groupBy { it.utility }
 
-    ModuleScaffold("مدیریت انرژی و مصارف", onBack) { padding ->
+    ModuleScaffold("مدیریت انرژی و مصارف", onBack, onAdd = onAdd) { padding ->
         LazyColumn(
             Modifier.fillMaxSize().padding(padding),
             contentPadding = PaddingValues(12.dp),

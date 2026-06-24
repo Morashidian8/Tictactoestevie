@@ -10,6 +10,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -45,11 +46,15 @@ class InventoryViewModel @Inject constructor(repository: InventoryRepository) : 
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun InventoryScreen(onBack: () -> Unit, viewModel: InventoryViewModel = hiltViewModel()) {
+fun InventoryScreen(
+    onBack: () -> Unit,
+    onAdd: () -> Unit,
+    viewModel: InventoryViewModel = hiltViewModel(),
+) {
     val parts by viewModel.parts.collectAsStateWithLifecycle()
     val lowCount = parts.count { it.lowStock }
 
-    ModuleScaffold("قطعات یدکی و انبار", onBack) { padding ->
+    ModuleScaffold("قطعات یدکی و انبار", onBack, onAdd = onAdd) { padding ->
         LazyColumn(
             Modifier.fillMaxSize().padding(padding),
             contentPadding = androidx.compose.foundation.layout.PaddingValues(12.dp),
@@ -90,12 +95,13 @@ fun InventoryScreen(onBack: () -> Unit, viewModel: InventoryViewModel = hiltView
     }
 }
 
-/** Shared scaffold for the More submodule screens (top bar + back). */
+/** Shared scaffold for the More submodule screens (top bar + back + optional add FAB). */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ModuleScaffold(
     title: String,
     onBack: () -> Unit,
+    onAdd: (() -> Unit)? = null,
     content: @Composable (androidx.compose.foundation.layout.PaddingValues) -> Unit,
 ) {
     Scaffold(
@@ -108,6 +114,13 @@ fun ModuleScaffold(
                     }
                 },
             )
+        },
+        floatingActionButton = {
+            if (onAdd != null) {
+                androidx.compose.material3.FloatingActionButton(onClick = onAdd) {
+                    Icon(androidx.compose.material.icons.Icons.Default.Add, contentDescription = "افزودن")
+                }
+            }
         },
         content = content,
     )

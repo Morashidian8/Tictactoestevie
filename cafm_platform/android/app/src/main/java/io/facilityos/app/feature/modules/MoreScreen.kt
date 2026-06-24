@@ -16,6 +16,7 @@ import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Map
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -41,6 +42,7 @@ fun MoreScreen(onNavigate: (String) -> Unit) {
         MoreItem("مدیریت انرژی و مصارف", "utilities", Icons.Default.Bolt),
         MoreItem("اعلان‌ها", "notifications", Icons.Default.Notifications),
         MoreItem("نقشه", "map", Icons.Default.Map),
+        MoreItem("تنظیمات", "settings", Icons.Default.Settings),
     )
 
     Scaffold(topBar = { TopAppBar(title = { Text("بیشتر") }) }) { padding ->

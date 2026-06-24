@@ -40,12 +40,11 @@ class FaultRepository @Inject constructor(
         dao.observeForAsset(assetId).map { list -> list.map { it.toModel() } }
 
     /** Offline-first fault creation: write locally, queue a sync op, kick a sync. */
-    fun reportFaultAsync(
-        scope: CoroutineScope,
+    suspend fun add(
         assetId: String,
         title: String,
         priority: Priority = Priority.MEDIUM,
-    ) = scope.launch {
+    ): String {
         val now = System.currentTimeMillis()
         val id = UUID.randomUUID().toString()
 
@@ -76,5 +75,13 @@ class FaultRepository @Inject constructor(
             ),
         )
         scheduler.syncNow()
+        return id
     }
+
+    fun reportFaultAsync(
+        scope: CoroutineScope,
+        assetId: String,
+        title: String,
+        priority: Priority = Priority.MEDIUM,
+    ) = scope.launch { add(assetId, title, priority) }
 }

@@ -9,11 +9,15 @@ product. It demonstrates the offline-first plumbing end to end so feature module
 
 ## What's implemented
 
-All screens run **fully offline** from seeded Room data, reachable via a 5-tab bottom nav
-(Home · Buildings · Work · Status · More).
+The UI is **Persian (RTL)** and runs **fully offline** from seeded Room data, reachable via a 5-tab
+bottom nav (خانه · ساختمان‌ها · کارها · پایش · بیشتر).
 
-- **App shell**: Hilt application + WorkManager factory, Compose theme with status colors, bottom-nav
-  Nav graph.
+- **App shell**: Hilt application + WorkManager factory, Compose theme with status colors, forced
+  RTL layout, bottom-nav Nav graph.
+- **Login + Settings**: offline login (name + role) gating the app; settings screen with
+  connection mode, language, app version, and logout.
+- **Offline data-entry forms**: report fault, add spare part, add HSE incident, add utility
+  reading — each writes to Room and queues an idempotent sync operation.
 - **Dashboards (Home)**: four role views (Technician / Supervisor / Manager / Executive) with KPIs
   computed live from Room — asset health score, PM compliance, availability, MTBF/MTTR, risk score,
   asset value, maintenance & deferred cost, critical-fault and open-WO lists.
@@ -75,6 +79,6 @@ Requires Android SDK (compileSdk 34, JDK 17).
 
 ## Not yet wired (next steps)
 
-Auth/MFA screens, real CameraX scanner, media capture + presigned upload, SQLCipher encryption,
-conflict-resolution UI, PM calendar, contractor module, document management, RCA/CAPA detail forms,
-data-entry forms for the read-only module screens, and report (PDF/Excel) generation.
+Real MFA + backend auth, real CameraX scanner, media capture + presigned upload, SQLCipher
+encryption, conflict-resolution UI, PM calendar, contractor module, document management, RCA/CAPA
+detail forms, and report (PDF/Excel) generation.

@@ -24,9 +24,15 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import io.facilityos.app.feature.assets.AssetDetailScreen
+import io.facilityos.app.feature.auth.LoginScreen
+import io.facilityos.app.feature.auth.SettingsScreen
 import io.facilityos.app.feature.buildings.BuildingDetailScreen
 import io.facilityos.app.feature.buildings.BuildingListScreen
 import io.facilityos.app.feature.dashboard.DashboardScreen
+import io.facilityos.app.feature.forms.AddIncidentScreen
+import io.facilityos.app.feature.forms.AddPartScreen
+import io.facilityos.app.feature.forms.AddReadingScreen
+import io.facilityos.app.feature.forms.ReportFaultScreen
 import io.facilityos.app.feature.inspections.ChecklistRunnerScreen
 import io.facilityos.app.feature.modules.ComplianceScreen
 import io.facilityos.app.feature.modules.HseScreen
@@ -58,9 +64,17 @@ object Routes {
     const val NOTIFICATIONS = "notifications"
     const val MAP = "map"
 
+    const val LOGIN = "login"
+    const val SETTINGS = "settings"
+    const val REPORT_FAULT = "report-fault/{assetId}"
+    const val ADD_PART = "add-part"
+    const val ADD_INCIDENT = "add-incident"
+    const val ADD_READING = "add-reading"
+
     fun buildingDetail(id: String) = "building/$id"
     fun assetDetail(id: String) = "asset/$id"
     fun inspection(templateId: String, assetId: String) = "inspection/$templateId/$assetId"
+    fun reportFault(assetId: String) = "report-fault/$assetId"
 }
 
 private data class TopDest(val route: String, val label: String, val icon: ImageVector)
@@ -77,33 +91,47 @@ private val topDestinations = listOf(
 fun FacilityOsNavGraph(navController: NavHostController = rememberNavController()) {
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = backStackEntry?.destination
+    val currentRoute = currentDestination?.route
+    val showBottomBar = topDestinations.any { it.route == currentRoute }
 
     Scaffold(
         bottomBar = {
-            NavigationBar {
-                topDestinations.forEach { dest ->
-                    val selected = currentDestination?.hierarchy?.any { it.route == dest.route } == true
-                    NavigationBarItem(
-                        selected = selected,
-                        onClick = {
-                            navController.navigate(dest.route) {
-                                popUpTo(navController.graph.findStartDestination().id) { saveState = true }
-                                launchSingleTop = true
-                                restoreState = true
-                            }
-                        },
-                        icon = { Icon(dest.icon, contentDescription = dest.label) },
-                        label = { Text(dest.label) },
-                    )
+            if (showBottomBar) {
+                NavigationBar {
+                    topDestinations.forEach { dest ->
+                        val selected = currentDestination?.hierarchy?.any { it.route == dest.route } == true
+                        NavigationBarItem(
+                            selected = selected,
+                            onClick = {
+                                navController.navigate(dest.route) {
+                                    popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                                    launchSingleTop = true
+                                    restoreState = true
+                                }
+                            },
+                            icon = { Icon(dest.icon, contentDescription = dest.label) },
+                            label = { Text(dest.label) },
+                        )
+                    }
                 }
             }
         },
     ) { padding ->
         NavHost(
             navController = navController,
-            startDestination = Routes.HOME,
+            startDestination = Routes.LOGIN,
             modifier = Modifier.padding(padding),
         ) {
+            composable(Routes.LOGIN) {
+                LoginScreen(
+                    onLoggedIn = {
+                        navController.navigate(Routes.HOME) {
+                            popUpTo(Routes.LOGIN) { inclusive = true }
+                        }
+                    },
+                )
+            }
+
             composable(Routes.HOME) { DashboardScreen() }
 
             composable(Routes.BUILDINGS) {
@@ -127,8 +155,12 @@ fun FacilityOsNavGraph(navController: NavHostController = rememberNavController(
                     onInspect = { templateId, assetId ->
                         navController.navigate(Routes.inspection(templateId, assetId))
                     },
+                    onReportFault = { assetId -> navController.navigate(Routes.reportFault(assetId)) },
                     onBack = { navController.popBackStack() },
                 )
+            }
+            composable(Routes.REPORT_FAULT) {
+                ReportFaultScreen(onDone = { navController.popBackStack() })
             }
             composable(Routes.INSPECTION) {
                 ChecklistRunnerScreen(onDone = { navController.popBackStack() })
@@ -144,15 +176,45 @@ fun FacilityOsNavGraph(navController: NavHostController = rememberNavController(
                 )
             }
 
-            composable(Routes.INVENTORY) { InventoryScreen(onBack = { navController.popBackStack() }) }
-            composable(Routes.HSE) { HseScreen(onBack = { navController.popBackStack() }) }
+            composable(Routes.INVENTORY) {
+                InventoryScreen(
+                    onBack = { navController.popBackStack() },
+                    onAdd = { navController.navigate(Routes.ADD_PART) },
+                )
+            }
+            composable(Routes.HSE) {
+                HseScreen(
+                    onBack = { navController.popBackStack() },
+                    onAdd = { navController.navigate(Routes.ADD_INCIDENT) },
+                )
+            }
             composable(Routes.COMPLIANCE) { ComplianceScreen(onBack = { navController.popBackStack() }) }
-            composable(Routes.UTILITIES) { UtilitiesScreen(onBack = { navController.popBackStack() }) }
+            composable(Routes.UTILITIES) {
+                UtilitiesScreen(
+                    onBack = { navController.popBackStack() },
+                    onAdd = { navController.navigate(Routes.ADD_READING) },
+                )
+            }
             composable(Routes.NOTIFICATIONS) { NotificationsScreen(onBack = { navController.popBackStack() }) }
             composable(Routes.MAP) {
                 MapScreen(
                     onBuildingClick = { navController.navigate(Routes.buildingDetail(it)) },
                     onBack = { navController.popBackStack() },
+                )
+            }
+
+            composable(Routes.ADD_PART) { AddPartScreen(onDone = { navController.popBackStack() }) }
+            composable(Routes.ADD_INCIDENT) { AddIncidentScreen(onDone = { navController.popBackStack() }) }
+            composable(Routes.ADD_READING) { AddReadingScreen(onDone = { navController.popBackStack() }) }
+
+            composable(Routes.SETTINGS) {
+                SettingsScreen(
+                    onBack = { navController.popBackStack() },
+                    onLoggedOut = {
+                        navController.navigate(Routes.LOGIN) {
+                            popUpTo(navController.graph.findStartDestination().id) { inclusive = true }
+                        }
+                    },
                 )
             }
         }

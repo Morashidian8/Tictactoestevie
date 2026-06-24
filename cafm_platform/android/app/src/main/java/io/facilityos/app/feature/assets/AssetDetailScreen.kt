@@ -36,6 +36,7 @@ import io.facilityos.app.core.designsystem.component.PriorityChip
 @Composable
 fun AssetDetailScreen(
     onInspect: (templateId: String, assetId: String) -> Unit,
+    onReportFault: (assetId: String) -> Unit,
     onBack: () -> Unit,
     viewModel: AssetDetailViewModel = hiltViewModel(),
 ) {
@@ -83,7 +84,7 @@ fun AssetDetailScreen(
                         Text("  بازرسی")
                     }
                     OutlinedButton(
-                        onClick = { viewModel.reportFault("ثبت‌شده از محل") },
+                        onClick = { onReportFault(viewModel.assetId) },
                         modifier = Modifier.weight(1f),
                     ) {
                         Icon(Icons.Default.ReportProblem, contentDescription = null)

@@ -36,10 +36,14 @@ class HseViewModel @Inject constructor(repository: HseRepository) : ViewModel() 
 }
 
 @Composable
-fun HseScreen(onBack: () -> Unit, viewModel: HseViewModel = hiltViewModel()) {
+fun HseScreen(
+    onBack: () -> Unit,
+    onAdd: () -> Unit,
+    viewModel: HseViewModel = hiltViewModel(),
+) {
     val incidents by viewModel.incidents.collectAsStateWithLifecycle()
 
-    ModuleScaffold("مدیریت HSE (ایمنی و بهداشت)", onBack) { padding ->
+    ModuleScaffold("مدیریت HSE (ایمنی و بهداشت)", onBack, onAdd = onAdd) { padding ->
         LazyColumn(
             Modifier.fillMaxSize().padding(padding),
             contentPadding = androidx.compose.foundation.layout.PaddingValues(12.dp),
