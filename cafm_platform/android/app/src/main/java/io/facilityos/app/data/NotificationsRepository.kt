@@ -40,21 +40,26 @@ class NotificationsRepository @Inject constructor(
                 it.status != FaultStatus.CLOSED.name && it.status != FaultStatus.COMPLETED.name
         }.forEach {
             out += AppNotification(
-                "fault-${it.id}", "critical_fault", "Critical fault open", it.title,
+                "fault-${it.id}", "critical_fault", "خرابی بحرانی باز", it.title,
                 NotificationSeverity.CRITICAL,
             )
         }
 
         compliance.forEach {
             when (it.status) {
-                ComplianceStatus.OVERDUE.name, ComplianceStatus.NON_COMPLIANT.name ->
+                ComplianceStatus.OVERDUE.name ->
                     out += AppNotification(
-                        "cmp-${it.id}", "compliance", "Compliance ${it.status.lowercase()}",
-                        "${it.deviceType} requires attention", NotificationSeverity.CRITICAL,
+                        "cmp-${it.id}", "compliance", "تطابق معوق",
+                        "${it.deviceType} نیازمند رسیدگی است", NotificationSeverity.CRITICAL,
+                    )
+                ComplianceStatus.NON_COMPLIANT.name ->
+                    out += AppNotification(
+                        "cmp-${it.id}", "compliance", "عدم تطابق",
+                        "${it.deviceType} نیازمند رسیدگی است", NotificationSeverity.CRITICAL,
                     )
                 ComplianceStatus.DUE_SOON.name ->
                     out += AppNotification(
-                        "cmp-${it.id}", "compliance", "Inspection due soon",
+                        "cmp-${it.id}", "compliance", "بازرسی نزدیک",
                         it.deviceType, NotificationSeverity.WARNING,
                     )
             }
@@ -62,7 +67,7 @@ class NotificationsRepository @Inject constructor(
 
         parts.filter { it.qty <= it.minQty }.forEach {
             out += AppNotification(
-                "part-${it.id}", "low_stock", "Low stock",
+                "part-${it.id}", "low_stock", "کمبود موجودی",
                 "${it.description} (${it.qty.toInt()}/${it.minQty.toInt()})",
                 NotificationSeverity.WARNING,
             )
@@ -70,7 +75,7 @@ class NotificationsRepository @Inject constructor(
 
         assets.filter { it.warrantyEnd != null && it.warrantyEnd in now..(now + 90 * day) }.forEach {
             out += AppNotification(
-                "wty-${it.id}", "warranty", "Warranty expiring",
+                "wty-${it.id}", "warranty", "انقضای گارانتی",
                 "${it.name} (${it.assetCode})", NotificationSeverity.WARNING,
             )
         }

@@ -56,7 +56,7 @@ class DashboardRepository @Inject constructor(
             it.status != FaultStatus.CLOSED.name && it.status != FaultStatus.COMPLETED.name
         }
         val critical = openFaults.filter { it.priority == Priority.CRITICAL.name }
-        val downAssets = assets.count { it.statusLabel.equals("Down", ignoreCase = true) }
+        val downAssets = assets.count { it.statusLabel == "خارج از سرویس" }
         val inService = assets.size - downAssets
 
         val overdueInspections = buildings.count {

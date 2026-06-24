@@ -4,6 +4,9 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.LayoutDirection
 import io.facilityos.app.core.designsystem.theme.FacilityOsTheme
 import io.facilityos.app.navigation.FacilityOsNavGraph
 import dagger.hilt.android.AndroidEntryPoint
@@ -14,8 +17,11 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            FacilityOsTheme {
-                FacilityOsNavGraph()
+            // App is Persian-first: force right-to-left layout regardless of device locale.
+            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+                FacilityOsTheme {
+                    FacilityOsNavGraph()
+                }
             }
         }
     }

@@ -46,7 +46,7 @@ fun MapScreen(
 ) {
     val buildings by viewModel.buildings.collectAsStateWithLifecycle()
 
-    ModuleScaffold("Map", onBack) { padding ->
+    ModuleScaffold("نقشه", onBack) { padding ->
         LazyColumn(
             Modifier.fillMaxSize().padding(padding),
             contentPadding = PaddingValues(12.dp),
@@ -54,8 +54,8 @@ fun MapScreen(
         ) {
             item {
                 Text(
-                    "Offline mode: an interactive Google Maps / MapLibre view with clustering and " +
-                        "navigation mounts here when online. Buildings and their coordinates below.",
+                    "حالت آفلاین: در حالت آنلاین نقشهٔ تعاملی (Google Maps / MapLibre) با خوشه‌بندی و " +
+                        "مسیریابی اینجا نمایش داده می‌شود. ساختمان‌ها و مختصاتشان در زیر.",
                     style = MaterialTheme.typography.bodySmall,
                 )
             }
@@ -69,8 +69,8 @@ fun MapScreen(
                         Column(Modifier.weight(1f)) {
                             Text(b.name, fontWeight = FontWeight.SemiBold)
                             Text(
-                                b.lat?.let { lat -> "%.4f, %.4f".format(lat, b.lng ?: 0.0) }
-                                    ?: "No GPS",
+                                b.lat?.let { lat -> "%.4f، %.4f".format(lat, b.lng ?: 0.0) }
+                                    ?: "بدون موقعیت GPS",
                                 style = MaterialTheme.typography.bodySmall,
                             )
                         }

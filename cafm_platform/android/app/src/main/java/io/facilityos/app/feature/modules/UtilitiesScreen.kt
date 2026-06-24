@@ -23,6 +23,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import io.facilityos.app.core.designsystem.theme.StatusColors
 import io.facilityos.app.core.designsystem.component.BarRow
 import io.facilityos.app.core.model.UtilityReading
+import io.facilityos.app.core.model.utilityFa
 import io.facilityos.app.data.UtilityRepository
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -42,7 +43,7 @@ fun UtilitiesScreen(onBack: () -> Unit, viewModel: UtilitiesViewModel = hiltView
     // Portfolio totals per utility per month.
     val byUtility = readings.groupBy { it.utility }
 
-    ModuleScaffold("Utility Management", onBack) { padding ->
+    ModuleScaffold("مدیریت انرژی و مصارف", onBack) { padding ->
         LazyColumn(
             Modifier.fillMaxSize().padding(padding),
             contentPadding = PaddingValues(12.dp),
@@ -60,11 +61,11 @@ fun UtilitiesScreen(onBack: () -> Unit, viewModel: UtilitiesViewModel = hiltView
                     Card(Modifier.fillMaxWidth()) {
                         Column(Modifier.padding(16.dp)) {
                             Text(
-                                utility.replaceFirstChar { it.uppercase() },
+                                utilityFa(utility),
                                 fontWeight = FontWeight.SemiBold,
                             )
                             Text(
-                                "Total cost: $%.0f".format(totalCost),
+                                "هزینهٔ کل: %.0f$".format(totalCost),
                                 style = MaterialTheme.typography.bodySmall,
                             )
                             byMonth.forEach { (month, value) ->

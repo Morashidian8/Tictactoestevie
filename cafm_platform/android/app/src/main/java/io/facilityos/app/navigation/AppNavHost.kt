@@ -66,11 +66,11 @@ object Routes {
 private data class TopDest(val route: String, val label: String, val icon: ImageVector)
 
 private val topDestinations = listOf(
-    TopDest(Routes.HOME, "Home", Icons.Default.SpaceDashboard),
-    TopDest(Routes.BUILDINGS, "Buildings", Icons.Default.Apartment),
-    TopDest(Routes.WORK, "Work", Icons.Default.Assignment),
-    TopDest(Routes.STATUS, "Status", Icons.Default.MonitorHeart),
-    TopDest(Routes.MORE, "More", Icons.Default.MoreHoriz),
+    TopDest(Routes.HOME, "خانه", Icons.Default.SpaceDashboard),
+    TopDest(Routes.BUILDINGS, "ساختمان‌ها", Icons.Default.Apartment),
+    TopDest(Routes.WORK, "کارها", Icons.Default.Assignment),
+    TopDest(Routes.STATUS, "پایش", Icons.Default.MonitorHeart),
+    TopDest(Routes.MORE, "بیشتر", Icons.Default.MoreHoriz),
 )
 
 @Composable

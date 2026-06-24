@@ -42,10 +42,10 @@ fun BuildingDetailScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(state.building?.name ?: "Building") },
+                title = { Text(state.building?.name ?: "ساختمان") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "بازگشت")
                     }
                 },
             )
@@ -60,10 +60,10 @@ fun BuildingDetailScreen(
                 item {
                     Card(Modifier.fillMaxWidth()) {
                         Column(Modifier.padding(16.dp)) {
-                            Text("Code ${b.code}", style = MaterialTheme.typography.bodySmall)
-                            Text("${b.floorsCount ?: "-"} floors · ${b.assetCount} assets")
+                            Text("کد ${b.code}", style = MaterialTheme.typography.bodySmall)
+                            Text("${b.floorsCount ?: "-"} طبقه · ${b.assetCount} تجهیز")
                             Text(
-                                "${b.openFaults} open faults",
+                                "${b.openFaults} خرابی باز",
                                 color = MaterialTheme.colorScheme.error,
                             )
                         }
@@ -71,7 +71,7 @@ fun BuildingDetailScreen(
                 }
                 item {
                     Text(
-                        "Assets",
+                        "تجهیزات",
                         style = MaterialTheme.typography.titleMedium,
                         modifier = Modifier.padding(top = 8.dp),
                     )

@@ -49,7 +49,7 @@ fun InventoryScreen(onBack: () -> Unit, viewModel: InventoryViewModel = hiltView
     val parts by viewModel.parts.collectAsStateWithLifecycle()
     val lowCount = parts.count { it.lowStock }
 
-    ModuleScaffold("Spare Parts & Inventory", onBack) { padding ->
+    ModuleScaffold("قطعات یدکی و انبار", onBack) { padding ->
         LazyColumn(
             Modifier.fillMaxSize().padding(padding),
             contentPadding = androidx.compose.foundation.layout.PaddingValues(12.dp),
@@ -58,7 +58,7 @@ fun InventoryScreen(onBack: () -> Unit, viewModel: InventoryViewModel = hiltView
             if (lowCount > 0) {
                 item {
                     Text(
-                        "⚠ $lowCount item(s) below reorder level",
+                        "⚠ $lowCount قلم زیر حد سفارش مجدد",
                         color = StatusColors.Critical,
                         fontWeight = FontWeight.SemiBold,
                     )
@@ -79,7 +79,7 @@ fun InventoryScreen(onBack: () -> Unit, viewModel: InventoryViewModel = hiltView
                             )
                         }
                         Text(
-                            "${p.qty.toInt()} / min ${p.minQty.toInt()}",
+                            "${p.qty.toInt()} / حداقل ${p.minQty.toInt()}",
                             color = if (p.lowStock) StatusColors.Critical else StatusColors.Ok,
                             fontWeight = FontWeight.SemiBold,
                         )
@@ -104,7 +104,7 @@ fun ModuleScaffold(
                 title = { Text(title) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "بازگشت")
                     }
                 },
             )

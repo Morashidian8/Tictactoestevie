@@ -35,15 +35,15 @@ private data class MoreItem(val label: String, val route: String, val icon: Imag
 @Composable
 fun MoreScreen(onNavigate: (String) -> Unit) {
     val items = listOf(
-        MoreItem("Spare Parts & Inventory", "inventory", Icons.Default.Inventory2),
-        MoreItem("HSE Management", "hse", Icons.Default.HealthAndSafety),
-        MoreItem("Fire Compliance", "compliance", Icons.Default.LocalFireDepartment),
-        MoreItem("Utility Management", "utilities", Icons.Default.Bolt),
-        MoreItem("Notifications", "notifications", Icons.Default.Notifications),
-        MoreItem("Map", "map", Icons.Default.Map),
+        MoreItem("قطعات یدکی و انبار", "inventory", Icons.Default.Inventory2),
+        MoreItem("مدیریت HSE (ایمنی و بهداشت)", "hse", Icons.Default.HealthAndSafety),
+        MoreItem("تطابق آتش‌نشانی", "compliance", Icons.Default.LocalFireDepartment),
+        MoreItem("مدیریت انرژی و مصارف", "utilities", Icons.Default.Bolt),
+        MoreItem("اعلان‌ها", "notifications", Icons.Default.Notifications),
+        MoreItem("نقشه", "map", Icons.Default.Map),
     )
 
-    Scaffold(topBar = { TopAppBar(title = { Text("More") }) }) { padding ->
+    Scaffold(topBar = { TopAppBar(title = { Text("بیشتر") }) }) { padding ->
         LazyColumn(
             Modifier.fillMaxSize().padding(padding),
             contentPadding = androidx.compose.foundation.layout.PaddingValues(12.dp),

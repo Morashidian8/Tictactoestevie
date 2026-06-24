@@ -72,12 +72,12 @@ class ChecklistRunnerViewModel @Inject constructor(
     /** Local fallback so the runner is usable without a backend during development. */
     private fun demoTemplate() = ChecklistTemplate(
         id = templateId,
-        name = "Monthly PM — Generic",
+        name = "نگهداری پیشگیرانهٔ ماهانه — عمومی",
         frequency = "monthly",
         items = listOf(
-            ChecklistItemDef("i1", 1, "General condition acceptable?", ResponseType.PASS_FAIL_NA),
-            ChecklistItemDef("i2", 2, "Operating temperature", ResponseType.NUMERIC, unit = "°C", maxValue = 80.0),
-            ChecklistItemDef("i3", 3, "Notes", ResponseType.TEXT, required = false),
+            ChecklistItemDef("i1", 1, "وضعیت کلی قابل قبول است؟", ResponseType.PASS_FAIL_NA),
+            ChecklistItemDef("i2", 2, "دمای کارکرد", ResponseType.NUMERIC, unit = "°C", maxValue = 80.0),
+            ChecklistItemDef("i3", 3, "توضیحات", ResponseType.TEXT, required = false),
         ),
     )
 }

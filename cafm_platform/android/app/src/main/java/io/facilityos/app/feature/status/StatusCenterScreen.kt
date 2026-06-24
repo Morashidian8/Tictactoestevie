@@ -35,7 +35,7 @@ import io.facilityos.app.core.model.BuildingStatus
 fun StatusCenterScreen(viewModel: StatusCenterViewModel = hiltViewModel()) {
     val buildings by viewModel.buildings.collectAsStateWithLifecycle()
 
-    Scaffold(topBar = { TopAppBar(title = { Text("Building Status Center") }) }) { padding ->
+    Scaffold(topBar = { TopAppBar(title = { Text("مرکز پایش ساختمان‌ها") }) }) { padding ->
         LazyColumn(
             Modifier.fillMaxSize().padding(padding),
             contentPadding = androidx.compose.foundation.layout.PaddingValues(12.dp),
@@ -52,12 +52,12 @@ private fun BuildingStatusCard(b: Building) {
     val attention = b.status == BuildingStatus.PARTIAL || b.openFaults in 1..2
 
     val subsystems = listOf(
-        "Elevators" to if (critical) BuildingStatus.CRITICAL else BuildingStatus.OPERATIONAL,
-        "Generators" to BuildingStatus.OPERATIONAL,
-        "Mechanical" to if (attention) BuildingStatus.PARTIAL else BuildingStatus.OPERATIONAL,
-        "Fire alarm" to if (critical) BuildingStatus.CRITICAL else BuildingStatus.OPERATIONAL,
-        "PM compliance" to if (attention) BuildingStatus.PARTIAL else BuildingStatus.OPERATIONAL,
-        "Inspections" to if (b.lastInspectionAt != null &&
+        "آسانسورها" to if (critical) BuildingStatus.CRITICAL else BuildingStatus.OPERATIONAL,
+        "ژنراتورها" to BuildingStatus.OPERATIONAL,
+        "مکانیکی" to if (attention) BuildingStatus.PARTIAL else BuildingStatus.OPERATIONAL,
+        "اعلام حریق" to if (critical) BuildingStatus.CRITICAL else BuildingStatus.OPERATIONAL,
+        "تطابق PM" to if (attention) BuildingStatus.PARTIAL else BuildingStatus.OPERATIONAL,
+        "بازرسی‌ها" to if (b.lastInspectionAt != null &&
             b.lastInspectionAt < System.currentTimeMillis() - 30L * 24 * 60 * 60 * 1000
         ) BuildingStatus.CRITICAL else BuildingStatus.OPERATIONAL,
     )
@@ -68,7 +68,7 @@ private fun BuildingStatusCard(b: Building) {
                 StatusDot(b.status)
                 Text(b.name, fontWeight = FontWeight.SemiBold)
                 Text(
-                    "   ${b.openFaults} open",
+                    "   ${b.openFaults} باز",
                     style = MaterialTheme.typography.bodySmall,
                     color = if (b.openFaults > 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
                 )

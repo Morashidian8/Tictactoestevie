@@ -29,6 +29,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.facilityos.app.core.designsystem.component.PriorityChip
 import io.facilityos.app.core.model.Fault
 import io.facilityos.app.core.model.WorkOrder
+import io.facilityos.app.core.model.faLabel
+import io.facilityos.app.core.model.workOrderTypeFa
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -37,11 +39,11 @@ fun WorkScreen(viewModel: WorkViewModel = hiltViewModel()) {
     val faults by viewModel.faults.collectAsStateWithLifecycle()
     var tab by remember { mutableIntStateOf(0) }
 
-    Scaffold(topBar = { TopAppBar(title = { Text("My Work") }) }) { padding ->
+    Scaffold(topBar = { TopAppBar(title = { Text("کارهای من") }) }) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
             TabRow(selectedTabIndex = tab) {
-                Tab(selected = tab == 0, onClick = { tab = 0 }, text = { Text("Work orders (${workOrders.size})") })
-                Tab(selected = tab == 1, onClick = { tab = 1 }, text = { Text("Faults (${faults.size})") })
+                Tab(selected = tab == 0, onClick = { tab = 0 }, text = { Text("دستورکارها (${workOrders.size})") })
+                Tab(selected = tab == 1, onClick = { tab = 1 }, text = { Text("خرابی‌ها (${faults.size})") })
             }
             LazyColumn(
                 Modifier.fillMaxSize(),
@@ -64,10 +66,10 @@ private fun WorkOrderRow(wo: WorkOrder) {
         Column(Modifier.padding(14.dp)) {
             Text("${wo.woNumber} · ${wo.title}", fontWeight = FontWeight.SemiBold)
             Text(
-                "${wo.type.uppercase()} · ${wo.status.name.lowercase().replace('_', ' ')}",
+                "${workOrderTypeFa(wo.type)} · ${wo.status.faLabel()}",
                 style = MaterialTheme.typography.bodySmall,
             )
-            wo.cost?.let { Text("Est. $%.0f".format(it), style = MaterialTheme.typography.labelSmall) }
+            wo.cost?.let { Text("تخمین %.0f$".format(it), style = MaterialTheme.typography.labelSmall) }
         }
     }
 }
@@ -83,7 +85,7 @@ private fun FaultRow(f: Fault) {
             Column(Modifier.weight(1f)) {
                 Text(f.title, fontWeight = FontWeight.SemiBold)
                 Text(
-                    f.status.name.lowercase().replace('_', ' '),
+                    f.status.faLabel(),
                     style = MaterialTheme.typography.bodySmall,
                 )
             }

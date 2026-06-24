@@ -45,10 +45,10 @@ fun AssetDetailScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(asset?.name ?: "Asset") },
+                title = { Text(asset?.name ?: "تجهیز") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "بازگشت")
                     }
                 },
             )
@@ -70,7 +70,7 @@ fun AssetDetailScreen(
                             listOfNotNull(asset.manufacturer, asset.model).joinToString(" · "),
                             style = MaterialTheme.typography.bodySmall,
                         )
-                        asset.serialNo?.let { Text("S/N $it", style = MaterialTheme.typography.bodySmall) }
+                        asset.serialNo?.let { Text("شماره سریال $it", style = MaterialTheme.typography.bodySmall) }
                     }
                 }
 
@@ -80,19 +80,19 @@ fun AssetDetailScreen(
                         modifier = Modifier.weight(1f),
                     ) {
                         Icon(Icons.Default.Build, contentDescription = null)
-                        Text("  Inspect")
+                        Text("  بازرسی")
                     }
                     OutlinedButton(
-                        onClick = { viewModel.reportFault("Reported from field") },
+                        onClick = { viewModel.reportFault("ثبت‌شده از محل") },
                         modifier = Modifier.weight(1f),
                     ) {
                         Icon(Icons.Default.ReportProblem, contentDescription = null)
-                        Text("  Fault")
+                        Text("  ثبت خرابی")
                     }
                 }
 
                 if (state.faults.isNotEmpty()) {
-                    Text("Open faults", style = MaterialTheme.typography.titleMedium)
+                    Text("خرابی‌های باز", style = MaterialTheme.typography.titleMedium)
                     state.faults.forEach { fault ->
                         Card(Modifier.fillMaxWidth()) {
                             Row(

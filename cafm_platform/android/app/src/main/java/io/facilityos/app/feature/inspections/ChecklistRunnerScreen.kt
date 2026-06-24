@@ -43,14 +43,14 @@ fun ChecklistRunnerScreen(
     }
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text(state.template?.name ?: "Inspection") }) },
+        topBar = { TopAppBar(title = { Text(state.template?.name ?: "بازرسی") }) },
         bottomBar = {
             Button(
                 onClick = viewModel::submit,
                 enabled = !state.submitting && state.template != null,
                 modifier = Modifier.fillMaxWidth().padding(16.dp),
             ) {
-                Text(if (state.submitting) "Saving…" else "Complete inspection")
+                Text(if (state.submitting) "در حال ذخیره…" else "تکمیل بازرسی")
             }
         },
     ) { padding ->
@@ -87,11 +87,12 @@ private fun ChecklistItemCard(
             when (item.responseType) {
                 ResponseType.PASS_FAIL_NA -> {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        listOf("pass", "fail", "na").forEach { option ->
+                        val labels = listOf("pass" to "تأیید", "fail" to "رد", "na" to "نامربوط")
+                        labels.forEach { (option, label) ->
                             FilterChip(
                                 selected = response?.result == option,
                                 onClick = { onResult(option) },
-                                label = { Text(option.uppercase()) },
+                                label = { Text(label) },
                             )
                         }
                     }
@@ -100,24 +101,25 @@ private fun ChecklistItemCard(
                     OutlinedTextField(
                         value = response?.valueNum?.toString() ?: "",
                         onValueChange = onNumeric,
-                        label = { Text(item.unit ?: "Value") },
+                        label = { Text(item.unit ?: "مقدار") },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
                     )
-                    item.maxValue?.let { Text("Max $it", style = androidx.compose.material3.MaterialTheme.typography.bodySmall) }
+                    item.maxValue?.let { Text("حداکثر $it", style = androidx.compose.material3.MaterialTheme.typography.bodySmall) }
                 }
                 ResponseType.TEXT -> {
                     OutlinedTextField(
                         value = response?.valueText ?: "",
                         onValueChange = onText,
-                        label = { Text("Notes") },
+                        label = { Text("توضیحات") },
                         modifier = Modifier.fillMaxWidth(),
                     )
                 }
                 ResponseType.PHOTO, ResponseType.SIGNATURE -> {
+                    val kind = if (item.responseType == ResponseType.PHOTO) "عکس" else "امضای دیجیتال"
                     Text(
-                        "${item.responseType.name} capture — wired to CameraX in a full build",
+                        "ثبت $kind — در نسخهٔ کامل به دوربین متصل می‌شود",
                         style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
                     )
                 }

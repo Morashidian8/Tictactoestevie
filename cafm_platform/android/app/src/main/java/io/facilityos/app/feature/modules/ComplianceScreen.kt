@@ -30,6 +30,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.facilityos.app.core.designsystem.component.complianceColor
 import io.facilityos.app.core.model.ComplianceItem
+import io.facilityos.app.core.model.faLabel
 import io.facilityos.app.data.ComplianceRepository
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -51,7 +52,7 @@ private val dateFmt = SimpleDateFormat("yyyy-MM-dd", Locale.US)
 fun ComplianceScreen(onBack: () -> Unit, viewModel: ComplianceViewModel = hiltViewModel()) {
     val items by viewModel.items.collectAsStateWithLifecycle()
 
-    ModuleScaffold("Fire Compliance", onBack) { padding ->
+    ModuleScaffold("تطابق آتش‌نشانی", onBack) { padding ->
         LazyColumn(
             Modifier.fillMaxSize().padding(padding),
             contentPadding = PaddingValues(12.dp),
@@ -66,12 +67,12 @@ fun ComplianceScreen(onBack: () -> Unit, viewModel: ComplianceViewModel = hiltVi
                         Column(Modifier.weight(1f)) {
                             Text(c.deviceType, fontWeight = FontWeight.SemiBold)
                             Text(
-                                "Next: ${c.nextInspection?.let { dateFmt.format(Date(it)) } ?: "—"} · " +
-                                    "Cert: ${c.certExpiry?.let { dateFmt.format(Date(it)) } ?: "—"}",
+                                "بعدی: ${c.nextInspection?.let { dateFmt.format(Date(it)) } ?: "—"} · " +
+                                    "گواهی: ${c.certExpiry?.let { dateFmt.format(Date(it)) } ?: "—"}",
                                 style = MaterialTheme.typography.bodySmall,
                             )
                         }
-                        StatusBadge(c.status.name.replace('_', ' '), complianceColor(c.status))
+                        StatusBadge(c.status.faLabel(), complianceColor(c.status))
                     }
                 }
             }

@@ -45,7 +45,7 @@ class NotificationsViewModel @Inject constructor(repository: NotificationsReposi
 fun NotificationsScreen(onBack: () -> Unit, viewModel: NotificationsViewModel = hiltViewModel()) {
     val notifications by viewModel.notifications.collectAsStateWithLifecycle()
 
-    ModuleScaffold("Notifications (${notifications.size})", onBack) { padding ->
+    ModuleScaffold("اعلان‌ها (${notifications.size})", onBack) { padding ->
         LazyColumn(
             Modifier.fillMaxSize().padding(padding),
             contentPadding = PaddingValues(12.dp),

@@ -44,7 +44,13 @@ fun CriticalityChip(criticality: Criticality) {
         Criticality.MEDIUM -> StatusColors.Attention
         Criticality.LOW -> StatusColors.Unknown
     }
-    Pill(text = criticality.name, color = color)
+    val label = when (criticality) {
+        Criticality.CRITICAL -> "بحرانی"
+        Criticality.HIGH -> "بالا"
+        Criticality.MEDIUM -> "متوسط"
+        Criticality.LOW -> "پایین"
+    }
+    Pill(text = label, color = color)
 }
 
 @Composable
@@ -55,16 +61,22 @@ fun PriorityChip(priority: Priority) {
         Priority.MEDIUM -> StatusColors.Attention
         Priority.LOW -> StatusColors.Unknown
     }
-    Pill(text = priority.name, color = color)
+    val label = when (priority) {
+        Priority.CRITICAL -> "بحرانی"
+        Priority.HIGH -> "بالا"
+        Priority.MEDIUM -> "متوسط"
+        Priority.LOW -> "پایین"
+    }
+    Pill(text = label, color = color)
 }
 
-/** Global sync indicator (Synced / Pending N / Offline). */
+/** Global sync indicator (همگام / در صف N / آفلاین). */
 @Composable
 fun SyncPill(state: SyncState, pendingCount: Int) {
     val (label, color) = when (state) {
-        SyncState.SYNCED -> "Synced" to StatusColors.Ok
-        SyncState.PENDING -> "Pending $pendingCount" to StatusColors.Attention
-        SyncState.ERROR -> "Offline" to StatusColors.Unknown
+        SyncState.SYNCED -> "همگام" to StatusColors.Ok
+        SyncState.PENDING -> "در صف $pendingCount" to StatusColors.Attention
+        SyncState.ERROR -> "آفلاین" to StatusColors.Unknown
     }
     Pill(text = label, color = color)
 }

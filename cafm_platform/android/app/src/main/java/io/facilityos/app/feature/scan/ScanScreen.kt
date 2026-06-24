@@ -36,10 +36,10 @@ fun ScanScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Scan QR") },
+                title = { Text("اسکن QR") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "بازگشت")
                     }
                 },
             )
@@ -51,14 +51,14 @@ fun ScanScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Text(
-                "CameraX + ML Kit viewfinder mounts here in a full build. " +
-                    "Enter a code manually to resolve an asset.",
+                "در نسخهٔ کامل، نمای دوربین (CameraX + ML Kit) اینجا نمایش داده می‌شود. " +
+                    "برای باز کردن تجهیز، کد را دستی وارد کنید.",
                 style = MaterialTheme.typography.bodySmall,
             )
             OutlinedTextField(
                 value = state.code,
                 onValueChange = viewModel::onCodeChange,
-                label = { Text("Asset QR / code") },
+                label = { Text("کد / QR تجهیز") },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
@@ -67,10 +67,10 @@ fun ScanScreen(
                 enabled = !state.resolving,
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Text(if (state.resolving) "Resolving…" else "Open asset")
+                Text(if (state.resolving) "در حال یافتن…" else "باز کردن تجهیز")
             }
             if (state.notFound) {
-                Text("No asset found for that code", color = MaterialTheme.colorScheme.error)
+                Text("تجهیزی با این کد یافت نشد", color = MaterialTheme.colorScheme.error)
             }
         }
     }

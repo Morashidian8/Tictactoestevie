@@ -27,6 +27,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.facilityos.app.core.designsystem.component.KpiCard
 import io.facilityos.app.core.designsystem.component.PriorityChip
 import io.facilityos.app.core.designsystem.theme.StatusColors
+import io.facilityos.app.core.model.faLabel
+import io.facilityos.app.core.model.workOrderTypeFa
 import io.facilityos.app.data.DashboardData
 
 private data class Kpi(val label: String, val value: String, val accent: androidx.compose.ui.graphics.Color? = null, val sub: String? = null)
@@ -37,7 +39,7 @@ fun DashboardScreen(viewModel: DashboardViewModel = hiltViewModel()) {
     val data by viewModel.data.collectAsStateWithLifecycle()
     val role by viewModel.role.collectAsStateWithLifecycle()
 
-    Scaffold(topBar = { TopAppBar(title = { Text("Dashboard") }) }) { padding ->
+    Scaffold(topBar = { TopAppBar(title = { Text("داشبورد") }) }) { padding ->
         LazyColumn(
             Modifier.fillMaxSize().padding(padding),
             contentPadding = androidx.compose.foundation.layout.PaddingValues(12.dp),
@@ -52,7 +54,7 @@ fun DashboardScreen(viewModel: DashboardViewModel = hiltViewModel()) {
                         FilterChip(
                             selected = role == r,
                             onClick = { viewModel.selectRole(r) },
-                            label = { Text(r.name.lowercase().replaceFirstChar { it.uppercase() }) },
+                            label = { Text(roleFa(r)) },
                         )
                     }
                 }
@@ -71,7 +73,7 @@ fun DashboardScreen(viewModel: DashboardViewModel = hiltViewModel()) {
             }
 
             if (data.criticalFaults > 0) {
-                item { SectionHeader("Critical faults (${data.criticalFaults})") }
+                item { SectionHeader("خرابی‌های بحرانی (${data.criticalFaults})") }
                 items(data.topFaults, key = { it.id }) { f ->
                     Card(Modifier.fillMaxWidth()) {
                         Row(
@@ -86,13 +88,13 @@ fun DashboardScreen(viewModel: DashboardViewModel = hiltViewModel()) {
             }
 
             if (role == DashboardRole.TECHNICIAN || role == DashboardRole.SUPERVISOR) {
-                item { SectionHeader("Open work orders (${data.openWorkOrders.size})") }
+                item { SectionHeader("دستورکارهای باز (${data.openWorkOrders.size})") }
                 items(data.openWorkOrders, key = { it.id }) { wo ->
                     Card(Modifier.fillMaxWidth()) {
                         Column(Modifier.padding(14.dp)) {
                             Text("${wo.woNumber} · ${wo.title}", fontWeight = FontWeight.SemiBold)
                             Text(
-                                "${wo.type.uppercase()} · ${wo.status.name.lowercase()}",
+                                "${workOrderTypeFa(wo.type)} · ${wo.status.faLabel()}",
                                 style = MaterialTheme.typography.bodySmall,
                             )
                         }
@@ -118,36 +120,43 @@ private fun kpisFor(role: DashboardRole, d: DashboardData): List<Kpi> {
     val amber = StatusColors.Attention
     return when (role) {
         DashboardRole.TECHNICIAN -> listOf(
-            Kpi("Open work orders", d.openWorkOrders.size.toString()),
-            Kpi("Overdue", d.overdueWorkOrders.toString(), if (d.overdueWorkOrders > 0) red else green),
-            Kpi("Open faults", d.openFaults.toString()),
-            Kpi("Critical", d.criticalFaults.toString(), if (d.criticalFaults > 0) red else green),
+            Kpi("دستورکارهای باز", d.openWorkOrders.size.toString()),
+            Kpi("معوق", d.overdueWorkOrders.toString(), if (d.overdueWorkOrders > 0) red else green),
+            Kpi("خرابی‌های باز", d.openFaults.toString()),
+            Kpi("بحرانی", d.criticalFaults.toString(), if (d.criticalFaults > 0) red else green),
         )
         DashboardRole.SUPERVISOR -> listOf(
-            Kpi("Open work orders", d.openWorkOrders.size.toString()),
-            Kpi("Overdue insp.", d.overdueInspections.toString(), if (d.overdueInspections > 0) amber else green),
-            Kpi("Open faults", d.openFaults.toString()),
-            Kpi("PM compliance", "${d.pmCompliancePct}%", if (d.pmCompliancePct >= 90) green else amber),
+            Kpi("دستورکارهای باز", d.openWorkOrders.size.toString()),
+            Kpi("بازرسی معوق", d.overdueInspections.toString(), if (d.overdueInspections > 0) amber else green),
+            Kpi("خرابی‌های باز", d.openFaults.toString()),
+            Kpi("تطابق PM", "${d.pmCompliancePct}%", if (d.pmCompliancePct >= 90) green else amber),
         )
         DashboardRole.MANAGER -> listOf(
-            Kpi("Asset health", d.assetHealthScore.toString(), healthColor(d.assetHealthScore), "/ 100"),
-            Kpi("PM compliance", "${d.pmCompliancePct}%", if (d.pmCompliancePct >= 90) green else amber),
-            Kpi("Critical faults", d.criticalFaults.toString(), if (d.criticalFaults > 0) red else green),
-            Kpi("Availability", "${d.availabilityPct}%", if (d.availabilityPct >= 95) green else amber),
-            Kpi("Buildings", d.buildings.toString()),
-            Kpi("Assets", d.assets.toString()),
+            Kpi("سلامت دارایی", d.assetHealthScore.toString(), healthColor(d.assetHealthScore), "از ۱۰۰"),
+            Kpi("تطابق PM", "${d.pmCompliancePct}%", if (d.pmCompliancePct >= 90) green else amber),
+            Kpi("خرابی بحرانی", d.criticalFaults.toString(), if (d.criticalFaults > 0) red else green),
+            Kpi("در دسترس بودن", "${d.availabilityPct}%", if (d.availabilityPct >= 95) green else amber),
+            Kpi("ساختمان‌ها", d.buildings.toString()),
+            Kpi("تجهیزات", d.assets.toString()),
         )
         DashboardRole.EXECUTIVE -> listOf(
-            Kpi("Asset value", money(d.assetValueEstimate)),
-            Kpi("Maint. cost", money(d.maintenanceCost), sub = "completed"),
-            Kpi("Deferred cost", money(d.deferredCost), amber, "open WOs"),
-            Kpi("Availability", "${d.availabilityPct}%"),
-            Kpi("MTBF", d.mtbfDays?.let { "${it.toInt()}d" } ?: "—"),
-            Kpi("MTTR", d.mttrHours?.let { "${it.toInt()}h" } ?: "—"),
-            Kpi("Risk score", d.riskScore.toString(), if (d.riskScore >= 40) red else green),
-            Kpi("Health", d.assetHealthScore.toString(), healthColor(d.assetHealthScore)),
+            Kpi("ارزش دارایی", money(d.assetValueEstimate)),
+            Kpi("هزینهٔ نگهداری", money(d.maintenanceCost), sub = "تکمیل‌شده"),
+            Kpi("هزینهٔ معوق", money(d.deferredCost), amber, "دستورکار باز"),
+            Kpi("در دسترس بودن", "${d.availabilityPct}%"),
+            Kpi("MTBF", d.mtbfDays?.let { "${it.toInt()} روز" } ?: "—"),
+            Kpi("MTTR", d.mttrHours?.let { "${it.toInt()} ساعت" } ?: "—"),
+            Kpi("امتیاز ریسک", d.riskScore.toString(), if (d.riskScore >= 40) red else green),
+            Kpi("سلامت", d.assetHealthScore.toString(), healthColor(d.assetHealthScore)),
         )
     }
+}
+
+private fun roleFa(role: DashboardRole): String = when (role) {
+    DashboardRole.TECHNICIAN -> "تکنسین"
+    DashboardRole.SUPERVISOR -> "سرپرست"
+    DashboardRole.MANAGER -> "مدیر"
+    DashboardRole.EXECUTIVE -> "مدیرعامل"
 }
 
 private fun healthColor(score: Int) = when {

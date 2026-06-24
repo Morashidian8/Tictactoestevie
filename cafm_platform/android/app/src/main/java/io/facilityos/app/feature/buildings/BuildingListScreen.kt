@@ -44,7 +44,7 @@ fun BuildingListScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Buildings") },
+                title = { Text("ساختمان‌ها") },
                 actions = {
                     SyncPill(state = state.syncState, pendingCount = state.pendingCount)
                 },
@@ -54,7 +54,7 @@ fun BuildingListScreen(
             ExtendedFloatingActionButton(
                 onClick = onScanClick,
                 icon = { Icon(Icons.Default.QrCodeScanner, contentDescription = null) },
-                text = { Text("Scan") },
+                text = { Text("اسکن") },
             )
         },
     ) { padding ->
@@ -62,7 +62,7 @@ fun BuildingListScreen(
             OutlinedTextField(
                 value = state.query,
                 onValueChange = viewModel::onQueryChange,
-                label = { Text("Search buildings") },
+                label = { Text("جستجوی ساختمان‌ها") },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth().padding(12.dp),
             )
@@ -90,10 +90,10 @@ private fun BuildingRow(building: Building, onClick: () -> Unit) {
                 }
             }
             Column(horizontalAlignment = Alignment.End) {
-                Text("${building.assetCount} assets", style = MaterialTheme.typography.bodySmall)
+                Text("${building.assetCount} تجهیز", style = MaterialTheme.typography.bodySmall)
                 if (building.openFaults > 0) {
                     Text(
-                        "⚠ ${building.openFaults} open",
+                        "⚠ ${building.openFaults} باز",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.error,
                     )

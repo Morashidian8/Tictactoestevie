@@ -21,6 +21,8 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.facilityos.app.core.model.HseIncident
+import io.facilityos.app.core.model.hseStatusFa
+import io.facilityos.app.core.model.hseTypeFa
 import io.facilityos.app.data.HseRepository
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -37,7 +39,7 @@ class HseViewModel @Inject constructor(repository: HseRepository) : ViewModel() 
 fun HseScreen(onBack: () -> Unit, viewModel: HseViewModel = hiltViewModel()) {
     val incidents by viewModel.incidents.collectAsStateWithLifecycle()
 
-    ModuleScaffold("HSE Management", onBack) { padding ->
+    ModuleScaffold("مدیریت HSE (ایمنی و بهداشت)", onBack) { padding ->
         LazyColumn(
             Modifier.fillMaxSize().padding(padding),
             contentPadding = androidx.compose.foundation.layout.PaddingValues(12.dp),
@@ -47,12 +49,12 @@ fun HseScreen(onBack: () -> Unit, viewModel: HseViewModel = hiltViewModel()) {
                 Card(Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(14.dp)) {
                         Text(
-                            i.type.replace('_', ' ').replaceFirstChar { it.uppercase() },
+                            hseTypeFa(i.type),
                             fontWeight = FontWeight.SemiBold,
                         )
                         Text(i.description, style = MaterialTheme.typography.bodySmall)
                         Text(
-                            "Severity ${i.severity} · ${i.status}",
+                            "شدت ${i.severity} · ${hseStatusFa(i.status)}",
                             style = MaterialTheme.typography.labelSmall,
                         )
                     }
