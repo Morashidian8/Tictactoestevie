@@ -3,591 +3,720 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<meta name="theme-color" content="#0E1117" />
-<title>سامانه نگهداری و تعمیرات</title>
+<meta name="theme-color" content="#4f46e5" />
+<title>سامانه نگهداری و تعمیرات تأسیسات</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;700;800&display=swap" rel="stylesheet">
 <style>
   :root{
-    --ok:#2E7D32; --warn:#F9A825; --crit:#C62828; --unk:#9E9E9E;
-    --bg:#0E1117; --panel:#161b22; --card:#1f2632; --ink:#e6edf3; --muted:#9aa4b2;
-    --primary:#1565C0; --primary2:#4DD0E1; --line:#222b38;
+    --bg:#eef1f8; --card:#ffffff; --ink:#1e293b; --muted:#64748b; --line:#e7ebf3;
+    --primary:#4f46e5; --primary2:#0ea5e9;
+    --grad:linear-gradient(135deg,#4f46e5 0%,#0ea5e9 100%);
+    --ok:#16a34a; --warn:#f59e0b; --crit:#dc2626; --unk:#94a3b8;
+    --shadow:0 6px 20px rgba(15,23,42,.07); --shadow2:0 2px 8px rgba(15,23,42,.06);
   }
-  *{box-sizing:border-box}
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
   html,body{margin:0;height:100%}
-  body{background:var(--bg);color:var(--ink);
-    font-family:Vazirmatn,'Segoe UI',Tahoma,Roboto,system-ui,sans-serif;
-    -webkit-tap-highlight-color:transparent}
-  #app{max-width:480px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column;
-    background:var(--bg);position:relative}
-  .appbar{background:var(--panel);padding:14px 16px;font-weight:700;font-size:16px;
-    display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line);
-    position:sticky;top:0;z-index:10}
-  .appbar .back{cursor:pointer;font-size:20px;padding:0 6px}
-  .body{flex:1;overflow:auto;padding:12px;padding-bottom:80px}
-  .pill{font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;color:#fff;white-space:nowrap}
-  .card{background:var(--card);border-radius:14px;padding:14px;margin-bottom:9px}
-  .card.tap{cursor:pointer}
-  .row{display:flex;align-items:center;gap:10px}
+  body{background:var(--bg);color:var(--ink);font-family:Vazirmatn,Tahoma,system-ui,sans-serif;font-size:15px}
+  #app{max-width:480px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column;position:relative;background:var(--bg)}
+  .head{background:var(--grad);color:#fff;padding:16px 18px;border-radius:0 0 22px 22px;
+    box-shadow:0 8px 24px rgba(79,70,229,.28);position:sticky;top:0;z-index:20}
+  .head .top{display:flex;align-items:center;justify-content:space-between}
+  .head h1{margin:0;font-size:18px;font-weight:800;display:flex;align-items:center;gap:8px}
+  .head .back{cursor:pointer;font-size:24px;line-height:1;padding:0 4px;opacity:.95}
+  .head .sub{font-size:12px;opacity:.85;margin-top:3px}
+  .hbadge{background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.35);color:#fff;
+    font-size:11px;font-weight:700;padding:4px 11px;border-radius:20px;backdrop-filter:blur(4px)}
+  .body{flex:1;overflow:auto;padding:14px;padding-bottom:88px}
+  .card{background:var(--card);border-radius:18px;padding:15px;margin-bottom:11px;box-shadow:var(--shadow2)}
+  .card.tap{cursor:pointer;transition:transform .08s,box-shadow .15s}
+  .card.tap:active{transform:scale(.985)}
+  .row{display:flex;align-items:center;gap:11px}
   .between{display:flex;align-items:center;justify-content:space-between;gap:8px}
-  .col{display:flex;flex-direction:column}
-  .grow{flex:1}
-  .muted{color:var(--muted);font-size:12px}
-  .small{font-size:11px}
+  .grow{flex:1;min-width:0}
+  .muted{color:var(--muted);font-size:12.5px}
+  .small{font-size:11.5px}
   .b{font-weight:700}
-  .dot{width:12px;height:12px;border-radius:50%;flex:none}
-  .chip{font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;color:#fff;white-space:nowrap}
-  .kpis{display:grid;grid-template-columns:1fr 1fr;gap:9px}
-  .kpi{background:var(--card);border-radius:14px;padding:13px}
-  .kpi .v{font-size:25px;font-weight:800;line-height:1}
+  .ell{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .dot{width:11px;height:11px;border-radius:50%;flex:none;box-shadow:0 0 0 3px rgba(0,0,0,.04)}
+  .chip{font-size:11px;font-weight:800;padding:3px 10px;border-radius:20px;color:#fff;white-space:nowrap}
+  .chipS{font-size:11px;font-weight:800;padding:4px 11px;border-radius:20px;white-space:nowrap}
+  .ic{width:42px;height:42px;border-radius:13px;display:flex;align-items:center;justify-content:center;
+    font-size:21px;flex:none}
+  /* KPI */
+  .kpis{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+  .kpi{background:var(--card);border-radius:18px;padding:14px;box-shadow:var(--shadow2);position:relative;overflow:hidden}
+  .kpi:before{content:'';position:absolute;inset-inline-start:0;top:14px;bottom:14px;width:4px;border-radius:4px;background:var(--accent,var(--primary))}
+  .kpi .v{font-size:23px;font-weight:800;line-height:1.15;color:var(--accent,var(--ink))}
   .kpi .l{font-size:12px;color:var(--muted);margin-top:5px}
-  .seg{display:flex;gap:6px;overflow:auto;margin-bottom:12px;padding-bottom:2px}
-  .seg div{font-size:12px;padding:6px 12px;border-radius:20px;background:#222b38;color:var(--muted);
-    white-space:nowrap;cursor:pointer}
-  .seg div.active{background:var(--primary);color:#fff;font-weight:700}
-  .tabs{display:flex;border-bottom:1px solid var(--line);margin:-12px -12px 12px}
-  .tabs div{flex:1;text-align:center;padding:12px;font-size:14px;color:var(--muted);cursor:pointer}
-  .tabs div.active{color:var(--ink);border-bottom:2px solid var(--primary2);font-weight:700}
-  .title{font-weight:700;font-size:15px;margin:14px 0 8px}
-  .bar{height:9px;border-radius:20px;background:#2b3543;margin:4px 0 10px;overflow:hidden}
+  .kpi.wide{grid-column:1/-1;display:flex;align-items:center;gap:14px}
+  /* segmented */
+  .seg{display:flex;gap:7px;overflow:auto;margin-bottom:13px;padding-bottom:3px}
+  .seg::-webkit-scrollbar{display:none}
+  .seg div{font-size:12.5px;padding:8px 14px;border-radius:22px;background:#fff;color:var(--muted);
+    white-space:nowrap;cursor:pointer;box-shadow:var(--shadow2);font-weight:700}
+  .seg div.active{background:var(--grad);color:#fff;box-shadow:0 4px 12px rgba(79,70,229,.3)}
+  .tabs{display:flex;background:#fff;border-radius:16px;padding:5px;margin-bottom:13px;box-shadow:var(--shadow2)}
+  .tabs div{flex:1;text-align:center;padding:10px;font-size:13.5px;color:var(--muted);cursor:pointer;border-radius:12px;font-weight:700}
+  .tabs div.active{background:var(--grad);color:#fff}
+  .title{font-weight:800;font-size:15px;margin:16px 4px 9px;display:flex;align-items:center;gap:7px}
+  .bar{height:9px;border-radius:20px;background:#eef1f8;overflow:hidden;margin:5px 0 11px}
   .bar>i{display:block;height:9px;border-radius:20px}
-  label{display:block;font-size:13px;color:var(--muted);margin:10px 0 5px}
-  input,select,textarea{width:100%;background:#0c1117;border:1px solid #2b3543;border-radius:10px;
-    padding:11px;font-size:14px;color:var(--ink);font-family:inherit}
-  input:focus,select,textarea:focus{outline:none;border-color:var(--primary2)}
+  /* forms */
+  label{display:block;font-size:13px;color:var(--muted);margin:13px 0 6px;font-weight:700}
+  input,select,textarea{width:100%;background:#fff;border:1.5px solid var(--line);border-radius:13px;
+    padding:12px;font-size:14.5px;color:var(--ink);font-family:inherit}
+  input:focus,select:focus,textarea:focus{outline:none;border-color:var(--primary)}
   .opts{display:flex;gap:8px;flex-wrap:wrap}
-  .opt{font-size:13px;font-weight:700;padding:8px 12px;border-radius:10px;border:1px solid #33404f;
-    color:var(--muted);cursor:pointer}
+  .opt{font-size:13px;font-weight:800;padding:9px 14px;border-radius:13px;border:1.5px solid var(--line);
+    color:var(--muted);cursor:pointer;background:#fff}
   .opt.sel{background:var(--primary);color:#fff;border-color:var(--primary)}
-  .opt.fail.sel{background:var(--crit);border-color:var(--crit)}
   .opt.pass.sel{background:var(--ok);border-color:var(--ok)}
-  .btn{display:block;width:100%;background:var(--primary);color:#fff;text-align:center;border:none;
-    border-radius:12px;padding:13px;font-size:15px;font-weight:700;cursor:pointer;margin-top:16px;font-family:inherit}
-  .btn:disabled{opacity:.45}
-  .btn.ghost{background:transparent;border:1px solid #33404f;color:var(--ink)}
+  .opt.fail.sel{background:var(--crit);border-color:var(--crit)}
+  .btn{display:block;width:100%;background:var(--grad);color:#fff;text-align:center;border:none;
+    border-radius:15px;padding:14px;font-size:15.5px;font-weight:800;cursor:pointer;margin-top:18px;
+    font-family:inherit;box-shadow:0 6px 16px rgba(79,70,229,.3)}
+  .btn:active{transform:scale(.99)}
+  .btn:disabled{opacity:.45;box-shadow:none}
+  .btn.ghost{background:#fff;border:1.5px solid var(--line);color:var(--ink);box-shadow:var(--shadow2)}
+  .btn.sm{padding:11px;font-size:14px;margin-top:0}
   .btnrow{display:flex;gap:10px}
+  /* stat tiles */
+  .stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:9px}
+  .stat{background:#fff;border-radius:14px;padding:11px;text-align:center;box-shadow:var(--shadow2)}
+  .stat .n{font-size:18px;font-weight:800}.stat .t{font-size:10.5px;color:var(--muted);margin-top:2px}
+  /* nav */
   .nav{position:fixed;bottom:0;left:0;right:0;max-width:480px;margin:0 auto;display:flex;
-    background:var(--panel);border-top:1px solid var(--line)}
-  .nav div{flex:1;text-align:center;padding:9px 2px;font-size:10px;color:var(--muted);cursor:pointer}
-  .nav div.active{color:var(--primary2)}
-  .nav .ic{font-size:19px;display:block;margin-bottom:2px}
-  .fab{position:fixed;bottom:78px;left:50%;transform:translateX(-50%);max-width:480px;width:auto}
-  .fab button{background:var(--primary);color:#fff;border:none;border-radius:30px;padding:12px 22px;
-    font-size:14px;font-weight:700;box-shadow:0 6px 18px rgba(0,0,0,.5);cursor:pointer;font-family:inherit}
-  .center{display:flex;flex-direction:column;justify-content:center;min-height:80vh;padding:8px}
-  .h1{font-size:22px;font-weight:800;text-align:center}
-  .sub{color:var(--muted);font-size:13px;text-align:center;margin:8px 0 22px}
-  .badge{position:absolute;top:8px;left:14px;background:var(--crit);color:#fff;font-size:10px;
-    font-weight:700;border-radius:20px;padding:2px 7px}
-  .empty{color:var(--muted);text-align:center;padding:40px 0;font-size:13px}
+    background:#fff;border-top:1px solid var(--line);box-shadow:0 -4px 20px rgba(15,23,42,.06);padding:5px 4px;
+    padding-bottom:max(5px,env(safe-area-inset-bottom))}
+  .nav div{flex:1;text-align:center;padding:7px 2px;font-size:10px;color:var(--muted);cursor:pointer;border-radius:13px}
+  .nav div.active{color:var(--primary);background:rgba(79,70,229,.09);font-weight:800}
+  .nav .ni{font-size:19px;display:block;margin-bottom:1px}
+  .fab{position:fixed;bottom:84px;left:50%;transform:translateX(-50%);z-index:15}
+  .fab button{background:var(--grad);color:#fff;border:none;border-radius:30px;padding:13px 24px;
+    font-size:14.5px;font-weight:800;box-shadow:0 8px 22px rgba(79,70,229,.4);cursor:pointer;font-family:inherit}
+  .center{display:flex;flex-direction:column;justify-content:center;min-height:78vh;padding:6px}
+  .empty{color:var(--muted);text-align:center;padding:48px 14px;font-size:13.5px}
+  .catHdr{display:flex;align-items:center;gap:8px;font-weight:800;font-size:13.5px;margin:16px 2px 8px}
+  .catLine{position:relative;padding-inline-start:13px}
+  .catLine:before{content:'';position:absolute;inset-inline-start:0;top:6px;bottom:6px;width:4px;border-radius:4px;background:var(--c)}
+  .check{width:24px;height:24px;border-radius:8px;border:2px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:14px;color:#fff}
+  .check.on{background:var(--ok);border-color:var(--ok)}
+  /* calendar */
+  .cal{background:#fff;border-radius:16px;padding:12px;box-shadow:var(--shadow2)}
+  .calhdr{display:flex;align-items:center;justify-content:space-between;font-weight:800;margin-bottom:8px}
+  .calhdr span{cursor:pointer;font-size:20px;padding:0 10px;color:var(--primary)}
+  .calgrid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;text-align:center}
+  .calgrid .wd{font-size:11px;color:var(--muted);padding:3px 0;font-weight:700}
+  .calgrid .day{padding:8px 0;border-radius:10px;cursor:pointer;font-size:13.5px}
+  .calgrid .day:active{background:#eef1f8}
+  .calgrid .day.sel{background:var(--grad);color:#fff;font-weight:800}
+  .toast{position:fixed;bottom:96px;left:50%;transform:translateX(-50%);background:#0f172a;color:#fff;
+    padding:11px 18px;border-radius:30px;font-size:13px;font-weight:700;z-index:50;box-shadow:0 8px 24px rgba(0,0,0,.3);
+    opacity:0;transition:opacity .2s;pointer-events:none}
+  .toast.show{opacity:.97}
+  .pricepill{background:rgba(79,70,229,.1);color:var(--primary);font-weight:800;font-size:12px;padding:4px 10px;border-radius:20px;white-space:nowrap}
 </style>
 </head>
 <body>
 <div id="app"></div>
+<div id="toast" class="toast"></div>
 
 <script>
-//=================== utilities ===================
-const FA = ['۰','۱','۲','۳','۴','۵','۶','۷','۸','۹'];
-const fa = s => String(s).replace(/[0-9]/g, d => FA[+d]);
-const money = v => v>=1e6 ? '$'+(v/1e6).toFixed(1)+'M' : v>=1000 ? '$'+Math.round(v/1000)+'k' : '$'+Math.round(v);
-const DAY = 86400000, now = () => Date.now();
-const uid = () => 'x'+Math.random().toString(36).slice(2,9);
-const esc = s => String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-const lightOf = st => ({OPERATIONAL:'var(--ok)',PARTIAL:'var(--warn)',CRITICAL:'var(--crit)',CLOSED:'var(--unk)'}[st]||'var(--unk)');
-
-const CRIT_FA = {CRITICAL:'بحرانی',HIGH:'بالا',MEDIUM:'متوسط',LOW:'پایین'};
-const CRIT_COLOR = {CRITICAL:'var(--crit)',HIGH:'#EF6C00',MEDIUM:'var(--warn)',LOW:'var(--unk)'};
-const FAULT_FA = {OPEN:'باز',ASSIGNED:'ارجاع‌شده',IN_PROGRESS:'در حال انجام',WAITING_PARTS:'منتظر قطعه',COMPLETED:'تکمیل‌شده',CLOSED:'بسته‌شده'};
-const WO_FA = {SCHEDULED:'زمان‌بندی‌شده',ASSIGNED:'ارجاع‌شده',IN_PROGRESS:'در حال انجام',ON_HOLD:'متوقف',COMPLETED:'تکمیل‌شده',CLOSED:'بسته‌شده',CANCELLED:'لغوشده'};
-const WO_TYPE_FA = {pm:'پیشگیرانه',cm:'اصلاحی'};
-const CMP_FA = {COMPLIANT:'منطبق',DUE_SOON:'نزدیک',OVERDUE:'معوق',NON_COMPLIANT:'نامنطبق'};
-const CMP_COLOR = {COMPLIANT:'var(--ok)',DUE_SOON:'var(--warn)',OVERDUE:'var(--crit)',NON_COMPLIANT:'var(--crit)'};
-const HSE_TYPE_FA = {near_miss:'شبه‌حادثه',unsafe_act:'عمل ناایمن',unsafe_condition:'شرایط ناایمن',accident:'حادثه',property_damage:'خسارت مالی'};
-const UTIL_FA = {electricity:'برق',water:'آب',gas:'گاز',diesel:'گازوئیل'};
-const fmtDate = ts => ts ? fa(new Date(ts).toISOString().slice(0,10)) : '—';
-
-//=================== store + seed ===================
-const KEY = 'facilityos_v1';
-let DB = null;
-function save(){ localStorage.setItem(KEY, JSON.stringify(DB)); }
-function load(){
-  const raw = localStorage.getItem(KEY);
-  if(raw){ DB = JSON.parse(raw); return; }
-  DB = seed(); save();
+//================= helpers =================
+const FA=['۰','۱','۲','۳','۴','۵','۶','۷','۸','۹'];
+const fa=s=>String(s).replace(/[0-9]/g,d=>FA[+d]);
+const DAY=86400000, now=()=>Date.now(), uid=()=>'x'+Math.random().toString(36).slice(2,9);
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function money(v){ // Toman
+  if(v>=1e9){const m=v/1e9;return fa(m%1?m.toFixed(1):m)+' میلیارد تومان';}
+  if(v>=1e6){const m=v/1e6;return fa(m%1?m.toFixed(1):m)+' میلیون تومان';}
+  if(v>=1e3) return fa(Math.round(v/1e3))+' هزار تومان';
+  return fa(Math.round(v))+' تومان';
 }
-function seed(){
-  const n = now();
-  const buildings = [
-    {id:'b1',code:'TWR-A',name:'برج A',address:'خیابان ملک فهد',lat:24.7136,lng:46.6753,floors:18,lastInsp:n-2*DAY,status:'OPERATIONAL'},
-    {id:'b2',code:'MALL-B',name:'مرکز خرید B',address:'خیابان العلیا',lat:24.69,lng:46.685,floors:4,lastInsp:n-21*DAY,status:'CRITICAL'},
-    {id:'b3',code:'CLN-C',name:'کلینیک C',address:'خیابان تخصصی',lat:24.72,lng:46.64,floors:6,lastInsp:n-5*DAY,status:'PARTIAL'},
-    {id:'b4',code:'OFF-D',name:'ساختمان اداری D',address:'خیابان امام سعود',lat:24.65,lng:46.71,floors:12,lastInsp:n-9*DAY,status:'OPERATIONAL'},
-    {id:'b5',code:'WHS-E',name:'انبار E',address:'شهرک صنعتی ۲',lat:24.6,lng:46.8,floors:2,lastInsp:n-40*DAY,status:'OPERATIONAL'},
-  ];
-  const specs = [
-    {cat:'حمل‌ونقل عمودی',name:'آسانسور مسافری',mfr:'KONE',model:'MonoSpace 500',crit:'HIGH'},
-    {cat:'برقی',name:'دیزل ژنراتور',mfr:'کاترپیلار',model:'3512C',crit:'CRITICAL'},
-    {cat:'برقی',name:'سیستم UPS',mfr:'اشنایدر',model:'Galaxy VS',crit:'HIGH'},
-    {cat:'مکانیکی',name:'چیلر',mfr:'Trane',model:'RTAC 140',crit:'MEDIUM'},
-    {cat:'اعلام و اطفاء حریق',name:'پمپ آتش‌نشانی',mfr:'Grundfos',model:'NK 80-250',crit:'CRITICAL'},
-    {cat:'مکانیکی',name:'هواساز',mfr:'Daikin',model:'AHU-M 22',crit:'LOW'},
-  ];
-  const assets = [];
-  buildings.forEach(b => specs.forEach((s,i)=>{
-    const code = `${b.code}-${String(i+1).padStart(3,'0')}`;
-    assets.push({id:`a-${b.id}-${i}`,buildingId:b.id,cat:s.cat,name:`${s.name} ${i+1}`,code,
-      qr:`QR-${code}`,mfr:s.mfr,model:s.model,serial:`SN-${b.code}-${1000+i}`,crit:s.crit,
-      warrantyEnd:n+(180+i*30)*DAY,status: (b.id==='b2'&&i===4)?'خارج از سرویس':'در سرویس'});
-  }));
-  const faults = [
-    {id:'f1',assetId:'a-b2-4',title:'ناموفقی پمپ آتش‌نشانی در تست هفتگی',priority:'CRITICAL',status:'OPEN',reportedAt:n-DAY,resolvedAt:null},
-    {id:'f2',assetId:'a-b2-0',title:'بازشدن مجدد درب آسانسور ۱',priority:'HIGH',status:'ASSIGNED',reportedAt:n-3*DAY,resolvedAt:null},
-    {id:'f3',assetId:'a-b3-2',title:'هشدار باتری UPS',priority:'MEDIUM',status:'OPEN',reportedAt:n-6*DAY,resolvedAt:null},
-    {id:'f4',assetId:'a-b1-3',title:'کمبود مبرّد چیلر',priority:'HIGH',status:'CLOSED',reportedAt:n-20*DAY,resolvedAt:n-18*DAY},
-    {id:'f5',assetId:'a-b4-1',title:'تعویض باتری ژنراتور',priority:'MEDIUM',status:'CLOSED',reportedAt:n-30*DAY,resolvedAt:n-29*DAY},
-  ];
-  const workOrders = [
-    {id:'w1',no:'WO-1001',type:'pm',title:'نگهداری ماهانه — آسانسور',status:'COMPLETED',due:n-4*DAY,cost:320},
-    {id:'w2',no:'WO-1002',type:'pm',title:'نگهداری ماهانه — ژنراتور',status:'COMPLETED',due:n-2*DAY,cost:280},
-    {id:'w3',no:'WO-1003',type:'pm',title:'نگهداری فصلی — چیلر',status:'SCHEDULED',due:n-DAY,cost:450},
-    {id:'w4',no:'WO-1004',type:'cm',title:'تعمیر پمپ آتش‌نشانی',status:'IN_PROGRESS',due:n+DAY,cost:1200},
-    {id:'w5',no:'WO-1005',type:'pm',title:'نگهداری سالانه — UPS',status:'ASSIGNED',due:n+5*DAY,cost:600},
-    {id:'w6',no:'WO-1006',type:'pm',title:'نگهداری ماهانه — هواساز',status:'SCHEDULED',due:n-8*DAY,cost:180},
-  ];
-  const parts = [
-    {id:'p1',pn:'FLT-AHU-22',desc:'فیلتر هوای هواساز G4',qty:24,min:10,loc:'انبار A · قفسه ۳',cost:18},
-    {id:'p2',pn:'BLT-V-1250',desc:'تسمه V ۱۲۵۰ میلی‌متر',qty:6,min:8,loc:'انبار A · قفسه ۱',cost:12.5},
-    {id:'p3',pn:'BAT-UPS-12',desc:'باتری UPS ۱۲ ولت ۹ آمپرساعت',qty:40,min:20,loc:'انبار B · قفسه ۵',cost:45},
-    {id:'p4',pn:'OIL-GEN',desc:'روغن موتور 15W40 (لیتر)',qty:3,min:20,loc:'انبار A · ردیف ۲',cost:6},
-  ];
-  const incidents = [
-    {id:'h1',buildingId:'b2',type:'near_miss',severity:'کم',desc:'کف لغزنده نزدیک اتاق پمپ',status:'investigating',at:n-2*DAY},
-    {id:'h2',buildingId:'b1',type:'unsafe_condition',severity:'متوسط',desc:'نبود حفاظ ماشین روی هواساز',status:'open',at:n-5*DAY},
-    {id:'h3',buildingId:'b4',type:'accident',severity:'زیاد',desc:'سوختگی جزئی برقی هنگام کار روی تابلو',status:'capa',at:n-12*DAY},
-  ];
-  const compliance = [
-    {id:'c1',device:'پمپ آتش‌نشانی',next:n-5*DAY,cert:n+60*DAY,status:'OVERDUE'},
-    {id:'c2',device:'پمپ آتش‌نشانی',next:n+20*DAY,cert:n+200*DAY,status:'COMPLIANT'},
-    {id:'c3',device:'سیستم اسپرینکلر',next:n+10*DAY,cert:n+25*DAY,status:'DUE_SOON'},
-    {id:'c4',device:'کپسول‌های اطفاء',next:n-15*DAY,cert:n-3*DAY,status:'NON_COMPLIANT'},
-  ];
-  const months = ['۱۴۰۵/۰۱','۱۴۰۵/۰۲','۱۴۰۵/۰۳','۱۴۰۵/۰۴','۱۴۰۵/۰۵','۱۴۰۵/۰۶'];
-  const utilities = [];
-  buildings.forEach(b=>months.forEach((m,i)=>{
-    const base=12000+i*300;
-    utilities.push({id:uid(),buildingId:b.id,utility:'electricity',period:m,consumption:base,cost:Math.round(base*0.08)});
-    utilities.push({id:uid(),buildingId:b.id,utility:'water',period:m,consumption:800+i*20,cost:Math.round((800+i*20)*0.5)});
-  }));
-  const template = {id:'tmpl',name:'نگهداری پیشگیرانهٔ ماهانه — عمومی',items:[
-    {id:'i1',prompt:'وضعیت کلی قابل قبول است؟',type:'pfn'},
-    {id:'i2',prompt:'صدا/لرزش غیرعادی وجود ندارد؟',type:'pfn'},
-    {id:'i3',prompt:'دمای کارکرد',type:'num',unit:'°C',max:80},
-    {id:'i4',prompt:'توضیحات',type:'text'},
-  ]};
-  return {user:null,buildings,assets,faults,workOrders,parts,incidents,compliance,utilities,template,inspections:[]};
+function moneyShort(v){
+  if(v>=1e9) return fa((v/1e9).toFixed(1))+' میلیارد';
+  if(v>=1e6) return fa(Math.round(v/1e6))+' میلیون';
+  if(v>=1e3) return fa(Math.round(v/1e3))+' هزار';
+  return fa(Math.round(v));
 }
+function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),1900);}
+const lightOf=st=>({OPERATIONAL:'var(--ok)',PARTIAL:'var(--warn)',CRITICAL:'var(--crit)',CLOSED:'var(--unk)'}[st]||'var(--unk)');
+const healthC=s=>s>=85?'var(--ok)':s>=60?'var(--warn)':'var(--crit)';
 
-//=================== computed ===================
-function openFaults(){ return DB.faults.filter(f=>f.status!=='CLOSED'&&f.status!=='COMPLETED'); }
-function buildingAssetCount(id){ return DB.assets.filter(a=>a.buildingId===id).length; }
-function buildingOpenFaults(id){
-  const ids = DB.assets.filter(a=>a.buildingId===id).map(a=>a.id);
-  return openFaults().filter(f=>ids.includes(f.assetId)).length;
-}
-function dashboard(){
-  const opens = openFaults();
-  const crit = opens.filter(f=>f.priority==='CRITICAL');
-  const down = DB.assets.filter(a=>a.status==='خارج از سرویس').length;
-  const overdueInsp = DB.buildings.filter(b=>b.lastInsp < now()-30*DAY).length;
-  const pm = DB.workOrders.filter(w=>w.type==='pm');
-  const pmDone = pm.filter(w=>w.status==='COMPLETED'||w.status==='CLOSED').length;
-  const pmPct = pm.length ? Math.round(pmDone*100/pm.length) : 100;
-  const term = ['COMPLETED','CLOSED','CANCELLED'];
-  const overdueWo = DB.workOrders.filter(w=>w.due<now()&&!term.includes(w.status)).length;
-  const resolved = DB.faults.filter(f=>f.resolvedAt).map(f=>f.resolvedAt-f.reportedAt);
-  const mttr = resolved.length ? Math.round(resolved.reduce((a,b)=>a+b,0)/resolved.length/3600000) : null;
-  const mtbf = DB.faults.length ? Math.round(DB.assets.length*90/DB.faults.length) : null;
-  const health = Math.max(0,Math.min(100,100-(crit.length*5+(opens.length-crit.length)*2+overdueInsp+down*3)));
-  const avail = DB.assets.length ? Math.round((DB.assets.length-down)*100/DB.assets.length) : 100;
-  const risk = Math.min(100,crit.length*20+overdueWo*5);
-  const maint = DB.workOrders.filter(w=>['COMPLETED','CLOSED'].includes(w.status)).reduce((s,w)=>s+(w.cost||0),0);
-  const deferred = DB.workOrders.filter(w=>!term.includes(w.status)).reduce((s,w)=>s+(w.cost||0),0);
-  const value = DB.assets.reduce((s,a)=>s+({CRITICAL:2e5,HIGH:8e4,MEDIUM:3e4,LOW:1e4}[a.crit]||1e4),0);
-  return {buildings:DB.buildings.length,assets:DB.assets.length,openFaults:opens.length,critical:crit.length,
-    overdueInsp,overdueWo,pmPct,health,avail,mttr,mtbf,risk,maint,deferred,value,
-    topFaults:opens.slice(0,5),openWos:DB.workOrders.filter(w=>!term.includes(w.status)).slice(0,8)};
-}
-function notifications(){
-  const out=[];
-  openFaults().filter(f=>f.priority==='CRITICAL').forEach(f=>out.push({sev:'C',t:'خرابی بحرانی باز',b:f.title}));
-  DB.compliance.forEach(c=>{
-    if(c.status==='OVERDUE') out.push({sev:'C',t:'تطابق معوق',b:c.device+' نیازمند رسیدگی است'});
-    else if(c.status==='NON_COMPLIANT') out.push({sev:'C',t:'عدم تطابق',b:c.device+' نیازمند رسیدگی است'});
-    else if(c.status==='DUE_SOON') out.push({sev:'W',t:'بازرسی نزدیک',b:c.device});
-  });
-  DB.parts.filter(p=>p.qty<=p.min).forEach(p=>out.push({sev:'W',t:'کمبود موجودی',b:`${p.desc} (${fa(p.qty)}/${fa(p.min)})`}));
-  DB.assets.filter(a=>a.warrantyEnd&&a.warrantyEnd<now()+90*DAY).forEach(a=>out.push({sev:'W',t:'انقضای گارانتی',b:`${a.name} (${a.code})`}));
-  return out.sort((a,b)=> (a.sev==='C'?0:1)-(b.sev==='C'?0:1));
-}
+const CRIT_FA={CRITICAL:'بحرانی',HIGH:'بالا',MEDIUM:'متوسط',LOW:'پایین'};
+const CRIT_COLOR={CRITICAL:'var(--crit)',HIGH:'#ea580c',MEDIUM:'var(--warn)',LOW:'var(--unk)'};
+const FAULT_FA={OPEN:'باز',ASSIGNED:'ارجاع‌شده',IN_PROGRESS:'در حال انجام',WAITING_PARTS:'منتظر قطعه',COMPLETED:'تکمیل‌شده',CLOSED:'بسته‌شده'};
+const WO_FA={SCHEDULED:'زمان‌بندی‌شده',ASSIGNED:'ارجاع‌شده',IN_PROGRESS:'در حال انجام',ON_HOLD:'متوقف',COMPLETED:'تکمیل‌شده',CLOSED:'بسته‌شده',CANCELLED:'لغوشده'};
+const WO_TYPE_FA={pm:'پیشگیرانه',cm:'اصلاحی'};
+const CMP_FA={COMPLIANT:'منطبق',DUE_SOON:'نزدیک',OVERDUE:'معوق',NON_COMPLIANT:'نامنطبق'};
+const CMP_COLOR={COMPLIANT:'var(--ok)',DUE_SOON:'var(--warn)',OVERDUE:'var(--crit)',NON_COMPLIANT:'var(--crit)'};
+const HSE_TYPE_FA={near_miss:'شبه‌حادثه',unsafe_act:'عمل ناایمن',unsafe_condition:'شرایط ناایمن',accident:'حادثه',property_damage:'خسارت مالی'};
+const UTIL_FA={electricity:'برق',water:'آب',gas:'گاز',diesel:'گازوئیل'};
 
-//=================== router ===================
-let route='login', params={};
-function go(r,p={}){ route=r; params=p; window.scrollTo(0,0); render(); }
-const app = () => document.getElementById('app');
+//================= Jalali calendar =================
+function div(a,b){return ~~(a/b)} function mod(a,b){return a-~~(a/b)*b}
+function jalCal(jy){var breaks=[-61,9,38,199,426,686,756,818,1111,1181,1210,1635,2060,2097,2192,2262,2324,2394,2456,3178];
+ var bl=breaks.length,gy=jy+621,leapJ=-14,jp=breaks[0],jm,jump,leap,leapG,march,n,i;
+ for(i=1;i<bl;i+=1){jm=breaks[i];jump=jm-jp;if(jy<jm)break;leapJ=leapJ+div(jump,33)*8+div(mod(jump,33),4);jp=jm;}
+ n=jy-jp;leapJ=leapJ+div(n,33)*8+div(mod(n,33)+3,4);
+ if(mod(jump,33)===4&&jump-n===4)leapJ+=1;
+ leapG=div(gy,4)-div((div(gy,100)+1)*3,4)-150;march=20+leapJ-leapG;
+ if(jump-n<6)n=n-jump+div(jump+4,33)*33;leap=mod(mod(n+1,33)-1,4);if(leap===-1)leap=4;
+ return {leap:leap,gy:gy,march:march};}
+function g2d(gy,gm,gd){var d=div((gy+div(gm-8,6)+100100)*1461,4)+div(153*mod(gm+9,12)+2,5)+gd-34840408;
+ d=d-div(div(gy+100100+div(gm-8,6),100)*3,4)+752;return d;}
+function d2g(jdn){var j,i,gd,gm,gy;j=4*jdn+139361631;j=j+div(div(4*jdn+183187720,146097)*3,4)*4-3908;
+ i=div(mod(j,1461),4)*5+308;gd=div(mod(i,153),5)+1;gm=mod(div(i,153),12)+1;gy=div(j,1461)-100100+div(8-gm,6);
+ return {gy:gy,gm:gm,gd:gd};}
+function j2d(jy,jm,jd){var r=jalCal(jy);return g2d(r.gy,3,r.march)+(jm-1)*31-div(jm,7)*(jm-7)+jd-1;}
+function d2j(jdn){var gy=d2g(jdn).gy,jy=gy-621,r=jalCal(jy),jdn1f=g2d(gy,3,r.march),jd,jm,k;k=jdn-jdn1f;
+ if(k>=0){if(k<=185){jm=1+div(k,31);jd=mod(k,31)+1;return {jy:jy,jm:jm,jd:jd};}else{k-=186;}}
+ else{jy-=1;k+=179;if(r.leap===1)k+=1;}jm=7+div(k,30);jd=mod(k,30)+1;return {jy:jy,jm:jm,jd:jd};}
+function toJalaali(gy,gm,gd){return d2j(g2d(gy,gm,gd));}
+function toGregorian(jy,jm,jd){return d2g(j2d(jy,jm,jd));}
+function jLeap(jy){return jalCal(jy).leap===0;}
+function jMonthLen(jy,jm){if(jm<=6)return 31;if(jm<=11)return 30;return jLeap(jy)?30:29;}
+const JMONTHS=['فروردین','اردیبهشت','خرداد','تیر','مرداد','شهریور','مهر','آبان','آذر','دی','بهمن','اسفند'];
+const JWEEK=['ش','ی','د','س','چ','پ','ج'];
+function todayJ(){const d=new Date();return toJalaali(d.getFullYear(),d.getMonth()+1,d.getDate());}
+function jStr(j){return j?fa(`${j.jy}/${String(j.jm).padStart(2,'0')}/${String(j.jd).padStart(2,'0')}`):'—';}
 
-function render(){
-  if(!DB.user && route!=='login'){ route='login'; }
-  app().innerHTML = ({
-    login:Login, home:Home, buildings:Buildings, building:Building, asset:Asset,
-    inspect:Inspect, reportFault:ReportFault, work:Work, status:StatusCenter, more:More,
-    inventory:Inventory, addPart:AddPart, hse:Hse, addIncident:AddIncident,
-    compliance:Compliance, utilities:Utilities, addReading:AddReading,
-    notifications:Notifs, reports:Reports, settings:Settings,
-  }[route]||Home)();
-  bind();
-}
-
-//=================== shared bits ===================
-const bar = (title,opt={}) => `<div class="appbar">
-  <div class="row">${opt.back?`<span class="back" data-go="${opt.back}">›</span>`:''}<span>${title}</span></div>
-  <div class="row">${opt.right||''}</div></div>`;
-const navbar = active => {
-  const items=[['home','▦','خانه'],['buildings','🏢','ساختمان‌ها'],['work','🗂','کارها'],['status','❤','پایش'],['more','⋯','بیشتر']];
-  return `<div class="nav">${items.map(([r,i,l])=>`<div class="${active===r?'active':''}" data-go="${r}"><span class="ic">${i}</span>${l}</div>`).join('')}</div>`;
+//================= catalog =================
+const CATS={
+ vt:{fa:'حمل‌ونقل عمودی',c:'#6366f1',ic:'🛗'},
+ mech:{fa:'تأسیسات مکانیکی',c:'#0ea5e9',ic:'⚙️'},
+ elec:{fa:'تأسیسات برقی',c:'#f59e0b',ic:'⚡'},
+ fire:{fa:'اعلام و اطفاء حریق',c:'#ef4444',ic:'🧯'},
+ sec:{fa:'امنیتی و جریان ضعیف',c:'#8b5cf6',ic:'📹'},
+ plumb:{fa:'آبرسانی و فاضلاب',c:'#14b8a6',ic:'🚿'},
 };
-const syncPill = `<span class="pill" style="background:var(--ok)">همگام</span>`;
+const CATALOG=[
+ ['elevatorP','vt','آسانسور مسافری','HIGH',2.5e9],['elevatorF','vt','آسانسور باربر','HIGH',2.2e9],
+ ['escalator','vt','پله برقی','MEDIUM',1.8e9],['liftDis','vt','بالابر معلولین','MEDIUM',6e8],
+ ['chiller','mech','چیلر','MEDIUM',1.5e9],['coolingTower','mech','برج خنک‌کننده','MEDIUM',5e8],
+ ['ahu','mech','هواساز (AHU)','LOW',3e8],['fcu','mech','فن‌کویل (FCU)','LOW',2.5e7],
+ ['boiler','mech','بویلر','HIGH',8e8],['burner','mech','مشعل','MEDIUM',1.5e8],
+ ['pumpCirc','mech','پمپ سیرکولاسیون','LOW',8e7],['pumpWater','mech','پمپ آبرسانی','MEDIUM',1.2e8],
+ ['waterTank','mech','مخزن آب','LOW',2e8],['exhaustFan','mech','اگزاست فن','LOW',4e7],['expTank','mech','منبع انبساط','LOW',3e7],
+ ['generator','elec','دیزل ژنراتور','CRITICAL',3e9],['ups','elec','سیستم UPS','HIGH',4e8],
+ ['ats','elec','ATS','MEDIUM',1.5e8],['transformer','elec','ترانسفورماتور','CRITICAL',1.2e9],
+ ['mainPanel','elec','تابلو برق اصلی','HIGH',2e8],['distPanel','elec','تابلو توزیع','MEDIUM',6e7],
+ ['capacitor','elec','بانک خازنی','MEDIUM',1.2e8],['battery','elec','باتری','MEDIUM',5e7],
+ ['firePanel','fire','پنل اعلام حریق','CRITICAL',1.5e8],['smokeDet','fire','دتکتور دود','MEDIUM',8e5],
+ ['heatDet','fire','دتکتور حرارت','MEDIUM',8e5],['callPoint','fire','شستی اعلام حریق','MEDIUM',6e5],
+ ['sprinkler','fire','اسپرینکلر','HIGH',5e5],['firePump','fire','پمپ آتش‌نشانی','CRITICAL',2.5e8],
+ ['fireDamper','fire','دمپر حریق','MEDIUM',4e6],['extinguisher','fire','کپسول آتش‌نشانی','MEDIUM',3e6],
+ ['fireDoor','fire','درب ضد حریق','MEDIUM',1.5e7],['hydrant','fire','جعبه آتش‌نشانی','MEDIUM',8e6],
+ ['cctv','sec','دوربین مداربسته','MEDIUM',5e6],['access','sec','کنترل تردد','MEDIUM',4e7],
+ ['pa','sec','سیستم صوتی اعلام','LOW',8e7],['intercom','sec','آیفون تصویری','LOW',1.5e7],
+ ['emgLight','sec','روشنایی اضطراری','MEDIUM',2e6],['exitSign','sec','تابلو خروج اضطراری','LOW',1.5e6],
+ ['bms','sec','سیستم مدیریت ساختمان BMS','HIGH',5e8],
+ ['sumpPump','plumb','پمپ لجن‌کش (فاضلاب)','MEDIUM',9e7],['softener','plumb','سختی‌گیر','LOW',6e7],
+].map(([key,cat,name,crit,value])=>({key,cat,name,crit,value}));
+const CATBY=Object.fromEntries(CATALOG.map(c=>[c.key,c]));
 
-//=================== screens ===================
-function Login(){
-  const roles=['مدیر سیستم','مدیر','سرپرست','تکنسین','مشاهده‌گر'];
-  return `<div class="body center">
-    <div class="h1">سامانه نگهداری و تعمیرات</div>
-    <div class="sub">ورود (حالت آفلاین — داده‌ها در همین مرورگر ذخیره می‌شود)</div>
-    <label>نام کاربر</label><input id="lname" placeholder="مثلاً علی رضایی"/>
-    <label>نقش</label>
-    <div class="opts" id="lroles">${roles.map((r,i)=>`<div class="opt ${i===3?'sel':''}" data-role="${r}">${r}</div>`).join('')}</div>
-    <button class="btn" id="loginBtn">ورود</button>
-  </div>`;
+const GEN_CL=[{p:'وضعیت ظاهری و نظافت مطلوب است؟',t:'pfn'},{p:'اتصالات و نصب محکم است؟',t:'pfn'},{p:'عملکرد در حالت تست صحیح است؟',t:'pfn'},{p:'توضیحات',t:'text'}];
+const PUMP_CL=[{p:'بدون نشتی از آب‌بند است؟',t:'pfn'},{p:'لرزش/صدای غیرعادی ندارد؟',t:'pfn'},{p:'فشار خروجی (bar)',t:'num',u:'bar'},{p:'کوپلینگ و یاتاقان سالم است؟',t:'pfn'},{p:'توضیحات',t:'text'}];
+const CL={
+ elevatorP:[{p:'حرکت کابین نرم و بدون لرزش است؟',t:'pfn'},{p:'توقف هم‌تراز با طبقه است؟',t:'pfn'},{p:'درب‌ها صحیح باز/بسته می‌شوند؟',t:'pfn'},{p:'روشنایی و فن کابین سالم است؟',t:'pfn'},{p:'تلفن اضطراری/زنگ کار می‌کند؟',t:'pfn'},{p:'دمای موتورخانه (°C)',t:'num',u:'°C',max:35},{p:'توضیحات',t:'text'}],
+ generator:[{p:'سطح روغن مناسب است؟',t:'pfn'},{p:'سطح مبرد رادیاتور مناسب است؟',t:'pfn'},{p:'سطح سوخت گازوئیل (٪)',t:'num',u:'٪'},{p:'باتری استارت شارژ است؟',t:'pfn'},{p:'تست راه‌اندازی موفق بود؟',t:'pfn'},{p:'نشتی روغن/آب/سوخت ندارد؟',t:'pfn'},{p:'توضیحات',t:'text'}],
+ chiller:[{p:'فشار مبرد در محدوده است؟',t:'pfn'},{p:'دمای آب خروجی (°C)',t:'num',u:'°C'},{p:'کمپرسور بدون صدای غیرعادی است؟',t:'pfn'},{p:'نشتی مبرد ندارد؟',t:'pfn'},{p:'توضیحات',t:'text'}],
+ ahu:[{p:'فیلترها تمیز است؟',t:'pfn'},{p:'تسمه و پولی سالم است؟',t:'pfn'},{p:'لرزش/صدای غیرعادی ندارد؟',t:'pfn'},{p:'دمپرها صحیح عمل می‌کنند؟',t:'pfn'},{p:'توضیحات',t:'text'}],
+ ups:[{p:'وضعیت باتری‌ها سالم است؟',t:'pfn'},{p:'ولتاژ خروجی (V)',t:'num',u:'V'},{p:'تست تخلیه باتری موفق بود؟',t:'pfn'},{p:'هشدار/خطایی روی نمایشگر نیست؟',t:'pfn'},{p:'توضیحات',t:'text'}],
+ mainPanel:[{p:'اتصالات بدون شل‌شدگی/اکسید است؟',t:'pfn'},{p:'دمای کلیدها/باسبار (°C)',t:'num',u:'°C',max:60},{p:'کلیدها و فیوزها سالم است؟',t:'pfn'},{p:'نقشهٔ تابلو موجود است؟',t:'pfn'},{p:'توضیحات',t:'text'}],
+ distPanel:[{p:'اتصالات بدون شل‌شدگی/اکسید است؟',t:'pfn'},{p:'دمای کلیدها (°C)',t:'num',u:'°C',max:60},{p:'کلیدها و فیوزها سالم است؟',t:'pfn'},{p:'توضیحات',t:'text'}],
+ transformer:[{p:'سطح روغن مناسب است؟',t:'pfn'},{p:'دمای بدنه (°C)',t:'num',u:'°C',max:75},{p:'سیلیکاژل سالم (آبی) است؟',t:'pfn'},{p:'بوشینگ‌ها تمیز و سالم است؟',t:'pfn'},{p:'توضیحات',t:'text'}],
+ firePanel:[{p:'پنل بدون خطا (Fault) است؟',t:'pfn'},{p:'باتری پشتیبان سالم است؟',t:'pfn'},{p:'تست زون‌ها موفق بود؟',t:'pfn'},{p:'آژیر و فلاشرها کار می‌کنند؟',t:'pfn'},{p:'توضیحات',t:'text'}],
+ firePump:[{p:'تست راه‌اندازی خودکار موفق بود؟',t:'pfn'},{p:'فشار خط (bar)',t:'num',u:'bar'},{p:'نشتی ندارد؟',t:'pfn'},{p:'پمپ جوکی صحیح عمل می‌کند؟',t:'pfn'},{p:'توضیحات',t:'text'}],
+ extinguisher:[{p:'فشار عقربه در محدودهٔ سبز است؟',t:'pfn'},{p:'ضامن و پلمب سالم است؟',t:'pfn'},{p:'تاریخ شارژ معتبر است؟',t:'pfn'},{p:'در محل و قابل دسترس است؟',t:'pfn'},{p:'توضیحات',t:'text'}],
+ cctv:[{p:'تصویر واضح و بدون قطعی است؟',t:'pfn'},{p:'ضبط (DVR/NVR) فعال است؟',t:'pfn'},{p:'دید در شب مناسب است؟',t:'pfn'},{p:'توضیحات',t:'text'}],
+ coolingTower:[{p:'نازل‌ها و پکینگ تمیز است؟',t:'pfn'},{p:'فن بدون لرزش کار می‌کند؟',t:'pfn'},{p:'سطح آب تشتک مناسب است؟',t:'pfn'},{p:'توضیحات',t:'text'}],
+ boiler:[{p:'فشار دیگ (bar)',t:'num',u:'bar'},{p:'شعلهٔ مشعل پایدار است؟',t:'pfn'},{p:'شیر اطمینان سالم است؟',t:'pfn'},{p:'نشتی آب/گاز ندارد؟',t:'pfn'},{p:'توضیحات',t:'text'}],
+ pumpCirc:PUMP_CL,pumpWater:PUMP_CL,sumpPump:PUMP_CL,
+};
+const clOf=key=>CL[key]||GEN_CL;
+
+//================= store + seed =================
+const KEY='facilityos_v2';
+let DB=null;
+const save=()=>localStorage.setItem(KEY,JSON.stringify(DB));
+function load(){const r=localStorage.getItem(KEY);if(r){DB=JSON.parse(r);return;}DB=seed();save();}
+function seed(){
+ const n=now();
+ const baseTehran={lat:35.70,lng:51.40};
+ const baseline=['elevatorP','generator','ups','mainPanel','firePanel','firePump','extinguisher','ahu','cctv','distPanel'];
+ const buildings=[],assets=[];
+ for(let i=1;i<=15;i++){
+   const id='b'+i, floors=5+((i*3)%16), bsm=1+(i%4);
+   const status = i===2?'CRITICAL': i===3||i===9?'PARTIAL':'OPERATIONAL';
+   buildings.push({id,code:'M'+String(i).padStart(2,'0'),name:'منطقه '+i+' تهران',type:'اداری',
+     floors,basements:bsm,totalArea:1200+i*350,builtArea:900+i*420,units:8+i*2,year:1385+(i%18),
+     manager:'مدیر منطقه '+i,address:'تهران، شهرداری منطقه '+i,
+     lat:baseTehran.lat+(i%5)*0.03-0.06,lng:baseTehran.lng+(i%4)*0.03-0.04,
+     lastInsp:n-((i*5)%45)*DAY,status});
+   baseline.forEach((key,k)=>{
+     const cb=CATBY[key], seq=k+1, code=`M${String(i).padStart(2,'0')}-${String(seq).padStart(3,'0')}`;
+     assets.push({id:`a-${id}-${key}`,buildingId:id,key,cat:cb.cat,name:cb.name,code,qr:'QR-'+code,
+       crit:cb.crit,value:cb.value,status:'در سرویس',installJ:todayJStr(1380+(i%15),((k*2)%12)+1)});
+   });
+ }
+ const find=(bi,key)=>assets.find(a=>a.buildingId==='b'+bi&&a.key===key);
+ if(find(2,'firePump')) find(2,'firePump').status='خارج از سرویس';
+ const faults=[
+   {id:'f1',assetId:find(2,'firePump').id,title:'ناموفقی پمپ آتش‌نشانی در تست هفتگی',priority:'CRITICAL',status:'OPEN',reportedAt:n-DAY,resolvedAt:null},
+   {id:'f2',assetId:find(2,'elevatorP').id,title:'بازشدن مجدد درب آسانسور',priority:'HIGH',status:'ASSIGNED',reportedAt:n-3*DAY,resolvedAt:null},
+   {id:'f3',assetId:find(3,'ups').id,title:'هشدار باتری UPS',priority:'MEDIUM',status:'OPEN',reportedAt:n-6*DAY,resolvedAt:null},
+   {id:'f4',assetId:find(9,'ahu').id,title:'گرفتگی فیلتر هواساز',priority:'MEDIUM',status:'OPEN',reportedAt:n-2*DAY,resolvedAt:null},
+   {id:'f5',assetId:find(1,'generator').id,title:'تعویض باتری ژنراتور',priority:'MEDIUM',status:'CLOSED',reportedAt:n-30*DAY,resolvedAt:n-29*DAY},
+   {id:'f6',assetId:find(4,'mainPanel').id,title:'گرمای بیش از حد تابلو',priority:'HIGH',status:'CLOSED',reportedAt:n-20*DAY,resolvedAt:n-17*DAY},
+ ];
+ const workOrders=[
+   {id:'w1',no:'WO-1001',type:'pm',title:'سرویس ماهانه آسانسور — منطقه ۱',status:'COMPLETED',due:n-4*DAY,cost:4500000,assetId:find(1,'elevatorP').id},
+   {id:'w2',no:'WO-1002',type:'pm',title:'سرویس ماهانه ژنراتور — منطقه ۱',status:'COMPLETED',due:n-2*DAY,cost:6000000,assetId:find(1,'generator').id},
+   {id:'w3',no:'WO-1003',type:'pm',title:'سرویس فصلی چیلر — منطقه ۹',status:'SCHEDULED',due:n-DAY,cost:9000000,assetId:find(9,'ahu').id},
+   {id:'w4',no:'WO-1004',type:'cm',title:'تعمیر پمپ آتش‌نشانی — منطقه ۲',status:'IN_PROGRESS',due:n+DAY,cost:18000000,assetId:find(2,'firePump').id},
+   {id:'w5',no:'WO-1005',type:'pm',title:'سرویس سالانه UPS — منطقه ۳',status:'ASSIGNED',due:n+5*DAY,cost:7500000,assetId:find(3,'ups').id},
+   {id:'w6',no:'WO-1006',type:'pm',title:'سرویس ماهانه هواساز — منطقه ۵',status:'SCHEDULED',due:n-8*DAY,cost:3000000,assetId:find(5,'ahu').id},
+ ];
+ const parts=[
+   {id:'p1',pn:'FLT-AHU-22',desc:'فیلتر هوای هواساز G4',qty:24,min:10,loc:'انبار مرکزی · قفسه ۳',cost:1200000},
+   {id:'p2',pn:'BLT-V-1250',desc:'تسمه V ۱۲۵۰ میلی‌متر',qty:6,min:8,loc:'انبار مرکزی · قفسه ۱',cost:850000},
+   {id:'p3',pn:'BAT-UPS-12',desc:'باتری UPS ۱۲ ولت ۹ آمپرساعت',qty:40,min:20,loc:'انبار برق · قفسه ۵',cost:2500000},
+   {id:'p4',pn:'OIL-GEN',desc:'روغن موتور 15W40 (لیتر)',qty:3,min:20,loc:'انبار مرکزی · ردیف ۲',cost:450000},
+ ];
+ const incidents=[
+   {id:'h1',buildingId:'b2',type:'near_miss',severity:'کم',desc:'کف لغزنده نزدیک اتاق پمپ',status:'investigating',at:n-2*DAY},
+   {id:'h2',buildingId:'b1',type:'unsafe_condition',severity:'متوسط',desc:'نبود حفاظ روی هواساز',status:'open',at:n-5*DAY},
+   {id:'h3',buildingId:'b4',type:'accident',severity:'زیاد',desc:'سوختگی جزئی برقی هنگام کار روی تابلو',status:'capa',at:n-12*DAY},
+ ];
+ const compliance=[
+   {id:'c1',device:'پمپ آتش‌نشانی — منطقه ۲',next:n-5*DAY,cert:n+60*DAY,status:'OVERDUE'},
+   {id:'c2',device:'کپسول‌های اطفاء — منطقه ۱',next:n+20*DAY,cert:n+200*DAY,status:'COMPLIANT'},
+   {id:'c3',device:'سیستم اسپرینکلر — منطقه ۳',next:n+10*DAY,cert:n+25*DAY,status:'DUE_SOON'},
+   {id:'c4',device:'کپسول‌های اطفاء — منطقه ۴',next:n-15*DAY,cert:n-3*DAY,status:'NON_COMPLIANT'},
+ ];
+ const months=['۱۴۰۴/۱۰','۱۴۰۴/۱۱','۱۴۰۴/۱۲','۱۴۰۵/۰۱','۱۴۰۵/۰۲','۱۴۰۵/۰۳'];
+ const utilities=[];
+ buildings.forEach((b,bi)=>months.forEach((m,i)=>{
+   const e=35000000+bi*2000000+i*1500000;
+   utilities.push({id:uid(),buildingId:b.id,utility:'electricity',period:m,consumption:Math.round(e/1000),cost:e});
+   utilities.push({id:uid(),buildingId:b.id,utility:'water',period:m,consumption:600+i*30,cost:8000000+i*400000});
+ }));
+ return {user:null,buildings,assets,faults,workOrders,parts,incidents,compliance,utilities,inspections:[]};
 }
-function Home(){
-  const d=dashboard();
-  const roles=[['تکنسین','tech'],['مدیر','mgr'],['سرپرست','sup'],['مدیرعامل','exec']];
-  const role=DB._dashRole||'mgr';
-  const kpiset={
-    tech:[['دستورکارهای باز',d.openWos.length],['معوق',d.overdueWo,d.overdueWo?'var(--crit)':'var(--ok)'],['خرابی‌های باز',d.openFaults],['بحرانی',d.critical,d.critical?'var(--crit)':'var(--ok)']],
-    sup:[['دستورکارهای باز',d.openWos.length],['بازرسی معوق',d.overdueInsp,d.overdueInsp?'var(--warn)':'var(--ok)'],['خرابی‌های باز',d.openFaults],['تطابق PM',d.pmPct+'٪',d.pmPct>=90?'var(--ok)':'var(--warn)']],
-    mgr:[['سلامت دارایی',d.health,healthC(d.health)],['تطابق PM',d.pmPct+'٪',d.pmPct>=90?'var(--ok)':'var(--warn)'],['خرابی بحرانی',d.critical,d.critical?'var(--crit)':'var(--ok)'],['در دسترس بودن',d.avail+'٪',d.avail>=95?'var(--ok)':'var(--warn)'],['ساختمان‌ها',d.buildings],['تجهیزات',d.assets]],
-    exec:[['ارزش دارایی',money(d.value)],['هزینهٔ نگهداری',money(d.maint)],['هزینهٔ معوق',money(d.deferred),'var(--warn)'],['در دسترس بودن',d.avail+'٪'],['MTBF',d.mtbf?fa(d.mtbf)+' روز':'—'],['MTTR',d.mttr?fa(d.mttr)+' ساعت':'—'],['امتیاز ریسک',d.risk,d.risk>=40?'var(--crit)':'var(--ok)'],['سلامت',d.health,healthC(d.health)]],
-  }[role];
-  return bar('داشبورد',{right:syncPill})+`<div class="body">
-    <div class="seg">${roles.map(([l,k])=>`<div class="${role===k?'active':''}" data-role2="${k}">${l}</div>`).join('')}</div>
-    <div class="kpis">${kpiset.map(([l,v,c])=>`<div class="kpi"><div class="v" style="color:${c||'var(--ink)'}">${fa(v)}</div><div class="l">${l}</div></div>`).join('')}</div>
-    ${d.critical?`<div class="title">خرابی‌های بحرانی (${fa(d.critical)})</div>`+d.topFaults.map(f=>`<div class="card between"><span class="small">${esc(f.title)}</span>${critChip(f.priority)}</div>`).join(''):''}
-    ${(role==='tech'||role==='sup')?`<div class="title">دستورکارهای باز (${fa(d.openWos.length)})</div>`+d.openWos.map(woRow).join(''):''}
-  </div>`+navbar('home');
+function todayJStr(jy,jm){return `${jy}/${String(jm).padStart(2,'0')}/01`;}
+
+//================= computed =================
+const openFaults=()=>DB.faults.filter(f=>f.status!=='CLOSED'&&f.status!=='COMPLETED');
+const bAssets=id=>DB.assets.filter(a=>a.buildingId===id);
+function bOpenFaults(id){const ids=bAssets(id).map(a=>a.id);return openFaults().filter(f=>ids.includes(f.assetId)).length;}
+const assetById=id=>DB.assets.find(a=>a.id===id);
+function dashboard(){
+ const opens=openFaults(),crit=opens.filter(f=>f.priority==='CRITICAL');
+ const down=DB.assets.filter(a=>a.status==='خارج از سرویس').length;
+ const overdueInsp=DB.buildings.filter(b=>b.lastInsp<now()-30*DAY).length;
+ const pm=DB.workOrders.filter(w=>w.type==='pm'),pmDone=pm.filter(w=>['COMPLETED','CLOSED'].includes(w.status)).length;
+ const pmPct=pm.length?Math.round(pmDone*100/pm.length):100;
+ const term=['COMPLETED','CLOSED','CANCELLED'];
+ const overdueWo=DB.workOrders.filter(w=>w.due<now()&&!term.includes(w.status)).length;
+ const res=DB.faults.filter(f=>f.resolvedAt).map(f=>f.resolvedAt-f.reportedAt);
+ const mttr=res.length?Math.round(res.reduce((a,b)=>a+b,0)/res.length/3600000):null;
+ const mtbf=DB.faults.length?Math.round(DB.assets.length*90/DB.faults.length):null;
+ const health=Math.max(0,Math.min(100,100-(crit.length*5+(opens.length-crit.length)*2+overdueInsp+down*3)));
+ const avail=DB.assets.length?Math.round((DB.assets.length-down)*100/DB.assets.length):100;
+ const risk=Math.min(100,crit.length*20+overdueWo*5);
+ const maint=DB.workOrders.filter(w=>['COMPLETED','CLOSED'].includes(w.status)).reduce((s,w)=>s+(w.cost||0),0);
+ const deferred=DB.workOrders.filter(w=>!term.includes(w.status)).reduce((s,w)=>s+(w.cost||0),0);
+ const value=DB.assets.reduce((s,a)=>s+(a.value||0),0);
+ return {buildings:DB.buildings.length,assets:DB.assets.length,openFaults:opens.length,critical:crit.length,
+  overdueInsp,overdueWo,pmPct,health,avail,mttr,mtbf,risk,maint,deferred,value,
+  topFaults:opens.slice(0,5),openWos:DB.workOrders.filter(w=>!term.includes(w.status)).slice(0,8)};
 }
-function Buildings(){
-  return bar('ساختمان‌ها',{right:syncPill})+`<div class="body">
-    <input id="bsearch" placeholder="🔍 جستجوی ساختمان‌ها" style="margin-bottom:12px"/>
-    <div id="blist">${buildingRows(DB.buildings)}</div></div>
-    <div class="fab"><button data-go="scan">＋ اسکن / یافتن تجهیز</button></div>`+navbar('buildings');
-}
-function buildingRows(list){
-  if(!list.length) return `<div class="empty">موردی یافت نشد</div>`;
-  return list.map(b=>{
-    const af=buildingOpenFaults(b.id), ac=buildingAssetCount(b.id);
-    return `<div class="card tap" data-go="building" data-id="${b.id}"><div class="row">
-      <span class="dot" style="background:${lightOf(b.status)}"></span>
-      <div class="grow"><div class="b">${esc(b.name)}</div><div class="muted">${esc(b.address)}</div></div>
-      <div class="col" style="align-items:flex-start">
-        <div class="small">${fa(ac)} تجهیز</div>
-        ${af?`<div class="small" style="color:var(--crit)">⚠ ${fa(af)} باز</div>`:''}
-      </div></div></div>`;
-  }).join('');
-}
-function Building(){
-  const b=DB.buildings.find(x=>x.id===params.id); if(!b) return Buildings();
-  const assets=DB.assets.filter(a=>a.buildingId===b.id);
-  return bar(b.name,{back:'buildings'})+`<div class="body">
-    <div class="card"><div class="muted">کد ${fa(b.code)}</div>
-      <div>${fa(b.floors)} طبقه · ${fa(assets.length)} تجهیز</div>
-      <div style="color:var(--crit)">${fa(buildingOpenFaults(b.id))} خرابی باز</div></div>
-    <div class="title">تجهیزات</div>
-    ${assets.map(a=>`<div class="card tap between" data-go="asset" data-id="${a.id}">
-      <div><div class="b">${esc(a.name)}</div><div class="muted">${esc(a.cat)} · ${fa(a.code)}</div></div>
-      ${critChip(a.crit)}</div>`).join('')}
-  </div>`+navbar('buildings');
-}
-function Asset(){
-  const a=DB.assets.find(x=>x.id===params.id); if(!a) return Buildings();
-  const fs=DB.faults.filter(f=>f.assetId===a.id&&f.status!=='CLOSED');
-  return bar(a.name,{back:'building#'+a.buildingId})+`<div class="body">
-    <div class="card">
-      <div class="row" style="margin-bottom:6px">${critChip(a.crit)}<span class="muted">${esc(a.status)}</span></div>
-      <div class="b">${fa(a.code)}</div>
-      <div class="muted">${esc(a.mfr)} · ${esc(a.model)}</div>
-      <div class="small muted">شماره سریال ${fa(a.serial)}</div>
-      <div class="small muted">پایان گارانتی ${fmtDate(a.warrantyEnd)}</div>
-    </div>
-    <div class="btnrow">
-      <button class="btn" data-go="inspect" data-id="${a.id}">🩺 بازرسی</button>
-      <button class="btn ghost" data-go="reportFault" data-id="${a.id}">⚠ ثبت خرابی</button>
-    </div>
-    ${fs.length?`<div class="title">خرابی‌های باز</div>`+fs.map(f=>`<div class="card between"><span class="small">${esc(f.title)}</span>${critChip(f.priority)}</div>`).join(''):''}
-  </div>`+navbar('buildings');
-}
-function Inspect(){
-  const a=DB.assets.find(x=>x.id===params.id); if(!a) return Buildings();
-  const phase=DB._inspPhase||'id';
-  if(phase==='id'){
-    return bar('مشخصات بازرس',{back:'asset#'+a.id})+`<div class="body">
-      <div class="muted">لطفاً پیش از شروع چک‌لیست، مشخصات خود را وارد کنید.</div>
-      <label>نام</label><input id="ifn"/>
-      <label>نام خانوادگی</label><input id="iln"/>
-      <label>کد ملی (۱۰ رقم)</label><input id="inid" inputmode="numeric" maxlength="10"/>
-      <label>سمت</label><input id="ipos"/>
-      <button class="btn" id="toChecklist">ادامه به چک‌لیست</button>
-    </div>`;
-  }
-  const t=DB.template;
-  return bar(t.name,{back:'asset#'+a.id})+`<div class="body" id="clbody">
-    ${t.items.map(it=>`<div class="card"><div class="b small" style="margin-bottom:8px">${esc(it.prompt)}</div>
-      ${it.type==='pfn'?`<div class="opts" data-item="${it.id}">
-        <div class="opt pass" data-val="pass">تأیید</div><div class="opt fail" data-val="fail">رد</div><div class="opt" data-val="na">نامربوط</div></div>`:''}
-      ${it.type==='num'?`<input data-item="${it.id}" inputmode="decimal" placeholder="${it.unit||'مقدار'}"/>${it.max?`<div class="small" style="color:var(--warn)">حداکثر ${fa(it.max)}</div>`:''}`:''}
-      ${it.type==='text'?`<textarea data-item="${it.id}" rows="2" placeholder="توضیحات"></textarea>`:''}
-    </div>`).join('')}
-    <button class="btn" id="submitInsp">تکمیل بازرسی</button>
-  </div>`;
-}
-function ReportFault(){
-  const a=DB.assets.find(x=>x.id===params.id); if(!a) return Buildings();
-  const pr=['CRITICAL','HIGH','MEDIUM','LOW'];
-  return bar('ثبت خرابی',{back:'asset#'+a.id})+`<div class="body">
-    <div class="muted">${esc(a.name)} · ${fa(a.code)}</div>
-    <label>شرح خرابی</label><textarea id="ftitle" rows="3"></textarea>
-    <label>اولویت</label>
-    <div class="opts" id="fpr">${pr.map((p,i)=>`<div class="opt ${i===2?'sel':''}" data-pr="${p}">${CRIT_FA[p]}</div>`).join('')}</div>
-    <button class="btn" id="saveFault">ثبت خرابی</button>
-  </div>`;
-}
-function Work(){
-  const tab=DB._workTab||'wo';
-  return bar('کارهای من')+`<div class="body">
-    <div class="tabs"><div class="${tab==='wo'?'active':''}" data-wtab="wo">دستورکارها (${fa(DB.workOrders.length)})</div>
-      <div class="${tab==='f'?'active':''}" data-wtab="f">خرابی‌ها (${fa(DB.faults.length)})</div></div>
-    ${tab==='wo'?DB.workOrders.map(woRow).join(''):DB.faults.map(f=>`<div class="card between">
-      <div><div class="b small">${esc(f.title)}</div><div class="muted">${FAULT_FA[f.status]}</div></div>${critChip(f.priority)}</div>`).join('')}
-  </div>`+navbar('work');
-}
-function StatusCenter(){
-  return bar('مرکز پایش ساختمان‌ها')+`<div class="body">${DB.buildings.map(b=>{
-    const of=buildingOpenFaults(b.id);
-    const crit=b.status==='CRITICAL'||of>=3, att=b.status==='PARTIAL'||(of>=1&&of<3);
-    const overdueI=b.lastInsp<now()-30*DAY;
-    const subs=[['آسانسورها',crit?'CRITICAL':'OPERATIONAL'],['ژنراتورها','OPERATIONAL'],['مکانیکی',att?'PARTIAL':'OPERATIONAL'],
-      ['اعلام حریق',crit?'CRITICAL':'OPERATIONAL'],['تطابق PM',att?'PARTIAL':'OPERATIONAL'],['بازرسی‌ها',overdueI?'CRITICAL':'OPERATIONAL']];
-    return `<div class="card"><div class="row"><span class="dot" style="background:${lightOf(b.status)}"></span>
-      <span class="b">${esc(b.name)}</span>${of?`<span class="small" style="color:var(--crit)">${fa(of)} باز</span>`:''}</div>
-      <div class="kpis" style="margin-top:8px">${subs.map(([n,s])=>`<div class="row"><span class="dot" style="background:${lightOf(s)}"></span><span class="small">${n}</span></div>`).join('')}</div>
-    </div>`;
-  }).join('')}</div>`+navbar('status');
-}
-function More(){
-  const items=[['inventory','📦','قطعات یدکی و انبار'],['hse','⛑','مدیریت HSE (ایمنی)'],['compliance','🔥','تطابق آتش‌نشانی'],
-    ['utilities','⚡','مدیریت انرژی و مصارف'],['reports','📄','گزارش‌ها'],['notifications','🔔','اعلان‌ها'],['settings','⚙','تنظیمات']];
-  return bar('بیشتر')+`<div class="body">${items.map(([r,i,l])=>`<div class="card tap between" data-go="${r}">
-    <div class="row"><span style="font-size:18px">${i}</span><span class="b">${l}</span></div><span style="color:var(--muted)">‹</span></div>`).join('')}</div>`+navbar('more');
-}
-function Inventory(){
-  const low=DB.parts.filter(p=>p.qty<=p.min).length;
-  return bar('قطعات یدکی و انبار',{back:'more'})+`<div class="body">
-    ${low?`<div class="b small" style="color:var(--crit);margin-bottom:8px">⚠ ${fa(low)} قلم زیر حد سفارش مجدد</div>`:''}
-    ${DB.parts.map(p=>`<div class="card between"><div><div class="b small">${esc(p.desc)}</div><div class="muted">${fa(p.pn)} · ${esc(p.loc)}</div></div>
-      <div class="b" style="color:${p.qty<=p.min?'var(--crit)':'var(--ok)'}">${fa(p.qty)} / حداقل ${fa(p.min)}</div></div>`).join('')}
-  </div><div class="fab"><button data-go="addPart">＋ افزودن قطعه</button></div>`+navbar('more');
-}
-function AddPart(){
-  return bar('افزودن قطعه',{back:'inventory'})+`<div class="body">
-    <label>کد قطعه</label><input id="pn"/><label>شرح قطعه</label><input id="pdesc"/>
-    <label>موجودی</label><input id="pqty" inputmode="numeric"/><label>حداقل موجودی</label><input id="pmin" inputmode="numeric"/>
-    <label>محل نگهداری</label><input id="ploc"/><label>قیمت واحد</label><input id="pcost" inputmode="numeric"/>
-    <button class="btn" id="savePart">ذخیره</button></div>`;
-}
-function Hse(){
-  return bar('مدیریت HSE (ایمنی)',{back:'more'})+`<div class="body">
-    ${DB.incidents.map(i=>`<div class="card"><div class="b small">${HSE_TYPE_FA[i.type]||i.type}</div>
-      <div class="muted">${esc(i.desc)}</div><div class="small" style="color:var(--muted)">شدت ${esc(i.severity)} · ${esc(i.status)}</div></div>`).join('')}
-  </div><div class="fab"><button data-go="addIncident">＋ ثبت حادثه</button></div>`+navbar('more');
-}
-function AddIncident(){
-  const types=Object.keys(HSE_TYPE_FA);
-  return bar('ثبت حادثهٔ HSE',{back:'hse'})+`<div class="body">
-    <label>ساختمان</label><select id="hb">${DB.buildings.map(b=>`<option value="${b.id}">${esc(b.name)}</option>`).join('')}</select>
-    <label>نوع حادثه</label><select id="htype">${types.map(t=>`<option value="${t}">${HSE_TYPE_FA[t]}</option>`).join('')}</select>
-    <label>شدت</label><select id="hsev"><option>کم</option><option selected>متوسط</option><option>زیاد</option></select>
-    <label>شرح حادثه</label><textarea id="hdesc" rows="3"></textarea>
-    <button class="btn" id="saveIncident">ثبت حادثه</button></div>`;
-}
-function Compliance(){
-  return bar('تطابق آتش‌نشانی',{back:'more'})+`<div class="body">${DB.compliance.map(c=>`<div class="card between">
-    <div><div class="b small">${esc(c.device)}</div><div class="muted">بعدی: ${fmtDate(c.next)} · گواهی: ${fmtDate(c.cert)}</div></div>
-    <span class="chip" style="background:${CMP_COLOR[c.status]}">${CMP_FA[c.status]}</span></div>`).join('')}</div>`+navbar('more');
-}
-function Utilities(){
-  const byU={};
-  DB.utilities.forEach(u=>{(byU[u.utility]=byU[u.utility]||[]).push(u);});
-  return bar('مدیریت انرژی و مصارف',{back:'more'})+`<div class="body">${Object.entries(byU).map(([u,list])=>{
-    const byM={}; list.forEach(r=>byM[r.period]=(byM[r.period]||0)+r.consumption);
-    const max=Math.max(...Object.values(byM)); const cost=list.reduce((s,r)=>s+r.cost,0);
-    const color=u==='electricity'?'var(--warn)':'var(--ok)';
-    return `<div class="card"><div class="b">${UTIL_FA[u]||u}</div><div class="muted" style="margin-bottom:6px">هزینهٔ کل: ${fa(cost)}$</div>
-      ${Object.entries(byM).map(([m,v])=>`<div class="small">${m}  ${fa(Math.round(v))}</div><div class="bar"><i style="width:${Math.round(v/max*100)}%;background:${color}"></i></div>`).join('')}</div>`;
-  }).join('')}</div><div class="fab"><button data-go="addReading">＋ ثبت قرائت</button></div>`+navbar('more');
-}
-function AddReading(){
-  return bar('ثبت قرائت کنتور',{back:'utilities'})+`<div class="body">
-    <label>ساختمان</label><select id="rb">${DB.buildings.map(b=>`<option value="${b.id}">${esc(b.name)}</option>`).join('')}</select>
-    <label>نوع انرژی</label><select id="rutil">${Object.entries(UTIL_FA).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select>
-    <label>دوره (مثلاً ۱۴۰۵/۰۴)</label><input id="rper"/>
-    <label>مصرف</label><input id="rcons" inputmode="numeric"/><label>هزینه</label><input id="rcost" inputmode="numeric"/>
-    <button class="btn" id="saveReading">ذخیره</button></div>`;
-}
-function Notifs(){
-  const ns=notifications();
-  return bar('اعلان‌ها ('+fa(ns.length)+')',{back:'more'})+`<div class="body">${ns.length?ns.map(n=>`<div class="card row">
-    <span class="dot" style="background:${n.sev==='C'?'var(--crit)':'var(--warn)'}"></span>
-    <div><div class="b small">${esc(n.t)}</div><div class="muted">${esc(n.b)}</div></div></div>`).join(''):'<div class="empty">اعلانی نیست</div>'}</div>`+navbar('more');
-}
-function Reports(){
-  return bar('گزارش‌ها',{back:'more'})+`<div class="body">
-    <div class="muted">گزارش‌ها به‌صورت آفلاین از داده‌های همین مرورگر تولید می‌شوند.</div>
-    <div class="card tap" id="repHtml"><div class="b">گزارش وضعیت ساختمان‌ها</div><div class="muted">باز کردن و چاپ به PDF</div></div>
-    <div class="card tap" id="repCsv"><div class="b">خروجی تجهیزات (Excel/CSV)</div><div class="muted">دانلود فایل</div></div>
-  </div>`+navbar('more');
-}
-function Settings(){
-  const u=DB.user||{};
-  return bar('تنظیمات',{back:'more'})+`<div class="body">
-    <div class="card"><div class="b">${esc(u.name||'—')}</div><div class="muted">${esc(u.role||'')}</div></div>
-    <div class="card"><div class="muted">حالت اتصال</div><div class="b">آفلاین (مرورگر)</div></div>
-    <div class="card"><div class="muted">زبان</div><div class="b">فارسی (راست‌به‌چپ)</div></div>
-    <div class="card"><div class="muted">نسخه</div><div class="b">${fa('0.1.0')} وب</div></div>
-    <button class="btn ghost" id="resetBtn">بازنشانی داده‌های نمونه</button>
-    <button class="btn" id="logoutBtn">خروج از حساب</button>
-  </div>`+navbar('more');
+function notifications(){const out=[];
+ openFaults().filter(f=>f.priority==='CRITICAL').forEach(f=>out.push({s:'C',t:'خرابی بحرانی باز',b:f.title}));
+ DB.compliance.forEach(c=>{if(c.status==='OVERDUE')out.push({s:'C',t:'تطابق معوق',b:c.device});
+  else if(c.status==='NON_COMPLIANT')out.push({s:'C',t:'عدم تطابق',b:c.device});
+  else if(c.status==='DUE_SOON')out.push({s:'W',t:'بازرسی نزدیک',b:c.device});});
+ DB.parts.filter(p=>p.qty<=p.min).forEach(p=>out.push({s:'W',t:'کمبود موجودی',b:`${p.desc} (${fa(p.qty)}/${fa(p.min)})`}));
+ return out.sort((a,b)=>(a.s==='C'?0:1)-(b.s==='C'?0:1));
 }
 
-//=================== helpers for rows ===================
-function critChip(c){ return `<span class="chip" style="background:${CRIT_COLOR[c]||'var(--unk)'}">${CRIT_FA[c]||c}</span>`; }
-function healthC(s){ return s>=85?'var(--ok)':s>=60?'var(--warn)':'var(--crit)'; }
-function woRow(w){ return `<div class="card"><div class="b small">${fa(w.no)} · ${esc(w.title)}</div>
-  <div class="muted">${WO_TYPE_FA[w.type]||w.type} · ${WO_FA[w.status]||w.status}</div>
-  ${w.cost?`<div class="small muted">تخمین ${fa(w.cost)}$</div>`:''}</div>`; }
+//================= router =================
+let route='login',params={};
+function go(r,p={}){route=r;params=p;window.scrollTo(0,0);render();}
+const app=()=>document.getElementById('app');
+function render(){
+ if(!DB.user&&route!=='login')route='login';
+ app().innerHTML=({login:Login,home:Home,buildings:Buildings,building:Building,assets:Assets,
+  addAsset:AddAsset,asset:Asset,inspect:Inspect,reportFault:ReportFault,work:Work,status:StatusCenter,
+  more:More,inventory:Inventory,addPart:AddPart,hse:Hse,addIncident:AddIncident,compliance:Compliance,
+  utilities:Utilities,addReading:AddReading,notifications:Notifs,reports:Reports,settings:Settings}[route]||Home)();
+ bind();
+}
 
-//=================== event binding ===================
+//================= shared =================
+const head=(title,opt={})=>`<div class="head"><div class="top">
+  <h1>${opt.back?`<span class="back" data-go="${opt.back}">›</span>`:''}<span>${esc(title)}</span></h1>
+  <div class="row">${opt.right||''}</div></div>${opt.sub?`<div class="sub">${opt.sub}</div>`:''}</div>`;
+const navbar=a=>{const items=[['home','🏠','خانه'],['buildings','🏢','ساختمان‌ها'],['work','🧰','کارها'],['status','💟','پایش'],['more','☰','بیشتر']];
+ return `<div class="nav">${items.map(([r,i,l])=>`<div class="${a===r?'active':''}" data-go="${r}"><span class="ni">${i}</span>${l}</div>`).join('')}</div>`;};
+const syncBadge=`<span class="hbadge">● همگام</span>`;
+const critChip=c=>`<span class="chip" style="background:${CRIT_COLOR[c]||'var(--unk)'}">${CRIT_FA[c]||c}</span>`;
+const catChip=cat=>`<span class="chipS" style="background:${CATS[cat].c}1a;color:${CATS[cat].c}">${CATS[cat].ic} ${CATS[cat].fa}</span>`;
+function ring(score){const r=27,c=2*Math.PI*r,off=c*(1-score/100),col=healthC(score);
+ return `<svg width="78" height="78" viewBox="0 0 78 78"><circle cx="39" cy="39" r="${r}" fill="none" stroke="#eef1f8" stroke-width="8"/>
+ <circle cx="39" cy="39" r="${r}" fill="none" stroke="${col}" stroke-width="8" stroke-linecap="round" stroke-dasharray="${c}" stroke-dashoffset="${off}" transform="rotate(-90 39 39)"/>
+ <text x="39" y="45" text-anchor="middle" font-size="20" font-weight="800" fill="${col}">${fa(score)}</text></svg>`;}
+function woRow(w){return `<div class="card"><div class="b small">${fa(w.no)} · ${esc(w.title)}</div>
+ <div class="between" style="margin-top:6px"><span class="muted">${WO_TYPE_FA[w.type]} · ${WO_FA[w.status]}</span>
+ ${w.cost?`<span class="pricepill">${money(w.cost)}</span>`:''}</div></div>`;}
+
+//================= screens =================
+function Login(){const roles=['مدیر سیستم','مدیر','سرپرست','تکنسین','مشاهده‌گر'];
+ return `<div class="body center">
+   <div style="text-align:center;font-size:54px">🏢</div>
+   <div style="text-align:center;font-size:23px;font-weight:800;margin-top:6px">سامانه نگهداری و تعمیرات</div>
+   <div style="text-align:center;color:var(--muted);font-size:13px;margin:8px 0 20px">مدیریت تأسیسات ساختمان‌های اداری</div>
+   <div class="card">
+     <label>نام و نام خانوادگی</label><input id="lname" placeholder="مثلاً علی رضایی"/>
+     <label>نقش</label><div class="opts" id="lroles">${roles.map((r,i)=>`<div class="opt ${i===3?'sel':''}" data-role="${r}">${r}</div>`).join('')}</div>
+     <button class="btn" id="loginBtn">ورود به سامانه</button>
+   </div></div>`;}
+
+function Home(){const d=dashboard();const role=DB._role||'mgr';
+ const roles=[['تکنسین','tech'],['سرپرست','sup'],['مدیر','mgr'],['مدیرعامل','exec']];
+ let cards='';
+ if(role==='mgr'){
+   cards=`<div class="kpi wide"><div>${ring(d.health)}</div><div class="grow">
+     <div class="b" style="font-size:15px">شاخص سلامت تأسیسات</div>
+     <div class="muted">میانگین وضعیت ${fa(d.assets)} تجهیز در ${fa(d.buildings)} ساختمان</div></div></div>`+
+   kpiGrid([['تطابق PM',fa(d.pmPct)+'٪',d.pmPct>=90?'var(--ok)':'var(--warn)'],['خرابی بحرانی',fa(d.critical),d.critical?'var(--crit)':'var(--ok)'],
+     ['در دسترس بودن',fa(d.avail)+'٪','var(--ok)'],['بازرسی معوق',fa(d.overdueInsp),d.overdueInsp?'var(--warn)':'var(--ok)']]);
+ } else if(role==='exec'){
+   cards=kpiGrid([['ارزش دارایی‌ها',moneyShort(d.value),'var(--primary)','تومان'],['هزینهٔ نگهداری',moneyShort(d.maint),'var(--ok)','تومان'],
+     ['هزینهٔ معوق',moneyShort(d.deferred),'var(--warn)','تومان'],['امتیاز ریسک',fa(d.risk),d.risk>=40?'var(--crit)':'var(--ok)'],
+     ['MTBF',d.mtbf?fa(d.mtbf)+' روز':'—'],['MTTR',d.mttr?fa(d.mttr)+' ساعت':'—']]);
+ } else if(role==='sup'){
+   cards=kpiGrid([['دستورکار باز',fa(d.openWos.length)],['بازرسی معوق',fa(d.overdueInsp),d.overdueInsp?'var(--warn)':'var(--ok)'],
+     ['خرابی باز',fa(d.openFaults)],['تطابق PM',fa(d.pmPct)+'٪',d.pmPct>=90?'var(--ok)':'var(--warn)']]);
+ } else {
+   cards=kpiGrid([['دستورکار باز',fa(d.openWos.length)],['معوق',fa(d.overdueWo),d.overdueWo?'var(--crit)':'var(--ok)'],
+     ['خرابی باز',fa(d.openFaults)],['بحرانی',fa(d.critical),d.critical?'var(--crit)':'var(--ok)']]);
+ }
+ return head('داشبورد',{right:syncBadge,sub:'خوش آمدید، '+esc(DB.user.name)})+`<div class="body">
+   <div class="seg">${roles.map(([l,k])=>`<div class="${role===k?'active':''}" data-role2="${k}">${l}</div>`).join('')}</div>
+   <div class="kpis">${cards}</div>
+   ${d.critical?`<div class="title">🔴 خرابی‌های بحرانی (${fa(d.critical)})</div>`+d.topFaults.map(f=>`<div class="card between"><span class="small grow ell">${esc(f.title)}</span>${critChip(f.priority)}</div>`).join(''):''}
+   ${(role==='tech'||role==='sup')?`<div class="title">🧰 دستورکارهای باز</div>`+d.openWos.map(woRow).join(''):''}
+ </div>`+navbar('home');}
+function kpiGrid(arr){return arr.map(([l,v,c,sub])=>`<div class="kpi" style="--accent:${c||'var(--primary)'}"><div class="v">${v}</div><div class="l">${l}${sub?' ('+sub+')':''}</div></div>`).join('');}
+
+function Buildings(){return head('ساختمان‌ها',{right:syncBadge,sub:fa(DB.buildings.length)+' ساختمان اداری'})+`<div class="body">
+   <input id="bsearch" placeholder="🔍 جستجوی ساختمان"/>
+   <div id="blist" style="margin-top:12px">${buildingRows(DB.buildings)}</div>
+ </div><div class="fab"><button data-go="scan">⊹ اسکن تجهیز</button></div>`+navbar('buildings');}
+function buildingRows(list){if(!list.length)return `<div class="empty">موردی یافت نشد</div>`;
+ return list.map(b=>{const af=bOpenFaults(b.id),ac=bAssets(b.id).length;
+  return `<div class="card tap" data-go="building" data-id="${b.id}"><div class="row">
+   <div class="ic" style="background:rgba(79,70,229,.1)">🏢</div>
+   <div class="grow"><div class="b">${esc(b.name)}</div><div class="muted">${esc(b.address)}</div>
+     <div class="row" style="margin-top:6px;gap:7px">
+       <span class="chipS" style="background:#eef1f8;color:var(--muted)">${fa(ac)} تجهیز</span>
+       <span class="chipS" style="background:${lightOf(b.status)}1a;color:${lightOf(b.status)}">● ${b.status==='CRITICAL'?'بحرانی':b.status==='PARTIAL'?'نیاز به توجه':'عملیاتی'}</span>
+       ${af?`<span class="chipS" style="background:#fee2e2;color:var(--crit)">⚠ ${fa(af)} خرابی</span>`:''}
+     </div></div>
+   <span style="color:var(--muted);font-size:20px">‹</span></div></div>`;}).join('');}
+
+function Building(){const b=DB.buildings.find(x=>x.id===params.id);if(!b)return Buildings();
+ const ac=bAssets(b.id).length,val=bAssets(b.id).reduce((s,a)=>s+a.value,0);
+ const info=[['طبقات',fa(b.floors)],['طبقات منفی',fa(b.basements)],['تعداد واحد',fa(b.units)],
+   ['متراژ کل',fa(b.totalArea)+' م²'],['زیربنا',fa(b.builtArea)+' م²'],['سال ساخت',fa(b.year)]];
+ return head(b.name,{back:'buildings',sub:'کاربری: '+b.type})+`<div class="body">
+   <div class="card">
+     <div class="row"><div class="ic" style="background:var(--grad);color:#fff">🏢</div>
+       <div class="grow"><div class="b" style="font-size:17px">${esc(b.name)}</div><div class="muted">کد: ${fa(b.code)} · مدیر: ${esc(b.manager)}</div></div>
+       <span class="chipS" style="background:${lightOf(b.status)}1a;color:${lightOf(b.status)}">● ${b.status==='CRITICAL'?'بحرانی':b.status==='PARTIAL'?'توجه':'عملیاتی'}</span></div>
+   </div>
+   <div class="title">📋 مشخصات کلی ساختمان</div>
+   <div class="stats">${info.map(([t,n])=>`<div class="stat"><div class="n">${n}</div><div class="t">${t}</div></div>`).join('')}</div>
+   <div class="card" style="margin-top:11px"><div class="between"><span class="muted">📍 موقعیت جغرافیایی</span>
+     <span class="b small">${fa(b.lat.toFixed(3))} , ${fa(b.lng.toFixed(3))}</span></div>
+     <div class="between" style="margin-top:8px"><span class="muted">🏠 آدرس</span><span class="small">${esc(b.address)}</span></div>
+     <div class="between" style="margin-top:8px"><span class="muted">📅 آخرین بازدید</span><span class="small">${fa(Math.round((now()-b.lastInsp)/DAY))} روز پیش</span></div>
+   </div>
+   <div class="card between" style="background:var(--grad);color:#fff">
+     <div><div class="small" style="opacity:.85">ارزش تخمینی تجهیزات</div><div class="b" style="font-size:18px">${money(val)}</div></div>
+     <div style="text-align:left"><div class="small" style="opacity:.85">تعداد تجهیز</div><div class="b" style="font-size:18px">${fa(ac)}</div></div>
+   </div>
+   <button class="btn" data-go="assets" data-id="${b.id}">🔧 مشاهدهٔ تجهیزات و قیمت‌ها</button>
+ </div>`+navbar('buildings');}
+
+function Assets(){const b=DB.buildings.find(x=>x.id===params.id);if(!b)return Buildings();
+ const list=bAssets(b.id);
+ const byCat={};list.forEach(a=>(byCat[a.cat]=byCat[a.cat]||[]).push(a));
+ let html='';Object.keys(CATS).forEach(cat=>{if(!byCat[cat])return;
+   html+=`<div class="catHdr" style="color:${CATS[cat].c}">${CATS[cat].ic} ${CATS[cat].fa}</div>`+
+   byCat[cat].map(a=>`<div class="card tap catLine" style="--c:${CATS[cat].c}" data-go="asset" data-id="${a.id}">
+     <div class="between"><div class="grow"><div class="b">${esc(a.name)}</div><div class="muted">${fa(a.code)}</div></div>
+       <div style="text-align:left">${critChip(a.crit)}<div class="pricepill" style="margin-top:5px">${money(a.value)}</div></div></div></div>`).join('');
+ });
+ return head('تجهیزات '+b.name,{back:'building#'+b.id,sub:fa(list.length)+' تجهیز ثبت‌شده'})+`<div class="body">
+   ${list.length?html:'<div class="empty">هنوز تجهیزی برای این ساختمان ثبت نشده.<br>با دکمهٔ پایین تجهیزات را اضافه کنید.</div>'}
+ </div><div class="fab"><button data-go="addAsset" data-id="${b.id}">＋ افزودن تجهیز</button></div>`+navbar('buildings');}
+
+function AddAsset(){const b=DB.buildings.find(x=>x.id===params.id);if(!b)return Buildings();
+ if(!DB._pick)DB._pick={};
+ const have=new Set(bAssets(b.id).map(a=>a.key));
+ let html='';Object.keys(CATS).forEach(cat=>{const items=CATALOG.filter(c=>c.cat===cat);
+   html+=`<div class="catHdr" style="color:${CATS[cat].c}">${CATS[cat].ic} ${CATS[cat].fa}</div>`+
+   items.map(c=>{const exists=have.has(c.key),on=DB._pick[c.key];
+     return `<div class="card catLine ${exists?'':'tap'}" style="--c:${CATS[cat].c};${exists?'opacity:.55':''}" ${exists?'':`data-pick="${c.key}"`}>
+       <div class="row"><div class="check ${on?'on':''}">${on?'✓':''}</div>
+       <div class="grow"><div class="b small">${esc(c.name)}</div><div class="muted">${exists?'قبلاً ثبت شده':money(c.value)}</div></div>
+       ${exists?'<span class="chipS" style="background:#eef1f8;color:var(--muted)">موجود</span>':critChip(c.crit)}</div></div>`;}).join('');
+ });
+ const cnt=Object.values(DB._pick).filter(Boolean).length;
+ return head('افزودن تجهیز',{back:'assets#'+b.id,sub:'تجهیزات موجود در «'+b.name+'» را انتخاب کنید'})+`<div class="body">${html}</div>
+   <div class="fab"><button id="addPick">افزودن ${cnt?fa(cnt)+' مورد':'تجهیز'}</button></div>`;}
+
+function Asset(){const a=assetById(params.id);if(!a)return Buildings();const b=DB.buildings.find(x=>x.id===a.buildingId);
+ const fs=DB.faults.filter(f=>f.assetId===a.id&&f.status!=='CLOSED');
+ const insp=DB.inspections.filter(x=>x.assetId===a.id).sort((x,y)=>y.at-x.at);
+ return head(a.name,{back:'assets#'+a.buildingId,sub:b.name})+`<div class="body">
+   <div class="card">
+     <div class="row"><div class="ic" style="background:${CATS[a.cat].c}1a;color:${CATS[a.cat].c}">${CATS[a.cat].ic}</div>
+       <div class="grow"><div class="b" style="font-size:16px">${esc(a.name)}</div><div class="muted">${fa(a.code)}</div></div>${critChip(a.crit)}</div>
+     <div class="stats" style="margin-top:13px;grid-template-columns:1fr 1fr">
+       <div class="stat"><div class="n" style="font-size:13px;color:var(--primary)">${money(a.value)}</div><div class="t">ارزش تجهیز</div></div>
+       <div class="stat"><div class="n" style="font-size:13px;color:${a.status==='در سرویس'?'var(--ok)':'var(--crit)'}">${esc(a.status)}</div><div class="t">وضعیت</div></div>
+     </div>
+     <div class="between" style="margin-top:11px"><span class="muted">${catChip(a.cat)}</span><span class="small muted">تاریخ نصب: ${fa(a.installJ||'—')}</span></div>
+   </div>
+   <div class="btnrow">
+     <button class="btn sm" data-go="inspect" data-id="${a.id}">🩺 بازرسی / چک‌لیست</button>
+     <button class="btn sm ghost" data-go="reportFault" data-id="${a.id}">⚠ ثبت خرابی</button>
+   </div>
+   ${fs.length?`<div class="title">خرابی‌های باز</div>`+fs.map(f=>`<div class="card between"><span class="small grow ell">${esc(f.title)}</span>${critChip(f.priority)}</div>`).join(''):''}
+   ${insp.length?`<div class="title">سوابق بازرسی (${fa(insp.length)})</div>`+insp.slice(0,5).map(x=>`<div class="card between"><div><div class="small b">${esc(x.inspector.fn)} ${esc(x.inspector.ln)}</div><div class="muted">${esc(x.inspector.pos)}</div></div><span class="small muted">${fa(x.dateJ||'—')}</span></div>`).join(''):''}
+ </div>`+navbar('buildings');}
+
+function Inspect(){const a=assetById(params.id);if(!a)return Buildings();const phase=DB._phase||'id';
+ if(phase==='id'){return head('مشخصات بازرس',{back:'asset#'+a.id,sub:a.name})+`<div class="body">
+   <div class="card"><div class="muted" style="margin-bottom:4px">پیش از شروع چک‌لیست، اطلاعات خود را وارد کنید.</div>
+     <label>نام</label><input id="ifn"/><label>نام خانوادگی</label><input id="iln"/>
+     <label>کد ملی (۱۰ رقم)</label><input id="inid" inputmode="numeric" maxlength="10"/>
+     <label>سمت</label><input id="ipos" placeholder="مثلاً تکنسین برق"/>
+     <button class="btn" id="toCl">ادامه</button></div></div>`;}
+ const items=clOf(a.key);
+ return head('چک‌لیست سرویس',{back:'asset#'+a.id,sub:a.name})+`<div class="body" id="clbody">
+   <div class="title">📅 تاریخ بازدید</div>${calHTML()}
+   <div class="title">✅ چک‌لیست استاندارد</div>
+   ${items.map((it,idx)=>`<div class="card"><div class="b small" style="margin-bottom:9px">${fa(idx+1)}. ${esc(it.p)}</div>
+     ${it.t==='pfn'?`<div class="opts" data-item="${idx}"><div class="opt pass" data-val="pass">تأیید</div><div class="opt fail" data-val="fail">رد</div><div class="opt" data-val="na">نامربوط</div></div>`:''}
+     ${it.t==='num'?`<input data-item="${idx}" inputmode="decimal" placeholder="${it.u||'مقدار'}"/>${it.max?`<div class="small" style="color:var(--warn);margin-top:5px">حداکثر مجاز: ${fa(it.max)}</div>`:''}`:''}
+     ${it.t==='text'?`<textarea data-item="${idx}" rows="2" placeholder="توضیحات"></textarea>`:''}
+   </div>`).join('')}
+   <button class="btn" id="submitInsp">ثبت بازرسی</button></div>`;}
+function calHTML(){const t=DB._cal||todayJ();if(!DB._cal)DB._cal={jy:t.jy,jm:t.jm};const cal=DB._cal;
+ const len=jMonthLen(cal.jy,cal.jm),g=toGregorian(cal.jy,cal.jm,1),off=(new Date(g.gy,g.gm-1,g.gd).getDay()+1)%7;
+ const sel=DB._inspJ;let cells='';for(let i=0;i<off;i++)cells+='<div></div>';
+ for(let d=1;d<=len;d++){const on=sel&&sel.jy===cal.jy&&sel.jm===cal.jm&&sel.jd===d;
+   cells+=`<div class="day ${on?'sel':''}" data-day="${d}">${fa(d)}</div>`;}
+ return `<div class="cal"><div class="calhdr"><span data-cal="prev">›</span>
+   <div>${JMONTHS[cal.jm-1]} ${fa(cal.jy)}</div><span data-cal="next">‹</span></div>
+   <div class="calgrid">${JWEEK.map(w=>`<div class="wd">${w}</div>`).join('')}${cells}</div>
+   ${sel?`<div class="small" style="text-align:center;margin-top:8px;color:var(--primary);font-weight:700">تاریخ انتخابی: ${jStr(sel)}</div>`:''}</div>`;}
+
+function ReportFault(){const a=assetById(params.id);if(!a)return Buildings();const pr=['CRITICAL','HIGH','MEDIUM','LOW'];
+ return head('ثبت خرابی',{back:'asset#'+a.id,sub:a.name})+`<div class="body"><div class="card">
+   <label>شرح خرابی</label><textarea id="ftitle" rows="3" placeholder="مشکل را توضیح دهید"></textarea>
+   <label>اولویت</label><div class="opts" id="fpr">${pr.map((p,i)=>`<div class="opt ${i===2?'sel':''}" data-pr="${p}">${CRIT_FA[p]}</div>`).join('')}</div>
+   <button class="btn" id="saveFault">ثبت خرابی</button></div></div>`;}
+
+function Work(){const tab=DB._wtab||'wo';
+ return head('کارها',{sub:'دستورکارها و خرابی‌ها'})+`<div class="body">
+   <div class="tabs"><div class="${tab==='wo'?'active':''}" data-wtab="wo">دستورکارها (${fa(DB.workOrders.length)})</div>
+     <div class="${tab==='f'?'active':''}" data-wtab="f">خرابی‌ها (${fa(DB.faults.length)})</div></div>
+   ${tab==='wo'?DB.workOrders.map(woRow).join(''):DB.faults.map(f=>{const a=assetById(f.assetId);
+     return `<div class="card between"><div class="grow"><div class="b small ell">${esc(f.title)}</div>
+       <div class="muted">${a?esc(a.name):''} · ${FAULT_FA[f.status]}</div></div>${critChip(f.priority)}</div>`;}).join('')}
+ </div>`+navbar('work');}
+
+function StatusCenter(){return head('مرکز پایش',{sub:'وضعیت زندهٔ ساختمان‌ها'})+`<div class="body">${DB.buildings.map(b=>{
+   const of=bOpenFaults(b.id),crit=b.status==='CRITICAL'||of>=3,att=b.status==='PARTIAL'||(of>=1&&of<3);
+   const overdueI=b.lastInsp<now()-30*DAY;
+   const subs=[['آسانسور',crit?'CRITICAL':'OPERATIONAL'],['برق/ژنراتور','OPERATIONAL'],['مکانیکی',att?'PARTIAL':'OPERATIONAL'],
+     ['اعلام حریق',crit?'CRITICAL':'OPERATIONAL'],['تطابق PM',att?'PARTIAL':'OPERATIONAL'],['بازرسی',overdueI?'CRITICAL':'OPERATIONAL']];
+   return `<div class="card"><div class="between"><div class="row"><span class="dot" style="background:${lightOf(b.status)}"></span><span class="b">${esc(b.name)}</span></div>
+     ${of?`<span class="chipS" style="background:#fee2e2;color:var(--crit)">${fa(of)} خرابی باز</span>`:'<span class="chipS" style="background:#dcfce7;color:var(--ok)">سالم</span>'}</div>
+     <div class="kpis" style="margin-top:10px;gap:7px">${subs.map(([n,s])=>`<div class="row" style="gap:7px"><span class="dot" style="background:${lightOf(s)}"></span><span class="small">${n}</span></div>`).join('')}</div></div>`;
+ }).join('')}</div>`+navbar('status');}
+
+function More(){const items=[['inventory','📦','قطعات یدکی و انبار'],['hse','⛑️','مدیریت HSE (ایمنی)'],['compliance','🧯','تطابق آتش‌نشانی'],
+   ['utilities','⚡','مدیریت انرژی و مصارف'],['reports','📄','گزارش‌ها'],['notifications','🔔','اعلان‌ها'],['settings','⚙️','تنظیمات']];
+ return head('بیشتر')+`<div class="body">${items.map(([r,i,l])=>`<div class="card tap between" data-go="${r}">
+   <div class="row"><div class="ic" style="background:#eef1f8">${i}</div><span class="b">${l}</span></div><span style="color:var(--muted);font-size:20px">‹</span></div>`).join('')}</div>`+navbar('more');}
+
+function Inventory(){const low=DB.parts.filter(p=>p.qty<=p.min).length;
+ return head('قطعات یدکی و انبار',{back:'more'})+`<div class="body">
+   ${low?`<div class="card" style="background:#fef2f2;border:1px solid #fecaca"><span class="b" style="color:var(--crit)">⚠ ${fa(low)} قلم زیر حد سفارش مجدد</span></div>`:''}
+   ${DB.parts.map(p=>`<div class="card between"><div class="grow"><div class="b small">${esc(p.desc)}</div><div class="muted">${fa(p.pn)} · ${esc(p.loc)}</div>
+     <div class="pricepill" style="margin-top:6px">${money(p.cost)}</div></div>
+     <div style="text-align:center"><div class="b" style="font-size:18px;color:${p.qty<=p.min?'var(--crit)':'var(--ok)'}">${fa(p.qty)}</div><div class="small muted">حداقل ${fa(p.min)}</div></div></div>`).join('')}
+ </div><div class="fab"><button data-go="addPart">＋ افزودن قطعه</button></div>`+navbar('more');}
+function AddPart(){return head('افزودن قطعه',{back:'inventory'})+`<div class="body"><div class="card">
+   <label>کد قطعه</label><input id="pn"/><label>شرح قطعه</label><input id="pdesc"/>
+   <label>موجودی</label><input id="pqty" inputmode="numeric"/><label>حداقل موجودی</label><input id="pmin" inputmode="numeric"/>
+   <label>محل نگهداری</label><input id="ploc"/><label>قیمت واحد (تومان)</label><input id="pcost" inputmode="numeric"/>
+   <button class="btn" id="savePart">ذخیره</button></div></div>`;}
+
+function Hse(){return head('مدیریت HSE (ایمنی)',{back:'more'})+`<div class="body">
+   ${DB.incidents.map(i=>{const b=DB.buildings.find(x=>x.id===i.buildingId);
+     return `<div class="card"><div class="between"><span class="b small">${HSE_TYPE_FA[i.type]}</span><span class="chipS" style="background:#eef1f8;color:var(--muted)">${i.status}</span></div>
+     <div class="muted" style="margin-top:5px">${esc(i.desc)}</div><div class="small muted" style="margin-top:5px">${b?esc(b.name):''} · شدت ${esc(i.severity)}</div></div>`;}).join('')}
+ </div><div class="fab"><button data-go="addIncident">＋ ثبت حادثه</button></div>`+navbar('more');}
+function AddIncident(){const types=Object.keys(HSE_TYPE_FA);
+ return head('ثبت حادثهٔ HSE',{back:'hse'})+`<div class="body"><div class="card">
+   <label>ساختمان</label><select id="hb">${DB.buildings.map(b=>`<option value="${b.id}">${esc(b.name)}</option>`).join('')}</select>
+   <label>نوع حادثه</label><select id="htype">${types.map(t=>`<option value="${t}">${HSE_TYPE_FA[t]}</option>`).join('')}</select>
+   <label>شدت</label><select id="hsev"><option>کم</option><option selected>متوسط</option><option>زیاد</option></select>
+   <label>شرح حادثه</label><textarea id="hdesc" rows="3"></textarea>
+   <button class="btn" id="saveIncident">ثبت حادثه</button></div></div>`;}
+
+function Compliance(){return head('تطابق آتش‌نشانی',{back:'more'})+`<div class="body">${DB.compliance.map(c=>`<div class="card between">
+   <div class="grow"><div class="b small">${esc(c.device)}</div><div class="muted">تاریخ بعدی بازرسی · انقضای گواهی</div></div>
+   <span class="chip" style="background:${CMP_COLOR[c.status]}">${CMP_FA[c.status]}</span></div>`).join('')}</div>`+navbar('more');}
+
+function Utilities(){const byU={};DB.utilities.forEach(u=>(byU[u.utility]=byU[u.utility]||[]).push(u));
+ return head('مدیریت انرژی و مصارف',{back:'more'})+`<div class="body">${Object.entries(byU).map(([u,list])=>{
+   const byM={};list.forEach(r=>byM[r.period]=(byM[r.period]||0)+r.cost);const max=Math.max(...Object.values(byM));
+   const total=list.reduce((s,r)=>s+r.cost,0);const color=u==='electricity'?'#f59e0b':'#0ea5e9';
+   return `<div class="card"><div class="between"><span class="b">${u==='electricity'?'⚡ ':'💧 '}${UTIL_FA[u]||u}</span><span class="pricepill">${money(total)}</span></div>
+     <div style="margin-top:8px">${Object.entries(byM).map(([m,v])=>`<div class="small muted">${m} — ${money(v)}</div><div class="bar"><i style="width:${Math.round(v/max*100)}%;background:${color}"></i></div>`).join('')}</div></div>`;
+ }).join('')}</div><div class="fab"><button data-go="addReading">＋ ثبت قرائت</button></div>`+navbar('more');}
+function AddReading(){return head('ثبت قرائت کنتور',{back:'utilities'})+`<div class="body"><div class="card">
+   <label>ساختمان</label><select id="rb">${DB.buildings.map(b=>`<option value="${b.id}">${esc(b.name)}</option>`).join('')}</select>
+   <label>نوع انرژی</label><select id="rutil">${Object.entries(UTIL_FA).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select>
+   <label>دوره (مثلاً ۱۴۰۵/۰۴)</label><input id="rper"/><label>مصرف</label><input id="rcons" inputmode="numeric"/>
+   <label>هزینه (تومان)</label><input id="rcost" inputmode="numeric"/><button class="btn" id="saveReading">ذخیره</button></div></div>`;}
+
+function Notifs(){const ns=notifications();return head('اعلان‌ها ('+fa(ns.length)+')',{back:'more'})+`<div class="body">${ns.length?ns.map(n=>`<div class="card row">
+   <div class="ic" style="background:${n.s==='C'?'#fee2e2':'#fef3c7'};color:${n.s==='C'?'var(--crit)':'var(--warn)'};width:38px;height:38px;font-size:18px">${n.s==='C'?'🔴':'🟡'}</div>
+   <div class="grow"><div class="b small">${esc(n.t)}</div><div class="muted">${esc(n.b)}</div></div></div>`).join(''):'<div class="empty">اعلانی نیست</div>'}</div>`+navbar('more');}
+
+function Reports(){return head('گزارش‌ها',{back:'more'})+`<div class="body">
+   <div class="muted" style="margin-bottom:6px">گزارش‌ها به‌صورت آفلاین از داده‌های همین مرورگر تولید می‌شوند.</div>
+   <div class="card tap" id="repHtml"><div class="row"><div class="ic" style="background:#eef1f8">📄</div><div class="grow"><div class="b">گزارش وضعیت ساختمان‌ها</div><div class="muted">باز کردن و چاپ / ذخیره PDF</div></div></div></div>
+   <div class="card tap" id="repCsv"><div class="row"><div class="ic" style="background:#eef1f8">📊</div><div class="grow"><div class="b">خروجی تجهیزات (Excel/CSV)</div><div class="muted">دانلود فایل</div></div></div></div>
+ </div>`+navbar('more');}
+
+function Settings(){const u=DB.user||{};return head('تنظیمات',{back:'more'})+`<div class="body">
+   <div class="card row"><div class="ic" style="background:var(--grad);color:#fff">👤</div><div class="grow"><div class="b">${esc(u.name||'—')}</div><div class="muted">${esc(u.role||'')}</div></div></div>
+   <div class="card between"><span class="muted">حالت اتصال</span><span class="b">آفلاین (مرورگر)</span></div>
+   <div class="card between"><span class="muted">زبان</span><span class="b">فارسی (راست‌به‌چپ)</span></div>
+   <div class="card between"><span class="muted">واحد پول</span><span class="b">تومان</span></div>
+   <div class="card between"><span class="muted">نسخه</span><span class="b">${fa('۲٫۰')} وب</span></div>
+   <button class="btn ghost" id="resetBtn">بازنشانی داده‌های نمونه</button>
+   <button class="btn" id="logoutBtn">خروج از حساب</button></div>`;}
+
+//================= bind =================
+function val(id){return (document.getElementById(id)?.value||'').trim();}
+function bindGo(scope){(scope||document).querySelectorAll('[data-go]').forEach(e=>e.onclick=()=>{
+  const r=e.getAttribute('data-go'),id=e.getAttribute('data-id');
+  if(r==='scan'){const code=prompt('کد یا QR تجهیز:');if(code){const a=DB.assets.find(x=>x.qr===code.trim()||x.code===code.trim());if(a)go('asset',{id:a.id});else toast('تجهیزی یافت نشد');}return;}
+  if(r.includes('#')){const[rr,pid]=r.split('#');go(rr,{id:pid});return;}
+  if(r==='inspect'){DB._phase='id';DB._inspJ=null;DB._cal=null;}
+  if(r==='addAsset')DB._pick={};
+  go(r,id?{id}:{});
+});}
 function bind(){
-  // generic navigation
-  document.querySelectorAll('[data-go]').forEach(e=>e.onclick=()=>{
-    const r=e.getAttribute('data-go'); const id=e.getAttribute('data-id');
-    if(r==='scan'){ const code=prompt('کد یا QR تجهیز را وارد کنید:'); if(code){const a=DB.assets.find(x=>x.qr===code.trim()||x.code===code.trim()); if(a) go('asset',{id:a.id}); else alert('تجهیزی با این کد یافت نشد');} return; }
-    if(r.includes('#')){ const [rr,pid]=r.split('#'); go(rr,{id:pid}); return; }
-    if(r==='inspect') DB._inspPhase='id';
-    go(r, id?{id}:{});
-  });
-  // login
-  const lroles=document.getElementById('lroles');
-  if(lroles){ let role='تکنسین';
-    lroles.querySelectorAll('[data-role]').forEach(d=>d.onclick=()=>{lroles.querySelectorAll('.opt').forEach(x=>x.classList.remove('sel'));d.classList.add('sel');role=d.getAttribute('data-role');});
-    document.getElementById('loginBtn').onclick=()=>{const name=document.getElementById('lname').value.trim();if(!name){alert('نام را وارد کنید');return;}DB.user={name,role};save();go('home');};
-  }
-  // dashboard role
-  document.querySelectorAll('[data-role2]').forEach(d=>d.onclick=()=>{DB._dashRole=d.getAttribute('data-role2');render();});
-  // building search
-  const bs=document.getElementById('bsearch');
-  if(bs) bs.oninput=()=>{const q=bs.value.trim();document.getElementById('blist').innerHTML=buildingRows(DB.buildings.filter(b=>b.name.includes(q)||b.code.includes(q)));bindGo();};
-  // work tabs
-  document.querySelectorAll('[data-wtab]').forEach(d=>d.onclick=()=>{DB._workTab=d.getAttribute('data-wtab');render();});
-  // inspect identity → checklist
-  const toCl=document.getElementById('toChecklist');
-  if(toCl) toCl.onclick=()=>{
-    const fn=val('ifn'),ln=val('iln'),nid=val('inid'),pos=val('ipos');
-    if(!fn||!ln||!pos){alert('همهٔ فیلدها را پر کنید');return;}
-    if(!/^\d{10}$/.test(nid)){alert('کد ملی باید ۱۰ رقم باشد');return;}
-    DB._inspector={fn,ln,nid,pos}; DB._inspPhase='checklist'; render();
-  };
-  // checklist pfn options
-  document.querySelectorAll('[data-item] .opt, #clbody [data-item]').forEach(()=>{});
-  document.querySelectorAll('.opts[data-item]').forEach(g=>g.querySelectorAll('.opt').forEach(o=>o.onclick=()=>{
-    g.querySelectorAll('.opt').forEach(x=>x.classList.remove('sel'));o.classList.add('sel');
-  }));
-  const subIns=document.getElementById('submitInsp');
-  if(subIns) subIns.onclick=()=>{
-    DB.inspections.push({id:uid(),assetId:params.id,inspector:DB._inspector,at:now()});
-    DB._inspPhase='id'; save(); alert('بازرسی با موفقیت ثبت شد ✅'); go('asset',{id:params.id});
-  };
-  // report fault
-  const fpr=document.getElementById('fpr');
-  if(fpr){ let pr='MEDIUM';
-    fpr.querySelectorAll('[data-pr]').forEach(d=>d.onclick=()=>{fpr.querySelectorAll('.opt').forEach(x=>x.classList.remove('sel'));d.classList.add('sel');pr=d.getAttribute('data-pr');});
-    document.getElementById('saveFault').onclick=()=>{const t=val('ftitle');if(!t){alert('شرح خرابی را وارد کنید');return;}
-      DB.faults.unshift({id:uid(),assetId:params.id,title:t,priority:pr,status:'OPEN',reportedAt:now(),resolvedAt:null});save();alert('خرابی ثبت شد ✅');go('asset',{id:params.id});};
-  }
-  // add part
-  const sp=document.getElementById('savePart');
-  if(sp) sp.onclick=()=>{const pn=val('pn'),desc=val('pdesc');if(!pn||!desc){alert('کد و شرح الزامی است');return;}
-    DB.parts.push({id:uid(),pn,desc,qty:+val('pqty')||0,min:+val('pmin')||0,loc:val('ploc'),cost:+val('pcost')||0});save();go('inventory');};
-  // add incident
-  const si=document.getElementById('saveIncident');
-  if(si) si.onclick=()=>{const desc=val('hdesc');if(!desc){alert('شرح حادثه الزامی است');return;}
-    DB.incidents.unshift({id:uid(),buildingId:val('hb'),type:val('htype'),severity:val('hsev'),desc,status:'open',at:now()});save();go('hse');};
-  // add reading
-  const sr=document.getElementById('saveReading');
-  if(sr) sr.onclick=()=>{const per=val('rper');if(!per){alert('دوره را وارد کنید');return;}
-    DB.utilities.push({id:uid(),buildingId:val('rb'),utility:val('rutil'),period:per,consumption:+val('rcons')||0,cost:+val('rcost')||0});save();go('utilities');};
-  // reports
-  const rh=document.getElementById('repHtml'); if(rh) rh.onclick=openHtmlReport;
-  const rc=document.getElementById('repCsv'); if(rc) rc.onclick=downloadCsv;
-  // settings
-  const lo=document.getElementById('logoutBtn'); if(lo) lo.onclick=()=>{DB.user=null;save();go('login');};
-  const rs=document.getElementById('resetBtn'); if(rs) rs.onclick=()=>{if(confirm('داده‌ها به حالت نمونه بازنشانی شود؟')){localStorage.removeItem(KEY);load();go('home');}};
-}
-function bindGo(){ document.querySelectorAll('#blist [data-go]').forEach(e=>e.onclick=()=>go('building',{id:e.getAttribute('data-id')})); }
-const val = id => (document.getElementById(id)?.value||'').trim();
-
-//=================== reports ===================
-function openHtmlReport(){
-  const d=dashboard();
-  const kpis=[['ساختمان‌ها',d.buildings],['تجهیزات',d.assets],['خرابی‌های باز',d.openFaults],['خرابی بحرانی',d.critical],
-    ['تطابق PM',d.pmPct+'٪'],['در دسترس بودن',d.avail+'٪'],['سلامت دارایی',d.health+' از ۱۰۰'],['امتیاز ریسک',d.risk]];
-  const rows=DB.buildings.map(b=>`<tr><td><span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:${lightOf(b.status).replace('var(--ok)','#2E7D32').replace('var(--warn)','#F9A825').replace('var(--crit)','#C62828').replace('var(--unk)','#9E9E9E')}"></span></td>
-    <td>${esc(b.name)}</td><td>${fa(b.code)}</td><td>${fa(buildingAssetCount(b.id))}</td><td>${fa(buildingOpenFaults(b.id))}</td></tr>`).join('');
-  const html=`<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><title>گزارش ساختمان‌ها</title>
-  <style>body{font-family:Tahoma,sans-serif;margin:24px;color:#11161f}h1{font-size:20px}.sub{color:#666;font-size:13px;margin-bottom:18px}
-  .kpis{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:20px}.kpi{border:1px solid #ddd;border-radius:10px;padding:10px 14px;min-width:120px}
-  .kpi .v{font-size:22px;font-weight:bold}.kpi .l{font-size:12px;color:#666}table{width:100%;border-collapse:collapse}
-  th,td{border:1px solid #ddd;padding:8px;text-align:right;font-size:13px}th{background:#f3f4f6}
-  @media print{.noprint{display:none}}</style></head><body>
-  <h1>گزارش وضعیت ساختمان‌ها — سامانه نگهداری و تعمیرات</h1>
-  <div class="sub">تاریخ: ${fa(new Date().toLocaleString('fa-IR'))}</div>
-  <div class="kpis">${kpis.map(([l,v])=>`<div class="kpi"><div class="v">${fa(v)}</div><div class="l">${l}</div></div>`).join('')}</div>
-  <h3>ساختمان‌ها</h3><table><thead><tr><th>وضعیت</th><th>نام</th><th>کد</th><th>تعداد تجهیزات</th><th>خرابی باز</th></tr></thead><tbody>${rows}</tbody></table>
-  <button class="noprint" onclick="window.print()" style="margin-top:20px;padding:10px 20px;font-size:15px">چاپ / ذخیره PDF</button>
-  </body></html>`;
-  const w=window.open('','_blank');
-  if(w){ w.document.write(html); w.document.close(); }
-  else { const blob=new Blob([html],{type:'text/html'}); const url=URL.createObjectURL(blob); location.href=url; }
-}
-function downloadCsv(){
-  const bmap={}; DB.buildings.forEach(b=>bmap[b.id]=b.name);
-  let csv='﻿'+'کد تجهیز,نام,دسته,ساختمان,بحرانیت,وضعیت\n';
-  DB.assets.forEach(a=>{const q=s=>'"'+String(s).replace(/"/g,'""')+'"';
-    csv+=[q(a.code),q(a.name),q(a.cat),q(bmap[a.buildingId]||''),q(CRIT_FA[a.crit]||a.crit),q(a.status)].join(',')+'\n';});
-  const blob=new Blob([csv],{type:'text/csv;charset=utf-8'}); const url=URL.createObjectURL(blob);
-  const a=document.createElement('a'); a.href=url; a.download='assets.csv'; a.click(); URL.revokeObjectURL(url);
+ bindGo();
+ // login
+ const lr=document.getElementById('lroles');
+ if(lr){let role='تکنسین';lr.querySelectorAll('[data-role]').forEach(d=>d.onclick=()=>{lr.querySelectorAll('.opt').forEach(x=>x.classList.remove('sel'));d.classList.add('sel');role=d.getAttribute('data-role');});
+   document.getElementById('loginBtn').onclick=()=>{const name=val('lname');if(!name){toast('نام را وارد کنید');return;}DB.user={name,role};save();go('home');};}
+ // dashboard role
+ document.querySelectorAll('[data-role2]').forEach(d=>d.onclick=()=>{DB._role=d.getAttribute('data-role2');render();});
+ // search
+ const bs=document.getElementById('bsearch');
+ if(bs)bs.oninput=()=>{const q=bs.value.trim();const el=document.getElementById('blist');el.innerHTML=buildingRows(DB.buildings.filter(b=>b.name.includes(q)||b.code.includes(q)||b.address.includes(q)));bindGo(el);};
+ // work tabs
+ document.querySelectorAll('[data-wtab]').forEach(d=>d.onclick=()=>{DB._wtab=d.getAttribute('data-wtab');render();});
+ // add asset picker
+ document.querySelectorAll('[data-pick]').forEach(c=>c.onclick=()=>{const k=c.getAttribute('data-pick');DB._pick[k]=!DB._pick[k];render();});
+ const addPick=document.getElementById('addPick');
+ if(addPick)addPick.onclick=()=>{const b=DB.buildings.find(x=>x.id===params.id);const keys=Object.keys(DB._pick).filter(k=>DB._pick[k]);
+   if(!keys.length){toast('تجهیزی انتخاب نشده');return;}
+   let seq=bAssets(b.id).length;keys.forEach(key=>{const cb=CATBY[key];seq++;const code=`${b.code}-${String(seq).padStart(3,'0')}`;
+     DB.assets.push({id:'a-'+b.id+'-'+key+'-'+uid(),buildingId:b.id,key,cat:cb.cat,name:cb.name,code,qr:'QR-'+code,crit:cb.crit,value:cb.value,status:'در سرویس',installJ:jStr(todayJ())});});
+   DB._pick={};save();toast(fa(keys.length)+' تجهیز اضافه شد ✅');go('assets',{id:b.id});};
+ // inspect identity
+ const toCl=document.getElementById('toCl');
+ if(toCl)toCl.onclick=()=>{const fn=val('ifn'),ln=val('iln'),nid=val('inid'),pos=val('ipos');
+   if(!fn||!ln||!pos){toast('همهٔ فیلدها را پر کنید');return;}if(!/^\d{10}$/.test(nid)){toast('کد ملی باید ۱۰ رقم باشد');return;}
+   DB._inspector={fn,ln,nid,pos};DB._phase='checklist';render();};
+ // checklist pfn
+ document.querySelectorAll('.opts[data-item]').forEach(g=>g.querySelectorAll('.opt').forEach(o=>o.onclick=()=>{g.querySelectorAll('.opt').forEach(x=>x.classList.remove('sel'));o.classList.add('sel');}));
+ // calendar
+ document.querySelectorAll('[data-cal]').forEach(s=>s.onclick=()=>{const dir=s.getAttribute('data-cal');let{jy,jm}=DB._cal;
+   if(dir==='next'){jm++;if(jm>12){jm=1;jy++;}}else{jm--;if(jm<1){jm=12;jy--;}}DB._cal={jy,jm};render();});
+ document.querySelectorAll('[data-day]').forEach(d=>d.onclick=()=>{DB._inspJ={jy:DB._cal.jy,jm:DB._cal.jm,jd:+d.getAttribute('data-day')};render();});
+ const subIns=document.getElementById('submitInsp');
+ if(subIns)subIns.onclick=()=>{const dj=DB._inspJ||todayJ();
+   DB.inspections.push({id:uid(),assetId:params.id,inspector:DB._inspector,dateJ:jStr(dj),at:now()});
+   DB._phase='id';save();toast('بازرسی ثبت شد ✅');go('asset',{id:params.id});};
+ // report fault
+ const fpr=document.getElementById('fpr');
+ if(fpr){let pr='MEDIUM';fpr.querySelectorAll('[data-pr]').forEach(d=>d.onclick=()=>{fpr.querySelectorAll('.opt').forEach(x=>x.classList.remove('sel'));d.classList.add('sel');pr=d.getAttribute('data-pr');});
+   document.getElementById('saveFault').onclick=()=>{const t=val('ftitle');if(!t){toast('شرح خرابی را وارد کنید');return;}
+     DB.faults.unshift({id:uid(),assetId:params.id,title:t,priority:pr,status:'OPEN',reportedAt:now(),resolvedAt:null});save();toast('خرابی ثبت شد ✅');go('asset',{id:params.id});};}
+ // forms
+ const sp=document.getElementById('savePart');
+ if(sp)sp.onclick=()=>{const pn=val('pn'),desc=val('pdesc');if(!pn||!desc){toast('کد و شرح الزامی است');return;}
+   DB.parts.push({id:uid(),pn,desc,qty:+val('pqty')||0,min:+val('pmin')||0,loc:val('ploc'),cost:+val('pcost')||0});save();toast('قطعه اضافه شد ✅');go('inventory');};
+ const si=document.getElementById('saveIncident');
+ if(si)si.onclick=()=>{const desc=val('hdesc');if(!desc){toast('شرح حادثه الزامی است');return;}
+   DB.incidents.unshift({id:uid(),buildingId:val('hb'),type:val('htype'),severity:val('hsev'),desc,status:'open',at:now()});save();toast('حادثه ثبت شد ✅');go('hse');};
+ const sr=document.getElementById('saveReading');
+ if(sr)sr.onclick=()=>{const per=val('rper');if(!per){toast('دوره را وارد کنید');return;}
+   DB.utilities.push({id:uid(),buildingId:val('rb'),utility:val('rutil'),period:per,consumption:+val('rcons')||0,cost:+val('rcost')||0});save();toast('قرائت ثبت شد ✅');go('utilities');};
+ // reports
+ const rh=document.getElementById('repHtml');if(rh)rh.onclick=openHtmlReport;
+ const rc=document.getElementById('repCsv');if(rc)rc.onclick=downloadCsv;
+ // settings
+ const lo=document.getElementById('logoutBtn');if(lo)lo.onclick=()=>{DB.user=null;save();go('login');};
+ const rs=document.getElementById('resetBtn');if(rs)rs.onclick=()=>{if(confirm('بازنشانی به داده‌های نمونه؟')){localStorage.removeItem(KEY);load();go('home');}};
 }
 
-//=================== boot ===================
-load();
-go(DB.user?'home':'login');
+//================= reports =================
+function openHtmlReport(){const d=dashboard();
+ const kpis=[['ساختمان‌ها',fa(d.buildings)],['تجهیزات',fa(d.assets)],['خرابی باز',fa(d.openFaults)],['خرابی بحرانی',fa(d.critical)],
+   ['تطابق PM',fa(d.pmPct)+'٪'],['در دسترس بودن',fa(d.avail)+'٪'],['ارزش دارایی',money(d.value)],['هزینهٔ نگهداری',money(d.maint)]];
+ const cmap={'var(--ok)':'#16a34a','var(--warn)':'#f59e0b','var(--crit)':'#dc2626','var(--unk)':'#94a3b8'};
+ const rows=DB.buildings.map(b=>`<tr><td><span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:${cmap[lightOf(b.status)]}"></span></td>
+   <td>${esc(b.name)}</td><td>${fa(b.floors)}</td><td>${fa(b.totalArea)}</td><td>${fa(bAssets(b.id).length)}</td><td>${fa(bOpenFaults(b.id))}</td></tr>`).join('');
+ const html=`<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><title>گزارش ساختمان‌ها</title>
+ <style>body{font-family:Tahoma,sans-serif;margin:24px;color:#1e293b}h1{font-size:20px}.s{color:#666;font-size:13px;margin-bottom:18px}
+ .k{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:20px}.kc{border:1px solid #e5e7eb;border-radius:10px;padding:10px 14px;min-width:130px}
+ .kc .v{font-size:18px;font-weight:bold}.kc .l{font-size:12px;color:#666}table{width:100%;border-collapse:collapse}
+ th,td{border:1px solid #e5e7eb;padding:8px;text-align:right;font-size:13px}th{background:#f3f4f6}@media print{.np{display:none}}</style></head><body>
+ <h1>گزارش وضعیت ساختمان‌های اداری — سامانهٔ نگهداری و تعمیرات</h1>
+ <div class="s">تاریخ: ${jStr(todayJ())} — تهیه‌کننده: ${esc(DB.user.name)}</div>
+ <div class="k">${kpis.map(([l,v])=>`<div class="kc"><div class="v">${v}</div><div class="l">${l}</div></div>`).join('')}</div>
+ <h3>فهرست ساختمان‌ها</h3><table><thead><tr><th>وضعیت</th><th>نام</th><th>طبقات</th><th>متراژ کل</th><th>تجهیزات</th><th>خرابی باز</th></tr></thead><tbody>${rows}</tbody></table>
+ <button class="np" onclick="window.print()" style="margin-top:20px;padding:10px 22px;font-size:15px;cursor:pointer">چاپ / ذخیرهٔ PDF</button></body></html>`;
+ const w=window.open('','_blank');if(w){w.document.write(html);w.document.close();}else{const b=new Blob([html],{type:'text/html'});location.href=URL.createObjectURL(b);}}
+function downloadCsv(){const bmap={};DB.buildings.forEach(b=>bmap[b.id]=b.name);
+ let csv='﻿'+'کد تجهیز,نام تجهیز,دسته,ساختمان,بحرانیت,ارزش (تومان),وضعیت\n';
+ DB.assets.forEach(a=>{const q=s=>'"'+String(s).replace(/"/g,'""')+'"';
+   csv+=[q(a.code),q(a.name),q(CATS[a.cat].fa),q(bmap[a.buildingId]||''),q(CRIT_FA[a.crit]),q(a.value),q(a.status)].join(',')+'\n';});
+ const b=new Blob([csv],{type:'text/csv;charset=utf-8'}),u=URL.createObjectURL(b),el=document.createElement('a');
+ el.href=u;el.download='assets.csv';el.click();URL.revokeObjectURL(u);toast('فایل دانلود شد');}
+
+//================= boot =================
+load();go(DB.user?'home':'login');
 </script>
 </body>
 </html>
