@@ -58,6 +58,11 @@ data class InspectionEntity(
     val startedAt: Long,
     val completedAt: Long?,
     val responses: List<InspectionResponse>,
+    // Inspector identity captured before the checklist (replaces a digital signature).
+    val inspectorFirstName: String,
+    val inspectorLastName: String,
+    val inspectorNationalId: String,
+    val inspectorPosition: String,
     val syncState: String,
 )
 

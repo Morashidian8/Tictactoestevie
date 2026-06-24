@@ -12,6 +12,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -42,33 +43,96 @@ fun ChecklistRunnerScreen(
         if (state.submitted) onDone()
     }
 
+    val title = when (state.phase) {
+        ChecklistPhase.IDENTITY -> "مشخصات بازرس"
+        ChecklistPhase.CHECKLIST -> state.template?.name ?: "بازرسی"
+    }
+
     Scaffold(
-        topBar = { TopAppBar(title = { Text(state.template?.name ?: "بازرسی") }) },
+        topBar = { TopAppBar(title = { Text(title) }) },
         bottomBar = {
-            Button(
-                onClick = viewModel::submit,
-                enabled = !state.submitting && state.template != null,
-                modifier = Modifier.fillMaxWidth().padding(16.dp),
-            ) {
-                Text(if (state.submitting) "در حال ذخیره…" else "تکمیل بازرسی")
+            when (state.phase) {
+                ChecklistPhase.IDENTITY -> Button(
+                    onClick = viewModel::continueToChecklist,
+                    enabled = state.identityValid,
+                    modifier = Modifier.fillMaxWidth().padding(16.dp),
+                ) { Text("ادامه به چک‌لیست") }
+
+                ChecklistPhase.CHECKLIST -> Button(
+                    onClick = viewModel::submit,
+                    enabled = !state.submitting && state.template != null,
+                    modifier = Modifier.fillMaxWidth().padding(16.dp),
+                ) { Text(if (state.submitting) "در حال ذخیره…" else "تکمیل بازرسی") }
             }
         },
     ) { padding ->
-        LazyColumn(
-            Modifier.fillMaxSize().padding(padding),
-            contentPadding = androidx.compose.foundation.layout.PaddingValues(12.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            items(state.template?.items ?: emptyList(), key = { it.id }) { item ->
-                ChecklistItemCard(
-                    item = item,
-                    response = state.responses[item.id],
-                    onResult = { viewModel.setResult(item.id, it) },
-                    onNumeric = { viewModel.setNumeric(item.id, it) },
-                    onText = { viewModel.setText(item.id, it) },
-                )
+        when (state.phase) {
+            ChecklistPhase.IDENTITY -> IdentityForm(state, viewModel, Modifier.padding(padding))
+            ChecklistPhase.CHECKLIST -> LazyColumn(
+                Modifier.fillMaxSize().padding(padding),
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(12.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                items(state.template?.items ?: emptyList(), key = { it.id }) { item ->
+                    ChecklistItemCard(
+                        item = item,
+                        response = state.responses[item.id],
+                        onResult = { viewModel.setResult(item.id, it) },
+                        onNumeric = { viewModel.setNumeric(item.id, it) },
+                        onText = { viewModel.setText(item.id, it) },
+                    )
+                }
             }
         }
+    }
+}
+
+@Composable
+private fun IdentityForm(
+    state: ChecklistUiState,
+    viewModel: ChecklistRunnerViewModel,
+    modifier: Modifier,
+) {
+    Column(
+        modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Text(
+            "لطفاً پیش از شروع چک‌لیست، مشخصات خود را وارد کنید.",
+            style = MaterialTheme.typography.bodySmall,
+        )
+        OutlinedTextField(
+            value = state.firstName,
+            onValueChange = viewModel::setFirstName,
+            label = { Text("نام") },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        OutlinedTextField(
+            value = state.lastName,
+            onValueChange = viewModel::setLastName,
+            label = { Text("نام خانوادگی") },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        OutlinedTextField(
+            value = state.nationalId,
+            onValueChange = viewModel::setNationalId,
+            label = { Text("کد ملی (۱۰ رقم)") },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            singleLine = true,
+            isError = state.nationalId.isNotEmpty() && state.nationalId.length != 10,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        OutlinedTextField(
+            value = state.position,
+            onValueChange = viewModel::setPosition,
+            label = { Text("سمت") },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+        )
     }
 }
 
@@ -106,7 +170,7 @@ private fun ChecklistItemCard(
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
                     )
-                    item.maxValue?.let { Text("حداکثر $it", style = androidx.compose.material3.MaterialTheme.typography.bodySmall) }
+                    item.maxValue?.let { Text("حداکثر $it", style = MaterialTheme.typography.bodySmall) }
                 }
                 ResponseType.TEXT -> {
                     OutlinedTextField(
@@ -116,13 +180,13 @@ private fun ChecklistItemCard(
                         modifier = Modifier.fillMaxWidth(),
                     )
                 }
-                ResponseType.PHOTO, ResponseType.SIGNATURE -> {
-                    val kind = if (item.responseType == ResponseType.PHOTO) "عکس" else "امضای دیجیتال"
+                ResponseType.PHOTO -> {
                     Text(
-                        "ثبت $kind — در نسخهٔ کامل به دوربین متصل می‌شود",
-                        style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
+                        "ثبت عکس — در نسخهٔ کامل به دوربین متصل می‌شود",
+                        style = MaterialTheme.typography.bodySmall,
                     )
                 }
+                ResponseType.SIGNATURE -> Unit // امضا نیاز نیست
             }
         }
     }

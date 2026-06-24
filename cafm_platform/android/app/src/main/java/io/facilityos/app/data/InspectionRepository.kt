@@ -25,6 +25,18 @@ private data class InspectionPayload(
     val startedAt: Long,
     val completedAt: Long,
     val responses: List<InspectionResponse>,
+    val inspectorFirstName: String,
+    val inspectorLastName: String,
+    val inspectorNationalId: String,
+    val inspectorPosition: String,
+)
+
+/** Inspector identity captured before each checklist. */
+data class Inspector(
+    val firstName: String,
+    val lastName: String,
+    val nationalId: String,
+    val position: String,
 )
 
 /**
@@ -56,6 +68,7 @@ class InspectionRepository @Inject constructor(
         templateId: String,
         assetId: String,
         responses: List<InspectionResponse>,
+        inspector: Inspector,
     ): String {
         val now = System.currentTimeMillis()
         val id = UUID.randomUUID().toString()
@@ -70,13 +83,20 @@ class InspectionRepository @Inject constructor(
                 startedAt = now,
                 completedAt = now,
                 responses = responses,
+                inspectorFirstName = inspector.firstName,
+                inspectorLastName = inspector.lastName,
+                inspectorNationalId = inspector.nationalId,
+                inspectorPosition = inspector.position,
                 syncState = SyncState.PENDING.name,
             ),
         )
 
         val payload = json.encodeToString(
             InspectionPayload.serializer(),
-            InspectionPayload(id, templateId, assetId, now, now, responses),
+            InspectionPayload(
+                id, templateId, assetId, now, now, responses,
+                inspector.firstName, inspector.lastName, inspector.nationalId, inspector.position,
+            ),
         )
         syncDao.enqueue(
             SyncOperationEntity(

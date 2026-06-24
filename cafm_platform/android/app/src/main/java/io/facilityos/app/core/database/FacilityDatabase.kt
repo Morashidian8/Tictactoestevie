@@ -23,7 +23,7 @@ import androidx.room.TypeConverters
         SyncOperationEntity::class,
         SyncCursorEntity::class,
     ],
-    version = 2,
+    version = 3,
     exportSchema = false,
 )
 @TypeConverters(Converters::class)
