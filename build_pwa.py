@@ -27,12 +27,15 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 CONFIGS = [
     ("binance_5m", "Binance", "۵ دقیقه", "binance", "5m", 300, "BTCUSDT"),
     ("binance_15m", "Binance", "۱۵ دقیقه", "binance", "15m", 900, "BTCUSDT"),
+    ("binance_1h", "Binance", "۱ ساعت", "binance", "1h", 3600, "BTCUSDT"),
     ("coinbase_5m", "Coinbase", "۵ دقیقه", "coinbase", "5m", 300, "BTC-USD"),
     ("coinbase_15m", "Coinbase", "۱۵ دقیقه", "coinbase", "15m", 900, "BTC-USD"),
+    ("coinbase_1h", "Coinbase", "۱ ساعت", "coinbase", "1h", 3600, "BTC-USD"),
 ]
-# Rolling-window lengths to precompute (minutes). 120/180 give 15m a useful
-# 8/12 candles per window (max alternation 7/11) instead of only 4.
-WIN_LENGTHS = [60, 120, 180]
+# Rolling-window lengths to precompute (minutes), 1h … 10h. A window is only
+# built for a timeframe when it spans at least 2 candles (so 1h windows are
+# skipped on the 1-hour timeframe, etc.).
+WIN_LENGTHS = [60, 120, 180, 240, 300, 360, 480, 600]
 
 
 def pack(stats):
@@ -57,21 +60,26 @@ def build_dataset(tz, source, interval, granularity, product, ex_label, tf_label
     if not candles:
         print(f"  ⚠️  no candles for {source} {interval}")
         return None
-    clock = A.build_hour_samples(candles, tz)
+    # Clock (on-the-hour) buckets only make sense when an hour holds several
+    # candles; for the 1-hour timeframe each hour is a single candle, so skip.
     clock_out = {}
-    for wd in range(7):
-        c = []
-        for h in range(24):
-            vals = clock[wd][h]
-            if vals:
-                c.append({"start": h * 60, "label": A.hour_label(h), **pack(A.summarize_hour(vals))})
-        c.sort(key=lambda x: x["start"])
-        clock_out[str(wd)] = c
+    if granularity < 3600:
+        clock = A.build_hour_samples(candles, tz)
+        for wd in range(7):
+            c = []
+            for h in range(24):
+                vals = clock[wd][h]
+                if vals:
+                    c.append({"start": h * 60, "label": A.hour_label(h), **pack(A.summarize_hour(vals))})
+            c.sort(key=lambda x: x["start"])
+            clock_out[str(wd)] = c
 
-    # Rolling windows for each requested length (60, 120 minutes ...).
+    # Rolling windows for each length that spans >= 2 candles on this timeframe.
     rolling_out = {}
     for wm in WIN_LENGTHS:
-        win = max(2, round(wm * 60 / granularity))  # candles per window
+        win = round(wm * 60 / granularity)  # candles per window
+        if win < 2:
+            continue  # window too short for this timeframe (e.g. 1h on 1h)
         samples = A.build_rolling_samples(candles, tz, win=win)
         per_wd = {}
         for wd in range(7):
