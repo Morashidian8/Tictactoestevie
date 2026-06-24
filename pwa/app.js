@@ -51,24 +51,15 @@ function winLabel(min) {
   return Number.isInteger(h) ? `${h.toLocaleString('fa')} ساعت` : `${min} دقیقه`;
 }
 
-// Rebuild the window-length dropdown from the lengths the dataset actually has.
+// The window-length options are static in the HTML; here we just disable the
+// ones this dataset doesn't have (e.g. 30m/1h on the 1-hour timeframe) and move
+// the selection to a valid one if needed.
 function syncWinlen(ds) {
   const sel = $('winlen');
-  const want = Object.keys(ds.rolling).map(Number).sort((a, b) => a - b);
-  const current = sel.value;
-  const have = Array.from(sel.options).map((o) => Number(o.value));
-  const same = have.length === want.length && have.every((v, i) => v === want[i]);
-  if (!same) {
-    sel.innerHTML = '';
-    for (const wm of want) {
-      const o = document.createElement('option');
-      o.value = String(wm);
-      o.textContent = winLabel(wm);
-      sel.appendChild(o);
-    }
-    // Keep the previous choice if still available, else prefer 60, else first.
-    sel.value = want.includes(Number(current)) ? current
-      : (want.includes(60) ? '60' : String(want[0]));
+  for (const o of sel.options) o.disabled = !(o.value in ds.rolling);
+  if (!(sel.value in ds.rolling)) {
+    const avail = Array.from(sel.options).find((o) => o.value in ds.rolling);
+    if (avail) sel.value = avail.value;
   }
 }
 
