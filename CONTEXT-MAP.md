@@ -14,6 +14,7 @@ the entries below are seeded as placeholders and may not all exist yet.
 | HSE PWA | `hse_pwa/` | Progressive web app for HSE inspection. |
 | Manhole PWA | `manhole_pwa/` | Progressive web app for manhole inspection. |
 | PWA | `pwa/` | Shared / generic PWA assets. |
+| FacilityOS (CMMS+CAFM) | `cafm_platform/` | Design & architecture package for an enterprise, offline-first Android CMMS + CAFM platform (buildings, assets, inspections, PM/CM, HSE, fire compliance). Docs-only; see `cafm_platform/README.md` and `cafm_platform/CONTEXT.md`. |
 
 When a skill needs the domain language for a given area, read the `CONTEXT.md` for the matching
 context above. If it doesn't exist yet, proceed silently (see `docs/agents/domain.md`).
