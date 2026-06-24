@@ -10,10 +10,11 @@ from .strategy import Signal
 
 @dataclass
 class Trade:
-    candle_open_time: int      # the candle this bet is on
+    candle_open_time: int      # the candle this bet is on (also the entry time, unix seconds)
     signal: Signal             # UP or DOWN
     stake: float               # amount risked
     payout_multiple: float     # gross return multiple on a win (e.g. 1.9 -> 0.9 profit)
+    entry_price: float = 0.0   # price at the moment the bet was placed
     won: Optional[bool] = None # filled in when the candle resolves
     pnl: float = 0.0           # net profit/loss once resolved
 

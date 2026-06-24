@@ -73,6 +73,12 @@
     <div id="msg" class="muted" style="margin-top:8px;text-align:center"></div>
   </div>
 
+  <h2>Position</h2>
+  <div class="card">
+    <div id="position">—</div>
+    <div id="trades" style="margin-top:8px"></div>
+  </div>
+
   <details>
     <summary>Connection</summary>
     <div class="card">
@@ -212,6 +218,39 @@ function render(s) {
   const hb = document.getElementById('haltBanner');
   if (s.halt_reason) { hb.style.display='block'; hb.textContent='HALTED — ' + s.halt_reason; }
   else hb.style.display='none';
+
+  renderPosition(s);
+}
+
+function fmtTime(unix){
+  if(!unix) return '—';
+  try { return new Date(unix*1000).toLocaleTimeString(); } catch(e){ return '—'; }
+}
+function renderPosition(s){
+  const posEl = document.getElementById('position');
+  const op = s.open_position;
+  if (op){
+    const up = op.signal === 'up';
+    const col = up ? 'var(--green)' : 'var(--red)';
+    posEl.innerHTML =
+      `<b style="color:${col}">● داخلِ پوزیشن — ${up?'UP (بالا)':'DOWN (پایین)'}</b>`
+      + `<div class="muted" style="margin-top:6px">مبلغ: $${fmt(op.stake)} `
+      + `· قیمتِ ورود: <b>${op.entry_price}</b> · ساعتِ ورود: <b>${fmtTime(op.entry_time)}</b></div>`;
+  } else {
+    posEl.innerHTML = '<span class="muted">الان داخلِ پوزیشن نیست — منتظرِ سیگنالِ بعدیه.</span>';
+  }
+  const tr = s.recent_trades || [];
+  const box = document.getElementById('trades');
+  if (!tr.length){ box.innerHTML = '<span class="muted">هنوز معامله‌ای نشده.</span>'; return; }
+  box.innerHTML = '<div class="muted" style="margin:6px 0">معاملاتِ اخیر</div>' + tr.map(t => {
+    const up = t.signal === 'up';
+    const res = t.won===true ? `<span style="color:var(--green)">برد +$${fmt(t.pnl)}</span>`
+              : t.won===false ? `<span style="color:var(--red)">باخت $${fmt(t.pnl)}</span>`
+              : '<span class="muted">باز ●</span>';
+    return `<div class="trade"><span class="chip ${up?'up':'down'}">${up?'UP':'DOWN'}</span>`
+      + `<span>$${fmt(t.stake)}</span><span class="muted">@${t.entry_price}</span>`
+      + `<span class="muted">${fmtTime(t.entry_time)}</span><span class="spacer"></span>${res}</div>`;
+  }).join('');
 }
 
 function connect() {

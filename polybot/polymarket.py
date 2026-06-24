@@ -189,13 +189,15 @@ class PolymarketSampledFeed:
         self._last: Optional[float] = None
 
     def next(self):
+        import time
         price = self._data.midpoint(self._token)
         if price is None:
             price = self._data.price(self._token) or self._last or 0.5
         open_ = self._last if self._last is not None else price
+        now = int(time.time())   # real wall-clock entry time
         candle = self._Candle(
-            open_time=self._t,
-            close_time=self._t + self._interval,
+            open_time=now - self._interval,
+            close_time=now,
             open=open_,
             high=max(open_, price),
             low=min(open_, price),

@@ -121,6 +121,7 @@ class TradingEngine:
             signal=signal,
             stake=stake,
             payout_multiple=payout,
+            entry_price=round(candle.close, 4),
         )
         self.portfolio.open_trade(trade)
         self.executor.place(signal, stake, next_open_time)

@@ -120,9 +120,10 @@ class SyntheticFeed:
         c = o + self._rng.uniform(-self._vol, self._vol)
         hi = max(o, c) + self._rng.uniform(0, self._vol / 2)
         lo = min(o, c) - self._rng.uniform(0, self._vol / 2)
+        now = int(time.time())   # real wall-clock so the UI shows real entry times
         candle = Candle(
-            open_time=self._t,
-            close_time=self._t + self._interval,
+            open_time=now - self._interval,
+            close_time=now,
             open=o,
             high=hi,
             low=lo,

@@ -206,6 +206,7 @@ class BotRunner:
         if self.engine is None:
             return {"running": False, "configured": False}
         p = self.engine.portfolio
+        open_pos = p.trades[-1] if p.trades and not p.trades[-1].resolved else None
         remaining = None
         if self.running and self._deadline is not None:
             remaining = max(0.0, round(self._deadline - self._clock(), 1))
@@ -227,10 +228,17 @@ class BotRunner:
                 {"color": self.last_candle.color.value, "close": round(self.last_candle.close, 2)}
                 if self.last_candle else None
             ),
+            "open_position": (
+                {"signal": open_pos.signal.value, "stake": round(open_pos.stake, 4),
+                 "entry_price": open_pos.entry_price, "entry_time": open_pos.candle_open_time,
+                 "payout_multiple": open_pos.payout_multiple}
+                if open_pos else None
+            ),
             "recent_trades": [
                 {"signal": t.signal.value, "stake": round(t.stake, 4),
-                 "won": t.won, "pnl": round(t.pnl, 4)}
-                for t in p.trades[-12:][::-1]
+                 "won": t.won, "pnl": round(t.pnl, 4),
+                 "entry_price": t.entry_price, "entry_time": t.candle_open_time}
+                for t in p.trades[-15:][::-1]
             ],
         }
 
