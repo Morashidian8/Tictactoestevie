@@ -30,6 +30,17 @@
             </intent-filter>
         </activity>
 
+        <!-- Shares generated report files (HTML/CSV) via a content URI. -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
+
         <!-- WorkManager is initialized on-demand via Hilt; disable default initializer. -->
         <provider
             android:name="androidx.startup.InitializationProvider"

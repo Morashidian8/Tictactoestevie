@@ -29,6 +29,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.facilityos.app.core.designsystem.component.CriticalityChip
 import io.facilityos.app.core.model.Asset
+import io.facilityos.app.core.model.toFaDigits
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -60,10 +61,10 @@ fun BuildingDetailScreen(
                 item {
                     Card(Modifier.fillMaxWidth()) {
                         Column(Modifier.padding(16.dp)) {
-                            Text("کد ${b.code}", style = MaterialTheme.typography.bodySmall)
-                            Text("${b.floorsCount ?: "-"} طبقه · ${b.assetCount} تجهیز")
+                            Text("کد ${b.code}".toFaDigits(), style = MaterialTheme.typography.bodySmall)
+                            Text("${b.floorsCount ?: "-"} طبقه · ${b.assetCount} تجهیز".toFaDigits())
                             Text(
-                                "${b.openFaults} خرابی باز",
+                                "${b.openFaults} خرابی باز".toFaDigits(),
                                 color = MaterialTheme.colorScheme.error,
                             )
                         }
@@ -91,7 +92,7 @@ private fun AssetRow(asset: Asset, onClick: () -> Unit) {
             Column(Modifier.weight(1f)) {
                 Text(asset.name, fontWeight = FontWeight.SemiBold)
                 Text(
-                    "${asset.categoryName} · ${asset.assetCode}",
+                    "${asset.categoryName} · ${asset.assetCode}".toFaDigits(),
                     style = MaterialTheme.typography.bodySmall,
                 )
             }

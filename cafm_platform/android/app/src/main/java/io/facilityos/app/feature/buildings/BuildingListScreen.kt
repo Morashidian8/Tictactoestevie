@@ -31,6 +31,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.facilityos.app.core.designsystem.component.StatusDot
 import io.facilityos.app.core.designsystem.component.SyncPill
 import io.facilityos.app.core.model.Building
+import io.facilityos.app.core.model.toFaDigits
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -90,10 +91,10 @@ private fun BuildingRow(building: Building, onClick: () -> Unit) {
                 }
             }
             Column(horizontalAlignment = Alignment.End) {
-                Text("${building.assetCount} تجهیز", style = MaterialTheme.typography.bodySmall)
+                Text("${building.assetCount} تجهیز".toFaDigits(), style = MaterialTheme.typography.bodySmall)
                 if (building.openFaults > 0) {
                     Text(
-                        "⚠ ${building.openFaults} باز",
+                        "⚠ ${building.openFaults} باز".toFaDigits(),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.error,
                     )

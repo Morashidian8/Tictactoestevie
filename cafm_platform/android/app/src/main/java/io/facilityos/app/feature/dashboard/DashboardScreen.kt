@@ -28,6 +28,7 @@ import io.facilityos.app.core.designsystem.component.KpiCard
 import io.facilityos.app.core.designsystem.component.PriorityChip
 import io.facilityos.app.core.designsystem.theme.StatusColors
 import io.facilityos.app.core.model.faLabel
+import io.facilityos.app.core.model.toFaDigits
 import io.facilityos.app.core.model.workOrderTypeFa
 import io.facilityos.app.data.DashboardData
 
@@ -73,7 +74,7 @@ fun DashboardScreen(viewModel: DashboardViewModel = hiltViewModel()) {
             }
 
             if (data.criticalFaults > 0) {
-                item { SectionHeader("خرابی‌های بحرانی (${data.criticalFaults})") }
+                item { SectionHeader("خرابی‌های بحرانی (${data.criticalFaults})".toFaDigits()) }
                 items(data.topFaults, key = { it.id }) { f ->
                     Card(Modifier.fillMaxWidth()) {
                         Row(
@@ -88,11 +89,11 @@ fun DashboardScreen(viewModel: DashboardViewModel = hiltViewModel()) {
             }
 
             if (role == DashboardRole.TECHNICIAN || role == DashboardRole.SUPERVISOR) {
-                item { SectionHeader("دستورکارهای باز (${data.openWorkOrders.size})") }
+                item { SectionHeader("دستورکارهای باز (${data.openWorkOrders.size})".toFaDigits()) }
                 items(data.openWorkOrders, key = { it.id }) { wo ->
                     Card(Modifier.fillMaxWidth()) {
                         Column(Modifier.padding(14.dp)) {
-                            Text("${wo.woNumber} · ${wo.title}", fontWeight = FontWeight.SemiBold)
+                            Text("${wo.woNumber} · ${wo.title}".toFaDigits(), fontWeight = FontWeight.SemiBold)
                             Text(
                                 "${workOrderTypeFa(wo.type)} · ${wo.status.faLabel()}",
                                 style = MaterialTheme.typography.bodySmall,

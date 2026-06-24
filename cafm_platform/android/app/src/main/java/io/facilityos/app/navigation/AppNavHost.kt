@@ -41,6 +41,7 @@ import io.facilityos.app.feature.modules.MapScreen
 import io.facilityos.app.feature.modules.MoreScreen
 import io.facilityos.app.feature.modules.NotificationsScreen
 import io.facilityos.app.feature.modules.UtilitiesScreen
+import io.facilityos.app.feature.reports.ReportsScreen
 import io.facilityos.app.feature.scan.ScanScreen
 import io.facilityos.app.feature.status.StatusCenterScreen
 import io.facilityos.app.feature.work.WorkScreen
@@ -63,6 +64,7 @@ object Routes {
     const val UTILITIES = "utilities"
     const val NOTIFICATIONS = "notifications"
     const val MAP = "map"
+    const val REPORTS = "reports"
 
     const val LOGIN = "login"
     const val SETTINGS = "settings"
@@ -196,6 +198,7 @@ fun FacilityOsNavGraph(navController: NavHostController = rememberNavController(
                 )
             }
             composable(Routes.NOTIFICATIONS) { NotificationsScreen(onBack = { navController.popBackStack() }) }
+            composable(Routes.REPORTS) { ReportsScreen(onBack = { navController.popBackStack() }) }
             composable(Routes.MAP) {
                 MapScreen(
                     onBuildingClick = { navController.navigate(Routes.buildingDetail(it)) },

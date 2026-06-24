@@ -30,6 +30,7 @@ import io.facilityos.app.core.designsystem.component.PriorityChip
 import io.facilityos.app.core.model.Fault
 import io.facilityos.app.core.model.WorkOrder
 import io.facilityos.app.core.model.faLabel
+import io.facilityos.app.core.model.toFaDigits
 import io.facilityos.app.core.model.workOrderTypeFa
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -42,8 +43,8 @@ fun WorkScreen(viewModel: WorkViewModel = hiltViewModel()) {
     Scaffold(topBar = { TopAppBar(title = { Text("کارهای من") }) }) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
             TabRow(selectedTabIndex = tab) {
-                Tab(selected = tab == 0, onClick = { tab = 0 }, text = { Text("دستورکارها (${workOrders.size})") })
-                Tab(selected = tab == 1, onClick = { tab = 1 }, text = { Text("خرابی‌ها (${faults.size})") })
+                Tab(selected = tab == 0, onClick = { tab = 0 }, text = { Text("دستورکارها (${workOrders.size})".toFaDigits()) })
+                Tab(selected = tab == 1, onClick = { tab = 1 }, text = { Text("خرابی‌ها (${faults.size})".toFaDigits()) })
             }
             LazyColumn(
                 Modifier.fillMaxSize(),
@@ -64,12 +65,12 @@ fun WorkScreen(viewModel: WorkViewModel = hiltViewModel()) {
 private fun WorkOrderRow(wo: WorkOrder) {
     Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(14.dp)) {
-            Text("${wo.woNumber} · ${wo.title}", fontWeight = FontWeight.SemiBold)
+            Text("${wo.woNumber} · ${wo.title}".toFaDigits(), fontWeight = FontWeight.SemiBold)
             Text(
                 "${workOrderTypeFa(wo.type)} · ${wo.status.faLabel()}",
                 style = MaterialTheme.typography.bodySmall,
             )
-            wo.cost?.let { Text("تخمین %.0f$".format(it), style = MaterialTheme.typography.labelSmall) }
+            wo.cost?.let { Text("تخمین %.0f$".format(it).toFaDigits(), style = MaterialTheme.typography.labelSmall) }
         }
     }
 }

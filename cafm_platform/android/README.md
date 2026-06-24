@@ -30,7 +30,16 @@ bottom nav (خانه · ساختمان‌ها · کارها · پایش · بی�
   submits **offline** — writes to Room + queues an idempotent `sync_operation`.
 - **Work**: tabbed work orders + faults (corrective maintenance), reported offline.
 - **More hub**: Inventory (low-stock alerts) · HSE incidents · Fire compliance (status badges) ·
-  Utilities (consumption bars) · Notifications (derived alerts) · Map (offline building list).
+  Utilities (consumption bars) · Notifications (derived alerts) · Map · **Reports** · Settings.
+- **Reports**: offline HTML report (Persian/RTL, printable to PDF) + CSV asset export (Excel),
+  shared via FileProvider.
+- **Persian numerals** rendered throughout via a `toFaDigits()` display helper.
+
+## CI
+
+`.github/workflows/cafm-android-ci.yml` builds `assembleDebug` on every push that touches
+`cafm_platform/android/**`, so compile errors surface automatically and a debug APK is uploaded
+as an artifact.
 - **Sync engine**: `SyncWorker` runs the push/pull delta protocol against `/sync/*`
   (`../docs/09-offline-sync.md`); periodic + on-demand via `SyncScheduler`. Disabled in offline mode.
 

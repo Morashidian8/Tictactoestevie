@@ -18,6 +18,7 @@ import io.facilityos.app.core.model.BuildingStatus
 import io.facilityos.app.core.model.Criticality
 import io.facilityos.app.core.model.Priority
 import io.facilityos.app.core.model.SyncState
+import io.facilityos.app.core.model.toFaDigits
 
 /** Small colored dot for building / subsystem health. */
 @Composable
@@ -88,6 +89,6 @@ private fun Pill(text: String, color: Color) {
             .background(color, RoundedCornerShape(50))
             .padding(PaddingValues(horizontal = 10.dp, vertical = 3.dp))
     ) {
-        Text(text, color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+        Text(text.toFaDigits(), color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
     }
 }

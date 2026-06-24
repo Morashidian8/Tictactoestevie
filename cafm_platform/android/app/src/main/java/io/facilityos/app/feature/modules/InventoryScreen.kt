@@ -32,6 +32,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.facilityos.app.core.designsystem.theme.StatusColors
 import io.facilityos.app.core.model.SparePart
+import io.facilityos.app.core.model.toFaDigits
 import io.facilityos.app.data.InventoryRepository
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -63,7 +64,7 @@ fun InventoryScreen(
             if (lowCount > 0) {
                 item {
                     Text(
-                        "⚠ $lowCount قلم زیر حد سفارش مجدد",
+                        "⚠ $lowCount قلم زیر حد سفارش مجدد".toFaDigits(),
                         color = StatusColors.Critical,
                         fontWeight = FontWeight.SemiBold,
                     )
@@ -79,12 +80,12 @@ fun InventoryScreen(
                         Column(Modifier.weight(1f)) {
                             Text(p.description, fontWeight = FontWeight.SemiBold)
                             Text(
-                                "${p.partNumber} · ${p.location}",
+                                "${p.partNumber} · ${p.location}".toFaDigits(),
                                 style = MaterialTheme.typography.bodySmall,
                             )
                         }
                         Text(
-                            "${p.qty.toInt()} / حداقل ${p.minQty.toInt()}",
+                            "${p.qty.toInt()} / حداقل ${p.minQty.toInt()}".toFaDigits(),
                             color = if (p.lowStock) StatusColors.Critical else StatusColors.Ok,
                             fontWeight = FontWeight.SemiBold,
                         )

@@ -24,6 +24,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.facilityos.app.core.designsystem.component.StatusDot
 import io.facilityos.app.core.model.Building
 import io.facilityos.app.core.model.BuildingStatus
+import io.facilityos.app.core.model.toFaDigits
 
 /**
  * Live building status center — a subsystem health light grid per building, computed offline.
@@ -68,7 +69,7 @@ private fun BuildingStatusCard(b: Building) {
                 StatusDot(b.status)
                 Text(b.name, fontWeight = FontWeight.SemiBold)
                 Text(
-                    "   ${b.openFaults} باز",
+                    "   ${b.openFaults} باز".toFaDigits(),
                     style = MaterialTheme.typography.bodySmall,
                     color = if (b.openFaults > 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
                 )

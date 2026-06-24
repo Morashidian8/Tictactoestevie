@@ -23,6 +23,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import io.facilityos.app.core.designsystem.theme.StatusColors
 import io.facilityos.app.core.designsystem.component.BarRow
 import io.facilityos.app.core.model.UtilityReading
+import io.facilityos.app.core.model.toFaDigits
 import io.facilityos.app.core.model.utilityFa
 import io.facilityos.app.data.UtilityRepository
 import kotlinx.coroutines.flow.SharingStarted
@@ -69,7 +70,7 @@ fun UtilitiesScreen(
                                 fontWeight = FontWeight.SemiBold,
                             )
                             Text(
-                                "هزینهٔ کل: %.0f$".format(totalCost),
+                                "هزینهٔ کل: %.0f$".format(totalCost).toFaDigits(),
                                 style = MaterialTheme.typography.bodySmall,
                             )
                             byMonth.forEach { (month, value) ->

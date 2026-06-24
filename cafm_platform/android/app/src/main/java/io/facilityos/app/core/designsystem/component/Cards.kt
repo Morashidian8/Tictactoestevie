@@ -19,6 +19,7 @@ import androidx.compose.ui.unit.sp
 import io.facilityos.app.core.designsystem.theme.StatusColors
 import io.facilityos.app.core.model.ComplianceStatus
 import io.facilityos.app.core.model.NotificationSeverity
+import io.facilityos.app.core.model.toFaDigits
 
 /** Compact KPI tile for dashboards. */
 @Composable
@@ -32,14 +33,14 @@ fun KpiCard(
     Card(modifier = modifier.height(96.dp)) {
         Column(Modifier.padding(14.dp)) {
             Text(
-                value,
+                value.toFaDigits(),
                 fontSize = 26.sp,
                 fontWeight = FontWeight.Bold,
                 color = accent ?: MaterialTheme.colorScheme.onSurface,
             )
             Text(label, style = MaterialTheme.typography.bodySmall)
             if (sub != null) {
-                Text(sub, style = MaterialTheme.typography.labelSmall, color = StatusColors.Unknown)
+                Text(sub.toFaDigits(), style = MaterialTheme.typography.labelSmall, color = StatusColors.Unknown)
             }
         }
     }
@@ -62,7 +63,7 @@ fun severityColor(severity: NotificationSeverity): Color = when (severity) {
 @Composable
 fun BarRow(label: String, fraction: Float, value: String, color: Color) {
     Column(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
-        Text("$label   $value", style = MaterialTheme.typography.bodySmall)
+        Text("$label   $value".toFaDigits(), style = MaterialTheme.typography.bodySmall)
         Box(
             Modifier
                 .fillMaxWidth()

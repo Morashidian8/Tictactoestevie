@@ -29,6 +29,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.facilityos.app.core.designsystem.component.severityColor
 import io.facilityos.app.core.model.AppNotification
+import io.facilityos.app.core.model.toFaDigits
 import io.facilityos.app.data.NotificationsRepository
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -45,7 +46,7 @@ class NotificationsViewModel @Inject constructor(repository: NotificationsReposi
 fun NotificationsScreen(onBack: () -> Unit, viewModel: NotificationsViewModel = hiltViewModel()) {
     val notifications by viewModel.notifications.collectAsStateWithLifecycle()
 
-    ModuleScaffold("اعلان‌ها (${notifications.size})", onBack) { padding ->
+    ModuleScaffold("اعلان‌ها (${notifications.size})".toFaDigits(), onBack) { padding ->
         LazyColumn(
             Modifier.fillMaxSize().padding(padding),
             contentPadding = PaddingValues(12.dp),
@@ -62,7 +63,7 @@ fun NotificationsScreen(onBack: () -> Unit, viewModel: NotificationsViewModel = 
                         )
                         Column(Modifier.weight(1f).padding(start = 12.dp)) {
                             Text(n.title, fontWeight = FontWeight.SemiBold)
-                            Text(n.body, style = MaterialTheme.typography.bodySmall)
+                            Text(n.body.toFaDigits(), style = MaterialTheme.typography.bodySmall)
                         }
                     }
                 }

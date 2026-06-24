@@ -30,6 +30,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.facilityos.app.core.model.ChecklistItemDef
 import io.facilityos.app.core.model.InspectionResponse
 import io.facilityos.app.core.model.ResponseType
+import io.facilityos.app.core.model.toFaDigits
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -170,7 +171,7 @@ private fun ChecklistItemCard(
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
                     )
-                    item.maxValue?.let { Text("حداکثر $it", style = MaterialTheme.typography.bodySmall) }
+                    item.maxValue?.let { Text("حداکثر $it".toFaDigits(), style = MaterialTheme.typography.bodySmall) }
                 }
                 ResponseType.TEXT -> {
                     OutlinedTextField(

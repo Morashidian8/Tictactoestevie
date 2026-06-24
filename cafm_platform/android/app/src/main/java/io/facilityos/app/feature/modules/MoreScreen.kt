@@ -16,6 +16,7 @@ import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Map
+import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -40,6 +41,7 @@ fun MoreScreen(onNavigate: (String) -> Unit) {
         MoreItem("مدیریت HSE (ایمنی و بهداشت)", "hse", Icons.Default.HealthAndSafety),
         MoreItem("تطابق آتش‌نشانی", "compliance", Icons.Default.LocalFireDepartment),
         MoreItem("مدیریت انرژی و مصارف", "utilities", Icons.Default.Bolt),
+        MoreItem("گزارش‌ها", "reports", Icons.Default.Description),
         MoreItem("اعلان‌ها", "notifications", Icons.Default.Notifications),
         MoreItem("نقشه", "map", Icons.Default.Map),
         MoreItem("تنظیمات", "settings", Icons.Default.Settings),

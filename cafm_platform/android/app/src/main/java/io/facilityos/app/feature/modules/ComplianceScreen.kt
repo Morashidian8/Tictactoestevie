@@ -31,6 +31,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import io.facilityos.app.core.designsystem.component.complianceColor
 import io.facilityos.app.core.model.ComplianceItem
 import io.facilityos.app.core.model.faLabel
+import io.facilityos.app.core.model.toFaDigits
 import io.facilityos.app.data.ComplianceRepository
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -67,8 +68,8 @@ fun ComplianceScreen(onBack: () -> Unit, viewModel: ComplianceViewModel = hiltVi
                         Column(Modifier.weight(1f)) {
                             Text(c.deviceType, fontWeight = FontWeight.SemiBold)
                             Text(
-                                "بعدی: ${c.nextInspection?.let { dateFmt.format(Date(it)) } ?: "—"} · " +
-                                    "گواهی: ${c.certExpiry?.let { dateFmt.format(Date(it)) } ?: "—"}",
+                                ("بعدی: ${c.nextInspection?.let { dateFmt.format(Date(it)) } ?: "—"} · " +
+                                    "گواهی: ${c.certExpiry?.let { dateFmt.format(Date(it)) } ?: "—"}").toFaDigits(),
                                 style = MaterialTheme.typography.bodySmall,
                             )
                         }

@@ -1,5 +1,14 @@
 package io.facilityos.app.core.model
 
+/**
+ * Convert Western digits in a string to Persian digits. Safe to apply to whole display strings —
+ * only characters 0-9 are mapped, Persian text and symbols pass through unchanged.
+ */
+fun String.toFaDigits(): String =
+    map { c -> if (c in '0'..'9') ('۰' + (c - '0')) else c }.joinToString("")
+
+fun Int.fa(): String = toString().toFaDigits()
+
 /** Persian (fa) display labels for status enums. */
 
 fun FaultStatus.faLabel(): String = when (this) {
