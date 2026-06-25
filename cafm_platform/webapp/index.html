@@ -9,22 +9,18 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;700;800&display=swap" rel="stylesheet">
 <style>
-  :root{
-    --bg:#eef1f8; --card:#fff; --ink:#1e293b; --muted:#64748b; --line:#e7ebf3;
-    --primary:#4f46e5; --primary2:#0ea5e9; --grad:linear-gradient(135deg,#4f46e5,#0ea5e9);
-    --ok:#16a34a; --warn:#f59e0b; --crit:#dc2626; --unk:#94a3b8;
-    --shadow:0 4px 16px rgba(15,23,42,.07);
-  }
+  :root{--bg:#eef1f8;--card:#fff;--ink:#1e293b;--muted:#64748b;--line:#e7ebf3;
+    --primary:#4f46e5;--primary2:#0ea5e9;--grad:linear-gradient(135deg,#4f46e5,#0ea5e9);
+    --ok:#16a34a;--warn:#f59e0b;--crit:#dc2626;--unk:#94a3b8;--shadow:0 4px 16px rgba(15,23,42,.07);}
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
   html,body{margin:0;height:100%}
   body{background:var(--bg);color:var(--ink);font-family:Vazirmatn,Tahoma,system-ui,sans-serif;font-size:15px}
   #app{max-width:480px;margin:0 auto;min-height:100vh;background:var(--bg);position:relative;display:flex;flex-direction:column}
-  .head{background:var(--grad);color:#fff;padding:16px 18px;border-radius:0 0 22px 22px;
-    box-shadow:0 8px 24px rgba(79,70,229,.28);position:sticky;top:0;z-index:20}
+  .head{background:var(--grad);color:#fff;padding:16px 18px;border-radius:0 0 22px 22px;box-shadow:0 8px 24px rgba(79,70,229,.28);position:sticky;top:0;z-index:20}
   .head .top{display:flex;align-items:center;justify-content:space-between}
   .head h1{margin:0;font-size:18px;font-weight:800;display:flex;align-items:center;gap:8px;min-width:0}
   .head h1 span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .head .back{cursor:pointer;font-size:24px;line-height:1;padding:0 4px}
+  .head .back{cursor:pointer;font-size:26px;line-height:1;padding:0 6px 0 2px}
   .head .sub{font-size:12px;opacity:.85;margin-top:3px}
   .gear{cursor:pointer;font-size:19px;background:rgba(255,255,255,.18);width:34px;height:34px;border-radius:11px;display:flex;align-items:center;justify-content:center}
   .body{flex:1;overflow:auto;padding:14px;padding-bottom:26px}
@@ -67,13 +63,12 @@
   .check.on{background:var(--ok);border-color:var(--ok)}
   .rel{display:flex;flex-wrap:wrap;gap:7px}
   .relC{background:#eef1f8;color:#334155;font-size:12px;font-weight:700;padding:7px 12px;border-radius:12px}
-  .cal{background:#fff;border-radius:16px;padding:12px;box-shadow:var(--shadow)}
-  .calhdr{display:flex;align-items:center;justify-content:space-between;font-weight:800;margin-bottom:8px}
-  .calhdr span{cursor:pointer;font-size:20px;padding:0 12px;color:var(--primary)}
+  .cal{background:#fff;border:1.5px solid var(--line);border-radius:14px;padding:12px}
   .calgrid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;text-align:center}
   .calgrid .wd{font-size:11px;color:var(--muted);padding:3px 0;font-weight:700}
   .calgrid .day{padding:9px 0;border-radius:10px;cursor:pointer;font-size:13.5px}
   .calgrid .day.sel{background:var(--grad);color:#fff;font-weight:800}
+  .datefield{display:flex;justify-content:space-between;align-items:center;border:1.5px solid var(--line);border-radius:13px;padding:12px;cursor:pointer}
   .pgrid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:8px}
   .pgrid img{width:100%;height:88px;object-fit:cover;border-radius:12px;box-shadow:var(--shadow)}
   .pricepill{background:rgba(79,70,229,.1);color:var(--primary);font-weight:800;font-size:12px;padding:4px 10px;border-radius:20px;white-space:nowrap}
@@ -81,6 +76,7 @@
   .resItem:last-child{border-bottom:none}
   .toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%);background:#0f172a;color:#fff;padding:11px 18px;border-radius:30px;font-size:13px;font-weight:700;z-index:50;opacity:0;transition:opacity .2s;pointer-events:none}
   .toast.show{opacity:.97}
+  a{color:inherit}
 </style>
 </head>
 <body>
@@ -92,6 +88,7 @@
 //============ helpers ============
 const FA=['۰','۱','۲','۳','۴','۵','۶','۷','۸','۹'];
 const fa=s=>String(s).replace(/[0-9]/g,d=>FA[+d]);
+const faToEn=s=>String(s).replace(/[۰-۹]/g,d=>'۰۱۲۳۴۵۶۷۸۹'.indexOf(d));
 const DAY=86400000,now=()=>Date.now(),uid=()=>'x'+Math.random().toString(36).slice(2,9);
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 function money(v){if(v>=1e9){const m=v/1e9;return fa(m%1?m.toFixed(1):m)+' میلیارد تومان';}
@@ -123,17 +120,22 @@ const JMONTHS=['فروردین','اردیبهشت','خرداد','تیر','مرد
 const JWEEK=['ش','ی','د','س','چ','پ','ج'];
 const todayJ=()=>{const d=new Date();return toJalaali(d.getFullYear(),d.getMonth()+1,d.getDate());};
 const jStr=j=>j?fa(`${j.jy}/${String(j.jm).padStart(2,'0')}/${String(j.jd).padStart(2,'0')}`):'—';
+const parseJ=s=>{const p=faToEn(s).split('/').map(Number);return {jy:p[0],jm:p[1],jd:p[2]};};
 
-//============ catalog + meta ============
-const CATS={vt:{fa:'حمل‌ونقل عمودی',c:'#6366f1',ic:'🛗'},mech:{fa:'تأسیسات مکانیکی',c:'#0ea5e9',ic:'⚙️'},
+//============ catalog ============
+const CATS={vt:{fa:'حمل‌ونقل عمودی',c:'#6366f1',ic:'🛗'},mech:{fa:'تأسیسات مکانیکی و تهویه',c:'#0ea5e9',ic:'⚙️'},
  elec:{fa:'تأسیسات برقی',c:'#f59e0b',ic:'⚡'},fire:{fa:'اعلام و اطفاء حریق',c:'#ef4444',ic:'🧯'},
- sec:{fa:'امنیتی و جریان ضعیف',c:'#8b5cf6',ic:'📹'},plumb:{fa:'آبرسانی و فاضلاب',c:'#14b8a6',ic:'🚿'}};
+ sec:{fa:'امنیتی و جریان ضعیف',c:'#8b5cf6',ic:'📹'},plumb:{fa:'آبرسانی و فاضلاب',c:'#14b8a6',ic:'🚿'},
+ pantry:{fa:'آبدارخانه',c:'#d97706',ic:'☕'}};
 const CATALOG=[
  ['elevatorP','vt','آسانسور مسافری','HIGH',2.5e9],['elevatorF','vt','آسانسور باربر','HIGH',2.2e9],
  ['escalator','vt','پله برقی','MEDIUM',1.8e9],['liftDis','vt','بالابر معلولین','MEDIUM',6e8],
  ['chiller','mech','چیلر','MEDIUM',1.5e9],['coolingTower','mech','برج خنک‌کننده','MEDIUM',5e8],
  ['ahu','mech','هواساز (AHU)','LOW',3e8],['fcu','mech','فن‌کویل (FCU)','LOW',2.5e7],
  ['boiler','mech','بویلر','HIGH',8e8],['burner','mech','مشعل','MEDIUM',1.5e8],
+ ['splitAC','mech','کولر گازی (اسپلیت)','LOW',3.5e7],['evapCooler','mech','کولر آبی','LOW',1.2e7],
+ ['heater','mech','بخاری گازی','LOW',4e6],['radiator','mech','شوفاژ (رادیاتور)','LOW',3e6],
+ ['packageBoiler','mech','پکیج شوفاژ دیواری','LOW',2.5e7],
  ['pumpCirc','mech','پمپ سیرکولاسیون','LOW',8e7],['pumpWater','mech','پمپ آبرسانی','MEDIUM',1.2e8],
  ['waterTank','mech','مخزن آب','LOW',2e8],['exhaustFan','mech','اگزاست فن','LOW',4e7],
  ['generator','elec','دیزل ژنراتور','CRITICAL',3e9],['ups','elec','سیستم UPS','HIGH',4e8],
@@ -148,6 +150,10 @@ const CATALOG=[
  ['pa','sec','سیستم صوتی اعلام','LOW',8e7],['intercom','sec','آیفون تصویری','LOW',1.5e7],
  ['emgLight','sec','روشنایی اضطراری','MEDIUM',2e6],['bms','sec','سیستم مدیریت ساختمان BMS','HIGH',5e8],
  ['sumpPump','plumb','پمپ لجن‌کش (فاضلاب)','MEDIUM',9e7],['softener','plumb','سختی‌گیر','LOW',6e7],
+ ['fridge','pantry','یخچال','LOW',1.5e7],['stove','pantry','اجاق گاز','LOW',8e6],
+ ['foodWarmer','pantry','گرمکن غذا (بن‌ماری)','LOW',9e6],['microwave','pantry','مایکروویو','LOW',5e6],
+ ['oven','pantry','فر برقی','LOW',7e6],['teaMaker','pantry','سماور/چای‌ساز','LOW',3e6],
+ ['dishwasher','pantry','ماشین ظرفشویی','LOW',2e7],['waterDispenser','pantry','آبسردکن','LOW',6e6],
 ].map(([key,cat,name,crit,value])=>({key,cat,name,crit,value}));
 const CATBY=Object.fromEntries(CATALOG.map(c=>[c.key,c]));
 
@@ -155,7 +161,10 @@ const BRANDS={elevatorP:['KONE','Schindler','OTIS','تیسن‌کروپ'],elevat
  generator:['Cummins','Caterpillar','Perkins','FG Wilson'],ups:['APC','Schneider','Eaton','Socomec'],
  transformer:['ایران‌ترانسفو','کوشکن'],chiller:['Trane','York','Carrier','LG'],ahu:['Daikin','ساران'],
  firePanel:['Zeta','Notifier','هایتک'],firePump:['Grundfos','Pentax','پمپیران'],cctv:['Hikvision','Dahua'],
- mainPanel:['اشنایدر','تابلوسازی پارس'],boiler:['ساران','مگاتُرم'],coolingTower:['Marley','آذرخش']};
+ mainPanel:['اشنایدر','تابلوسازی پارس'],boiler:['ساران','مگاتُرم'],coolingTower:['Marley','آذرخش'],
+ splitAC:['LG','Samsung','گری','اجنرال'],evapCooler:['آبسال','انرژی'],packageBoiler:['ایران‌رادیاتور','بوتان','بوش'],
+ radiator:['ایران‌رادیاتور','بوتان'],heater:['آبسال','نیک‌کالا'],fridge:['اسنوا','امرسان','سامسونگ'],
+ stove:['اخوان','استیل البرز'],microwave:['سامسونگ','ال‌جی'],dishwasher:['بوش','سامسونگ']};
 const pick=(a,i)=>a[((i%a.length)+a.length)%a.length];
 function specsFor(key,i,seq){const yr=fa(1385+((i+seq)%18));const B=BRANDS[key]||['متفرقه'];const brand=pick(B,i+seq);
  switch(key){
@@ -168,12 +177,17 @@ function specsFor(key,i,seq){const yr=fa(1385+((i+seq)%18));const B=BRANDS[key]|
   case 'transformer':return [{k:'برند',v:brand},{k:'ظرفیت',v:fa([400,630,800,1000,1250][(i+seq)%5])+' kVA'},{k:'ولتاژ',v:'۲۰ به ۰٫۴ کیلوولت'},{k:'نوع',v:pick(['روغنی','خشک'],i)},{k:'سال ساخت',v:yr}];
   case 'chiller':return [{k:'برند',v:brand},{k:'ظرفیت',v:fa([60,90,120,180,240][(i+seq)%5])+' تن تبرید'},{k:'نوع',v:pick(['هواخنک','آب‌خنک'],i)},{k:'مبرد',v:pick(['R134a','R407c','R410a'],i)},{k:'سال ساخت',v:yr}];
   case 'ahu':case 'fcu':return [{k:'برند',v:brand},{k:'دبی هوا',v:fa([2000,3500,5000,8000][(i+seq)%4])+' CFM'},{k:'سال ساخت',v:yr}];
+  case 'splitAC':return [{k:'برند',v:brand},{k:'ظرفیت',v:fa([18000,24000,30000,36000][(i+seq)%4])+' BTU'},{k:'نوع',v:'اسپلیت دیواری'},{k:'سال ساخت',v:yr}];
+  case 'packageBoiler':return [{k:'برند',v:brand},{k:'ظرفیت',v:fa([24,28,32][(i+seq)%3])+' هزار kcal/h'},{k:'نوع',v:'دیواری دو مبدله'},{k:'سال ساخت',v:yr}];
+  case 'evapCooler':return [{k:'برند',v:brand},{k:'دبی هوا',v:fa([3500,5500,7000][(i+seq)%3])+' CFM'},{k:'سال ساخت',v:yr}];
   case 'firePanel':return [{k:'برند',v:brand},{k:'تعداد زون',v:fa([4,8,12,16][i%4])},{k:'تعداد دتکتور',v:fa(20+((i*7)%80))},{k:'سال نصب',v:yr}];
   case 'firePump':return [{k:'برند',v:brand},{k:'دبی',v:fa([500,750,1000,1500][(i+seq)%4])+' لیتر/دقیقه'},{k:'هد',v:fa([40,60,80,100][i%4])+' متر'},{k:'توان',v:fa([7.5,11,15,22][(i+seq)%4])+' kW'},{k:'سال ساخت',v:yr}];
   case 'mainPanel':case 'distPanel':return [{k:'برند',v:brand},{k:'جریان نامی',v:fa([250,400,630,800,1250][(i+seq)%5])+' آمپر'},{k:'ولتاژ',v:'۴۰۰ ولت'},{k:'تعداد فیدر',v:fa(4+(i%12))},{k:'سال ساخت',v:yr}];
   case 'cctv':return [{k:'برند',v:brand},{k:'تعداد دوربین',v:fa(8+((i*3)%40))},{k:'نوع',v:pick(['IP','آنالوگ'],i)},{k:'سال نصب',v:yr}];
   case 'extinguisher':return [{k:'نوع',v:pick(['پودر و گاز','CO2','آب و گاز'],i)},{k:'وزن',v:fa([4,6,12][(i+seq)%3])+' کیلوگرم'},{k:'تاریخ شارژ بعدی',v:yr}];
   case 'boiler':return [{k:'برند',v:brand},{k:'ظرفیت',v:fa([300,500,800][(i+seq)%3])+' هزار kcal/h'},{k:'نوع',v:pick(['فولادی','چدنی'],i)},{k:'سال ساخت',v:yr}];
+  case 'fridge':return [{k:'برند',v:brand},{k:'ظرفیت',v:fa([16,20,24][(i+seq)%3])+' فوت'},{k:'سال ساخت',v:yr}];
+  case 'stove':return [{k:'برند',v:brand},{k:'تعداد شعله',v:fa([4,5][i%2])},{k:'نوع',v:'گازی'},{k:'سال ساخت',v:yr}];
   default:return [{k:'برند',v:brand},{k:'مدل',v:'استاندارد'},{k:'سال ساخت',v:yr}];
  }}
 const RELATED={
@@ -185,12 +199,16 @@ const RELATED={
  transformer:['بوشینگ‌ها','تپ‌چنجر','رله بوخهلتس','سیلیکاژل','تابلو حفاظت'],
  chiller:['کمپرسور','کندانسور','اواپراتور','شیر انبساط','پمپ آب','برج خنک‌کننده'],
  ahu:['فن','فیلترها','کویل سرمایش/گرمایش','دمپرها','رطوبت‌زن'],
+ splitAC:['یونیت داخلی','یونیت خارجی (کمپرسور)','فیلتر','لولهٔ مبرد','تخلیهٔ آب (درین)'],
+ packageBoiler:['مشعل','مبدل اصلی','مبدل ثانویه','پمپ','منبع انبساط','شیر اطمینان'],
  firePanel:['دتکتور دود','دتکتور حرارت','شستی اعلام','آژیر و فلاشر','باتری پشتیبان'],
  firePump:['پمپ اصلی','پمپ جوکی','تابلو کنترل','شیرآلات و کلکتور','منبع تحت فشار'],
  mainPanel:['کلید اصلی','کلیدهای فرعی','شینه (باسبار)','رله‌های حفاظتی','کنتور و آنالایزر'],
  boiler:['مشعل','مبدل حرارتی','پمپ سیرکولاسیون','منبع انبساط','شیر اطمینان'],
  coolingTower:['فن','نازل‌های پاشش','پکینگ','تشتک آب','شناور'],
- cctv:['دستگاه ضبط (NVR/DVR)','سوئیچ شبکه','مانیتور','هارد ذخیره‌سازی']};
+ cctv:['دستگاه ضبط (NVR/DVR)','سوئیچ شبکه','مانیتور','هارد ذخیره‌سازی'],
+ fridge:['کمپرسور','ترموستات','نوار دور درب','لامپ داخلی'],
+ stove:['شیرهای گاز','جرقه‌زن','مشعل‌ها','شلنگ و رابط گاز']};
 const relOf=key=>RELATED[key]||[];
 
 const GEN_CL=[{p:'وضعیت ظاهری و نظافت مطلوب است؟',t:'pfn'},{p:'اتصالات و نصب محکم است؟',t:'pfn'},{p:'عملکرد در حالت تست صحیح است؟',t:'pfn'},{p:'توضیحات',t:'text'}];
@@ -200,6 +218,8 @@ const CL={
  generator:[{p:'سطح روغن مناسب است؟',t:'pfn'},{p:'سطح مبرد رادیاتور مناسب است؟',t:'pfn'},{p:'سطح سوخت گازوئیل (٪)',t:'num',u:'٪'},{p:'باتری استارت شارژ است؟',t:'pfn'},{p:'تست راه‌اندازی موفق بود؟',t:'pfn'},{p:'نشتی روغن/آب/سوخت ندارد؟',t:'pfn'},{p:'توضیحات',t:'text'}],
  chiller:[{p:'فشار مبرد در محدوده است؟',t:'pfn'},{p:'دمای آب خروجی (°C)',t:'num',u:'°C'},{p:'کمپرسور بدون صدای غیرعادی است؟',t:'pfn'},{p:'نشتی مبرد ندارد؟',t:'pfn'},{p:'توضیحات',t:'text'}],
  ahu:[{p:'فیلترها تمیز است؟',t:'pfn'},{p:'تسمه و پولی سالم است؟',t:'pfn'},{p:'لرزش/صدای غیرعادی ندارد؟',t:'pfn'},{p:'دمپرها صحیح عمل می‌کنند؟',t:'pfn'},{p:'توضیحات',t:'text'}],
+ splitAC:[{p:'فیلترها تمیز است؟',t:'pfn'},{p:'خنک‌کنندگی مناسب است؟',t:'pfn'},{p:'تخلیهٔ آب (درین) باز است؟',t:'pfn'},{p:'نشتی گاز ندارد؟',t:'pfn'},{p:'توضیحات',t:'text'}],
+ packageBoiler:[{p:'فشار آب مدار (bar)',t:'num',u:'bar'},{p:'احتراق و شعله پایدار است؟',t:'pfn'},{p:'نشتی آب/گاز ندارد؟',t:'pfn'},{p:'آب‌گرم بهداشتی سالم است؟',t:'pfn'},{p:'توضیحات',t:'text'}],
  ups:[{p:'وضعیت باتری‌ها سالم است؟',t:'pfn'},{p:'ولتاژ خروجی (V)',t:'num',u:'V'},{p:'تست تخلیه باتری موفق بود؟',t:'pfn'},{p:'هشدار/خطایی روی نمایشگر نیست؟',t:'pfn'},{p:'توضیحات',t:'text'}],
  mainPanel:[{p:'اتصالات بدون شل‌شدگی/اکسید است؟',t:'pfn'},{p:'دمای کلیدها/باسبار (°C)',t:'num',u:'°C',max:60},{p:'کلیدها و فیوزها سالم است؟',t:'pfn'},{p:'نقشهٔ تابلو موجود است؟',t:'pfn'},{p:'توضیحات',t:'text'}],
  distPanel:[{p:'اتصالات بدون شل‌شدگی است؟',t:'pfn'},{p:'دمای کلیدها (°C)',t:'num',u:'°C',max:60},{p:'کلیدها و فیوزها سالم است؟',t:'pfn'},{p:'توضیحات',t:'text'}],
@@ -210,6 +230,8 @@ const CL={
  cctv:[{p:'تصویر واضح و بدون قطعی است؟',t:'pfn'},{p:'ضبط (DVR/NVR) فعال است؟',t:'pfn'},{p:'دید در شب مناسب است؟',t:'pfn'},{p:'توضیحات',t:'text'}],
  boiler:[{p:'فشار دیگ (bar)',t:'num',u:'bar'},{p:'شعلهٔ مشعل پایدار است؟',t:'pfn'},{p:'شیر اطمینان سالم است؟',t:'pfn'},{p:'نشتی آب/گاز ندارد؟',t:'pfn'},{p:'توضیحات',t:'text'}],
  coolingTower:[{p:'نازل‌ها و پکینگ تمیز است؟',t:'pfn'},{p:'فن بدون لرزش کار می‌کند؟',t:'pfn'},{p:'سطح آب تشتک مناسب است؟',t:'pfn'},{p:'توضیحات',t:'text'}],
+ fridge:[{p:'خنک‌کنندگی مناسب است؟',t:'pfn'},{p:'نوار دور درب سالم است؟',t:'pfn'},{p:'نظافت و عدم بو مطلوب است؟',t:'pfn'},{p:'توضیحات',t:'text'}],
+ stove:[{p:'نشتی گاز ندارد؟',t:'pfn'},{p:'جرقه‌زن و شعله‌ها سالم است؟',t:'pfn'},{p:'شیرها و اتصالات سالم است؟',t:'pfn'},{p:'توضیحات',t:'text'}],
  pumpCirc:PUMP_CL,pumpWater:PUMP_CL,sumpPump:PUMP_CL};
 const inspectOf=key=>CL[key]||GEN_CL;
 const GEN_MAINT=[{p:'نظافت کامل تجهیز انجام شد؟',t:'pfn'},{p:'بازدید و آچارکشی اتصالات انجام شد؟',t:'pfn'},{p:'روغن‌کاری/گریس‌کاری قطعات متحرک انجام شد؟',t:'pfn'},{p:'تست عملکرد پس از سرویس موفق بود؟',t:'pfn'},{p:'قطعات تعویض‌شده',t:'text'},{p:'توضیحات',t:'text'}];
@@ -218,6 +240,8 @@ const MAINT={
  generator:[{p:'بررسی/تعویض فیلتر روغن انجام شد؟',t:'pfn'},{p:'بررسی/تعویض فیلتر سوخت و هوا انجام شد؟',t:'pfn'},{p:'سطح و کیفیت روغن بررسی شد؟',t:'pfn'},{p:'تست و آبگیری باتری انجام شد؟',t:'pfn'},{p:'تست بارگیری (Load) موفق بود؟',t:'pfn'},{p:'قطعات تعویض‌شده',t:'text'},{p:'توضیحات',t:'text'}],
  ups:[{p:'تست سلامت و ولتاژ باتری‌ها انجام شد؟',t:'pfn'},{p:'گردگیری و نظافت فن‌ها انجام شد؟',t:'pfn'},{p:'آچارکشی ترمینال باتری‌ها انجام شد؟',t:'pfn'},{p:'تست تخلیه و بازگشت برق انجام شد؟',t:'pfn'},{p:'توضیحات',t:'text'}],
  chiller:[{p:'بررسی شارژ گاز مبرد انجام شد؟',t:'pfn'},{p:'نظافت کندانسور انجام شد؟',t:'pfn'},{p:'بررسی روغن کمپرسور انجام شد؟',t:'pfn'},{p:'بررسی عملکرد شیرها و سنسورها انجام شد؟',t:'pfn'},{p:'توضیحات',t:'text'}],
+ splitAC:[{p:'شست‌وشوی فیلتر و کویل انجام شد؟',t:'pfn'},{p:'بررسی شارژ گاز انجام شد؟',t:'pfn'},{p:'تمیزکاری مسیر تخلیهٔ آب انجام شد؟',t:'pfn'},{p:'تست سرمایش/گرمایش انجام شد؟',t:'pfn'},{p:'توضیحات',t:'text'}],
+ packageBoiler:[{p:'سرویس و تنظیم مشعل انجام شد؟',t:'pfn'},{p:'رسوب‌زدایی مبدل‌ها انجام شد؟',t:'pfn'},{p:'بررسی فشار و منبع انبساط انجام شد؟',t:'pfn'},{p:'توضیحات',t:'text'}],
  mainPanel:[{p:'آچارکشی اتصالات و باسبار انجام شد؟',t:'pfn'},{p:'ترموگرافی/بررسی نقاط داغ انجام شد؟',t:'pfn'},{p:'گردگیری و نظافت تابلو انجام شد؟',t:'pfn'},{p:'تست رله‌های حفاظتی انجام شد؟',t:'pfn'},{p:'توضیحات',t:'text'}],
  firePanel:[{p:'تست تک‌تک دتکتورها انجام شد؟',t:'pfn'},{p:'تست آژیرها و فلاشرها انجام شد؟',t:'pfn'},{p:'بررسی و تعویض باتری پشتیبان انجام شد؟',t:'pfn'},{p:'توضیحات',t:'text'}],
  firePump:[{p:'تست راه‌اندازی و دبی پمپ انجام شد؟',t:'pfn'},{p:'بررسی و گریس‌کاری یاتاقان‌ها انجام شد؟',t:'pfn'},{p:'بررسی آب‌بندی و نشتی انجام شد؟',t:'pfn'},{p:'توضیحات',t:'text'}],
@@ -225,10 +249,10 @@ const MAINT={
 const maintOf=key=>MAINT[key]||GEN_MAINT;
 
 //============ store + seed ============
-const KEY='facilityos_tech_v1';let DB=null;
+const KEY='facilityos_tech_v2';let DB=null;
 const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(DB));}catch(e){toast('حافظهٔ مرورگر پر است');}};
 function load(){const r=localStorage.getItem(KEY);if(r){DB=JSON.parse(r);return;}DB=seed();save();}
-function seed(){const baseline=['elevatorP','generator','ups','mainPanel','firePanel','firePump','extinguisher','ahu','cctv','chiller'];
+function seed(){const baseline=['elevatorP','generator','ups','mainPanel','firePanel','firePump','extinguisher','ahu','splitAC','fridge'];
  const buildings=[],assets=[];
  for(let i=1;i<=15;i++){const id='b'+i,floors=5+((i*3)%16),bsm=1+(i%4),status=i===2?'CRITICAL':(i===3||i===9?'PARTIAL':'OPERATIONAL');
    buildings.push({id,code:'M'+String(i).padStart(2,'0'),name:'منطقه '+i+' تهران',type:'اداری',floors,basements:bsm,
@@ -248,11 +272,11 @@ const inspById=id=>DB.inspections.find(x=>x.id===id);
 const bValue=id=>bAssets(id).reduce((s,a)=>s+a.value,0);
 
 //============ router ============
-let route='login',params={};
+let route='profile',params={};
 function go(r,p={}){route=r;params=p;window.scrollTo(0,0);render();}
 const app=()=>document.getElementById('app');
-function render(){if(!DB.user&&route!=='login')route='login';
- app().innerHTML=({login:Login,buildings:Buildings,building:Building,addAsset:AddAsset,asset:Asset,
+function render(){if(!DB.user&&route!=='profile')route='profile';
+ app().innerHTML=({profile:Profile,buildings:Buildings,building:Building,addAsset:AddAsset,asset:Asset,
   inspect:Inspect,report:Report,settings:Settings}[route]||Buildings)();bind();}
 
 //============ shared ============
@@ -261,39 +285,55 @@ const head=(title,opt={})=>`<div class="head"><div class="top">
   <div class="row">${opt.right||''}</div></div>${opt.sub?`<div class="sub">${esc(opt.sub)}</div>`:''}</div>`;
 const catChip=cat=>`<span class="chipS" style="background:${CATS[cat].c}1a;color:${CATS[cat].c}">${CATS[cat].ic} ${CATS[cat].fa}</span>`;
 
-//============ screens ============
-function Login(){return `<div class="body center">
-   <div style="text-align:center;font-size:56px">🛠️</div>
-   <div style="text-align:center;font-size:22px;font-weight:800;margin-top:6px">سامانهٔ بازرسی و نگهداری</div>
-   <div style="text-align:center;color:var(--muted);font-size:13px;margin:8px 0 22px">تأسیسات ساختمان‌های اداری</div>
-   <div class="card"><label>نام و نام خانوادگی تکنسین</label><input id="lname" placeholder="مثلاً علی رضایی"/>
-     <button class="btn" id="loginBtn">ورود</button></div></div>`;}
+//============ date picker ============
+function datePicker(){const sel=DB._profJ||todayJ();
+ if(!DB._calOpen)return `<div class="datefield" id="dateField"><span class="b">📅 ${jStr(sel)}</span><span class="pricepill">تغییر تاریخ</span></div>`;
+ if(!DB._cal)DB._cal={jy:sel.jy,jm:sel.jm};const cal=DB._cal;const ty=todayJ().jy;const years=[];for(let y=ty-2;y<=ty+1;y++)years.push(y);
+ const len=jMonthLen(cal.jy,cal.jm),g=toGregorian(cal.jy,cal.jm,1),off=(new Date(g.gy,g.gm-1,g.gd).getDay()+1)%7;
+ let cells='';for(let i=0;i<off;i++)cells+='<div></div>';
+ for(let d=1;d<=len;d++){const on=sel&&sel.jy===cal.jy&&sel.jm===cal.jm&&sel.jd===d;cells+=`<div class="day ${on?'sel':''}" data-day="${d}">${fa(d)}</div>`;}
+ return `<div class="cal"><div class="row" style="gap:8px;margin-bottom:9px">
+   <select id="calYear" style="flex:1">${years.map(y=>`<option value="${y}" ${y===cal.jy?'selected':''}>${fa(y)}</option>`).join('')}</select>
+   <select id="calMonth" style="flex:1.4">${JMONTHS.map((m,k)=>`<option value="${k+1}" ${k+1===cal.jm?'selected':''}>${m}</option>`).join('')}</select></div>
+   <div class="calgrid">${JWEEK.map(w=>`<div class="wd">${w}</div>`).join('')}${cells}</div></div>`;}
+function captureProf(){const g=id=>document.getElementById(id);if(g('pfn'))DB._prof={fn:g('pfn').value.trim(),ln:g('pln').value.trim(),nid:g('pnid').value.trim(),pos:g('ppos').value.trim()};}
 
-function Buildings(){return head('انتخاب ساختمان',{sub:fa(DB.buildings.length)+' ساختمان اداری',
-   right:`<span class="gear" data-go="settings">⚙</span>`})+`<div class="body">
+//============ screens ============
+function Profile(){const editing=!!DB.user;const u=DB.user||{};
+ if(!DB._prof)DB._prof={fn:u.fn||'',ln:u.ln||'',nid:u.nid||'',pos:u.pos||''};
+ if(!DB._profJ)DB._profJ=u.dateJ?parseJ(u.dateJ):todayJ();
+ return head(editing?'مشخصات بازرس':'ورود بازرس',editing?{back:'settings'}:{})+`<div class="body">
+   ${editing?'':'<div style="text-align:center;font-size:52px;margin:6px 0">🛠️</div><div style="text-align:center;color:var(--muted);font-size:13px;margin-bottom:14px">مشخصات خود و تاریخ بازدید را یک‌بار وارد کنید</div>'}
+   <div class="card">
+     <label>نام</label><input id="pfn" value="${esc(DB._prof.fn)}"/>
+     <label>نام خانوادگی</label><input id="pln" value="${esc(DB._prof.ln)}"/>
+     <label>کد ملی (۱۰ رقم)</label><input id="pnid" inputmode="numeric" maxlength="10" value="${esc(DB._prof.nid)}"/>
+     <label>سمت سازمانی</label><input id="ppos" value="${esc(DB._prof.pos)}" placeholder="مثلاً تکنسین آسانسور"/>
+     <label>تاریخ بازدید</label>${datePicker()}
+     <button class="btn" id="saveProf">${editing?'ذخیره':'ورود'}</button>
+   </div></div>`;}
+
+function Buildings(){return head('انتخاب ساختمان',{sub:fa(DB.buildings.length)+' ساختمان اداری',right:`<span class="gear" data-go="settings">⚙</span>`})+`<div class="body">
    <input id="bsearch" placeholder="🔍 جستجوی ساختمان"/>
    <div id="blist" style="margin-top:12px">${buildingRows(DB.buildings)}</div></div>`;}
 function buildingRows(list){if(!list.length)return `<div class="empty">موردی یافت نشد</div>`;
  return list.map(b=>`<div class="card tap" data-go="building" data-id="${b.id}"><div class="row">
    <div class="ic" style="background:rgba(79,70,229,.1)">🏢</div>
-   <div class="grow"><div class="b">${esc(b.name)}</div>
-     <div class="muted">${fa(bAssets(b.id).length)} تجهیز · ${fa(b.floors)} طبقه</div></div>
-   <span class="dot" style="background:${lightOf(b.status)}"></span>
-   <span style="color:var(--muted);font-size:20px">‹</span></div></div>`).join('');}
+   <div class="grow"><div class="b">${esc(b.name)}</div><div class="muted">${fa(bAssets(b.id).length)} تجهیز · ${fa(b.floors)} طبقه</div></div>
+   <span class="dot" style="background:${lightOf(b.status)}"></span><span style="color:var(--muted);font-size:20px">‹</span></div></div>`).join('');}
 
 function Building(){const b=DB.buildings.find(x=>x.id===params.id);if(!b)return Buildings();
  const list=bAssets(b.id),byCat={};list.forEach(a=>(byCat[a.cat]=byCat[a.cat]||[]).push(a));
- const info=[['طبقات',fa(b.floors)],['طبقات منفی',fa(b.basements)],['تعداد واحد',fa(b.units)],
-   ['متراژ کل',fa(b.totalArea)+' م²'],['زیربنا',fa(b.builtArea)+' م²'],['سال ساخت',fa(b.year)]];
+ const info=[['طبقات',fa(b.floors)],['طبقات منفی',fa(b.basements)],['تعداد واحد',fa(b.units)],['متراژ کل',fa(b.totalArea)+' م²'],['زیربنا',fa(b.builtArea)+' م²'],['سال ساخت',fa(b.year)]];
  let eq='';Object.keys(CATS).forEach(cat=>{if(!byCat[cat])return;
    eq+=`<div class="catHdr" style="color:${CATS[cat].c}">${CATS[cat].ic} ${CATS[cat].fa}</div>`+
    byCat[cat].map(a=>`<div class="card tap catLine" style="--c:${CATS[cat].c}" data-go="asset" data-id="${a.id}">
-     <div class="between"><div class="grow"><div class="b">${esc(a.name)}</div><div class="muted">کد: ${fa(a.code)}</div></div>
-     ${critChip(a.crit)}</div></div>`).join('');});
+     <div class="between"><div class="grow"><div class="b">${esc(a.name)}</div><div class="muted">کد: ${fa(a.code)}</div></div>${critChip(a.crit)}</div></div>`).join('');});
  return head(b.name,{back:'buildings',sub:'کاربری: اداری'})+`<div class="body">
    <div class="card"><div class="title" style="margin-top:0">📋 مشخصات ساختمان</div>
      <div class="stats">${info.map(([t,n])=>`<div class="stat"><div class="n">${n}</div><div class="t">${t}</div></div>`).join('')}</div>
-     <div class="specrow" style="margin-top:10px"><span class="k">📍 موقعیت</span><span class="v">${fa(b.lat.toFixed(3))} , ${fa(b.lng.toFixed(3))}</span></div>
+     <a href="https://www.google.com/maps?q=${b.lat},${b.lng}" target="_blank" rel="noopener" style="text-decoration:none">
+       <div class="specrow" style="margin-top:10px"><span class="k">📍 موقعیت روی نقشه</span><span class="v" style="color:var(--primary)">باز کردن در گوگل‌مپ ↗</span></div></a>
      <div class="specrow"><span class="k">🏠 آدرس</span><span class="v">${esc(b.address)}</span></div>
      <div class="specrow"><span class="k">💰 ارزش تجهیزات</span><span class="v" style="color:var(--primary)">${money(bValue(b.id))}</span></div>
    </div>
@@ -311,7 +351,7 @@ function AddAsset(){const b=DB.buildings.find(x=>x.id===params.id);if(!b)return 
        <div class="grow"><div class="b small">${esc(c.name)}</div><div class="muted">${ex?'قبلاً ثبت شده':CRIT_FA[c.crit]}</div></div>
        ${ex?'<span class="chipS" style="background:#eef1f8;color:var(--muted)">موجود</span>':catChip(c.cat)}</div></div>`;}).join('');});
  const cnt=Object.values(DB._pick).filter(Boolean).length;
- return head('افزودن تجهیز',{back:'building#'+b.id,sub:'تجهیزات موجود در «'+b.name+'» را انتخاب کنید'})+`<div class="body">${html}</div>
+ return head('افزودن تجهیز',{back:'building#'+b.id,sub:'تجهیزات موجود را انتخاب کنید'})+`<div class="body">${html}</div>
    <div class="fab"><button id="addPick">افزودن ${cnt?fa(cnt)+' مورد':''}</button></div>`;}
 
 function Asset(){const a=assetById(params.id);if(!a)return Buildings();const b=DB.buildings.find(x=>x.id===a.buildingId);
@@ -322,31 +362,20 @@ function Asset(){const a=assetById(params.id);if(!a)return Buildings();const b=D
      <div class="grow"><div class="b" style="font-size:16px">${esc(a.name)}</div><div class="muted">کد: ${fa(a.code)}</div></div>${critChip(a.crit)}</div></div>
    <div class="card"><div class="title" style="margin-top:0">📑 مشخصات فنی</div>
      ${specs.map(s=>`<div class="specrow"><span class="k">${esc(s.k)}</span><span class="v">${esc(s.v)}</span></div>`).join('')}</div>
-   ${rel.length?`<div class="card"><div class="title" style="margin-top:0">🔗 تجهیزات و قطعات مرتبط</div>
-     <div class="rel">${rel.map(r=>`<span class="relC">${esc(r)}</span>`).join('')}</div></div>`:''}
+   ${rel.length?`<div class="card"><div class="title" style="margin-top:0">🔗 تجهیزات و قطعات مرتبط</div><div class="rel">${rel.map(r=>`<span class="relC">${esc(r)}</span>`).join('')}</div></div>`:''}
    <div class="title">🩺 چک‌لیست‌ها</div>
-   <div class="btnrow">
-     <button class="btn sm" data-go="inspect" data-id="${a.id}" data-mode="inspect">بازرسی دوره‌ای</button>
-     <button class="btn sm ghost" data-go="inspect" data-id="${a.id}" data-mode="maint">سرویس و نگهداری</button>
-   </div>
+   <div class="btnrow"><button class="btn sm" data-go="inspect" data-id="${a.id}" data-mode="inspect">بازرسی دوره‌ای</button>
+     <button class="btn sm ghost" data-go="inspect" data-id="${a.id}" data-mode="maint">سرویس و نگهداری</button></div>
    ${insp.length?`<div class="title">📜 سوابق بازرسی (${fa(insp.length)})</div>`+insp.slice(0,8).map(x=>`<div class="card tap between" data-go="report" data-id="${x.id}">
-     <div class="grow"><div class="b small">${x.mode==='maint'?'سرویس و نگهداری':'بازرسی دوره‌ای'}</div>
-       <div class="muted">${esc(x.inspector.fn)} ${esc(x.inspector.ln)} · ${x.dateJ}</div></div>
+     <div class="grow"><div class="b small">${x.mode==='maint'?'سرویس و نگهداری':'بازرسی دوره‌ای'}</div><div class="muted">${esc(x.inspector.fn)} ${esc(x.inspector.ln)} · ${x.dateJ}</div></div>
      <span class="chipS" style="background:${x.fails?'#fee2e2':'#dcfce7'};color:${x.fails?'var(--crit)':'var(--ok)'}">${x.fails?fa(x.fails)+' ایراد':'سالم'}</span></div>`).join(''):''}
  </div>`;}
 
-function Inspect(){const a=assetById(params.id);if(!a)return Buildings();const mode=DB._mode||'inspect';const phase=DB._phase||'id';
- const modeFa=mode==='maint'?'سرویس و نگهداری':'بازرسی دوره‌ای';
- if(phase==='id'){return head('مشخصات بازرس',{back:'asset#'+a.id,sub:a.name+' — '+modeFa})+`<div class="body"><div class="card">
-   <div class="muted" style="margin-bottom:4px">پیش از شروع، اطلاعات خود را وارد کنید.</div>
-   <label>نام</label><input id="ifn"/><label>نام خانوادگی</label><input id="iln"/>
-   <label>کد ملی (۱۰ رقم)</label><input id="inid" inputmode="numeric" maxlength="10"/>
-   <label>سمت</label><input id="ipos" placeholder="مثلاً تکنسین آسانسور"/>
-   <button class="btn" id="toCl">ادامه</button></div></div>`;}
- const items=mode==='maint'?maintOf(a.key):inspectOf(a.key);
+function Inspect(){const a=assetById(params.id);if(!a)return Buildings();const mode=DB._mode||'inspect';const u=DB.user||{};
+ const modeFa=mode==='maint'?'سرویس و نگهداری':'بازرسی دوره‌ای';const items=mode==='maint'?maintOf(a.key):inspectOf(a.key);
  return head(modeFa,{back:'asset#'+a.id,sub:a.name})+`<div class="body" id="clbody">
-   <div class="title" style="margin-top:0">📅 تاریخ بازدید</div>${calHTML()}
-   <div class="title">✅ ${mode==='maint'?'چک‌لیست سرویس و نگهداری':'چک‌لیست بازرسی'}</div>
+   <div class="card"><div class="small muted">بازرس: <b style="color:var(--ink)">${esc(u.fn)} ${esc(u.ln)}</b> · سمت: ${esc(u.pos)} · تاریخ بازدید: ${esc(u.dateJ)}</div></div>
+   <div class="title" style="margin-top:6px">✅ ${mode==='maint'?'چک‌لیست سرویس و نگهداری':'چک‌لیست بازرسی'}</div>
    ${items.map((it,idx)=>`<div class="card"><div class="b small" style="margin-bottom:9px">${fa(idx+1)}. ${esc(it.p)}</div>
      ${it.t==='pfn'?`<div class="opts" data-item="${idx}">${['pass','تأیید','fail','رد','na','نامربوط'].reduce((h,_,k,ar)=>k%2?h:h+`<div class="opt ${ar[k]==='pass'?'pass':ar[k]==='fail'?'fail':''} ${DB._resp[idx]===ar[k]?'sel':''}" data-val="${ar[k]}">${ar[k+1]}</div>`,'')}</div>`:''}
      ${it.t==='num'?`<input data-item="${idx}" inputmode="decimal" value="${DB._resp[idx]??''}" placeholder="${it.u||'مقدار'}"/>${it.max?`<div class="small" style="color:var(--warn);margin-top:5px">حداکثر مجاز: ${fa(it.max)}</div>`:''}`:''}
@@ -356,38 +385,28 @@ function Inspect(){const a=assetById(params.id);if(!a)return Buildings();const m
    <div class="card"><button class="btn ghost sm" id="addPhoto">＋ افزودن عکس از دوربین/گالری</button>
      <div class="pgrid" id="pgrid">${(DB._photos||[]).map(p=>`<img src="${p}">`).join('')}</div></div>
    <button class="btn" id="submitInsp">ثبت و تولید گزارش</button></div>`;}
-function calHTML(){if(!DB._cal){const t=todayJ();DB._cal={jy:t.jy,jm:t.jm};}const cal=DB._cal;
- const len=jMonthLen(cal.jy,cal.jm),g=toGregorian(cal.jy,cal.jm,1),off=(new Date(g.gy,g.gm-1,g.gd).getDay()+1)%7,sel=DB._inspJ;
- let cells='';for(let i=0;i<off;i++)cells+='<div></div>';
- for(let d=1;d<=len;d++){const on=sel&&sel.jy===cal.jy&&sel.jm===cal.jm&&sel.jd===d;cells+=`<div class="day ${on?'sel':''}" data-day="${d}">${fa(d)}</div>`;}
- return `<div class="cal"><div class="calhdr"><span data-cal="prev">›</span><div>${JMONTHS[cal.jm-1]} ${fa(cal.jy)}</div><span data-cal="next">‹</span></div>
-   <div class="calgrid">${JWEEK.map(w=>`<div class="wd">${w}</div>`).join('')}${cells}</div>
-   <div class="small" style="text-align:center;margin-top:8px;color:var(--primary);font-weight:700">تاریخ: ${jStr(sel||todayJ())}</div></div>`;}
 
 function Report(){const x=inspById(params.id);if(!x)return Buildings();const a=assetById(x.assetId),b=a?DB.buildings.find(y=>y.id===a.buildingId):null;
  const resFa=v=>v==='pass'?'<span style="color:var(--ok);font-weight:800">✔ تأیید</span>':v==='fail'?'<span style="color:var(--crit);font-weight:800">✘ رد</span>':v==='na'?'<span style="color:var(--unk)">نامربوط</span>':'<span class="muted">ثبت‌نشده</span>';
- const meta=[['تجهیز',a?a.name:'—'],['کد تجهیز',a?fa(a.code):'—'],['ساختمان',b?b.name:'—'],['نوع',x.mode==='maint'?'سرویس و نگهداری':'بازرسی دوره‌ای'],
-   ['بازرس',x.inspector.fn+' '+x.inspector.ln],['کد ملی',fa(x.inspector.nid)],['سمت',x.inspector.pos],['تاریخ بازدید',x.dateJ]];
- return head('گزارش بازرسی',{back:'asset#'+(a?a.id:''),sub:a?a.name:''})+`<div class="body">
+ const meta=[['تجهیز',a?a.name:'—'],['کد تجهیز',a?fa(a.code):'—'],['ساختمان',b?b.name:'—'],['نوع',x.mode==='maint'?'سرویس و نگهداری':'بازرسی دوره‌ای'],['بازرس',x.inspector.fn+' '+x.inspector.ln],['کد ملی',fa(x.inspector.nid)],['سمت',x.inspector.pos],['تاریخ بازدید',x.dateJ]];
+ return head('گزارش بازرسی',{back:'asset#'+(a?a.id:'')})+`<div class="body">
    <div class="card" style="background:var(--grad);color:#fff"><div class="b" style="font-size:17px">گزارش ${x.mode==='maint'?'سرویس و نگهداری':'بازرسی'}</div>
      <div class="small" style="opacity:.9;margin-top:4px">${a?esc(a.name):''} — ${b?esc(b.name):''}</div>
      <div class="row" style="margin-top:10px;gap:8px"><span class="chipS" style="background:rgba(255,255,255,.25);color:#fff">${x.dateJ}</span>
-       <span class="chipS" style="background:${x.fails?'rgba(255,255,255,.25)':'rgba(255,255,255,.25)'};color:#fff">${x.fails?fa(x.fails)+' ایراد':'بدون ایراد'}</span></div></div>
-   <div class="card"><div class="title" style="margin-top:0">📝 گزارش متنی</div>
-     ${meta.map(([k,v])=>`<div class="specrow"><span class="k">${k}</span><span class="v">${esc(v)}</span></div>`).join('')}</div>
-   <div class="card"><div class="title" style="margin-top:0">✅ نتایج چک‌لیست</div>
-     ${x.responses.map(r=>`<div class="resItem"><span class="grow">${esc(r.p)}</span><span>${r.t==='pfn'?resFa(r.v):(r.v?esc(r.v):'<span class="muted">—</span>')}</span></div>`).join('')}</div>
-   ${x.photos&&x.photos.length?`<div class="card"><div class="title" style="margin-top:0">📷 گزارش تصویری (${fa(x.photos.length)})</div>
-     <div class="pgrid">${x.photos.map(p=>`<img src="${p}">`).join('')}</div></div>`:''}
+       <span class="chipS" style="background:rgba(255,255,255,.25);color:#fff">${x.fails?fa(x.fails)+' ایراد':'بدون ایراد'}</span></div></div>
+   <div class="card"><div class="title" style="margin-top:0">📝 گزارش متنی</div>${meta.map(([k,v])=>`<div class="specrow"><span class="k">${k}</span><span class="v">${esc(v)}</span></div>`).join('')}</div>
+   <div class="card"><div class="title" style="margin-top:0">✅ نتایج چک‌لیست</div>${x.responses.map(r=>`<div class="resItem"><span class="grow">${esc(r.p)}</span><span>${r.t==='pfn'?resFa(r.v):(r.v?esc(r.v):'<span class="muted">—</span>')}</span></div>`).join('')}</div>
+   ${x.photos&&x.photos.length?`<div class="card"><div class="title" style="margin-top:0">📷 گزارش تصویری (${fa(x.photos.length)})</div><div class="pgrid">${x.photos.map(p=>`<img src="${p}">`).join('')}</div></div>`:''}
    <button class="btn" id="printRep">🖨 چاپ / ذخیرهٔ PDF گزارش</button>
    <button class="btn ghost" data-go="asset" data-id="${a?a.id:''}">بازگشت به تجهیز</button>
  </div>`;}
 
 function Settings(){const u=DB.user||{};return head('تنظیمات',{back:'buildings'})+`<div class="body">
-   <div class="card row"><div class="ic" style="background:var(--grad);color:#fff">👤</div><div class="grow"><div class="b">${esc(u.name||'—')}</div><div class="muted">تکنسین</div></div></div>
-   <div class="card between"><span class="muted">حالت</span><span class="b">آفلاین (مرورگر)</span></div>
+   <div class="card row"><div class="ic" style="background:var(--grad);color:#fff">👤</div><div class="grow"><div class="b">${esc(u.fn||'')} ${esc(u.ln||'')}</div><div class="muted">${esc(u.pos||'تکنسین')}</div></div></div>
+   <div class="card between"><span class="muted">کد ملی</span><span class="b">${fa(u.nid||'—')}</span></div>
+   <div class="card between"><span class="muted">تاریخ بازدید</span><span class="b">${u.dateJ||'—'}</span></div>
    <div class="card between"><span class="muted">تعداد بازرسی ثبت‌شده</span><span class="b">${fa(DB.inspections.length)}</span></div>
-   <div class="card between"><span class="muted">نسخه</span><span class="b">${fa('۳٫۰')} تکنسین</span></div>
+   <button class="btn ghost" id="editProf">✏️ ویرایش مشخصات و تاریخ</button>
    <button class="btn ghost" id="resetBtn">بازنشانی داده‌های نمونه</button>
    <button class="btn" id="logoutBtn">خروج</button></div>`;}
 
@@ -405,14 +424,26 @@ const val=id=>(document.getElementById(id)?.value||'').trim();
 function bindGo(scope){(scope||document).querySelectorAll('[data-go]').forEach(e=>e.onclick=()=>{
   const r=e.getAttribute('data-go'),id=e.getAttribute('data-id');
   if(r.includes('#')){const[rr,pid]=r.split('#');go(rr,{id:pid});return;}
-  if(r==='inspect'){DB._phase='id';DB._mode=e.getAttribute('data-mode')||'inspect';DB._resp={};DB._photos=[];DB._inspJ=null;DB._cal=null;}
+  if(r==='inspect'){DB._mode=e.getAttribute('data-mode')||'inspect';DB._resp={};DB._photos=[];}
   if(r==='addAsset')DB._pick={};
+  if(r==='profile'){DB._prof=null;DB._profJ=null;DB._calOpen=false;DB._cal=null;}
   go(r,id?{id}:{});});}
 function bind(){bindGo();
- const lb=document.getElementById('loginBtn');
- if(lb)lb.onclick=()=>{const name=val('lname');if(!name){toast('نام را وارد کنید');return;}DB.user={name};save();go('buildings');};
+ // profile
+ const sp=document.getElementById('saveProf');
+ if(sp){['pfn','pln','pnid','ppos'].forEach(id=>{const e=document.getElementById(id);if(e)e.oninput=()=>captureProf();});
+   const df=document.getElementById('dateField');if(df)df.onclick=()=>{captureProf();DB._cal={jy:DB._profJ.jy,jm:DB._profJ.jm};DB._calOpen=true;render();};
+   const cy=document.getElementById('calYear');if(cy)cy.onchange=()=>{captureProf();DB._cal.jy=+cy.value;render();};
+   const cm=document.getElementById('calMonth');if(cm)cm.onchange=()=>{captureProf();DB._cal.jm=+cm.value;render();};
+   document.querySelectorAll('.cal [data-day]').forEach(d=>d.onclick=()=>{captureProf();DB._profJ={jy:DB._cal.jy,jm:DB._cal.jm,jd:+d.getAttribute('data-day')};DB._calOpen=false;render();});
+   sp.onclick=()=>{captureProf();const p=DB._prof;if(!p.fn||!p.ln||!p.pos){toast('نام، نام خانوادگی و سمت الزامی است');return;}
+     const nid=faToEn(p.nid);if(!/^\d{10}$/.test(nid)){toast('کد ملی باید ۱۰ رقم باشد');return;}
+     const editing=!!DB.user;DB.user={fn:p.fn,ln:p.ln,nid:nid,pos:p.pos,dateJ:jStr(DB._profJ)};
+     DB._prof=null;DB._profJ=null;DB._calOpen=false;DB._cal=null;save();toast('ذخیره شد ✅');go(editing?'settings':'buildings');};}
+ // buildings search
  const bs=document.getElementById('bsearch');
  if(bs)bs.oninput=()=>{const q=bs.value.trim(),el=document.getElementById('blist');el.innerHTML=buildingRows(DB.buildings.filter(b=>b.name.includes(q)||b.code.includes(q)));bindGo(el);};
+ // add asset picker
  document.querySelectorAll('[data-pick]').forEach(c=>c.onclick=()=>{const k=c.getAttribute('data-pick');DB._pick[k]=!DB._pick[k];render();});
  const ap=document.getElementById('addPick');
  if(ap)ap.onclick=()=>{const b=DB.buildings.find(x=>x.id===params.id),keys=Object.keys(DB._pick).filter(k=>DB._pick[k]);
@@ -420,48 +451,42 @@ function bind(){bindGo();
    keys.forEach(key=>{const cb=CATBY[key];seq++;const i=+b.id.slice(1),code=`${b.code}-${String(seq).padStart(3,'0')}`;
      DB.assets.push({id:'a-'+b.id+'-'+key+'-'+uid(),buildingId:b.id,key,cat:cb.cat,name:cb.name,code,crit:cb.crit,value:cb.value,status:'در سرویس',specs:specsFor(key,i,seq)});});
    DB._pick={};save();toast(fa(keys.length)+' تجهیز اضافه شد ✅');go('building',{id:b.id});};
- const toCl=document.getElementById('toCl');
- if(toCl)toCl.onclick=()=>{const fn=val('ifn'),ln=val('iln'),nid=val('inid'),pos=val('ipos');
-   if(!fn||!ln||!pos){toast('همهٔ فیلدها را پر کنید');return;}if(!/^\d{10}$/.test(nid)){toast('کد ملی باید ۱۰ رقم باشد');return;}
-   DB._inspector={fn,ln,nid,pos};DB._phase='checklist';render();};
+ // checklist
  document.querySelectorAll('.opts[data-item]').forEach(g=>{const idx=+g.getAttribute('data-item');
    g.querySelectorAll('.opt').forEach(o=>o.onclick=()=>{g.querySelectorAll('.opt').forEach(x=>x.classList.remove('sel'));o.classList.add('sel');DB._resp[idx]=o.getAttribute('data-val');});});
  document.querySelectorAll('input[data-item],textarea[data-item]').forEach(inp=>{const idx=+inp.getAttribute('data-item');inp.oninput=()=>{DB._resp[idx]=inp.value;};});
- document.querySelectorAll('[data-cal]').forEach(s=>s.onclick=()=>{const dir=s.getAttribute('data-cal');let{jy,jm}=DB._cal;
-   if(dir==='next'){jm++;if(jm>12){jm=1;jy++;}}else{jm--;if(jm<1){jm=12;jy--;}}DB._cal={jy,jm};render();});
- document.querySelectorAll('[data-day]').forEach(d=>d.onclick=()=>{DB._inspJ={jy:DB._cal.jy,jm:DB._cal.jm,jd:+d.getAttribute('data-day')};render();});
- const addP=document.getElementById('addPhoto');const pin=document.getElementById('photoInput');
+ const addP=document.getElementById('addPhoto'),pin=document.getElementById('photoInput');
  if(addP&&pin){addP.onclick=()=>pin.click();pin.onchange=()=>{addPhotos(pin.files);pin.value='';};}
  const sub=document.getElementById('submitInsp');
- if(sub)sub.onclick=()=>{const a=assetById(params.id),mode=DB._mode,items=mode==='maint'?maintOf(a.key):inspectOf(a.key);
-   const responses=items.map((it,idx)=>({p:it.p,t:it.t,v:DB._resp[idx]??null}));
-   const fails=responses.filter(r=>r.v==='fail').length;const dj=DB._inspJ||todayJ();
-   const insp={id:uid(),assetId:a.id,mode,inspector:DB._inspector,dateJ:jStr(dj),responses,photos:DB._photos||[],fails,at:now()};
-   DB.inspections.unshift(insp);DB._phase='id';DB._resp={};DB._photos=[];save();toast('گزارش ثبت شد ✅');go('report',{id:insp.id});};
+ if(sub)sub.onclick=()=>{const a=assetById(params.id),mode=DB._mode,items=mode==='maint'?maintOf(a.key):inspectOf(a.key),u=DB.user;
+   const responses=items.map((it,idx)=>({p:it.p,t:it.t,v:DB._resp[idx]??null}));const fails=responses.filter(r=>r.v==='fail').length;
+   const insp={id:uid(),assetId:a.id,mode,inspector:{fn:u.fn,ln:u.ln,nid:u.nid,pos:u.pos},dateJ:u.dateJ,responses,photos:DB._photos||[],fails,at:now()};
+   DB.inspections.unshift(insp);DB._resp={};DB._photos=[];save();toast('گزارش ثبت شد ✅');go('report',{id:insp.id});};
+ // report print
  const pr=document.getElementById('printRep');if(pr)pr.onclick=()=>printReport(params.id);
- const lo=document.getElementById('logoutBtn');if(lo)lo.onclick=()=>{DB.user=null;save();go('login');};
- const rs=document.getElementById('resetBtn');if(rs)rs.onclick=()=>{if(confirm('بازنشانی به داده‌های نمونه؟ سوابق بازرسی پاک می‌شود.')){localStorage.removeItem(KEY);load();go('buildings');}};}
+ // settings
+ const ed=document.getElementById('editProf');if(ed)ed.onclick=()=>{DB._prof=null;DB._profJ=null;DB._calOpen=false;DB._cal=null;go('profile');};
+ const lo=document.getElementById('logoutBtn');if(lo)lo.onclick=()=>{DB.user=null;save();go('profile');};
+ const rs=document.getElementById('resetBtn');if(rs)rs.onclick=()=>{if(confirm('بازنشانی به داده‌های نمونه؟ سوابق پاک می‌شود.')){const u=DB.user;localStorage.removeItem(KEY);load();DB.user=u;save();go('buildings');}};}
 
-//============ print report ============
+//============ print ============
 function printReport(id){const x=inspById(id);if(!x)return;const a=assetById(x.assetId),b=a?DB.buildings.find(y=>y.id===a.buildingId):null;
  const resFa=v=>v==='pass'?'<b style="color:#16a34a">تأیید</b>':v==='fail'?'<b style="color:#dc2626">رد</b>':v==='na'?'نامربوط':'—';
- const meta=[['تجهیز',a?a.name:'—'],['کد تجهیز',a?fa(a.code):'—'],['ساختمان',b?b.name:'—'],['نوع گزارش',x.mode==='maint'?'سرویس و نگهداری':'بازرسی دوره‌ای'],
-   ['بازرس',x.inspector.fn+' '+x.inspector.ln],['کد ملی',fa(x.inspector.nid)],['سمت',x.inspector.pos],['تاریخ بازدید',x.dateJ]];
+ const meta=[['تجهیز',a?a.name:'—'],['کد تجهیز',a?fa(a.code):'—'],['ساختمان',b?b.name:'—'],['نوع گزارش',x.mode==='maint'?'سرویس و نگهداری':'بازرسی دوره‌ای'],['بازرس',x.inspector.fn+' '+x.inspector.ln],['کد ملی',fa(x.inspector.nid)],['سمت',x.inspector.pos],['تاریخ بازدید',x.dateJ]];
  const html=`<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><title>گزارش بازرسی</title>
  <style>body{font-family:Tahoma,sans-serif;margin:22px;color:#1e293b}h1{font-size:19px}h3{margin:18px 0 8px}
  table{width:100%;border-collapse:collapse;font-size:13px}td{border:1px solid #e5e7eb;padding:7px}
- .imgs{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}.imgs img{width:31%;border-radius:8px;border:1px solid #e5e7eb}
- @media print{.np{display:none}}</style></head><body>
+ .imgs{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}.imgs img{width:31%;border-radius:8px;border:1px solid #e5e7eb}@media print{.np{display:none}}</style></head><body>
  <h1>گزارش ${x.mode==='maint'?'سرویس و نگهداری':'بازرسی'} تأسیسات</h1>
  <h3>مشخصات</h3><table>${meta.map(([k,v])=>`<tr><td style="background:#f3f4f6;width:35%">${k}</td><td>${esc(v)}</td></tr>`).join('')}</table>
  <h3>نتایج چک‌لیست</h3><table>${x.responses.map(r=>`<tr><td>${esc(r.p)}</td><td style="width:30%">${r.t==='pfn'?resFa(r.v):(r.v?esc(r.v):'—')}</td></tr>`).join('')}</table>
  ${x.photos&&x.photos.length?`<h3>گزارش تصویری</h3><div class="imgs">${x.photos.map(p=>`<img src="${p}">`).join('')}</div>`:''}
- <p style="margin-top:18px;font-size:12px;color:#666">تهیه‌شده توسط سامانهٔ بازرسی و نگهداری — ${jStr(todayJ())}</p>
+ <p style="margin-top:18px;font-size:12px;color:#666">سامانهٔ بازرسی و نگهداری — ${jStr(todayJ())}</p>
  <button class="np" onclick="window.print()" style="margin-top:14px;padding:10px 22px;font-size:15px;cursor:pointer">چاپ / ذخیرهٔ PDF</button></body></html>`;
  const w=window.open('','_blank');if(w){w.document.write(html);w.document.close();}else{location.href=URL.createObjectURL(new Blob([html],{type:'text/html'}));}}
 
 //============ boot ============
-load();go(DB.user?'buildings':'login');
+load();go(DB.user?'buildings':'profile');
 </script>
 </body>
 </html>
