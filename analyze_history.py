@@ -717,7 +717,7 @@ def build_hour_samples(candles, tz):
     return samples
 
 
-def build_rolling_samples(candles, tz, win=None):
+def build_rolling_samples(candles, tz, win=None, with_times=False):
     """
     Returns: samples[weekday][(hour, minute)] = list of per-window flip counts.
 
@@ -726,6 +726,9 @@ def build_rolling_samples(candles, tz, win=None):
     weekday and clock time of its FIRST candle, so a window starting Sunday
     11:35 (and ending 12:35) lands in samples[Sun][(11, 35)]. Windows with a
     gap (missing candle) are skipped.
+
+    When with_times=True, each entry is a (start_unix, flips) tuple instead of
+    just flips (used to surface the most recent occurrences).
     """
     n = len(candles)
     times = [c["time"] for c in candles]
@@ -745,7 +748,9 @@ def build_rolling_samples(candles, tz, win=None):
         flips = longest_alt_flips(dirs[i : i + win])
         dt = datetime.fromtimestamp(times[i], tz=timezone.utc).astimezone(tz)
         key = (dt.hour, dt.minute)
-        samples[dt.weekday()].setdefault(key, []).append(flips)
+        samples[dt.weekday()].setdefault(key, []).append(
+            (times[i], flips) if with_times else flips
+        )
     return samples
 
 
