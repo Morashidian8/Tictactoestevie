@@ -253,17 +253,21 @@ const maintOf=key=>MAINT[key]||GEN_MAINT;
 //============ store + seed ============
 const KEY='facilityos_tech_v2';let DB=null;
 const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(DB));}catch(e){toast('حافظهٔ مرورگر پر است');}};
-function load(){const r=localStorage.getItem(KEY);if(r){DB=JSON.parse(r);return;}DB=seed();save();}
+function applyOverrides(buildings){const b1=buildings.find(b=>b.id==='b1');
+ if(b1){b1.floors=2;b1.basements=1;b1.rooms=26;b1.structure='فلزی';b1.facade='سنگ';b1.address='خیابان فاطمی، خیابان هشت‌بهشت، پلاک ۸۵';}}
+function load(){const r=localStorage.getItem(KEY);if(r){DB=JSON.parse(r);applyOverrides(DB.buildings);save();return;}DB=seed();save();}
 function seed(){const baseline=['elevatorP','generator','ups','mainPanel','firePanel','firePump','extinguisher','ahu','splitAC','fridge'];
  const buildings=[],assets=[];
  for(let i=1;i<=15;i++){const id='b'+i,floors=5+((i*3)%16),bsm=1+(i%4),status=i===2?'CRITICAL':(i===3||i===9?'PARTIAL':'OPERATIONAL');
    buildings.push({id,code:'M'+String(i).padStart(2,'0'),name:'منطقه '+i+' تهران',type:'اداری',floors,basements:bsm,
      totalArea:1200+i*350,builtArea:900+i*420,rooms:12+i*4,year:1385+(i%18),manager:'مدیر منطقه '+i,
+     structure:['فلزی','بتنی'][i%2],facade:['سنگ','آجرنما','کامپوزیت','شیشه (کرتین‌وال)','سیمان'][i%5],
      address:'تهران، شهرداری منطقه '+i,lat:35.70+(i%5)*0.03-0.06,lng:51.40+(i%4)*0.03-0.04,lastInsp:now()-((i*5)%45)*DAY,status});
    baseline.forEach((key,k)=>{const cb=CATBY[key],seq=k+1,code=`M${String(i).padStart(2,'0')}-${String(seq).padStart(3,'0')}`;
      assets.push({id:`a-${id}-${key}`,buildingId:id,key,cat:cb.cat,name:cb.name,code,crit:cb.crit,value:cb.value,
        status:(i===2&&key==='firePump')?'خارج از سرویس':'در سرویس',specs:specsFor(key,i,seq)});});
  }
+ applyOverrides(buildings);
  return {user:null,buildings,assets,inspections:[]};
 }
 
@@ -330,7 +334,7 @@ function buildingRows(list){if(!list.length)return `<div class="empty">مورد�
 
 function Building(){const b=DB.buildings.find(x=>x.id===params.id);if(!b)return Buildings();
  const list=bAssets(b.id),byCat={};list.forEach(a=>(byCat[a.cat]=byCat[a.cat]||[]).push(a));
- const info=[['طبقات روی زمین',fa(b.floors)],['طبقات زیرزمین',fa(b.basements)],['تعداد اتاق',fa(b.rooms||0)],['متراژ کل',fa(b.totalArea)+' م²'],['زیربنا',fa(b.builtArea)+' م²'],['سال ساخت',fa(b.year)]];
+ const info=[['طبقات روی زمین',fa(b.floors)],['طبقات زیرزمین',fa(b.basements)],['تعداد اتاق',fa(b.rooms||0)],['متراژ کل',fa(b.totalArea)+' م²'],['زیربنا',fa(b.builtArea)+' م²'],['سال ساخت',fa(b.year)],['نوع سازه',b.structure||'—'],['جنس نما',b.facade||'—']];
  let eq='';Object.keys(CATS).forEach(cat=>{if(!byCat[cat])return;
    eq+=`<div class="catHdr" style="color:${CATS[cat].c}">${CATS[cat].ic} ${CATS[cat].fa}</div>`+
    byCat[cat].map(a=>`<div class="card tap catLine" style="--c:${CATS[cat].c}" data-go="asset" data-id="${a.id}">
@@ -417,14 +421,7 @@ function Settings(){const u=DB.user||{};return head('تنظیمات',{back:'buil
    <button class="btn" id="logoutBtn">خروج</button></div>`;}
 
 //============ maps ============
-function openNeshan(lat,lng){var web='https://neshan.org/maps/@'+lat+','+lng+',16z';
- var ua=navigator.userAgent||'';
- if(!/android/i.test(ua)){window.open(web,'_blank');return;}
- var fired=Date.now();
- // ۱) تلاش برای باز کردن مستقیم اپ نشان روی گوشی
- window.location.href='intent://maps/@'+lat+','+lng+',16z#Intent;scheme=https;package=org.neshan.explore.main;end';
- // ۲) اگر اپ نشان باز نشد، نقشهٔ مسیریابی پیش‌فرض گوشی (geo) باز شود
- setTimeout(function(){if(!document.hidden&&Date.now()-fired<2500){window.location.href='geo:'+lat+','+lng+'?q='+lat+','+lng+'(مقصد)';}},1400);}
+function openNeshan(lat,lng){window.open('https://neshan.org/maps/@'+lat+','+lng+',16z','_blank');}
 function openGmap(lat,lng){window.open('https://www.google.com/maps?q='+lat+','+lng,'_blank');}
 
 //============ images ============
