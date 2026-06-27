@@ -133,8 +133,45 @@ def lowest_rolling(ds, wd, wm):
     return (best["label"], best["avg"])
 
 
+def debug_window(tz, weekday=5, hour=7, minute=35, win=12):
+    """Print the exact candles of the most recent Saturday 07:35-08:35 window
+    (Binance 5m) so the computed alternation can be checked against the chart."""
+    try:
+        candles = A.fetch_binance("5m", 300, 21, "BTCUSDT")
+    except Exception as exc:
+        print(f"DEBUG window fetch failed: {exc}")
+        return
+    times = [c["time"] for c in candles]
+    sym = {1: "🟢", -1: "🔴", 0: "⚪"}
+    found = None
+    for i in range(len(candles) - win + 1):
+        if times[i + win - 1] - times[i] != (win - 1) * 300:
+            continue
+        dt = datetime.fromtimestamp(times[i], tz=tz)
+        if dt.weekday() == weekday and dt.hour == hour and dt.minute == minute:
+            found = i  # keep the latest match
+    print("\n=== DEBUG: شنبه 07:35–08:35 (Binance 5m، آخرین رخداد، داده‌ی واقعی) ===")
+    if found is None:
+        print("هیچ بازه‌ی کاملی پیدا نشد.")
+        return
+    seg = candles[found:found + win]
+    dirs = [A.candle_direction(c) for c in seg]
+    longest = A.longest_alt_flips(dirs)
+    total = sum(1 for k in range(1, len(dirs))
+                if dirs[k] != 0 and dirs[k - 1] != 0 and dirs[k] == -dirs[k - 1])
+    start = datetime.fromtimestamp(seg[0]["time"], tz=tz)
+    print(f"تاریخ: {start:%Y-%m-%d}  | الگو: " + "".join(sym[d] for d in dirs))
+    print(f"بلندترین زنجیره‌ی بی‌وقفه (تناوب اپ) = {longest} | کل تغییر رنگ = {total}")
+    for c in seg:
+        d = A.candle_direction(c)
+        t = datetime.fromtimestamp(c["time"], tz=tz)
+        print(f"   {t:%H:%M}  open={c['open']:.2f}  close={c['close']:.2f}  {sym[d]}")
+    print("=== END DEBUG ===\n")
+
+
 def main():
     tz, tz_name = A.get_tz()
+    debug_window(tz)
     datasets = {}
     for key, ex_label, tf_label, source, interval, gran, product in CONFIGS:
         print(f"== building {key} ({ex_label} {tf_label}) ==")
