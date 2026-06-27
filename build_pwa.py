@@ -36,6 +36,7 @@ CONFIGS = [
 # built for a timeframe when it spans at least 2 candles (so 1h windows are
 # skipped on the 1-hour timeframe, 30m only applies to 5m/15m, etc.).
 WIN_LENGTHS = [30, 60, 120, 180, 240, 300, 360, 480, 600]
+RECENT_K = 6  # how many most-recent occurrences of each window to keep
 
 
 def pack(stats):
@@ -80,13 +81,17 @@ def build_dataset(tz, source, interval, granularity, product, ex_label, tf_label
         win = round(wm * 60 / granularity)  # candles per window
         if win < 2:
             continue  # window too short for this timeframe (e.g. 1h on 1h)
-        samples = A.build_rolling_samples(candles, tz, win=win)
+        samples = A.build_rolling_samples(candles, tz, win=win, with_times=True)
         per_wd = {}
         for wd in range(7):
             r = []
-            for (h, m), vals in samples[wd].items():
+            for (h, m), pairs in samples[wd].items():
+                flips = [f for _, f in pairs]
+                recent = pairs[-RECENT_K:]              # oldest -> newest
+                rc = [f for _, f in recent][::-1]        # newest first
+                rd = datetime.fromtimestamp(recent[-1][0], tz=tz).strftime("%Y-%m-%d")
                 r.append({"start": h * 60 + m, "label": A.window_label(h, m, wm),
-                          **pack(A.summarize_hour(vals))})
+                          **pack(A.summarize_hour(flips)), "rc": rc, "rd": rd})
             r.sort(key=lambda x: x["start"])
             per_wd[str(wd)] = r
         rolling_out[str(wm)] = per_wd

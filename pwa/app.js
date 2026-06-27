@@ -133,11 +133,55 @@ function render() {
         `<div class="row"><span>احتمال تناوب بالای میانگین</span><b>${w.ap}%</b></div>` +
         `<div class="row"><span>بیشینه</span><b>${w.mx} (${w.mxc} بار)</b></div>`;
       if (showHist) div.appendChild(histBars(w.hist));
+      if (w.rc && w.rc.length) div.appendChild(recentToggle(w, wd));
       card.appendChild(div);
     });
     out.appendChild(card);
   }
   renderGap();
+}
+
+// "YYYY-MM-DD" plus/minus a number of days.
+function addDays(s, delta) {
+  const [y, mo, da] = s.split('-').map(Number);
+  const dt = new Date(Date.UTC(y, mo - 1, da));
+  dt.setUTCDate(dt.getUTCDate() + delta);
+  const p = (n) => String(n).padStart(2, '0');
+  return `${dt.getUTCFullYear()}-${p(dt.getUTCMonth() + 1)}-${p(dt.getUTCDate())}`;
+}
+
+// A collapsible "recent occurrences" panel for one window (last ~6 weeks).
+function recentToggle(w, wd) {
+  const dayName = DATA.names[String(wd)];
+  const btn = document.createElement('button');
+  btn.className = 'recentbtn';
+  btn.textContent = '🔎 رخدادهای اخیر این بازه';
+  const panel = document.createElement('div');
+  panel.className = 'recent';
+  panel.style.display = 'none';
+  btn.addEventListener('click', () => {
+    if (panel.dataset.built !== '1') {
+      const mx = Math.max(...w.rc);
+      const head = document.createElement('div');
+      head.className = 'rhead';
+      head.innerHTML =
+        `آخرین بار (${dayName} ${w.rd}): <b>${w.rc[0]}</b> تناوب` +
+        ` • بیشترین در ${w.rc.length} هفته‌ی اخیر: <b>${mx}</b>`;
+      panel.appendChild(head);
+      w.rc.forEach((v, i) => {
+        const row = document.createElement('div');
+        row.className = 'row';
+        row.innerHTML = `<span>${dayName} ${addDays(w.rd, -7 * i)}</span><b>${v} تناوب</b>`;
+        panel.appendChild(row);
+      });
+      panel.dataset.built = '1';
+    }
+    panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+  });
+  const box = document.createElement('div');
+  box.appendChild(btn);
+  box.appendChild(panel);
+  return box;
 }
 
 function distBars(hist, unit) {
