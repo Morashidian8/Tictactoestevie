@@ -599,6 +599,17 @@ def get_candles():
 # ---------------------------------------------------------------------------
 # Alternation metric
 # ---------------------------------------------------------------------------
+def directions_of(candles):
+    """Candle colours for the whole series, colouring each doji by comparison
+    to the PREVIOUS candle's close (matching chart conventions)."""
+    out = []
+    prev = None
+    for c in candles:
+        out.append(candle_direction(c, prev))
+        prev = c["close"]
+    return out
+
+
 def longest_alt_flips(directions):
     """
     Number of flips in the LONGEST strictly-alternating run inside `directions`.
@@ -628,7 +639,7 @@ def alternation_runs(candles):
     strictly-alternating run across the whole candle series. A run of flips
     i..j means candles i-1..j alternate; its length (in flips) is j-i+1.
     """
-    dirs = [candle_direction(c) for c in candles]
+    dirs = directions_of(candles)
     n = len(dirs)
     runs = []
     i = 1
@@ -702,11 +713,12 @@ def build_hour_samples(candles, tz):
     five-minute candles, in time order.
     """
     # Group candle directions by (date, weekday, hour) in the target timezone.
+    dirs_all = directions_of(candles)
     buckets = {}  # (date, weekday, hour) -> list of (minute_key, direction)
-    for c in candles:
+    for idx, c in enumerate(candles):
         dt = datetime.fromtimestamp(c["time"], tz=timezone.utc).astimezone(tz)
         key = (dt.date(), dt.weekday(), dt.hour)
-        buckets.setdefault(key, []).append((c["time"], candle_direction(c)))
+        buckets.setdefault(key, []).append((c["time"], dirs_all[idx]))
 
     samples = {wd: {h: [] for h in range(24)} for wd in range(7)}
     for (date, weekday, hour), items in buckets.items():
@@ -732,7 +744,7 @@ def build_rolling_samples(candles, tz, win=None, with_times=False):
     """
     n = len(candles)
     times = [c["time"] for c in candles]
-    dirs = [candle_direction(c) for c in candles]
+    dirs = directions_of(candles)
     # Infer the candle step (seconds) from the data so this works for any
     # timeframe (5m, 15m, ...) regardless of the module-level GRANULARITY.
     diffs = [times[i + 1] - times[i] for i in range(min(n - 1, 1000))]

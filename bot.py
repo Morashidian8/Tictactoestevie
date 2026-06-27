@@ -249,13 +249,23 @@ def fetch_candles_binance():
     return candles
 
 
-def candle_direction(candle) -> int:
-    """+1 green (bullish), -1 red (bearish), 0 doji (flat)."""
-    if candle["close"] > candle["open"]:
+def candle_direction(candle, prev_close=None) -> int:
+    """
+    +1 green (bullish), -1 red (bearish).
+
+    close > open -> green, close < open -> red. For a doji (close == open) we
+    match how Binance/TradingView colour it: green if its close is >= the
+    PREVIOUS candle's close, otherwise red (falls back to green when there is
+    no previous candle to compare with).
+    """
+    o, c = candle["open"], candle["close"]
+    if c > o:
         return 1
-    if candle["close"] < candle["open"]:
+    if c < o:
         return -1
-    return 0
+    if prev_close is None:
+        return 1
+    return 1 if c >= prev_close else -1
 
 
 def dir_label(d: int) -> str:
