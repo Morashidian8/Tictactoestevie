@@ -282,8 +282,8 @@ function render(){if(!DB.user&&route!=='profile')route='profile';
   inspect:Inspect,report:Report,settings:Settings}[route]||Buildings)();bind();}
 
 //============ shared ============
-const GASLOGO=`<svg viewBox="0 0 100 100" width="22" height="22" aria-hidden="true"><defs><linearGradient id="gy" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffe14d"/><stop offset="1" stop-color="#f5b100"/></linearGradient></defs><circle cx="50" cy="50" r="47" fill="url(#gy)"/><circle cx="50" cy="50" r="38" fill="#fff"/><path d="M50 20c4.5 7.2-2.8 10.5-2.8 16.3 0 2.7 2.2 4.6 4.8 4.2-1.4 3.6 .2 6.6 2.8 8.2-7.6 1.4-13.6-4-13.6-11.2 0-7 5-12 8.8-17.5z" fill="#e2231a"/><rect x="44.5" y="41" width="11" height="7" rx="2.5" fill="#173f8a"/><path d="M30 52c4.4 5 11 7.2 20 7.2s15.6-2.2 20-7.2c-1 7.2-6.6 12-14 12.8 2.6 1 4.2 2.8 4.2 5.4-3-1.8-6.4-2.6-10.2-2.6s-7.2 .8-10.2 2.6c0-2.6 1.6-4.4 4.2-5.4-7.4-.8-13-5.6-14-12.8z" fill="#173f8a"/><circle cx="50" cy="63" r="2.6" fill="#fff"/></svg>`;
-const BRAND=`<div class="brand">${GASLOGO}<span>واحد مستغلات شرکت گاز استان تهران</span></div>`;
+function logoImg(px){return '<img src="logo.png" alt="لوگوی شرکت گاز استان تهران" style="width:'+px+'px;height:'+px+'px;border-radius:50%;object-fit:cover;display:inline-block;vertical-align:middle">';}
+const BRAND=`<div class="brand">${logoImg(26)}<span>واحد مستغلات شرکت گاز استان تهران</span></div>`;
 const head=(title,opt={})=>`<div class="head">${BRAND}<div class="top">
   <h1>${opt.back?`<span class="back" data-go="${opt.back}">↩ بازگشت</span>`:''}<span>${esc(title)}</span></h1>
   <div class="row">${opt.right||''}</div></div>${opt.sub?`<div class="sub">${esc(opt.sub)}</div>`:''}</div>`;
@@ -307,7 +307,7 @@ function Profile(){const editing=!!DB.user;const u=DB.user||{};
  if(!DB._prof)DB._prof={fn:u.fn||'',ln:u.ln||'',nid:u.nid||'',pos:u.pos||''};
  if(!DB._profJ)DB._profJ=u.dateJ?parseJ(u.dateJ):todayJ();
  return head(editing?'مشخصات بازرس':'ورود بازرس',editing?{back:'settings'}:{})+`<div class="body">
-   ${editing?'':`<div style="text-align:center;margin:8px 0 2px">${GASLOGO.replace('width="22" height="22"','width="92" height="92"')}</div>
+   ${editing?'':`<div style="text-align:center;margin:8px 0 2px">${logoImg(108)}</div>
    <div style="text-align:center;font-weight:800;margin-top:8px">واحد مستغلات شرکت گاز استان تهران</div>
    <div style="text-align:center;color:var(--muted);font-size:13px;margin:5px 0 14px">مشخصات خود و تاریخ بازدید را یک‌بار وارد کنید</div>`}
    <div class="card">
