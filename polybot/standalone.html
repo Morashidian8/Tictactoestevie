@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>PolyBot ساده</title>
+<title>PolyBot — کندلِ واقعی</title>
 <style>
   :root{--bg:#0E1117;--surface:#161A23;--surfaceVar:#1E2430;--line:#2a3142;
     --green:#16C784;--red:#EA3943;--indigo:#818CF8;--muted:#8b93a7;--text:#E6E9EF;}
@@ -12,48 +12,48 @@
   h2{margin:18px 4px 8px;font-size:15px;color:var(--muted)}
   .card{background:var(--surface);border-radius:14px;padding:16px;margin-bottom:12px}
   .banner{background:rgba(22,199,132,.15);border-radius:12px;padding:10px 12px;font-weight:700;font-size:13px;margin-bottom:12px}
-  .equity{font-size:34px;font-weight:800;margin:2px 0}
+  .equity{font-size:32px;font-weight:800;margin:2px 0}
   .muted{color:var(--muted);font-size:13px}
+  .big{font-size:15px}
   .stats{display:flex;gap:8px;margin:12px 0}
   .stat{flex:1;background:var(--surfaceVar);border-radius:10px;padding:10px;text-align:center}
   .stat .v{font-size:18px;font-weight:800;margin-top:2px}
   .btns{display:flex;gap:8px;margin-top:6px}
-  button{flex:1;border:0;border-radius:22px;padding:13px;font-size:15px;font-weight:800;color:#0b0d12;background:var(--indigo)}
+  button{flex:1;border:0;border-radius:22px;padding:13px;font-size:15px;font-weight:800;color:#0b0d12;background:var(--green)}
   button.ghost{background:transparent;color:var(--text);border:1px solid var(--line)}
-  button.run{background:var(--green)}
   label{display:block;font-size:13px;color:var(--muted);margin:12px 0 5px}
   input,select{width:100%;background:#0f131b;border:1px solid var(--line);color:var(--text);border-radius:10px;padding:11px;font-size:15px}
-  .sw{display:flex;align-items:center;gap:8px;margin-top:12px}
-  .sw input{width:auto}
+  .sw{display:flex;align-items:center;gap:8px;margin-top:12px}.sw input{width:auto}
   .pos{font-size:17px;font-weight:800}
   .chip{font-size:11px;font-weight:900;padding:3px 8px;border-radius:6px}
-  .up{color:var(--green);background:rgba(22,199,132,.18)}
-  .down{color:var(--red);background:rgba(234,57,67,.18)}
+  .up{color:var(--green);background:rgba(22,199,132,.18)}.down{color:var(--red);background:rgba(234,57,67,.18)}
   .trade{display:flex;align-items:center;gap:8px;border-top:1px solid var(--line);padding:9px 0;font-size:13px}
-  .sp{flex:1}
-  .dot{display:inline-block;width:11px;height:11px;border-radius:50%;vertical-align:middle}
+  .sp{flex:1}.dot{display:inline-block;width:11px;height:11px;border-radius:50%;vertical-align:middle}
 </style>
 </head>
 <body>
 
-  <h2 style="font-size:22px;color:var(--text)">PolyBot — نسخه‌ی ساده</h2>
-  <div class="banner">حالتِ تمرینی — پولِ فرضی. هیچ ریسکِ واقعی نیست. همه‌چی داخلِ همین صفحه اجرا می‌شه.</div>
+  <h2 style="font-size:22px;color:var(--text)">PolyBot — کندلِ واقعیِ ۵ دقیقه‌ای</h2>
+  <div class="banner">پولِ فرضی · کندلِ واقعیِ بیت‌کوین · سینک با ساعتِ واقعی. هر کندل که بسته شه، یک تصمیم.</div>
 
   <div class="card">
     <div class="muted">موجودی (Equity)</div>
     <div class="equity" id="equity">$100.00</div>
-    <div class="muted">سود/زیان: <b id="pnl" style="color:var(--green)">+$0.00</b>
-      · کندلِ فعلی <span id="cdot" class="dot" style="background:var(--muted)"></span>
-      <b id="price">$—</b></div>
+    <div class="muted">سود/زیان: <b id="pnl" style="color:var(--green)">+$0.00</b></div>
+    <div class="big" style="margin-top:10px">قیمتِ لحظه‌ای BTC: <b id="price">—</b></div>
+    <div class="muted" style="margin-top:4px">کندلِ فعلی <span id="cdot" class="dot" style="background:var(--muted)"></span>
+      · بسته شدن تا: <b id="cd">—</b></div>
+    <div class="muted" id="lastc" style="margin-top:4px">آخرین کندلِ بسته‌شده: —</div>
     <div class="stats">
       <div class="stat"><div class="muted">نرخِ برد</div><div class="v" id="wr">—</div></div>
       <div class="stat"><div class="muted">برد/باخت</div><div class="v" id="wl">0/0</div></div>
       <div class="stat"><div class="muted">مرحله</div><div class="v" id="step">x0</div></div>
     </div>
     <div class="btns">
-      <button class="run" id="startBtn" onclick="toggle()">▶ شروع</button>
+      <button id="startBtn" onclick="toggle()">▶ شروع</button>
       <button class="ghost" onclick="reset()">ریست</button>
     </div>
+    <div id="msg" class="muted" style="margin-top:8px;text-align:center"></div>
   </div>
 
   <h2>پوزیشنِ فعلی</h2>
@@ -62,24 +62,14 @@
     <div id="trades" style="margin-top:10px"></div>
   </div>
 
-  <h2>منبعِ دیتا</h2>
+  <h2>تنظیمات</h2>
   <div class="card">
-    <label>منبع</label>
-    <select id="src" onchange="onSrc()">
-      <option value="sim">شبیه‌سازی (همیشه کار می‌کنه)</option>
-      <option value="real">واقعیِ Polymarket — زنده</option>
+    <label>تایم‌فریمِ کندل</label>
+    <select id="tf">
+      <option value="5m" selected>۵ دقیقه (واقعی)</option>
+      <option value="1m">۱ دقیقه (واقعی)</option>
+      <option value="15m">۱۵ دقیقه (واقعی)</option>
     </select>
-    <div id="realBox" style="display:none">
-      <div class="btns" style="margin-top:10px"><button class="ghost" onclick="loadMarkets()">بارگذاریِ بازارهای بیت‌کوین</button></div>
-      <div id="mkts" class="muted" style="margin-top:8px"></div>
-      <label>توکنِ بازار</label>
-      <input id="token" placeholder="از لیستِ بالا یکی را انتخاب کن یا آی‌دی را بچسبان">
-      <div id="srcMsg" class="muted" style="margin-top:8px"></div>
-    </div>
-  </div>
-
-  <h2>استراتژی</h2>
-  <div class="card">
     <label>جهت</label>
     <select id="dir">
       <option value="follow">دنبالِ کندلِ قبلی (قرمز→پایین، سبز→بالا)</option>
@@ -92,35 +82,43 @@
     <input id="amt" type="number" value="1" min="0">
     <label>موجودیِ شروع ($)</label>
     <input id="bal" type="number" value="100" min="1">
-    <label>سرعت (ثانیه برای هر کندل)</label>
-    <input id="speed" type="number" value="2" min="1">
   </div>
 
-  <p class="muted" style="text-align:center;margin:18px 0">مشاوره‌ی مالی نیست. این استراتژی‌ها لبه‌ی تضمین‌شده ندارن.</p>
+  <p class="muted" style="text-align:center;margin:18px 0">دادهٔ کندل از Binance (همان قیمتی که بازارهای up/down روی آن resolve می‌شوند). مشاورهٔ مالی نیست.</p>
 
 <script>
-let timer=null, price=65000, prevColor=null, streakLen=0, lastRealPrice=null;
-let bal=100, start=100, openBet=null, trades=[], wins=0, losses=0, step=0, lastWon=null;
+const HOSTS=['https://data-api.binance.vision','https://api.binance.com'];
+let pollTimer=null, cdTimer=null, busy=false;
+let lastClosedOpen=null, formingClose=0, curPrice=null, curColor='none';
+let bal=100, start=100, openBet=null, trades=[], wins=0, losses=0, step=0;
+let prevColor=null, streakLen=0;
 
 function fmt(n){return (n==null?0:n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});}
-function timeNow(){return new Date().toLocaleTimeString('fa-IR');}
+function clk(ms){try{return new Date(ms).toLocaleTimeString('fa-IR');}catch(e){return '—';}}
 function colorOf(o,c){return c>o?'green':c<o?'red':'none';}
 
-function nextCandle(){
-  const o=price, c=o+(Math.random()*120-60);
-  price=c;
-  return {open:o,close:c,color:colorOf(o,c),time:timeNow(),price:Math.round(c)};
+async function getKlines(){
+  const tf=document.getElementById('tf').value;
+  let err;
+  for(const h of HOSTS){
+    try{
+      const r=await fetch(h+'/api/v3/klines?symbol=BTCUSDT&interval='+tf+'&limit=3');
+      if(!r.ok){err='HTTP '+r.status;continue;}
+      return await r.json();
+    }catch(e){err=e;}
+  }
+  throw err||new Error('fetch');
 }
+
 function decide(color){
-  // streak tracking
   if(color==='none'){streakLen=0;}
   else if(color===prevColor){streakLen++;}
   else {streakLen=1;}
   prevColor=color;
   const need=Math.max(1,parseInt(document.getElementById('streak').value)||1);
   if(color==='none'||streakLen<need) return null;
-  let sig = color==='green'?'up':'down';
-  if(document.getElementById('dir').value==='fade') sig = sig==='up'?'down':'up';
+  let sig=color==='green'?'up':'down';
+  if(document.getElementById('dir').value==='fade') sig=sig==='up'?'down':'up';
   return sig;
 }
 function stake(){
@@ -129,136 +127,112 @@ function stake(){
   return Math.min(base*Math.pow(2,step), bal);
 }
 
-function onSrc(){ document.getElementById('realBox').style.display =
-  document.getElementById('src').value==='real' ? 'block' : 'none'; }
-
-async function loadMarkets(){
-  const box=document.getElementById('mkts');
-  box.textContent='در حال بارگذاری از Polymarket…'; box.style.color='var(--muted)';
-  try{
-    const r=await fetch('https://gamma-api.polymarket.com/markets?closed=false&limit=300');
-    const data=await r.json();
-    const rows=Array.isArray(data)?data:(data.data||data.markets||[]);
-    const btc=rows.filter(m=>{const t=((m.question||'')+' '+(m.slug||'')).toLowerCase();
-      return (t.includes('bitcoin')||t.includes('btc'))&&(t.includes('up or down')||t.includes('up/down')||t.includes('up-or-down')||t.includes('higher'));});
-    if(!btc.length){ box.textContent='بازارِ up/down بیت‌کوین پیدا نشد (شاید الان بازاری باز نیست).'; return; }
-    box.innerHTML=btc.slice(0,12).map(m=>{
-      let toks=[]; try{toks=JSON.parse(m.clobTokenIds);}catch(e){toks=m.clobTokenIds||[];}
-      return `<div class="trade" onclick="pick('${toks[0]}')"><span>${m.question}</span><span class="sp"></span><span class="chip up">انتخاب</span></div>`;
-    }).join('');
-  }catch(e){
-    box.innerHTML='<span style="color:var(--red)">❌ اتصال به Polymarket از مرورگر ممکن نشد (CORS). یعنی برای دیتای واقعی به یک سرورِ کوچک نیاز داریم — بهم بگو تا راهش رو بسازم.</span>';
-  }
-}
-function pick(id){ document.getElementById('token').value=id;
-  document.getElementById('mkts').innerHTML='✅ توکن انتخاب شد.'; }
-
-async function fetchRealPrice(){
-  const id=document.getElementById('token').value.trim();
-  if(!id) throw new Error('no-token');
-  const r=await fetch('https://clob.polymarket.com/midpoint?token_id='+encodeURIComponent(id));
-  const d=await r.json();
-  const p=parseFloat(d.mid);
-  if(isNaN(p)) throw new Error('bad-price');
-  return p;
-}
-
-let busy=false;
-async function tick(){
-  if(busy) return; busy=true;
-  let candle;
-  if(document.getElementById('src').value==='real'){
-    try{
-      const p=await fetchRealPrice();
-      const o=(lastRealPrice==null)?p:lastRealPrice;  // first sample is flat (no fake jump)
-      lastRealPrice=p; price=p;
-      candle={open:o,close:p,color:colorOf(o,p),time:timeNow(),price:p};
-      const m=document.getElementById('srcMsg');
-      m.textContent='قیمتِ واقعیِ Polymarket: '+p+' · '+timeNow(); m.style.color='var(--green)';
-    }catch(e){
-      const m=document.getElementById('srcMsg');
-      m.textContent='❌ گرفتنِ قیمتِ واقعی نشد (CORS یا توکنِ اشتباه). متوقف شد.'; m.style.color='var(--red)';
-      busy=false; stop(); return;
-    }
-  } else {
-    candle=nextCandle();
-  }
-  // 1) resolve open bet against this candle
+// Called once per *closed* 5-min candle.
+function onClosedCandle(o,c,closeTime){
+  const color=colorOf(o,c);
+  // 1) resolve the bet that was riding on this candle
   if(openBet){
-    const won = (openBet.signal==='up'&&candle.color==='green')||(openBet.signal==='down'&&candle.color==='red');
+    const won=(openBet.signal==='up'&&color==='green')||(openBet.signal==='down'&&color==='red');
     openBet.won=won;
-    if(won){ openBet.pnl=openBet.stake*0.95; bal+=openBet.stake+openBet.pnl; wins++; step=0; lastWon=true; }
-    else { openBet.pnl=-openBet.stake; losses++; step=Math.min(step+1,8); lastWon=false; }
-    trades.unshift(openBet); trades=trades.slice(0,12);
-    openBet=null;
+    if(won){openBet.pnl=openBet.stake*0.95; bal+=openBet.stake+openBet.pnl; wins++; step=0;}
+    else {openBet.pnl=-openBet.stake; losses++; step=Math.min(step+1,8);}
+    trades.unshift(openBet); trades=trades.slice(0,12); openBet=null;
   }
-  // 2) decide + place next bet
-  const sig=decide(candle.color);
+  // 2) decide for the NEXT candle and place a bet
+  const sig=decide(color);
   if(sig){
     const s=stake();
-    if(s>=0.01 && bal>=s){
-      bal-=s;
-      openBet={signal:sig,stake:s,entry:candle.price,time:candle.time,won:null,pnl:0};
-    }
+    if(s>=0.01 && bal>=s){ bal-=s; openBet={signal:sig,stake:s,entry:Math.round(c),time:clk(closeTime),won:null,pnl:0}; }
   }
-  if(bal+ (openBet?openBet.stake:0) <=0.01){ stop(); }
-  render(candle);
+  if(bal+(openBet?openBet.stake:0)<=0.01){ stop(); setMsg('موجودی تمام شد — متوقف شد.'); }
+}
+
+async function poll(){
+  if(busy) return; busy=true;
+  try{
+    const rows=await getKlines();
+    const closed=rows[rows.length-2], forming=rows[rows.length-1];
+    curPrice=Math.round(parseFloat(forming[4]));
+    curColor=colorOf(parseFloat(forming[1]),parseFloat(forming[4]));
+    formingClose=parseInt(forming[6]);
+    const o=parseFloat(closed[1]), c=parseFloat(closed[4]), ct=parseInt(closed[6]), oid=parseInt(closed[0]);
+    if(lastClosedOpen===null){
+      // first read: seed strategy on the just-closed candle (and maybe place first bet)
+      lastClosedOpen=oid; onClosedCandle(o,c,ct);
+      setMsg('وصل شد ✅ — منتظرِ بسته شدنِ کندلِ بعدی.');
+    } else if(oid!==lastClosedOpen){
+      lastClosedOpen=oid; onClosedCandle(o,c,ct);
+      setMsg('یک کندلِ '+document.getElementById('tf').value+' بسته شد ('+clk(ct)+').');
+    }
+    document.getElementById('lastc').innerHTML='آخرین کندلِ بسته‌شده: '+
+      '<span class="dot" style="background:'+(colorOf(o,c)==='green'?'var(--green)':'var(--red)')+'"></span> '+
+      (colorOf(o,c)==='green'?'سبز (بالا)':'قرمز (پایین)')+' @ $'+Math.round(c).toLocaleString('en-US')+' · '+clk(ct);
+    render();
+  }catch(e){
+    setMsg('❌ گرفتنِ کندلِ واقعی نشد (CORS/شبکه). اگر این پیام موند، باید یک سرورِ کوچک بسازم.');
+  }
   busy=false;
 }
 
-function render(candle){
+function setMsg(t){document.getElementById('msg').textContent=t||'';}
+
+function render(){
   const eq=bal+(openBet?openBet.stake:0);
   document.getElementById('equity').textContent='$'+fmt(eq);
-  const pnl=eq-start;
-  const pe=document.getElementById('pnl'); pe.textContent=(pnl>=0?'+':'')+'$'+fmt(pnl);
-  pe.style.color=pnl>=0?'var(--green)':'var(--red)';
+  const pnl=eq-start; const pe=document.getElementById('pnl');
+  pe.textContent=(pnl>=0?'+':'')+'$'+fmt(pnl); pe.style.color=pnl>=0?'var(--green)':'var(--red)';
   const tot=wins+losses;
-  document.getElementById('wr').textContent= tot? Math.round(wins/tot*100)+'%':'—';
+  document.getElementById('wr').textContent= tot?Math.round(wins/tot*100)+'%':'—';
   document.getElementById('wl').textContent=wins+'/'+losses;
   document.getElementById('step').textContent='x'+step;
-  if(candle){
-    document.getElementById('cdot').style.background= candle.color==='green'?'var(--green)':candle.color==='red'?'var(--red)':'var(--muted)';
-    document.getElementById('price').textContent='$'+candle.price.toLocaleString('en-US');
-  }
-  // position
-  const pe2=document.getElementById('pos');
-  if(openBet){
-    const up=openBet.signal==='up';
-    pe2.innerHTML=`<span class="pos" style="color:${up?'var(--green)':'var(--red)'}">● داخلِ پوزیشن — ${up?'UP (بالا)':'DOWN (پایین)'}</span>`
-      +`<div class="muted" style="margin-top:6px">مبلغ: $${fmt(openBet.stake)} · قیمتِ ورود: <b>$${openBet.entry.toLocaleString('en-US')}</b> · ساعتِ ورود: <b>${openBet.time}</b></div>`;
-  } else {
-    pe2.innerHTML='<span class="muted">الان داخلِ پوزیشن نیست — منتظرِ سیگنالِ بعدی.</span>';
-  }
-  // trades
+  document.getElementById('price').textContent= curPrice!=null?('$'+curPrice.toLocaleString('en-US')):'—';
+  document.getElementById('cdot').style.background= curColor==='green'?'var(--green)':curColor==='red'?'var(--red)':'var(--muted)';
+  const op=openBet, pe2=document.getElementById('pos');
+  if(op){
+    const up=op.signal==='up';
+    pe2.innerHTML='<span class="pos" style="color:'+(up?'var(--green)':'var(--red)')+'">● داخلِ پوزیشن — '+(up?'UP (بالا)':'DOWN (پایین)')+'</span>'+
+      '<div class="muted" style="margin-top:6px">مبلغ: $'+fmt(op.stake)+' · قیمتِ ورود: <b>$'+op.entry.toLocaleString('en-US')+'</b> · ساعتِ ورود: <b>'+op.time+'</b></div>'+
+      '<div class="muted" style="margin-top:4px">منتظرِ بسته شدنِ کندلِ فعلی برای نتیجه…</div>';
+  } else { pe2.innerHTML='<span class="muted">الان داخلِ پوزیشن نیست — منتظرِ سیگنالِ کندلِ بعدی.</span>'; }
   const box=document.getElementById('trades');
-  box.innerHTML = trades.length? ('<div class="muted" style="margin-bottom:4px">معاملاتِ اخیر</div>'+trades.map(t=>{
+  box.innerHTML= trades.length? ('<div class="muted" style="margin-bottom:4px">معاملاتِ اخیر</div>'+trades.map(t=>{
     const up=t.signal==='up';
-    const res= t.won? `<span style="color:var(--green)">برد +$${fmt(t.pnl)}</span>`:`<span style="color:var(--red)">باخت $${fmt(t.pnl)}</span>`;
-    return `<div class="trade"><span class="chip ${up?'up':'down'}">${up?'UP':'DOWN'}</span><span>$${fmt(t.stake)}</span><span class="muted">@$${t.entry.toLocaleString('en-US')}</span><span class="muted">${t.time}</span><span class="sp"></span>${res}</div>`;
+    const res= t.won? '<span style="color:var(--green)">برد +$'+fmt(t.pnl)+'</span>':'<span style="color:var(--red)">باخت $'+fmt(t.pnl)+'</span>';
+    return '<div class="trade"><span class="chip '+(up?'up':'down')+'">'+(up?'UP':'DOWN')+'</span><span>$'+fmt(t.stake)+'</span><span class="muted">@$'+t.entry.toLocaleString('en-US')+'</span><span class="muted">'+t.time+'</span><span class="sp"></span>'+res+'</div>';
   }).join('')) : '<span class="muted">هنوز معامله‌ای نشده.</span>';
 }
 
-function toggle(){ timer? stop() : run(); }
+function countdown(){
+  if(!formingClose){document.getElementById('cd').textContent='—';return;}
+  let s=Math.max(0,Math.floor((formingClose-Date.now())/1000));
+  const m=Math.floor(s/60); s=s%60;
+  document.getElementById('cd').textContent=m+':'+(s<10?'0':'')+s;
+}
+
+function toggle(){ pollTimer? stop() : run(); }
 function run(){
-  if(timer) return;
-  if(!trades.length && !openBet){ // fresh start: read balance
-    bal=parseFloat(document.getElementById('bal').value)||100; start=bal;
-  }
-  const sp=(parseFloat(document.getElementById('speed').value)||2)*1000;
-  timer=setInterval(tick, sp);
+  if(pollTimer) return;
+  if(!trades.length && !openBet){ bal=parseFloat(document.getElementById('bal').value)||100; start=bal; }
+  setMsg('در حال اتصال به دادهٔ واقعی…');
+  poll();
+  pollTimer=setInterval(poll, 15000);   // check every 15s; acts only when a candle closes
+  cdTimer=setInterval(countdown, 1000);
   document.getElementById('startBtn').textContent='● در حال اجرا — توقف';
-  document.getElementById('startBtn').classList.remove('run');
+  document.getElementById('startBtn').classList.add('ghost');
 }
 function stop(){
-  clearInterval(timer); timer=null;
+  clearInterval(pollTimer); pollTimer=null; clearInterval(cdTimer); cdTimer=null;
   document.getElementById('startBtn').textContent='▶ شروع';
-  document.getElementById('startBtn').classList.add('run');
+  document.getElementById('startBtn').classList.remove('ghost');
 }
 function reset(){
   stop();
-  price=65000; prevColor=null; streakLen=0; lastRealPrice=null; openBet=null; trades=[]; wins=0; losses=0; step=0; lastWon=null;
+  lastClosedOpen=null; formingClose=0; curPrice=null; curColor='none';
+  openBet=null; trades=[]; wins=0; losses=0; step=0; prevColor=null; streakLen=0;
   bal=parseFloat(document.getElementById('bal').value)||100; start=bal;
-  render(null);
+  setMsg(''); document.getElementById('cd').textContent='—';
+  document.getElementById('lastc').textContent='آخرین کندلِ بسته‌شده: —';
+  render();
 }
 reset();
 </script>
