@@ -62,6 +62,22 @@
     <div id="trades" style="margin-top:10px"></div>
   </div>
 
+  <h2>منبعِ دیتا</h2>
+  <div class="card">
+    <label>منبع</label>
+    <select id="src" onchange="onSrc()">
+      <option value="sim">شبیه‌سازی (همیشه کار می‌کنه)</option>
+      <option value="real">واقعیِ Polymarket — زنده</option>
+    </select>
+    <div id="realBox" style="display:none">
+      <div class="btns" style="margin-top:10px"><button class="ghost" onclick="loadMarkets()">بارگذاریِ بازارهای بیت‌کوین</button></div>
+      <div id="mkts" class="muted" style="margin-top:8px"></div>
+      <label>توکنِ بازار</label>
+      <input id="token" placeholder="از لیستِ بالا یکی را انتخاب کن یا آی‌دی را بچسبان">
+      <div id="srcMsg" class="muted" style="margin-top:8px"></div>
+    </div>
+  </div>
+
   <h2>استراتژی</h2>
   <div class="card">
     <label>جهت</label>
@@ -83,7 +99,7 @@
   <p class="muted" style="text-align:center;margin:18px 0">مشاوره‌ی مالی نیست. این استراتژی‌ها لبه‌ی تضمین‌شده ندارن.</p>
 
 <script>
-let timer=null, price=65000, prevColor=null, streakLen=0;
+let timer=null, price=65000, prevColor=null, streakLen=0, lastRealPrice=null;
 let bal=100, start=100, openBet=null, trades=[], wins=0, losses=0, step=0, lastWon=null;
 
 function fmt(n){return (n==null?0:n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});}
@@ -113,8 +129,60 @@ function stake(){
   return Math.min(base*Math.pow(2,step), bal);
 }
 
-function tick(){
-  const candle=nextCandle();
+function onSrc(){ document.getElementById('realBox').style.display =
+  document.getElementById('src').value==='real' ? 'block' : 'none'; }
+
+async function loadMarkets(){
+  const box=document.getElementById('mkts');
+  box.textContent='در حال بارگذاری از Polymarket…'; box.style.color='var(--muted)';
+  try{
+    const r=await fetch('https://gamma-api.polymarket.com/markets?closed=false&limit=300');
+    const data=await r.json();
+    const rows=Array.isArray(data)?data:(data.data||data.markets||[]);
+    const btc=rows.filter(m=>{const t=((m.question||'')+' '+(m.slug||'')).toLowerCase();
+      return (t.includes('bitcoin')||t.includes('btc'))&&(t.includes('up or down')||t.includes('up/down')||t.includes('up-or-down')||t.includes('higher'));});
+    if(!btc.length){ box.textContent='بازارِ up/down بیت‌کوین پیدا نشد (شاید الان بازاری باز نیست).'; return; }
+    box.innerHTML=btc.slice(0,12).map(m=>{
+      let toks=[]; try{toks=JSON.parse(m.clobTokenIds);}catch(e){toks=m.clobTokenIds||[];}
+      return `<div class="trade" onclick="pick('${toks[0]}')"><span>${m.question}</span><span class="sp"></span><span class="chip up">انتخاب</span></div>`;
+    }).join('');
+  }catch(e){
+    box.innerHTML='<span style="color:var(--red)">❌ اتصال به Polymarket از مرورگر ممکن نشد (CORS). یعنی برای دیتای واقعی به یک سرورِ کوچک نیاز داریم — بهم بگو تا راهش رو بسازم.</span>';
+  }
+}
+function pick(id){ document.getElementById('token').value=id;
+  document.getElementById('mkts').innerHTML='✅ توکن انتخاب شد.'; }
+
+async function fetchRealPrice(){
+  const id=document.getElementById('token').value.trim();
+  if(!id) throw new Error('no-token');
+  const r=await fetch('https://clob.polymarket.com/midpoint?token_id='+encodeURIComponent(id));
+  const d=await r.json();
+  const p=parseFloat(d.mid);
+  if(isNaN(p)) throw new Error('bad-price');
+  return p;
+}
+
+let busy=false;
+async function tick(){
+  if(busy) return; busy=true;
+  let candle;
+  if(document.getElementById('src').value==='real'){
+    try{
+      const p=await fetchRealPrice();
+      const o=(lastRealPrice==null)?p:lastRealPrice;  // first sample is flat (no fake jump)
+      lastRealPrice=p; price=p;
+      candle={open:o,close:p,color:colorOf(o,p),time:timeNow(),price:p};
+      const m=document.getElementById('srcMsg');
+      m.textContent='قیمتِ واقعیِ Polymarket: '+p+' · '+timeNow(); m.style.color='var(--green)';
+    }catch(e){
+      const m=document.getElementById('srcMsg');
+      m.textContent='❌ گرفتنِ قیمتِ واقعی نشد (CORS یا توکنِ اشتباه). متوقف شد.'; m.style.color='var(--red)';
+      busy=false; stop(); return;
+    }
+  } else {
+    candle=nextCandle();
+  }
   // 1) resolve open bet against this candle
   if(openBet){
     const won = (openBet.signal==='up'&&candle.color==='green')||(openBet.signal==='down'&&candle.color==='red');
@@ -135,6 +203,7 @@ function tick(){
   }
   if(bal+ (openBet?openBet.stake:0) <=0.01){ stop(); }
   render(candle);
+  busy=false;
 }
 
 function render(candle){
@@ -187,7 +256,7 @@ function stop(){
 }
 function reset(){
   stop();
-  price=65000; prevColor=null; streakLen=0; openBet=null; trades=[]; wins=0; losses=0; step=0; lastWon=null;
+  price=65000; prevColor=null; streakLen=0; lastRealPrice=null; openBet=null; trades=[]; wins=0; losses=0; step=0; lastWon=null;
   bal=parseFloat(document.getElementById('bal').value)||100; start=bal;
   render(null);
 }
