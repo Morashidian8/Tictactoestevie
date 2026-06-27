@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="fa">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>PolyBot ساده</title>
+<style>
+  :root{--bg:#0E1117;--surface:#161A23;--surfaceVar:#1E2430;--line:#2a3142;
+    --green:#16C784;--red:#EA3943;--indigo:#818CF8;--muted:#8b93a7;--text:#E6E9EF;}
+  *{box-sizing:border-box;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+  body{margin:0;background:var(--bg);color:var(--text);padding:14px;max-width:560px;margin:0 auto;direction:rtl}
+  h2{margin:18px 4px 8px;font-size:15px;color:var(--muted)}
+  .card{background:var(--surface);border-radius:14px;padding:16px;margin-bottom:12px}
+  .banner{background:rgba(22,199,132,.15);border-radius:12px;padding:10px 12px;font-weight:700;font-size:13px;margin-bottom:12px}
+  .equity{font-size:34px;font-weight:800;margin:2px 0}
+  .muted{color:var(--muted);font-size:13px}
+  .stats{display:flex;gap:8px;margin:12px 0}
+  .stat{flex:1;background:var(--surfaceVar);border-radius:10px;padding:10px;text-align:center}
+  .stat .v{font-size:18px;font-weight:800;margin-top:2px}
+  .btns{display:flex;gap:8px;margin-top:6px}
+  button{flex:1;border:0;border-radius:22px;padding:13px;font-size:15px;font-weight:800;color:#0b0d12;background:var(--indigo)}
+  button.ghost{background:transparent;color:var(--text);border:1px solid var(--line)}
+  button.run{background:var(--green)}
+  label{display:block;font-size:13px;color:var(--muted);margin:12px 0 5px}
+  input,select{width:100%;background:#0f131b;border:1px solid var(--line);color:var(--text);border-radius:10px;padding:11px;font-size:15px}
+  .sw{display:flex;align-items:center;gap:8px;margin-top:12px}
+  .sw input{width:auto}
+  .pos{font-size:17px;font-weight:800}
+  .chip{font-size:11px;font-weight:900;padding:3px 8px;border-radius:6px}
+  .up{color:var(--green);background:rgba(22,199,132,.18)}
+  .down{color:var(--red);background:rgba(234,57,67,.18)}
+  .trade{display:flex;align-items:center;gap:8px;border-top:1px solid var(--line);padding:9px 0;font-size:13px}
+  .sp{flex:1}
+  .dot{display:inline-block;width:11px;height:11px;border-radius:50%;vertical-align:middle}
+</style>
+</head>
+<body>
+
+  <h2 style="font-size:22px;color:var(--text)">PolyBot — نسخه‌ی ساده</h2>
+  <div class="banner">حالتِ تمرینی — پولِ فرضی. هیچ ریسکِ واقعی نیست. همه‌چی داخلِ همین صفحه اجرا می‌شه.</div>
+
+  <div class="card">
+    <div class="muted">موجودی (Equity)</div>
+    <div class="equity" id="equity">$100.00</div>
+    <div class="muted">سود/زیان: <b id="pnl" style="color:var(--green)">+$0.00</b>
+      · کندلِ فعلی <span id="cdot" class="dot" style="background:var(--muted)"></span>
+      <b id="price">$—</b></div>
+    <div class="stats">
+      <div class="stat"><div class="muted">نرخِ برد</div><div class="v" id="wr">—</div></div>
+      <div class="stat"><div class="muted">برد/باخت</div><div class="v" id="wl">0/0</div></div>
+      <div class="stat"><div class="muted">مرحله</div><div class="v" id="step">x0</div></div>
+    </div>
+    <div class="btns">
+      <button class="run" id="startBtn" onclick="toggle()">▶ شروع</button>
+      <button class="ghost" onclick="reset()">ریست</button>
+    </div>
+  </div>
+
+  <h2>پوزیشنِ فعلی</h2>
+  <div class="card">
+    <div id="pos" class="muted">هنوز شروع نشده.</div>
+    <div id="trades" style="margin-top:10px"></div>
+  </div>
+
+  <h2>استراتژی</h2>
+  <div class="card">
+    <label>جهت</label>
+    <select id="dir">
+      <option value="follow">دنبالِ کندلِ قبلی (قرمز→پایین، سبز→بالا)</option>
+      <option value="fade">برعکسِ کندلِ قبلی (قرمز→بالا، سبز→پایین)</option>
+    </select>
+    <label>حداقل استریک (بعد از N کندلِ هم‌رنگ وارد شو)</label>
+    <input id="streak" type="number" value="1" min="1">
+    <div class="sw"><input type="checkbox" id="mart" checked><span>مارتینگل (بعد از باخت دوبرابر) — ⚠️ پرریسک</span></div>
+    <label>مبلغِ هر معامله ($)</label>
+    <input id="amt" type="number" value="1" min="0">
+    <label>موجودیِ شروع ($)</label>
+    <input id="bal" type="number" value="100" min="1">
+    <label>سرعت (ثانیه برای هر کندل)</label>
+    <input id="speed" type="number" value="2" min="1">
+  </div>
+
+  <p class="muted" style="text-align:center;margin:18px 0">مشاوره‌ی مالی نیست. این استراتژی‌ها لبه‌ی تضمین‌شده ندارن.</p>
+
+<script>
+let timer=null, price=65000, prevColor=null, streakLen=0;
+let bal=100, start=100, openBet=null, trades=[], wins=0, losses=0, step=0, lastWon=null;
+
+function fmt(n){return (n==null?0:n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});}
+function timeNow(){return new Date().toLocaleTimeString('fa-IR');}
+function colorOf(o,c){return c>o?'green':c<o?'red':'none';}
+
+function nextCandle(){
+  const o=price, c=o+(Math.random()*120-60);
+  price=c;
+  return {open:o,close:c,color:colorOf(o,c),time:timeNow(),price:Math.round(c)};
+}
+function decide(color){
+  // streak tracking
+  if(color==='none'){streakLen=0;}
+  else if(color===prevColor){streakLen++;}
+  else {streakLen=1;}
+  prevColor=color;
+  const need=Math.max(1,parseInt(document.getElementById('streak').value)||1);
+  if(color==='none'||streakLen<need) return null;
+  let sig = color==='green'?'up':'down';
+  if(document.getElementById('dir').value==='fade') sig = sig==='up'?'down':'up';
+  return sig;
+}
+function stake(){
+  const base=parseFloat(document.getElementById('amt').value)||1;
+  if(!document.getElementById('mart').checked) return Math.min(base,bal);
+  return Math.min(base*Math.pow(2,step), bal);
+}
+
+function tick(){
+  const candle=nextCandle();
+  // 1) resolve open bet against this candle
+  if(openBet){
+    const won = (openBet.signal==='up'&&candle.color==='green')||(openBet.signal==='down'&&candle.color==='red');
+    openBet.won=won;
+    if(won){ openBet.pnl=openBet.stake*0.95; bal+=openBet.stake+openBet.pnl; wins++; step=0; lastWon=true; }
+    else { openBet.pnl=-openBet.stake; losses++; step=Math.min(step+1,8); lastWon=false; }
+    trades.unshift(openBet); trades=trades.slice(0,12);
+    openBet=null;
+  }
+  // 2) decide + place next bet
+  const sig=decide(candle.color);
+  if(sig){
+    const s=stake();
+    if(s>=0.01 && bal>=s){
+      bal-=s;
+      openBet={signal:sig,stake:s,entry:candle.price,time:candle.time,won:null,pnl:0};
+    }
+  }
+  if(bal+ (openBet?openBet.stake:0) <=0.01){ stop(); }
+  render(candle);
+}
+
+function render(candle){
+  const eq=bal+(openBet?openBet.stake:0);
+  document.getElementById('equity').textContent='$'+fmt(eq);
+  const pnl=eq-start;
+  const pe=document.getElementById('pnl'); pe.textContent=(pnl>=0?'+':'')+'$'+fmt(pnl);
+  pe.style.color=pnl>=0?'var(--green)':'var(--red)';
+  const tot=wins+losses;
+  document.getElementById('wr').textContent= tot? Math.round(wins/tot*100)+'%':'—';
+  document.getElementById('wl').textContent=wins+'/'+losses;
+  document.getElementById('step').textContent='x'+step;
+  if(candle){
+    document.getElementById('cdot').style.background= candle.color==='green'?'var(--green)':candle.color==='red'?'var(--red)':'var(--muted)';
+    document.getElementById('price').textContent='$'+candle.price.toLocaleString('en-US');
+  }
+  // position
+  const pe2=document.getElementById('pos');
+  if(openBet){
+    const up=openBet.signal==='up';
+    pe2.innerHTML=`<span class="pos" style="color:${up?'var(--green)':'var(--red)'}">● داخلِ پوزیشن — ${up?'UP (بالا)':'DOWN (پایین)'}</span>`
+      +`<div class="muted" style="margin-top:6px">مبلغ: $${fmt(openBet.stake)} · قیمتِ ورود: <b>$${openBet.entry.toLocaleString('en-US')}</b> · ساعتِ ورود: <b>${openBet.time}</b></div>`;
+  } else {
+    pe2.innerHTML='<span class="muted">الان داخلِ پوزیشن نیست — منتظرِ سیگنالِ بعدی.</span>';
+  }
+  // trades
+  const box=document.getElementById('trades');
+  box.innerHTML = trades.length? ('<div class="muted" style="margin-bottom:4px">معاملاتِ اخیر</div>'+trades.map(t=>{
+    const up=t.signal==='up';
+    const res= t.won? `<span style="color:var(--green)">برد +$${fmt(t.pnl)}</span>`:`<span style="color:var(--red)">باخت $${fmt(t.pnl)}</span>`;
+    return `<div class="trade"><span class="chip ${up?'up':'down'}">${up?'UP':'DOWN'}</span><span>$${fmt(t.stake)}</span><span class="muted">@$${t.entry.toLocaleString('en-US')}</span><span class="muted">${t.time}</span><span class="sp"></span>${res}</div>`;
+  }).join('')) : '<span class="muted">هنوز معامله‌ای نشده.</span>';
+}
+
+function toggle(){ timer? stop() : run(); }
+function run(){
+  if(timer) return;
+  if(!trades.length && !openBet){ // fresh start: read balance
+    bal=parseFloat(document.getElementById('bal').value)||100; start=bal;
+  }
+  const sp=(parseFloat(document.getElementById('speed').value)||2)*1000;
+  timer=setInterval(tick, sp);
+  document.getElementById('startBtn').textContent='● در حال اجرا — توقف';
+  document.getElementById('startBtn').classList.remove('run');
+}
+function stop(){
+  clearInterval(timer); timer=null;
+  document.getElementById('startBtn').textContent='▶ شروع';
+  document.getElementById('startBtn').classList.add('run');
+}
+function reset(){
+  stop();
+  price=65000; prevColor=null; streakLen=0; openBet=null; trades=[]; wins=0; losses=0; step=0; lastWon=null;
+  bal=parseFloat(document.getElementById('bal').value)||100; start=bal;
+  render(null);
+}
+reset();
+</script>
+</body>
+</html>
