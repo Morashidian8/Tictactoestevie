@@ -11,6 +11,10 @@ on:
       - "pwa/**"
       - "build_pwa.py"
       - ".github/workflows/pwa.yml"
+  schedule:
+    # Rebuild hourly so the published data stays fresh (UTC). GitHub may delay
+    # scheduled runs by a few minutes; that is fine for a yearly analysis.
+    - cron: "0 * * * *"
   workflow_dispatch:
     inputs:
       source:
