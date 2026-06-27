@@ -419,10 +419,12 @@ function Settings(){const u=DB.user||{};return head('تنظیمات',{back:'buil
 //============ maps ============
 function openNeshan(lat,lng){var web='https://neshan.org/maps/@'+lat+','+lng+',16z';
  var ua=navigator.userAgent||'';
- if(/android/i.test(ua)){
-   // باز کردن اپ نشان روی گوشی برای مسیریابی؛ در صورت نبود اپ، سایت باز می‌شود
-   window.location.href='intent://maps/@'+lat+','+lng+',16z#Intent;scheme=https;package=org.neshan.explore.main;S.browser_fallback_url='+encodeURIComponent(web)+';end';
- }else{window.open(web,'_blank');}}
+ if(!/android/i.test(ua)){window.open(web,'_blank');return;}
+ var fired=Date.now();
+ // ۱) تلاش برای باز کردن مستقیم اپ نشان روی گوشی
+ window.location.href='intent://maps/@'+lat+','+lng+',16z#Intent;scheme=https;package=org.neshan.explore.main;end';
+ // ۲) اگر اپ نشان باز نشد، نقشهٔ مسیریابی پیش‌فرض گوشی (geo) باز شود
+ setTimeout(function(){if(!document.hidden&&Date.now()-fired<2500){window.location.href='geo:'+lat+','+lng+'?q='+lat+','+lng+'(مقصد)';}},1400);}
 function openGmap(lat,lng){window.open('https://www.google.com/maps?q='+lat+','+lng,'_blank');}
 
 //============ images ============
