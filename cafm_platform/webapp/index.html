@@ -282,7 +282,7 @@ function render(){if(!DB.user&&route!=='profile')route='profile';
   inspect:Inspect,report:Report,settings:Settings}[route]||Buildings)();bind();}
 
 //============ shared ============
-const GASLOGO=`<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true"><path d="M12 2c.6 2.4-1.3 3.6-2 5.2-.4 1 .2 2.1 1.2 2.1.9 0 1.4-.7 1.5-1.5 1.6 1.4 2.6 3.3 2.6 5.4A6.3 6.3 0 1 1 6.5 13c0-2 .9-3.7 2.1-5.2C9.9 6.1 11.6 4.7 12 2z"/></svg>`;
+const GASLOGO=`<svg viewBox="0 0 100 100" width="22" height="22" aria-hidden="true"><defs><linearGradient id="gy" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffe14d"/><stop offset="1" stop-color="#f5b100"/></linearGradient></defs><circle cx="50" cy="50" r="47" fill="url(#gy)"/><circle cx="50" cy="50" r="38" fill="#fff"/><path d="M50 20c4.5 7.2-2.8 10.5-2.8 16.3 0 2.7 2.2 4.6 4.8 4.2-1.4 3.6 .2 6.6 2.8 8.2-7.6 1.4-13.6-4-13.6-11.2 0-7 5-12 8.8-17.5z" fill="#e2231a"/><rect x="44.5" y="41" width="11" height="7" rx="2.5" fill="#173f8a"/><path d="M30 52c4.4 5 11 7.2 20 7.2s15.6-2.2 20-7.2c-1 7.2-6.6 12-14 12.8 2.6 1 4.2 2.8 4.2 5.4-3-1.8-6.4-2.6-10.2-2.6s-7.2 .8-10.2 2.6c0-2.6 1.6-4.4 4.2-5.4-7.4-.8-13-5.6-14-12.8z" fill="#173f8a"/><circle cx="50" cy="63" r="2.6" fill="#fff"/></svg>`;
 const BRAND=`<div class="brand">${GASLOGO}<span>واحد مستغلات شرکت گاز استان تهران</span></div>`;
 const head=(title,opt={})=>`<div class="head">${BRAND}<div class="top">
   <h1>${opt.back?`<span class="back" data-go="${opt.back}">↩ بازگشت</span>`:''}<span>${esc(title)}</span></h1>
@@ -307,7 +307,7 @@ function Profile(){const editing=!!DB.user;const u=DB.user||{};
  if(!DB._prof)DB._prof={fn:u.fn||'',ln:u.ln||'',nid:u.nid||'',pos:u.pos||''};
  if(!DB._profJ)DB._profJ=u.dateJ?parseJ(u.dateJ):todayJ();
  return head(editing?'مشخصات بازرس':'ورود بازرس',editing?{back:'settings'}:{})+`<div class="body">
-   ${editing?'':`<div style="text-align:center;margin:6px 0 2px;color:var(--primary)"><span style="display:inline-flex;width:66px;height:66px;border-radius:20px;background:rgba(79,70,229,.1);align-items:center;justify-content:center">${GASLOGO.replace('width="20" height="20"','width="36" height="36"')}</span></div>
+   ${editing?'':`<div style="text-align:center;margin:8px 0 2px">${GASLOGO.replace('width="22" height="22"','width="92" height="92"')}</div>
    <div style="text-align:center;font-weight:800;margin-top:8px">واحد مستغلات شرکت گاز استان تهران</div>
    <div style="text-align:center;color:var(--muted);font-size:13px;margin:5px 0 14px">مشخصات خود و تاریخ بازدید را یک‌بار وارد کنید</div>`}
    <div class="card">
@@ -339,7 +339,7 @@ function Building(){const b=DB.buildings.find(x=>x.id===params.id);if(!b)return 
    <div class="card"><div class="title" style="margin-top:0">📋 مشخصات ساختمان</div>
      <div class="stats">${info.map(([t,n])=>`<div class="stat"><div class="n">${n}</div><div class="t">${t}</div></div>`).join('')}</div>
      <div class="specrow" style="margin-top:10px"><span class="k">📍 موقعیت روی نقشه</span>
-       <span class="v"><a href="https://www.google.com/maps?q=${b.lat},${b.lng}" target="_blank" rel="noopener" style="color:var(--primary)">گوگل‌مپ ↗</a> &nbsp;·&nbsp; <a href="https://neshan.org/maps/@${b.lat},${b.lng},16z" target="_blank" rel="noopener" style="color:#16a34a">مسیریاب نشان ↗</a></span></div>
+       <span class="v"><span onclick="openGmap(${b.lat},${b.lng})" style="color:var(--primary);cursor:pointer">گوگل‌مپ ↗</span> &nbsp;·&nbsp; <span onclick="openNeshan(${b.lat},${b.lng})" style="color:#16a34a;cursor:pointer">مسیریاب نشان ↗</span></span></div>
      <div class="specrow"><span class="k">🏠 آدرس</span><span class="v">${esc(b.address)}</span></div>
      <div class="specrow"><span class="k">💰 ارزش تجهیزات</span><span class="v" style="color:var(--primary)">${money(bValue(b.id))}</span></div>
    </div>
@@ -415,6 +415,15 @@ function Settings(){const u=DB.user||{};return head('تنظیمات',{back:'buil
    <button class="btn ghost" id="editProf">✏️ ویرایش مشخصات و تاریخ</button>
    <button class="btn ghost" id="resetBtn">بازنشانی داده‌های نمونه</button>
    <button class="btn" id="logoutBtn">خروج</button></div>`;}
+
+//============ maps ============
+function openNeshan(lat,lng){var web='https://neshan.org/maps/@'+lat+','+lng+',16z';
+ var ua=navigator.userAgent||'';
+ if(/android/i.test(ua)){
+   // باز کردن اپ نشان روی گوشی برای مسیریابی؛ در صورت نبود اپ، سایت باز می‌شود
+   window.location.href='intent://maps/@'+lat+','+lng+',16z#Intent;scheme=https;package=org.neshan.explore.main;S.browser_fallback_url='+encodeURIComponent(web)+';end';
+ }else{window.open(web,'_blank');}}
+function openGmap(lat,lng){window.open('https://www.google.com/maps?q='+lat+','+lng,'_blank');}
 
 //============ images ============
 function addPhotos(files){Array.from(files).forEach(f=>{if(!f.type.startsWith('image'))return;
