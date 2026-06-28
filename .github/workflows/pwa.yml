@@ -56,7 +56,11 @@ jobs:
           path: .cache
           key: btc-${{ inputs.source }}-cache-${{ github.run_id }}
           restore-keys: btc-${{ inputs.source }}-cache-
-      - name: Build Bitcoin PWA (best-effort, won't block HSE)
+      # داده‌ی سنگین بیت‌کوین (یک سال کندل) فقط در اجراهای زمان‌بندی‌شده و دستی
+      # ساخته می‌شود؛ روی push (مثل انتشار اپ‌های HSE) رد می‌شود تا دیپلوی سریع
+      # بماند. اپ بیت‌کوین حذف نشده — صرفاً موقع دیپلوی HSE دوباره بیلد نمی‌شود.
+      - name: Build Bitcoin PWA data (schedule/manual only)
+        if: github.event_name != 'push'
         continue-on-error: true
         env:
           ANALYSIS_SOURCE: ${{ inputs.source || 'binance' }}
@@ -71,8 +75,14 @@ jobs:
           cp -r hse_pwa site/hse
           # اپ ابزارهای HSE «ورود به منهول» را زیر /manhole/ منتشر کن.
           cp -r manhole_pwa site/manhole
-          # اگر ساخت اپ بیت‌کوین ناموفق بود و ریشه خالی است،
-          # ریشه را به اپ HSE هدایت کن تا سایت همیشه قابل استفاده باشد.
+          # اگر داده‌ی بیت‌کوین در این اجرا ساخته نشد (مثلاً push اپ HSE)، پوسته‌ی
+          # ثابت اپ بیت‌کوین را در ریشه قرار بده و آخرین data.json منتشرشده را از
+          # سایت زنده بگیر تا اپ ریشه سالم بماند بدون نیاز به بیلد مجدد.
+          if [ ! -f site/index.html ]; then
+            cp pwa/* site/ 2>/dev/null || true
+            [ -f site/data.json ] || curl -fsSL https://morashidian8.github.io/Tictactoestevie/data.json -o site/data.json || true
+          fi
+          # اگر باز هم ریشه‌ای نبود، ریشه را به اپ HSE هدایت کن تا سایت همیشه کار کند.
           if [ ! -f site/index.html ]; then
             echo '<!DOCTYPE html><html lang="fa"><head><meta charset="utf-8">' > site/index.html
             echo '<meta http-equiv="refresh" content="0; url=./hse/"></head>' >> site/index.html
