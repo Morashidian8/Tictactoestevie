@@ -1,0 +1,42 @@
+name: Deploy PolyBot web app (GitHub Pages)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "polybot/standalone.html"
+      - "polybot/pwa/**"
+      - ".github/workflows/pages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Assemble site
+        run: |
+          mkdir -p _site
+          cp polybot/standalone.html _site/index.html
+          cp polybot/pwa/manifest.webmanifest _site/manifest.webmanifest
+          cp polybot/pwa/icon.svg _site/icon.svg
+      - uses: actions/configure-pages@v5
+        with:
+          enablement: true
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - id: deployment
+        uses: actions/deploy-pages@v4
