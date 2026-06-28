@@ -294,6 +294,19 @@
     border-radius: 10px; padding: 12px; margin-top: 14px;
   }
 
+  /* تعاریف کار گرم/سرد */
+  .def-row { display: flex; gap: 10px; align-items: flex-start; padding: 8px 0; }
+  .def-row + .def-row { border-top: 1px solid var(--line2); }
+  .def-tag {
+    flex: 0 0 auto; font-size: 13px; font-weight: 700; border-radius: 10px;
+    padding: 6px 10px; white-space: nowrap;
+  }
+  .def-hot { background: rgba(255,90,90,0.14); color: #ff6a6a; }
+  .def-cold { background: rgba(63,208,255,0.14); color: #3fd0ff; }
+  .def-txt { font-size: 13px; line-height: 1.9; color: var(--txt2); }
+  .hc-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 14px; }
+  @media (max-width: 520px){ .hc-cols { grid-template-columns: 1fr; } }
+
   /* بخش اطلاعات */
   .about-logo-img {
     width: 104px; height: 104px; object-fit: contain;
@@ -1053,6 +1066,7 @@
     <button data-page="area-type">محوطه مشمول/مشروط</button>
     <button data-page="ppe">انتخاب PPE بر اساس فعالیت</button>
     <button data-page="clothing">ماتریس البسه</button>
+    <button data-page="hcdet">تشخیص کار گرم و سرد</button>
     <button data-page="assess">ورود به فضای بسته</button>
     <button data-page="hotcold">کار گرم و سرد</button>
     <button data-page="ptw">راهنمای پرمیت کار</button>
@@ -1100,7 +1114,7 @@
       <span class="ax-ico">🛡️</span>
       <span class="ax-name">ایمنی</span>
       <span class="ax-desc">عملیات، فضای محصور، آتش‌نشانی و ریسک</span>
-      <span class="ax-foot"><span class="ax-badge">۱۸ ابزار</span><span class="ax-arrow">←</span></span>
+      <span class="ax-foot"><span class="ax-badge">۱۹ ابزار</span><span class="ax-arrow">←</span></span>
     </button>
     <button class="axis" style="--c:#3FD0FF" onclick="axisSoon('بهداشت حرفه‌ای و طب کار')">
       <span class="ax-ghost">💓</span>
@@ -1259,8 +1273,9 @@
     <div class="cb-ico">🛡️</div>
   </div>
 
-  <div class="sec-head"><span class="sh-bar" style="background:#b6a4ff"></span><div class="sh-txt"><div class="sh-t">صلاحیت، PPE و البسه</div><div class="sh-s">۴ ابزار</div></div></div>
+  <div class="sec-head"><span class="sh-bar" style="background:#b6a4ff"></span><div class="sh-txt"><div class="sh-t">صلاحیت، PPE و البسه</div><div class="sh-s">۵ ابزار</div></div></div>
   <div class="toolrows">
+    <button class="toolrow" onclick="goPage('hcdet')"><span class="tr-ico" style="--c:#FF9500">🔥</span><span class="tr-txt"><span class="tr-name">تشخیص کار گرم و سرد</span><span class="tr-desc">گرم یا سرد بودن هر فعالیت + تعاریف و مصادیق</span></span><span class="tr-arrow">‹</span></button>
     <button class="toolrow" onclick="goPage('competency')"><span class="tr-ico" style="--c:#22FF88">🎖️</span><span class="tr-txt"><span class="tr-name">لیست صلاحیت افراد</span><span class="tr-desc">استعلام صلاحیت با کد ملی یا شماره پرسنلی</span></span><span class="tr-arrow">‹</span></button>
     <button class="toolrow" onclick="goPage('area-type')"><span class="tr-ico" style="--c:#FF9500">📍</span><span class="tr-txt"><span class="tr-name">تشخیص محوطه مشمول/مشروط</span><span class="tr-desc">آیا فعالیت شما نیاز به پروانه دارد؟</span></span><span class="tr-arrow">‹</span></button>
     <button class="toolrow" onclick="goPage('ppe')"><span class="tr-ico" style="--c:#3FD0FF">🦺</span><span class="tr-txt"><span class="tr-name">انتخاب PPE بر اساس فعالیت</span><span class="tr-desc">تجهیزات حفاظت فردی لازم هر فعالیت</span></span><span class="tr-arrow">‹</span></button>
@@ -1302,9 +1317,10 @@
 <!-- ===== صفحه «ابزارها» (فهرست کامل) ===== -->
 <div class="page" id="tools">
 <div class="container">
-  <div class="sec-head"><span class="sh-bar" style="background:#22FF88"></span><div class="sh-txt"><div class="sh-t">ایمنی</div><div class="sh-s">۶ ابزار</div></div></div>
+  <div class="sec-head"><span class="sh-bar" style="background:#22FF88"></span><div class="sh-txt"><div class="sh-t">ایمنی</div><div class="sh-s">۷ ابزار</div></div></div>
   <div class="toolrows">
     <button class="toolrow" onclick="goPage('assess')"><span class="tr-ico" style="--c:#22FF88">🕳️</span><span class="tr-txt"><span class="tr-name">ورود به فضای بسته</span><span class="tr-desc">نظارت گاز و چک‌لیست فضای محصور</span></span><span class="tr-arrow">‹</span></button>
+    <button class="toolrow" onclick="goPage('hcdet')"><span class="tr-ico" style="--c:#FF9500">🔥</span><span class="tr-txt"><span class="tr-name">تشخیص کار گرم و سرد</span><span class="tr-desc">گرم یا سرد بودن هر فعالیت + تعاریف و مصادیق</span></span><span class="tr-arrow">‹</span></button>
     <button class="toolrow" onclick="goPage('hotcold')"><span class="tr-ico" style="--c:#FF9500">🔥</span><span class="tr-txt"><span class="tr-name">کار گرم و سرد</span><span class="tr-desc">فرم پرمیت و الزامات ایمنی</span></span><span class="tr-arrow">‹</span></button>
     <button class="toolrow" onclick="goPage('ptw')"><span class="tr-ico" style="--c:#3FD0FF">📋</span><span class="tr-txt"><span class="tr-name">راهنمای پرمیت کار</span><span class="tr-desc">مراحل و انواع مجوز کار</span></span><span class="tr-arrow">‹</span></button>
     <button class="toolrow" onclick="goPage('digging')"><span class="tr-ico" style="--c:#FF9500">🪏</span><span class="tr-txt"><span class="tr-name">فاصله ایمن حفاری</span><span class="tr-desc">محاسبه فاصله مجاز از خطوط</span></span><span class="tr-arrow">‹</span></button>
@@ -1428,6 +1444,30 @@
   <div class="conv-note">فهرست کامل سمت‌ها، اقلام، تعداد و بازه‌های تحویل (سالانه/دوسالانه و...) پس از دریافت از شما بارگذاری می‌شود؛ نمونه برای آزمایش سازوکار موجود است.</div>
 </div>
 </div><!-- /page clothing -->
+
+<!-- ===== تشخیص کار گرم و سرد ===== -->
+<div class="page" id="hcdet">
+<div class="container">
+  <div class="cat-banner" style="--c:#FF9500"><div class="cb-txt"><div class="cb-title">تشخیص کار گرم و سرد</div><div class="cb-desc">فعالیت را انتخاب کنید تا گرم یا سرد بودن آن مشخص شود</div></div><div class="cb-ico">🔥</div></div>
+
+  <div class="card">
+    <div class="def-row"><span class="def-tag def-hot">🔥 کار گرم</span><span class="def-txt">هر فعالیتی که در آن منبع جرقه، شعله، حرارت یا هر منشأ اشتعال ایجاد شود و در حضور مواد/گازهای قابل اشتعال قابلیت ایجاد حریق یا انفجار داشته باشد (مانند جوشکاری، برشکاری، سنگ‌زنی، شعله‌کاری).</span></div>
+    <div class="def-row"><span class="def-tag def-cold">❄️ کار سرد</span><span class="def-txt">فعالیتی که فاقد منبع جرقه، شعله یا حرارت است و به‌خودی‌خود قابلیت ایجاد اشتعال ندارد (مانند پیچ‌ومهره، رنگ با قلم‌مو، عایق‌کاری، حفاری دستی).</span></div>
+  </div>
+
+  <div class="card">
+    <div class="field">
+      <label>فعالیت را انتخاب کنید</label>
+      <select class="inp" id="hcdSel" onchange="renderHCDet()"><option value="">— انتخاب فعالیت —</option></select>
+    </div>
+  </div>
+  <div id="hcdResult"></div>
+
+  <div id="hcdRef"></div>
+
+  <div class="conv-note">مبنا: دستورالعمل صدور پروانه‌های فعالیت (HSE-IN-S-223) و نظام پروانه‌های کار (HSE-IN-S-222). در صورت همراهی با گاز/ماده قابل اشتعال یا تردید در ماهیت کار، طبقه‌بندی نهایی بر عهده مسئول محوطه/HSE است. این ابزار جایگزین گازسنجی و صدور پروانه نیست.</div>
+</div>
+</div><!-- /page hcdet -->
 
 <!-- ===== دستورالعمل‌ها ===== -->
 <div class="page" id="guidelines">
@@ -1965,7 +2005,7 @@
 // جابجایی بین صفحه‌ها (منو + کارت‌های داشبورد)
 var PAGE_TITLES = { 'cat-safety':'ایمنی', 'tools':'ابزارها', 'alerts':'اطلاعیه‌ها', 'quiz':'آزمون و خودآزمایی',
   'competency':'لیست صلاحیت افراد', 'area-type':'محوطه مشمول/مشروط', 'ppe':'انتخاب PPE بر اساس فعالیت',
-  'clothing':'ماتریس البسه', 'guidelines':'دستورالعمل‌ها' };
+  'clothing':'ماتریس البسه', 'hcdet':'تشخیص کار گرم و سرد', 'guidelines':'دستورالعمل‌ها' };
 var navStack = [];
 var currentPage = 'home';
 function goPage(id, isBack){
@@ -3693,6 +3733,81 @@ function renderClothing(){
   box.innerHTML='<div class="sec-block"><h3>👕 البسه و تجهیزات — '+p+'</h3>'+CLOTHING_DB[p].map(function(c){return '<div class="sec-row"><span class="sk">'+c.item+'</span><span class="sv">'+c.qty+' · '+c.period+'</span></div>';}).join('')+'</div>';
 }
 
+/* ================= تشخیص کار گرم و سرد ================= */
+// فهرست جامع فعالیت‌های صنعت گاز — t:'hot' کار گرم، t:'cold' کار سرد
+var HC_ACTIVITIES = [
+  // --- کار گرم (منبع جرقه/شعله/حرارت) ---
+  {n:'جوشکاری برق (قوس الکتریکی)', t:'hot', note:'تولید قوس، جرقه و حرارت بالا.'},
+  {n:'جوشکاری گاز (اکسی‌استیلن)', t:'hot', note:'شعله باز و حرارت مستقیم.'},
+  {n:'جوشکاری آرگون (TIG/MIG)', t:'hot', note:'قوس الکتریکی و حرارت.'},
+  {n:'جوش لوله پلی‌اتیلن — بات‌فیوژن', t:'hot', note:'ذوب حرارتی سر لوله با المنت داغ.'},
+  {n:'جوش لوله پلی‌اتیلن — الکتروفیوژن', t:'hot', note:'حرارت الکتریکی برای ذوب اتصال.'},
+  {n:'برشکاری با شعله (هوا-گاز/اکسی‌استیلن)', t:'hot', note:'شعله و پاشش فلز مذاب.'},
+  {n:'برشکاری با قوس پلاسما/کربن', t:'hot', note:'قوس و جرقه پرحرارت.'},
+  {n:'سنگ‌زنی و فرز (سنگ فرز)', t:'hot', note:'تولید جرقه فراوان.'},
+  {n:'برش با دیسک برش', t:'hot', note:'جرقه ناشی از سایش.'},
+  {n:'سوراخکاری روی خط گازدار (Hot Tap)', t:'hot', note:'کار گرم ویژه روی خط در حال بهره‌برداری.'},
+  {n:'لحیم‌کاری و سخت‌لحیم (برنز)', t:'hot', note:'شعله/حرارت برای ذوب فلز پرکننده.'},
+  {n:'شعله‌کاری و گرم‌کردن با مشعل', t:'hot', note:'شعله باز مستقیم.'},
+  {n:'ذوب و پاشش قیر/مشعل قیر', t:'hot', note:'شعله و سطح داغ.'},
+  {n:'سندبلاست/شات‌بلاست', t:'hot', note:'احتمال جرقه و الکتریسیته ساکن.'},
+  {n:'کار با موتور احتراق داخلی (ژنراتور/کمپرسور/خودرو) در محوطه گازدار', t:'hot', note:'منبع گرما و جرقه احتراق.'},
+  {n:'استفاده از ابزار برقی غیرضدانفجار در منطقه طبقه‌بندی‌شده', t:'hot', note:'احتمال جرقه الکتریکی.'},
+  {n:'استفاده از چراغ/تجهیزات روشنایی غیرضدانفجار در فضای دارای گاز', t:'hot', note:'منبع بالقوه اشتعال.'},
+  {n:'پرچ‌کاری گرم', t:'hot', note:'حرارت و جرقه.'},
+  {n:'استفاده از هیتر/بخاری شعله‌باز', t:'hot', note:'شعله باز.'},
+  {n:'خشک‌کردن/پخت رنگ با حرارت', t:'hot', note:'منبع حرارتی.'},
+  {n:'دریل/مته‌کاری روی فلز در محیط گازدار', t:'hot', note:'گرمای اصطکاکی و احتمال جرقه.'},
+  // --- کار سرد (بدون منبع اشتعال) ---
+  {n:'پیچ‌ومهره و مونتاژ مکانیکی', t:'cold', note:'بدون جرقه/شعله/حرارت.'},
+  {n:'باز و بستن فلنج و اتصالات', t:'cold', note:'با ابزار دستی و بدون جرقه.'},
+  {n:'تعویض شیر/والو دستی', t:'cold', note:'عملیات مکانیکی سرد.'},
+  {n:'رنگ‌کاری با قلم‌مو/غلتک', t:'cold', note:'بدون حرارت.'},
+  {n:'رنگ‌پاشی بدون حرارت (در صورت نبود گاز)', t:'cold', note:'بدون منبع اشتعال؛ تهویه و رعایت بخار حلال لازم است.'},
+  {n:'عایق‌کاری و نوارپیچی لوله', t:'cold', note:'دستی و سرد.'},
+  {n:'گریس‌کاری و روانکاری', t:'cold', note:'بدون منبع اشتعال.'},
+  {n:'حفاری دستی با بیل و کلنگ', t:'cold', note:'بدون جرقه (با کنترل برخورد به خطوط).'},
+  {n:'خاکبرداری و خاک‌ریزی دستی', t:'cold', note:'عملیات سرد.'},
+  {n:'گازسنجی و نشت‌یابی', t:'cold', note:'با دستگاه کالیبره؛ بدون منبع اشتعال.'},
+  {n:'قرائت کنتور', t:'cold', note:'فاقد منبع اشتعال.'},
+  {n:'بازرسی چشمی و بازدید', t:'cold', note:'فاقد منبع اشتعال.'},
+  {n:'تمیزکاری و نظافت دستی', t:'cold', note:'بدون حرارت/جرقه.'},
+  {n:'نقشه‌برداری', t:'cold', note:'عملیات سرد.'},
+  {n:'نصب علائم، تابلو و حصارکشی', t:'cold', note:'دستی و سرد.'},
+  {n:'داربست‌بندی (بدون برش گرم)', t:'cold', note:'مونتاژ مکانیکی سرد.'},
+  {n:'آبکشی و تخلیه آب', t:'cold', note:'بدون منبع اشتعال.'},
+  {n:'تست هیدرواستاتیک با آب', t:'cold', note:'با آب و بدون حرارت.'},
+  {n:'پرکردن کیسه شن و تثبیت', t:'cold', note:'عملیات سرد.'},
+  {n:'جابجایی دستی بار', t:'cold', note:'فاقد منبع اشتعال.'},
+  {n:'نمونه‌برداری', t:'cold', note:'بدون منبع اشتعال.'},
+  {n:'کالیبراسیون ابزار دقیق (بدون منبع اشتعال)', t:'cold', note:'عملیات سرد.'},
+  {n:'باز و بست شیر آب/تخلیه', t:'cold', note:'مکانیکی و سرد.'}
+];
+function initHCDet(){
+  var s=document.getElementById('hcdSel'); if(!s) return;
+  var opts=HC_ACTIVITIES.slice().sort(function(a,b){return a.n.localeCompare(b.n,'fa');});
+  s.innerHTML='<option value="">— انتخاب فعالیت —</option>'+opts.map(function(a,i){
+    var idx=HC_ACTIVITIES.indexOf(a); return '<option value="'+idx+'">'+a.n+'</option>'; }).join('');
+  renderHCDetRef();
+}
+function renderHCDet(){
+  var v=document.getElementById('hcdSel').value, box=document.getElementById('hcdResult');
+  if(v===''){ box.innerHTML=''; return; }
+  var a=HC_ACTIVITIES[+v]; if(!a){ box.innerHTML=''; return; }
+  var hot=a.t==='hot';
+  box.innerHTML='<div class="result-box '+(hot?'r-red':'r-green')+'"><span class="icon">'+(hot?'🔥':'❄️')+
+    '</span><div class="verdict">'+(hot?'کار گرم':'کار سرد')+'</div><div class="sub">'+a.n+' — '+a.note+'</div></div>';
+}
+function renderHCDetRef(){
+  var box=document.getElementById('hcdRef'); if(!box) return;
+  var hot=HC_ACTIVITIES.filter(function(a){return a.t==='hot';}).map(function(a){return '<li>'+a.n+'</li>';}).join('');
+  var cold=HC_ACTIVITIES.filter(function(a){return a.t==='cold';}).map(function(a){return '<li>'+a.n+'</li>';}).join('');
+  box.innerHTML='<div class="hc-cols">'+
+    '<div class="req-list"><h3>🔥 مصادیق کار گرم</h3><ul class="ri-ctrl">'+hot+'</ul></div>'+
+    '<div class="req-list"><h3>❄️ مصادیق کار سرد</h3><ul class="ri-ctrl">'+cold+'</ul></div>'+
+    '</div>';
+}
+
 // ساخت کارت‌های نوع حریق در بارگذاری
 buildFireGrid();
 initGasPage();
@@ -3700,6 +3815,7 @@ initFAPage();
 initRiskPages();
 initPPE();
 initClothing();
+initHCDet();
 enhanceSelects();
 // اعمال تم ذخیره‌شده و هماهنگ‌کردن آیکون دکمه
 applyTheme(document.documentElement.getAttribute('data-theme')==='light' ? 'light' : 'dark');
