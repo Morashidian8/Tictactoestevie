@@ -1049,6 +1049,10 @@
   <nav class="menu" id="mainMenu">
     <button class="active" data-page="home">🏠 خانه</button>
     <div class="menu-sec"><span class="ms-dot" style="background:#22FF88"></span> ایمنی</div>
+    <button data-page="competency">لیست صلاحیت افراد</button>
+    <button data-page="area-type">محوطه مشمول/مشروط</button>
+    <button data-page="ppe">انتخاب PPE بر اساس فعالیت</button>
+    <button data-page="clothing">ماتریس البسه</button>
     <button data-page="assess">ورود به منهول</button>
     <button data-page="hotcold">کار گرم و سرد</button>
     <button data-page="ptw">راهنمای پرمیت کار</button>
@@ -1069,6 +1073,7 @@
     <div class="menu-sec"><span class="ms-dot" style="background:#b6a4ff"></span> آزمون و آموزش</div>
     <button data-page="quiz">آزمون و خودآزمایی HSE</button>
     <div class="menu-sec"><span class="ms-dot" style="background:#8A9BB8"></span> مستندات</div>
+    <button data-page="guidelines">دستورالعمل‌ها</button>
     <button data-page="about">اطلاعات</button>
   </nav>
 </aside>
@@ -1088,14 +1093,14 @@
 
   <!-- ۳) محورهای اصلی HSE -->
   <div class="sec-head"><span class="sh-bar" style="background:var(--neon)"></span>
-    <div class="sh-txt"><div class="sh-t">محورهای اصلی HSE</div><div class="sh-s">چهار محور تخصصی</div></div></div>
+    <div class="sh-txt"><div class="sh-t">محورهای اصلی HSE</div><div class="sh-s">شش محور تخصصی</div></div></div>
   <div class="axes">
     <button class="axis" style="--c:#22FF88" onclick="goPage('cat-safety')">
       <span class="ax-ghost">🛡️</span>
       <span class="ax-ico">🛡️</span>
       <span class="ax-name">ایمنی</span>
       <span class="ax-desc">عملیات، فضای محصور، آتش‌نشانی و ریسک</span>
-      <span class="ax-foot"><span class="ax-badge">۱۴ ابزار</span><span class="ax-arrow">←</span></span>
+      <span class="ax-foot"><span class="ax-badge">۱۸ ابزار</span><span class="ax-arrow">←</span></span>
     </button>
     <button class="axis" style="--c:#3FD0FF" onclick="axisSoon('بهداشت حرفه‌ای و طب کار')">
       <span class="ax-ghost">💓</span>
@@ -1117,6 +1122,20 @@
       <span class="ax-name">پدافند غیرعامل</span>
       <span class="ax-desc">حفاظت و مدیریت بحران</span>
       <span class="ax-foot"><span class="ax-badge">به‌زودی</span><span class="ax-arrow">←</span></span>
+    </button>
+    <button class="axis" style="--c:#b6a4ff" onclick="goPage('quiz')">
+      <span class="ax-ghost">🎓</span>
+      <span class="ax-ico">🎓</span>
+      <span class="ax-name">آموزش</span>
+      <span class="ax-desc">آزمون و خودآزمایی HSE</span>
+      <span class="ax-foot"><span class="ax-badge">آزمون</span><span class="ax-arrow">←</span></span>
+    </button>
+    <button class="axis" style="--c:#3a8ee0" onclick="goPage('guidelines')">
+      <span class="ax-ghost">📚</span>
+      <span class="ax-ico">📚</span>
+      <span class="ax-name">دستورالعمل‌ها</span>
+      <span class="ax-desc">مرجع دستورالعمل‌های HSE</span>
+      <span class="ax-foot"><span class="ax-badge">۲ سند</span><span class="ax-arrow">←</span></span>
     </button>
   </div>
 
@@ -1240,6 +1259,14 @@
     <div class="cb-ico">🛡️</div>
   </div>
 
+  <div class="sec-head"><span class="sh-bar" style="background:#b6a4ff"></span><div class="sh-txt"><div class="sh-t">صلاحیت، PPE و البسه</div><div class="sh-s">۴ ابزار</div></div></div>
+  <div class="toolrows">
+    <button class="toolrow" onclick="goPage('competency')"><span class="tr-ico" style="--c:#22FF88">🎖️</span><span class="tr-txt"><span class="tr-name">لیست صلاحیت افراد</span><span class="tr-desc">استعلام صلاحیت با کد ملی یا شماره پرسنلی</span></span><span class="tr-arrow">‹</span></button>
+    <button class="toolrow" onclick="goPage('area-type')"><span class="tr-ico" style="--c:#FF9500">📍</span><span class="tr-txt"><span class="tr-name">تشخیص محوطه مشمول/مشروط</span><span class="tr-desc">آیا فعالیت شما نیاز به پروانه دارد؟</span></span><span class="tr-arrow">‹</span></button>
+    <button class="toolrow" onclick="goPage('ppe')"><span class="tr-ico" style="--c:#3FD0FF">🦺</span><span class="tr-txt"><span class="tr-name">انتخاب PPE بر اساس فعالیت</span><span class="tr-desc">تجهیزات حفاظت فردی لازم هر فعالیت</span></span><span class="tr-arrow">‹</span></button>
+    <button class="toolrow" onclick="goPage('clothing')"><span class="tr-ico" style="--c:#7BE06B">👕</span><span class="tr-txt"><span class="tr-name">ماتریس البسه</span><span class="tr-desc">البسه و تجهیزات سالانه بر اساس سمت</span></span><span class="tr-arrow">‹</span></button>
+  </div>
+
   <div class="sec-head"><span class="sh-bar" style="background:#22FF88"></span><div class="sh-txt"><div class="sh-t">عملیات و فضای محصور</div><div class="sh-s">۶ ابزار</div></div></div>
   <div class="toolrows">
     <button class="toolrow" onclick="goPage('assess')"><span class="tr-ico" style="--c:#22FF88">🕳️</span><span class="tr-txt"><span class="tr-name">ورود به منهول</span><span class="tr-desc">نظارت گاز و چک‌لیست ورود به فضای محصور</span></span><span class="tr-arrow">‹</span></button>
@@ -1327,6 +1354,101 @@
   </div>
 </div>
 </div><!-- /page alerts -->
+
+<!-- ===== صلاحیت افراد ===== -->
+<div class="page" id="competency">
+<div class="container">
+  <div class="cat-banner" style="--c:#22FF88"><div class="cb-txt"><div class="cb-title">لیست صلاحیت افراد</div><div class="cb-desc">استعلام صلاحیت‌های ایمنی افراد</div></div><div class="cb-ico">🎖️</div></div>
+  <div class="card">
+    <div class="field">
+      <label>کد ملی یا شماره پرسنلی</label>
+      <input type="text" id="cmpQuery" inputmode="numeric" placeholder="مثال: ۰۰۱۲۳۴۵۶۷۸">
+    </div>
+    <button class="btn" onclick="lookupCompetency()">استعلام صلاحیت</button>
+    <div class="err" id="cmpErr">فردی با این کد ملی/پرسنلی یافت نشد.</div>
+  </div>
+  <div id="cmpResult"></div>
+  <div class="conv-note">انواع صلاحیت طبق دستورالعمل صدور پروانه‌های فعالیت (HSE-IN-S-223): مسئول ارشد عملیات، مسئول محوطه، مسئول اجرا، آزمایش‌کننده گاز، ناظر مطلع حفاری. — فهرست واقعی افراد، کد ملی/پرسنلی و تاریخ اخذ/انقضای صلاحیت پس از دریافت از شما بارگذاری می‌شود؛ یک نمونه برای آزمایش سازوکار موجود است.</div>
+</div>
+</div><!-- /page competency -->
+
+<!-- ===== محوطه مشمول/مشروط ===== -->
+<div class="page" id="area-type">
+<div class="container">
+  <div class="cat-banner" style="--c:#FF9500"><div class="cb-txt"><div class="cb-title">محوطه مشمول / مشروط</div><div class="cb-desc">آیا فعالیت شما نیاز به پروانه کار دارد؟</div></div><div class="cb-ico">📍</div></div>
+  <div class="card">
+    <div class="field">
+      <label>۱) آیا محل کار تحت نظارت شرکت گاز است؟ <span class="unit">(تأسیسات/محوطه محصور یا خط لوله دارای حریم)</span></label>
+      <div class="seg" id="aq1"><button onclick="areaAns(1,'y',this)">بله</button><button onclick="areaAns(1,'n',this)">خیر</button></div>
+    </div>
+    <div class="field">
+      <label>۲) آیا این محوطه جزو «محوطه‌های مشروط» اعلام‌شده است؟ <span class="unit">(مثل کارگاه مرکزی/تعمیرات)</span></label>
+      <div class="seg" id="aq2"><button onclick="areaAns(2,'y',this)">بله</button><button onclick="areaAns(2,'n',this)">خیر</button></div>
+    </div>
+    <div class="field">
+      <label>۳) آیا شما از پرسنل مخصوص همان محوطه هستید؟</label>
+      <div class="seg" id="aq3"><button onclick="areaAns(3,'y',this)">بله</button><button onclick="areaAns(3,'n',this)">خیر</button></div>
+    </div>
+    <div class="field">
+      <label>۴) آیا فعالیت شما جزو فعالیت‌های روزمره/تکراری همان محوطه (فهرست بدون‌پروانه) است؟</label>
+      <div class="seg" id="aq4"><button onclick="areaAns(4,'y',this)">بله</button><button onclick="areaAns(4,'n',this)">خیر</button></div>
+    </div>
+  </div>
+  <div id="areaResult"></div>
+  <div class="conv-note">مبنا: مجموعه مقررات نظام پروانه‌های کار (HSE-IN-S-222). محوطه مشمول = هر تأسیسات/محوطه تحت نظارت سازمان؛ هیچ‌کس بدون پروانه نباید کار کند. محوطه مشروط = بخشی از محوطه مشمول که فعالیت‌های روزمره پرسنل مخصوص آن با رعایت الزامات و بدون پروانه مجاز است.</div>
+</div>
+</div><!-- /page area-type -->
+
+<!-- ===== انتخاب PPE بر اساس فعالیت ===== -->
+<div class="page" id="ppe">
+<div class="container">
+  <div class="cat-banner" style="--c:#3FD0FF"><div class="cb-txt"><div class="cb-title">انتخاب PPE بر اساس فعالیت</div><div class="cb-desc">تجهیزات حفاظت فردی لازم برای هر فعالیت</div></div><div class="cb-ico">🦺</div></div>
+  <div class="card">
+    <div class="field">
+      <label>فعالیت را انتخاب کنید</label>
+      <select class="inp" id="ppeSel" onchange="renderPPE()"><option value="">— انتخاب فعالیت —</option></select>
+    </div>
+  </div>
+  <div id="ppeResult"></div>
+  <div class="conv-note">فهرست PPE بر اساس ماهیت خطر هر فعالیت تنظیم شده است و جایگزین ارزیابی ریسک محل کار و تأیید مسئول HSE نیست.</div>
+</div>
+</div><!-- /page ppe -->
+
+<!-- ===== ماتریس البسه ===== -->
+<div class="page" id="clothing">
+<div class="container">
+  <div class="cat-banner" style="--c:#7BE06B"><div class="cb-txt"><div class="cb-title">ماتریس البسه</div><div class="cb-desc">البسه و تجهیزات سالانه بر اساس سمت سازمانی</div></div><div class="cb-ico">👕</div></div>
+  <div class="card">
+    <div class="field">
+      <label>سمت سازمانی را انتخاب کنید</label>
+      <select class="inp" id="clSel" onchange="renderClothing()"><option value="">— انتخاب سمت —</option></select>
+    </div>
+  </div>
+  <div id="clResult"></div>
+  <div class="conv-note">فهرست کامل سمت‌ها، اقلام، تعداد و بازه‌های تحویل (سالانه/دوسالانه و...) پس از دریافت از شما بارگذاری می‌شود؛ نمونه برای آزمایش سازوکار موجود است.</div>
+</div>
+</div><!-- /page clothing -->
+
+<!-- ===== دستورالعمل‌ها ===== -->
+<div class="page" id="guidelines">
+<div class="container">
+  <div class="cat-banner" style="--c:#3a8ee0"><div class="cb-txt"><div class="cb-title">دستورالعمل‌ها</div><div class="cb-desc">مرجع دستورالعمل‌های HSE شرکت گاز</div></div><div class="cb-ico">📚</div></div>
+  <div class="gas-card">
+    <div class="gas-head"><span class="gico">📄</span><div><div class="gname">صدور پروانه‌های فعالیت (PTW)</div><div class="gformula">HSE-IN-S-223(2)-03</div></div></div>
+    <div class="gas-prop"><span class="gk">پروانه‌های اصلی</span><span class="gv">گرم، سرد</span></div>
+    <div class="gas-prop"><span class="gk">پروانه‌های مکمل</span><span class="gv">حفاری، ارتفاع، فضای بسته، جداسازی برق، پرتونگاری</span></div>
+    <div class="gas-prop"><span class="gk">انواع صلاحیت</span><span class="gv">ارشد عملیات، محوطه، اجرا، آزمایش گاز، ناظر حفاری</span></div>
+    <div class="gas-warn">پروانه مکمل به‌تنهایی صادر نمی‌شود و همواره همراه یک پروانه اصلی (گرم/سرد) صادر می‌گردد.</div>
+  </div>
+  <div class="gas-card">
+    <div class="gas-head"><span class="gico">📄</span><div><div class="gname">مجموعه مقررات نظام پروانه‌های کار</div><div class="gformula">HSE-IN-S-222(2)-03</div></div></div>
+    <div class="gas-prop"><span class="gk">محوطه مشمول</span><span class="gv">هر محوطه تحت نظارت — کار بدون پروانه ممنوع</span></div>
+    <div class="gas-prop"><span class="gk">محوطه مشروط</span><span class="gv">فعالیت روزمره پرسنل مخصوص، بدون پروانه با رعایت الزامات</span></div>
+    <div class="gas-prop"><span class="gk">مستندات</span><span class="gv">فرم‌ها، لیست عملیات، نفرات صلاحیت‌دار، فلوچارت‌ها</span></div>
+  </div>
+  <div class="conv-note">این بخش خلاصه‌ای مرجع از دستورالعمل‌هاست. ابزارهای «پرمیت کار»، «محوطه مشمول/مشروط» و «صلاحیت افراد» بر پایه‌ی همین اسناد ساخته شده‌اند.</div>
+</div>
+</div><!-- /page guidelines -->
 
 <!-- ===== صفحه ارزیابی ورود ===== -->
 <div class="page" id="assess">
@@ -1829,7 +1951,9 @@
 })();
 
 // جابجایی بین صفحه‌ها (منو + کارت‌های داشبورد)
-var PAGE_TITLES = { 'cat-safety':'ایمنی', 'tools':'ابزارها', 'alerts':'اطلاعیه‌ها', 'quiz':'آزمون و خودآزمایی' };
+var PAGE_TITLES = { 'cat-safety':'ایمنی', 'tools':'ابزارها', 'alerts':'اطلاعیه‌ها', 'quiz':'آزمون و خودآزمایی',
+  'competency':'لیست صلاحیت افراد', 'area-type':'محوطه مشمول/مشروط', 'ppe':'انتخاب PPE بر اساس فعالیت',
+  'clothing':'ماتریس البسه', 'guidelines':'دستورالعمل‌ها' };
 var navStack = [];
 var currentPage = 'home';
 function goPage(id, isBack){
@@ -3410,11 +3534,119 @@ function toggleTheme(){
   applyTheme(cur==='light' ? 'dark' : 'light');
 }
 
+/* ================= صلاحیت افراد ================= */
+function faNorm(s){ return (s||'').replace(/[۰-۹]/g,function(d){return '۰۱۲۳۴۵۶۷۸۹'.indexOf(d);}).replace(/\s/g,'').trim(); }
+// نمونه برای آزمایش سازوکار — داده‌های واقعی پس از دریافت از کارفرما جایگزین می‌شود
+var PEOPLE = [
+  {nid:'0012345678', pno:'10234', name:'نمونه آزمایشی — علی رضایی', roles:[
+    {role:'مسئول محوطه', issued:'۱۴۰۳/۰۲/۱۵', expiry:'۱۴۰۵/۰۲/۱۵', status:'valid'},
+    {role:'آزمایش‌کننده گاز', issued:'۱۴۰۳/۰۶/۰۱', expiry:'۱۴۰۴/۰۶/۰۱', status:'soon'}
+  ]},
+  {nid:'0023456789', pno:'10235', name:'نمونه آزمایشی — مریم احمدی', roles:[
+    {role:'مسئول اجرا', issued:'۱۴۰۲/۱۱/۱۰', expiry:'۱۴۰۴/۱۱/۱۰', status:'valid'},
+    {role:'ناظر مطلع حفاری', issued:'۱۴۰۱/۰۳/۰۱', expiry:'۱۴۰۳/۰۳/۰۱', status:'expired'}
+  ]}
+];
+function lookupCompetency(){
+  var q=faNorm(document.getElementById('cmpQuery').value);
+  var err=document.getElementById('cmpErr'), box=document.getElementById('cmpResult');
+  if(!q){ err.style.display='none'; box.innerHTML=''; return; }
+  var p=PEOPLE.filter(function(x){return x.nid===q||x.pno===q;})[0];
+  if(!p){ err.style.display='block'; box.innerHTML=''; return; }
+  err.style.display='none';
+  var st={valid:{t:'معتبر',c:'tag-ok'}, soon:{t:'نزدیک انقضا',c:'tag-warn'}, expired:{t:'منقضی',c:'tag-bad'}};
+  var rows=p.roles.map(function(r){ var s=st[r.status]||st.valid;
+    return '<div class="risk-item"><div class="ri-haz">🎖️ '+r.role+' &nbsp;<span class="tag '+s.c+'">'+s.t+'</span></div>'+
+      '<div class="ri-meta"><span class="ri-chip">تاریخ اخذ: '+r.issued+'</span><span class="ri-chip">تاریخ انقضا: '+r.expiry+'</span></div></div>'; }).join('');
+  box.innerHTML='<div class="risk-card"><div class="rc-title">👤 '+p.name+'</div><div class="rc-sub">کد ملی: '+p.nid+' · شماره پرسنلی: '+p.pno+'</div>'+rows+'</div>';
+}
+
+/* ================= محوطه مشمول/مشروط ================= */
+var areaA={};
+function areaAns(q,v,btn){
+  areaA[q]=v;
+  var grp=btn.parentNode; grp.querySelectorAll('button').forEach(function(b){b.classList.remove('on');}); btn.classList.add('on');
+  evalArea();
+}
+function evalArea(){
+  var box=document.getElementById('areaResult');
+  if(!areaA[1]){ box.innerHTML=''; return; }
+  var cls,icon,verdict,sub;
+  if(areaA[1]==='n'){ cls='r-orange'; icon='ℹ️'; verdict='خارج از محوطه مشمول'; sub='این محل تحت نظارت سازمان نیست؛ نظام پروانه‌های کار بر آن اعمال نمی‌شود (با رعایت الزامات عمومی ایمنی).'; }
+  else if(areaA[2]!=='y'){ cls='r-red'; icon='📋'; verdict='محوطه مشمول — پروانه کار لازم است'; sub='هیچ فعالیتی بدون پروانه کارِ تکمیل و امضاشده توسط افراد صلاحیت‌دار مجاز نیست.'; }
+  else {
+    if(!areaA[3] || !areaA[4]){ box.innerHTML='<div class="result-box r-orange"><span class="icon">📝</span><div class="verdict">به پرسش‌های ۳ و ۴ پاسخ دهید</div></div>'; return; }
+    if(areaA[3]==='y' && areaA[4]==='y'){ cls='r-green'; icon='✅'; verdict='بدون پروانه مجاز است'; sub='فعالیت روزمره/تکراری پرسنل مخصوصِ محوطه مشروط — با رعایت کامل الزامات و دستورالعمل‌های ایمنی، بدون صدور پروانه قابل انجام است.'; }
+    else { cls='r-red'; icon='📋'; verdict='پروانه کار لازم است'; sub='فعالیت غیرروزمره یا انجام توسط پرسنل غیرمخصوص در محوطه مشروط — نیازمند صدور پروانه فعالیت است.'; }
+  }
+  box.innerHTML='<div class="result-box '+cls+'"><span class="icon">'+icon+'</span><div class="verdict">'+verdict+'</div><div class="sub">'+sub+'</div></div>';
+}
+
+/* ================= انتخاب PPE بر اساس فعالیت ================= */
+var PPE_DB = {
+  'امداد گاز و واکنش اضطراری':['لباس نسوز/آنتی‌استاتیک','دستگاه تنفسی هوای فشرده (SCBA)','گازسنج همراه کالیبره','کلاه ایمنی و سپر صورت','دستکش مقاوم حرارتی','کفش ایمنی نسوز','لباس شبرنگ','طناب و هارنس نجات'],
+  'جوشکاری و برشکاری':['ماسک/سپر جوشکاری با شیشه مناسب','لباس نسوز چرمی یا کتان ضخیم','دستکش بلند چرمی جوشکاری','پیش‌بند و ساق‌بند چرمی','عینک ایمنی زیر ماسک','کفش ایمنی','ماسک تنفسی ضد دود فلز','گوشی حفاظتی'],
+  'حفاری و خاکبرداری':['کلاه ایمنی','کفش ایمنی ساق‌بلند','دستکش کار','لباس شبرنگ','عینک ایمنی','گازسنج (در صورت احتمال حضور گاز)','ماسک ضدگردوغبار','گوشی حفاظتی (نزدیک ماشین‌آلات)'],
+  'کار در ارتفاع':['هارنس کامل بدن + لنیارد دوشاخه جذب‌انرژی','کلاه ایمنی با بند چانه','کفش ایمنی ضدلغزش','دستکش','نقطه اتکا و طناب نجات','کیف ابزار بنددار (ضد سقوط ابزار)'],
+  'برق‌کار':['دستکش عایق برق متناسب با کلاس ولتاژ','کفش/چکمه عایق','کلاه ایمنی عایق','سپر صورت مقاوم در برابر قوس الکتریکی','لباس مقاوم Arc-Flash','سکو/فرش عایق','ابزار عایق'],
+  'اپراتور بهره‌برداری':['کلاه ایمنی','کفش ایمنی','دستکش','لباس کار آنتی‌استاتیک','گازسنج همراه','عینک ایمنی','گوشی حفاظتی'],
+  'نشت‌یاب گاز':['گازسنج/نشت‌یاب کالیبره','کلاه ایمنی','کفش ایمنی','دستکش','لباس شبرنگ','چراغ‌قوه ضدانفجار'],
+  'رنگ‌کاری و عایق‌کاری':['ماسک تنفسی با فیلتر بخار آلی','دستکش مقاوم در برابر حلال','عینک ایمنی','لباس کار سرتاسری','کفش ایمنی','تهویه/هواکش هنگام کار در فضای بسته'],
+  'پرتونگاری صنعتی':['دزیمتر فردی و فیلم‌بج','دستگاه پایش پرتو (Survey Meter)','کلاه و کفش ایمنی','تابلو و طناب حصارکشی ناحیه پرتو','لباس کار','نشان و هشدار پرتو'],
+  'موتورسوار / پیک':['کلاه کاسکت استاندارد','دستکش','کفش ساق‌دار','لباس شبرنگ','زانوبند/آرنج‌بند در صورت نیاز'],
+  'راننده عملیاتی':['کفش ایمنی','لباس شبرنگ','کلاه ایمنی هنگام خروج در محوطه','دستکش','کپسول اطفا و جعبه کمک‌های اولیه در خودرو'],
+  'انباردار':['کفش ایمنی','دستکش کار','کلاه ایمنی (انبار مرتفع)','لباس کار','ماسک ضدگردوغبار'],
+  'ورود به فضای بسته':['دستگاه تنفسی هوای فشرده (SCBA) یا کپسول هوا','گازسنج چهارگانه (O₂/LEL/H₂S/CO)','هارنس کامل بدن + طناب نجات','کلاه ایمنی','چراغ ضدانفجار','دستکش و کفش ایمنی','نگهبان ورودی و تجهیزات نجات/وینچ'],
+  'آزمایش‌کننده گاز':['گازسنج کالیبره چندگانه','کلاه و کفش ایمنی','دستکش','لباس آنتی‌استاتیک','عینک ایمنی']
+};
+function initPPE(){ var s=document.getElementById('ppeSel'); if(!s) return; s.innerHTML='<option value="">— انتخاب فعالیت —</option>'+Object.keys(PPE_DB).map(function(a){return '<option value="'+a+'">'+a+'</option>';}).join(''); }
+function renderPPE(){
+  var a=document.getElementById('ppeSel').value, box=document.getElementById('ppeResult');
+  if(!a||!PPE_DB[a]){ box.innerHTML=''; return; }
+  box.innerHTML='<div class="req-list"><h3>🦺 تجهیزات حفاظت فردی لازم — '+a+'</h3><ul class="ri-ctrl">'+PPE_DB[a].map(function(x){return '<li>'+x+'</li>';}).join('')+'</ul></div>';
+}
+
+/* ================= ماتریس البسه ================= */
+// نمونه — فهرست کامل سمت‌ها/اقلام/بازه‌ها پس از دریافت از کارفرما جایگزین می‌شود
+var CLOTHING_DB = {
+  'کارشناس حفاظت (HSE)':[
+    {item:'کاپشن', qty:'۱ عدد', period:'هر ۲ سال'},
+    {item:'پیراهن و شلوار کار', qty:'۲ دست', period:'سالانه'},
+    {item:'جلیقه شبرنگ', qty:'۱ عدد', period:'سالانه'},
+    {item:'کلاه ایمنی', qty:'۱ عدد', period:'هر ۲ سال'},
+    {item:'کفش ایمنی', qty:'۱ جفت', period:'سالانه'},
+    {item:'دستکش', qty:'۴ جفت', period:'سالانه'},
+    {item:'عینک ایمنی', qty:'۱ عدد', period:'سالانه'},
+    {item:'عینک آفتابی', qty:'۱ عدد', period:'هر ۲ سال'},
+    {item:'گوشی حفاظتی', qty:'۱ عدد', period:'سالانه'}
+  ],
+  'کارگر عملیات':[
+    {item:'لباس کار سرتاسری', qty:'۲ دست', period:'سالانه'},
+    {item:'کفش ایمنی', qty:'۱ جفت', period:'سالانه'},
+    {item:'دستکش کار', qty:'۶ جفت', period:'سالانه'},
+    {item:'کلاه ایمنی', qty:'۱ عدد', period:'هر ۲ سال'},
+    {item:'لباس بارانی', qty:'۱ دست', period:'هر ۲ سال'}
+  ],
+  'راننده':[
+    {item:'پیراهن و شلوار', qty:'۲ دست', period:'سالانه'},
+    {item:'کفش ایمنی', qty:'۱ جفت', period:'سالانه'},
+    {item:'جلیقه شبرنگ', qty:'۱ عدد', period:'سالانه'}
+  ]
+};
+function initClothing(){ var s=document.getElementById('clSel'); if(!s) return; s.innerHTML='<option value="">— انتخاب سمت —</option>'+Object.keys(CLOTHING_DB).map(function(p){return '<option value="'+p+'">'+p+'</option>';}).join(''); }
+function renderClothing(){
+  var p=document.getElementById('clSel').value, box=document.getElementById('clResult');
+  if(!p||!CLOTHING_DB[p]){ box.innerHTML=''; return; }
+  box.innerHTML='<div class="sec-block"><h3>👕 البسه و تجهیزات — '+p+'</h3>'+CLOTHING_DB[p].map(function(c){return '<div class="sec-row"><span class="sk">'+c.item+'</span><span class="sv">'+c.qty+' · '+c.period+'</span></div>';}).join('')+'</div>';
+}
+
 // ساخت کارت‌های نوع حریق در بارگذاری
 buildFireGrid();
 initGasPage();
 initFAPage();
 initRiskPages();
+initPPE();
+initClothing();
 enhanceSelects();
 // اعمال تم ذخیره‌شده و هماهنگ‌کردن آیکون دکمه
 applyTheme(document.documentElement.getAttribute('data-theme')==='light' ? 'light' : 'dark');
