@@ -121,7 +121,7 @@ async function getKlines(){
   let err;
   for(const h of HOSTS){
     try{
-      const r=await fetch(h+'/api/v3/klines?symbol=BTCUSDT&interval='+tf+'&limit=3');
+      const r=await fetch(h+'/api/v3/klines?symbol=BTCUSDT&interval='+tf+'&limit=100');
       if(!r.ok){err='HTTP '+r.status;continue;}
       return await r.json();
     }catch(e){err=e;}
@@ -179,8 +179,8 @@ async function testPoly(){
   }
 }
 
-// Called once per *closed* 5-min candle.
-async function onClosedCandle(o,c,closeTime){
+// Called once per *closed* 5-min candle. allowLive: only the most recent close may use live odds.
+async function onClosedCandle(o,c,closeTime,allowLive){
   const color=colorOf(o,c);
   // 1) resolve the bet that was riding on this candle
   if(openBet){
@@ -197,7 +197,7 @@ async function onClosedCandle(o,c,closeTime){
     if(s>=0.01 && bal>=s){
       // figure out the entry odds first (so a limit can reject the trade)
       let odds=parseFloat(document.getElementById('odds').value)||0.51, live=false;
-      if(document.getElementById('useReal').checked){
+      if(allowLive && document.getElementById('useReal').checked){
         try{ const o2=await entryOdds(sig); if(o2&&o2>0&&o2<1){ odds=o2; live=true; } }catch(e){}
       }
       odds=Math.min(0.99,Math.max(0.01,odds));
@@ -218,27 +218,62 @@ async function poll(){
   if(busy) return; busy=true;
   try{
     const rows=await getKlines();
-    const closed=rows[rows.length-2], forming=rows[rows.length-1];
+    const forming=rows[rows.length-1];
     curPrice=Math.round(parseFloat(forming[4]));
     curColor=colorOf(parseFloat(forming[1]),parseFloat(forming[4]));
     formingClose=parseInt(forming[6]);
-    const o=parseFloat(closed[1]), c=parseFloat(closed[4]), ct=parseInt(closed[6]), oid=parseInt(closed[0]);
     if(lastClosedOpen===null){
-      // first read: seed strategy on the just-closed candle (and maybe place first bet)
-      lastClosedOpen=oid; await onClosedCandle(o,c,ct);
+      // fresh start: seed on the latest closed candle only (no history replay)
+      const last=rows[rows.length-2];
+      lastClosedOpen=parseInt(last[0]);
+      await onClosedCandle(parseFloat(last[1]),parseFloat(last[4]),parseInt(last[6]),true);
       setMsg('وصل شد ✅ — منتظرِ بسته شدنِ کندلِ بعدی.');
-    } else if(oid!==lastClosedOpen){
-      lastClosedOpen=oid; await onClosedCandle(o,c,ct);
-      setMsg('یک کندلِ '+document.getElementById('tf').value+' بسته شد ('+clk(ct)+').');
+    } else {
+      // process every candle that closed since we last saw one (catch-up while away)
+      let caught=0;
+      for(let i=0;i<rows.length-1;i++){
+        const oid=parseInt(rows[i][0]);
+        if(oid<=lastClosedOpen) continue;
+        const isLatest=(i===rows.length-2);
+        lastClosedOpen=oid;
+        await onClosedCandle(parseFloat(rows[i][1]),parseFloat(rows[i][4]),parseInt(rows[i][6]),isLatest);
+        caught++;
+      }
+      if(caught===1) setMsg('یک کندلِ '+document.getElementById('tf').value+' بسته شد.');
+      else if(caught>1) setMsg('برگشتی ✅ — '+caught+' کندل که در نبودت بسته شده بود جبران شد.');
     }
+    const last=rows[rows.length-2];
+    const lc=colorOf(parseFloat(last[1]),parseFloat(last[4]));
     document.getElementById('lastc').innerHTML='آخرین کندلِ بسته‌شده: '+
-      '<span class="dot" style="background:'+(colorOf(o,c)==='green'?'var(--green)':'var(--red)')+'"></span> '+
-      (colorOf(o,c)==='green'?'سبز (بالا)':'قرمز (پایین)')+' @ $'+Math.round(c).toLocaleString('en-US')+' · '+clk(ct);
-    render();
+      '<span class="dot" style="background:'+(lc==='green'?'var(--green)':'var(--red)')+'"></span> '+
+      (lc==='green'?'سبز (بالا)':'قرمز (پایین)')+' @ $'+Math.round(parseFloat(last[4])).toLocaleString('en-US')+' · '+clk(parseInt(last[6]));
+    render(); saveState();
   }catch(e){
     setMsg('❌ گرفتنِ کندلِ واقعی نشد (CORS/شبکه). اگر این پیام موند، باید یک سرورِ کوچک بسازم.');
   }
   busy=false;
+}
+
+// --- persistence: survive leaving/reopening the app ---
+function val(id){return document.getElementById(id).value;}
+function setVal(id,v){ if(v!=null && document.getElementById(id)) document.getElementById(id).value=v; }
+function saveState(){
+  try{ localStorage.setItem('polybot', JSON.stringify({
+    running: !!pollTimer, bal, start, openBet, trades, wins, losses, step, prevColor, streakLen, lastClosedOpen,
+    cfg:{tf:val('tf'),dir:val('dir'),streak:val('streak'),mart:document.getElementById('mart').checked,
+      amt:val('amt'),bal:val('bal'),odds:val('odds'),useReal:document.getElementById('useReal').checked,maxEntry:val('maxEntry')}
+  })); }catch(e){}
+}
+function loadState(){            // returns running flag, or null if nothing saved
+  let s; try{ s=JSON.parse(localStorage.getItem('polybot')); }catch(e){}
+  if(!s) return null;
+  bal=s.bal; start=s.start; openBet=s.openBet||null; trades=s.trades||[]; wins=s.wins||0; losses=s.losses||0;
+  step=s.step||0; prevColor=s.prevColor||null; streakLen=s.streakLen||0;
+  lastClosedOpen=(s.lastClosedOpen!=null)?s.lastClosedOpen:null;
+  if(s.cfg){const c=s.cfg; setVal('tf',c.tf);setVal('dir',c.dir);setVal('streak',c.streak);
+    document.getElementById('mart').checked=!!c.mart; setVal('amt',c.amt);setVal('bal',c.bal);
+    setVal('odds',c.odds); document.getElementById('useReal').checked=!!c.useReal; setVal('maxEntry',c.maxEntry);}
+  return !!s.running;
 }
 
 function setMsg(t){document.getElementById('msg').textContent=t||'';}
@@ -287,11 +322,13 @@ function run(){
   cdTimer=setInterval(countdown, 1000);
   document.getElementById('startBtn').textContent='● در حال اجرا — توقف';
   document.getElementById('startBtn').classList.add('ghost');
+  saveState();
 }
 function stop(){
   clearInterval(pollTimer); pollTimer=null; clearInterval(cdTimer); cdTimer=null;
   document.getElementById('startBtn').textContent='▶ شروع';
   document.getElementById('startBtn').classList.remove('ghost');
+  saveState();
 }
 function reset(){
   stop();
@@ -300,9 +337,18 @@ function reset(){
   bal=parseFloat(document.getElementById('bal').value)||100; start=bal;
   setMsg(''); document.getElementById('cd').textContent='—';
   document.getElementById('lastc').textContent='آخرین کندلِ بسته‌شده: —';
+  try{ localStorage.removeItem('polybot'); }catch(e){}
   render();
 }
-reset();
+
+// On open: restore the saved session and resume (catching up while you were away).
+const _wasRunning = loadState();
+if(_wasRunning===null){ reset(); }
+else {
+  document.getElementById('startBtn').textContent= _wasRunning ? '● در حال اجرا — توقف' : '▶ شروع';
+  render();
+  if(_wasRunning){ run(); }
+}
 </script>
 </body>
 </html>
