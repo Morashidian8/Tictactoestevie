@@ -229,6 +229,8 @@ async function onClosedCandle(o,c,closeTime,place){
   if(bal+(openBet?openBet.stake:0)<=0.01){ stop(); setMsg('موجودی تمام شد — متوقف شد.'); }
 }
 
+function tfSeconds(){ return ({'1m':60,'5m':300,'15m':900})[document.getElementById('tf').value]||300; }
+
 async function poll(){
   if(busy) return; busy=true;
   try{
@@ -237,34 +239,40 @@ async function poll(){
     curPrice=Math.round(parseFloat(forming[4]));
     curColor=colorOf(parseFloat(forming[1]),parseFloat(forming[4]));
     formingClose=parseInt(forming[6]);
-    if(lastClosedOpen===null){
-      // fresh start: seed on the latest closed candle only (no history replay)
-      const last=rows[rows.length-2];
-      lastClosedOpen=parseInt(last[0]);
-      await onClosedCandle(parseFloat(last[1]),parseFloat(last[4]),parseInt(last[6]),true);
-      setMsg('وصل شد ✅ — منتظرِ بسته شدنِ کندلِ بعدی.');
-    } else {
-      // process every candle that closed since we last saw one (catch-up while away)
-      let caught=0;
-      for(let i=0;i<rows.length-1;i++){
-        const oid=parseInt(rows[i][0]);
-        if(oid<=lastClosedOpen) continue;
-        const isLatest=(i===rows.length-2);
-        lastClosedOpen=oid;
-        await onClosedCandle(parseFloat(rows[i][1]),parseFloat(rows[i][4]),parseInt(rows[i][6]),isLatest);
-        caught++;
-      }
-      if(caught===1) setMsg('یک کندلِ '+document.getElementById('tf').value+' بسته شد.');
-      else if(caught>1) setMsg('برگشتی ✅ — '+caught+' کندل که در نبودت بسته شده بود جبران شد.');
-    }
     const last=rows[rows.length-2];
-    const lc=colorOf(parseFloat(last[1]),parseFloat(last[4]));
+    const lastOid=parseInt(last[0]);
+    const iv=tfSeconds()*1000;
+    const o=parseFloat(last[1]), c=parseFloat(last[4]), ct=parseInt(last[6]);
+
+    if(lastClosedOpen!==null && lastOid===lastClosedOpen){
+      // no new candle yet — just refresh the display
+    } else if(lastClosedOpen!==null && lastOid===lastClosedOpen+iv){
+      // the exact next candle while running: a real, live, consecutive step
+      lastClosedOpen=lastOid;
+      await onClosedCandle(o,c,ct,true);
+      setMsg('کندلِ '+document.getElementById('tf').value+' بسته شد ('+clk(ct)+').');
+    } else if(lastClosedOpen===null){
+      // fresh start
+      lastClosedOpen=lastOid;
+      await onClosedCandle(o,c,ct,true);
+      setMsg('وصل شد ✅ — معامله از کندلِ فعلی شروع شد.');
+    } else {
+      // a gap: the app was closed/asleep (browsers can't trade in the background).
+      // Don't fabricate the missed candles — refund any dangling bet, reset the
+      // streak + martingale, and continue cleanly from the current candle.
+      if(openBet){ bal+=openBet.stake; openBet=null; }
+      step=0; streakLen=0; prevColor=null;
+      lastClosedOpen=lastOid;
+      await onClosedCandle(o,c,ct,true);
+      setMsg('از کندلِ فعلی ادامه داد. بازه‌ی نبودنت معامله نشد و مارتینگل ریست شد (مرورگر در پس‌زمینه معامله نمی‌کند).');
+    }
+    const lc=colorOf(o,c);
     document.getElementById('lastc').innerHTML='آخرین کندلِ بسته‌شده: '+
       '<span class="dot" style="background:'+(lc==='green'?'var(--green)':'var(--red)')+'"></span> '+
-      (lc==='green'?'سبز (بالا)':'قرمز (پایین)')+' @ $'+Math.round(parseFloat(last[4])).toLocaleString('en-US')+' · '+clk(parseInt(last[6]));
+      (lc==='green'?'سبز (بالا)':'قرمز (پایین)')+' @ $'+Math.round(c).toLocaleString('en-US')+' · '+clk(ct);
     render(); saveState();
   }catch(e){
-    setMsg('❌ گرفتنِ کندلِ واقعی نشد (CORS/شبکه). اگر این پیام موند، باید یک سرورِ کوچک بسازم.');
+    setMsg('❌ گرفتنِ کندلِ واقعی نشد (CORS/شبکه).');
   }
   busy=false;
 }
