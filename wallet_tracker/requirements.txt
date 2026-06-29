@@ -1,0 +1,4 @@
+# Standalone deps for wallet_tracker (no shared deps with the rest of the repo).
+requests>=2.31
+fastapi>=0.110
+uvicorn[standard]>=0.27
