@@ -19,11 +19,14 @@ h1{font-size:1.5rem;margin:0 0 4px;color:var(--primary)}
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
 @media(max-width:560px){.grid{grid-template-columns:1fr}}
 label{display:flex;flex-direction:column;gap:6px;font-size:.9rem;font-weight:bold;color:#374151}
-input,textarea{
+input,textarea,select{
   font-family:inherit;font-size:1rem;padding:10px 12px;border:1.5px solid #d1d5db;
   border-radius:10px;outline:none;background:#f9fafb;color:#111827;
 }
-input:focus,textarea:focus{border-color:var(--primary2);background:#fff}
+select{cursor:pointer;appearance:none;-webkit-appearance:none;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2'><path d='M6 9l6 6 6-6'/></svg>");
+  background-repeat:no-repeat;background-position:left 12px center;padding-left:34px}
+input:focus,textarea:focus,select:focus{border-color:var(--primary2);background-color:#fff}
 textarea{resize:vertical}
 
 .actions{display:flex;gap:12px;margin-top:20px;flex-wrap:wrap}

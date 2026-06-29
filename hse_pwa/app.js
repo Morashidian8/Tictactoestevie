@@ -1,5 +1,6 @@
 // ====== HSE Inspection — Offline PWA ======
 let CHECKLIST = null, ITEMS = [], idx = 0;
+let BUILDINGS = []; // فهرست ساختمان‌ها با آدرس
 const STORE_KEY = "hse_pwa_v1";
 const HISTORY_KEY = "hse_pwa_history";
 let state = { building: {}, answers: {} };
@@ -208,11 +209,35 @@ function showCategorySelection(){
   show("categoryScreen");
 }
 
+// =================== فهرست ساختمان‌ها ===================
+function populateBuildings(){
+  const sel = $("#b_name");
+  if(!sel || sel.tagName !== "SELECT") return;
+  // پاک‌سازی و افزودن گزینهٔ پیش‌فرض
+  sel.innerHTML = '<option value="">— انتخاب ساختمان —</option>';
+  BUILDINGS.forEach(b=>{
+    const o = document.createElement("option");
+    o.value = b.name;
+    o.textContent = b.unit ? `${b.name} — ${b.unit}` : b.name;
+    sel.appendChild(o);
+  });
+  // با انتخاب ساختمان، آدرس به‌صورت خودکار درج می‌شود
+  sel.onchange = ()=>{
+    const b = BUILDINGS.find(x=>x.name === sel.value);
+    const addr = $("#b_address");
+    if(addr) addr.value = b ? (b.address||"") : "";
+  };
+}
+
 // =================== راه‌اندازی ===================
 async function init(){
   CHECKLIST = await (await fetch("checklist_data.json")).json();
   ITEMS = CHECKLIST.items;
   filteredItems = [...ITEMS]; // شروع با تمام ردیف‌ها
+
+  // بارگذاری فهرست ساختمان‌ها و پر کردن منوی انتخابی
+  try{ BUILDINGS = await (await fetch("buildings.json")).json(); }catch(e){ BUILDINGS = []; }
+  populateBuildings();
 
   const saved = loadLocal();
   const resumeBtn = $("#resumeBtn");
@@ -315,7 +340,8 @@ async function guard(fn,label,btn){
   }
 }
 
-function readBuilding(){ state.building={ name:$("#b_name").value, address:$("#b_address").value,
+function readBuilding(){ const nm=$("#b_name").value; const bobj=BUILDINGS.find(x=>x.name===nm);
+  state.building={ name:nm, unit:(bobj&&bobj.unit)||"", address:$("#b_address").value,
   date:$("#b_date").value, inspector:$("#b_inspector").value, period:$("#b_period").value }; persist(); }
 function fillBuilding(){ const b=state.building||{}; $("#b_name").value=b.name||""; $("#b_address").value=b.address||"";
   $("#b_date").value=b.date||""; $("#b_inspector").value=b.inspector||""; $("#b_period").value=b.period||""; }
@@ -444,8 +470,8 @@ async function exportExcel(){
   ws.mergeCells("A1:I1"); const t=ws.getCell("A1"); t.value="گزارش بازدید ایمنی و آتش‌نشانی ساختمان";
   t.font={name:"B Nazanin",bold:true,size:14,color:{argb:"FFFFFFFF"}}; t.alignment={horizontal:"center",vertical:"middle"};
   t.fill={type:"pattern",pattern:"solid",fgColor:{argb:"FF1F4E78"}}; ws.getRow(1).height=26;
-  const info=[["نام ساختمان / پروژه",b.name||""],["آدرس",b.address||""],["تاریخ بازدید",b.date||""],
-    ["بازرس HSE",b.inspector||""],["کد ساختمان",b.code||""],["دوره بازدید",b.period||""]];
+  const info=[["نام ساختمان / اداره",b.name||""],["واحد / اداره گازرسانی",b.unit||""],["آدرس",b.address||""],
+    ["تاریخ بازدید",b.date||""],["بازرس HSE",b.inspector||""],["دوره بازدید",b.period||""]];
   let r=2; for(let i=0;i<info.length;i+=2){ ws.getCell(r,1).value=info[i][0]; ws.getCell(r,1).font={name:"B Nazanin",bold:true};
     ws.getCell(r,2).value=info[i][1]; ws.getCell(r,2).font={name:"B Nazanin"};
     if(info[i+1]){ ws.getCell(r,4).value=info[i+1][0]; ws.getCell(r,4).font={name:"B Nazanin",bold:true};
@@ -498,9 +524,9 @@ async function exportWord(){
       children:[P([R(v||"—",{size:22})])] }) ];
   const infoTable=new D.Table({ visuallyRightToLeft:true, width:{size:100,type:D.WidthType.PERCENTAGE},
     rows:[
-      new D.TableRow({children:[...kv("نام ساختمان / پروژه",b.name), ...kv("تاریخ بازدید",b.date)]}),
+      new D.TableRow({children:[...kv("نام ساختمان / اداره",b.name), ...kv("تاریخ بازدید",b.date)]}),
       new D.TableRow({children:[...kv("آدرس",b.address), ...kv("بازرس HSE",b.inspector)]}),
-      new D.TableRow({children:[...kv("نام ساختمان / اداره",b.name), ...kv("دوره بازدید",b.period)]}),
+      new D.TableRow({children:[...kv("واحد / اداره گازرسانی",b.unit), ...kv("دوره بازدید",b.period)]}),
     ] });
 
   // ---- آمار خلاصه ----

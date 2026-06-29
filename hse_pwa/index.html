@@ -17,8 +17,12 @@
   <section id="startScreen" class="card screen">
     <h1>چک‌لیست بازدید ایمنی و آتش‌نشانی</h1>
     <div class="grid">
-      <label>نام ساختمان / اداره <input id="b_name" type="text"></label>
-      <label>آدرس <input id="b_address" type="text"></label>
+      <label>نام ساختمان / اداره
+        <select id="b_name"><option value="">— انتخاب ساختمان —</option></select>
+      </label>
+      <label>آدرس
+        <input id="b_address" type="text" readonly placeholder="با انتخاب ساختمان درج می‌شود">
+      </label>
       <label>تاریخ بازدید
         <input id="b_date" type="text" readonly placeholder="انتخاب از تقویم">
       </label>
