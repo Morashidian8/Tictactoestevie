@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0b1120" />
+  <title>ردیاب کیف پول پلی‌مارکت</title>
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main class="app">
+    <header class="head">
+      <h1>ردیاب کیف پول پلی‌مارکت</h1>
+      <p class="sub">موجودی USDC و سود/زیان معاملات در یک بازه زمانی دلخواه</p>
+    </header>
+
+    <section class="card form">
+      <label class="field">
+        <span>آدرس کیف پول (Polygon)</span>
+        <input id="address" type="text" inputmode="text" spellcheck="false"
+               placeholder="0x..." autocomplete="off" />
+      </label>
+
+      <div class="field">
+        <span>بازه زمانی</span>
+        <div class="presets" id="presets">
+          <button type="button" data-min="60" class="preset active">۱ ساعت</button>
+          <button type="button" data-min="120" class="preset">۲ ساعت</button>
+          <button type="button" data-min="360" class="preset">۶ ساعت</button>
+          <button type="button" data-min="720" class="preset">۱۲ ساعت</button>
+          <button type="button" data-min="1440" class="preset">۲۴ ساعت</button>
+          <button type="button" data-min="10080" class="preset">۷ روز</button>
+        </div>
+        <div class="custom">
+          <input id="customMin" type="number" min="1" step="1" placeholder="دقیقه دلخواه" />
+          <span class="hint">مثلاً ۹۰ برای یک ساعت و نیم</span>
+        </div>
+      </div>
+
+      <button id="go" class="go">محاسبه کن</button>
+
+      <details class="adv">
+        <summary>تنظیمات پیشرفته (اختیاری)</summary>
+        <label class="field">
+          <span>آدرس RPC شبکه Polygon — اگر خالی بماند از پیش‌فرض عمومی استفاده می‌شود</span>
+          <input id="rpc" type="text" spellcheck="false" placeholder="https://polygon-rpc.com" autocomplete="off" />
+        </label>
+      </details>
+    </section>
+
+    <section id="status" class="status" hidden></section>
+
+    <section id="results" class="results" hidden>
+      <div class="grid">
+        <div class="card stat">
+          <div class="stat-label">موجودی نقدی USDC</div>
+          <div class="stat-value" id="balance">—</div>
+          <div class="stat-foot" id="balanceBreak"></div>
+        </div>
+        <div class="card stat">
+          <div class="stat-label">ارزش پورتفولیو</div>
+          <div class="stat-value" id="portfolio">—</div>
+          <div class="stat-foot">مجموع ارزش فعلی پوزیشن‌ها</div>
+        </div>
+        <div class="card stat">
+          <div class="stat-label">سود/زیان در بازه</div>
+          <div class="stat-value" id="pnl">—</div>
+          <div class="stat-foot" id="pnlFoot"></div>
+        </div>
+        <div class="card stat">
+          <div class="stat-label">سود/زیان تحقق‌نیافته (فعلی)</div>
+          <div class="stat-value" id="unrealized">—</div>
+          <div class="stat-foot" id="unrealizedFoot"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>رویدادهای بسته‌شده در بازه</h2>
+        <div id="events" class="events"></div>
+      </div>
+
+      <div class="card">
+        <h2>پوزیشن‌های باز</h2>
+        <div id="positions" class="events"></div>
+      </div>
+
+      <div id="warnings" class="card warn" hidden></div>
+    </section>
+
+    <footer class="foot">
+      <span id="meta"></span>
+    </footer>
+  </main>
+
+  <script src="poly.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
