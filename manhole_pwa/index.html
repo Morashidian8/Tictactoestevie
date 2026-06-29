@@ -1091,6 +1091,7 @@
     <button data-page="ppe">انتخاب PPE بر اساس فعالیت</button>
     <button data-page="clothing">ماتریس البسه</button>
     <button data-page="hcdet">تشخیص کار گرم و سرد</button>
+    <button data-page="hazzone">زون‌بندی مناطق خطر</button>
     <button data-page="assess">ورود به فضای بسته</button>
     <button data-page="gasinject">تزریق گاز (راه‌اندازی خط)</button>
     <button data-page="hotcold">کار گرم و سرد</button>
@@ -1139,7 +1140,7 @@
       <span class="ax-ico">🛡️</span>
       <span class="ax-name">ایمنی</span>
       <span class="ax-desc">عملیات، فضای محصور، آتش‌نشانی و ریسک</span>
-      <span class="ax-foot"><span class="ax-badge">۲۰ ابزار</span><span class="ax-arrow">←</span></span>
+      <span class="ax-foot"><span class="ax-badge">۲۱ ابزار</span><span class="ax-arrow">←</span></span>
     </button>
     <button class="axis" style="--c:#3FD0FF" onclick="axisSoon('بهداشت حرفه‌ای و طب کار')">
       <span class="ax-ghost">💓</span>
@@ -1299,9 +1300,10 @@
     <div class="cb-ico">🛡️</div>
   </div>
 
-  <div class="sec-head"><span class="sh-bar" style="background:#b6a4ff"></span><div class="sh-txt"><div class="sh-t">صلاحیت، PPE و البسه</div><div class="sh-s">۵ ابزار</div></div></div>
+  <div class="sec-head"><span class="sh-bar" style="background:#b6a4ff"></span><div class="sh-txt"><div class="sh-t">صلاحیت، PPE و البسه</div><div class="sh-s">۶ ابزار</div></div></div>
   <div class="toolrows">
     <button class="toolrow" onclick="goPage('hcdet')"><span class="tr-ico" style="--c:#FF9500">🔥</span><span class="tr-txt"><span class="tr-name">تشخیص کار گرم و سرد</span><span class="tr-desc">گرم یا سرد بودن هر فعالیت + تعاریف و مصادیق</span></span><span class="tr-arrow">‹</span></button>
+    <button class="toolrow" onclick="goPage('hazzone')"><span class="tr-ico" style="--c:#FF5A5A">⛔</span><span class="tr-txt"><span class="tr-name">زون‌بندی مناطق خطر</span><span class="tr-desc">تعیین Zone 0/1/2 هر مکان + مصادیق و الزام تجهیزات</span></span><span class="tr-arrow">‹</span></button>
     <button class="toolrow" onclick="goPage('competency')"><span class="tr-ico" style="--c:#22FF88">🎖️</span><span class="tr-txt"><span class="tr-name">لیست صلاحیت افراد</span><span class="tr-desc">استعلام صلاحیت با کد ملی یا شماره پرسنلی</span></span><span class="tr-arrow">‹</span></button>
     <button class="toolrow" onclick="goPage('area-type')"><span class="tr-ico" style="--c:#FF9500">📍</span><span class="tr-txt"><span class="tr-name">تشخیص محوطه مشمول/مشروط</span><span class="tr-desc">آیا فعالیت شما نیاز به پروانه دارد؟</span></span><span class="tr-arrow">‹</span></button>
     <button class="toolrow" onclick="goPage('ppe')"><span class="tr-ico" style="--c:#3FD0FF">🦺</span><span class="tr-txt"><span class="tr-name">انتخاب PPE بر اساس فعالیت</span><span class="tr-desc">تجهیزات حفاظت فردی لازم هر فعالیت</span></span><span class="tr-arrow">‹</span></button>
@@ -1344,9 +1346,10 @@
 <!-- ===== صفحه «ابزارها» (فهرست کامل) ===== -->
 <div class="page" id="tools">
 <div class="container">
-  <div class="sec-head"><span class="sh-bar" style="background:#22FF88"></span><div class="sh-txt"><div class="sh-t">ایمنی</div><div class="sh-s">۸ ابزار</div></div></div>
+  <div class="sec-head"><span class="sh-bar" style="background:#22FF88"></span><div class="sh-txt"><div class="sh-t">ایمنی</div><div class="sh-s">۹ ابزار</div></div></div>
   <div class="toolrows">
     <button class="toolrow" onclick="goPage('assess')"><span class="tr-ico" style="--c:#22FF88">🕳️</span><span class="tr-txt"><span class="tr-name">ورود به فضای بسته</span><span class="tr-desc">نظارت گاز و چک‌لیست فضای محصور</span></span><span class="tr-arrow">‹</span></button>
+    <button class="toolrow" onclick="goPage('hazzone')"><span class="tr-ico" style="--c:#FF5A5A">⛔</span><span class="tr-txt"><span class="tr-name">زون‌بندی مناطق خطر</span><span class="tr-desc">تعیین Zone 0/1/2 هر مکان + مصادیق</span></span><span class="tr-arrow">‹</span></button>
     <button class="toolrow" onclick="goPage('gasinject')"><span class="tr-ico" style="--c:#3FD0FF">🛢️</span><span class="tr-txt"><span class="tr-name">تزریق گاز (راه‌اندازی خط)</span><span class="tr-desc">محاسبهٔ زمان تخلیه/تزریق + روش‌ها و نکات</span></span><span class="tr-arrow">‹</span></button>
     <button class="toolrow" onclick="goPage('hcdet')"><span class="tr-ico" style="--c:#FF9500">🔥</span><span class="tr-txt"><span class="tr-name">تشخیص کار گرم و سرد</span><span class="tr-desc">گرم یا سرد بودن هر فعالیت + تعاریف و مصادیق</span></span><span class="tr-arrow">‹</span></button>
     <button class="toolrow" onclick="goPage('hotcold')"><span class="tr-ico" style="--c:#FF9500">🔥</span><span class="tr-txt"><span class="tr-name">کار گرم و سرد</span><span class="tr-desc">فرم پرمیت و الزامات ایمنی</span></span><span class="tr-arrow">‹</span></button>
@@ -1645,6 +1648,33 @@
 </div>
 <div class="note">این ابزار جهت برآورد زمان است و جایگزین دستورالعمل اجرایی، گازسنجی و تأیید ناظر عملیات نمی‌باشد.</div>
 </div><!-- /page gasinject -->
+
+<!-- ===== زون‌بندی مناطق خطر ===== -->
+<div class="page" id="hazzone">
+<div class="container">
+  <div class="cat-banner" style="--c:#FF5A5A"><div class="cb-txt"><div class="cb-title">زون‌بندی مناطق خطر</div><div class="cb-desc">طبقه‌بندی فضاهای خطرناک طبق IEC — مکان را انتخاب کنید</div></div><div class="cb-ico">⛔</div></div>
+
+  <div class="card">
+    <div class="def-row"><span class="def-tag" style="background:rgba(255,90,90,0.16);color:#cc3333">⛔ ZONE 0</span><span class="def-txt">فضایی که مخلوط گاز و هوای قابل اشتعال در آن به‌طور <b>دائم</b> یا برای مدت‌های طولانی حضور دارد (بیش از ۱۰۰۰ ساعت در سال)؛ مانند فضای داخلی برج‌های تقطیر و مخازن.</span></div>
+    <div class="def-row"><span class="def-tag" style="background:rgba(255,149,0,0.16);color:#cc7a00">⚠️ ZONE 1</span><span class="def-txt">فضایی که گاز قابل اشتعال در شرایط عادی بهره‌برداری به‌طور <b>متناوب</b> حضور دارد (تا حدود ۱۰۰۰ ساعت در سال)؛ یا مجاور Zone 0 و محل نشت/تعمیرات.</span></div>
+    <div class="def-row"><span class="def-tag" style="background:rgba(63,208,255,0.16);color:#1481a8">🔵 ZONE 2</span><span class="def-txt">فضایی که در شرایط عادی گاز <b>وجود ندارد</b> و اگر پدید آید فقط برای مدت کوتاه (حدود ۱ تا ۱۰ ساعت در سال).</span></div>
+    <div class="def-row"><span class="def-tag" style="background:rgba(34,255,136,0.16);color:#1d8f4e">✅ بی‌خطر</span><span class="def-txt">فضای خارج از مناطق طبقه‌بندی‌شده که منبع نشت گاز قابل اشتعال ندارد (Non-hazardous).</span></div>
+  </div>
+
+  <div class="card">
+    <div class="field">
+      <label>مکان / تجهیز را انتخاب کنید</label>
+      <select class="inp" id="hzSel" onchange="renderHazzone()"><option value="">— انتخاب مکان —</option></select>
+    </div>
+  </div>
+  <div id="hzResult"></div>
+
+  <div id="hzRef"></div>
+
+  <div class="conv-note">مبنا: تعریف کمیسیون بین‌المللی الکتروتکنیک (IEC) و استاندارد IEC 60079-10-1. گاز طبیعی (متان) گروه گازی <b>IIA</b> و کلاس دمایی <b>T1</b> است. طبقه‌بندی نهایی هر تأسیسات باید توسط کارشناس و بر اساس نقشهٔ Area Classification انجام شود؛ این فهرست راهنمای نمونه و آموزشی است.</div>
+</div>
+<div class="note">تجهیزات برقی هر زون باید دارای گواهی Ex متناسب (Ga/Gb/Gc) باشند. این ابزار جایگزین مطالعهٔ طبقه‌بندی منطقهٔ تأسیسات نیست.</div>
+</div><!-- /page hazzone -->
 
 <!-- ===== دستورالعمل‌ها ===== -->
 <div class="page" id="guidelines">
@@ -2223,7 +2253,7 @@
 // جابجایی بین صفحه‌ها (منو + کارت‌های داشبورد)
 var PAGE_TITLES = { 'cat-safety':'ایمنی', 'tools':'ابزارها', 'alerts':'اطلاعیه‌ها', 'quiz':'آزمون و خودآزمایی',
   'competency':'لیست صلاحیت افراد', 'area-type':'محوطه مشمول/مشروط', 'ppe':'انتخاب PPE بر اساس فعالیت',
-  'clothing':'ماتریس البسه', 'hcdet':'تشخیص کار گرم و سرد', 'gasinject':'تزریق گاز', 'guidelines':'دستورالعمل‌ها' };
+  'clothing':'ماتریس البسه', 'hcdet':'تشخیص کار گرم و سرد', 'gasinject':'تزریق گاز', 'hazzone':'زون‌بندی مناطق خطر', 'guidelines':'دستورالعمل‌ها' };
 var navStack = [];
 var currentPage = 'home';
 function goPage(id, isBack){
@@ -2819,6 +2849,71 @@ function calcPress(){
   if(L>15){ box.innerHTML='<div class="hyd-note">برای طول بیش از ۱۵ مایل به جدول کامل/دستورالعمل مراجعه شود.</div>'; return; }
   var p=PRESS[v][L-1];
   box.innerHTML='<div class="result-box r-blue"><span class="icon">📈</span><div class="verdict">حداقل فشار ورودی ≈ '+faDigits(p)+' PSIG</div><div class="sub">برای طول '+faDigits(L)+' مایل</div></div>';
+}
+
+/* ================= زون‌بندی مناطق خطر (IEC) ================= */
+var ZONE_META={
+  '0':{name:'ZONE 0 — خطر دائمی', cls:'r-red', icon:'⛔', eq:'تجهیزات گروه Ga (Category 1G) — مانند حفاظت ذاتاً ایمن ia.', desc:'گاز قابل اشتعال به‌طور دائم یا طولانی (بیش از ۱۰۰۰ ساعت در سال) حضور دارد.'},
+  '1':{name:'ZONE 1 — خطر متناوب', cls:'r-orange', icon:'⚠️', eq:'تجهیزات گروه Gb (Category 2G) — مانند d، e، p، ib.', desc:'گاز در شرایط عادی بهره‌برداری به‌طور متناوب حضور دارد (تا ~۱۰۰۰ ساعت در سال).'},
+  '2':{name:'ZONE 2 — خطر نادر/کوتاه', cls:'r-blue', icon:'🔵', eq:'تجهیزات گروه Gc (Category 3G) — مانند nA (و بالاتر).', desc:'در شرایط عادی گاز نیست؛ اگر پدید آید فقط برای مدت کوتاه (~۱ تا ۱۰ ساعت در سال).'},
+  's':{name:'خارج از زون — بی‌خطر', cls:'r-green', icon:'✅', eq:'الزام تجهیزات ضدانفجار خاص ندارد (تجهیزات معمولی مجاز است).', desc:'منبع نشت گاز قابل اشتعال وجود ندارد.'}
+};
+var HZ_ITEMS=[
+  // ZONE 0
+  {n:'فضای داخلی مخزن حاوی مایع قابل اشتعال (فضای بخار)', z:'0', note:'بخار قابل اشتعال به‌طور دائم در فضای بالای مایع وجود دارد.'},
+  {n:'فضای داخلی برج تقطیر پالایشگاه', z:'0', note:'حضور دائم مخلوط قابل اشتعال در فرآیند.'},
+  {n:'فضای داخلی ظروف فرآیندی و سپراتورهای گازی', z:'0', note:'گاز قابل اشتعال به‌طور پیوسته در داخل ظرف است.'},
+  {n:'فضای داخلی خط لوله و کلکتور حاوی گاز', z:'0', note:'فاز داخلی خط، همواره حاوی گاز قابل اشتعال است.'},
+  {n:'فضای داخلی مخزن مادهٔ بودارکننده (اودوریزور)', z:'0', note:'بخار قابل اشتعال مادهٔ بودار به‌طور دائم حضور دارد.'},
+  {n:'فضای داخلی درایر/فیلتر گازی در حین فرآیند', z:'0', note:'گاز قابل اشتعال پیوسته در جریان است.'},
+  // ZONE 1
+  {n:'مجاورت دهانهٔ ونت/بلودان (تخلیهٔ متناوب گاز)', z:'1', note:'هنگام تخلیه‌های متناوب، گاز در شرایط عادی ظاهر می‌شود.'},
+  {n:'محل نمونه‌گیری گاز (Sampling Point)', z:'1', note:'هنگام نمونه‌گیری به‌طور متناوب نشت کنترل‌شده رخ می‌دهد.'},
+  {n:'اطراف آب‌بند (Seal) پمپ یا کمپرسور گاز', z:'1', note:'نشت متناوب از آب‌بند در بهره‌برداری عادی محتمل است.'},
+  {n:'داخل حوضچهٔ شیر (Valve Pit) کم‌تهویه با اتصال گازی', z:'1', note:'تهویهٔ ضعیف + احتمال تجمع نشت متناوب.'},
+  {n:'اتاق رگولاتور ایستگاه CGS/TBS با تهویهٔ محدود', z:'1', note:'احتمال حضور متناوب گاز در فضای کم‌تهویه.'},
+  {n:'مجاورت خروجی شیر اطمینان/PSV', z:'1', note:'تخلیهٔ متناوب در شرایط عادی بهره‌برداری.'},
+  {n:'محل تزریق بو (اودوریزاسیون)', z:'1', note:'نشت متناوب بخار مادهٔ بودار محتمل است.'},
+  {n:'محل بارگیری/تخلیهٔ CNG یا LPG', z:'1', note:'هنگام اتصال/قطع شیلنگ‌ها نشت متناوب رخ می‌دهد.'},
+  {n:'اطراف فلنج و اتصالات با نشت متناوب محتمل', z:'1', note:'در بهره‌برداری عادی احتمال نشت دوره‌ای دارد.'},
+  {n:'اتاق کمپرسور با تهویهٔ طبیعی محدود', z:'1', note:'تجمع گاز نشتی در فضای کم‌تهویه.'},
+  {n:'مجاورت بلافصل نواحی Zone 0', z:'1', note:'انتشار گاز از Zone 0 به فضای پیرامون.'},
+  // ZONE 2
+  {n:'محوطهٔ باز ایستگاه CGS/TBS با تهویهٔ مناسب', z:'2', note:'تهویهٔ خوب؛ گاز فقط در خرابی و برای مدت کوتاه ظاهر می‌شود.'},
+  {n:'اطراف فلنج/شیر/اتصالات جوشی (آب‌بند در حالت عادی)', z:'2', note:'نشت فقط در صورت خرابی غیرعادی.'},
+  {n:'اطراف کمپرسور گاز در فضای باز با تهویهٔ خوب', z:'2', note:'پراکندگی سریع نشت احتمالی.'},
+  {n:'پیرامون خطوط لولهٔ روزمینی با اتصالات', z:'2', note:'نشت تنها در شرایط غیرعادی و کوتاه‌مدت.'},
+  {n:'اتاق با تهویهٔ مکانیکی کافی (گاز فقط در خرابی)', z:'2', note:'تهویهٔ مناسب احتمال تجمع را کاهش می‌دهد.'},
+  {n:'نواحی حاشیه‌ای پیرامون Zone 1', z:'2', note:'فاصله از منبع، تداوم حضور گاز را کوتاه می‌کند.'},
+  {n:'اطراف سکو/انبار کپسول گاز با تهویهٔ مناسب', z:'2', note:'نشت احتمالی نادر و کوتاه‌مدت.'},
+  // SAFE
+  {n:'اتاق کنترل با فشار مثبت (Pressurized)', z:'s', note:'فشار مثبت از ورود گاز جلوگیری می‌کند.'},
+  {n:'ساختمان اداری دور از منابع گاز', z:'s', note:'بدون منبع نشت گاز قابل اشتعال.'},
+  {n:'محوطهٔ باز بدون منبع نشت گاز', z:'s', note:'فاقد منبع رهایش گاز.'},
+  {n:'انبار قطعات/کالای غیرگازی', z:'s', note:'هیچ منبع گاز قابل اشتعالی وجود ندارد.'},
+  {n:'پارکینگ روباز دور از تأسیسات گازی', z:'s', note:'خارج از محدودهٔ طبقه‌بندی‌شده.'},
+  {n:'کارگاه تعمیرات مکانیکی بدون منبع گاز', z:'s', note:'فاقد منبع رهایش گاز.'},
+  {n:'اتاق تابلو برق با فشار مثبت و دور از نشت', z:'s', note:'محافظت‌شده و خارج از ناحیهٔ خطر.'}
+];
+function initHazzone(){
+  var s=document.getElementById('hzSel'); if(!s) return;
+  var opts=HZ_ITEMS.slice().sort(function(a,b){return a.n.localeCompare(b.n,'fa');});
+  s.innerHTML='<option value="">— انتخاب مکان —</option>'+opts.map(function(a){var i=HZ_ITEMS.indexOf(a);return '<option value="'+i+'">'+a.n+'</option>';}).join('');
+  renderHazRef();
+}
+function renderHazzone(){
+  var v=document.getElementById('hzSel').value, box=document.getElementById('hzResult');
+  if(v===''){ box.innerHTML=''; return; }
+  var a=HZ_ITEMS[+v]; if(!a){ box.innerHTML=''; return; }
+  var z=ZONE_META[a.z];
+  box.innerHTML='<div class="result-box '+z.cls+'"><span class="icon">'+z.icon+'</span><div class="verdict">'+z.name+'</div>'+
+    '<div class="sub">'+a.n+' — '+a.note+'<br><b>الزام تجهیزات:</b> '+z.eq+'</div></div>';
+}
+function renderHazRef(){
+  var box=document.getElementById('hzRef'); if(!box) return;
+  function list(z,title){ var items=HZ_ITEMS.filter(function(a){return a.z===z;}).map(function(a){return '<li>'+a.n+'</li>';}).join('');
+    return '<div class="req-list"><h3>'+ZONE_META[z].icon+' '+title+'</h3><ul class="ri-ctrl">'+items+'</ul></div>'; }
+  box.innerHTML='<div class="hc-cols">'+list('0','مصادیق ZONE 0')+list('1','مصادیق ZONE 1')+list('2','مصادیق ZONE 2')+list('s','مصادیق بی‌خطر')+'</div>';
 }
 
 function evalDig(){
@@ -4344,6 +4439,7 @@ initPPE();
 initClothing();
 initHCDet();
 taInit();
+initHazzone();
 enhanceSelects();
 // اعمال تم ذخیره‌شده و هماهنگ‌کردن آیکون دکمه
 applyTheme(document.documentElement.getAttribute('data-theme')==='light' ? 'light' : 'dark');
