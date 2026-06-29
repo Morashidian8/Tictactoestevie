@@ -1106,8 +1106,7 @@
     <div class="menu-sec"><span class="ms-dot" style="background:#22FF88"></span> ایمنی</div>
     <button data-page="competency">لیست صلاحیت افراد</button>
     <button data-page="area-type">محوطه مشمول/مشروط</button>
-    <button data-page="ppe">انتخاب PPE بر اساس فعالیت</button>
-    <button data-page="clothing">ماتریس البسه</button>
+    <button data-page="clothing">ماتریس البسه و PPE</button>
     <button data-page="hcdet">تشخیص کار گرم و سرد</button>
     <button data-page="hazzone">زون‌بندی مناطق خطر</button>
     <button data-page="gasdet">انواع دستگاه گازسنج</button>
@@ -1160,7 +1159,7 @@
       <span class="ax-ico">🛡️</span>
       <span class="ax-name">ایمنی</span>
       <span class="ax-desc">عملیات، فضای محصور، آتش‌نشانی و ریسک</span>
-      <span class="ax-foot"><span class="ax-badge">۲۳ ابزار</span><span class="ax-arrow">←</span></span>
+      <span class="ax-foot"><span class="ax-badge">۲۲ ابزار</span><span class="ax-arrow">←</span></span>
     </button>
     <button class="axis" style="--c:#3FD0FF" onclick="axisSoon('بهداشت حرفه‌ای و طب کار')">
       <span class="ax-ghost">💓</span>
@@ -1320,7 +1319,7 @@
     <div class="cb-ico">🛡️</div>
   </div>
 
-  <div class="sec-head"><span class="sh-bar" style="background:#b6a4ff"></span><div class="sh-txt"><div class="sh-t">صلاحیت، PPE و البسه</div><div class="sh-s">۸ ابزار</div></div></div>
+  <div class="sec-head"><span class="sh-bar" style="background:#b6a4ff"></span><div class="sh-txt"><div class="sh-t">صلاحیت، البسه و PPE</div><div class="sh-s">۷ ابزار</div></div></div>
   <div class="toolrows">
     <button class="toolrow" onclick="goPage('hcdet')"><span class="tr-ico" style="--c:#FF9500">🔥</span><span class="tr-txt"><span class="tr-name">تشخیص کار گرم و سرد</span><span class="tr-desc">گرم یا سرد بودن هر فعالیت + تعاریف و مصادیق</span></span><span class="tr-arrow">‹</span></button>
     <button class="toolrow" onclick="goPage('gasdet')"><span class="tr-ico" style="--c:#3FD0FF">📟</span><span class="tr-txt"><span class="tr-name">انواع دستگاه گازسنج</span><span class="tr-desc">معرفی و طرز کار گازسنج‌های رایج</span></span><span class="tr-arrow">‹</span></button>
@@ -1328,8 +1327,7 @@
     <button class="toolrow" onclick="goPage('hazzone')"><span class="tr-ico" style="--c:#FF5A5A">⛔</span><span class="tr-txt"><span class="tr-name">زون‌بندی مناطق خطر</span><span class="tr-desc">تعیین Zone 0/1/2 هر مکان + مصادیق و الزام تجهیزات</span></span><span class="tr-arrow">‹</span></button>
     <button class="toolrow" onclick="goPage('competency')"><span class="tr-ico" style="--c:#22FF88">🎖️</span><span class="tr-txt"><span class="tr-name">لیست صلاحیت افراد</span><span class="tr-desc">استعلام صلاحیت با کد ملی یا شماره پرسنلی</span></span><span class="tr-arrow">‹</span></button>
     <button class="toolrow" onclick="goPage('area-type')"><span class="tr-ico" style="--c:#FF9500">📍</span><span class="tr-txt"><span class="tr-name">تشخیص محوطه مشمول/مشروط</span><span class="tr-desc">آیا فعالیت شما نیاز به پروانه دارد؟</span></span><span class="tr-arrow">‹</span></button>
-    <button class="toolrow" onclick="goPage('ppe')"><span class="tr-ico" style="--c:#3FD0FF">🦺</span><span class="tr-txt"><span class="tr-name">انتخاب PPE بر اساس فعالیت</span><span class="tr-desc">تجهیزات حفاظت فردی لازم هر فعالیت</span></span><span class="tr-arrow">‹</span></button>
-    <button class="toolrow" onclick="goPage('clothing')"><span class="tr-ico" style="--c:#7BE06B">👕</span><span class="tr-txt"><span class="tr-name">ماتریس البسه</span><span class="tr-desc">البسه و تجهیزات سالانه بر اساس سمت</span></span><span class="tr-arrow">‹</span></button>
+    <button class="toolrow" onclick="goPage('clothing')"><span class="tr-ico" style="--c:#7BE06B">👕</span><span class="tr-txt"><span class="tr-name">ماتریس البسه و PPE</span><span class="tr-desc">البسه و تجهیزات حفاظت فردی بر اساس سمت</span></span><span class="tr-arrow">‹</span></button>
   </div>
 
   <div class="sec-head"><span class="sh-bar" style="background:#22FF88"></span><div class="sh-txt"><div class="sh-t">عملیات و فضای محصور</div><div class="sh-s">۷ ابزار</div></div></div>
@@ -1476,25 +1474,10 @@
 </div>
 </div><!-- /page area-type -->
 
-<!-- ===== انتخاب PPE بر اساس فعالیت ===== -->
-<div class="page" id="ppe">
-<div class="container">
-  <div class="cat-banner" style="--c:#3FD0FF"><div class="cb-txt"><div class="cb-title">انتخاب PPE بر اساس فعالیت</div><div class="cb-desc">تجهیزات حفاظت فردی لازم برای هر فعالیت</div></div><div class="cb-ico">🦺</div></div>
-  <div class="card">
-    <div class="field">
-      <label>فعالیت را انتخاب کنید</label>
-      <select class="inp" id="ppeSel" onchange="renderPPE()"><option value="">— انتخاب فعالیت —</option></select>
-    </div>
-  </div>
-  <div id="ppeResult"></div>
-  <div class="conv-note">فهرست PPE بر اساس ماهیت خطر هر فعالیت تنظیم شده است و جایگزین ارزیابی ریسک محل کار و تأیید مسئول HSE نیست.</div>
-</div>
-</div><!-- /page ppe -->
-
-<!-- ===== ماتریس البسه ===== -->
+<!-- ===== ماتریس البسه و PPE ===== -->
 <div class="page" id="clothing">
 <div class="container">
-  <div class="cat-banner" style="--c:#7BE06B"><div class="cb-txt"><div class="cb-title">ماتریس البسه</div><div class="cb-desc">البسه و تجهیزات حفاظت فردی بر اساس سمت سازمانی</div></div><div class="cb-ico">👕</div></div>
+  <div class="cat-banner" style="--c:#7BE06B"><div class="cb-txt"><div class="cb-title">ماتریس البسه و PPE</div><div class="cb-desc">البسه و تجهیزات حفاظت فردی بر اساس سمت سازمانی</div></div><div class="cb-ico">👕</div></div>
   <div class="card">
     <div class="field">
       <label>جستجوی نام سمت سازمانی</label>
@@ -1722,7 +1705,7 @@
       <ellipse cx="232" cy="96" rx="20" ry="26" fill="#c75b4a"/>
     </svg></div>
     <div class="gd-caption">شماتیک آموزشی — صفحهٔ مدرج (زرد=ایمن، قرمز=خطر) + مکندهٔ دستی (BULB)</div>
-    <div class="gd-desc">یاب گازها و بخارات قابل‌اشتعال (گاز طبیعی، متان، اتان، پروپان، بوتان، استیلن، بنزین، الکل متیلیک و تینر) در مخازن، بشکه‌ها، گودال‌ها، فضای محصور و محل نشت لوله‌ها.</div>
+    <div class="gd-desc">برای یافتن گازها و بخارات قابل‌اشتعال (گاز طبیعی، متان، اتان، پروپان، بوتان، استیلن، بنزین، الکل متیلیک و تینر) در مخازن، بشکه‌ها، گودال‌ها، فضای محصور و محل نشت لوله‌ها به‌کار می‌رود.</div>
     <div class="sec-block" style="margin-top:6px"><h3 style="font-size:13px">آماده‌سازی و طرز کار</h3>
       <div class="step-item"><span class="step-num">۱</span><span>تنظیم صفر و ولتاژ در هوای تمیز و عاری از گاز: پمپ مکنده را ۱/۴ دور ساعتگرد بچرخان تا روشن شود.</span></div>
       <div class="step-item"><span class="step-num">۲</span><span>کلید ولتاژ را بکش و بچرخان تا عقربه روی علامت بایستد؛ سپس با دکمهٔ A (air) و ZERO ADJUST دستگاه را صفر کن.</span></div>
@@ -1765,7 +1748,7 @@
       <circle cx="232" cy="46" r="4" fill="#ff5a5a"/>
     </svg></div>
     <div class="gd-caption">شماتیک آموزشی — بدنهٔ قلمی، نمایشگر، سنسور و چراغ</div>
-    <div class="gd-desc">نشت‌یاب پرتابل با فناوری پیشرفته و ابعاد کوچک قلمی؛ یاب نشتی‌های بسیار کوچک گاز طبیعی. مشخصات: وزن ۱۵۰ گرم، طول ۲۱۰ میلی‌متر، قطر ۲۵ میلی‌متر، دو باتری ۱٫۵ ولت قلمی Alkaline.</div>
+    <div class="gd-desc">نشت‌یاب پرتابل با فناوری پیشرفته و ابعاد کوچک قلمی؛ برای یافتن نشتی‌های بسیار کوچک گاز طبیعی به‌کار می‌رود. مشخصات: وزن ۱۵۰ گرم، طول ۲۱۰ میلی‌متر، قطر ۲۵ میلی‌متر، دو باتری ۱٫۵ ولت قلمی Alkaline.</div>
     <div class="sec-block" style="margin-top:6px"><h3 style="font-size:13px">طرز کار و محدودهٔ نمایش (Range)</h3>
       <div class="step-item"><span class="step-num">۱</span><span>باتری‌ها را بگذار؛ شارژ باتری با ۵ خط عمودی روی نمایشگر نشان داده می‌شود.</span></div>
       <div class="step-item"><span class="step-num">۲</span><span>کلید ON/OFF را بزن؛ پس از گرم‌شدن آماده می‌شود (برای خاموش‌کردن، ON/OFF را ~۵ ثانیه نگه دار).</span></div>
@@ -1833,7 +1816,7 @@
       <circle cx="232" cy="122" r="7" fill="#9fb3d1"/>
     </svg></div>
     <div class="gd-caption">شماتیک آموزشی — بدنه با نمایشگر و کلیدها + Probe انعطاف‌پذیر</div>
-    <div class="gd-desc">نشت‌یاب چندحالته با Probe و شیلنگ نمونه‌گیری؛ دارای کلید ON/MENU/OFF، چراغ‌های LED (ON و FAULT) و بازر. حالت کار با کلید انتخابگر (SELECTOR) و در محدوده‌های مختلف بسته به مدل تنظیم می‌شود.</div>
+    <div class="gd-desc">نشت‌یاب چندحالته با Probe و شیلنگ نمونه‌گیری؛ دارای کلید ON/MENU/OFF، چراغ‌های LED (نشانگر روشن‌بودن و خطا/FAULT) و بازر (بوق هشدار). حالت کار با کلید انتخابگر (SELECTOR) و بسته به مدل در محدوده‌های مختلف تنظیم می‌شود.</div>
     <div class="sec-block" style="margin-top:6px"><h3 style="font-size:13px">حالت‌های کار و محدودهٔ اندازه‌گیری (نمونه)</h3>
       <div class="sec-row"><span class="sk">Leak Test (تست نشت)</span><span class="sv">۰–۱۰۰٪ LEL · ۰–۱۰۰٪ Vol CH₄ · ۰–۲۰۰۰ ppm CO</span></div>
       <div class="sec-row"><span class="sk">Confined Space (فضای محصور)</span><span class="sv">۰–۱۰۰٪ LEL · ۰–۲۵٪ O₂ · ۰–۲۰۰۰ ppm CO · H₂S (مدل GT-44)</span></div>
@@ -1864,7 +1847,7 @@
 <!-- ===== کالیبراسیون دستگاه‌های گازسنج ===== -->
 <div class="page" id="calib">
 <div class="container">
-  <div class="cat-banner" style="--c:#7BE06B"><div class="cb-txt"><div class="cb-title">کالیبراسیون گازسنج‌ها</div><div class="cb-desc">دوره و شرایط کالیبراسیون تجهیزات گازسنج، نشت‌یاب و بوسنج</div></div><div class="cb-ico">🎯</div></div>
+  <div class="cat-banner" style="--c:#7BE06B"><div class="cb-txt"><div class="cb-title">کالیبراسیون گازسنج‌ها</div><div class="cb-desc">دوره و شرایط کالیبراسیون گازسنج، نشت‌یاب و دستگاه سنجش بو</div></div><div class="cb-ico">🎯</div></div>
 
   <div class="conv-note">دامنه: کل شرکت گاز استان تهران · مراجع: استاندارد <b>ISO 17025</b> و روش اجرایی کالیبراسیون <b>IP-105-01</b> · ویرایش ۱ (۱۴۰۳/۰۷/۰۹). مسئولیت هماهنگی: امور بازرسی فنی و HSE؛ انجام کالیبراسیون توسط نمایندگان شرکت‌های سازندهٔ واجد صلاحیت.</div>
 
@@ -1874,7 +1857,7 @@
     <div class="field"><label>دستگاه را انتخاب کنید</label>
       <select class="inp" id="calSel" onchange="renderCalib()"><option value="">— انتخاب دستگاه —</option></select></div>
     <div id="calResult"></div>
-    <div class="conv-note" style="margin-top:8px">اعداد بر حسب «ماه» است. تبصره: برای دستگاه <b>SPY GAS</b> باید گواهی صحت عملکرد صادر گردد.</div>
+    <div class="conv-note" style="margin-top:8px">اعداد بر حسب «ماه» است (دورهٔ کالیبراسیون هر گاز). فهرست شامل دستگاه‌هایی است که هماهنگی کالیبراسیون آن‌ها بر عهدهٔ واحد HSE است.</div>
   </div>
 
   <!-- ۸-۱ شرایط کالیبره نمودن -->
@@ -1912,7 +1895,7 @@
       <div class="cal2-d" style="direction:rtl;text-align:right">خطای مجاز جریان: q<sub>min</sub> تا ۰٫۲q<sub>max</sub> → ±۲٪ · بازهٔ ۰٫۲q<sub>max</sub> تا q<sub>max</sub> → ±۱٪</div>
     </div>
     <div class="cal2-row"><div class="cal2-h">دماسنج و فشارسنج</div><div class="cal2-d" style="direction:rtl;text-align:right">ایستگاه‌های C.G.S: یک سال · ایستگاه‌های D.R.S، RS و MS: دو سال</div></div>
-    <div class="cal2-row"><div class="cal2-h">گازسنج، نشت‌یاب و بوسنج</div><div class="cal2-d" style="direction:rtl;text-align:right">بر اساس سنسور مربوطه طبق جدول ۱</div></div>
+    <div class="cal2-row"><div class="cal2-h">گازسنج، نشت‌یاب و دستگاه سنجش بو</div><div class="cal2-d" style="direction:rtl;text-align:right">بر اساس سنسور مربوطه طبق جدول ۱</div></div>
     <div class="cal2-row"><div class="cal2-h">مولتی‌متر / آمپرمتر / ولتمتر</div><div class="cal2-d" style="direction:rtl;text-align:right">دوره‌ای، طبق دستورالعمل سازنده</div></div>
   </div>
 
@@ -2497,8 +2480,8 @@
 
 // جابجایی بین صفحه‌ها (منو + کارت‌های داشبورد)
 var PAGE_TITLES = { 'cat-safety':'ایمنی', 'tools':'ابزارها', 'alerts':'اطلاعیه‌ها', 'quiz':'آزمون و خودآزمایی',
-  'competency':'لیست صلاحیت افراد', 'area-type':'محوطه مشمول/مشروط', 'ppe':'انتخاب PPE بر اساس فعالیت',
-  'clothing':'ماتریس البسه', 'hcdet':'تشخیص کار گرم و سرد', 'gasinject':'تزریق گاز', 'hazzone':'زون‌بندی مناطق خطر', 'gasdet':'انواع دستگاه گازسنج', 'calib':'کالیبراسیون گازسنج‌ها', 'guidelines':'دستورالعمل‌ها' };
+  'competency':'لیست صلاحیت افراد', 'area-type':'محوطه مشمول/مشروط',
+  'clothing':'ماتریس البسه و PPE', 'hcdet':'تشخیص کار گرم و سرد', 'gasinject':'تزریق گاز', 'hazzone':'زون‌بندی مناطق خطر', 'gasdet':'انواع دستگاه گازسنج', 'calib':'کالیبراسیون گازسنج‌ها', 'guidelines':'دستورالعمل‌ها' };
 var navStack = [];
 var currentPage = 'home';
 function goPage(id, isBack){
@@ -3106,15 +3089,7 @@ var CAL1=[
   {n:'MULTI RAE', ch4:12, merc:12, unit:'HSE'},
   {n:'ODOR HANDY PLUS', merc:6, unit:'HSE'},
   {n:'SEWERIN 680', ch4:12, co2:12, h2s:12, o2:12, unit:'HSE'},
-  {n:'BW max XT II', ch4:6, co2:6, h2s:6, o2:6, unit:'HSE'},
-  {n:'SPY GAS', ch4:12, unit:'بازرسی فنی'},
-  {n:'SEWERIN PM4', ch4:12, unit:'بازرسی فنی'},
-  {n:'Ethan analyzer (SEWERIN 680)', ch4:12, unit:'بازرسی فنی'},
-  {n:'Leaser one', ch4:12, unit:'بازرسی فنی'},
-  {n:'Ethan analyzer (Heat)', ch4:12, unit:'بازرسی فنی'},
-  {n:'Ethan analyzer (Huberg)', ch4:12, unit:'بازرسی فنی'},
-  {n:'SEWERIN portafid', ch4:12, unit:'بازرسی فنی'},
-  {n:'CROWCON (Gastec)', ch4:12, unit:'بازرسی فنی'}
+  {n:'BW max XT II', ch4:6, co2:6, h2s:6, o2:6, unit:'HSE'}
 ];
 function initCalib(){
   var s=document.getElementById('calSel'); if(!s) return;
@@ -4908,7 +4883,6 @@ buildFireGrid();
 initGasPage();
 initFAPage();
 initRiskPages();
-initPPE();
 initClothing();
 initHCDet();
 taInit();
