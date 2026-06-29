@@ -418,6 +418,9 @@
   .cl-role:last-child { border-bottom:0; }
   .cl-role:active { background:rgba(34,255,136,0.10); }
   .cl-more { padding:10px 14px; font-size:12px; color:var(--muted); text-align:center; }
+  .cl-count { padding:8px 14px; font-size:12px; color:var(--txt2); border-bottom:1px solid var(--line2); position:sticky; top:0; background:#102744; z-index:1; }
+  html[data-theme="light"] .cl-count { background:#FFFFFF; }
+  html[data-theme="light"] .cl-list { background:#FFFFFF; }
 
   /* ===== ارزیابی ریسک ===== */
   .risk-card { background:#fff; border-radius:14px; padding:14px 16px; margin-bottom:14px; box-shadow:0 1px 4px rgba(0,0,0,0.08); }
@@ -1495,7 +1498,7 @@
   <div class="card">
     <div class="field">
       <label>جستجوی نام سمت سازمانی</label>
-      <input type="text" id="clSearch" placeholder="مثال: کارشناس، آتش‌نشانی، بهره‌برداری…" oninput="clFilter()">
+      <input type="text" id="clSearch" autocomplete="off" placeholder="مثال: کارشناس، آتش‌نشانی، بهره‌برداری…" oninput="clFilter()">
     </div>
     <div id="clList" class="cl-list"></div>
   </div>
@@ -4802,16 +4805,19 @@ var CLO_ROLES=[{n:'مديرعامل',m:{0:24,8:36,18:24,23:60,24:12,25:60,26:12}
 {n:'كارشناس بررسي هاي فني و اقتصادي بهينه سازي مصرف گاز',m:{0:24,5:12,8:36,18:24,24:12,25:60,26:12}},
 {n:'مهندس ارشد طراحي و اجراي طرح هاي بهينه سازي مصرف گاز',m:{0:24,5:12,8:36,16:3,17:36,18:24,23:60,24:12,25:60,26:12}}];
 
-function initClothing(){ clFilter(); }
+function initClothing(){
+  var inp=document.getElementById('clSearch');
+  if(inp && !inp._bound){ inp._bound=1; inp.addEventListener('input',clFilter); inp.addEventListener('keyup',clFilter); }
+  clFilter();
+}
 function clNorm(s){ return (s||'').replace(/[ي]/g,'ی').replace(/[ك]/g,'ک').replace(/‌/g,' ').replace(/\s+/g,' ').trim(); }
 function clFilter(){
   var inp=document.getElementById('clSearch'); if(!inp) return;
-  var q=clNorm(inp.value), box=document.getElementById('clList');
+  var q=clNorm(inp.value), box=document.getElementById('clList'); if(!box) return;
   var list=[]; for(var i=0;i<CLO_ROLES.length;i++){ if(!q||clNorm(CLO_ROLES[i].n).indexOf(q)>=0) list.push(i); }
-  var html=list.slice(0,50).map(function(i){return '<button class="cl-role" onclick="clPick('+i+')">'+CLO_ROLES[i].n+'</button>';}).join('');
-  if(list.length===0) html='<div class="cl-more">موردی یافت نشد</div>';
-  else if(list.length>50) html+='<div class="cl-more">'+faDigits(list.length-50)+' مورد دیگر… برای محدودکردن، بیشتر تایپ کنید</div>';
-  box.innerHTML=html;
+  if(list.length===0){ box.innerHTML='<div class="cl-more">موردی یافت نشد</div>'; return; }
+  var head='<div class="cl-count">'+faDigits(list.length)+' سمت'+(q?' (نتیجهٔ جستجو)':' — برای پیداکردن، اسکرول یا تایپ کنید')+'</div>';
+  box.innerHTML=head+list.map(function(i){return '<button class="cl-role" onclick="clPick('+i+')">'+CLO_ROLES[i].n+'</button>';}).join('');
 }
 function clPick(i){
   var r=CLO_ROLES[i], box=document.getElementById('clResult');
