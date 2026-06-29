@@ -403,6 +403,11 @@
   .sec-row .sv { font-weight:700; color:#1a1a1a; text-align:left; }
   .hyd-note { background:#fef0e0; border-radius:10px; padding:10px 12px; font-size:13px; color:#a25100; line-height:1.9; margin-top:10px; }
   .gi-formula { background:rgba(63,208,255,0.12); border:1px solid var(--line2); border-radius:10px; padding:12px 10px; margin-bottom:12px; font-size:14px; font-weight:700; text-align:center; direction:ltr; }
+  .gd-fig { display:flex; justify-content:center; margin:4px 0 10px; }
+  .gd-fig svg { width:100%; max-width:300px; height:auto; background:#eef3fa; border:1px solid var(--line2); border-radius:12px; padding:8px; }
+  html[data-theme="light"] .gd-fig svg { background:#f4f7fb; }
+  .gd-desc { font-size:13.5px; line-height:1.95; color:var(--txt2); margin:2px 0 10px; }
+  .gd-caption { text-align:center; font-size:11.5px; color:var(--muted); margin-top:-4px; margin-bottom:10px; }
 
   /* ===== ارزیابی ریسک ===== */
   .risk-card { background:#fff; border-radius:14px; padding:14px 16px; margin-bottom:14px; box-shadow:0 1px 4px rgba(0,0,0,0.08); }
@@ -1092,6 +1097,7 @@
     <button data-page="clothing">ماتریس البسه</button>
     <button data-page="hcdet">تشخیص کار گرم و سرد</button>
     <button data-page="hazzone">زون‌بندی مناطق خطر</button>
+    <button data-page="gasdet">انواع دستگاه گازسنج</button>
     <button data-page="assess">ورود به فضای بسته</button>
     <button data-page="gasinject">تزریق گاز (راه‌اندازی خط)</button>
     <button data-page="hotcold">کار گرم و سرد</button>
@@ -1140,7 +1146,7 @@
       <span class="ax-ico">🛡️</span>
       <span class="ax-name">ایمنی</span>
       <span class="ax-desc">عملیات، فضای محصور، آتش‌نشانی و ریسک</span>
-      <span class="ax-foot"><span class="ax-badge">۲۱ ابزار</span><span class="ax-arrow">←</span></span>
+      <span class="ax-foot"><span class="ax-badge">۲۲ ابزار</span><span class="ax-arrow">←</span></span>
     </button>
     <button class="axis" style="--c:#3FD0FF" onclick="axisSoon('بهداشت حرفه‌ای و طب کار')">
       <span class="ax-ghost">💓</span>
@@ -1300,9 +1306,10 @@
     <div class="cb-ico">🛡️</div>
   </div>
 
-  <div class="sec-head"><span class="sh-bar" style="background:#b6a4ff"></span><div class="sh-txt"><div class="sh-t">صلاحیت، PPE و البسه</div><div class="sh-s">۶ ابزار</div></div></div>
+  <div class="sec-head"><span class="sh-bar" style="background:#b6a4ff"></span><div class="sh-txt"><div class="sh-t">صلاحیت، PPE و البسه</div><div class="sh-s">۷ ابزار</div></div></div>
   <div class="toolrows">
     <button class="toolrow" onclick="goPage('hcdet')"><span class="tr-ico" style="--c:#FF9500">🔥</span><span class="tr-txt"><span class="tr-name">تشخیص کار گرم و سرد</span><span class="tr-desc">گرم یا سرد بودن هر فعالیت + تعاریف و مصادیق</span></span><span class="tr-arrow">‹</span></button>
+    <button class="toolrow" onclick="goPage('gasdet')"><span class="tr-ico" style="--c:#3FD0FF">📟</span><span class="tr-txt"><span class="tr-name">انواع دستگاه گازسنج</span><span class="tr-desc">معرفی و طرز کار گازسنج‌های رایج</span></span><span class="tr-arrow">‹</span></button>
     <button class="toolrow" onclick="goPage('hazzone')"><span class="tr-ico" style="--c:#FF5A5A">⛔</span><span class="tr-txt"><span class="tr-name">زون‌بندی مناطق خطر</span><span class="tr-desc">تعیین Zone 0/1/2 هر مکان + مصادیق و الزام تجهیزات</span></span><span class="tr-arrow">‹</span></button>
     <button class="toolrow" onclick="goPage('competency')"><span class="tr-ico" style="--c:#22FF88">🎖️</span><span class="tr-txt"><span class="tr-name">لیست صلاحیت افراد</span><span class="tr-desc">استعلام صلاحیت با کد ملی یا شماره پرسنلی</span></span><span class="tr-arrow">‹</span></button>
     <button class="toolrow" onclick="goPage('area-type')"><span class="tr-ico" style="--c:#FF9500">📍</span><span class="tr-txt"><span class="tr-name">تشخیص محوطه مشمول/مشروط</span><span class="tr-desc">آیا فعالیت شما نیاز به پروانه دارد؟</span></span><span class="tr-arrow">‹</span></button>
@@ -1346,9 +1353,10 @@
 <!-- ===== صفحه «ابزارها» (فهرست کامل) ===== -->
 <div class="page" id="tools">
 <div class="container">
-  <div class="sec-head"><span class="sh-bar" style="background:#22FF88"></span><div class="sh-txt"><div class="sh-t">ایمنی</div><div class="sh-s">۹ ابزار</div></div></div>
+  <div class="sec-head"><span class="sh-bar" style="background:#22FF88"></span><div class="sh-txt"><div class="sh-t">ایمنی</div><div class="sh-s">۱۰ ابزار</div></div></div>
   <div class="toolrows">
     <button class="toolrow" onclick="goPage('assess')"><span class="tr-ico" style="--c:#22FF88">🕳️</span><span class="tr-txt"><span class="tr-name">ورود به فضای بسته</span><span class="tr-desc">نظارت گاز و چک‌لیست فضای محصور</span></span><span class="tr-arrow">‹</span></button>
+    <button class="toolrow" onclick="goPage('gasdet')"><span class="tr-ico" style="--c:#3FD0FF">📟</span><span class="tr-txt"><span class="tr-name">انواع دستگاه گازسنج</span><span class="tr-desc">معرفی و طرز کار گازسنج‌های رایج</span></span><span class="tr-arrow">‹</span></button>
     <button class="toolrow" onclick="goPage('hazzone')"><span class="tr-ico" style="--c:#FF5A5A">⛔</span><span class="tr-txt"><span class="tr-name">زون‌بندی مناطق خطر</span><span class="tr-desc">تعیین Zone 0/1/2 هر مکان + مصادیق</span></span><span class="tr-arrow">‹</span></button>
     <button class="toolrow" onclick="goPage('gasinject')"><span class="tr-ico" style="--c:#3FD0FF">🛢️</span><span class="tr-txt"><span class="tr-name">تزریق گاز (راه‌اندازی خط)</span><span class="tr-desc">محاسبهٔ زمان تخلیه/تزریق + روش‌ها و نکات</span></span><span class="tr-arrow">‹</span></button>
     <button class="toolrow" onclick="goPage('hcdet')"><span class="tr-ico" style="--c:#FF9500">🔥</span><span class="tr-txt"><span class="tr-name">تشخیص کار گرم و سرد</span><span class="tr-desc">گرم یا سرد بودن هر فعالیت + تعاریف و مصادیق</span></span><span class="tr-arrow">‹</span></button>
@@ -1675,6 +1683,166 @@
 </div>
 <div class="note">تجهیزات برقی هر زون باید دارای گواهی Ex متناسب (Ga/Gb/Gc) باشند. این ابزار جایگزین مطالعهٔ طبقه‌بندی منطقهٔ تأسیسات نیست.</div>
 </div><!-- /page hazzone -->
+
+<!-- ===== انواع دستگاه گازسنج ===== -->
+<div class="page" id="gasdet">
+<div class="container">
+  <div class="cat-banner" style="--c:#3FD0FF"><div class="cb-txt"><div class="cb-title">انواع دستگاه گازسنج</div><div class="cb-desc">معرفی و طرز کار گازسنج‌های رایج صنعت گاز</div></div><div class="cb-ico">📟</div></div>
+
+  <div class="conv-note">گازسنج‌ها میزان گاز نشت‌یافته را اندازه می‌گیرند. چون بوی مادهٔ بودارکننده تنها در حدود ۱٪ حجمی گاز در هوا حس می‌شود، با بویایی نمی‌توان فهمید گاز به حد اشتعال/انفجار رسیده است؛ با گازسنج درصد دقیق گاز و اقدامات پیشگیرانه مشخص می‌شود. همهٔ گازسنج‌های پست امداد و تعمیرات باید همیشه سالم و آماده‌به‌کار باشند.</div>
+
+  <!-- J.W. SNIFFER MODEL-G -->
+  <div class="sec-block">
+    <h3>۱) گازسنج J.W. SNIFFER – MODEL-G</h3>
+    <div class="gd-fig"><svg viewBox="0 0 260 150" role="img" aria-label="گازسنج عقربه‌ای">
+      <rect x="18" y="18" width="150" height="116" rx="12" fill="#2b3a55" stroke="#1b2740" stroke-width="2"/>
+      <circle cx="93" cy="72" r="46" fill="#0e1726"/>
+      <path d="M 50 72 A 43 43 0 0 1 93 29" fill="none" stroke="#ffd34d" stroke-width="9"/>
+      <path d="M 93 29 A 43 43 0 0 1 136 72" fill="none" stroke="#ff5a5a" stroke-width="9"/>
+      <line x1="93" y1="72" x2="66" y2="46" stroke="#fff" stroke-width="3"/><circle cx="93" cy="72" r="5" fill="#fff"/>
+      <circle cx="40" cy="116" r="8" fill="#9fb3d1"/><circle cx="146" cy="116" r="8" fill="#9fb3d1"/>
+      <path d="M 168 64 q 42 -12 58 16" fill="none" stroke="#3a4a66" stroke-width="4"/>
+      <ellipse cx="232" cy="96" rx="20" ry="26" fill="#c75b4a"/>
+    </svg></div>
+    <div class="gd-caption">شماتیک آموزشی — صفحهٔ مدرج (زرد=ایمن، قرمز=خطر) + مکندهٔ دستی (BULB)</div>
+    <div class="gd-desc">یاب گازها و بخارات قابل‌اشتعال (گاز طبیعی، متان، اتان، پروپان، بوتان، استیلن، بنزین، الکل متیلیک و تینر) در مخازن، بشکه‌ها، گودال‌ها، فضای محصور و محل نشت لوله‌ها.</div>
+    <div class="sec-block" style="margin-top:6px"><h3 style="font-size:13px">آماده‌سازی و طرز کار</h3>
+      <div class="step-item"><span class="step-num">۱</span><span>تنظیم صفر و ولتاژ در هوای تمیز و عاری از گاز: پمپ مکنده را ۱/۴ دور ساعتگرد بچرخان تا روشن شود.</span></div>
+      <div class="step-item"><span class="step-num">۲</span><span>کلید ولتاژ را بکش و بچرخان تا عقربه روی علامت بایستد؛ سپس با دکمهٔ A (air) و ZERO ADJUST دستگاه را صفر کن.</span></div>
+      <div class="step-item"><span class="step-num">۳</span><span>لولهٔ نمونه‌گیر را نزدیک محل بگذار، شیر ورودی را باز کن و ۳ تا ۴ بار پمپ بزن.</span></div>
+      <div class="step-item"><span class="step-num">۴</span><span>پس از پایدارشدن عقربه، عدد روی صفحهٔ مدرج برابر درصد گاز است؛ زرد = زیر حد انفجار (کار گرم ممکن)، قرمز = خطر انفجار.</span></div>
+    </div>
+    <div class="hyd-note">⚠️ نقطه‌ضعف مهم: با ورود نمونهٔ پرگاز، عقربه ابتدا سریع تا انتهای قرمز می‌رود و سپس به صفر برمی‌گردد؛ اگر اپراتور لحظه‌ای چشم بردارد و هنگام بازگشت عقربه به صفر نگاه کند، ممکن است اشتباهاً «بدون گاز» نتیجه بگیرد — بسیار خطرناک؛ پایش دقیق و پیوسته لازم است.</div>
+  </div>
+
+  <!-- SIEGER 5000 -->
+  <div class="sec-block">
+    <h3>۲) گازسنج SIEGER مدل ۵۰۰۰</h3>
+    <div class="gd-fig"><svg viewBox="0 0 260 150" role="img" aria-label="گازسنج زیگر">
+      <rect x="18" y="18" width="150" height="116" rx="12" fill="#26543f" stroke="#163627" stroke-width="2"/>
+      <circle cx="93" cy="70" r="44" fill="#0e1726"/>
+      <path d="M 52 70 A 41 41 0 0 1 134 70" fill="none" stroke="#3FD0FF" stroke-width="8"/>
+      <line x1="93" y1="70" x2="120" y2="48" stroke="#fff" stroke-width="3"/><circle cx="93" cy="70" r="5" fill="#fff"/>
+      <circle cx="40" cy="116" r="7" fill="#ffd34d"/><text x="118" y="120" fill="#9fb3d1" font-size="11" font-family="sans-serif">%LEL</text>
+      <path d="M 168 64 q 42 -12 58 16" fill="none" stroke="#3a4a66" stroke-width="4"/>
+      <ellipse cx="232" cy="96" rx="20" ry="26" fill="#3a8ee0"/>
+    </svg></div>
+    <div class="gd-caption">شماتیک آموزشی — نمایش %LEL با هشدار سمعی و بصری</div>
+    <div class="gd-desc">گاز طبیعی را در محدودهٔ ۵ تا ۱۰۰٪ LEL نشان می‌دهد؛ علاوه بر صفحهٔ مدرج درصد LEL، دارای هشدار سمعی (آژیر) و بصری (چراغ) است.</div>
+    <div class="sec-block" style="margin-top:6px"><h3 style="font-size:13px">طرز کار</h3>
+      <div class="step-item"><span class="step-num">۱</span><span>سوئیچ را در وضعیت ON قرار بده.</span></div>
+      <div class="step-item"><span class="step-num">۲</span><span>پس از حدود ۵ دقیقه (زمان گرم‌شدن) دستگاه آماده می‌شود.</span></div>
+      <div class="step-item"><span class="step-num">۳</span><span>سر لولهٔ نمونه‌گیر را در محل بگذار و تلمبه را ۱۰ بار فشار بده تا عقربه روی نقطهٔ ثابت بایستد؛ عدد = غلظت گاز.</span></div>
+      <div class="step-item"><span class="step-num">۴</span><span>چراغ چشمک‌زن + بوق هر ۷٫۵ ثانیه = دستگاه سالم و گاز مجاز؛ با افزایش گاز، تکرار آژیر بیشتر و تا دو بار در ثانیه می‌رسد.</span></div>
+    </div>
+  </div>
+
+  <!-- SPY GAS -->
+  <div class="sec-block">
+    <h3>۳) نشت‌یاب SPY GAS (قلمی)</h3>
+    <div class="gd-fig"><svg viewBox="0 0 260 90" role="img" aria-label="نشت‌یاب قلمی">
+      <rect x="20" y="34" width="185" height="24" rx="12" fill="#2f8f5b" stroke="#1d5d3a" stroke-width="2"/>
+      <rect x="58" y="38" width="42" height="16" rx="3" fill="#0e1726"/>
+      <circle cx="125" cy="46" r="5" fill="#ffd34d"/>
+      <polygon points="205,34 240,46 205,58" fill="#9fb3d1"/>
+      <circle cx="232" cy="46" r="4" fill="#ff5a5a"/>
+    </svg></div>
+    <div class="gd-caption">شماتیک آموزشی — بدنهٔ قلمی، نمایشگر، سنسور و چراغ</div>
+    <div class="gd-desc">نشت‌یاب پرتابل با فناوری پیشرفته و ابعاد کوچک قلمی؛ یاب نشتی‌های بسیار کوچک گاز طبیعی. مشخصات: وزن ۱۵۰ گرم، طول ۲۱۰ میلی‌متر، قطر ۲۵ میلی‌متر، دو باتری ۱٫۵ ولت قلمی Alkaline.</div>
+    <div class="sec-block" style="margin-top:6px"><h3 style="font-size:13px">طرز کار و محدودهٔ نمایش (Range)</h3>
+      <div class="step-item"><span class="step-num">۱</span><span>باتری‌ها را بگذار؛ شارژ باتری با ۵ خط عمودی روی نمایشگر نشان داده می‌شود.</span></div>
+      <div class="step-item"><span class="step-num">۲</span><span>کلید ON/OFF را بزن؛ پس از گرم‌شدن آماده می‌شود (برای خاموش‌کردن، ON/OFF را ~۵ ثانیه نگه دار).</span></div>
+      <div class="step-item"><span class="step-num">۳</span><span>سنسور را نزدیک محل نشت ببر؛ غلظت با چراغ‌های فتوالکتریک و بوق خودکار نشان داده می‌شود.</span></div>
+      <div class="sec-row"><span class="sk">Range 1</span><span class="sv">کمتر از ۱۰۰ ppm</span></div>
+      <div class="sec-row"><span class="sk">Range 2</span><span class="sv">۱۰۰ تا ۱۰۰۰ ppm</span></div>
+      <div class="sec-row"><span class="sk">Range 3</span><span class="sv">۱۰۰۰ تا ۱۰۰۰۰ ppm</span></div>
+      <div class="sec-row"><span class="sk">Range 4</span><span class="sv">بیشتر از ۱۰۰۰۰ ppm</span></div>
+    </div>
+  </div>
+
+  <!-- TETRA -->
+  <div class="sec-block">
+    <h3>۴) گازسنج چهار سنسوره TETRA</h3>
+    <div class="gd-fig"><svg viewBox="0 0 200 150" role="img" aria-label="گازسنج چهار گاز">
+      <rect x="40" y="18" width="120" height="118" rx="14" fill="#f0b429" stroke="#b9860b" stroke-width="2"/>
+      <rect x="56" y="34" width="88" height="54" rx="6" fill="#0e1726"/>
+      <text x="64" y="52" fill="#3FD0FF" font-size="11" font-family="sans-serif">O₂  LEL</text>
+      <text x="64" y="72" fill="#7BE06B" font-size="11" font-family="sans-serif">CO  H₂S</text>
+      <circle cx="68" cy="112" r="9" fill="#2b3a55"/><circle cx="100" cy="112" r="9" fill="#2b3a55"/><circle cx="132" cy="112" r="9" fill="#ff5a5a"/>
+    </svg></div>
+    <div class="gd-caption">شماتیک آموزشی — نمایش هم‌زمان ۴ گاز و چراغ آژیر</div>
+    <div class="gd-desc">دستگاه چهار سنسوره برای اندازه‌گیری اکسیژن، سولفید هیدروژن، مونوکسیدکربن و گازهای قابل‌اشتعال (O₂, H₂S, CO, EXPLOSIVE/CH₄)؛ مناسب اغلب محیط‌های کاری صنایع نفت و گاز. ضدانفجار، دارای هشدار سمعی، بصری و لرزشی و دکمهٔ MUTE برای قطع موقت آژیر.</div>
+    <div class="sec-block" style="margin-top:6px"><h3 style="font-size:13px">واحد سنجش و آستانه‌های هشدار (A1 / A2 / Over Range)</h3>
+      <div class="sec-row"><span class="sk">O₂ (%VOL)</span><span class="sv">A1=۱۹ · A2=۲۳ · Over=۲۵</span></div>
+      <div class="sec-row"><span class="sk">CH₄ (%LEL)</span><span class="sv">A1=۲۰ · A2=۴۰ · Over=۱۰۰</span></div>
+      <div class="sec-row"><span class="sk">CO (ppm)</span><span class="sv">A1=۳۰ · A2=۱۰۰ · Over=۵۰۰</span></div>
+      <div class="sec-row"><span class="sk">H₂S (ppm)</span><span class="sv">A1=۵ · A2=۱۰ · Over=۱۰۰</span></div>
+    </div>
+  </div>
+
+  <!-- D15 -->
+  <div class="sec-block">
+    <h3>۵) گازسنج D15</h3>
+    <div class="gd-fig"><svg viewBox="0 0 260 150" role="img" aria-label="گازسنج D15">
+      <rect x="18" y="20" width="150" height="112" rx="12" fill="#3a3f4b" stroke="#23262e" stroke-width="2"/>
+      <rect x="44" y="34" width="98" height="46" rx="6" fill="#0e1726"/>
+      <path d="M 60 64 A 30 30 0 0 1 126 64" fill="none" stroke="#7BE06B" stroke-width="6"/>
+      <line x1="93" y1="64" x2="78" y2="44" stroke="#fff" stroke-width="2.5"/><circle cx="93" cy="64" r="4" fill="#fff"/>
+      <circle cx="44" cy="106" r="7" fill="#9fb3d1"/><circle cx="74" cy="106" r="7" fill="#9fb3d1"/><circle cx="138" cy="106" r="7" fill="#ffd34d"/>
+      <path d="M 168 70 q 42 -10 58 16" fill="none" stroke="#3a4a66" stroke-width="4"/>
+      <ellipse cx="232" cy="100" rx="19" ry="24" fill="#5b6b86"/>
+    </svg></div>
+    <div class="gd-caption">شماتیک آموزشی — کلیدها: POWER · SELECTOR · ZERO · VOLTAGE · BULB</div>
+    <div class="gd-desc">گازسنج عقربه‌ای با اجزای POWER SWITCH، SELECTOR SWITCH، GREEN ARROW، VOLTAGE، ZERO KNOB، مکندهٔ دستی (BULB) و محل اتصال شیلنگ نمونه‌گیری. تنها برای گازهای قابل‌اشتعال در هوا؛ کاربرد در فضای دارای اکسیژن بیش از حد معمول ممکن است خطرناک باشد.</div>
+    <div class="sec-block" style="margin-top:6px"><h3 style="font-size:13px">طرز کار</h3>
+      <div class="step-item"><span class="step-num">۱</span><span>کلید POWER SWITCH را روی ON بگذار.</span></div>
+      <div class="step-item"><span class="step-num">۲</span><span>کلید SELECTOR را روی وضعیت V بگذار.</span></div>
+      <div class="step-item"><span class="step-num">۳</span><span>مکندهٔ دستی را در هوای عاری از گاز چند بار فشار بده و رها کن؛ سپس VOLTAGE KNOB را بکش و بچرخان تا عقربه روی فلش سبز (GREEN ARROW) بایستد.</span></div>
+      <div class="step-item"><span class="step-num">۴</span><span>کلید SELECTOR را روی L.F.L بگذار.</span></div>
+      <div class="step-item"><span class="step-num">۵</span><span>ZERO KNOB را بکش و بچرخان تا عقربه روی صفر بایستد.</span></div>
+      <div class="step-item"><span class="step-num">۶</span><span>SELECTOR را روی %GAS بگذار؛ بدون تنظیم باید روی صفر باشد، سپس دوباره روی L.F.L. اگر روی صفر نرفت، دستگاه باید کالیبره شود.</span></div>
+    </div>
+  </div>
+
+  <!-- GMI GT -->
+  <div class="sec-block">
+    <h3>۶) نشت‌یاب چندحالته GMI GT (سری GT-40/42/43/44)</h3>
+    <div class="gd-fig"><svg viewBox="0 0 260 150" role="img" aria-label="نشت‌یاب GMI GT">
+      <rect x="28" y="22" width="98" height="112" rx="16" fill="#34507a" stroke="#1f3354" stroke-width="2"/>
+      <rect x="44" y="36" width="66" height="40" rx="5" fill="#0e1726"/>
+      <text x="52" y="61" fill="#7BE06B" font-size="11" font-family="sans-serif">GT</text>
+      <circle cx="54" cy="104" r="8" fill="#9fb3d1"/><circle cx="80" cy="104" r="8" fill="#9fb3d1"/><circle cx="106" cy="104" r="8" fill="#ffd34d"/>
+      <path d="M 126 56 q 64 0 74 42 q 8 24 30 24" fill="none" stroke="#3a4a66" stroke-width="5"/>
+      <circle cx="232" cy="122" r="7" fill="#9fb3d1"/>
+    </svg></div>
+    <div class="gd-caption">شماتیک آموزشی — بدنه با نمایشگر و کلیدها + Probe انعطاف‌پذیر</div>
+    <div class="gd-desc">نشت‌یاب چندحالته با Probe و شیلنگ نمونه‌گیری؛ دارای کلید ON/MENU/OFF، چراغ‌های LED (ON و FAULT) و بازر. حالت کار با کلید انتخابگر (SELECTOR) و در محدوده‌های مختلف بسته به مدل تنظیم می‌شود.</div>
+    <div class="sec-block" style="margin-top:6px"><h3 style="font-size:13px">حالت‌های کار و محدودهٔ اندازه‌گیری (نمونه)</h3>
+      <div class="sec-row"><span class="sk">Leak Test (تست نشت)</span><span class="sv">۰–۱۰۰٪ LEL · ۰–۱۰۰٪ Vol CH₄ · ۰–۲۰۰۰ ppm CO</span></div>
+      <div class="sec-row"><span class="sk">Confined Space (فضای محصور)</span><span class="sv">۰–۱۰۰٪ LEL · ۰–۲۵٪ O₂ · ۰–۲۰۰۰ ppm CO · H₂S (مدل GT-44)</span></div>
+      <div class="sec-row"><span class="sk">Bar Hole (سوراخ آزمایش خاک)</span><span class="sv">۰–۱۰۰٪ LEL · ۰–۱۰۰٪ Vol CH₄</span></div>
+      <div class="sec-row"><span class="sk">CO</span><span class="sv">۰–۲۰۰۰ ppm CO · ۰–۲۵٪ O₂</span></div>
+      <div class="sec-row"><span class="sk">Purge (تخلیه)</span><span class="sv">۰–۱۰۰٪ Vol CH₄ · ۰–۲۵٪ O₂</span></div>
+      <div class="sec-row"><span class="sk">Sniffer (ردیابی نشت کوچک)</span><span class="sv">۰–۱۰۰۰۰ ppm CH₄</span></div>
+    </div>
+  </div>
+
+  <!-- نکات عمومی نگهداری -->
+  <div class="req-list">
+    <h3>🧰 احتیاطات و نگهداری عمومی همهٔ گازسنج‌ها</h3>
+    <div class="req-item"><span class="ri">✅</span><span>تنظیم صفر همیشه در هوای تمیز و عاری از گاز انجام شود.</span></div>
+    <div class="req-item"><span class="ri">✅</span><span>از ضربه‌زدن، تکان‌دادن و سقوط دستگاه جداً پرهیز شود.</span></div>
+    <div class="req-item"><span class="ri">✅</span><span>دستگاه و سنسور را از آب و رطوبت دور نگه دارید.</span></div>
+    <div class="req-item"><span class="ri">✅</span><span>سنسور را برای مدت طولانی در معرض جریان مستقیم یا گاز پرفشار قرار ندهید.</span></div>
+    <div class="req-item"><span class="ri">✅</span><span>برای تمیزکردن بدنه و اطراف سنسور فقط از الکل استفاده شود؛ از مشتقات نفتی پرهیز شود.</span></div>
+    <div class="req-item"><span class="ri">✅</span><span>در صورت عملکرد نامناسب، دستگاه را باز نکنید و دست‌کاری نکنید؛ به تعمیرگاه بسپارید.</span></div>
+    <div class="req-item"><span class="ri">✅</span><span>باتری و شارژ به‌طور منظم بررسی شود تا دستگاه همیشه آماده‌به‌کار باشد.</span></div>
+  </div>
+
+  <div class="conv-note">مبنا: کتاب جامع ایمنی گاز طبیعی در ایستگاه‌ها و شبکه‌های گازرسانی — فصل نهم (دستگاه گازسنج). تصاویر این صفحه شماتیک‌های آموزشیِ اصیل‌اند؛ برای کار با هر دستگاه به دفترچهٔ راهنمای همان مدل و آموزش رسمی مراجعه شود.</div>
+</div>
+<div class="note">این صفحه مرجع آموزشی است و جایگزین دفترچهٔ سازنده، کالیبراسیون و آموزش عملی دستگاه نیست.</div>
+</div><!-- /page gasdet -->
 
 <!-- ===== دستورالعمل‌ها ===== -->
 <div class="page" id="guidelines">
@@ -2253,7 +2421,7 @@
 // جابجایی بین صفحه‌ها (منو + کارت‌های داشبورد)
 var PAGE_TITLES = { 'cat-safety':'ایمنی', 'tools':'ابزارها', 'alerts':'اطلاعیه‌ها', 'quiz':'آزمون و خودآزمایی',
   'competency':'لیست صلاحیت افراد', 'area-type':'محوطه مشمول/مشروط', 'ppe':'انتخاب PPE بر اساس فعالیت',
-  'clothing':'ماتریس البسه', 'hcdet':'تشخیص کار گرم و سرد', 'gasinject':'تزریق گاز', 'hazzone':'زون‌بندی مناطق خطر', 'guidelines':'دستورالعمل‌ها' };
+  'clothing':'ماتریس البسه', 'hcdet':'تشخیص کار گرم و سرد', 'gasinject':'تزریق گاز', 'hazzone':'زون‌بندی مناطق خطر', 'gasdet':'انواع دستگاه گازسنج', 'guidelines':'دستورالعمل‌ها' };
 var navStack = [];
 var currentPage = 'home';
 function goPage(id, isBack){
