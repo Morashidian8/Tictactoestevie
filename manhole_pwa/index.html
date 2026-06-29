@@ -358,9 +358,11 @@
   .req-item:last-child { border-bottom:none; }
   .req-item .ri { flex-shrink:0; }
   .permit-badge {
-    display:inline-block; padding:5px 14px; border-radius:20px; font-size:14px;
-    font-weight:700; background:#eaf2fb; color:#1F4E79; margin:3px;
+    display:inline-block; padding:6px 14px; border-radius:20px; font-size:14px;
+    font-weight:800; background:#ffffff; color:#13243d; margin:3px;
+    box-shadow:0 2px 8px rgba(0,0,0,0.18);
   }
+  .permit-badge.supp{ background:#FFE8CC; color:#9a4d00; }
   .big-num { font-size:26px; font-weight:800; }
   .big-num small { font-size:13px; font-weight:600; opacity:0.9; }
   .calc-rows { background:#fff; border-radius:12px; padding:4px 16px; box-shadow:0 1px 4px rgba(0,0,0,0.08); margin-top:12px; }
@@ -610,7 +612,7 @@
   .ext-item .ei-desc{ color:var(--txt2); }
   .ext-item .ei-best{ background:rgba(34,255,136,0.15); color:#67ffb4; }
   .conv-note{ background:rgba(58,142,224,0.10); border:1px solid var(--line2); color:var(--txt2); }
-  .permit-badge{ background:rgba(34,255,136,0.12); color:var(--neon2); }
+  .permit-badge{ background:#ffffff; color:#13243d; }
   .about-ver{ background:rgba(58,142,224,0.14); color:var(--txt); }
   .about-logo-img{ background:transparent; filter:drop-shadow(0 8px 22px rgba(0,0,0,0.5)); }
 
@@ -1414,14 +1416,20 @@
 <div class="page" id="area-type">
 <div class="container">
   <div class="cat-banner" style="--c:#FF9500"><div class="cb-txt"><div class="cb-title">محوطه مشمول / مشروط</div><div class="cb-desc">آیا فعالیت شما نیاز به پروانه کار دارد؟</div></div><div class="cb-ico">📍</div></div>
+
+  <div class="card">
+    <div class="def-row"><span class="def-tag" style="background:rgba(255,149,0,0.16);color:#cc7a00">📍 محوطه مشمول</span><span class="def-txt">هر تأسیسات یا محوطه‌ی تحت نظارت سازمان (محصور با دیوار/فنس یا خط لوله دارای حریم). در این محوطه‌ها هیچ‌کس بدون پروانه‌ی کار نباید کار کند.</span></div>
+    <div class="def-row"><span class="def-tag" style="background:rgba(34,255,136,0.16);color:#1d8f4e">✅ محوطه مشروط</span><span class="def-txt">بخشی از محوطه‌ی مشمول که طبق ابلاغ کتبی رسمی (پیشنهاد واحد، تأیید HSE و تصویب مدیر مسئول) همراه با «فهرست فعالیت‌های بدون‌پروانه» تعیین شده است؛ مانند کارگاه مرکزی و کارگاه‌های تعمیرات. فقط پرسنل مخصوص همان محوطه می‌توانند فعالیت‌های همان فهرست را بدون پروانه انجام دهند.</span></div>
+  </div>
+
   <div class="card">
     <div class="field">
       <label>۱) آیا محل کار تحت نظارت شرکت گاز است؟ <span class="unit">(تأسیسات/محوطه محصور یا خط لوله دارای حریم)</span></label>
       <div class="seg" id="aq1"><button onclick="areaAns(1,'y',this)">بله</button><button onclick="areaAns(1,'n',this)">خیر</button></div>
     </div>
     <div class="field">
-      <label>۲) آیا این محوطه جزو «محوطه‌های مشروط» اعلام‌شده است؟ <span class="unit">(مثل کارگاه مرکزی/تعمیرات)</span></label>
-      <div class="seg" id="aq2"><button onclick="areaAns(2,'y',this)">بله</button><button onclick="areaAns(2,'n',this)">خیر</button></div>
+      <label>۲) آیا برای این محوطه «ابلاغ کتبی محوطه مشروط» همراه با فهرست فعالیت‌های بدون‌پروانه وجود دارد؟ <span class="unit">(اگر چنین ابلاغ مصوبی نیست، محوطه «مشمول» است و هر کار پروانه می‌خواهد)</span></label>
+      <div class="seg" id="aq2"><button onclick="areaAns(2,'y',this)">بله، ابلاغ شده</button><button onclick="areaAns(2,'n',this)">خیر / نمی‌دانم</button></div>
     </div>
     <div class="field">
       <label>۳) آیا شما از پرسنل مخصوص همان محوطه هستید؟</label>
@@ -1676,20 +1684,34 @@
       <label>چه کاری قرار است انجام شود؟ <span class="unit">— فعالیت را انتخاب کنید</span></label>
       <select class="inp" id="ptwJob" onchange="evalPtw()">
         <option value="">— انتخاب فعالیت —</option>
-        <option value="weld">جوشکاری / برشکاری / سنگ‌زنی</option>
-        <option value="hottap">عملیات گرم روی خط گازدار (Hot Tap)</option>
-        <option value="pefuse">جوش لوله پلی‌اتیلن (الکتروفیوژن/بات‌فیوژن)</option>
-        <option value="sandblast">سندبلاست / شات‌بلاست</option>
-        <option value="cold">تعمیرات مکانیکی سرد (فلنج، شیر، اتصالات)</option>
-        <option value="paint">رنگ‌آمیزی / عایق‌کاری / نظافت صنعتی</option>
-        <option value="confined">ورود به فضای محصور (منهول/حوضچه/مخزن)</option>
-        <option value="excav">حفاری و خاک‌برداری</option>
-        <option value="elec">کار روی تجهیزات و تابلو برق</option>
-        <option value="height">کار در ارتفاع (بیش از ۱٫۲ متر)</option>
-        <option value="radio">پرتونگاری صنعتی (رادیوگرافی)</option>
-        <option value="ptest">تست فشار / نشت‌یابی</option>
-        <option value="lift">جابجایی بار با جرثقیل / بالابری</option>
+        <optgroup label="کار گرم (پروانه اصلی)">
+          <option value="weld">جوشکاری / برشکاری / سنگ‌زنی</option>
+          <option value="hottap">عملیات گرم روی خط گازدار (Hot Tap)</option>
+          <option value="pefuse">جوش لوله پلی‌اتیلن (الکتروفیوژن/بات‌فیوژن)</option>
+          <option value="sandblast">سندبلاست / شات‌بلاست</option>
+        </optgroup>
+        <optgroup label="کار سرد (پروانه اصلی)">
+          <option value="cold">تعمیرات مکانیکی سرد (فلنج، شیر، اتصالات)</option>
+          <option value="paint">رنگ‌آمیزی / عایق‌کاری / نظافت صنعتی</option>
+          <option value="ptest">تست فشار / نشت‌یابی</option>
+        </optgroup>
+        <optgroup label="پروانه مکمل (همراه پروانه اصلی)">
+          <option value="confined">ورود به فضای بسته (منهول/حوضچه/مخزن)</option>
+          <option value="excav">حفاری و خاک‌برداری</option>
+          <option value="height">کار در ارتفاع (بیش از ۱٫۲ متر)</option>
+          <option value="elec">جداسازی الکتریکی / کار با برق</option>
+          <option value="radio">پرتونگاری صنعتی (رادیوگرافی)</option>
+          <option value="diving">غواصی</option>
+          <option value="machinery">ورود ماشین‌آلات</option>
+        </optgroup>
       </select>
+    </div>
+    <div class="field" id="ptwNatureWrap" style="display:none; margin-top:4px">
+      <label>ماهیت کارِ اصلی در این فعالیت چیست؟ <span class="unit">— پروانه مکمل همراه پروانه اصلی صادر می‌شود</span></label>
+      <div class="seg" id="ptwNature">
+        <button onclick="ptwSetNature('hot',this)">🔥 کار گرم (جوش/برش/سنگ‌زنی…)</button>
+        <button onclick="ptwSetNature('cold',this)">❄️ کار سرد (مکانیکی/بازرسی…)</button>
+      </div>
     </div>
   </div>
   <div id="ptwJobResult"></div>
@@ -1710,8 +1732,10 @@
         <button onclick="ptwToggleSupp('confined',this)">🕳️ فضای بسته</button>
         <button onclick="ptwToggleSupp('excav',this)">🪏 حفاری</button>
         <button onclick="ptwToggleSupp('height',this)">🪜 کار در ارتفاع</button>
-        <button onclick="ptwToggleSupp('elec',this)">⚡ جداسازی برق</button>
+        <button onclick="ptwToggleSupp('elec',this)">⚡ جداسازی الکتریکی</button>
         <button onclick="ptwToggleSupp('radio',this)">☢️ پرتونگاری</button>
+        <button onclick="ptwToggleSupp('diving',this)">🤿 غواصی</button>
+        <button onclick="ptwToggleSupp('machinery',this)">🚜 ورود ماشین‌آلات</button>
       </div>
     </div>
     <div class="field" id="ptwSoilWrap" style="display:none">
@@ -2641,45 +2665,86 @@ function resetDig(){
 
 /* ================= راهنمای پرمیت کار ================= */
 /* ================= نظام پروانه‌های کار (PTW) ================= */
-/* ===== انتخاب پروانه بر اساس فعالیت (HSE-IN-S-223/222) ===== */
-var PTW_DATA = {
-  weld:{ permits:['پروانه کار گرم'], icon:'🔥',
-    reqs:['گازسنجی LEL پیش از شروع و به‌صورت دوره‌ای (کار گرم: LEL تا صفر / حداکثر ۵٪).','دورکردن یا پوشاندن مواد و بخارات قابل اشتعال در شعاع پاشش جرقه.','استقرار خاموش‌کننده مناسب و مأمور آتش‌نشان (Fire Watch) در محل.','بررسی مسیر انتشار جرقه به منهول‌ها، کانال‌ها و طبقات پایین‌تر.','ادامه حضور آتش‌پا تا حداقل ۳۰ دقیقه پس از پایان کار.'] },
-  hottap:{ permits:['پروانه کار گرم','مصوبه ویژه Hot Tap'], icon:'⚠️',
-    reqs:['ارزیابی ریسک اختصاصی و تأیید سطوح بالای سازمان.','کنترل فشار و دبی خط در محدوده مجاز عملیات.','اجرا فقط توسط تیم دارای صلاحیت Hot Tap.','استقرار تیم آتش‌نشانی و طرح واکنش اضطراری در محل.'] },
-  pefuse:{ permits:['پروانه کار گرم'], icon:'🔥',
-    reqs:['کار با المنت/صفحه داغ یا جریان الکتریکی، منبع حرارت محسوب می‌شود.','کنترل نبود گاز قابل اشتعال در محیط جوش لوله پلی‌اتیلن.','رعایت دما و زمان ذوب طبق دستورالعمل سازنده اتصال.','دورنگه‌داشتن مواد قابل اشتعال از دستگاه داغ.'] },
-  sandblast:{ permits:['پروانه کار گرم'], icon:'🔥',
-    reqs:['احتمال ایجاد جرقه و بار الکتریسیته ساکن؛ نیازمند اتصال به زمین.','گازسنجی محیط پیش از شروع.','حفاظت تنفسی و چشمی مناسب اپراتور.','محصورسازی و کنترل گرد و غبار.'] },
-  cold:{ permits:['پروانه کار سرد'], icon:'🔧',
-    reqs:['گازسنجی محیط (کار سرد: کمتر از ۱۰٪ LEL).','ایزولاسیون و تخلیه فشار قطعه پیش از بازکردن اتصالات.','استفاده از ابزار ضدجرقه (برنجی/برنزی) در محیط گازدار.','آماده‌باش برای نشت احتمالی هنگام بازکردن فلنج.'] },
-  paint:{ permits:['پروانه کار سرد'], icon:'🎨',
-    reqs:['تهویه مناسب هنگام کار با حلال در فضای بسته.','ماسک و حفاظت تنفسی متناسب با SDS رنگ/حلال.','ممنوعیت هم‌زمانی با کار گرم در مجاورت (بخار حلال قابل اشتعال است).'] },
-  confined:{ permits:['پروانه ورود به فضای محصور','+ پروانه گرم/سرد متناسب با کار'], icon:'🕳️',
-    reqs:['گازسنجی چهارگانه (O₂، LEL، H₂S، CO) در سه تراز پیش از ورود.','ایزولاسیون کامل ورودی‌های گاز و انرژی (LOTO).','تهویه طبیعی/مکانیکی پیش از ورود و در حین کار.','نگهبان ثابت بیرون فضا + تجهیزات نجات (هارنس، طناب، سه‌پایه).','وسیله ارتباطی دائم بین داخل و خارج.'] },
-  excav:{ permits:['پروانه حفاری','+ پروانه گرم/سرد در صورت نیاز'], icon:'🪏',
-    reqs:['استعلام و مارک‌کردن کلیه تأسیسات زیرزمینی (گاز، برق، آب، مخابرات).','تعیین موقعیت خط با حفاری دستی آزمایشی و رعایت فاصله ایمن ماشین‌آلات.','شیب‌بندی یا سپرکوبی ترانشه عمیق‌تر از ۱٫۲ متر.','حفاظ و علائم هشدار دور محدوده حفاری.'] },
-  elec:{ permits:['پروانه کار برقی (جداسازی برق)'], icon:'⚡',
-    reqs:['قطع برق و قفل و برچسب ایمنی (LOTO) توسط فرد مجاز.','تست بی‌برق بودن با فازمتر/ولت‌متر پیش از شروع.','استفاده از تجهیزات حفاظت فردی عایق (دستکش، کفش، فرش عایق).','در تأسیسات گازی تجهیزات برقی باید ضدانفجار (Ex) باشد.'] },
-  height:{ permits:['پروانه کار در ارتفاع'], icon:'🪜',
-    reqs:['هارنس کامل بدن با دو لنیارد و اتصال به نقطه مطمئن.','بازرسی داربست و صدور تگ مجاز توسط داربست‌بند دارای صلاحیت.','محصورسازی پای کار و جلوگیری از سقوط ابزار.','عدم کار در ارتفاع هنگام باد شدید یا بارندگی.'] },
-  radio:{ permits:['پروانه پرتونگاری'], icon:'☢️',
-    reqs:['اجرا فقط توسط شرکت دارای مجوز سازمان انرژی اتمی.','تعیین و طناب‌کشی منطقه ممنوعه بر اساس نرخ دز و دزیمتری.','هماهنگی زمانی، ترجیحاً خارج از ساعت حضور سایر افراد.','علائم هشدار پرتو و کنترل تردد در محدوده.'] },
-  ptest:{ permits:['پروانه کار سرد','دستورالعمل تست فشار'], icon:'🧪',
-    reqs:['تخلیه افراد غیرمرتبط از محدوده خط تحت تست.','استفاده از فشارسنج کالیبره با رنج مناسب.','افزایش فشار تدریجی و مرحله‌ای طبق دستورالعمل.','ممنوعیت سفت‌کردن اتصالات زیر فشار.'] },
-  lift:{ permits:['پروانه کار سرد','مجوز عملیات بالابری'], icon:'🏗️',
-    reqs:['بازرسی جرثقیل، اسلینگ و تجهیزات بالابری و اعتبار گواهی.','تعیین وزن بار و رعایت جدول ظرفیت/شعاع (Load Chart).','محصورسازی شعاع چرخش و دورکردن افراد از زیر بار.','توقف عملیات در باد شدید و استقرار سیگنال‌من.'] }
+/* ===== انتخاب پروانه بر اساس فعالیت (HSE-IN-S-223/222) =====
+   پروانه‌های اصلی: کار گرم و کار سرد. پروانه‌های مکمل هیچ‌گاه به‌تنهایی صادر
+   نمی‌شوند و همراهِ یک پروانه‌ی اصلی (گرم/سرد) متناسب با ماهیت کار صادر می‌گردند.
+   kind: 'hot' یا 'cold' = پروانه اصلی مشخص؛ 'supp' = پروانه مکمل که به انتخاب
+   ماهیت کار (گرم/سرد) نیاز دارد. */
+var PTW_MAIN_NAME = { hot:'پروانه کار گرم', cold:'پروانه کار سرد' };
+var PTW_MAIN_REQ = {
+  hot:['گازسنجی LEL پیش از شروع و کنترل مستمر (کار گرم: LEL تا صفر / حداکثر ۵٪).','دورکردن یا پوشاندن مواد و بخارات قابل اشتعال در شعاع پاشش جرقه.','استقرار خاموش‌کننده مناسب و مأمور آتش‌نشان (Fire Watch) در محل.','ادامه حضور آتش‌پا تا حداقل ۳۰ دقیقه پس از پایان کار.'],
+  cold:['گازسنجی محیط (کار سرد: کمتر از ۱۰٪ LEL).','ایزولاسیون و تخلیه فشار قطعه پیش از بازکردن اتصالات.','استفاده از ابزار ضدجرقه (برنجی/برنزی) در محیط گازدار.','آماده‌باش برای نشت احتمالی هنگام بازکردن اتصالات.']
 };
-function evalPtw(){
+var PTW_DATA = {
+  weld:{ kind:'hot', icon:'🔥', extra:[],
+    reqs:['بررسی مسیر انتشار جرقه به منهول‌ها، کانال‌ها و طبقات پایین‌تر.','استفاده از سپر/پرده نسوز و عینک و ماسک جوشکاری.'] },
+  hottap:{ kind:'hot', icon:'⚠️', extra:['مصوبه ویژه Hot Tap'],
+    reqs:['ارزیابی ریسک اختصاصی و تأیید سطوح بالای سازمان.','کنترل فشار و دبی خط در محدوده مجاز عملیات.','اجرا فقط توسط تیم دارای صلاحیت Hot Tap و استقرار تیم آتش‌نشانی.'] },
+  pefuse:{ kind:'hot', icon:'🔥', extra:[],
+    reqs:['کار با المنت/صفحه داغ یا جریان الکتریکی، منبع حرارت محسوب می‌شود.','رعایت دما و زمان ذوب طبق دستورالعمل سازنده اتصال و کنترل نبود گاز.'] },
+  sandblast:{ kind:'hot', icon:'🔥', extra:[],
+    reqs:['احتمال ایجاد جرقه و بار الکتریسیته ساکن؛ نیازمند اتصال به زمین.','حفاظت تنفسی و چشمی مناسب اپراتور و کنترل گرد و غبار.'] },
+  cold:{ kind:'cold', icon:'🔧', extra:[],
+    reqs:['تعمیر مکانیکی فلنج/شیر/اتصالات بدون منبع جرقه و حرارت.','اطمینان از تخلیه فشار و ایزوله‌بودن قطعه پیش از کار.'] },
+  paint:{ kind:'cold', icon:'🎨', extra:[],
+    reqs:['تهویه مناسب هنگام کار با حلال در فضای بسته.','ماسک و حفاظت تنفسی متناسب با SDS رنگ/حلال.','ممنوعیت هم‌زمانی با کار گرم در مجاورت (بخار حلال قابل اشتعال است).'] },
+  ptest:{ kind:'cold', icon:'🧪', extra:['دستورالعمل تست فشار'],
+    reqs:['تخلیه افراد غیرمرتبط از محدوده خط تحت تست و افزایش فشار تدریجی.','استفاده از فشارسنج کالیبره و ممنوعیت سفت‌کردن اتصالات زیر فشار.'] },
+  confined:{ kind:'supp', icon:'🕳️', suppName:'پروانه ورود به فضای بسته',
+    reqs:['گازسنجی چهارگانه (O₂، LEL، H₂S، CO) در سه تراز پیش از ورود.','ایزولاسیون کامل ورودی‌های گاز و انرژی (LOTO) و تهویه پیش و حین کار.','نگهبان ثابت بیرون فضا + تجهیزات نجات (هارنس، طناب، سه‌پایه) و ارتباط دائم.'] },
+  excav:{ kind:'supp', icon:'🪏', suppName:'پروانه حفاری',
+    reqs:['استعلام و مارک‌کردن کلیه تأسیسات زیرزمینی (گاز، برق، آب، مخابرات).','تعیین موقعیت خط با حفاری دستی آزمایشی و رعایت فاصله ایمن ماشین‌آلات.','شیب‌بندی یا سپرکوبی ترانشه عمیق‌تر از ۱٫۲ متر و علائم هشدار.'] },
+  height:{ kind:'supp', icon:'🪜', suppName:'پروانه کار در ارتفاع',
+    reqs:['هارنس کامل بدن با دو لنیارد و اتصال به نقطه مطمئن.','بازرسی داربست و صدور تگ مجاز توسط داربست‌بند دارای صلاحیت.','محصورسازی پای کار و توقف کار در باد شدید/بارندگی.'] },
+  elec:{ kind:'supp', icon:'⚡', suppName:'پروانه جداسازی الکتریکی',
+    reqs:['قطع برق و قفل و برچسب ایمنی (LOTO) توسط فرد مجاز و تست بی‌برقی.','تجهیزات حفاظت فردی عایق و در فضای گازدار تجهیزات ضدانفجار (Ex).'] },
+  radio:{ kind:'supp', icon:'☢️', suppName:'پروانه پرتونگاری',
+    reqs:['اجرا فقط توسط شرکت دارای مجوز سازمان انرژی اتمی و دزیمتری فردی.','تعیین و طناب‌کشی منطقه ممنوعه بر اساس نرخ دز و کنترل تردد.','پروانه پرتونگاری قابل تمدید نیست و باید مجدداً صادر شود.'] },
+  diving:{ kind:'supp', icon:'🤿', suppName:'پروانه غواصی',
+    reqs:['اجرا فقط توسط غواص دارای صلاحیت و گواهی پزشکی معتبر.','بازرسی تجهیزات تنفسی و تأمین هوای پشتیبان و تیم نجات سطحی.','ارتباط دائم با غواص و کنترل زمان و عمق غوص.'] },
+  machinery:{ kind:'supp', icon:'🚜', suppName:'پروانه ورود ماشین‌آلات',
+    reqs:['کنترل صلاحیت راننده و گواهی فنی و سلامت ماشین‌آلات.','محصورسازی شعاع کاری/چرخش و دورکردن افراد و استقرار سیگنال‌من.','رعایت فاصله ایمن از خطوط و تأسیسات و توقف در باد شدید.'] }
+};
+var ptwJobNature = null;
+function ptwSetNature(n,btn){
+  ptwJobNature = n;
+  document.getElementById('ptwNature').querySelectorAll('button').forEach(function(b){b.classList.remove('on');});
+  btn.classList.add('on'); evalPtw(true);
+}
+function evalPtw(keepNature){
   var v=document.getElementById('ptwJob').value, box=document.getElementById('ptwJobResult');
-  if(!v||!PTW_DATA[v]){ box.innerHTML=''; return; }
+  var natWrap=document.getElementById('ptwNatureWrap');
+  if(!v||!PTW_DATA[v]){ box.innerHTML=''; natWrap.style.display='none'; ptwJobNature=null; return; }
   var d=PTW_DATA[v];
-  box.innerHTML =
-    '<div class="result-box r-blue"><span class="icon">'+d.icon+'</span>'+
+  if(d.kind!=='supp'){
+    // پروانه اصلی مشخص
+    natWrap.style.display='none'; ptwJobNature=null;
+    var permits=[PTW_MAIN_NAME[d.kind]].concat(d.extra||[]);
+    var cls=d.kind==='hot'?'r-red':'r-green';
+    var reqs=(d.reqs||[]).concat(PTW_MAIN_REQ[d.kind]);
+    box.innerHTML = ptwResultBox(d.icon,cls,permits,reqs,null);
+    return;
+  }
+  // پروانه مکمل: نیازمند انتخاب ماهیت کار اصلی
+  natWrap.style.display='block';
+  if(!keepNature){ ptwJobNature=null; document.getElementById('ptwNature').querySelectorAll('button').forEach(function(b){b.classList.remove('on');}); }
+  if(!ptwJobNature){
+    box.innerHTML='<div class="result-box r-orange"><span class="icon">'+d.icon+'</span><div class="verdict">'+d.suppName+'</div>'+
+      '<div class="sub">این یک پروانه‌ی مکمل است و به‌تنهایی صادر نمی‌شود. ماهیت کارِ اصلی را در بالا انتخاب کنید (گرم یا سرد).</div></div>';
+    return;
+  }
+  var permits=[d.suppName, PTW_MAIN_NAME[ptwJobNature]];
+  var reqs=(d.reqs||[]).concat(PTW_MAIN_REQ[ptwJobNature]);
+  var note='طبق دستورالعمل، «'+d.suppName+'» همراه با «'+PTW_MAIN_NAME[ptwJobNature]+'» صادر و به آن ضمیمه می‌شود.';
+  box.innerHTML = ptwResultBox(d.icon,'r-blue',permits,reqs,note);
+}
+function ptwResultBox(icon,cls,permits,reqs,note){
+  return '<div class="result-box '+cls+'"><span class="icon">'+icon+'</span>'+
     '<div class="verdict">پروانه‌های موردنیاز</div>'+
-    '<div style="margin-top:10px">'+d.permits.map(function(p){return '<span class="permit-badge">'+p+'</span>';}).join('')+'</div></div>'+
+    '<div style="margin-top:10px">'+permits.map(function(p,i){return '<span class="permit-badge'+(i===0&&cls==='r-blue'?' supp':'')+'">'+p+'</span>';}).join('')+'</div></div>'+
+    (note?'<div class="hyd-note">⚠️ '+note+'</div>':'')+
     '<div class="req-list"><h3>پیش‌نیازها و الزامات اصلی</h3>'+
-    d.reqs.map(function(t){return '<div class="req-item"><span class="ri">✅</span><span>'+t+'</span></div>';}).join('')+'</div>';
+    reqs.map(function(t){return '<div class="req-item"><span class="ri">✅</span><span>'+t+'</span></div>';}).join('')+'</div>';
 }
 
 var ptwState = { main:null, supp:{} };
@@ -2733,7 +2798,17 @@ var PTW_SUPP = {
     'اطلاع‌رسانی محل و ساعت پرتونگاری پیش از شروع و کنترل ورود/خروج تجهیزات (۸-۴-۱).',
     'استفاده از کولیماتور برای محدودکردن تابشِ بی‌هدف (۸-۲-۱۳).',
     'حصارکشی، تابلو و علائم هشدار پرتو پیرامون ناحیه.',
-    'پروانه‌ی پرتونگاری قابل تمدید نیست و باید مجدداً صادر شود.'] }
+    'پروانه‌ی پرتونگاری قابل تمدید نیست و باید مجدداً صادر شود.'] },
+  diving:{ name:'🤿 غواصی', notes:[
+    'اجرا فقط توسط غواص دارای صلاحیت و گواهی سلامت پزشکی معتبر.',
+    'بازرسی کامل تجهیزات تنفسی و تأمین منبع هوای پشتیبان پیش از غوص.',
+    'استقرار تیم نجات و پشتیبان سطحی و وسیله‌ی ارتباطی دائم با غواص.',
+    'کنترل زمان، عمق و شرایط جریان آب و توقف در شرایط نامساعد.'] },
+  machinery:{ name:'🚜 ورود ماشین‌آلات', notes:[
+    'کنترل صلاحیت راننده/اپراتور و گواهی فنی و سلامت ماشین‌آلات.',
+    'محصورسازی شعاع کاری/چرخش و دورکردن افراد از محدوده‌ی خطر.',
+    'استقرار سیگنال‌من (راهنما) و رعایت فاصله‌ی ایمن از خطوط و تأسیسات.',
+    'توقف عملیات در باد شدید و دید ناکافی و رعایت طرح کنترل ترافیک.'] }
 };
 var PTW_SOIL = {
   rock:{ name:'خاک سخت و سنگی (پایدار)', notes:['نسبتاً پایدار؛ با این حال بازرسی روزانه‌ی دیواره الزامی است.','در عمق بیش از ۱۲۰ سانتی‌متر، تدابیر ضدریزش (شیب‌دار/پله‌ای) رعایت شود.','احتمال ریزش سنگ‌های موضعی و لغزش بلوک‌ها وجود دارد.'] },
@@ -2750,7 +2825,7 @@ function renderPTW(){
   if(!ptwState.main && !suppSel.length){ box.innerHTML=''; return; }
   var badges='';
   if(ptwState.main) badges+='<span class="permit-badge">'+PTW_MAIN[ptwState.main].name+'</span>';
-  suppSel.forEach(function(s){ badges+='<span class="permit-badge" style="background:rgba(255,149,0,0.16);color:#FF9500">'+PTW_SUPP[s].name+'</span>'; });
+  suppSel.forEach(function(s){ badges+='<span class="permit-badge supp">'+PTW_SUPP[s].name+'</span>'; });
   var html='<div class="result-box '+(ptwState.main?PTW_MAIN[ptwState.main].cls:'r-orange')+'"><span class="icon">📋</span><div class="verdict">پروانه‌ی مورد نیاز</div><div style="margin-top:10px">'+badges+'</div></div>';
   if(suppSel.length && !ptwState.main){ html+='<div class="hyd-note">⚠️ پروانه‌ی مکمل به‌تنهایی صادر نمی‌شود؛ ابتدا پروانه‌ی اصلی (کار گرم یا کار سرد) را انتخاب کنید.</div>'; }
   if(ptwState.main) html+=ptwNoteCard(PTW_MAIN[ptwState.main].name+' — نکات ایمنی', PTW_MAIN[ptwState.main].notes);
