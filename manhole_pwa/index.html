@@ -408,6 +408,10 @@
   html[data-theme="light"] .gd-fig svg { background:#f4f7fb; }
   .gd-desc { font-size:13.5px; line-height:1.95; color:var(--txt2); margin:2px 0 10px; }
   .gd-caption { text-align:center; font-size:11.5px; color:var(--muted); margin-top:-4px; margin-bottom:10px; }
+  .cal2-row { padding:9px 0; border-bottom:1px solid var(--line); }
+  .cal2-row:last-child { border-bottom:none; }
+  .cal2-h { font-size:13.5px; font-weight:700; color:var(--txt); }
+  .cal2-d { font-size:12.5px; color:var(--txt2); margin-top:4px; direction:ltr; text-align:right; line-height:1.8; }
 
   /* ===== ارزیابی ریسک ===== */
   .risk-card { background:#fff; border-radius:14px; padding:14px 16px; margin-bottom:14px; box-shadow:0 1px 4px rgba(0,0,0,0.08); }
@@ -1098,6 +1102,7 @@
     <button data-page="hcdet">تشخیص کار گرم و سرد</button>
     <button data-page="hazzone">زون‌بندی مناطق خطر</button>
     <button data-page="gasdet">انواع دستگاه گازسنج</button>
+    <button data-page="calib">کالیبراسیون گازسنج‌ها</button>
     <button data-page="assess">ورود به فضای بسته</button>
     <button data-page="gasinject">تزریق گاز (راه‌اندازی خط)</button>
     <button data-page="hotcold">کار گرم و سرد</button>
@@ -1146,7 +1151,7 @@
       <span class="ax-ico">🛡️</span>
       <span class="ax-name">ایمنی</span>
       <span class="ax-desc">عملیات، فضای محصور، آتش‌نشانی و ریسک</span>
-      <span class="ax-foot"><span class="ax-badge">۲۲ ابزار</span><span class="ax-arrow">←</span></span>
+      <span class="ax-foot"><span class="ax-badge">۲۳ ابزار</span><span class="ax-arrow">←</span></span>
     </button>
     <button class="axis" style="--c:#3FD0FF" onclick="axisSoon('بهداشت حرفه‌ای و طب کار')">
       <span class="ax-ghost">💓</span>
@@ -1306,10 +1311,11 @@
     <div class="cb-ico">🛡️</div>
   </div>
 
-  <div class="sec-head"><span class="sh-bar" style="background:#b6a4ff"></span><div class="sh-txt"><div class="sh-t">صلاحیت، PPE و البسه</div><div class="sh-s">۷ ابزار</div></div></div>
+  <div class="sec-head"><span class="sh-bar" style="background:#b6a4ff"></span><div class="sh-txt"><div class="sh-t">صلاحیت، PPE و البسه</div><div class="sh-s">۸ ابزار</div></div></div>
   <div class="toolrows">
     <button class="toolrow" onclick="goPage('hcdet')"><span class="tr-ico" style="--c:#FF9500">🔥</span><span class="tr-txt"><span class="tr-name">تشخیص کار گرم و سرد</span><span class="tr-desc">گرم یا سرد بودن هر فعالیت + تعاریف و مصادیق</span></span><span class="tr-arrow">‹</span></button>
     <button class="toolrow" onclick="goPage('gasdet')"><span class="tr-ico" style="--c:#3FD0FF">📟</span><span class="tr-txt"><span class="tr-name">انواع دستگاه گازسنج</span><span class="tr-desc">معرفی و طرز کار گازسنج‌های رایج</span></span><span class="tr-arrow">‹</span></button>
+    <button class="toolrow" onclick="goPage('calib')"><span class="tr-ico" style="--c:#7BE06B">🎯</span><span class="tr-txt"><span class="tr-name">کالیبراسیون گازسنج‌ها</span><span class="tr-desc">دوره و شرایط کالیبراسیون طبق دستورالعمل</span></span><span class="tr-arrow">‹</span></button>
     <button class="toolrow" onclick="goPage('hazzone')"><span class="tr-ico" style="--c:#FF5A5A">⛔</span><span class="tr-txt"><span class="tr-name">زون‌بندی مناطق خطر</span><span class="tr-desc">تعیین Zone 0/1/2 هر مکان + مصادیق و الزام تجهیزات</span></span><span class="tr-arrow">‹</span></button>
     <button class="toolrow" onclick="goPage('competency')"><span class="tr-ico" style="--c:#22FF88">🎖️</span><span class="tr-txt"><span class="tr-name">لیست صلاحیت افراد</span><span class="tr-desc">استعلام صلاحیت با کد ملی یا شماره پرسنلی</span></span><span class="tr-arrow">‹</span></button>
     <button class="toolrow" onclick="goPage('area-type')"><span class="tr-ico" style="--c:#FF9500">📍</span><span class="tr-txt"><span class="tr-name">تشخیص محوطه مشمول/مشروط</span><span class="tr-desc">آیا فعالیت شما نیاز به پروانه دارد؟</span></span><span class="tr-arrow">‹</span></button>
@@ -1353,10 +1359,11 @@
 <!-- ===== صفحه «ابزارها» (فهرست کامل) ===== -->
 <div class="page" id="tools">
 <div class="container">
-  <div class="sec-head"><span class="sh-bar" style="background:#22FF88"></span><div class="sh-txt"><div class="sh-t">ایمنی</div><div class="sh-s">۱۰ ابزار</div></div></div>
+  <div class="sec-head"><span class="sh-bar" style="background:#22FF88"></span><div class="sh-txt"><div class="sh-t">ایمنی</div><div class="sh-s">۱۱ ابزار</div></div></div>
   <div class="toolrows">
     <button class="toolrow" onclick="goPage('assess')"><span class="tr-ico" style="--c:#22FF88">🕳️</span><span class="tr-txt"><span class="tr-name">ورود به فضای بسته</span><span class="tr-desc">نظارت گاز و چک‌لیست فضای محصور</span></span><span class="tr-arrow">‹</span></button>
     <button class="toolrow" onclick="goPage('gasdet')"><span class="tr-ico" style="--c:#3FD0FF">📟</span><span class="tr-txt"><span class="tr-name">انواع دستگاه گازسنج</span><span class="tr-desc">معرفی و طرز کار گازسنج‌های رایج</span></span><span class="tr-arrow">‹</span></button>
+    <button class="toolrow" onclick="goPage('calib')"><span class="tr-ico" style="--c:#7BE06B">🎯</span><span class="tr-txt"><span class="tr-name">کالیبراسیون گازسنج‌ها</span><span class="tr-desc">دوره و شرایط کالیبراسیون طبق دستورالعمل</span></span><span class="tr-arrow">‹</span></button>
     <button class="toolrow" onclick="goPage('hazzone')"><span class="tr-ico" style="--c:#FF5A5A">⛔</span><span class="tr-txt"><span class="tr-name">زون‌بندی مناطق خطر</span><span class="tr-desc">تعیین Zone 0/1/2 هر مکان + مصادیق</span></span><span class="tr-arrow">‹</span></button>
     <button class="toolrow" onclick="goPage('gasinject')"><span class="tr-ico" style="--c:#3FD0FF">🛢️</span><span class="tr-txt"><span class="tr-name">تزریق گاز (راه‌اندازی خط)</span><span class="tr-desc">محاسبهٔ زمان تخلیه/تزریق + روش‌ها و نکات</span></span><span class="tr-arrow">‹</span></button>
     <button class="toolrow" onclick="goPage('hcdet')"><span class="tr-ico" style="--c:#FF9500">🔥</span><span class="tr-txt"><span class="tr-name">تشخیص کار گرم و سرد</span><span class="tr-desc">گرم یا سرد بودن هر فعالیت + تعاریف و مصادیق</span></span><span class="tr-arrow">‹</span></button>
@@ -1843,6 +1850,66 @@
 </div>
 <div class="note">این صفحه مرجع آموزشی است و جایگزین دفترچهٔ سازنده، کالیبراسیون و آموزش عملی دستگاه نیست.</div>
 </div><!-- /page gasdet -->
+
+<!-- ===== کالیبراسیون دستگاه‌های گازسنج ===== -->
+<div class="page" id="calib">
+<div class="container">
+  <div class="cat-banner" style="--c:#7BE06B"><div class="cb-txt"><div class="cb-title">کالیبراسیون گازسنج‌ها</div><div class="cb-desc">دوره و شرایط کالیبراسیون تجهیزات گازسنج، نشت‌یاب و بوسنج</div></div><div class="cb-ico">🎯</div></div>
+
+  <div class="conv-note">دامنه: کل شرکت گاز استان تهران · مراجع: استاندارد <b>ISO 17025</b> و روش اجرایی کالیبراسیون <b>IP-105-01</b> · ویرایش ۱ (۱۴۰۳/۰۷/۰۹). مسئولیت هماهنگی: امور بازرسی فنی و HSE؛ انجام کالیبراسیون توسط نمایندگان شرکت‌های سازندهٔ واجد صلاحیت.</div>
+
+  <!-- جدول ۱ — استعلام دوره کالیبراسیون -->
+  <div class="sec-block">
+    <h3>📋 جدول ۱ — دورهٔ کالیبراسیون هر دستگاه</h3>
+    <div class="field"><label>دستگاه را انتخاب کنید</label>
+      <select class="inp" id="calSel" onchange="renderCalib()"><option value="">— انتخاب دستگاه —</option></select></div>
+    <div id="calResult"></div>
+    <div class="conv-note" style="margin-top:8px">اعداد بر حسب «ماه» است. تبصره: برای دستگاه <b>SPY GAS</b> باید گواهی صحت عملکرد صادر گردد.</div>
+  </div>
+
+  <!-- ۸-۱ شرایط کالیبره نمودن -->
+  <div class="req-list">
+    <h3>⚙️ شرایط کالیبره نمودن (بند ۸-۱)</h3>
+    <div class="req-item"><span class="ri">✅</span><span>دورهٔ کالیبراسیون بسته به نوع گازسنج و سنسور، طبق جدول ۱ تعیین می‌شود.</span></div>
+    <div class="req-item"><span class="ri">✅</span><span>شرایط محیطی: دمای محیط باید ثابت و برابر <b>۲۰ ± ۲ درجهٔ سلسیوس</b> باشد.</span></div>
+    <div class="req-item"><span class="ri">✅</span><span>صحت عملکرد کالیبراسیون بسته به دقت دستگاه و دقت سیلندر کالیبراسیون (بین <b>۱ تا ۱۰٪</b>) است.</span></div>
+    <div class="req-item"><span class="ri">✅</span><span>دبی گاز خروجی رگولاتور سیلندر باید طبق User Manual هر دستگاه باشد (<b>۰٫۵ یا ۱ لیتر بر دقیقه</b>).</span></div>
+    <div class="req-item"><span class="ri">✅</span><span>کالیبراسیون منظم توسط افراد صلاحیت‌دار و مطابق دستورالعمل سازنده؛ در صورت مصرف کمِ دستگاه، پیش از استفاده «چک کالیبره» انجام شود.</span></div>
+    <div class="req-item"><span class="ri">✅</span><span>عوامل نیازمند کالیبراسیون فوق‌العاده: فرسودگی یا کثیف‌شدن سنسور (گرد و خاک)، تماس با آب و رطوبت، ضربهٔ فیزیکی، و حرارت/سرمای زیاد.</span></div>
+    <div class="req-item"><span class="ri">✅</span><span>روش انجام کالیبراسیون (بند ۸-۲): مطابق دستورالعمل سازندهٔ هر دستگاه.</span></div>
+  </div>
+
+  <!-- جدول ۲ — تکنولوژی سنسور -->
+  <div class="sec-block">
+    <h3>🔬 جدول ۲ — تکنولوژی سنسور و طول عمر</h3>
+    <div class="cal2-row"><div class="cal2-h">اکسیژن · الکتروشیمیایی · ۲ تا ۳ سال</div><div class="cal2-d">CROWCON GT43 · CROWCON TETRA · BW max XT II · SEWERIN 680</div></div>
+    <div class="cal2-row"><div class="cal2-h">CO و H₂S · الکتروشیمیایی · ۳ تا ۴ سال</div><div class="cal2-d">GT43 · TETRA · CROWCON · BW max XT II · SEWERIN 680</div></div>
+    <div class="cal2-row"><div class="cal2-h">مرکاپتان · الکتروشیمیایی · ۱ تا ۲ سال</div><div class="cal2-d">MULTI RAE · ODOR HANDY PLUS</div></div>
+    <div class="cal2-row"><div class="cal2-h">CH₄ (ppm) · نیمه‌هادی · ۵ تا ۸ سال</div><div class="cal2-d">SPY GAS · GT44 · GT43 · BW max XT II</div></div>
+    <div class="cal2-row"><div class="cal2-h">CH₄ (ppm) · FID · بیش از ۵ سال</div><div class="cal2-d">CROWCON FID · SEWERIN PORTAFID</div></div>
+    <div class="cal2-row"><div class="cal2-h">CH₄ (%LEL) · کاتالیتیک · ۵ سال</div><div class="cal2-d">D15 · SNIFFER · GT43 · GT44 · SEWERIN PM4 · SEWERIN 680</div></div>
+    <div class="cal2-row"><div class="cal2-h">CH₄ (%VOL) · هدایت گرمایی · بیش از ۸ سال</div><div class="cal2-d">D15 · GT43 · GT44 · MULTI RAE · SEWERIN PM4 · SEWERIN 680</div></div>
+    <div class="cal2-row"><div class="cal2-h">CH₄ (ppm/LEL/VOL) · لیزر · ۱۰ سال</div><div class="cal2-d">Leaser one</div></div>
+  </div>
+
+  <!-- سایر تجهیزات اندازه‌گیری -->
+  <div class="sec-block">
+    <h3>📏 سایر تجهیزات اندازه‌گیری (مرجع)</h3>
+    <div class="cal2-row"><div class="cal2-h">کنتور توربینی (Turbine Meter) و تصحیح‌کنندهٔ حجمی</div>
+      <div class="sec-row"><span class="sk">۱۶۰ ≤ q<sub>max</sub> &lt; ۱۰۰۰۰ scm/h</span><span class="sv">دورهٔ ۳ سال</span></div>
+      <div class="sec-row"><span class="sk">۱۰۰۰۰ ≤ q<sub>max</sub> &lt; ۵۰۰۰۰</span><span class="sv">دورهٔ ۲ سال</span></div>
+      <div class="sec-row"><span class="sk">۵۰۰۰۰ ≤ q<sub>max</sub></span><span class="sv">دورهٔ ۱ سال</span></div>
+      <div class="cal2-d" style="direction:rtl;text-align:right">خطای مجاز جریان: q<sub>min</sub> تا ۰٫۲q<sub>max</sub> → ±۲٪ · بازهٔ ۰٫۲q<sub>max</sub> تا q<sub>max</sub> → ±۱٪</div>
+    </div>
+    <div class="cal2-row"><div class="cal2-h">دماسنج و فشارسنج</div><div class="cal2-d" style="direction:rtl;text-align:right">ایستگاه‌های C.G.S: یک سال · ایستگاه‌های D.R.S، RS و MS: دو سال</div></div>
+    <div class="cal2-row"><div class="cal2-h">گازسنج، نشت‌یاب و بوسنج</div><div class="cal2-d" style="direction:rtl;text-align:right">بر اساس سنسور مربوطه طبق جدول ۱</div></div>
+    <div class="cal2-row"><div class="cal2-h">مولتی‌متر / آمپرمتر / ولتمتر</div><div class="cal2-d" style="direction:rtl;text-align:right">دوره‌ای، طبق دستورالعمل سازنده</div></div>
+  </div>
+
+  <div class="conv-note">مبنا: دستورالعمل کالیبراسیون تجهیزات (شرکت گاز استان تهران). این صفحه راهنمای مرجع است؛ کالیبراسیون باید توسط مرکز معتبر و طبق دستورالعمل سازندهٔ هر دستگاه انجام و گواهی صادر شود.</div>
+</div>
+<div class="note">کالیبراسیون و صدور گواهی بر عهدهٔ مراکز/نمایندگان واجد صلاحیت است؛ این ابزار جایگزین آن نیست.</div>
+</div><!-- /page calib -->
 
 <!-- ===== دستورالعمل‌ها ===== -->
 <div class="page" id="guidelines">
@@ -2421,7 +2488,7 @@
 // جابجایی بین صفحه‌ها (منو + کارت‌های داشبورد)
 var PAGE_TITLES = { 'cat-safety':'ایمنی', 'tools':'ابزارها', 'alerts':'اطلاعیه‌ها', 'quiz':'آزمون و خودآزمایی',
   'competency':'لیست صلاحیت افراد', 'area-type':'محوطه مشمول/مشروط', 'ppe':'انتخاب PPE بر اساس فعالیت',
-  'clothing':'ماتریس البسه', 'hcdet':'تشخیص کار گرم و سرد', 'gasinject':'تزریق گاز', 'hazzone':'زون‌بندی مناطق خطر', 'gasdet':'انواع دستگاه گازسنج', 'guidelines':'دستورالعمل‌ها' };
+  'clothing':'ماتریس البسه', 'hcdet':'تشخیص کار گرم و سرد', 'gasinject':'تزریق گاز', 'hazzone':'زون‌بندی مناطق خطر', 'gasdet':'انواع دستگاه گازسنج', 'calib':'کالیبراسیون گازسنج‌ها', 'guidelines':'دستورالعمل‌ها' };
 var navStack = [];
 var currentPage = 'home';
 function goPage(id, isBack){
@@ -3017,6 +3084,42 @@ function calcPress(){
   if(L>15){ box.innerHTML='<div class="hyd-note">برای طول بیش از ۱۵ مایل به جدول کامل/دستورالعمل مراجعه شود.</div>'; return; }
   var p=PRESS[v][L-1];
   box.innerHTML='<div class="result-box r-blue"><span class="icon">📈</span><div class="verdict">حداقل فشار ورودی ≈ '+faDigits(p)+' PSIG</div><div class="sub">برای طول '+faDigits(L)+' مایل</div></div>';
+}
+
+/* ================= کالیبراسیون گازسنج‌ها (جدول ۱) ================= */
+var CAL1=[
+  {n:'D15', ch4:12, unit:'HSE'},
+  {n:'SNIFFER', ch4:12, unit:'HSE'},
+  {n:'GT44', ch4:12, unit:'HSE'},
+  {n:'GT43', ch4:12, co2:12, h2s:12, o2:12, unit:'HSE'},
+  {n:'CROWCON (TETRA)', ch4:12, co2:12, h2s:12, o2:12, unit:'HSE'},
+  {n:'MULTI RAE', ch4:12, merc:12, unit:'HSE'},
+  {n:'ODOR HANDY PLUS', merc:6, unit:'HSE'},
+  {n:'SEWERIN 680', ch4:12, co2:12, h2s:12, o2:12, unit:'HSE'},
+  {n:'BW max XT II', ch4:6, co2:6, h2s:6, o2:6, unit:'HSE'},
+  {n:'SPY GAS', ch4:12, unit:'بازرسی فنی'},
+  {n:'SEWERIN PM4', ch4:12, unit:'بازرسی فنی'},
+  {n:'Ethan analyzer (SEWERIN 680)', ch4:12, unit:'بازرسی فنی'},
+  {n:'Leaser one', ch4:12, unit:'بازرسی فنی'},
+  {n:'Ethan analyzer (Heat)', ch4:12, unit:'بازرسی فنی'},
+  {n:'Ethan analyzer (Huberg)', ch4:12, unit:'بازرسی فنی'},
+  {n:'SEWERIN portafid', ch4:12, unit:'بازرسی فنی'},
+  {n:'CROWCON (Gastec)', ch4:12, unit:'بازرسی فنی'}
+];
+function initCalib(){
+  var s=document.getElementById('calSel'); if(!s) return;
+  s.innerHTML='<option value="">— انتخاب دستگاه —</option>'+CAL1.map(function(d,i){return '<option value="'+i+'">'+d.n+'</option>';}).join('');
+}
+function renderCalib(){
+  var v=document.getElementById('calSel').value, box=document.getElementById('calResult');
+  if(v===''){ box.innerHTML=''; return; }
+  var d=CAL1[+v]; if(!d){ box.innerHTML=''; return; }
+  var gases=[['CH₄','ch4'],['CO₂','co2'],['H₂S','h2s'],['O₂','o2'],['مرکاپتان','merc']];
+  var rows=gases.filter(function(g){return d[g[1]]!=null;}).map(function(g){
+    return '<div class="sec-row"><span class="sk">'+g[0]+'</span><span class="sv">هر '+faDigits(d[g[1]])+' ماه</span></div>'; }).join('');
+  box.innerHTML='<div class="result-box r-green"><span class="icon">🎯</span><div class="verdict">'+d.n+'</div>'+
+    '<div class="sub">واحد مسئول هماهنگی: '+d.unit+'</div></div>'+
+    '<div class="sec-block" style="margin-top:8px"><h3 style="font-size:13px">دورهٔ کالیبراسیون به تفکیک گاز</h3>'+rows+'</div>';
 }
 
 /* ================= زون‌بندی مناطق خطر (IEC) ================= */
@@ -4608,6 +4711,7 @@ initClothing();
 initHCDet();
 taInit();
 initHazzone();
+initCalib();
 enhanceSelects();
 // اعمال تم ذخیره‌شده و هماهنگ‌کردن آیکون دکمه
 applyTheme(document.documentElement.getAttribute('data-theme')==='light' ? 'light' : 'dark');
