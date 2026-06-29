@@ -84,6 +84,10 @@ input:focus { border-color: var(--accent); }
 }
 .go:disabled { opacity: .6; cursor: progress; }
 
+.adv { margin-top: 12px; }
+.adv summary { color: var(--muted); font-size: .85rem; cursor: pointer; }
+.adv .field { margin-top: 12px; margin-bottom: 0; }
+
 .status { text-align: center; color: var(--muted); padding: 10px; }
 .status.error { color: var(--red); }
 

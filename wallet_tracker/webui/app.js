@@ -24,19 +24,28 @@ $("customMin").addEventListener("input", (e) => {
 $("go").addEventListener("click", run);
 $("address").addEventListener("keydown", (e) => { if (e.key === "Enter") run(); });
 
-// -- main ------------------------------------------------------------------
+// remember last address + custom RPC locally (no server, nothing leaves the device)
+try {
+  $("address").value = localStorage.getItem("pw_addr") || "";
+  if ($("rpc")) $("rpc").value = localStorage.getItem("pw_rpc") || "";
+} catch (_) {}
+
+// -- main: everything runs in the browser, no backend ----------------------
 async function run() {
   const address = $("address").value.trim();
   if (!/^0x[0-9a-fA-F]{40}$/.test(address)) {
     return showStatus("آدرس نامعتبر است. یک آدرس 0x... روی شبکه Polygon وارد کنید.", true);
   }
+  const rpc = ($("rpc") && $("rpc").value.trim()) || undefined;
+  try {
+    localStorage.setItem("pw_addr", address);
+    if (rpc) localStorage.setItem("pw_rpc", rpc);
+  } catch (_) {}
+
   setLoading(true);
   showStatus("در حال خواندن داده‌ها از پلی‌مارکت و شبکه Polygon…", false);
   try {
-    const url = `api/report?address=${encodeURIComponent(address)}&minutes=${windowMinutes}`;
-    const res = await fetch(url);
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.detail || "خطای سرور");
+    const data = await window.Poly.buildReport(address, windowMinutes, rpc);
     render(data);
     $("status").hidden = true;
   } catch (err) {
@@ -50,20 +59,19 @@ async function run() {
 function render(d) {
   $("results").hidden = false;
 
-  // balance
-  $("balance").textContent = money(d.balance.total_cash);
+  const totalCash = d.balance.total != null ? d.balance.total : d.balance.total_cash;
+  $("balance").textContent = money(totalCash);
   $("balanceBreak").textContent =
     `USDC.e: ${money(d.balance.usdc_e)} · native: ${money(d.balance.usdc_native)}`;
 
   $("portfolio").textContent = money(d.portfolio_value);
 
-  // window pnl
   const w = d.pnl_window;
   setSigned($("pnl"), w.total);
+  const label = windowLabel(d.window.minutes);
   $("pnlFoot").textContent =
-    `${d.window.label} · معاملات: ${w.trades_count} · پاداش: ${money(w.rewards)} · جریان نقدی: ${money(w.net_cash_flow)}`;
+    `${label} · معاملات: ${w.trades_count} · پاداش: ${money(w.rewards)} · جریان نقدی: ${money(w.net_cash_flow)}`;
 
-  // unrealized
   const op = d.open_positions;
   setSigned($("unrealized"), op.unrealized_pnl_now);
   $("unrealizedFoot").textContent = `${op.count} پوزیشن باز`;
@@ -71,7 +79,6 @@ function render(d) {
   renderEvents($("events"), w.events);
   renderPositions($("positions"), op.positions);
 
-  // warnings
   const wbox = $("warnings");
   if (d.warnings && d.warnings.length) {
     wbox.hidden = false;
@@ -118,6 +125,12 @@ function renderPositions(box, positions) {
 }
 
 // -- helpers ---------------------------------------------------------------
+function windowLabel(min) {
+  if (min < 60) return `${fmtNum(min)} دقیقه اخیر`;
+  const h = min / 60;
+  if (h < 24) return `${fmtNum(h)} ساعت اخیر`;
+  return `${fmtNum(h / 24)} روز اخیر`;
+}
 function setLoading(on) { $("go").disabled = on; $("go").textContent = on ? "در حال محاسبه…" : "محاسبه کن"; }
 function showStatus(msg, isError) { const s = $("status"); s.hidden = false; s.textContent = msg; s.classList.toggle("error", !!isError); }
 function setSigned(el, v) { el.textContent = signed(v); el.classList.toggle("pos", (v || 0) > 0); el.classList.toggle("neg", (v || 0) < 0); }

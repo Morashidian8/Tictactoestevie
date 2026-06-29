@@ -40,6 +40,14 @@
       </div>
 
       <button id="go" class="go">محاسبه کن</button>
+
+      <details class="adv">
+        <summary>تنظیمات پیشرفته (اختیاری)</summary>
+        <label class="field">
+          <span>آدرس RPC شبکه Polygon — اگر خالی بماند از پیش‌فرض عمومی استفاده می‌شود</span>
+          <input id="rpc" type="text" spellcheck="false" placeholder="https://polygon-rpc.com" autocomplete="off" />
+        </label>
+      </details>
     </section>
 
     <section id="status" class="status" hidden></section>
@@ -86,6 +94,7 @@
     </footer>
   </main>
 
+  <script src="poly.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

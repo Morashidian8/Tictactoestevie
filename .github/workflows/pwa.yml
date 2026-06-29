@@ -9,6 +9,7 @@ on:
       - "hse_pwa/**"
       - "manhole_pwa/**"
       - "pwa/**"
+      - "wallet_tracker/webui/**"
       - "build_pwa.py"
       - ".github/workflows/pwa.yml"
   schedule:
@@ -75,6 +76,8 @@ jobs:
           cp -r hse_pwa site/hse
           # اپ ابزارهای HSE «ورود به منهول» را زیر /manhole/ منتشر کن.
           cp -r manhole_pwa site/manhole
+          # ردیاب کیف پول پلی‌مارکت (کاملاً مرورگری، بدون سرور) را زیر /wallet/ منتشر کن.
+          cp -r wallet_tracker/webui site/wallet
           # اگر داده‌ی بیت‌کوین در این اجرا ساخته نشد (مثلاً push اپ HSE)، پوسته‌ی
           # ثابت اپ بیت‌کوین را در ریشه قرار بده و آخرین data.json منتشرشده را از
           # سایت زنده بگیر تا اپ ریشه سالم بماند بدون نیاز به بیلد مجدد.
