@@ -149,7 +149,9 @@ textarea{resize:vertical}
       <label>تاریخ بازدید
         <input id="b_date" type="text" readonly placeholder="انتخاب از تقویم">
       </label>
-      <label>بازرس HSE <input id="b_inspector" type="text"></label>
+      <label>بازرس HSE
+        <select id="b_inspector"><option value="">— انتخاب بازرس —</option></select>
+      </label>
       <label>دوره بازدید <input id="b_period" type="text"></label>
     </div>
     <div class="actions">
@@ -20431,6 +20433,7 @@ var __async = (__this, __arguments, generator) => {
 <script>// ====== HSE Inspection — Offline PWA ======
 let CHECKLIST = null, ITEMS = [], idx = 0;
 let BUILDINGS = []; // فهرست ساختمان‌ها با آدرس
+let INSPECTORS = []; // فهرست بازرسان HSE
 const STORE_KEY = "hse_pwa_v1";
 const HISTORY_KEY = "hse_pwa_history";
 let state = { building: {}, answers: {} };
@@ -20657,6 +20660,17 @@ function populateBuildings(){
     const addr = $("#b_address");
     if(addr) addr.value = b ? (b.address||"") : "";
   };
+}
+
+function populateInspectors(){
+  const sel = $("#b_inspector");
+  if(!sel || sel.tagName !== "SELECT") return;
+  sel.innerHTML = '<option value="">— انتخاب بازرس —</option>';
+  INSPECTORS.forEach(name=>{
+    const o = document.createElement("option");
+    o.value = name; o.textContent = name;
+    sel.appendChild(o);
+  });
 }
 
 // =================== راه‌اندازی ===================
@@ -22219,6 +22233,41 @@ async function init(){
 ];
   populateBuildings();
 
+  // بارگذاری فهرست بازرسان و پر کردن منوی انتخابی
+  INSPECTORS = [
+ "روشنک باقرزاده آذر",
+ "مرتضی میرزایی زاویه کرد",
+ "هادی محمدی زاده",
+ "لقمان نیاری",
+ "ندا امیرعبدالهیان",
+ "فاطمه پورعطا",
+ "محسن عباسی",
+ "فردین راد نسب",
+ "علی سلطان زاده",
+ "امیر جهانی",
+ "سید مهدی موسوی",
+ "امیر ایروانی مهر",
+ "مهدی عبداله زاده لزوری",
+ "محمد رضا میرابی",
+ "محمد رشیدبان",
+ "حمید چراغی",
+ "مسعود جنابی",
+ "داود حسنوند",
+ "سیدامیرحسین شجاعی",
+ "کوروش مرادیان",
+ "مهران سفیدبان",
+ "ابوذر کوچک نیا",
+ "مهدی رجبی",
+ "میثم اله یاری",
+ "مسلم جلیل پور",
+ "جمشید مظفری",
+ "احسان مرادی",
+ "وحید افتخارمنش",
+ "مصطفی دهقان",
+ "عباس صادقی"
+];
+  populateInspectors();
+
   const saved = loadLocal();
   const resumeBtn = $("#resumeBtn");
   if(resumeBtn && saved && saved.answers && Object.keys(saved.answers).length){
@@ -22232,8 +22281,9 @@ async function init(){
 
   // startBtn: validation و رفتن به صفحه‌ی انتخاب mode
   $("#startBtn").onclick=()=>{
-    if(!$("#b_name").value.trim()){ toast("لطفاً نام ساختمان را وارد کنید"); return; }
+    if(!$("#b_name").value.trim()){ toast("لطفاً ساختمان را انتخاب کنید"); return; }
     if(!$("#b_date").value){ toast("لطفاً تاریخ را انتخاب کنید"); return; }
+    if(!$("#b_inspector").value.trim()){ toast("لطفاً بازرس را انتخاب کنید"); return; }
     readBuilding();
     idx = 0;
     show("modeScreen");

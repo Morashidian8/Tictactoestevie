@@ -1,6 +1,7 @@
 // ====== HSE Inspection — Offline PWA ======
 let CHECKLIST = null, ITEMS = [], idx = 0;
 let BUILDINGS = []; // فهرست ساختمان‌ها با آدرس
+let INSPECTORS = []; // فهرست بازرسان HSE
 const STORE_KEY = "hse_pwa_v1";
 const HISTORY_KEY = "hse_pwa_history";
 let state = { building: {}, answers: {} };
@@ -229,6 +230,17 @@ function populateBuildings(){
   };
 }
 
+function populateInspectors(){
+  const sel = $("#b_inspector");
+  if(!sel || sel.tagName !== "SELECT") return;
+  sel.innerHTML = '<option value="">— انتخاب بازرس —</option>';
+  INSPECTORS.forEach(name=>{
+    const o = document.createElement("option");
+    o.value = name; o.textContent = name;
+    sel.appendChild(o);
+  });
+}
+
 // =================== راه‌اندازی ===================
 async function init(){
   CHECKLIST = await (await fetch("checklist_data.json")).json();
@@ -238,6 +250,10 @@ async function init(){
   // بارگذاری فهرست ساختمان‌ها و پر کردن منوی انتخابی
   try{ BUILDINGS = await (await fetch("buildings.json")).json(); }catch(e){ BUILDINGS = []; }
   populateBuildings();
+
+  // بارگذاری فهرست بازرسان و پر کردن منوی انتخابی
+  try{ INSPECTORS = await (await fetch("inspectors.json")).json(); }catch(e){ INSPECTORS = []; }
+  populateInspectors();
 
   const saved = loadLocal();
   const resumeBtn = $("#resumeBtn");
@@ -252,8 +268,9 @@ async function init(){
 
   // startBtn: validation و رفتن به صفحه‌ی انتخاب mode
   $("#startBtn").onclick=()=>{
-    if(!$("#b_name").value.trim()){ toast("لطفاً نام ساختمان را وارد کنید"); return; }
+    if(!$("#b_name").value.trim()){ toast("لطفاً ساختمان را انتخاب کنید"); return; }
     if(!$("#b_date").value){ toast("لطفاً تاریخ را انتخاب کنید"); return; }
+    if(!$("#b_inspector").value.trim()){ toast("لطفاً بازرس را انتخاب کنید"); return; }
     readBuilding();
     idx = 0;
     show("modeScreen");
