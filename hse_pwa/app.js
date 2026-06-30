@@ -247,12 +247,14 @@ async function init(){
   ITEMS = CHECKLIST.items;
   filteredItems = [...ITEMS]; // شروع با تمام ردیف‌ها
 
-  // بارگذاری فهرست ساختمان‌ها و پر کردن منوی انتخابی
-  try{ BUILDINGS = await (await fetch("buildings.json")).json(); }catch(e){ BUILDINGS = []; }
+  // فهرست ساختمان‌ها: ابتدا دادهٔ تزریق‌شده در صفحه، سپس در صورت نبود از فایل
+  BUILDINGS = Array.isArray(window.HSE_BUILDINGS) ? window.HSE_BUILDINGS.slice() : [];
+  if(!BUILDINGS.length){ try{ BUILDINGS = await (await fetch("buildings.json")).json(); }catch(e){ BUILDINGS = []; } }
   populateBuildings();
 
-  // بارگذاری فهرست بازرسان و پر کردن منوی انتخابی
-  try{ INSPECTORS = await (await fetch("inspectors.json")).json(); }catch(e){ INSPECTORS = []; }
+  // فهرست بازرسان: ابتدا دادهٔ تزریق‌شده، سپس در صورت نبود از فایل
+  INSPECTORS = Array.isArray(window.HSE_INSPECTORS) ? window.HSE_INSPECTORS.slice() : [];
+  if(!INSPECTORS.length){ try{ INSPECTORS = await (await fetch("inspectors.json")).json(); }catch(e){ INSPECTORS = []; } }
   populateInspectors();
 
   const saved = loadLocal();

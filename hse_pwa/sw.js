@@ -1,11 +1,13 @@
 // Service Worker — کش کامل برای کارکرد آفلاین
-const CACHE = "hse-pwa-v3";
+const CACHE = "hse-pwa-v4";
 const ASSETS = [
   "./",
   "./index.html",
   "./styles.css",
   "./app.js",
   "./checklist_data.json",
+  "./buildings.json",
+  "./inspectors.json",
   "./manifest.webmanifest",
   "./vendor/exceljs.min.js",
   "./vendor/docx.umd.js",
