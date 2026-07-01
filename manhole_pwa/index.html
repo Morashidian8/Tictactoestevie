@@ -417,6 +417,8 @@
   .cl-role { display:block; width:100%; text-align:right; padding:11px 14px; border:0; border-bottom:1px solid var(--line); background:transparent; color:var(--txt); font:inherit; font-size:14px; cursor:pointer; }
   .cl-role:last-child { border-bottom:0; }
   .cl-role:active { background:rgba(34,255,136,0.10); }
+  .cl-badge { float:left; font-size:11px; color:var(--muted); background:rgba(127,224,107,0.14); border-radius:8px; padding:2px 8px; margin-top:1px; }
+  .cl-badge-0 { background:rgba(255,120,120,0.14); color:#e88; }
   .cl-more { padding:10px 14px; font-size:12px; color:var(--muted); text-align:center; }
   .mode-card { display:flex; align-items:center; gap:12px; width:100%; text-align:right; background:var(--glass); border:1px solid var(--line2); border-radius:14px; padding:16px 14px; margin-bottom:12px; cursor:pointer; color:var(--txt); font:inherit; box-shadow:0 2px 10px rgba(0,0,0,0.08); }
   .mode-card:active { filter:brightness(1.06); }
@@ -4853,20 +4855,24 @@ function clMode(m){
 }
 function clNorm(s){ return (s||'').replace(/[ي]/g,'ی').replace(/[ك]/g,'ک').replace(/‌/g,' ').replace(/\s+/g,' ').trim(); }
 /* ----- بر اساس تجهیز ----- */
+function clItemCount(k){ var c=0; for(var i=0;i<CLO_ROLES.length;i++){ if(CLO_ROLES[i].m[k]!=null) c++; } return c; }
 function clItemFilter(){
   var inp=document.getElementById('clItemSearch'); var q=inp?clNorm(inp.value):'';
   var box=document.getElementById('clItemList'); if(!box) return;
   var list=[]; for(var k=0;k<CLO_ITEMS.length;k++){ if(!q||clNorm(CLO_ITEMS[k]).indexOf(q)>=0) list.push(k); }
   if(list.length===0){ box.innerHTML='<div class="cl-more">موردی یافت نشد</div>'; return; }
   box.innerHTML='<div class="cl-count">'+faDigits(list.length)+' قلم'+(q?' (نتیجهٔ جستجو)':' — یک قلم را انتخاب کنید')+'</div>'+
-    list.map(function(k){return '<button class="cl-role" onclick="clItemPick('+k+')">'+CLO_ITEMS[k]+'</button>';}).join('');
+    list.map(function(k){ var c=clItemCount(k);
+      var badge=c>0?'<span class="cl-badge">'+faDigits(c)+' سمت</span>':'<span class="cl-badge cl-badge-0">بدون تخصیص</span>';
+      return '<button class="cl-role" onclick="clItemPick('+k+')">'+CLO_ITEMS[k]+badge+'</button>';}).join('');
 }
 function clItemPick(k){
   var box=document.getElementById('clItemResult'), rows=[];
   for(var i=0;i<CLO_ROLES.length;i++){ if(CLO_ROLES[i].m[k]!=null) rows.push({n:CLO_ROLES[i].n,mo:CLO_ROLES[i].m[k]}); }
   rows.sort(function(a,b){return a.mo-b.mo || a.n.localeCompare(b.n,'fa');});
   var html=rows.map(function(r){return '<div class="sec-row"><span class="sk">'+r.n+'</span><span class="sv">هر '+faDigits(r.mo)+' ماه</span></div>';}).join('');
-  box.innerHTML='<div class="sec-block"><h3>🧰 '+CLO_ITEMS[k]+' — سمت‌های مشمول ('+faDigits(rows.length)+')</h3>'+(html||'<div class="sec-row"><span class="sv">هیچ سمتی این قلم را دریافت نمی‌کند</span></div>')+'</div>';
+  var empty='<div class="sec-row"><span class="sv">این قلم در ماتریس رسمی شرکت گاز استان تهران به هیچ سمت سازمانی‌ای تخصیص داده نشده است.</span></div>';
+  box.innerHTML='<div class="sec-block"><h3>🧰 '+CLO_ITEMS[k]+' — سمت‌های مشمول ('+faDigits(rows.length)+')</h3>'+(html||empty)+'</div>';
   box.scrollIntoView({behavior:'smooth',block:'start'});
 }
 function clFilter(){
