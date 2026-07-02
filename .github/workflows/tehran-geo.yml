@@ -7,6 +7,7 @@ on:
       - "claude/tehran-gas-fire-routes-*"
     paths:
       - "tehran_gas_fire_map/scripts/fetch_geo.py"
+      - "tehran_gas_fire_map/scripts/fetch_stations.py"
       - "tehran_gas_fire_map/scripts/build_map.py"
       - "tehran_gas_fire_map/scripts/inline_assets.py"
       - "tehran_gas_fire_map/data/gas_offices.json"
@@ -39,6 +40,15 @@ jobs:
             python tehran_gas_fire_map/scripts/fetch_geo.py
           fi
 
+      - name: Fetch full fire-station list
+        # Quick Overpass query; embedded in the map for browser-side edit mode.
+        run: |
+          if [ -f tehran_gas_fire_map/data/stations.json ]; then
+            echo "stations.json already present — skipping fetch"
+          else
+            python tehran_gas_fire_map/scripts/fetch_stations.py
+          fi
+
       - name: Build self-contained map HTML
         run: |
           pip install folium
@@ -49,7 +59,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add tehran_gas_fire_map/data/geo_results.json tehran_gas_fire_map/output/tehran_gas_fire_map.html
+          git add tehran_gas_fire_map/data/geo_results.json tehran_gas_fire_map/data/stations.json tehran_gas_fire_map/output/tehran_gas_fire_map.html
           git diff --cached --quiet || git commit -m "chore: tehran gas-fire map artifacts [skip ci]"
           for i in 1 2 3; do
             git pull --rebase origin "${GITHUB_REF_NAME}" && git push && break
