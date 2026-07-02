@@ -51,11 +51,13 @@ def main():
     folium.TileLayer("OpenStreetMap", name="نقشه خیابانی").add_to(m)
     folium.TileLayer("CartoDB positron", name="نقشه روشن").add_to(m)
 
-    # Tehran city boundary
-    boundary = folium.FeatureGroup(name="محدوده شهر تهران", show=True)
-    for seg in data.get("boundary", []):
-        folium.PolyLine(seg, color="#2e7d32", weight=2.5, opacity=0.7, dash_array="6,6").add_to(boundary)
-    boundary.add_to(m)
+    # Tehran city boundary (only if the CI fetch returned segments)
+    has_boundary = bool(data.get("boundary"))
+    if has_boundary:
+        boundary = folium.FeatureGroup(name="محدوده شهر تهران", show=True)
+        for seg in data["boundary"]:
+            folium.PolyLine(seg, color="#2e7d32", weight=2.5, opacity=0.7, dash_array="6,6").add_to(boundary)
+        boundary.add_to(m)
 
     routes_fg = folium.FeatureGroup(name="مسیر خودروی آتش‌نشانی")
     offices_fg = folium.FeatureGroup(name="ادارات گاز")
@@ -103,13 +105,14 @@ def main():
     stations_fg.add_to(m)
     offices_fg.add_to(m)
 
-    title = """
+    boundary_line = "خط‌چین سبز = محدوده شهر تهران — " if has_boundary else ""
+    title = f"""
 <div dir="rtl" style="position:fixed;top:10px;right:60px;z-index:9999;background:rgba(255,255,255,.95);
      padding:10px 14px;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,.3);font-family:Tahoma;max-width:380px">
   <div style="font-size:15px;font-weight:bold;color:#333">🗺️ ادارات گاز شهر تهران و نزدیک‌ترین ایستگاه آتش‌نشانی</div>
   <div style="font-size:11px;color:#555;margin-top:4px">
     🔥 نارنجی = اداره گاز &nbsp;|&nbsp; 🚒 قرمز = ایستگاه آتش‌نشانی &nbsp;|&nbsp; خط قرمز = مسیر رانندگی خودروی آتش‌نشانی<br>
-    خط‌چین سبز = محدوده شهر تهران — روی هر نشانگر کلیک کنید (فاصله و زمان رسیدن)<br>
+    {boundary_line}روی هر نشانگر کلیک کنید (فاصله و زمان رسیدن)<br>
     منبع داده: OpenStreetMap + مسیریابی OSRM — زمان‌ها بدون ترافیک است، فوریت: ۱۲۵
   </div>
 </div>"""
