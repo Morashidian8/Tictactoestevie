@@ -14,6 +14,7 @@ the entries below are seeded as placeholders and may not all exist yet.
 | HSE PWA | `hse_pwa/` | Progressive web app for HSE inspection. |
 | Manhole PWA | `manhole_pwa/` | Progressive web app for manhole inspection. |
 | PWA | `pwa/` | Shared / generic PWA assets. |
+| Wallet tracker | `wallet_tracker/` | Standalone PWA + FastAPI backend that reports a Polymarket wallet's USDC cash balance and the FIFO-accurate realized PnL of its trades over a chosen time window. No dependency on `polybot`. |
 
 When a skill needs the domain language for a given area, read the `CONTEXT.md` for the matching
 context above. If it doesn't exist yet, proceed silently (see `docs/agents/domain.md`).

@@ -11,7 +11,7 @@
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="ورود به منهول">
+<meta name="apple-mobile-web-app-title" content="ورود به فضای بسته">
 <title>HSE man — شرکت گاز استان تهران</title>
 
 <style>
@@ -113,6 +113,7 @@
   .r-green { background: linear-gradient(135deg,#1e8e3e,#34a853); }
   .r-orange{ background: linear-gradient(135deg,#e37400,#fb8c00); }
   .r-red   { background: linear-gradient(135deg,#c5221f,#ea4335); }
+  .r-blue  { background: linear-gradient(135deg,#1F4E79,#2E75B6); }
   .reasons {
     background: #fff;
     border-radius: 12px;
@@ -294,6 +295,19 @@
     border-radius: 10px; padding: 12px; margin-top: 14px;
   }
 
+  /* تعاریف کار گرم/سرد */
+  .def-row { display: flex; gap: 10px; align-items: flex-start; padding: 8px 0; }
+  .def-row + .def-row { border-top: 1px solid var(--line2); }
+  .def-tag {
+    flex: 0 0 auto; font-size: 13px; font-weight: 700; border-radius: 10px;
+    padding: 6px 10px; white-space: nowrap;
+  }
+  .def-hot { background: rgba(255,90,90,0.14); color: #ff6a6a; }
+  .def-cold { background: rgba(63,208,255,0.14); color: #3fd0ff; }
+  .def-txt { font-size: 13px; line-height: 1.9; color: var(--txt2); }
+  .hc-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 14px; }
+  @media (max-width: 520px){ .hc-cols { grid-template-columns: 1fr; } }
+
   /* بخش اطلاعات */
   .about-logo-img {
     width: 104px; height: 104px; object-fit: contain;
@@ -344,9 +358,11 @@
   .req-item:last-child { border-bottom:none; }
   .req-item .ri { flex-shrink:0; }
   .permit-badge {
-    display:inline-block; padding:5px 14px; border-radius:20px; font-size:14px;
-    font-weight:700; background:#eaf2fb; color:#1F4E79; margin:3px;
+    display:inline-block; padding:6px 14px; border-radius:20px; font-size:14px;
+    font-weight:800; background:#ffffff; color:#13243d; margin:3px;
+    box-shadow:0 2px 8px rgba(0,0,0,0.18);
   }
+  .permit-badge.supp{ background:#FFE8CC; color:#9a4d00; }
   .big-num { font-size:26px; font-weight:800; }
   .big-num small { font-size:13px; font-weight:600; opacity:0.9; }
   .calc-rows { background:#fff; border-radius:12px; padding:4px 16px; box-shadow:0 1px 4px rgba(0,0,0,0.08); margin-top:12px; }
@@ -386,6 +402,35 @@
   .sec-row .sk { color:#555; flex-shrink:0; }
   .sec-row .sv { font-weight:700; color:#1a1a1a; text-align:left; }
   .hyd-note { background:#fef0e0; border-radius:10px; padding:10px 12px; font-size:13px; color:#a25100; line-height:1.9; margin-top:10px; }
+  .gi-formula { background:rgba(63,208,255,0.12); border:1px solid var(--line2); border-radius:10px; padding:12px 10px; margin-bottom:12px; font-size:14px; font-weight:700; text-align:center; direction:ltr; }
+  .gd-fig { display:flex; justify-content:center; margin:4px 0 10px; }
+  .gd-fig svg { width:100%; max-width:300px; height:auto; background:#eef3fa; border:1px solid var(--line2); border-radius:12px; padding:8px; }
+  html[data-theme="light"] .gd-fig svg { background:#f4f7fb; }
+  .gd-desc { font-size:13.5px; line-height:1.95; color:var(--txt2); margin:2px 0 10px; }
+  .gd-caption { text-align:center; font-size:11.5px; color:var(--muted); margin-top:-4px; margin-bottom:10px; }
+  .cal2-row { padding:9px 0; border-bottom:1px solid var(--line); }
+  .cal2-row:last-child { border-bottom:none; }
+  .cal2-h { font-size:13.5px; font-weight:700; color:var(--txt); }
+  .cal2-d { font-size:12.5px; color:var(--txt2); margin-top:4px; direction:ltr; text-align:right; line-height:1.8; }
+  .cl-list { max-height:340px; overflow:auto; margin-top:10px; border:1px solid var(--line2); border-radius:10px; }
+  .cl-list:empty { display:none; }
+  .cl-role { display:block; width:100%; text-align:right; padding:11px 14px; border:0; border-bottom:1px solid var(--line); background:transparent; color:var(--txt); font:inherit; font-size:14px; cursor:pointer; }
+  .cl-role:last-child { border-bottom:0; }
+  .cl-role:active { background:rgba(34,255,136,0.10); }
+  .cl-badge { float:left; font-size:11px; color:var(--muted); background:rgba(127,224,107,0.14); border-radius:8px; padding:2px 8px; margin-top:1px; }
+  .cl-badge-0 { background:rgba(255,120,120,0.14); color:#e88; }
+  .cl-more { padding:10px 14px; font-size:12px; color:var(--muted); text-align:center; }
+  .mode-card { display:flex; align-items:center; gap:12px; width:100%; text-align:right; background:var(--glass); border:1px solid var(--line2); border-radius:14px; padding:16px 14px; margin-bottom:12px; cursor:pointer; color:var(--txt); font:inherit; box-shadow:0 2px 10px rgba(0,0,0,0.08); }
+  .mode-card:active { filter:brightness(1.06); }
+  .mc-ico { flex:0 0 auto; width:46px; height:46px; border-radius:12px; display:inline-flex; align-items:center; justify-content:center; font-size:22px; background:rgba(127,224,107,0.14); }
+  .mc-txt { flex:1; display:flex; flex-direction:column; gap:3px; }
+  .mc-t { font-weight:800; font-size:15px; }
+  .mc-s { font-size:12.5px; color:var(--txt2); line-height:1.7; }
+  .mc-arrow { color:var(--muted); font-size:20px; }
+  .cl-back { background:none; border:0; color:var(--neon2); font:inherit; font-size:13px; padding:4px 2px 10px; cursor:pointer; }
+  .cl-count { padding:8px 14px; font-size:12px; color:var(--txt2); border-bottom:1px solid var(--line2); position:sticky; top:0; background:#102744; z-index:1; }
+  html[data-theme="light"] .cl-count { background:#FFFFFF; }
+  html[data-theme="light"] .cl-list { background:#FFFFFF; }
 
   /* ===== ارزیابی ریسک ===== */
   .risk-card { background:#fff; border-radius:14px; padding:14px 16px; margin-bottom:14px; box-shadow:0 1px 4px rgba(0,0,0,0.08); }
@@ -596,7 +641,7 @@
   .ext-item .ei-desc{ color:var(--txt2); }
   .ext-item .ei-best{ background:rgba(34,255,136,0.15); color:#67ffb4; }
   .conv-note{ background:rgba(58,142,224,0.10); border:1px solid var(--line2); color:var(--txt2); }
-  .permit-badge{ background:rgba(34,255,136,0.12); color:var(--neon2); }
+  .permit-badge{ background:#ffffff; color:#13243d; }
   .about-ver{ background:rgba(58,142,224,0.14); color:var(--txt); }
   .about-logo-img{ background:transparent; filter:drop-shadow(0 8px 22px rgba(0,0,0,0.5)); }
 
@@ -1000,6 +1045,26 @@
   html[data-theme="light"] .seg button,
   html[data-theme="light"] .rstat,
   html[data-theme="light"] .risk-item{ background:#F4F7FB; }
+  /* سطوح کارت‌ها در تم روشن سفید شوند (پیش‌فرض تیره بود و متن ناخوانا می‌شد) */
+  html[data-theme="light"] .card,
+  html[data-theme="light"] .reasons,
+  html[data-theme="light"] .req-list,
+  html[data-theme="light"] .calc-rows,
+  html[data-theme="light"] .conv-results,
+  html[data-theme="light"] .gas-card,
+  html[data-theme="light"] .sec-block,
+  html[data-theme="light"] .risk-card,
+  html[data-theme="light"] .ext-item{
+    background:#FFFFFF;
+    border:1px solid rgba(16,27,46,0.10);
+    box-shadow:0 2px 12px rgba(16,27,46,0.07), inset 0 1px 0 rgba(255,255,255,0.6);
+  }
+  html[data-theme="light"] .ri-ctrl li,
+  html[data-theme="light"] .reasons .row,
+  html[data-theme="light"] .req-item span:last-child,
+  html[data-theme="light"] .gas-prop .gv,
+  html[data-theme="light"] .sec-row .sv{ color:#1d2b40; }
+  html[data-theme="light"] .conv-note{ background:#EEF4FB; border-color:#D6E4F0; color:#516074; }
   /* تگ‌ها — متن تیره‌تر برای کنتراست روی سفید */
   html[data-theme="light"] .tag-ok{ background:rgba(15,174,102,0.14); color:#0a8f52; }
   html[data-theme="light"] .tag-warn{ background:rgba(255,149,0,0.16); color:#b96b00; }
@@ -1049,7 +1114,15 @@
   <nav class="menu" id="mainMenu">
     <button class="active" data-page="home">🏠 خانه</button>
     <div class="menu-sec"><span class="ms-dot" style="background:#22FF88"></span> ایمنی</div>
-    <button data-page="assess">ورود به منهول</button>
+    <button data-page="competency">لیست صلاحیت افراد</button>
+    <button data-page="area-type">محوطه مشمول/مشروط</button>
+    <button data-page="clothing">ماتریس البسه و PPE</button>
+    <button data-page="hcdet">تشخیص کار گرم و سرد</button>
+    <button data-page="hazzone">زون‌بندی مناطق خطر</button>
+    <button data-page="gasdet">انواع دستگاه گازسنج</button>
+    <button data-page="calib">کالیبراسیون گازسنج‌ها</button>
+    <button data-page="assess">ورود به فضای بسته</button>
+    <button data-page="gasinject">تزریق گاز (راه‌اندازی خط)</button>
     <button data-page="hotcold">کار گرم و سرد</button>
     <button data-page="ptw">راهنمای پرمیت کار</button>
     <button data-page="digging">فاصله ایمن حفاری</button>
@@ -1069,6 +1142,7 @@
     <div class="menu-sec"><span class="ms-dot" style="background:#b6a4ff"></span> آزمون و آموزش</div>
     <button data-page="quiz">آزمون و خودآزمایی HSE</button>
     <div class="menu-sec"><span class="ms-dot" style="background:#8A9BB8"></span> مستندات</div>
+    <button data-page="guidelines">دستورالعمل‌ها</button>
     <button data-page="about">اطلاعات</button>
   </nav>
 </aside>
@@ -1088,14 +1162,14 @@
 
   <!-- ۳) محورهای اصلی HSE -->
   <div class="sec-head"><span class="sh-bar" style="background:var(--neon)"></span>
-    <div class="sh-txt"><div class="sh-t">محورهای اصلی HSE</div><div class="sh-s">چهار محور تخصصی</div></div></div>
+    <div class="sh-txt"><div class="sh-t">محورهای اصلی HSE</div><div class="sh-s">شش محور تخصصی</div></div></div>
   <div class="axes">
     <button class="axis" style="--c:#22FF88" onclick="goPage('cat-safety')">
       <span class="ax-ghost">🛡️</span>
       <span class="ax-ico">🛡️</span>
       <span class="ax-name">ایمنی</span>
       <span class="ax-desc">عملیات، فضای محصور، آتش‌نشانی و ریسک</span>
-      <span class="ax-foot"><span class="ax-badge">۱۴ ابزار</span><span class="ax-arrow">←</span></span>
+      <span class="ax-foot"><span class="ax-badge">۲۲ ابزار</span><span class="ax-arrow">←</span></span>
     </button>
     <button class="axis" style="--c:#3FD0FF" onclick="axisSoon('بهداشت حرفه‌ای و طب کار')">
       <span class="ax-ghost">💓</span>
@@ -1118,29 +1192,44 @@
       <span class="ax-desc">حفاظت و مدیریت بحران</span>
       <span class="ax-foot"><span class="ax-badge">به‌زودی</span><span class="ax-arrow">←</span></span>
     </button>
+    <button class="axis" style="--c:#b6a4ff" onclick="goPage('quiz')">
+      <span class="ax-ghost">🎓</span>
+      <span class="ax-ico">🎓</span>
+      <span class="ax-name">آموزش</span>
+      <span class="ax-desc">آزمون و خودآزمایی HSE</span>
+      <span class="ax-foot"><span class="ax-badge">آزمون</span><span class="ax-arrow">←</span></span>
+    </button>
+    <button class="axis" style="--c:#3a8ee0" onclick="goPage('guidelines')">
+      <span class="ax-ghost">📚</span>
+      <span class="ax-ico">📚</span>
+      <span class="ax-name">دستورالعمل‌ها</span>
+      <span class="ax-desc">مرجع دستورالعمل‌های HSE</span>
+      <span class="ax-foot"><span class="ax-badge">۲ سند</span><span class="ax-arrow">←</span></span>
+    </button>
   </div>
 
-  <!-- ۴) آموزش و آگاهی -->
+  <!-- ۴) آزمون خودآزمایی HSE -->
   <div class="edu-card">
     <div class="edu-head">
-      <span class="edu-ico">🎓</span>
-      <div class="edu-htxt"><div class="edu-t">آموزش و آگاهی</div><div class="edu-s">دانش ایمنی خود را به‌روز کنید</div></div>
+      <span class="edu-ico">🧠</span>
+      <div class="edu-htxt"><div class="edu-t">آزمون خودآزمایی HSE</div><div class="edu-s">۲۰ سؤال تصادفی از مخزن ۲۰۰ سؤالی · نمره از ۱۰۰</div></div>
       <span class="edu-new">جدید</span>
     </div>
-    <div class="tip-box"><span class="tip-ico">💡</span><div><b>نکته ایمنی روز:</b> پیش از ورود به فضای محصور، همواره گازسنجی سه‌مرحله‌ای (کف، میانه، سقف) انجام دهید.</div></div>
+    <div class="tip-box"><span class="tip-ico">💡</span><div><b>۴ حوزه تخصصی:</b> ایمنی، بهداشت، محیط زیست و پدافند غیرعامل — سطح سؤالات پیشرفته.</div></div>
     <div class="edu-list">
-      <div class="edu-item"><span class="ei-dot" style="background:#3FD0FF"></span><span class="ei-name">شناسایی و کنترل خطرات فضای محصور</span><span class="ei-tag">مقاله</span></div>
-      <div class="edu-item"><span class="ei-dot" style="background:#FF9500"></span><span class="ei-name">الزامات صدور پرمیت کار گرم</span><span class="ei-tag">بخشنامه</span></div>
-      <div class="edu-item"><span class="ei-dot" style="background:#22FF88"></span><span class="ei-name">اصول گازسنجی و تفسیر نتایج</span><span class="ei-tag">آموزش</span></div>
+      <div class="edu-item"><span class="ei-dot" style="background:#22FF88"></span><span class="ei-name">ایمنی (Safety)</span><span class="ei-tag">۵۰ سؤال</span></div>
+      <div class="edu-item"><span class="ei-dot" style="background:#3FD0FF"></span><span class="ei-name">بهداشت (Health)</span><span class="ei-tag">۵۰ سؤال</span></div>
+      <div class="edu-item"><span class="ei-dot" style="background:#7BE06B"></span><span class="ei-name">محیط زیست (Environment)</span><span class="ei-tag">۵۰ سؤال</span></div>
+      <div class="edu-item"><span class="ei-dot" style="background:#FF9500"></span><span class="ei-name">پدافند غیرعامل</span><span class="ei-tag">۵۰ سؤال</span></div>
     </div>
-    <button class="edu-btn" onclick="goPage('quiz')">📝 شروع آزمون خودآزمایی HSE</button>
+    <button class="edu-btn" onclick="quizStart()">📝 شروع آزمون خودآزمایی HSE</button>
   </div>
 
   <!-- ۵) دسترسی سریع -->
   <div class="sec-head"><span class="sh-bar" style="background:var(--orange)"></span>
     <div class="sh-txt"><div class="sh-t">دسترسی سریع</div><div class="sh-s">پرکاربردترین ابزارها</div></div></div>
   <div class="quick">
-    <button class="q-tile" onclick="goPage('assess')"><span class="q-ico" style="--c:#22FF88">🕳️</span><span class="q-name">ورود به منهول</span></button>
+    <button class="q-tile" onclick="goPage('assess')"><span class="q-ico" style="--c:#22FF88">🕳️</span><span class="q-name">ورود به فضای بسته</span></button>
     <button class="q-tile" onclick="goPage('hotcold')"><span class="q-ico" style="--c:#FF9500">🔥</span><span class="q-name">کار گرم و سرد</span></button>
     <button class="q-tile" onclick="goPage('convert')"><span class="q-ico" style="--c:#3FD0FF">🔄</span><span class="q-name">تبدیل مقادیر</span></button>
     <button class="q-tile" onclick="goPage('extinguisher')"><span class="q-ico" style="--c:#FF5A5A">🧯</span><span class="q-name">کپسول آتش‌نشانی</span></button>
@@ -1197,12 +1286,12 @@
     <div class="quiz-hero">
       <div class="qh-ico">🧠</div>
       <div class="qh-title">آزمون تصادفی HSE</div>
-      <div class="qh-desc">۲۰ سؤال تصادفی از بانک سؤالات؛ در پایان نمره و پاسخِ صحیحِ اشتباهات نمایش داده می‌شود.</div>
+      <div class="qh-desc">۲۰ سؤال تصادفی از مخزن ۲۰۰ سؤالی (ایمنی، بهداشت، محیط زیست، پدافند)؛ نمره از ۱۰۰ و مرور پاسخ صحیح اشتباهات در پایان.</div>
     </div>
     <div class="quiz-stats3">
       <div class="qs"><span class="qs-n">۲۰</span><span class="qs-l">سؤال</span></div>
-      <div class="qs"><span class="qs-n">۴</span><span class="qs-l">گزینه</span></div>
-      <div class="qs"><span class="qs-n" id="qsBank">۵۰</span><span class="qs-l">بانک سؤال</span></div>
+      <div class="qs"><span class="qs-n">۱۰۰</span><span class="qs-l">نمره کل</span></div>
+      <div class="qs"><span class="qs-n" id="qsBank">۲۰۰</span><span class="qs-l">مخزن سؤال</span></div>
     </div>
     <button class="btn" onclick="quizStart()">شروع آزمون</button>
   </div>
@@ -1220,7 +1309,7 @@
     <div class="res-ring">
       <svg viewBox="0 0 120 120" class="bigring"><circle cx="60" cy="60" r="50" class="br-bg"/>
         <circle cx="60" cy="60" r="50" class="br-fg" id="resFg" stroke="#22FF88" stroke-dasharray="314.159" stroke-dashoffset="314.159"/></svg>
-      <div class="br-center"><span class="br-num" id="resScore">۰</span><span class="br-lbl">از ۲۰</span></div>
+      <div class="br-center"><span class="br-num" id="resScore">۰</span><span class="br-lbl">از ۱۰۰</span></div>
     </div>
     <div class="res-title" id="resTitle"></div>
     <div class="res-chips"><span class="rchip ok" id="resOk"></span><span class="rchip bad" id="resBad"></span></div>
@@ -1240,9 +1329,21 @@
     <div class="cb-ico">🛡️</div>
   </div>
 
-  <div class="sec-head"><span class="sh-bar" style="background:#22FF88"></span><div class="sh-txt"><div class="sh-t">عملیات و فضای محصور</div><div class="sh-s">۶ ابزار</div></div></div>
+  <div class="sec-head"><span class="sh-bar" style="background:#b6a4ff"></span><div class="sh-txt"><div class="sh-t">صلاحیت، البسه و PPE</div><div class="sh-s">۷ ابزار</div></div></div>
   <div class="toolrows">
-    <button class="toolrow" onclick="goPage('assess')"><span class="tr-ico" style="--c:#22FF88">🕳️</span><span class="tr-txt"><span class="tr-name">ورود به منهول</span><span class="tr-desc">نظارت گاز و چک‌لیست ورود به فضای محصور</span></span><span class="tr-arrow">‹</span></button>
+    <button class="toolrow" onclick="goPage('hcdet')"><span class="tr-ico" style="--c:#FF9500">🔥</span><span class="tr-txt"><span class="tr-name">تشخیص کار گرم و سرد</span><span class="tr-desc">گرم یا سرد بودن هر فعالیت + تعاریف و مصادیق</span></span><span class="tr-arrow">‹</span></button>
+    <button class="toolrow" onclick="goPage('gasdet')"><span class="tr-ico" style="--c:#3FD0FF">📟</span><span class="tr-txt"><span class="tr-name">انواع دستگاه گازسنج</span><span class="tr-desc">معرفی و طرز کار گازسنج‌های رایج</span></span><span class="tr-arrow">‹</span></button>
+    <button class="toolrow" onclick="goPage('calib')"><span class="tr-ico" style="--c:#7BE06B">🎯</span><span class="tr-txt"><span class="tr-name">کالیبراسیون گازسنج‌ها</span><span class="tr-desc">دوره و شرایط کالیبراسیون طبق دستورالعمل</span></span><span class="tr-arrow">‹</span></button>
+    <button class="toolrow" onclick="goPage('hazzone')"><span class="tr-ico" style="--c:#FF5A5A">⛔</span><span class="tr-txt"><span class="tr-name">زون‌بندی مناطق خطر</span><span class="tr-desc">تعیین Zone 0/1/2 هر مکان + مصادیق و الزام تجهیزات</span></span><span class="tr-arrow">‹</span></button>
+    <button class="toolrow" onclick="goPage('competency')"><span class="tr-ico" style="--c:#22FF88">🎖️</span><span class="tr-txt"><span class="tr-name">لیست صلاحیت افراد</span><span class="tr-desc">استعلام صلاحیت با کد ملی یا شماره پرسنلی</span></span><span class="tr-arrow">‹</span></button>
+    <button class="toolrow" onclick="goPage('area-type')"><span class="tr-ico" style="--c:#FF9500">📍</span><span class="tr-txt"><span class="tr-name">تشخیص محوطه مشمول/مشروط</span><span class="tr-desc">آیا فعالیت شما نیاز به پروانه دارد؟</span></span><span class="tr-arrow">‹</span></button>
+    <button class="toolrow" onclick="goPage('clothing')"><span class="tr-ico" style="--c:#7BE06B">👕</span><span class="tr-txt"><span class="tr-name">ماتریس البسه و PPE</span><span class="tr-desc">البسه و تجهیزات حفاظت فردی بر اساس سمت</span></span><span class="tr-arrow">‹</span></button>
+  </div>
+
+  <div class="sec-head"><span class="sh-bar" style="background:#22FF88"></span><div class="sh-txt"><div class="sh-t">عملیات و فضای محصور</div><div class="sh-s">۷ ابزار</div></div></div>
+  <div class="toolrows">
+    <button class="toolrow" onclick="goPage('assess')"><span class="tr-ico" style="--c:#22FF88">🕳️</span><span class="tr-txt"><span class="tr-name">ورود به فضای بسته</span><span class="tr-desc">نظارت گاز و چک‌لیست ورود به فضای محصور</span></span><span class="tr-arrow">‹</span></button>
+    <button class="toolrow" onclick="goPage('gasinject')"><span class="tr-ico" style="--c:#3FD0FF">🛢️</span><span class="tr-txt"><span class="tr-name">تزریق گاز (راه‌اندازی خط)</span><span class="tr-desc">محاسبهٔ زمان تخلیه/تزریق + روش‌ها و نکات</span></span><span class="tr-arrow">‹</span></button>
     <button class="toolrow" onclick="goPage('hotcold')"><span class="tr-ico" style="--c:#FF9500">🔥</span><span class="tr-txt"><span class="tr-name">کار گرم و سرد</span><span class="tr-desc">فرم پرمیت و الزامات ایمنی</span></span><span class="tr-arrow">‹</span></button>
     <button class="toolrow" onclick="goPage('ptw')"><span class="tr-ico" style="--c:#3FD0FF">📋</span><span class="tr-txt"><span class="tr-name">راهنمای پرمیت کار</span><span class="tr-desc">مراحل و انواع مجوز کار</span></span><span class="tr-arrow">‹</span></button>
     <button class="toolrow" onclick="goPage('digging')"><span class="tr-ico" style="--c:#FF9500">🪏</span><span class="tr-txt"><span class="tr-name">فاصله ایمن حفاری</span><span class="tr-desc">محاسبه فاصله مجاز از خطوط</span></span><span class="tr-arrow">‹</span></button>
@@ -1275,9 +1376,14 @@
 <!-- ===== صفحه «ابزارها» (فهرست کامل) ===== -->
 <div class="page" id="tools">
 <div class="container">
-  <div class="sec-head"><span class="sh-bar" style="background:#22FF88"></span><div class="sh-txt"><div class="sh-t">ایمنی</div><div class="sh-s">۶ ابزار</div></div></div>
+  <div class="sec-head"><span class="sh-bar" style="background:#22FF88"></span><div class="sh-txt"><div class="sh-t">ایمنی</div><div class="sh-s">۱۱ ابزار</div></div></div>
   <div class="toolrows">
-    <button class="toolrow" onclick="goPage('assess')"><span class="tr-ico" style="--c:#22FF88">🕳️</span><span class="tr-txt"><span class="tr-name">ورود به منهول</span><span class="tr-desc">نظارت گاز و چک‌لیست فضای محصور</span></span><span class="tr-arrow">‹</span></button>
+    <button class="toolrow" onclick="goPage('assess')"><span class="tr-ico" style="--c:#22FF88">🕳️</span><span class="tr-txt"><span class="tr-name">ورود به فضای بسته</span><span class="tr-desc">نظارت گاز و چک‌لیست فضای محصور</span></span><span class="tr-arrow">‹</span></button>
+    <button class="toolrow" onclick="goPage('gasdet')"><span class="tr-ico" style="--c:#3FD0FF">📟</span><span class="tr-txt"><span class="tr-name">انواع دستگاه گازسنج</span><span class="tr-desc">معرفی و طرز کار گازسنج‌های رایج</span></span><span class="tr-arrow">‹</span></button>
+    <button class="toolrow" onclick="goPage('calib')"><span class="tr-ico" style="--c:#7BE06B">🎯</span><span class="tr-txt"><span class="tr-name">کالیبراسیون گازسنج‌ها</span><span class="tr-desc">دوره و شرایط کالیبراسیون طبق دستورالعمل</span></span><span class="tr-arrow">‹</span></button>
+    <button class="toolrow" onclick="goPage('hazzone')"><span class="tr-ico" style="--c:#FF5A5A">⛔</span><span class="tr-txt"><span class="tr-name">زون‌بندی مناطق خطر</span><span class="tr-desc">تعیین Zone 0/1/2 هر مکان + مصادیق</span></span><span class="tr-arrow">‹</span></button>
+    <button class="toolrow" onclick="goPage('gasinject')"><span class="tr-ico" style="--c:#3FD0FF">🛢️</span><span class="tr-txt"><span class="tr-name">تزریق گاز (راه‌اندازی خط)</span><span class="tr-desc">محاسبهٔ زمان تخلیه/تزریق + روش‌ها و نکات</span></span><span class="tr-arrow">‹</span></button>
+    <button class="toolrow" onclick="goPage('hcdet')"><span class="tr-ico" style="--c:#FF9500">🔥</span><span class="tr-txt"><span class="tr-name">تشخیص کار گرم و سرد</span><span class="tr-desc">گرم یا سرد بودن هر فعالیت + تعاریف و مصادیق</span></span><span class="tr-arrow">‹</span></button>
     <button class="toolrow" onclick="goPage('hotcold')"><span class="tr-ico" style="--c:#FF9500">🔥</span><span class="tr-txt"><span class="tr-name">کار گرم و سرد</span><span class="tr-desc">فرم پرمیت و الزامات ایمنی</span></span><span class="tr-arrow">‹</span></button>
     <button class="toolrow" onclick="goPage('ptw')"><span class="tr-ico" style="--c:#3FD0FF">📋</span><span class="tr-txt"><span class="tr-name">راهنمای پرمیت کار</span><span class="tr-desc">مراحل و انواع مجوز کار</span></span><span class="tr-arrow">‹</span></button>
     <button class="toolrow" onclick="goPage('digging')"><span class="tr-ico" style="--c:#FF9500">🪏</span><span class="tr-txt"><span class="tr-name">فاصله ایمن حفاری</span><span class="tr-desc">محاسبه فاصله مجاز از خطوط</span></span><span class="tr-arrow">‹</span></button>
@@ -1327,6 +1433,532 @@
   </div>
 </div>
 </div><!-- /page alerts -->
+
+<!-- ===== صلاحیت افراد ===== -->
+<div class="page" id="competency">
+<div class="container">
+  <div class="cat-banner" style="--c:#22FF88"><div class="cb-txt"><div class="cb-title">لیست صلاحیت افراد</div><div class="cb-desc">استعلام صلاحیت‌های ایمنی افراد</div></div><div class="cb-ico">🎖️</div></div>
+  <div class="card">
+    <div class="field">
+      <label>کد ملی یا شماره پرسنلی</label>
+      <input type="text" id="cmpQuery" inputmode="numeric" placeholder="مثال: ۰۰۱۲۳۴۵۶۷۸">
+    </div>
+    <button class="btn" onclick="lookupCompetency()">استعلام صلاحیت</button>
+    <div class="err" id="cmpErr">فردی با این کد ملی/پرسنلی یافت نشد.</div>
+  </div>
+  <div id="cmpResult"></div>
+  <div class="conv-note">انواع صلاحیت طبق دستورالعمل صدور پروانه‌های فعالیت (HSE-IN-S-223): مسئول ارشد عملیات، مسئول محوطه، مسئول اجرا، آزمایش‌کننده گاز، ناظر مطلع حفاری. — فهرست واقعی افراد، کد ملی/پرسنلی و تاریخ اخذ/انقضای صلاحیت پس از دریافت از شما بارگذاری می‌شود؛ یک نمونه برای آزمایش سازوکار موجود است.</div>
+</div>
+</div><!-- /page competency -->
+
+<!-- ===== محوطه مشمول/مشروط ===== -->
+<div class="page" id="area-type">
+<div class="container">
+  <div class="cat-banner" style="--c:#FF9500"><div class="cb-txt"><div class="cb-title">محوطه مشمول / مشروط</div><div class="cb-desc">آیا فعالیت شما نیاز به پروانه کار دارد؟</div></div><div class="cb-ico">📍</div></div>
+
+  <div class="card">
+    <div class="def-row"><span class="def-tag" style="background:rgba(255,149,0,0.16);color:#cc7a00">📍 محوطه مشمول</span><span class="def-txt">هر تأسیسات یا محوطه‌ی تحت نظارت سازمان (محصور با دیوار/فنس یا خط لوله دارای حریم). در این محوطه‌ها هیچ‌کس بدون پروانه‌ی کار نباید کار کند.</span></div>
+    <div class="def-row"><span class="def-tag" style="background:rgba(34,255,136,0.16);color:#1d8f4e">✅ محوطه مشروط</span><span class="def-txt">بخشی از محوطه‌ی مشمول که طبق ابلاغ کتبی رسمی (پیشنهاد واحد، تأیید HSE و تصویب مدیر مسئول) همراه با «فهرست فعالیت‌های بدون‌پروانه» تعیین شده است؛ مانند کارگاه مرکزی و کارگاه‌های تعمیرات. فقط پرسنل مخصوص همان محوطه می‌توانند فعالیت‌های همان فهرست را بدون پروانه انجام دهند.</span></div>
+  </div>
+
+  <div class="card">
+    <div class="field">
+      <label>۱) آیا محل کار تحت نظارت شرکت گاز است؟ <span class="unit">(تأسیسات/محوطه محصور یا خط لوله دارای حریم)</span></label>
+      <div class="seg" id="aq1"><button onclick="areaAns(1,'y',this)">بله</button><button onclick="areaAns(1,'n',this)">خیر</button></div>
+    </div>
+    <div class="field">
+      <label>۲) آیا برای این محوطه «ابلاغ کتبی محوطه مشروط» همراه با فهرست فعالیت‌های بدون‌پروانه وجود دارد؟ <span class="unit">(اگر چنین ابلاغ مصوبی نیست، محوطه «مشمول» است و هر کار پروانه می‌خواهد)</span></label>
+      <div class="seg" id="aq2"><button onclick="areaAns(2,'y',this)">بله، ابلاغ شده</button><button onclick="areaAns(2,'n',this)">خیر / نمی‌دانم</button></div>
+    </div>
+    <div class="field">
+      <label>۳) آیا شما از پرسنل مخصوص همان محوطه هستید؟</label>
+      <div class="seg" id="aq3"><button onclick="areaAns(3,'y',this)">بله</button><button onclick="areaAns(3,'n',this)">خیر</button></div>
+    </div>
+    <div class="field">
+      <label>۴) آیا فعالیت شما جزو فعالیت‌های روزمره/تکراری همان محوطه (فهرست بدون‌پروانه) است؟</label>
+      <div class="seg" id="aq4"><button onclick="areaAns(4,'y',this)">بله</button><button onclick="areaAns(4,'n',this)">خیر</button></div>
+    </div>
+  </div>
+  <div id="areaResult"></div>
+  <div class="conv-note">مبنا: مجموعه مقررات نظام پروانه‌های کار (HSE-IN-S-222). محوطه مشمول = هر تأسیسات/محوطه تحت نظارت سازمان؛ هیچ‌کس بدون پروانه نباید کار کند. محوطه مشروط = بخشی از محوطه مشمول که فعالیت‌های روزمره پرسنل مخصوص آن با رعایت الزامات و بدون پروانه مجاز است.</div>
+</div>
+</div><!-- /page area-type -->
+
+<!-- ===== ماتریس البسه و PPE ===== -->
+<div class="page" id="clothing">
+<div class="container">
+  <div class="cat-banner" style="--c:#7BE06B"><div class="cb-txt"><div class="cb-title">ماتریس البسه و PPE</div><div class="cb-desc">البسه و تجهیزات حفاظت فردی — ۲۲۰ سمت × ۲۸ قلم</div></div><div class="cb-ico">👕</div></div>
+
+  <!-- انتخاب حالت -->
+  <div id="clHome">
+    <button class="mode-card" onclick="clMode('role')"><span class="mc-ico" style="--c:#7BE06B">🧑‍💼</span><span class="mc-txt"><span class="mc-t">جستجو بر اساس سمت سازمانی</span><span class="mc-s">یک سمت را انتخاب کن → اقلام البسه و دورهٔ تحویل آن</span></span><span class="mc-arrow">‹</span></button>
+    <button class="mode-card" onclick="clMode('item')"><span class="mc-ico" style="--c:#3FD0FF">🧰</span><span class="mc-txt"><span class="mc-t">جستجو بر اساس تجهیز</span><span class="mc-s">یک قلم را انتخاب کن → همهٔ سمت‌های مشمول و دورهٔ تحویل</span></span><span class="mc-arrow">‹</span></button>
+  </div>
+
+  <!-- حالت: بر اساس سمت -->
+  <div id="clRoleView" style="display:none">
+    <button class="cl-back" onclick="clMode('home')">‹ بازگشت به انتخاب حالت</button>
+    <div class="card">
+      <div class="field">
+        <label>جستجوی نام سمت سازمانی</label>
+        <input type="text" id="clSearch" autocomplete="off" placeholder="مثال: کارشناس، آتش‌نشانی، بهره‌برداری…" oninput="clFilter()">
+      </div>
+      <div id="clList" class="cl-list"></div>
+    </div>
+    <div id="clResult"></div>
+  </div>
+
+  <!-- حالت: بر اساس تجهیز -->
+  <div id="clItemView" style="display:none">
+    <button class="cl-back" onclick="clMode('home')">‹ بازگشت به انتخاب حالت</button>
+    <div class="card">
+      <div class="field">
+        <label>جستجو یا انتخاب تجهیز/قلم</label>
+        <input type="text" id="clItemSearch" autocomplete="off" placeholder="مثال: دستکش، عینک، کفش، ماسک…" oninput="clItemFilter()">
+      </div>
+      <div id="clItemList" class="cl-list"></div>
+    </div>
+    <div id="clItemResult"></div>
+  </div>
+
+  <div class="conv-note">مبنا: ماتریس تخصیص لوازم حفاظت فردی (البسه) شرکت گاز استان تهران — ۲۸ قلم البسه/تجهیز برای ۲۲۰ سمت سازمانی. اعداد «دورهٔ تحویل بر حسب ماه» است (مثلاً «هر ۱۲ ماه»). سلول خالی = آن قلم به آن سمت تخصیص ندارد. مرجع نهایی، جدول رسمی شرکت است.</div>
+</div>
+</div><!-- /page clothing -->
+
+<!-- ===== تشخیص کار گرم و سرد ===== -->
+<div class="page" id="hcdet">
+<div class="container">
+  <div class="cat-banner" style="--c:#FF9500"><div class="cb-txt"><div class="cb-title">تشخیص کار گرم و سرد</div><div class="cb-desc">فعالیت را انتخاب کنید تا گرم یا سرد بودن آن مشخص شود</div></div><div class="cb-ico">🔥</div></div>
+
+  <div class="card">
+    <div class="def-row"><span class="def-tag def-hot">🔥 کار گرم</span><span class="def-txt">هر فعالیتی که در آن منبع جرقه، شعله، حرارت یا هر منشأ اشتعال ایجاد شود و در حضور مواد/گازهای قابل اشتعال قابلیت ایجاد حریق یا انفجار داشته باشد (مانند جوشکاری، برشکاری، سنگ‌زنی، شعله‌کاری).</span></div>
+    <div class="def-row"><span class="def-tag def-cold">❄️ کار سرد</span><span class="def-txt">فعالیتی که فاقد منبع جرقه، شعله یا حرارت است و به‌خودی‌خود قابلیت ایجاد اشتعال ندارد (مانند پیچ‌ومهره، رنگ با قلم‌مو، عایق‌کاری، حفاری دستی).</span></div>
+  </div>
+
+  <div class="card">
+    <div class="field">
+      <label>فعالیت را انتخاب کنید</label>
+      <select class="inp" id="hcdSel" onchange="renderHCDet()"><option value="">— انتخاب فعالیت —</option></select>
+    </div>
+  </div>
+  <div id="hcdResult"></div>
+
+  <div id="hcdRef"></div>
+
+  <div class="conv-note">مبنا: دستورالعمل صدور پروانه‌های فعالیت (HSE-IN-S-223) و نظام پروانه‌های کار (HSE-IN-S-222). در صورت همراهی با گاز/ماده قابل اشتعال یا تردید در ماهیت کار، طبقه‌بندی نهایی بر عهده مسئول محوطه/HSE است. این ابزار جایگزین گازسنجی و صدور پروانه نیست.</div>
+</div>
+</div><!-- /page hcdet -->
+
+<!-- ===== تزریق گاز (راه‌اندازی خط) ===== -->
+<div class="page" id="gasinject">
+<div class="container">
+  <div class="cat-banner" style="--c:#3FD0FF"><div class="cb-txt"><div class="cb-title">تزریق گاز</div><div class="cb-desc">جایگزینی هوای خط با گاز هنگام راه‌اندازی + محاسبهٔ زمان</div></div><div class="cb-ico">🛢️</div></div>
+
+  <div class="card">
+    <div class="def-row"><span class="def-tag" style="background:rgba(255,90,90,0.14);color:#cc3333">🔥 روش مستقیم</span><span class="def-txt">گاز مستقیماً هوا را می‌راند. در مرز برخورد گاز و هوا مخلوط قابل اشتعال شکل می‌گیرد و برخورد سنگ‌ریزه/شن به جدار لوله می‌تواند جرقه و انفجار ایجاد کند. توصیهٔ AGA: سرعت برخورد فاز گاز و هوا بین ۲ تا ۲۰ متر بر ثانیه باشد. پایان کار = رسیدن گاز خروجی به ۱۰۰٪ حجمی در محل بلودان (با گازسنج).</span></div>
+    <div class="def-row"><span class="def-tag" style="background:rgba(63,208,255,0.16);color:#1481a8">❄️ روش غیرمستقیم</span><span class="def-txt">استفاده از گاز خنثی (N₂ یا CO₂) به‌عنوان بافر میان هوا و گاز طبیعی؛ ابتدا خط با گاز خنثی شست‌وشو و سپس گاز تزریق می‌شود. کاربرد: شرایط بد جوی، محل نامناسب بلودان یا عدم تأمین گاز کافی.</span></div>
+  </div>
+
+  <div class="card">
+    <div class="field">
+      <label>فشار ابتدای خط بعد از شیر تغذیه — P₁ <span class="unit">(PSIG)</span></label>
+      <input type="number" id="giP1" inputmode="decimal" step="any" placeholder="مثال: ۸۰">
+    </div>
+    <div class="field">
+      <label>چگالی نسبی گاز — G</label>
+      <input type="number" id="giG" inputmode="decimal" step="any" value="0.60" placeholder="۰٫۶۰">
+    </div>
+    <div class="field">
+      <label>قطر داخلی خط لوله — D <span class="unit">(اینچ)</span></label>
+      <input type="number" id="giD" inputmode="decimal" step="any" placeholder="مثال: ۲۳٫۳۷۶ (لولهٔ ۲۴ اینچ)">
+    </div>
+    <div class="field">
+      <label>طول خط لوله — L</label>
+      <input type="number" id="giL" inputmode="decimal" step="any" placeholder="مثال: ۵">
+      <div class="seg" id="giUnit" style="margin-top:8px"><button data-v="mile" class="on" onclick="segPick('giUnit',this);calcGasInject()">مایل</button><button data-v="km" onclick="segPick('giUnit',this);calcGasInject()">کیلومتر</button></div>
+    </div>
+    <div class="field">
+      <label>نوع شیر تخلیه — ضریب گرفتگی FC</label>
+      <select class="inp" id="giFC" onchange="calcGasInject()">
+        <option value="1">IDEAL NOZZLE — ۱</option>
+        <option value="1.6">THRU PORT GATE — ۱٫۶</option>
+        <option value="1.8">REGULAR GATE — ۱٫۸</option>
+        <option value="2" selected>REGULAR L.P.V (PLUG VALVE) — ۲</option>
+        <option value="3.2">VENTURI L.P.V — ۳٫۲</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>قطر داخلی شیر تخلیه — d <span class="unit">(اینچ)</span></label>
+      <input type="number" id="gid" inputmode="decimal" step="any" placeholder="مثال: ۴">
+    </div>
+    <div class="field">
+      <label>تعداد شیرهای تخلیه — n</label>
+      <input type="number" id="gin" inputmode="numeric" step="1" value="1" placeholder="۱">
+    </div>
+    <button class="btn" onclick="calcGasInject()">محاسبهٔ زمان تخلیه/تزریق</button>
+    <div class="err" id="giErr">لطفاً مقادیر P₁، D، L و d را به‌درستی وارد کنید.</div>
+  </div>
+
+  <div id="giResult"></div>
+
+  <div class="sec-block">
+    <h3>🧮 فرمول زمان تخلیه (Blow Down Time)</h3>
+    <div class="gi-formula">T<sub>m</sub> = ( 0.0588 × ∛P₁ × √G × D² × L × FC ) ÷ ( d² × n )</div>
+    <div class="sec-row"><span class="sk">T<sub>m</sub></span><span class="sv">زمان کل تخلیه/تزریق (دقیقه)</span></div>
+    <div class="sec-row"><span class="sk">P₁</span><span class="sv">فشار ابتدای خط بعد از شیر تغذیه (PSIG)</span></div>
+    <div class="sec-row"><span class="sk">G</span><span class="sv">چگالی نسبی گاز (≈ ۰٫۶۰)</span></div>
+    <div class="sec-row"><span class="sk">D</span><span class="sv">قطر داخلی خط لوله (اینچ)</span></div>
+    <div class="sec-row"><span class="sk">L</span><span class="sv">طول خط لوله (مایل ≈ ۱٫۶ کیلومتر)</span></div>
+    <div class="sec-row"><span class="sk">d</span><span class="sv">قطر داخلی شیر تخلیه (اینچ)</span></div>
+    <div class="sec-row"><span class="sk">n</span><span class="sv">تعداد شیرهای تخلیه</span></div>
+    <div class="sec-row"><span class="sk">FC</span><span class="sv">ضریب گرفتگی (CHOKE FACTOR) بر اساس نوع شیر</span></div>
+  </div>
+
+  <div class="sec-block">
+    <h3>🔧 ضریب گرفتگی FC بر اساس نوع شیر تخلیه</h3>
+    <div class="sec-row"><span class="sk">IDEAL NOZZLE</span><span class="sv">۱</span></div>
+    <div class="sec-row"><span class="sk">THRU PORT GATE</span><span class="sv">۱٫۶</span></div>
+    <div class="sec-row"><span class="sk">REGULAR GATE</span><span class="sv">۱٫۸</span></div>
+    <div class="sec-row"><span class="sk">REGULAR L.P.V (PLUG VALVE)</span><span class="sv">۲</span></div>
+    <div class="sec-row"><span class="sk">VENTURI L.P.V</span><span class="sv">۳٫۲</span></div>
+  </div>
+
+  <div class="req-list">
+    <h3>📌 نکات کلیدی اجرای تزریق گاز</h3>
+    <div class="req-item"><span class="ri">✅</span><span>برای لوله‌های با قطر بیش از ۱۲ اینچ، عملیات با فشار حداقل ۸۰ PSIG انجام می‌شود.</span></div>
+    <div class="req-item"><span class="ri">✅</span><span>زمان تخلیه/جایگزینی از جدول زمانی A (به ازای هر مایل ≈ ۱٫۶ کیلومتر) × طول خط؛ برای قطرهای خارج از جدول از فرمول بالا استفاده می‌شود.</span></div>
+    <div class="req-item"><span class="ri">✅</span><span>برآورد سرانگشتی: حدود ۱ دقیقه به ازای هر مایل خط.</span></div>
+    <div class="req-item"><span class="ri">✅</span><span>خاتمهٔ عملیات پس از حصول اطمینان از عاری‌بودن خط از هوا با دو نمونه‌گیری متوالی به فاصلهٔ ۳۰ ثانیه و آزمایش با گازسنج.</span></div>
+    <div class="req-item"><span class="ri">✅</span><span>رسیدن گاز خروجی به ۱۰۰٪ حجمی در محل بلودان نشانهٔ اتمام جایگزینی هوا با گاز است.</span></div>
+    <div class="req-item"><span class="ri">✅</span><span>در روش مستقیم، سرعت برخورد فاز گاز و هوا طبق توصیهٔ AGA بین ۲ تا ۲۰ متر بر ثانیه کنترل شود.</span></div>
+    <div class="req-item"><span class="ri">✅</span><span>پس از اطمینان از تخلیهٔ کامل هوا، شیر تخلیه بسته و با باز کردن کامل شیر تغذیه خط در سرویس قرار می‌گیرد.</span></div>
+  </div>
+
+  <div class="sec-block">
+    <h3>📋 جدول A — زمان استاندارد تخلیه در هر مایل (AGA ۱-۱)</h3>
+    <div class="field"><label>قطر خط لوله / قطر شیر تخلیه</label>
+      <select class="inp" id="taSel" onchange="calcTableA()"><option value="">— انتخاب —</option></select></div>
+    <div class="field"><label>طول خط <span class="unit">(مایل)</span></label>
+      <input type="number" id="taL" inputmode="decimal" step="any" placeholder="مثال: ۳" oninput="calcTableA()"></div>
+    <div id="taResult"></div>
+    <div class="conv-note" style="margin-top:8px">۱ مایل = ۱۶۰۹ متر. زمان کل ≈ «زمان هر مایل» × «طول خط». برای قطرهای خارج از این جدول از فرمول بالا استفاده کنید.</div>
+  </div>
+
+  <div class="sec-block">
+    <h3>📈 حداقل فشار ورودی گاز برای راه‌اندازی <span style="font-weight:600;font-size:12px">(شبکه ۶۰ و خطوط تغذیه ۲۵۰ — تا قطر ۱۲ اینچ)</span></h3>
+    <div class="field"><label>اندازه شیر تخلیه (بلودان) و قطر خط</label>
+      <select class="inp" id="prSel" onchange="calcPress()">
+        <option value="">— انتخاب —</option>
+        <option value="4|12">بلودان ۴″ · خط ۱۲″</option>
+        <option value="4|10">بلودان ۴″ · خط ۱۰″</option>
+        <option value="4|8">بلودان ۴″ · خط ۸″</option>
+        <option value="4|6">بلودان ۴″ · خط ۶″</option>
+        <option value="2|6">بلودان ۲″ · خط ۶″</option>
+        <option value="2|4">بلودان ۲″ · خط ۴″</option>
+      </select></div>
+    <div class="field"><label>طول خط <span class="unit">(مایل، ۱ تا ۱۵)</span></label>
+      <input type="number" id="prL" inputmode="numeric" step="1" min="1" max="15" placeholder="مثال: ۵" oninput="calcPress()"></div>
+    <div id="prResult"></div>
+    <div class="conv-note" style="margin-top:8px">پس از پایان زمان ۲ دقیقه به ازای هر مایل و بستن شیر تغذیه، عمل تخلیه به ازای هر مایل یک دقیقه ادامه می‌یابد.</div>
+  </div>
+
+  <div class="req-list">
+    <h3>⚠️ نکات ایمنی تزریق و تخلیهٔ گاز (بند ۷-۵)</h3>
+    <div class="req-item"><span class="ri">۱</span><span>پیش از تخلیهٔ گاز، پروانه کار عملیات توسط مسئولین به‌دقت کنترل و امضا شود؛ تا رفع هر مغایرت با فرم، عملیات شروع نشود مگر با موافقت مسئول ایمنی.</span></div>
+    <div class="req-item"><span class="ri">۲</span><span>تخلیهٔ گاز نباید در زیر بالکن ساختمان‌ها انجام شود.</span></div>
+    <div class="req-item"><span class="ri">۳</span><span>محل تخلیهٔ گاز نباید زیر سیم‌های برق باشد.</span></div>
+    <div class="req-item"><span class="ri">۴</span><span>محل تخلیه باید دور از شعله‌های باز انتخاب شود.</span></div>
+    <div class="req-item"><span class="ri">۵</span><span>محل تخلیه باید از ساختمان‌های مرتفع فاصله داشته باشد.</span></div>
+    <div class="req-item"><span class="ri">۶</span><span>محل تخلیه حتی‌الامکان نباید زیر شاخه‌های درختان باشد.</span></div>
+    <div class="req-item"><span class="ri">۷</span><span>تخلیهٔ گاز در هوای مه‌آلود یا توأم با رعد و برق انجام نشود.</span></div>
+    <div class="req-item"><span class="ri">۸</span><span>پیش از شروع، نکات ایمنی به همسایگان گوشزد شود (بستن پنجره‌ها و عدم برافروختن آتش در حیاط منازل).</span></div>
+    <div class="req-item"><span class="ri">۹</span><span>در صورت استفاده از سه‌پایهٔ تخلیه: تعادل سه‌پایه، سالم‌بودن اتصالات، اتصال آن به پرجینگ‌تی، و سلامت و فشارقوی‌بودن شیلنگ قبلاً بررسی شود.</span></div>
+    <div class="req-item"><span class="ri">۱۰</span><span>نفرات به تعداد کافی پیش‌بینی شوند و هیچ محل تخلیه‌ای بدون ناظر نماند.</span></div>
+    <div class="req-item"><span class="ri">۱۱</span><span>در محل پرتراکم انسانی/ترافیکی، قبلاً با واحد انتظامی برای کنترل عبور و مرور هماهنگ شود.</span></div>
+    <div class="req-item"><span class="ri">۱۲</span><span>کپسول آتش‌نشانی به تعداد کافی تهیه و در محل‌های تخلیه مستقر شود.</span></div>
+    <div class="req-item"><span class="ri">۱۳</span><span>فقط از ابزارآلات سالم استفاده شود (خرابی ابزاری مثل آچار آلن هنگام قطع اضطراری تخلیه می‌تواند فاجعه‌آفرین باشد).</span></div>
+    <div class="req-item"><span class="ri">۱۴</span><span>بی‌سیم به تعداد کافی موجود باشد؛ هرگز حین تزریق گاز به تلفن همراه اکتفا نکنید.</span></div>
+    <div class="req-item"><span class="ri">۱۵</span><span>خودرو به تعداد کافی در محل عملیات موجود باشد.</span></div>
+    <div class="req-item"><span class="ri">۱۶</span><span>در صورت لزوم پیش از عملیات با واحدهای اورژانس و آتش‌نشانی هماهنگی شود.</span></div>
+    <div class="req-item"><span class="ri">۱۷</span><span>پیش از شروع، از گریس‌کاری شیرها و صحت نشان‌دهندهٔ وضعیت باز/بستهٔ آن‌ها اطمینان حاصل شود.</span></div>
+    <div class="req-item"><span class="ri">۱۸</span><span>اگر برای تخلیه از باز کردن علمک‌ها استفاده شده، پس از پایان کار و پیش از تزریق گاز حتماً علمک‌ها مجدداً بسته شوند (خروج گاز پرفشار از علمک باز خطرناک است).</span></div>
+    <div class="req-item"><span class="ri">۱۹</span><span>مراحل و روش عملیات تزریق گاز همراه کروکی کامل قبلاً به واحد HSE ارسال و عملیات فقط پس از تأیید کتبی HSE انجام شود.</span></div>
+    <div class="req-item"><span class="ri">۲۰</span><span>تصمیم به سوزاندن گاز خروجی با مسئول محل است: مسیر کوتاه نیازی به سوزاندن ندارد؛ در مسیر طولانی و زمان‌بر، ترجیحاً گاز سوزانده می‌شود (با بررسی کامل شیلنگ، سه‌پایه و نشتی‌ها).</span></div>
+    <div class="req-item"><span class="ri">۲۱</span><span>در خطوط پلی‌اتیلن، برای پیشگیری از تخلیهٔ بار الکتریسیتهٔ ساکن، حین تخلیه گونی خیس روی لوله انداخته شود.</span></div>
+  </div>
+
+  <div class="conv-note">مبنا: کتاب جامع ایمنی گاز طبیعی در ایستگاه‌ها و شبکه‌های گازرسانی — فصل هفتم (تزریق گاز). فرمول جهت محاسبهٔ زمان تقریبی تزریق گاز/تخلیهٔ هوا برای قطرهای خارج از جدول A است؛ صادرکننده/ناظر عملیات مرجع نهایی است.</div>
+</div>
+<div class="note">این ابزار جهت برآورد زمان است و جایگزین دستورالعمل اجرایی، گازسنجی و تأیید ناظر عملیات نمی‌باشد.</div>
+</div><!-- /page gasinject -->
+
+<!-- ===== زون‌بندی مناطق خطر ===== -->
+<div class="page" id="hazzone">
+<div class="container">
+  <div class="cat-banner" style="--c:#FF5A5A"><div class="cb-txt"><div class="cb-title">زون‌بندی مناطق خطر</div><div class="cb-desc">طبقه‌بندی فضاهای خطرناک طبق IEC — مکان را انتخاب کنید</div></div><div class="cb-ico">⛔</div></div>
+
+  <div class="card">
+    <div class="def-row"><span class="def-tag" style="background:rgba(255,90,90,0.16);color:#cc3333">⛔ ZONE 0</span><span class="def-txt">فضایی که مخلوط گاز و هوای قابل اشتعال در آن به‌طور <b>دائم</b> یا برای مدت‌های طولانی حضور دارد (بیش از ۱۰۰۰ ساعت در سال)؛ مانند فضای داخلی برج‌های تقطیر و مخازن.</span></div>
+    <div class="def-row"><span class="def-tag" style="background:rgba(255,149,0,0.16);color:#cc7a00">⚠️ ZONE 1</span><span class="def-txt">فضایی که گاز قابل اشتعال در شرایط عادی بهره‌برداری به‌طور <b>متناوب</b> حضور دارد (تا حدود ۱۰۰۰ ساعت در سال)؛ یا مجاور Zone 0 و محل نشت/تعمیرات.</span></div>
+    <div class="def-row"><span class="def-tag" style="background:rgba(63,208,255,0.16);color:#1481a8">🔵 ZONE 2</span><span class="def-txt">فضایی که در شرایط عادی گاز <b>وجود ندارد</b> و اگر پدید آید فقط برای مدت کوتاه (حدود ۱ تا ۱۰ ساعت در سال).</span></div>
+    <div class="def-row"><span class="def-tag" style="background:rgba(34,255,136,0.16);color:#1d8f4e">✅ بی‌خطر</span><span class="def-txt">فضای خارج از مناطق طبقه‌بندی‌شده که منبع نشت گاز قابل اشتعال ندارد (Non-hazardous).</span></div>
+  </div>
+
+  <div class="card">
+    <div class="field">
+      <label>مکان / تجهیز را انتخاب کنید</label>
+      <select class="inp" id="hzSel" onchange="renderHazzone()"><option value="">— انتخاب مکان —</option></select>
+    </div>
+  </div>
+  <div id="hzResult"></div>
+
+  <div id="hzRef"></div>
+
+  <div class="conv-note">مبنا: تعریف کمیسیون بین‌المللی الکتروتکنیک (IEC) و استاندارد IEC 60079-10-1. گاز طبیعی (متان) گروه گازی <b>IIA</b> و کلاس دمایی <b>T1</b> است. طبقه‌بندی نهایی هر تأسیسات باید توسط کارشناس و بر اساس نقشهٔ Area Classification انجام شود؛ این فهرست راهنمای نمونه و آموزشی است.</div>
+</div>
+<div class="note">تجهیزات برقی هر زون باید دارای گواهی Ex متناسب (Ga/Gb/Gc) باشند. این ابزار جایگزین مطالعهٔ طبقه‌بندی منطقهٔ تأسیسات نیست.</div>
+</div><!-- /page hazzone -->
+
+<!-- ===== انواع دستگاه گازسنج ===== -->
+<div class="page" id="gasdet">
+<div class="container">
+  <div class="cat-banner" style="--c:#3FD0FF"><div class="cb-txt"><div class="cb-title">انواع دستگاه گازسنج</div><div class="cb-desc">معرفی و طرز کار گازسنج‌های رایج صنعت گاز</div></div><div class="cb-ico">📟</div></div>
+
+  <div class="conv-note">گازسنج‌ها میزان گاز نشت‌یافته را اندازه می‌گیرند. چون بوی مادهٔ بودارکننده تنها در حدود ۱٪ حجمی گاز در هوا حس می‌شود، با بویایی نمی‌توان فهمید گاز به حد اشتعال/انفجار رسیده است؛ با گازسنج درصد دقیق گاز و اقدامات پیشگیرانه مشخص می‌شود. همهٔ گازسنج‌های پست امداد و تعمیرات باید همیشه سالم و آماده‌به‌کار باشند.</div>
+
+  <!-- J.W. SNIFFER MODEL-G -->
+  <div class="sec-block">
+    <h3>۱) گازسنج J.W. SNIFFER – MODEL-G</h3>
+    <div class="gd-fig"><svg viewBox="0 0 260 150" role="img" aria-label="گازسنج عقربه‌ای">
+      <rect x="18" y="18" width="150" height="116" rx="12" fill="#2b3a55" stroke="#1b2740" stroke-width="2"/>
+      <circle cx="93" cy="72" r="46" fill="#0e1726"/>
+      <path d="M 50 72 A 43 43 0 0 1 93 29" fill="none" stroke="#ffd34d" stroke-width="9"/>
+      <path d="M 93 29 A 43 43 0 0 1 136 72" fill="none" stroke="#ff5a5a" stroke-width="9"/>
+      <line x1="93" y1="72" x2="66" y2="46" stroke="#fff" stroke-width="3"/><circle cx="93" cy="72" r="5" fill="#fff"/>
+      <circle cx="40" cy="116" r="8" fill="#9fb3d1"/><circle cx="146" cy="116" r="8" fill="#9fb3d1"/>
+      <path d="M 168 64 q 42 -12 58 16" fill="none" stroke="#3a4a66" stroke-width="4"/>
+      <ellipse cx="232" cy="96" rx="20" ry="26" fill="#c75b4a"/>
+    </svg></div>
+    <div class="gd-caption">شماتیک آموزشی — صفحهٔ مدرج (زرد=ایمن، قرمز=خطر) + مکندهٔ دستی (BULB)</div>
+    <div class="gd-desc">برای یافتن گازها و بخارات قابل‌اشتعال (گاز طبیعی، متان، اتان، پروپان، بوتان، استیلن، بنزین، الکل متیلیک و تینر) در مخازن، بشکه‌ها، گودال‌ها، فضای محصور و محل نشت لوله‌ها به‌کار می‌رود.</div>
+    <div class="sec-block" style="margin-top:6px"><h3 style="font-size:13px">آماده‌سازی و طرز کار</h3>
+      <div class="step-item"><span class="step-num">۱</span><span>تنظیم صفر و ولتاژ در هوای تمیز و عاری از گاز: پمپ مکنده را ۱/۴ دور ساعتگرد بچرخان تا روشن شود.</span></div>
+      <div class="step-item"><span class="step-num">۲</span><span>کلید ولتاژ را بکش و بچرخان تا عقربه روی علامت بایستد؛ سپس با دکمهٔ A (air) و ZERO ADJUST دستگاه را صفر کن.</span></div>
+      <div class="step-item"><span class="step-num">۳</span><span>لولهٔ نمونه‌گیر را نزدیک محل بگذار، شیر ورودی را باز کن و ۳ تا ۴ بار پمپ بزن.</span></div>
+      <div class="step-item"><span class="step-num">۴</span><span>پس از پایدارشدن عقربه، عدد روی صفحهٔ مدرج برابر درصد گاز است؛ زرد = زیر حد انفجار (کار گرم ممکن)، قرمز = خطر انفجار.</span></div>
+    </div>
+    <div class="hyd-note">⚠️ نقطه‌ضعف مهم: با ورود نمونهٔ پرگاز، عقربه ابتدا سریع تا انتهای قرمز می‌رود و سپس به صفر برمی‌گردد؛ اگر اپراتور لحظه‌ای چشم بردارد و هنگام بازگشت عقربه به صفر نگاه کند، ممکن است اشتباهاً «بدون گاز» نتیجه بگیرد — بسیار خطرناک؛ پایش دقیق و پیوسته لازم است.</div>
+  </div>
+
+  <!-- SIEGER 5000 -->
+  <div class="sec-block">
+    <h3>۲) گازسنج SIEGER مدل ۵۰۰۰</h3>
+    <div class="gd-fig"><svg viewBox="0 0 260 150" role="img" aria-label="گازسنج زیگر">
+      <rect x="18" y="18" width="150" height="116" rx="12" fill="#26543f" stroke="#163627" stroke-width="2"/>
+      <circle cx="93" cy="70" r="44" fill="#0e1726"/>
+      <path d="M 52 70 A 41 41 0 0 1 134 70" fill="none" stroke="#3FD0FF" stroke-width="8"/>
+      <line x1="93" y1="70" x2="120" y2="48" stroke="#fff" stroke-width="3"/><circle cx="93" cy="70" r="5" fill="#fff"/>
+      <circle cx="40" cy="116" r="7" fill="#ffd34d"/><text x="118" y="120" fill="#9fb3d1" font-size="11" font-family="sans-serif">%LEL</text>
+      <path d="M 168 64 q 42 -12 58 16" fill="none" stroke="#3a4a66" stroke-width="4"/>
+      <ellipse cx="232" cy="96" rx="20" ry="26" fill="#3a8ee0"/>
+    </svg></div>
+    <div class="gd-caption">شماتیک آموزشی — نمایش %LEL با هشدار سمعی و بصری</div>
+    <div class="gd-desc">گاز طبیعی را در محدودهٔ ۵ تا ۱۰۰٪ LEL نشان می‌دهد؛ علاوه بر صفحهٔ مدرج درصد LEL، دارای هشدار سمعی (آژیر) و بصری (چراغ) است.</div>
+    <div class="sec-block" style="margin-top:6px"><h3 style="font-size:13px">طرز کار</h3>
+      <div class="step-item"><span class="step-num">۱</span><span>سوئیچ را در وضعیت ON قرار بده.</span></div>
+      <div class="step-item"><span class="step-num">۲</span><span>پس از حدود ۵ دقیقه (زمان گرم‌شدن) دستگاه آماده می‌شود.</span></div>
+      <div class="step-item"><span class="step-num">۳</span><span>سر لولهٔ نمونه‌گیر را در محل بگذار و تلمبه را ۱۰ بار فشار بده تا عقربه روی نقطهٔ ثابت بایستد؛ عدد = غلظت گاز.</span></div>
+      <div class="step-item"><span class="step-num">۴</span><span>چراغ چشمک‌زن + بوق هر ۷٫۵ ثانیه = دستگاه سالم و گاز مجاز؛ با افزایش گاز، تکرار آژیر بیشتر و تا دو بار در ثانیه می‌رسد.</span></div>
+    </div>
+  </div>
+
+  <!-- SPY GAS -->
+  <div class="sec-block">
+    <h3>۳) نشت‌یاب SPY GAS (قلمی)</h3>
+    <div class="gd-fig"><svg viewBox="0 0 260 90" role="img" aria-label="نشت‌یاب قلمی">
+      <rect x="20" y="34" width="185" height="24" rx="12" fill="#2f8f5b" stroke="#1d5d3a" stroke-width="2"/>
+      <rect x="58" y="38" width="42" height="16" rx="3" fill="#0e1726"/>
+      <circle cx="125" cy="46" r="5" fill="#ffd34d"/>
+      <polygon points="205,34 240,46 205,58" fill="#9fb3d1"/>
+      <circle cx="232" cy="46" r="4" fill="#ff5a5a"/>
+    </svg></div>
+    <div class="gd-caption">شماتیک آموزشی — بدنهٔ قلمی، نمایشگر، سنسور و چراغ</div>
+    <div class="gd-desc">نشت‌یاب پرتابل با فناوری پیشرفته و ابعاد کوچک قلمی؛ برای یافتن نشتی‌های بسیار کوچک گاز طبیعی به‌کار می‌رود. مشخصات: وزن ۱۵۰ گرم، طول ۲۱۰ میلی‌متر، قطر ۲۵ میلی‌متر، دو باتری ۱٫۵ ولت قلمی Alkaline.</div>
+    <div class="sec-block" style="margin-top:6px"><h3 style="font-size:13px">طرز کار و محدودهٔ نمایش (Range)</h3>
+      <div class="step-item"><span class="step-num">۱</span><span>باتری‌ها را بگذار؛ شارژ باتری با ۵ خط عمودی روی نمایشگر نشان داده می‌شود.</span></div>
+      <div class="step-item"><span class="step-num">۲</span><span>کلید ON/OFF را بزن؛ پس از گرم‌شدن آماده می‌شود (برای خاموش‌کردن، ON/OFF را ~۵ ثانیه نگه دار).</span></div>
+      <div class="step-item"><span class="step-num">۳</span><span>سنسور را نزدیک محل نشت ببر؛ غلظت با چراغ‌های فتوالکتریک و بوق خودکار نشان داده می‌شود.</span></div>
+      <div class="sec-row"><span class="sk">Range 1</span><span class="sv">کمتر از ۱۰۰ ppm</span></div>
+      <div class="sec-row"><span class="sk">Range 2</span><span class="sv">۱۰۰ تا ۱۰۰۰ ppm</span></div>
+      <div class="sec-row"><span class="sk">Range 3</span><span class="sv">۱۰۰۰ تا ۱۰۰۰۰ ppm</span></div>
+      <div class="sec-row"><span class="sk">Range 4</span><span class="sv">بیشتر از ۱۰۰۰۰ ppm</span></div>
+    </div>
+  </div>
+
+  <!-- TETRA -->
+  <div class="sec-block">
+    <h3>۴) گازسنج چهار سنسوره TETRA</h3>
+    <div class="gd-fig"><svg viewBox="0 0 200 150" role="img" aria-label="گازسنج چهار گاز">
+      <rect x="40" y="18" width="120" height="118" rx="14" fill="#f0b429" stroke="#b9860b" stroke-width="2"/>
+      <rect x="56" y="34" width="88" height="54" rx="6" fill="#0e1726"/>
+      <text x="64" y="52" fill="#3FD0FF" font-size="11" font-family="sans-serif">O₂  LEL</text>
+      <text x="64" y="72" fill="#7BE06B" font-size="11" font-family="sans-serif">CO  H₂S</text>
+      <circle cx="68" cy="112" r="9" fill="#2b3a55"/><circle cx="100" cy="112" r="9" fill="#2b3a55"/><circle cx="132" cy="112" r="9" fill="#ff5a5a"/>
+    </svg></div>
+    <div class="gd-caption">شماتیک آموزشی — نمایش هم‌زمان ۴ گاز و چراغ آژیر</div>
+    <div class="gd-desc">دستگاه چهار سنسوره برای اندازه‌گیری اکسیژن، سولفید هیدروژن، مونوکسیدکربن و گازهای قابل‌اشتعال (O₂, H₂S, CO, EXPLOSIVE/CH₄)؛ مناسب اغلب محیط‌های کاری صنایع نفت و گاز. ضدانفجار، دارای هشدار سمعی، بصری و لرزشی و دکمهٔ MUTE برای قطع موقت آژیر.</div>
+    <div class="sec-block" style="margin-top:6px"><h3 style="font-size:13px">واحد سنجش و آستانه‌های هشدار (A1 / A2 / Over Range)</h3>
+      <div class="sec-row"><span class="sk">O₂ (%VOL)</span><span class="sv">A1=۱۹ · A2=۲۳ · Over=۲۵</span></div>
+      <div class="sec-row"><span class="sk">CH₄ (%LEL)</span><span class="sv">A1=۲۰ · A2=۴۰ · Over=۱۰۰</span></div>
+      <div class="sec-row"><span class="sk">CO (ppm)</span><span class="sv">A1=۳۰ · A2=۱۰۰ · Over=۵۰۰</span></div>
+      <div class="sec-row"><span class="sk">H₂S (ppm)</span><span class="sv">A1=۵ · A2=۱۰ · Over=۱۰۰</span></div>
+    </div>
+  </div>
+
+  <!-- D15 -->
+  <div class="sec-block">
+    <h3>۵) گازسنج D15</h3>
+    <div class="gd-fig"><svg viewBox="0 0 260 150" role="img" aria-label="گازسنج D15">
+      <rect x="18" y="20" width="150" height="112" rx="12" fill="#3a3f4b" stroke="#23262e" stroke-width="2"/>
+      <rect x="44" y="34" width="98" height="46" rx="6" fill="#0e1726"/>
+      <path d="M 60 64 A 30 30 0 0 1 126 64" fill="none" stroke="#7BE06B" stroke-width="6"/>
+      <line x1="93" y1="64" x2="78" y2="44" stroke="#fff" stroke-width="2.5"/><circle cx="93" cy="64" r="4" fill="#fff"/>
+      <circle cx="44" cy="106" r="7" fill="#9fb3d1"/><circle cx="74" cy="106" r="7" fill="#9fb3d1"/><circle cx="138" cy="106" r="7" fill="#ffd34d"/>
+      <path d="M 168 70 q 42 -10 58 16" fill="none" stroke="#3a4a66" stroke-width="4"/>
+      <ellipse cx="232" cy="100" rx="19" ry="24" fill="#5b6b86"/>
+    </svg></div>
+    <div class="gd-caption">شماتیک آموزشی — کلیدها: POWER · SELECTOR · ZERO · VOLTAGE · BULB</div>
+    <div class="gd-desc">گازسنج عقربه‌ای با اجزای POWER SWITCH، SELECTOR SWITCH، GREEN ARROW، VOLTAGE، ZERO KNOB، مکندهٔ دستی (BULB) و محل اتصال شیلنگ نمونه‌گیری. تنها برای گازهای قابل‌اشتعال در هوا؛ کاربرد در فضای دارای اکسیژن بیش از حد معمول ممکن است خطرناک باشد.</div>
+    <div class="sec-block" style="margin-top:6px"><h3 style="font-size:13px">طرز کار</h3>
+      <div class="step-item"><span class="step-num">۱</span><span>کلید POWER SWITCH را روی ON بگذار.</span></div>
+      <div class="step-item"><span class="step-num">۲</span><span>کلید SELECTOR را روی وضعیت V بگذار.</span></div>
+      <div class="step-item"><span class="step-num">۳</span><span>مکندهٔ دستی را در هوای عاری از گاز چند بار فشار بده و رها کن؛ سپس VOLTAGE KNOB را بکش و بچرخان تا عقربه روی فلش سبز (GREEN ARROW) بایستد.</span></div>
+      <div class="step-item"><span class="step-num">۴</span><span>کلید SELECTOR را روی L.F.L بگذار.</span></div>
+      <div class="step-item"><span class="step-num">۵</span><span>ZERO KNOB را بکش و بچرخان تا عقربه روی صفر بایستد.</span></div>
+      <div class="step-item"><span class="step-num">۶</span><span>SELECTOR را روی %GAS بگذار؛ بدون تنظیم باید روی صفر باشد، سپس دوباره روی L.F.L. اگر روی صفر نرفت، دستگاه باید کالیبره شود.</span></div>
+    </div>
+  </div>
+
+  <!-- GMI GT -->
+  <div class="sec-block">
+    <h3>۶) نشت‌یاب چندحالته GMI GT (سری GT-40/42/43/44)</h3>
+    <div class="gd-fig"><svg viewBox="0 0 260 150" role="img" aria-label="نشت‌یاب GMI GT">
+      <rect x="28" y="22" width="98" height="112" rx="16" fill="#34507a" stroke="#1f3354" stroke-width="2"/>
+      <rect x="44" y="36" width="66" height="40" rx="5" fill="#0e1726"/>
+      <text x="52" y="61" fill="#7BE06B" font-size="11" font-family="sans-serif">GT</text>
+      <circle cx="54" cy="104" r="8" fill="#9fb3d1"/><circle cx="80" cy="104" r="8" fill="#9fb3d1"/><circle cx="106" cy="104" r="8" fill="#ffd34d"/>
+      <path d="M 126 56 q 64 0 74 42 q 8 24 30 24" fill="none" stroke="#3a4a66" stroke-width="5"/>
+      <circle cx="232" cy="122" r="7" fill="#9fb3d1"/>
+    </svg></div>
+    <div class="gd-caption">شماتیک آموزشی — بدنه با نمایشگر و کلیدها + Probe انعطاف‌پذیر</div>
+    <div class="gd-desc">نشت‌یاب چندحالته با Probe و شیلنگ نمونه‌گیری؛ دارای کلید ON/MENU/OFF، چراغ‌های LED (نشانگر روشن‌بودن و خطا/FAULT) و بازر (بوق هشدار). حالت کار با کلید انتخابگر (SELECTOR) و بسته به مدل در محدوده‌های مختلف تنظیم می‌شود.</div>
+    <div class="sec-block" style="margin-top:6px"><h3 style="font-size:13px">حالت‌های کار و محدودهٔ اندازه‌گیری (نمونه)</h3>
+      <div class="sec-row"><span class="sk">Leak Test (تست نشت)</span><span class="sv">۰–۱۰۰٪ LEL · ۰–۱۰۰٪ Vol CH₄ · ۰–۲۰۰۰ ppm CO</span></div>
+      <div class="sec-row"><span class="sk">Confined Space (فضای محصور)</span><span class="sv">۰–۱۰۰٪ LEL · ۰–۲۵٪ O₂ · ۰–۲۰۰۰ ppm CO · H₂S (مدل GT-44)</span></div>
+      <div class="sec-row"><span class="sk">Bar Hole (سوراخ آزمایش خاک)</span><span class="sv">۰–۱۰۰٪ LEL · ۰–۱۰۰٪ Vol CH₄</span></div>
+      <div class="sec-row"><span class="sk">CO</span><span class="sv">۰–۲۰۰۰ ppm CO · ۰–۲۵٪ O₂</span></div>
+      <div class="sec-row"><span class="sk">Purge (تخلیه)</span><span class="sv">۰–۱۰۰٪ Vol CH₄ · ۰–۲۵٪ O₂</span></div>
+      <div class="sec-row"><span class="sk">Sniffer (ردیابی نشت کوچک)</span><span class="sv">۰–۱۰۰۰۰ ppm CH₄</span></div>
+    </div>
+  </div>
+
+  <!-- نکات عمومی نگهداری -->
+  <div class="req-list">
+    <h3>🧰 احتیاطات و نگهداری عمومی همهٔ گازسنج‌ها</h3>
+    <div class="req-item"><span class="ri">✅</span><span>تنظیم صفر همیشه در هوای تمیز و عاری از گاز انجام شود.</span></div>
+    <div class="req-item"><span class="ri">✅</span><span>از ضربه‌زدن، تکان‌دادن و سقوط دستگاه جداً پرهیز شود.</span></div>
+    <div class="req-item"><span class="ri">✅</span><span>دستگاه و سنسور را از آب و رطوبت دور نگه دارید.</span></div>
+    <div class="req-item"><span class="ri">✅</span><span>سنسور را برای مدت طولانی در معرض جریان مستقیم یا گاز پرفشار قرار ندهید.</span></div>
+    <div class="req-item"><span class="ri">✅</span><span>برای تمیزکردن بدنه و اطراف سنسور فقط از الکل استفاده شود؛ از مشتقات نفتی پرهیز شود.</span></div>
+    <div class="req-item"><span class="ri">✅</span><span>در صورت عملکرد نامناسب، دستگاه را باز نکنید و دست‌کاری نکنید؛ به تعمیرگاه بسپارید.</span></div>
+    <div class="req-item"><span class="ri">✅</span><span>باتری و شارژ به‌طور منظم بررسی شود تا دستگاه همیشه آماده‌به‌کار باشد.</span></div>
+  </div>
+
+  <div class="conv-note">مبنا: کتاب جامع ایمنی گاز طبیعی در ایستگاه‌ها و شبکه‌های گازرسانی — فصل نهم (دستگاه گازسنج). تصاویر این صفحه شماتیک‌های آموزشیِ اصیل‌اند؛ برای کار با هر دستگاه به دفترچهٔ راهنمای همان مدل و آموزش رسمی مراجعه شود.</div>
+</div>
+<div class="note">این صفحه مرجع آموزشی است و جایگزین دفترچهٔ سازنده، کالیبراسیون و آموزش عملی دستگاه نیست.</div>
+</div><!-- /page gasdet -->
+
+<!-- ===== کالیبراسیون دستگاه‌های گازسنج ===== -->
+<div class="page" id="calib">
+<div class="container">
+  <div class="cat-banner" style="--c:#7BE06B"><div class="cb-txt"><div class="cb-title">کالیبراسیون گازسنج‌ها</div><div class="cb-desc">دوره و شرایط کالیبراسیون گازسنج، نشت‌یاب و دستگاه سنجش بو</div></div><div class="cb-ico">🎯</div></div>
+
+  <div class="conv-note">دامنه: کل شرکت گاز استان تهران · مراجع: استاندارد <b>ISO 17025</b> و روش اجرایی کالیبراسیون <b>IP-105-01</b> · ویرایش ۱ (۱۴۰۳/۰۷/۰۹). مسئولیت هماهنگی: امور بازرسی فنی و HSE؛ انجام کالیبراسیون توسط نمایندگان شرکت‌های سازندهٔ واجد صلاحیت.</div>
+
+  <!-- جدول ۱ — استعلام دوره کالیبراسیون -->
+  <div class="sec-block">
+    <h3>📋 جدول ۱ — دورهٔ کالیبراسیون هر دستگاه</h3>
+    <div class="field"><label>دستگاه را انتخاب کنید</label>
+      <select class="inp" id="calSel" onchange="renderCalib()"><option value="">— انتخاب دستگاه —</option></select></div>
+    <div id="calResult"></div>
+    <div class="conv-note" style="margin-top:8px">اعداد بر حسب «ماه» است (دورهٔ کالیبراسیون هر گاز). فهرست شامل دستگاه‌هایی است که هماهنگی کالیبراسیون آن‌ها بر عهدهٔ واحد HSE است.</div>
+  </div>
+
+  <!-- ۸-۱ شرایط کالیبره نمودن -->
+  <div class="req-list">
+    <h3>⚙️ شرایط کالیبره نمودن (بند ۸-۱)</h3>
+    <div class="req-item"><span class="ri">✅</span><span>دورهٔ کالیبراسیون بسته به نوع گازسنج و سنسور، طبق جدول ۱ تعیین می‌شود.</span></div>
+    <div class="req-item"><span class="ri">✅</span><span>شرایط محیطی: دمای محیط باید ثابت و برابر <b>۲۰ ± ۲ درجهٔ سلسیوس</b> باشد.</span></div>
+    <div class="req-item"><span class="ri">✅</span><span>صحت عملکرد کالیبراسیون بسته به دقت دستگاه و دقت سیلندر کالیبراسیون (بین <b>۱ تا ۱۰٪</b>) است.</span></div>
+    <div class="req-item"><span class="ri">✅</span><span>دبی گاز خروجی رگولاتور سیلندر باید طبق User Manual هر دستگاه باشد (<b>۰٫۵ یا ۱ لیتر بر دقیقه</b>).</span></div>
+    <div class="req-item"><span class="ri">✅</span><span>کالیبراسیون منظم توسط افراد صلاحیت‌دار و مطابق دستورالعمل سازنده؛ در صورت مصرف کمِ دستگاه، پیش از استفاده «چک کالیبره» انجام شود.</span></div>
+    <div class="req-item"><span class="ri">✅</span><span>عوامل نیازمند کالیبراسیون فوق‌العاده: فرسودگی یا کثیف‌شدن سنسور (گرد و خاک)، تماس با آب و رطوبت، ضربهٔ فیزیکی، و حرارت/سرمای زیاد.</span></div>
+    <div class="req-item"><span class="ri">✅</span><span>روش انجام کالیبراسیون (بند ۸-۲): مطابق دستورالعمل سازندهٔ هر دستگاه.</span></div>
+  </div>
+
+  <!-- جدول ۲ — تکنولوژی سنسور -->
+  <div class="sec-block">
+    <h3>🔬 جدول ۲ — تکنولوژی سنسور و طول عمر</h3>
+    <div class="cal2-row"><div class="cal2-h">اکسیژن · الکتروشیمیایی · ۲ تا ۳ سال</div><div class="cal2-d">CROWCON GT43 · CROWCON TETRA · BW max XT II · SEWERIN 680</div></div>
+    <div class="cal2-row"><div class="cal2-h">CO و H₂S · الکتروشیمیایی · ۳ تا ۴ سال</div><div class="cal2-d">GT43 · TETRA · CROWCON · BW max XT II · SEWERIN 680</div></div>
+    <div class="cal2-row"><div class="cal2-h">مرکاپتان · الکتروشیمیایی · ۱ تا ۲ سال</div><div class="cal2-d">MULTI RAE · ODOR HANDY PLUS</div></div>
+    <div class="cal2-row"><div class="cal2-h">CH₄ (ppm) · نیمه‌هادی · ۵ تا ۸ سال</div><div class="cal2-d">SPY GAS · GT44 · GT43 · BW max XT II</div></div>
+    <div class="cal2-row"><div class="cal2-h">CH₄ (ppm) · FID · بیش از ۵ سال</div><div class="cal2-d">CROWCON FID · SEWERIN PORTAFID</div></div>
+    <div class="cal2-row"><div class="cal2-h">CH₄ (%LEL) · کاتالیتیک · ۵ سال</div><div class="cal2-d">D15 · SNIFFER · GT43 · GT44 · SEWERIN PM4 · SEWERIN 680</div></div>
+    <div class="cal2-row"><div class="cal2-h">CH₄ (%VOL) · هدایت گرمایی · بیش از ۸ سال</div><div class="cal2-d">D15 · GT43 · GT44 · MULTI RAE · SEWERIN PM4 · SEWERIN 680</div></div>
+    <div class="cal2-row"><div class="cal2-h">CH₄ (ppm/LEL/VOL) · لیزر · ۱۰ سال</div><div class="cal2-d">Leaser one</div></div>
+  </div>
+
+  <!-- سایر تجهیزات اندازه‌گیری -->
+  <div class="sec-block">
+    <h3>📏 سایر تجهیزات اندازه‌گیری (مرجع)</h3>
+    <div class="cal2-row"><div class="cal2-h">کنتور توربینی (Turbine Meter) و تصحیح‌کنندهٔ حجمی</div>
+      <div class="sec-row"><span class="sk">۱۶۰ ≤ q<sub>max</sub> &lt; ۱۰۰۰۰ scm/h</span><span class="sv">دورهٔ ۳ سال</span></div>
+      <div class="sec-row"><span class="sk">۱۰۰۰۰ ≤ q<sub>max</sub> &lt; ۵۰۰۰۰</span><span class="sv">دورهٔ ۲ سال</span></div>
+      <div class="sec-row"><span class="sk">۵۰۰۰۰ ≤ q<sub>max</sub></span><span class="sv">دورهٔ ۱ سال</span></div>
+      <div class="cal2-d" style="direction:rtl;text-align:right">خطای مجاز جریان: q<sub>min</sub> تا ۰٫۲q<sub>max</sub> → ±۲٪ · بازهٔ ۰٫۲q<sub>max</sub> تا q<sub>max</sub> → ±۱٪</div>
+    </div>
+    <div class="cal2-row"><div class="cal2-h">دماسنج و فشارسنج</div><div class="cal2-d" style="direction:rtl;text-align:right">ایستگاه‌های C.G.S: یک سال · ایستگاه‌های D.R.S، RS و MS: دو سال</div></div>
+    <div class="cal2-row"><div class="cal2-h">گازسنج، نشت‌یاب و دستگاه سنجش بو</div><div class="cal2-d" style="direction:rtl;text-align:right">بر اساس سنسور مربوطه طبق جدول ۱</div></div>
+    <div class="cal2-row"><div class="cal2-h">مولتی‌متر / آمپرمتر / ولتمتر</div><div class="cal2-d" style="direction:rtl;text-align:right">دوره‌ای، طبق دستورالعمل سازنده</div></div>
+  </div>
+
+  <div class="conv-note">مبنا: دستورالعمل کالیبراسیون تجهیزات (شرکت گاز استان تهران). این صفحه راهنمای مرجع است؛ کالیبراسیون باید توسط مرکز معتبر و طبق دستورالعمل سازندهٔ هر دستگاه انجام و گواهی صادر شود.</div>
+</div>
+<div class="note">کالیبراسیون و صدور گواهی بر عهدهٔ مراکز/نمایندگان واجد صلاحیت است؛ این ابزار جایگزین آن نیست.</div>
+</div><!-- /page calib -->
+
+<!-- ===== دستورالعمل‌ها ===== -->
+<div class="page" id="guidelines">
+<div class="container">
+  <div class="cat-banner" style="--c:#3a8ee0"><div class="cb-txt"><div class="cb-title">دستورالعمل‌ها</div><div class="cb-desc">مرجع دستورالعمل‌های HSE شرکت گاز</div></div><div class="cb-ico">📚</div></div>
+  <div class="gas-card">
+    <div class="gas-head"><span class="gico">📄</span><div><div class="gname">صدور پروانه‌های فعالیت (PTW)</div><div class="gformula">HSE-IN-S-223(2)-03</div></div></div>
+    <div class="gas-prop"><span class="gk">پروانه‌های اصلی</span><span class="gv">گرم، سرد</span></div>
+    <div class="gas-prop"><span class="gk">پروانه‌های مکمل</span><span class="gv">حفاری، ارتفاع، فضای بسته، جداسازی برق، پرتونگاری</span></div>
+    <div class="gas-prop"><span class="gk">انواع صلاحیت</span><span class="gv">ارشد عملیات، محوطه، اجرا، آزمایش گاز، ناظر حفاری</span></div>
+    <div class="gas-warn">پروانه مکمل به‌تنهایی صادر نمی‌شود و همواره همراه یک پروانه اصلی (گرم/سرد) صادر می‌گردد.</div>
+  </div>
+  <div class="gas-card">
+    <div class="gas-head"><span class="gico">📄</span><div><div class="gname">مجموعه مقررات نظام پروانه‌های کار</div><div class="gformula">HSE-IN-S-222(2)-03</div></div></div>
+    <div class="gas-prop"><span class="gk">محوطه مشمول</span><span class="gv">هر محوطه تحت نظارت — کار بدون پروانه ممنوع</span></div>
+    <div class="gas-prop"><span class="gk">محوطه مشروط</span><span class="gv">فعالیت روزمره پرسنل مخصوص، بدون پروانه با رعایت الزامات</span></div>
+    <div class="gas-prop"><span class="gk">مستندات</span><span class="gv">فرم‌ها، لیست عملیات، نفرات صلاحیت‌دار، فلوچارت‌ها</span></div>
+  </div>
+  <div class="conv-note">این بخش خلاصه‌ای مرجع از دستورالعمل‌هاست. ابزارهای «پرمیت کار»، «محوطه مشمول/مشروط» و «صلاحیت افراد» بر پایه‌ی همین اسناد ساخته شده‌اند.</div>
+</div>
+</div><!-- /page guidelines -->
 
 <!-- ===== صفحه ارزیابی ورود ===== -->
 <div class="page" id="assess">
@@ -1485,31 +2117,84 @@
 <!-- ===== صفحه راهنمای پرمیت ===== -->
 <div class="page" id="ptw">
 <div class="container">
+  <div class="cat-banner" style="--c:#3FD0FF"><div class="cb-txt"><div class="cb-title">پروانه (پرمیت) کار</div><div class="cb-desc">نظام پروانه‌های کار — HSE-IN-S-223 / 222</div></div><div class="cb-ico">📋</div></div>
+
   <div class="card">
     <div class="field">
-      <label>چه کاری قرار است انجام شود؟</label>
+      <label>چه کاری قرار است انجام شود؟ <span class="unit">— فعالیت را انتخاب کنید</span></label>
       <select class="inp" id="ptwJob" onchange="evalPtw()">
-        <option value="">انتخاب کنید…</option>
-        <option value="weld">جوشکاری / برشکاری / سنگ‌زنی</option>
-        <option value="hottap">عملیات گرم روی خط گازدار (Hot Tap)</option>
-        <option value="cold">تعمیرات مکانیکی سرد (فلنج، شیر، اتصالات)</option>
-        <option value="paint">رنگ‌آمیزی / عایق‌کاری / نظافت صنعتی</option>
-        <option value="confined">ورود به منهول / حوضچه / مخزن</option>
-        <option value="excav">حفاری و خاک‌برداری</option>
-        <option value="elec">کار روی تجهیزات و تابلو برق</option>
-        <option value="height">کار در ارتفاع (بیش از ۱.۲ متر)</option>
-        <option value="radio">پرتونگاری صنعتی (رادیوگرافی)</option>
-        <option value="ptest">تست فشار / نشت‌یابی</option>
+        <option value="">— انتخاب فعالیت —</option>
+        <optgroup label="کار گرم (پروانه اصلی)">
+          <option value="weld">جوشکاری / برشکاری / سنگ‌زنی</option>
+          <option value="hottap">عملیات گرم روی خط گازدار (Hot Tap)</option>
+          <option value="pefuse">جوش لوله پلی‌اتیلن (الکتروفیوژن/بات‌فیوژن)</option>
+          <option value="sandblast">سندبلاست / شات‌بلاست</option>
+        </optgroup>
+        <optgroup label="کار سرد (پروانه اصلی)">
+          <option value="cold">تعمیرات مکانیکی سرد (فلنج، شیر، اتصالات)</option>
+          <option value="paint">رنگ‌آمیزی / عایق‌کاری / نظافت صنعتی</option>
+          <option value="ptest">تست فشار / نشت‌یابی</option>
+        </optgroup>
+        <optgroup label="پروانه مکمل (همراه پروانه اصلی)">
+          <option value="confined">ورود به فضای بسته (منهول/حوضچه/مخزن)</option>
+          <option value="excav">حفاری و خاک‌برداری</option>
+          <option value="height">کار در ارتفاع (بیش از ۱٫۲ متر)</option>
+          <option value="elec">جداسازی الکتریکی / کار با برق</option>
+          <option value="radio">پرتونگاری صنعتی (رادیوگرافی)</option>
+          <option value="diving">غواصی</option>
+          <option value="machinery">ورود ماشین‌آلات</option>
+        </optgroup>
       </select>
     </div>
+    <div class="field" id="ptwNatureWrap" style="display:none; margin-top:4px">
+      <label>ماهیت کارِ اصلی در این فعالیت چیست؟ <span class="unit">— پروانه مکمل همراه پروانه اصلی صادر می‌شود</span></label>
+      <div class="seg" id="ptwNature">
+        <button onclick="ptwSetNature('hot',this)">🔥 کار گرم (جوش/برش/سنگ‌زنی…)</button>
+        <button onclick="ptwSetNature('cold',this)">❄️ کار سرد (مکانیکی/بازرسی…)</button>
+      </div>
+    </div>
   </div>
+  <div id="ptwJobResult"></div>
+
+  <div class="sec-head" style="margin-top:18px"><span class="sh-bar" style="background:#3FD0FF"></span><div class="sh-txt"><div class="sh-t">ساخت دستی پروانه</div><div class="sh-s">انتخاب مستقیم پروانه اصلی و مکمل</div></div></div>
+
+  <div class="card">
+    <div class="field">
+      <label>۱) پروانه اصلی <span class="unit">— ابتدا یکی را انتخاب کنید</span></label>
+      <div class="seg" id="ptwMain">
+        <button onclick="ptwSetMain('hot',this)">🔥 کار گرم</button>
+        <button onclick="ptwSetMain('cold',this)">❄️ کار سرد</button>
+      </div>
+    </div>
+    <div class="field">
+      <label>۲) پروانه‌های مکمل <span class="unit">— در صورت نیاز (همراه پروانه اصلی)</span></label>
+      <div class="seg" id="ptwSupp" style="flex-wrap:wrap; gap:8px">
+        <button onclick="ptwToggleSupp('confined',this)">🕳️ فضای بسته</button>
+        <button onclick="ptwToggleSupp('excav',this)">🪏 حفاری</button>
+        <button onclick="ptwToggleSupp('height',this)">🪜 کار در ارتفاع</button>
+        <button onclick="ptwToggleSupp('elec',this)">⚡ جداسازی الکتریکی</button>
+        <button onclick="ptwToggleSupp('radio',this)">☢️ پرتونگاری</button>
+        <button onclick="ptwToggleSupp('diving',this)">🤿 غواصی</button>
+        <button onclick="ptwToggleSupp('machinery',this)">🚜 ورود ماشین‌آلات</button>
+      </div>
+    </div>
+    <div class="field" id="ptwSoilWrap" style="display:none">
+      <label>۳) جنس / نوع خاک <span class="unit">(برای حفاری)</span></label>
+      <select class="inp" id="ptwSoil" onchange="renderPTW()">
+        <option value="">— انتخاب نوع خاک —</option>
+        <option value="rock">خاک سخت و سنگی (پایدار)</option>
+        <option value="clay">خاک چسبنده / رسی (نیمه‌پایدار)</option>
+        <option value="mixed">خاک متوسط / مخلوط</option>
+        <option value="loose">خاک سست / دانه‌ای / ریزشی (شن و ماسه)</option>
+      </select>
+      <div class="conv-note" style="margin-top:8px">راهنمای تشخیص: سنگی = مقاوم و کلوخه‌ای؛ رسی = چسبنده و قالب‌پذیرِ مرطوب؛ دانه‌ای = شن/ماسه که به‌راحتی می‌ریزد و قالب نمی‌گیرد.</div>
+    </div>
+  </div>
+
   <div id="ptwResult"></div>
-  <div class="conv-note">
-    شرایط هر پرمیت تابع دستورالعمل سامانه پروانه کار شرکت است؛ این راهنما جنبه یادآوری دارد
-    و صادرکننده پرمیت مرجع نهایی تعیین الزامات است.
-  </div>
+  <div class="conv-note">طبق دستورالعمل، پروانه مکمل به‌تنهایی صادر نمی‌شود و حتماً همراه یک پروانه اصلی (گرم/سرد) صادر می‌گردد. صادرکننده‌ی پروانه، مرجع نهایی تعیین الزامات است.</div>
 </div>
-<div class="note">پرمیت فقط برای محل، تجهیز و بازه زمانی مشخص‌شده اعتبار دارد.</div>
+<div class="note">پروانه فقط برای محل، تجهیز و بازه‌ی زمانی مشخص‌شده اعتبار دارد.</div>
 </div><!-- /page ptw -->
 
 <!-- ===== صفحه محاسبه پرج ===== -->
@@ -1766,7 +2451,7 @@
 <div class="container">
   <div class="card about-center">
     <img class="about-logo-img" src="icons/logo.png" alt="آرم شرکت گاز استان تهران">
-    <div class="about-title">ارزیابی ورود به منهول</div>
+    <div class="about-title">ارزیابی ورود به فضای بسته</div>
     <div><span class="about-ver">نسخه 1.0.0</span></div>
   </div>
 
@@ -1829,7 +2514,9 @@
 })();
 
 // جابجایی بین صفحه‌ها (منو + کارت‌های داشبورد)
-var PAGE_TITLES = { 'cat-safety':'ایمنی', 'tools':'ابزارها', 'alerts':'اطلاعیه‌ها', 'quiz':'آزمون و خودآزمایی' };
+var PAGE_TITLES = { 'cat-safety':'ایمنی', 'tools':'ابزارها', 'alerts':'اطلاعیه‌ها', 'quiz':'آزمون و خودآزمایی',
+  'competency':'لیست صلاحیت افراد', 'area-type':'محوطه مشمول/مشروط',
+  'clothing':'ماتریس البسه و PPE', 'hcdet':'تشخیص کار گرم و سرد', 'gasinject':'تزریق گاز', 'hazzone':'زون‌بندی مناطق خطر', 'gasdet':'انواع دستگاه گازسنج', 'calib':'کالیبراسیون گازسنج‌ها', 'guidelines':'دستورالعمل‌ها' };
 var navStack = [];
 var currentPage = 'home';
 function goPage(id, isBack){
@@ -1852,6 +2539,7 @@ function goPage(id, isBack){
   // حالت فعال نوار پایین
   var nav = (id==='home')?'home':(id==='quiz')?'quiz':(id==='alerts')?'alerts':'tools';
   document.querySelectorAll('.bn-item').forEach(function(b){ b.classList.toggle('active', b.dataset.nav===nav); });
+  if (id==='clothing' && typeof clMode==='function') clMode('home');
   window.scrollTo({top:0});
   toggleMenu(false);
 }
@@ -2211,7 +2899,7 @@ function resetForm(){
   window.scrollTo({top:0, behavior:'smooth'});
 }
 
-/* ===== خروجی تصویری نتیجه ارزیابی ورود به منهول =====
+/* ===== خروجی تصویری نتیجه ارزیابی ورود به فضای بسته =====
    نتیجه را روی یک canvas رسم و به‌صورت فایل PNG ذخیره می‌کند.
    کاملاً آفلاین و بدون هیچ کتابخانه‌ی خارجی. */
 function saveAssessImage(){
@@ -2255,7 +2943,7 @@ function saveAssessImage(){
   ctx.textAlign = 'center';
   ctx.fillStyle = '#fff';
   ctx.font = '700 24px ' + FONT;
-  ctx.fillText('ارزیابی ورود به منهول', W/2, 42);
+  ctx.fillText('ارزیابی ورود به فضای بسته', W/2, 42);
   ctx.font = '400 14px ' + FONT;
   ctx.fillStyle = 'rgba(255,255,255,0.85)';
   ctx.fillText('تاریخ: ' + A.when.toLocaleString('fa-IR'), W/2, 70);
@@ -2361,6 +3049,165 @@ function segVal(groupId){
   return b ? b.dataset.v : null;
 }
 
+/* ================= تزریق گاز (Blow Down Time) ================= */
+function calcGasInject(){
+  var P1=parseFloat(document.getElementById('giP1').value);
+  var G=parseFloat(document.getElementById('giG').value);
+  var D=parseFloat(document.getElementById('giD').value);
+  var L=parseFloat(document.getElementById('giL').value);
+  var FC=parseFloat(document.getElementById('giFC').value);
+  var d=parseFloat(document.getElementById('gid').value);
+  var n=parseFloat(document.getElementById('gin').value);
+  var err=document.getElementById('giErr'), box=document.getElementById('giResult');
+  if(segVal('giUnit')==='km' && L>0) L=L/1.609;   // کیلومتر → مایل
+  if(!(P1>0)||!(G>0)||!(D>0)||!(L>0)||!(FC>0)||!(d>0)||!(n>0)){ err.style.display='block'; box.innerHTML=''; return; }
+  err.style.display='none';
+  var Tm=(0.0588*Math.cbrt(P1)*Math.sqrt(G)*D*D*L*FC)/(d*d*n);
+  var hrs=Math.floor(Tm/60), mins=Math.round(Tm%60);
+  if(mins===60){ hrs++; mins=0; }
+  var human = hrs>0 ? (faDigits(hrs)+' ساعت و '+faDigits(mins)+' دقیقه') : (faDigits(mins)+' دقیقه');
+  box.innerHTML='<div class="result-box r-blue"><span class="icon">⏱️</span><div class="verdict">زمان تخلیه/تزریق ≈ '+faDigits(Tm.toFixed(1)).replace('.','٫')+' دقیقه</div><div class="sub">معادل حدود '+human+'</div></div>';
+}
+/* جدول A — زمان استاندارد تخلیه (دقیقه در هر مایل) بر اساس قطر خط و قطر شیر تخلیه */
+var TBL_A={
+  34:{8:8.40,10:5.45,12:3.80,14:3.15,16:2.35},
+  30:{8:6.65,10:4.30,12:3.00,14:2.50,16:1.95},
+  26:{6:10.00,8:5.75,10:3.80,12:2.60,14:2.20},
+  24:{6:7.35,8:4.20,10:2.75,12:1.95},
+  20:{6:5.10,8:2.95,10:1.90},
+  18:{4:9.45,6:4.10,8:2.35},
+  16:{4:7.40,6:3.25,8:1.85},
+  14:{4:5.60,6:2.45,8:2.00}
+};
+function taInit(){
+  var s=document.getElementById('taSel'); if(!s) return;
+  var opts='';
+  Object.keys(TBL_A).sort(function(a,b){return b-a;}).forEach(function(D){
+    Object.keys(TBL_A[D]).sort(function(a,b){return a-b;}).forEach(function(d){
+      opts+='<option value="'+D+'|'+d+'">خط '+faDigits(D)+'″ · تخلیه '+faDigits(d)+'″ — '+faDigits(TBL_A[D][d].toFixed(2)).replace('.','٫')+' دقیقه/مایل</option>';
+    });
+  });
+  s.innerHTML='<option value="">— انتخاب —</option>'+opts;
+}
+function calcTableA(){
+  var v=document.getElementById('taSel').value, L=parseFloat(document.getElementById('taL').value), box=document.getElementById('taResult');
+  if(!v){ box.innerHTML=''; return; }
+  var p=v.split('|'), per=TBL_A[p[0]][p[1]];
+  var html='<div class="verdict">'+faDigits(per.toFixed(2)).replace('.','٫')+' دقیقه در هر مایل</div>';
+  if(L>0){ var tot=per*L, h=Math.floor(tot/60), m=Math.round(tot%60); if(m===60){h++;m=0;}
+    html+='<div class="sub">زمان کل برای '+faDigits(L)+' مایل ≈ '+faDigits(tot.toFixed(1)).replace('.','٫')+' دقیقه'+(h>0?' ('+faDigits(h)+' ساعت و '+faDigits(m)+' دقیقه)':'')+'</div>'; }
+  box.innerHTML='<div class="result-box r-blue"><span class="icon">📋</span>'+html+'</div>';
+}
+/* جدول حداقل فشار ورودی (PSIG) — کلید: «اندازه بلودان|قطر خط»، اندیس = طول مایل ۱..۱۵ */
+var PRESS={
+  "4|12":[18,20,21,22,23,24,25,26,27,28,29,30,31,32,33],
+  "4|10":[11,13,15,17,18,20,21,23,24,25,26,28,29,30,31],
+  "4|8":[8,11,13,16,18,20,22,24,26,28,29,31,32,34,35],
+  "4|6":[8,12,16,19,22,24,27,29,32,34,36,38,40,41,43],
+  "2|6":[22,25,28,30,32,35,37,39,41,43,44,46,48,50,51],
+  "2|4":[14,20,25,29,33,37,40,43,46,49,52,55,57,60,62]
+};
+function calcPress(){
+  var v=document.getElementById('prSel').value, L=parseInt(document.getElementById('prL').value,10), box=document.getElementById('prResult');
+  if(!v||!(L>=1)){ box.innerHTML=''; return; }
+  if(L>15){ box.innerHTML='<div class="hyd-note">برای طول بیش از ۱۵ مایل به جدول کامل/دستورالعمل مراجعه شود.</div>'; return; }
+  var p=PRESS[v][L-1];
+  box.innerHTML='<div class="result-box r-blue"><span class="icon">📈</span><div class="verdict">حداقل فشار ورودی ≈ '+faDigits(p)+' PSIG</div><div class="sub">برای طول '+faDigits(L)+' مایل</div></div>';
+}
+
+/* ================= کالیبراسیون گازسنج‌ها (جدول ۱) ================= */
+var CAL1=[
+  {n:'D15', ch4:12, unit:'HSE'},
+  {n:'SNIFFER', ch4:12, unit:'HSE'},
+  {n:'GT44', ch4:12, unit:'HSE'},
+  {n:'GT43', ch4:12, co2:12, h2s:12, o2:12, unit:'HSE'},
+  {n:'CROWCON (TETRA)', ch4:12, co2:12, h2s:12, o2:12, unit:'HSE'},
+  {n:'MULTI RAE', ch4:12, merc:12, unit:'HSE'},
+  {n:'ODOR HANDY PLUS', merc:6, unit:'HSE'},
+  {n:'SEWERIN 680', ch4:12, co2:12, h2s:12, o2:12, unit:'HSE'},
+  {n:'BW max XT II', ch4:6, co2:6, h2s:6, o2:6, unit:'HSE'}
+];
+function initCalib(){
+  var s=document.getElementById('calSel'); if(!s) return;
+  s.innerHTML='<option value="">— انتخاب دستگاه —</option>'+CAL1.map(function(d,i){return '<option value="'+i+'">'+d.n+'</option>';}).join('');
+}
+function renderCalib(){
+  var v=document.getElementById('calSel').value, box=document.getElementById('calResult');
+  if(v===''){ box.innerHTML=''; return; }
+  var d=CAL1[+v]; if(!d){ box.innerHTML=''; return; }
+  var gases=[['CH₄','ch4'],['CO₂','co2'],['H₂S','h2s'],['O₂','o2'],['مرکاپتان','merc']];
+  var rows=gases.filter(function(g){return d[g[1]]!=null;}).map(function(g){
+    return '<div class="sec-row"><span class="sk">'+g[0]+'</span><span class="sv">هر '+faDigits(d[g[1]])+' ماه</span></div>'; }).join('');
+  box.innerHTML='<div class="result-box r-green"><span class="icon">🎯</span><div class="verdict">'+d.n+'</div>'+
+    '<div class="sub">واحد مسئول هماهنگی: '+d.unit+'</div></div>'+
+    '<div class="sec-block" style="margin-top:8px"><h3 style="font-size:13px">دورهٔ کالیبراسیون به تفکیک گاز</h3>'+rows+'</div>';
+}
+
+/* ================= زون‌بندی مناطق خطر (IEC) ================= */
+var ZONE_META={
+  '0':{name:'ZONE 0 — خطر دائمی', cls:'r-red', icon:'⛔', eq:'تجهیزات گروه Ga (Category 1G) — مانند حفاظت ذاتاً ایمن ia.', desc:'گاز قابل اشتعال به‌طور دائم یا طولانی (بیش از ۱۰۰۰ ساعت در سال) حضور دارد.'},
+  '1':{name:'ZONE 1 — خطر متناوب', cls:'r-orange', icon:'⚠️', eq:'تجهیزات گروه Gb (Category 2G) — مانند d، e، p، ib.', desc:'گاز در شرایط عادی بهره‌برداری به‌طور متناوب حضور دارد (تا ~۱۰۰۰ ساعت در سال).'},
+  '2':{name:'ZONE 2 — خطر نادر/کوتاه', cls:'r-blue', icon:'🔵', eq:'تجهیزات گروه Gc (Category 3G) — مانند nA (و بالاتر).', desc:'در شرایط عادی گاز نیست؛ اگر پدید آید فقط برای مدت کوتاه (~۱ تا ۱۰ ساعت در سال).'},
+  's':{name:'خارج از زون — بی‌خطر', cls:'r-green', icon:'✅', eq:'الزام تجهیزات ضدانفجار خاص ندارد (تجهیزات معمولی مجاز است).', desc:'منبع نشت گاز قابل اشتعال وجود ندارد.'}
+};
+var HZ_ITEMS=[
+  // ZONE 0
+  {n:'فضای داخلی مخزن حاوی مایع قابل اشتعال (فضای بخار)', z:'0', note:'بخار قابل اشتعال به‌طور دائم در فضای بالای مایع وجود دارد.'},
+  {n:'فضای داخلی برج تقطیر پالایشگاه', z:'0', note:'حضور دائم مخلوط قابل اشتعال در فرآیند.'},
+  {n:'فضای داخلی ظروف فرآیندی و سپراتورهای گازی', z:'0', note:'گاز قابل اشتعال به‌طور پیوسته در داخل ظرف است.'},
+  {n:'فضای داخلی خط لوله و کلکتور حاوی گاز', z:'0', note:'فاز داخلی خط، همواره حاوی گاز قابل اشتعال است.'},
+  {n:'فضای داخلی مخزن مادهٔ بودارکننده (اودوریزور)', z:'0', note:'بخار قابل اشتعال مادهٔ بودار به‌طور دائم حضور دارد.'},
+  {n:'فضای داخلی درایر/فیلتر گازی در حین فرآیند', z:'0', note:'گاز قابل اشتعال پیوسته در جریان است.'},
+  // ZONE 1
+  {n:'مجاورت دهانهٔ ونت/بلودان (تخلیهٔ متناوب گاز)', z:'1', note:'هنگام تخلیه‌های متناوب، گاز در شرایط عادی ظاهر می‌شود.'},
+  {n:'محل نمونه‌گیری گاز (Sampling Point)', z:'1', note:'هنگام نمونه‌گیری به‌طور متناوب نشت کنترل‌شده رخ می‌دهد.'},
+  {n:'اطراف آب‌بند (Seal) پمپ یا کمپرسور گاز', z:'1', note:'نشت متناوب از آب‌بند در بهره‌برداری عادی محتمل است.'},
+  {n:'داخل حوضچهٔ شیر (Valve Pit) کم‌تهویه با اتصال گازی', z:'1', note:'تهویهٔ ضعیف + احتمال تجمع نشت متناوب.'},
+  {n:'اتاق رگولاتور ایستگاه CGS/TBS با تهویهٔ محدود', z:'1', note:'احتمال حضور متناوب گاز در فضای کم‌تهویه.'},
+  {n:'مجاورت خروجی شیر اطمینان/PSV', z:'1', note:'تخلیهٔ متناوب در شرایط عادی بهره‌برداری.'},
+  {n:'محل تزریق بو (اودوریزاسیون)', z:'1', note:'نشت متناوب بخار مادهٔ بودار محتمل است.'},
+  {n:'محل بارگیری/تخلیهٔ CNG یا LPG', z:'1', note:'هنگام اتصال/قطع شیلنگ‌ها نشت متناوب رخ می‌دهد.'},
+  {n:'اطراف فلنج و اتصالات با نشت متناوب محتمل', z:'1', note:'در بهره‌برداری عادی احتمال نشت دوره‌ای دارد.'},
+  {n:'اتاق کمپرسور با تهویهٔ طبیعی محدود', z:'1', note:'تجمع گاز نشتی در فضای کم‌تهویه.'},
+  {n:'مجاورت بلافصل نواحی Zone 0', z:'1', note:'انتشار گاز از Zone 0 به فضای پیرامون.'},
+  // ZONE 2
+  {n:'محوطهٔ باز ایستگاه CGS/TBS با تهویهٔ مناسب', z:'2', note:'تهویهٔ خوب؛ گاز فقط در خرابی و برای مدت کوتاه ظاهر می‌شود.'},
+  {n:'اطراف فلنج/شیر/اتصالات جوشی (آب‌بند در حالت عادی)', z:'2', note:'نشت فقط در صورت خرابی غیرعادی.'},
+  {n:'اطراف کمپرسور گاز در فضای باز با تهویهٔ خوب', z:'2', note:'پراکندگی سریع نشت احتمالی.'},
+  {n:'پیرامون خطوط لولهٔ روزمینی با اتصالات', z:'2', note:'نشت تنها در شرایط غیرعادی و کوتاه‌مدت.'},
+  {n:'اتاق با تهویهٔ مکانیکی کافی (گاز فقط در خرابی)', z:'2', note:'تهویهٔ مناسب احتمال تجمع را کاهش می‌دهد.'},
+  {n:'نواحی حاشیه‌ای پیرامون Zone 1', z:'2', note:'فاصله از منبع، تداوم حضور گاز را کوتاه می‌کند.'},
+  {n:'اطراف سکو/انبار کپسول گاز با تهویهٔ مناسب', z:'2', note:'نشت احتمالی نادر و کوتاه‌مدت.'},
+  // SAFE
+  {n:'اتاق کنترل با فشار مثبت (Pressurized)', z:'s', note:'فشار مثبت از ورود گاز جلوگیری می‌کند.'},
+  {n:'ساختمان اداری دور از منابع گاز', z:'s', note:'بدون منبع نشت گاز قابل اشتعال.'},
+  {n:'محوطهٔ باز بدون منبع نشت گاز', z:'s', note:'فاقد منبع رهایش گاز.'},
+  {n:'انبار قطعات/کالای غیرگازی', z:'s', note:'هیچ منبع گاز قابل اشتعالی وجود ندارد.'},
+  {n:'پارکینگ روباز دور از تأسیسات گازی', z:'s', note:'خارج از محدودهٔ طبقه‌بندی‌شده.'},
+  {n:'کارگاه تعمیرات مکانیکی بدون منبع گاز', z:'s', note:'فاقد منبع رهایش گاز.'},
+  {n:'اتاق تابلو برق با فشار مثبت و دور از نشت', z:'s', note:'محافظت‌شده و خارج از ناحیهٔ خطر.'}
+];
+function initHazzone(){
+  var s=document.getElementById('hzSel'); if(!s) return;
+  var opts=HZ_ITEMS.slice().sort(function(a,b){return a.n.localeCompare(b.n,'fa');});
+  s.innerHTML='<option value="">— انتخاب مکان —</option>'+opts.map(function(a){var i=HZ_ITEMS.indexOf(a);return '<option value="'+i+'">'+a.n+'</option>';}).join('');
+  renderHazRef();
+}
+function renderHazzone(){
+  var v=document.getElementById('hzSel').value, box=document.getElementById('hzResult');
+  if(v===''){ box.innerHTML=''; return; }
+  var a=HZ_ITEMS[+v]; if(!a){ box.innerHTML=''; return; }
+  var z=ZONE_META[a.z];
+  box.innerHTML='<div class="result-box '+z.cls+'"><span class="icon">'+z.icon+'</span><div class="verdict">'+z.name+'</div>'+
+    '<div class="sub">'+a.n+' — '+a.note+'<br><b>الزام تجهیزات:</b> '+z.eq+'</div></div>';
+}
+function renderHazRef(){
+  var box=document.getElementById('hzRef'); if(!box) return;
+  function list(z,title){ var items=HZ_ITEMS.filter(function(a){return a.z===z;}).map(function(a){return '<li>'+a.n+'</li>';}).join('');
+    return '<div class="req-list"><h3>'+ZONE_META[z].icon+' '+title+'</h3><ul class="ri-ctrl">'+items+'</ul></div>'; }
+  box.innerHTML='<div class="hc-cols">'+list('0','مصادیق ZONE 0')+list('1','مصادیق ZONE 1')+list('2','مصادیق ZONE 2')+list('s','مصادیق بی‌خطر')+'</div>';
+}
+
 function evalDig(){
   const line = document.getElementById('digLine').value;
   const op = segVal('digOp');
@@ -2417,43 +3264,176 @@ function resetDig(){
 }
 
 /* ================= راهنمای پرمیت کار ================= */
-const PTW_DATA = {
-  weld: { permits:['پرمیت کار گرم'], icon:'🔥',
-    reqs:['گازسنجی LEL پیش از شروع و به‌صورت دوره‌ای (کار گرم: حداکثر ۵٪ LEL)','دور‌کردن یا پوشاندن مواد قابل اشتعال در شعاع خطر جرقه','کپسول اطفای حریق آماده در محل + نفر آتش‌پای (Fire Watch)','بررسی مسیر انتشار جرقه (کانال‌ها، منهول‌ها، طبقات پایین)'] },
-  hottap: { permits:['پرمیت کار گرم','مصوبه ویژه Hot Tap'], icon:'⚠️',
-    reqs:['ارزیابی ریسک اختصاصی و تأیید سطوح بالای سازمان','کنترل فشار و دبی خط در محدوده مجاز عملیات','تیم آتش‌نشانی و طرح واکنش اضطراری در محل','اجرا فقط توسط تیم دارای صلاحیت Hot Tap'] },
-  cold: { permits:['پرمیت کار سرد'], icon:'🔧',
-    reqs:['گازسنجی (کار سرد: کمتر از ۱۰٪ LEL)','ایزولاسیون و تخلیه فشار قطعه پیش از باز کردن اتصالات','استفاده از ابزار ضدجرقه (برنجی/برنزی) در محیط گازدار','آماده‌باش برای نشت احتمالی هنگام باز کردن فلنج'] },
-  paint: { permits:['پرمیت کار سرد'], icon:'🎨',
-    reqs:['تهویه مناسب در صورت کار با حلال در فضای محصور','ماسک و حفاظت تنفسی متناسب با MSDS رنگ/حلال','ممنوعیت هم‌زمانی با کار گرم در مجاورت (بخار حلال قابل اشتعال است)'] },
-  confined: { permits:['پرمیت ورود به فضای بسته','+ پرمیت گرم/سرد متناسب با کار'], icon:'🕳️',
-    reqs:['گازسنجی چهارگانه (LEL، O₂، H₂S، CO) قبل از ورود — طبق صفحه «ورود به منهول» همین برنامه','ایزولاسیون کامل ورودی‌های گاز و انرژی (LOTO)','تهویه طبیعی/مکانیکی پیش از ورود و در حین کار','نگهبان ثابت بیرون فضا + تجهیزات نجات (هارنس، طناب، سه‌پایه)','وسیله ارتباطی دائم بین داخل و خارج'] },
-  excav: { permits:['پرمیت حفاری'], icon:'⛏️',
-    reqs:['استعلام و مارک‌کردن کلیه تأسیسات زیرزمینی (گاز، برق، آب، مخابرات)','رعایت فاصله ایمن ماشین‌آلات — طبق صفحه «فاصله ایمن حفاری»','شیب‌بندی یا سپرکوبی ترانشه عمیق‌تر از ۱.۲ متر','حفاظ و علائم هشدار دور محدوده حفاری'] },
-  elec: { permits:['پرمیت کار برقی'], icon:'⚡',
-    reqs:['قطع برق و قفل و برچسب ایمنی (LOTO) توسط فرد مجاز','تست بی‌برق بودن با فازمتر/ولت‌متر پیش از شروع','استفاده از تجهیزات حفاظت فردی عایق (دستکش، کفش، فرش عایق)','در تأسیسات گازی: تجهیزات برقی باید ضدانفجار (Ex) باشد'] },
-  height: { permits:['پرمیت کار در ارتفاع'], icon:'🪜',
-    reqs:['هارنس کامل بدن با دو لنیارد و اتصال به نقطه مطمئن','بازرسی داربست و صدور تگ مجاز (داربست‌بند دارای صلاحیت)','محصورسازی پای کار و جلوگیری از سقوط ابزار','عدم کار در ارتفاع هنگام باد شدید یا بارندگی'] },
-  radio: { permits:['پرمیت پرتونگاری'], icon:'☢️',
-    reqs:['اجرا فقط توسط شرکت دارای مجوز از سازمان انرژی اتمی','تعیین و طناب‌کشی منطقه ممنوعه بر اساس نرخ دز','هماهنگی زمانی — ترجیحاً خارج از ساعت حضور سایر افراد','علائم هشدار پرتو و کنترل تردد در محدوده'] },
-  ptest: { permits:['پرمیت کار سرد','دستورالعمل تست فشار'], icon:'🧪',
-    reqs:['تخلیه افراد غیرمرتبط از محدوده خط تحت تست','استفاده از فشارسنج کالیبره با رنج مناسب','افزایش فشار تدریجی و مرحله‌ای طبق دستورالعمل','ممنوعیت سفت‌کردن اتصالات زیر فشار'] }
+/* ================= نظام پروانه‌های کار (PTW) ================= */
+/* ===== انتخاب پروانه بر اساس فعالیت (HSE-IN-S-223/222) =====
+   پروانه‌های اصلی: کار گرم و کار سرد. پروانه‌های مکمل هیچ‌گاه به‌تنهایی صادر
+   نمی‌شوند و همراهِ یک پروانه‌ی اصلی (گرم/سرد) متناسب با ماهیت کار صادر می‌گردند.
+   kind: 'hot' یا 'cold' = پروانه اصلی مشخص؛ 'supp' = پروانه مکمل که به انتخاب
+   ماهیت کار (گرم/سرد) نیاز دارد. */
+var PTW_MAIN_NAME = { hot:'پروانه کار گرم', cold:'پروانه کار سرد' };
+var PTW_MAIN_REQ = {
+  hot:['گازسنجی LEL پیش از شروع و کنترل مستمر (کار گرم: LEL تا صفر / حداکثر ۵٪).','دورکردن یا پوشاندن مواد و بخارات قابل اشتعال در شعاع پاشش جرقه.','استقرار خاموش‌کننده مناسب و مأمور آتش‌نشان (Fire Watch) در محل.','ادامه حضور آتش‌پا تا حداقل ۳۰ دقیقه پس از پایان کار.'],
+  cold:['گازسنجی محیط (کار سرد: کمتر از ۱۰٪ LEL).','ایزولاسیون و تخلیه فشار قطعه پیش از بازکردن اتصالات.','استفاده از ابزار ضدجرقه (برنجی/برنزی) در محیط گازدار.','آماده‌باش برای نشت احتمالی هنگام بازکردن اتصالات.']
 };
-
-function evalPtw(){
-  const v = document.getElementById('ptwJob').value;
-  const box = document.getElementById('ptwResult');
-  if(!v){ box.innerHTML=''; return; }
-  const d = PTW_DATA[v];
-  box.innerHTML =
-    '<div class="result-box r-green" style="background:linear-gradient(135deg,#1F4E79,#2E75B6)">'+
-    '<span class="icon">'+d.icon+'</span>'+
-    '<div class="verdict">پرمیت مورد نیاز</div>'+
-    '<div style="margin-top:10px">'+d.permits.map(p=>'<span class="permit-badge">'+p+'</span>').join('')+'</div></div>'+
+var PTW_DATA = {
+  weld:{ kind:'hot', icon:'🔥', extra:[],
+    reqs:['بررسی مسیر انتشار جرقه به منهول‌ها، کانال‌ها و طبقات پایین‌تر.','استفاده از سپر/پرده نسوز و عینک و ماسک جوشکاری.'] },
+  hottap:{ kind:'hot', icon:'⚠️', extra:['مصوبه ویژه Hot Tap'],
+    reqs:['ارزیابی ریسک اختصاصی و تأیید سطوح بالای سازمان.','کنترل فشار و دبی خط در محدوده مجاز عملیات.','اجرا فقط توسط تیم دارای صلاحیت Hot Tap و استقرار تیم آتش‌نشانی.'] },
+  pefuse:{ kind:'hot', icon:'🔥', extra:[],
+    reqs:['کار با المنت/صفحه داغ یا جریان الکتریکی، منبع حرارت محسوب می‌شود.','رعایت دما و زمان ذوب طبق دستورالعمل سازنده اتصال و کنترل نبود گاز.'] },
+  sandblast:{ kind:'hot', icon:'🔥', extra:[],
+    reqs:['احتمال ایجاد جرقه و بار الکتریسیته ساکن؛ نیازمند اتصال به زمین.','حفاظت تنفسی و چشمی مناسب اپراتور و کنترل گرد و غبار.'] },
+  cold:{ kind:'cold', icon:'🔧', extra:[],
+    reqs:['تعمیر مکانیکی فلنج/شیر/اتصالات بدون منبع جرقه و حرارت.','اطمینان از تخلیه فشار و ایزوله‌بودن قطعه پیش از کار.'] },
+  paint:{ kind:'cold', icon:'🎨', extra:[],
+    reqs:['تهویه مناسب هنگام کار با حلال در فضای بسته.','ماسک و حفاظت تنفسی متناسب با SDS رنگ/حلال.','ممنوعیت هم‌زمانی با کار گرم در مجاورت (بخار حلال قابل اشتعال است).'] },
+  ptest:{ kind:'cold', icon:'🧪', extra:['دستورالعمل تست فشار'],
+    reqs:['تخلیه افراد غیرمرتبط از محدوده خط تحت تست و افزایش فشار تدریجی.','استفاده از فشارسنج کالیبره و ممنوعیت سفت‌کردن اتصالات زیر فشار.'] },
+  confined:{ kind:'supp', icon:'🕳️', suppName:'پروانه ورود به فضای بسته',
+    reqs:['گازسنجی چهارگانه (O₂، LEL، H₂S، CO) در سه تراز پیش از ورود.','ایزولاسیون کامل ورودی‌های گاز و انرژی (LOTO) و تهویه پیش و حین کار.','نگهبان ثابت بیرون فضا + تجهیزات نجات (هارنس، طناب، سه‌پایه) و ارتباط دائم.'] },
+  excav:{ kind:'supp', icon:'🪏', suppName:'پروانه حفاری',
+    reqs:['استعلام و مارک‌کردن کلیه تأسیسات زیرزمینی (گاز، برق، آب، مخابرات).','تعیین موقعیت خط با حفاری دستی آزمایشی و رعایت فاصله ایمن ماشین‌آلات.','شیب‌بندی یا سپرکوبی ترانشه عمیق‌تر از ۱٫۲ متر و علائم هشدار.'] },
+  height:{ kind:'supp', icon:'🪜', suppName:'پروانه کار در ارتفاع',
+    reqs:['هارنس کامل بدن با دو لنیارد و اتصال به نقطه مطمئن.','بازرسی داربست و صدور تگ مجاز توسط داربست‌بند دارای صلاحیت.','محصورسازی پای کار و توقف کار در باد شدید/بارندگی.'] },
+  elec:{ kind:'supp', icon:'⚡', suppName:'پروانه جداسازی الکتریکی',
+    reqs:['قطع برق و قفل و برچسب ایمنی (LOTO) توسط فرد مجاز و تست بی‌برقی.','تجهیزات حفاظت فردی عایق و در فضای گازدار تجهیزات ضدانفجار (Ex).'] },
+  radio:{ kind:'supp', icon:'☢️', suppName:'پروانه پرتونگاری',
+    reqs:['اجرا فقط توسط شرکت دارای مجوز سازمان انرژی اتمی و دزیمتری فردی.','تعیین و طناب‌کشی منطقه ممنوعه بر اساس نرخ دز و کنترل تردد.','پروانه پرتونگاری قابل تمدید نیست و باید مجدداً صادر شود.'] },
+  diving:{ kind:'supp', icon:'🤿', suppName:'پروانه غواصی',
+    reqs:['اجرا فقط توسط غواص دارای صلاحیت و گواهی پزشکی معتبر.','بازرسی تجهیزات تنفسی و تأمین هوای پشتیبان و تیم نجات سطحی.','ارتباط دائم با غواص و کنترل زمان و عمق غوص.'] },
+  machinery:{ kind:'supp', icon:'🚜', suppName:'پروانه ورود ماشین‌آلات',
+    reqs:['کنترل صلاحیت راننده و گواهی فنی و سلامت ماشین‌آلات.','محصورسازی شعاع کاری/چرخش و دورکردن افراد و استقرار سیگنال‌من.','رعایت فاصله ایمن از خطوط و تأسیسات و توقف در باد شدید.'] }
+};
+var ptwJobNature = null;
+function ptwSetNature(n,btn){
+  ptwJobNature = n;
+  document.getElementById('ptwNature').querySelectorAll('button').forEach(function(b){b.classList.remove('on');});
+  btn.classList.add('on'); evalPtw(true);
+}
+function evalPtw(keepNature){
+  var v=document.getElementById('ptwJob').value, box=document.getElementById('ptwJobResult');
+  var natWrap=document.getElementById('ptwNatureWrap');
+  if(!v||!PTW_DATA[v]){ box.innerHTML=''; natWrap.style.display='none'; ptwJobNature=null; return; }
+  var d=PTW_DATA[v];
+  if(d.kind!=='supp'){
+    // پروانه اصلی مشخص
+    natWrap.style.display='none'; ptwJobNature=null;
+    var permits=[PTW_MAIN_NAME[d.kind]].concat(d.extra||[]);
+    var cls=d.kind==='hot'?'r-red':'r-green';
+    var reqs=(d.reqs||[]).concat(PTW_MAIN_REQ[d.kind]);
+    box.innerHTML = ptwResultBox(d.icon,cls,permits,reqs,null);
+    return;
+  }
+  // پروانه مکمل: نیازمند انتخاب ماهیت کار اصلی
+  natWrap.style.display='block';
+  if(!keepNature){ ptwJobNature=null; document.getElementById('ptwNature').querySelectorAll('button').forEach(function(b){b.classList.remove('on');}); }
+  if(!ptwJobNature){
+    box.innerHTML='<div class="result-box r-orange"><span class="icon">'+d.icon+'</span><div class="verdict">'+d.suppName+'</div>'+
+      '<div class="sub">این یک پروانه‌ی مکمل است و به‌تنهایی صادر نمی‌شود. ماهیت کارِ اصلی را در بالا انتخاب کنید (گرم یا سرد).</div></div>';
+    return;
+  }
+  var permits=[d.suppName, PTW_MAIN_NAME[ptwJobNature]];
+  var reqs=(d.reqs||[]).concat(PTW_MAIN_REQ[ptwJobNature]);
+  var note='طبق دستورالعمل، «'+d.suppName+'» همراه با «'+PTW_MAIN_NAME[ptwJobNature]+'» صادر و به آن ضمیمه می‌شود.';
+  box.innerHTML = ptwResultBox(d.icon,'r-blue',permits,reqs,note);
+}
+function ptwResultBox(icon,cls,permits,reqs,note){
+  return '<div class="result-box '+cls+'"><span class="icon">'+icon+'</span>'+
+    '<div class="verdict">پروانه‌های موردنیاز</div>'+
+    '<div style="margin-top:10px">'+permits.map(function(p,i){return '<span class="permit-badge'+(i===0&&cls==='r-blue'?' supp':'')+'">'+p+'</span>';}).join('')+'</div></div>'+
+    (note?'<div class="hyd-note">⚠️ '+note+'</div>':'')+
     '<div class="req-list"><h3>پیش‌نیازها و الزامات اصلی</h3>'+
-    d.reqs.map(t=>'<div class="req-item"><span class="ri">✅</span><span>'+t+'</span></div>').join('')+
-    '</div>';
-  box.scrollIntoView({behavior:'smooth', block:'start'});
+    reqs.map(function(t){return '<div class="req-item"><span class="ri">✅</span><span>'+t+'</span></div>';}).join('')+'</div>';
+}
+
+var ptwState = { main:null, supp:{} };
+var PTW_MAIN = {
+  hot:{ name:'🔥 پروانه کار گرم', cls:'r-red',
+    notes:['گازسنجی پیش از شروع و کنترل مستمر؛ LEL باید صفر باشد.','تخلیه و پاکسازی (Purge) خط/تجهیز و ایمن‌سازی کامل پیش از کار گرم.','حذف یا پوشاندن مواد و بخارات قابل اشتعال در محدوده‌ی کار.','استقرار مأمور آتش‌نشان (Fire Watch) و خاموش‌کننده‌ی مناسب در محل.','بررسی مسیر انتشار جرقه (کانال‌ها، منهول، طبقات پایین).','در صورت لزوم، پروانه‌ی دو امضایی و هماهنگی با بهره‌برداری.'] },
+  cold:{ name:'❄️ پروانه کار سرد', cls:'r-green',
+    notes:['اطمینان از نبود منبع جرقه/حرارت و استفاده از ابزار ضدجرقه در محیط گازدار.','ایزولاسیون و تخلیه‌ی فشار تجهیز پیش از باز کردن اتصالات.','گازسنجی محیط و آماده‌باش برای نشت احتمالی هنگام باز کردن فلنج.','در صورت تبدیل احتمالی به کار گرم، صدور پروانه‌ی کار گرم الزامی است.'] }
+};
+var PTW_SUPP = {
+  confined:{ name:'🕳️ ورود به فضای بسته', notes:[
+    'ورود ممنوع است مگر با صدور پروانه‌ی ورود به فضای بسته (۴-۳-۱).',
+    'پیش از ورود: تهویه‌ی طبیعی/اجباری و سپس گازسنجی الزامی است (۴-۳-۴ و ۴-۳-۵).',
+    'گازسنجی مستمر O₂ / LEL / H₂S / CO با دستگاهِ روشن در تمام مدت؛ فقط توسط آزمایش‌کننده‌ی گاز صلاحیت‌دار (۴-۳-۱۹ و ۴-۳-۲۰).',
+    'اطمینان از صحت کارکرد و اعتبار کالیبراسیون گازسنج پیش از ورود (۴-۳-۲۴).',
+    'استقرار نگهبان ورودی (Stand-by) به‌صورت تمام‌وقت با وسیله‌ی ارتباطی و در تماس با مراکز امداد و آتش‌نشانی (۴-۳-۸ و ۴-۳-۹).',
+    'استفاده از سه‌پایه و تجهیزات نجات؛ و دستگاه تنفسی برای کارهای داخل فضا مانند جوشکاری/برشکاری/تعمیرات (۴-۳-۷ و ۴-۳-۱۳).',
+    'تخلیه‌ی آب و محتویات اضافی و اطمینان از نبود حیوانات موذی پیش از ورود (۴-۳-۱۰ و ۴-۳-۶).',
+    'برای کار گرم داخل فضای بسته، تخلیه‌ی گاز از مسیرِ قبل و بعدِ شیر و ایمن‌سازی کامل (۴-۳-۱۲).',
+    'روشنایی فقط با برق ۲۴ ولت یا کمتر؛ استفاده از برق ۲۲۰ ولت داخل فضای بسته ممنوع است (۴-۳-۱۶ و ۴-۳-۱۷).',
+    'نصب علائم هشدار و نرده‌ی حریم دور دهانه پیش از باز کردن دریچه (۴-۳-۲۲).',
+    'حتی‌الامکان انجام کار در طول روز (۴-۳-۱۵).'] },
+  excav:{ name:'🪏 حفاری و خاکبرداری', notes:[
+    'حفاری بدون صدور پروانه ممنوع است (۶-۴-۸).',
+    'استعلام و اخذ مجوز برای جلوگیری از برخورد با تأسیسات زیرزمینی مجاور (گاز، برق، آب، مخابرات) (۶-۴-۶).',
+    'در عمق بیش از ۱۲۰ سانتی‌متر: شمع‌بندی/الوارگذاری/شیب‌دار یا پله‌ای کردن دیواره جهت جلوگیری از ریزش (۶-۴-۱۴).',
+    'بازرسی لوازم تقویت دیواره توسط مسئول اجرا پیش از استفاده (۶-۴-۷).',
+    'تدابیر ضدریزش هنگام استقرار ماشین‌آلات کنار ترانشه و ممنوعیت حضور در شعاع کاری ماشین (۶-۴-۱۵ و ۶-۴-۱۶).',
+    'علائم هشدار، نوار خطر و چراغ چشمک‌زن (به‌ویژه شب) و طرح کنترل ترافیک در معابر (۶-۴-۱۲ و ۶-۴-۹).',
+    'اگر شرایط «فضای بسته» ایجاد شود، پروانه‌ی مکمل ورود به فضای بسته نیز باید صادر گردد (۶-۴-۱۱).'] },
+  height:{ name:'🪜 کار در ارتفاع', notes:[
+    'کار در ارتفاعِ بیش از ۱٫۲ متر نیازمند مجوز مسئول محوطه و تأیید دستگاه نظارت است (۷-۸-۱).',
+    'استفاده از هارنس کامل بدن، کلاه ایمنی مخصوص ارتفاع و کفش مناسب (۷-۸-۴).',
+    'نصب پاخور (حداقل ضخامت ۲٫۵ و ارتفاع ۱۵ سانتی‌متر)، نرده‌ی حفاظتی و راه‌پله‌ی ایمن در جایگاه‌ها (۷-۷-۱ و ۷-۸-۶).',
+    'استفاده از تور/شبکه‌ی ایمنی در محل‌های با احتمال سقوط زیاد (۷-۷-۲).',
+    'ممنوعیت حمل اشیای اضافی همراه فرد؛ انتقال ابزار فقط به روش ایمن (۷-۷-۳).',
+    'ممنوعیت کار هم‌زمان زیر محل کار در ارتفاع و مشخص‌کردن منطقه‌ی ممنوعه‌ی عبور (۷-۸-۳ و ۷-۸-۲).',
+    'بازرسی تجهیزات پیش از کار و بازدید دوره‌ای (حداکثر هفتگی) با گزارش مکتوب (۷-۸-۵).',
+    'استفاده از ماشین‌آلات و بسکتِ دارای گواهی بازرسی فنی معتبر (۷-۸-۷).',
+    'توقف کار در باد بیش از ۳۰ کیلومتر بر ساعت، هنگام صاعقه، و روی سطوح لغزنده‌ی بارانی (۷-۹-۱، ۷-۹-۲ و ۷-۹-۳).'] },
+  elec:{ name:'⚡ جداسازی الکتریکی', notes:[
+    'قطع، جداسازی و قفل‌گذاری/برچسب‌گذاری منبع برق (LOTO) پیش از شروع کار.',
+    'اطمینان از بی‌برق بودن با تست (فازمتر/ولت‌متر) و تخلیه‌ی بار خازنی.',
+    'اتصال زمین تجهیز و استفاده از ابزار و تجهیزات حفاظت فردی عایق.',
+    'در فضای گازدار، تجهیزات برقی باید ضدانفجار (Ex) باشد.',
+    'جداسازی و وصل مجدد فقط توسط افراد صلاحیت‌دار انجام شود.'] },
+  radio:{ name:'☢️ پرتونگاری صنعتی', notes:[
+    'هر پرتونگار باید مجهز به سه دزیمتر فردی باشد: قرائت غیرمستقیم (TLD)، قرائت مستقیم و هشداردهنده؛ پرتونگاری بدون مونیتورینگ فردی ممنوع است (۸-۲-۱۲).',
+    'تعیین ناحیه‌ی ممنوعه و کنترل‌شده بر اساس فعالیت (کوری) چشمه طبق جدول دستورالعمل (۸-۳).',
+    'تخلیه‌ی کامل افراد از ناحیه‌ی کنترل‌شده پیش از پرتونگاری و جلوگیری از ورود افراد متفرقه در تمام مدت (۸-۴-۱).',
+    'اطلاع‌رسانی محل و ساعت پرتونگاری پیش از شروع و کنترل ورود/خروج تجهیزات (۸-۴-۱).',
+    'استفاده از کولیماتور برای محدودکردن تابشِ بی‌هدف (۸-۲-۱۳).',
+    'حصارکشی، تابلو و علائم هشدار پرتو پیرامون ناحیه.',
+    'پروانه‌ی پرتونگاری قابل تمدید نیست و باید مجدداً صادر شود.'] },
+  diving:{ name:'🤿 غواصی', notes:[
+    'اجرا فقط توسط غواص دارای صلاحیت و گواهی سلامت پزشکی معتبر.',
+    'بازرسی کامل تجهیزات تنفسی و تأمین منبع هوای پشتیبان پیش از غوص.',
+    'استقرار تیم نجات و پشتیبان سطحی و وسیله‌ی ارتباطی دائم با غواص.',
+    'کنترل زمان، عمق و شرایط جریان آب و توقف در شرایط نامساعد.'] },
+  machinery:{ name:'🚜 ورود ماشین‌آلات', notes:[
+    'کنترل صلاحیت راننده/اپراتور و گواهی فنی و سلامت ماشین‌آلات.',
+    'محصورسازی شعاع کاری/چرخش و دورکردن افراد از محدوده‌ی خطر.',
+    'استقرار سیگنال‌من (راهنما) و رعایت فاصله‌ی ایمن از خطوط و تأسیسات.',
+    'توقف عملیات در باد شدید و دید ناکافی و رعایت طرح کنترل ترافیک.'] }
+};
+var PTW_SOIL = {
+  rock:{ name:'خاک سخت و سنگی (پایدار)', notes:['نسبتاً پایدار؛ با این حال بازرسی روزانه‌ی دیواره الزامی است.','در عمق بیش از ۱۲۰ سانتی‌متر، تدابیر ضدریزش (شیب‌دار/پله‌ای) رعایت شود.','احتمال ریزش سنگ‌های موضعی و لغزش بلوک‌ها وجود دارد.'] },
+  clay:{ name:'خاک چسبنده/رسی (نیمه‌پایدار)', notes:['شیب‌دار یا پله‌ای کردن دیواره متناسب با عمق.','از اشباع‌شدن خاک و ترک‌خوردگی لبه‌ی ترانشه جلوگیری شود.','انباشت بار و خاک نزدیک لبه ممنوع است.'] },
+  mixed:{ name:'خاک متوسط/مخلوط', notes:['ترکیب شیب‌دار کردن و شمع‌بندی/الوارگذاری در عمق زیاد.','کنترل رطوبت و کاهش بارِ لبه‌ی ترانشه.','بازرسی مکرر دیواره به‌ویژه پس از بارندگی.'] },
+  loose:{ name:'خاک سست/دانه‌ای/ریزشی (شن و ماسه)', notes:['پرخطرترین نوع خاک؛ شمع‌بندی/سپرکوبی الزامی است.','شیب ملایم‌تر و عرض بیشترِ ترانشه در نظر گرفته شود.','انباشت خاک و تردد ماشین‌آلات نزدیک لبه ممنوع؛ نظارت دائم بر دیواره.','ریزش ناگهانی محتمل است — حضور غیرضروری در ترانشه ممنوع.'] }
+};
+function ptwSetMain(m,btn){ ptwState.main=m; document.getElementById('ptwMain').querySelectorAll('button').forEach(function(b){b.classList.remove('on');}); btn.classList.add('on'); renderPTW(); }
+function ptwToggleSupp(s,btn){ ptwState.supp[s]=!ptwState.supp[s]; btn.classList.toggle('on', ptwState.supp[s]); document.getElementById('ptwSoilWrap').style.display = ptwState.supp['excav']?'block':'none'; renderPTW(); }
+function ptwNoteCard(title,notes){ return '<div class="sec-block"><h3>'+title+'</h3>'+notes.map(function(n,i){return '<div class="step-item"><span class="step-num">'+faDigits(i+1)+'</span><span>'+n+'</span></div>';}).join('')+'</div>'; }
+function renderPTW(){
+  var box=document.getElementById('ptwResult');
+  var suppSel=Object.keys(ptwState.supp).filter(function(k){return ptwState.supp[k];});
+  if(!ptwState.main && !suppSel.length){ box.innerHTML=''; return; }
+  var badges='';
+  if(ptwState.main) badges+='<span class="permit-badge">'+PTW_MAIN[ptwState.main].name+'</span>';
+  suppSel.forEach(function(s){ badges+='<span class="permit-badge supp">'+PTW_SUPP[s].name+'</span>'; });
+  var html='<div class="result-box '+(ptwState.main?PTW_MAIN[ptwState.main].cls:'r-orange')+'"><span class="icon">📋</span><div class="verdict">پروانه‌ی مورد نیاز</div><div style="margin-top:10px">'+badges+'</div></div>';
+  if(suppSel.length && !ptwState.main){ html+='<div class="hyd-note">⚠️ پروانه‌ی مکمل به‌تنهایی صادر نمی‌شود؛ ابتدا پروانه‌ی اصلی (کار گرم یا کار سرد) را انتخاب کنید.</div>'; }
+  if(ptwState.main) html+=ptwNoteCard(PTW_MAIN[ptwState.main].name+' — نکات ایمنی', PTW_MAIN[ptwState.main].notes);
+  suppSel.forEach(function(s){
+    html+=ptwNoteCard(PTW_SUPP[s].name+' (مکمل) — نکات ایمنی', PTW_SUPP[s].notes);
+    if(s==='excav'){ var soil=document.getElementById('ptwSoil').value; if(soil && PTW_SOIL[soil]) html+=ptwNoteCard('نکات حفاری بر اساس «'+PTW_SOIL[soil].name+'»', PTW_SOIL[soil].notes); }
+  });
+  box.innerHTML=html;
 }
 
 /* ================= محاسبه پرج ================= */
@@ -3284,56 +4264,206 @@ function faDigits(n){ return String(n).replace(/[0-9]/g, function(d){ return '۰
 function qShuffle(a){ for(var i=a.length-1;i>0;i--){ var j=Math.floor(Math.random()*(i+1)); var t=a[i]; a[i]=a[j]; a[j]=t; } return a; }
 
 var QUIZ_BANK = [
-  {q:'حداقل درصد اکسیژن مجاز برای ورود به فضای محصور بدون دستگاه تنفسی چقدر است؟', opts:['۱۹٫۵٪','۱۶٪','۲۵٪','۱۰٪'], a:0, cat:'فضای محصور'},
-  {q:'حداکثر درصد اکسیژن مجاز (مرز خطر اغنای اکسیژن) چقدر است؟', opts:['۲۳٫۵٪','۳۰٪','۲۱٪','۱۹٫۵٪'], a:0, cat:'فضای محصور'},
-  {q:'LEL در سنجش گاز به چه معناست؟', opts:['حد پایین قابلیت اشتعال','حد بالای قابلیت اشتعال','حد مجاز سمیت','حد اکسیژن'], a:0, cat:'گازها'},
-  {q:'UEL به چه معناست؟', opts:['حد بالای قابلیت اشتعال','حد پایین قابلیت اشتعال','حد بویایی','حد انفجار اکسیژن'], a:0, cat:'گازها'},
-  {q:'حداکثر LEL مجاز برای ورود به فضای محصور چقدر است؟', opts:['کمتر از ۱۰٪','۵۰٪','۲۵٪','۱۰۰٪'], a:0, cat:'فضای محصور'},
-  {q:'گاز سولفید هیدروژن (H₂S) چه بویی دارد؟', opts:['تخم‌مرغ گندیده','بی‌بو','شیرین','ترش'], a:0, cat:'گازها'},
-  {q:'حد مجاز مواجهه شغلی با H₂S (TLV-TWA) تقریباً چقدر است؟', opts:['۱۰ ppm','۱۰۰ ppm','۵۰۰ ppm','۱ ppm'], a:0, cat:'گازها'},
-  {q:'خطرناک‌ترین ویژگی گاز مونوکسیدکربن (CO) چیست؟', opts:['بی‌رنگ و بی‌بو بودن','بوی تند','رنگ زرد','حل‌شدن در آب'], a:0, cat:'گازها'},
-  {q:'حد مجاز مواجهه با CO تقریباً چقدر است؟', opts:['۳۵ ppm','۳۵۰ ppm','۵ ppm','۱۰۰۰ ppm'], a:0, cat:'گازها'},
-  {q:'گاز طبیعی (متان) نسبت به هوا چگونه رفتار می‌کند؟', opts:['سبک‌تر است و به بالا می‌رود','سنگین‌تر است و ته می‌نشیند','هم‌وزن هواست','در آب حل می‌شود'], a:0, cat:'گازها'},
-  {q:'حد پایین انفجار (LEL) متان تقریباً چند درصد حجمی است؟', opts:['۵٪','۱۵٪','۱٪','۵۰٪'], a:0, cat:'گازها'},
-  {q:'حریق مواد جامد مانند چوب و کاغذ در کدام کلاس قرار می‌گیرد؟', opts:['کلاس A','کلاس B','کلاس C','کلاس D'], a:0, cat:'آتش‌نشانی'},
-  {q:'حریق مایعات قابل اشتعال در کدام کلاس است؟', opts:['کلاس B','کلاس A','کلاس C','کلاس K'], a:0, cat:'آتش‌نشانی'},
-  {q:'حریق گازها در کدام کلاس قرار می‌گیرد؟', opts:['کلاس C','کلاس A','کلاس B','کلاس D'], a:0, cat:'آتش‌نشانی'},
-  {q:'حریق فلزات قابل اشتعال در کدام کلاس است؟', opts:['کلاس D','کلاس C','کلاس B','کلاس A'], a:0, cat:'آتش‌نشانی'},
-  {q:'در حریق گاز، اولین و مهم‌ترین اقدام چیست؟', opts:['قطع جریان گاز','خاموش‌کردن فوری شعله','پاشیدن آب','تخلیه کامل'], a:0, cat:'آتش‌نشانی'},
-  {q:'مخفف PASS در کار با خاموش‌کننده دستی یعنی چه؟', opts:['کشیدن ضامن، نشانه‌گیری به پای شعله، فشردن اهرم، جاروب‌کردن','فشار، ایمنی، سرعت، استاندارد','پایش، ارزیابی، اقدام، ثبت','هیچ‌کدام'], a:0, cat:'آتش‌نشانی'},
-  {q:'برای حریق تجهیزات برقی زیر بار از کدام خاموش‌کننده استفاده می‌شود؟', opts:['CO₂ یا پودر','آب','فوم','کلاس D'], a:0, cat:'آتش‌نشانی'},
-  {q:'کدام مورد جزو «کار گرم» محسوب می‌شود؟', opts:['جوشکاری و برشکاری','نقاشی با قلم‌مو','حمل بار','بازرسی چشمی'], a:0, cat:'کار گرم'},
-  {q:'پیش از کار گرم روی خط گازدار چه باید کرد؟', opts:['تخلیه (Purge) و گازسنجی تا صفر','فقط بازکردن شیر','افزایش فشار خط','هیچ اقدام خاصی لازم نیست'], a:0, cat:'کار گرم'},
-  {q:'پرمیت کار (Work Permit) چیست؟', opts:['مجوز کتبی برای انجام کار خطرناک','قرارداد استخدام','بیمه‌نامه','گواهی آموزش'], a:0, cat:'پرمیت'},
-  {q:'وظیفه نگهبان فضای محصور (Hole Watch) چیست؟', opts:['پایش دائم و ارتباط با فرد داخل','انجام کار در داخل','صدور پرمیت','فقط گازسنجی نهایی'], a:0, cat:'فضای محصور'},
-  {q:'حداقل فاصله ایمن حفاری مکانیکی از خط گاز معمولاً چگونه تعیین می‌شود؟', opts:['بر اساس دستورالعمل و نوع خط','حدس اپراتور','عمق دلخواه','رنگ خاک'], a:0, cat:'حفاری'},
-  {q:'پیش از حفاری مکانیکی نزدیک خطوط گاز چه اقدامی لازم است؟', opts:['تعیین موقعیت خط با حفاری دستی آزمایشی','شروع فوری حفاری','افزایش سرعت','هیچ اقدامی'], a:0, cat:'حفاری'},
-  {q:'ریزش دیواره ترانشه با کدام روش کنترل می‌شود؟', opts:['شیب‌دارکردن یا شمع‌کوبی دیواره','انباشت خاک روی لبه','حفر عمیق‌تر','هیچ روشی'], a:0, cat:'حفاری'},
-  {q:'شماره تلفن امداد گاز چند است؟', opts:['۱۹۴','۱۲۵','۱۱۵','۱۱۰'], a:0, cat:'اضطراری'},
-  {q:'شماره تلفن آتش‌نشانی چند است؟', opts:['۱۲۵','۱۹۴','۱۱۵','۱۱۰'], a:0, cat:'اضطراری'},
-  {q:'شماره تلفن اورژانس چند است؟', opts:['۱۱۵','۱۲۵','۱۹۴','۱۱۲'], a:0, cat:'اضطراری'},
-  {q:'هنگام استشمام بوی گاز در فضای بسته چه کاری را نباید انجام داد؟', opts:['زدن کلید برق یا ایجاد جرقه','بازکردن در و پنجره','خارج‌کردن افراد','قطع جریان گاز'], a:0, cat:'اضطراری'},
-  {q:'اولین اقدام در مواجهه با فرد دچار برق‌گرفتگی چیست؟', opts:['قطع جریان برق','لمس فوری فرد','پاشیدن آب','هیچ اقدامی'], a:0, cat:'اضطراری'},
-  {q:'سطح ریسک در روش ماتریسی با کدام رابطه به‌دست می‌آید؟', opts:['احتمال × شدت','احتمال + شدت','شدت ÷ احتمال','فقط شدت'], a:0, cat:'ارزیابی ریسک'},
-  {q:'هدف اصلی ارزیابی ریسک چیست؟', opts:['شناسایی و کنترل خطرات پیش از حادثه','گزارش پس از حادثه','افزایش تولید','کاهش هزینه'], a:0, cat:'ارزیابی ریسک'},
-  {q:'در سلسله‌مراتب کنترل خطر، مؤثرترین اقدام کدام است؟', opts:['حذف خطر','تجهیزات حفاظت فردی','نصب علائم هشدار','آموزش'], a:0, cat:'ارزیابی ریسک'},
-  {q:'تجهیزات حفاظت فردی (PPE) در سلسله‌مراتب کنترل کجا قرار دارد؟', opts:['آخرین و کم‌اثرترین لایه','اولین و مؤثرترین لایه','تنها روش کنترل','بی‌اثر'], a:0, cat:'ارزیابی ریسک'},
-  {q:'SCBA چیست؟', opts:['دستگاه تنفسی هوای فشرده مستقل','نوعی گازسنج','نوعی کپسول آتش‌نشانی','لباس کار'], a:0, cat:'فضای محصور'},
-  {q:'گازسنجی فضای محصور باید در چند تراز انجام شود؟', opts:['کف، میانه و سقف','فقط کف','فقط سقف','یک نقطه'], a:0, cat:'فضای محصور'},
-  {q:'چرا گازسنجی باید چندنقطه‌ای (چندتراز) باشد؟', opts:['چون گازها چگالی متفاوت دارند','برای سرعت بیشتر','برای صرفه‌جویی','فقط الزام قانونی'], a:0, cat:'گازها'},
-  {q:'۱ درصد حجمی برابر چند ppm است؟', opts:['۱۰٬۰۰۰ ppm','۱٬۰۰۰ ppm','۱۰۰ ppm','۱۰۰٬۰۰۰ ppm'], a:0, cat:'تبدیل مقادیر'},
-  {q:'اگر LEL متان ۵٪ باشد، ۵۰٪ LEL معادل چند درصد حجمی است؟', opts:['۲٫۵٪','۵٪','۱٪','۱۰٪'], a:0, cat:'تبدیل مقادیر'},
-  {q:'رسیدن نشانگر به ۱۰۰٪ LEL یعنی چه؟', opts:['غلظت گاز به حد پایین انفجار رسیده است','محیط کاملاً ایمن است','گاز صفر است','حد بالای انفجار'], a:0, cat:'گازها'},
-  {q:'بهداشت حرفه‌ای عمدتاً به چه می‌پردازد؟', opts:['پیشگیری از بیماری‌های شغلی','اطفای حریق','حفاری','امور مالی'], a:0, cat:'بهداشت'},
-  {q:'مواجهه طولانی‌مدت با صدای زیاد چه عارضه‌ای دارد؟', opts:['کاهش شنوایی','بهبود تمرکز','افزایش دید','بی‌اثر است'], a:0, cat:'بهداشت'},
-  {q:'حد آستانه صدا که نیازمند حفاظت شنوایی است تقریباً چقدر است؟', opts:['۸۵ دسی‌بل','۴۰ دسی‌بل','۲۰۰ دسی‌بل','۱۰ دسی‌بل'], a:0, cat:'بهداشت'},
-  {q:'هدف از رعایت حریم خطوط انتقال گاز چیست؟', opts:['حفاظت خط و ایمنی عمومی','زیبایی منظر','عبور خودرو','کشاورزی'], a:0, cat:'خطوط لوله'},
-  {q:'حفاظت کاتدیک روی خطوط لوله برای چیست؟', opts:['جلوگیری از خوردگی لوله','افزایش فشار','گرمایش لوله','رنگ‌آمیزی'], a:0, cat:'خطوط لوله'},
-  {q:'تهویه پیش از ورود به منهول برای چیست؟', opts:['خروج گاز و تأمین اکسیژن کافی','خنک‌کردن','تمیزکردن','تأمین روشنایی'], a:0, cat:'فضای محصور'},
-  {q:'مثلث آتش از کدام سه عنصر تشکیل می‌شود؟', opts:['سوخت، اکسیژن، حرارت','آب، خاک، باد','گاز، برق، فشار','دود، شعله، خاکستر'], a:0, cat:'آتش‌نشانی'},
-  {q:'خاموش‌کننده CO₂ کدام ضلع مثلث آتش را حذف می‌کند؟', opts:['اکسیژن','سوخت','نور','صدا'], a:0, cat:'آتش‌نشانی'},
-  {q:'کپسول پودر ABC مناسب کدام کلاس‌های حریق است؟', opts:['A و B و C','فقط D','فقط K','هیچ‌کدام'], a:0, cat:'آتش‌نشانی'},
-  {q:'مهم‌ترین اصل هنگام هر حادثه گازی چیست؟', opts:['حفظ جان افراد و قطع منبع گاز','ادامه کار','فقط ثبت گزارش','عکس‌گرفتن'], a:0, cat:'اضطراری'}
+  {q:'حداقل درصد اکسیژن مجاز برای ورود به فضای محصور بدون دستگاه تنفسی چقدر است؟', opts:['۱۹٫۵٪','۱۶٪','۱۷٪','۲۱٪'], a:0, cat:'ایمنی'},
+  {q:'حداکثر درصد اکسیژن مجاز (مرز اغنای اکسیژن) پیش از خطر چقدر است؟', opts:['۲۳٫۵٪','۲۱٪','۲۵٪','۳۰٪'], a:0, cat:'ایمنی'},
+  {q:'حداکثر درصد LEL مجاز برای ورود ایمن به فضای محصور معمولاً چقدر است؟', opts:['کمتر از ۱۰٪','۵۰٪','۲۵٪','۱۰۰٪'], a:0, cat:'ایمنی'},
+  {q:'برای انجام کار گرم، غلظت گاز قابل اشتعال حداکثر چند درصد LEL مجاز است؟', opts:['حداکثر ۵٪ LEL','۲۵٪ LEL','۵۰٪ LEL','۱۰۰٪ LEL'], a:0, cat:'ایمنی'},
+  {q:'LOTO مخفف چیست؟', opts:['قفل‌گذاری و برچسب‌گذاری (Lockout/Tagout)','سامانه اطفای حریق','نوعی گازسنج','پرمیت کار گرم'], a:0, cat:'ایمنی'},
+  {q:'ترتیب صحیح اقدامات در روش PASS کار با خاموش‌کننده دستی کدام است؟', opts:['کشیدن ضامن، نشانه‌گیری به پای شعله، فشردن اهرم، جاروب‌کردن','فشردن اهرم، کشیدن ضامن، جاروب، نشانه‌گیری','نشانه‌گیری به نوک شعله، فشردن، کشیدن ضامن','پاشش از فاصله دور به مرکز شعله'], a:0, cat:'ایمنی'},
+  {q:'در سلسله‌مراتب کنترل خطر، مؤثرترین لایه کدام است؟', opts:['حذف خطر (Elimination)','تجهیزات حفاظت فردی','کنترل اداری','علائم هشدار'], a:0, cat:'ایمنی'},
+  {q:'تجهیزات حفاظت فردی (PPE) در سلسله‌مراتب کنترل کجا قرار دارد؟', opts:['آخرین و کم‌اثرترین لایه','اولین و مؤثرترین لایه','جایگزین کنترل مهندسی','بی‌نیاز از سایر کنترل‌ها'], a:0, cat:'ایمنی'},
+  {q:'در روش ماتریسی، سطح ریسک از کدام رابطه به‌دست می‌آید؟', opts:['احتمال × شدت','احتمال + شدت','شدت ÷ احتمال','فقط شدت پیامد'], a:0, cat:'ایمنی'},
+  {q:'ترانشه با چه عمقی معمولاً نیازمند سیستم حفاظت دیواره (شیب یا سپر) است؟', opts:['بیش از ۱٫۲ متر','بیش از ۵ متر','بیش از ۳ متر','هر عمقی بدون نیاز'], a:0, cat:'ایمنی'},
+  {q:'نسبت ایمن استقرار نردبان تکیه‌ای (افقی به عمودی) چقدر است؟', opts:['۱ به ۴','۱ به ۱','۲ به ۱','۱ به ۸'], a:0, cat:'ایمنی'},
+  {q:'برای ورود به فضای محصور کدام گازسنج لازم است؟', opts:['چهارگانه (O₂, LEL, H₂S, CO)','فقط سنج اکسیژن','فقط سنج LEL','دماسنج'], a:0, cat:'ایمنی'},
+  {q:'در گازسنجی فضای محصور، ترتیب صحیح سنجش کدام است؟', opts:['اکسیژن، سپس گاز قابل اشتعال، سپس گازهای سمی','گاز سمی، اکسیژن، LEL','LEL، گاز سمی، اکسیژن','ترتیب اهمیتی ندارد'], a:0, cat:'ایمنی'},
+  {q:'وظیفه اصلی نگهبان فضای محصور (Attendant) چیست؟', opts:['پایش دائم و ارتباط با فرد داخل و عدم ترک پست','ورود و کمک به انجام کار','صدور پرمیت','فقط گازسنجی نهایی'], a:0, cat:'ایمنی'},
+  {q:'مثلث آتش از کدام سه عنصر تشکیل شده است؟', opts:['سوخت، اکسیژن، حرارت','آب، خاک، باد','گاز، برق، فشار','دود، شعله، خاکستر'], a:0, cat:'ایمنی'},
+  {q:'عنصر چهارم در هرم آتش (Tetrahedron) چیست؟', opts:['واکنش زنجیره‌ای','رطوبت','نور','فشار'], a:0, cat:'ایمنی'},
+  {q:'خاموش‌کننده مناسب برای حریق تجهیزات برقی زیر بار کدام است؟', opts:['CO₂ یا پودر خشک','آب','فوم پروتئینی','کلاس D'], a:0, cat:'ایمنی'},
+  {q:'خاموش‌کننده CO₂ کدام ضلع مثلث آتش را حذف می‌کند؟', opts:['اکسیژن','سوخت','حرارت','واکنش زنجیره‌ای'], a:0, cat:'ایمنی'},
+  {q:'چرا استفاده از آب روی حریق فرآورده‌های نفتی خطرناک است؟', opts:['باعث پخش و گسترش حریق می‌شود','شعله را تقویت نمی‌کند','هیچ اثری ندارد','تنها بخار تولید می‌کند'], a:0, cat:'ایمنی'},
+  {q:'نفر آتش‌پا (Fire Watch) پس از پایان کار گرم حداقل چه مدت باید در محل بماند؟', opts:['حداقل ۳۰ دقیقه','بلافاصله ترک می‌کند','۵ دقیقه','۲ ساعت'], a:0, cat:'ایمنی'},
+  {q:'جنس ابزار ضدجرقه برای کار در محیط گازدار چیست؟', opts:['آلیاژ غیرآهنی مانند برنج یا برنز','فولاد کربنی','چدن','آهن آبکاری‌شده'], a:0, cat:'ایمنی'},
+  {q:'پدیده BLEVE نتیجه چیست؟', opts:['انبساط ناگهانی بخار مایع جوشانِ مخزن تحت فشار','نشت آرام گاز','خوردگی لوله','افت فشار تدریجی'], a:0, cat:'ایمنی'},
+  {q:'در منطقه‌بندی خطر، Zone 0 به چه معناست؟', opts:['حضور دائم یا طولانی‌مدت گاز قابل اشتعال','حضور نامحتمل گاز','نبود هرگونه گاز','فقط گرد و غبار'], a:0, cat:'ایمنی'},
+  {q:'در محیط طبقه‌بندی‌شده گازی، تجهیزات برقی باید چه ویژگی داشته باشند؟', opts:['ضدانفجار (Ex)','ارزان‌قیمت','پرتوان','بدون اتصال زمین'], a:0, cat:'ایمنی'},
+  {q:'نقطه اشتعال (Flash Point) یک مایع چیست؟', opts:['پایین‌ترین دمایی که بخار کافی برای اشتعال لحظه‌ای تولید می‌کند','دمای جوش مایع','دمای انجماد','دمای خوداشتعالی'], a:0, cat:'ایمنی'},
+  {q:'خوداشتعالی (Autoignition) به چه معناست؟', opts:['اشتعال بدون منبع جرقه به‌علت رسیدن به دمای کافی','اشتعال فقط با جرقه','اشتعال در دمای پایین','عدم امکان اشتعال'], a:0, cat:'ایمنی'},
+  {q:'علاوه بر سمیت، خطر دیگر گاز H₂S چیست؟', opts:['قابل اشتعال و انفجار بودن','خنثی و بی‌خطر بودن','سنگین‌نبودن','حل‌شدن کامل در آب'], a:0, cat:'ایمنی'},
+  {q:'IDLH به چه معناست؟', opts:['غلظت بلافاصله خطرناک برای جان و سلامتی','حد مجاز روزانه','حد بویایی','حد انفجار پایین'], a:0, cat:'ایمنی'},
+  {q:'اولین اقدام در مواجهه با فرد دچار برق‌گرفتگی چیست؟', opts:['قطع جریان برق','لمس فوری فرد','پاشیدن آب','تنفس مصنوعی پیش از قطع برق'], a:0, cat:'ایمنی'},
+  {q:'هدف از JSA/JHA چیست؟', opts:['تجزیه ایمنی شغل و شناسایی خطر هر مرحله کار','ثبت حقوق کارکنان','برنامه‌ریزی تولید','حسابرسی مالی'], a:0, cat:'ایمنی'},
+  {q:'شبه‌حادثه (Near Miss) چیست؟', opts:['رویدادی بدون آسیب که پتانسیل ایجاد حادثه داشته است','حادثه منجر به فوت','خرابی برنامه‌ریزی‌شده','بازرسی دوره‌ای'], a:0, cat:'ایمنی'},
+  {q:'هدف جلسه پنج‌دقیقه‌ای ایمنی (Tool Box Meeting) چیست؟', opts:['یادآوری خطرات و نکات ایمنی پیش از شروع کار','ارزیابی عملکرد سالانه','صدور فیش حقوقی','آموزش بلندمدت'], a:0, cat:'ایمنی'},
+  {q:'چرا بیشتر تلفات فضای محصور در میان نجات‌دهندگان رخ می‌دهد؟', opts:['ورود شتاب‌زده بدون تجهیزات حفاظتی','استفاده زیاد از تجهیزات','گازسنجی مکرر','تهویه بیش از حد'], a:0, cat:'ایمنی'},
+  {q:'رنگ زمینه علائم ایمنیِ «الزام/اجبار» (مثل استفاده اجباری از PPE) چیست؟', opts:['آبی دایره‌ای','قرمز','زرد مثلثی','سبز'], a:0, cat:'ایمنی'},
+  {q:'علامت ایمنی با زمینه زرد و شکل مثلث بیانگر چیست؟', opts:['هشدار خطر','ممنوعیت','الزام','مسیر خروج'], a:0, cat:'ایمنی'},
+  {q:'علت اتصال به زمین (Earthing) هنگام انتقال مایعات قابل اشتعال چیست؟', opts:['تخلیه بار الکتریسیته ساکن و جلوگیری از جرقه','افزایش دبی انتقال','کاهش وزن مخزن','رنگ‌آمیزی'], a:0, cat:'ایمنی'},
+  {q:'کدام مورد از کارهای «گرم» محسوب می‌شود؟', opts:['سنگ‌زنی و برشکاری با شعله','بازکردن فلنج با آچار','نقاشی با قلم‌مو','بازرسی چشمی'], a:0, cat:'ایمنی'},
+  {q:'پیش از کار گرم روی خط گازدار چه اقدامی ضروری است؟', opts:['تخلیه (Purge) و گازسنجی تا رسیدن به حد مجاز','فقط افزایش فشار خط','رنگ‌آمیزی خط','هیچ اقدامی'], a:0, cat:'ایمنی'},
+  {q:'پرمیت کار (Work Permit) چیست؟', opts:['مجوز کتبی و کنترل‌شده برای انجام کار پرخطر','قرارداد استخدامی','بیمه‌نامه','گواهی پایان کار'], a:0, cat:'ایمنی'},
+  {q:'ریزش دیواره ترانشه با کدام روش کنترل می‌شود؟', opts:['شیب‌دار کردن یا سپرکوبی/شمع‌کوبی دیواره','انباشت خاک روی لبه ترانشه','حفر عمیق‌تر','افزایش طول ترانشه'], a:0, cat:'ایمنی'},
+  {q:'پیش از حفاری مکانیکی نزدیک خطوط گاز چه باید کرد؟', opts:['تعیین موقعیت دقیق خط با حفاری دستی آزمایشی','شروع فوری با بیل مکانیکی','افزایش سرعت حفاری','نادیده‌گرفتن نقشه‌ها'], a:0, cat:'ایمنی'},
+  {q:'پرمیت کار سرد زمانی صادر می‌شود که غلظت گاز قابل اشتعال چقدر باشد؟', opts:['کمتر از ۱۰٪ LEL','بیش از ۵۰٪ LEL','دقیقاً ۱۰۰٪ LEL','بی‌اهمیت است'], a:0, cat:'ایمنی'},
+  {q:'سامانه اطفای ثابت مناسب اتاق‌های برق و سرور کدام است؟', opts:['گاز پاک مانند FM200 یا CO₂','آب‌افشان معمولی','فوم','پودر خیس'], a:0, cat:'ایمنی'},
+  {q:'هدف از قفل و برچسب‌گذاری (LOTO) چیست؟', opts:['جلوگیری از راه‌اندازی ناخواسته تجهیز هنگام تعمیر','افزایش سرعت تعمیر','کاهش هزینه','ثبت ساعت کاری'], a:0, cat:'ایمنی'},
+  {q:'هنگام استشمام بوی گاز در فضای بسته کدام کار را نباید انجام داد؟', opts:['زدن کلید برق یا ایجاد هرگونه جرقه','بازکردن در و پنجره','خارج‌کردن افراد','قطع جریان گاز'], a:0, cat:'ایمنی'},
+  {q:'هارنس کامل بدن در کار در ارتفاع برای چیست؟', opts:['توزیع نیروی سقوط و مهار ایمن فرد','افزایش سرعت کار','جایگزین کلاه ایمنی','حمل ابزار'], a:0, cat:'ایمنی'},
+  {q:'مهم‌ترین اصل هنگام هر حادثه گازی چیست؟', opts:['حفظ جان افراد و قطع منبع گاز','ادامه عملیات','عکس‌برداری','ثبت گزارش پیش از اقدام'], a:0, cat:'ایمنی'},
+  {q:'اثر مستقیم رسیدن نشانگر گازسنج به ۱۰۰٪ LEL چیست؟', opts:['غلظت گاز به حد پایین انفجار رسیده و محیط به‌شدت خطرناک است','محیط کاملاً ایمن است','گاز صفر است','حد بالای انفجار رد شده'], a:0, cat:'ایمنی'},
+  {q:'کلاس حریق ناشی از گازهای قابل اشتعال (در دسته‌بندی اروپایی) کدام است؟', opts:['کلاس C','کلاس A','کلاس B','کلاس D'], a:0, cat:'ایمنی'},
+  {q:'شماره تلفن امداد گاز چند است؟', opts:['۱۹۴','۱۲۵','۱۱۵','۱۱۰'], a:0, cat:'ایمنی'},
+  {q:'TLV-TWA به چه معناست؟', opts:['میانگین وزنی-زمانی مجاز مواجهه در یک شیفت ۸ ساعته','حداکثر لحظه‌ای مجاز','سقف غلظتی','حد بویایی'], a:0, cat:'بهداشت'},
+  {q:'TLV-STEL چیست؟', opts:['حد مجاز مواجهه کوتاه‌مدت (۱۵ دقیقه‌ای)','میانگین ۸ ساعته','سقف غلظت دائمی','حد بیولوژیک'], a:0, cat:'بهداشت'},
+  {q:'TLV-C (Ceiling) به چه معناست؟', opts:['سقف غلظتی که در هیچ لحظه نباید از آن فراتر رفت','میانگین روزانه','حد ۱۵ دقیقه‌ای','حد سالانه'], a:0, cat:'بهداشت'},
+  {q:'حد مجاز مواجهه شغلی با صدا برای ۸ ساعت کار در ایران چقدر است؟', opts:['۸۵ دسی‌بل','۶۰ دسی‌بل','۱۰۵ دسی‌بل','۴۰ دسی‌بل'], a:0, cat:'بهداشت'},
+  {q:'در نرخ تبادل ۳ دسی‌بلی، با هر ۳ دسی‌بل افزایش تراز صدا، زمان مجاز مواجهه چه می‌شود؟', opts:['نصف می‌شود','دو برابر می‌شود','تغییری نمی‌کند','چهار برابر می‌شود'], a:0, cat:'بهداشت'},
+  {q:'مهم‌ترین عارضه مواجهه مزمن شغلی با صدای زیاد چیست؟', opts:['کم‌شنوایی حسی-عصبی دائمی','سرماخوردگی','افزایش فشار خون موقت','بهبود تمرکز'], a:0, cat:'بهداشت'},
+  {q:'آزمون پایش سلامت شنوایی کارکنان چه نام دارد؟', opts:['ادیومتری','اسپیرومتری','الکتروکاردیوگرافی','رادیوگرافی'], a:0, cat:'بهداشت'},
+  {q:'آزمون سنجش عملکرد ریه چیست؟', opts:['اسپیرومتری','ادیومتری','سونوگرافی','ادیومتری صوتی'], a:0, cat:'بهداشت'},
+  {q:'بیماری «انگشتان سفید» (سندرم رینود شغلی) ناشی از چیست؟', opts:['ارتعاش دست و بازو','صدای زیاد','گرمای محیط','نور شدید'], a:0, cat:'بهداشت'},
+  {q:'شاخص استاندارد سنجش استرس گرمایی محیط کار کدام است؟', opts:['WBGT','dBA','Lux','ppm'], a:0, cat:'بهداشت'},
+  {q:'علامت مهم گرمازدگی شدید (Heat Stroke) چیست؟', opts:['افزایش دمای مرکزی بدن و اختلال هوشیاری','لرز و سرفه','کاهش ضربان قلب','افزایش اشتها'], a:0, cat:'بهداشت'},
+  {q:'مکانیسم سمیت گاز H₂S در بدن چیست؟', opts:['مهار آنزیم سیتوکروم اکسیداز و توقف تنفس سلولی','انعقاد خون','تخریب کبد','افزایش قند خون'], a:0, cat:'بهداشت'},
+  {q:'مکانیسم سمیت مونوکسیدکربن (CO) چیست؟', opts:['اتصال به هموگلوبین و تشکیل کربوکسی‌هموگلوبین','تخریب ریه','کاهش گلبول سفید','افزایش فشار خون'], a:0, cat:'بهداشت'},
+  {q:'مواجهه مزمن با بنزن چه عارضه‌ای ایجاد می‌کند؟', opts:['سرطان خون (لوسمی)','پوکی استخوان','نزدیک‌بینی','کم‌شنوایی'], a:0, cat:'بهداشت'},
+  {q:'اصلی‌ترین راه ورود گازها و بخارات شیمیایی به بدن چیست؟', opts:['دستگاه تنفسی','پوست سالم','گوارش','چشم'], a:0, cat:'بهداشت'},
+  {q:'کدام مرجع، حدود مواجهه شغلی TLV را منتشر می‌کند؟', opts:['ACGIH','FIFA','WTO','IATA'], a:0, cat:'بهداشت'},
+  {q:'صدا، ارتعاش، گرما و پرتو جزو کدام دسته عوامل زیان‌آورند؟', opts:['فیزیکی','شیمیایی','بیولوژیک','ارگونومیک'], a:0, cat:'بهداشت'},
+  {q:'ویروس‌ها، باکتری‌ها و قارچ‌ها جزو کدام عوامل زیان‌آورند؟', opts:['بیولوژیک','فیزیکی','شیمیایی','روانی'], a:0, cat:'بهداشت'},
+  {q:'هدف اصلی علم ارگونومی چیست؟', opts:['تطبیق کار و ابزار با توانایی انسان و کاهش اختلالات اسکلتی-عضلانی','افزایش سرعت ماشین','کاهش هزینه برق','افزایش دما'], a:0, cat:'بهداشت'},
+  {q:'روش‌های RULA و REBA برای ارزیابی چه چیزی به‌کار می‌روند؟', opts:['پوسچر (وضعیت بدنی) کار','کیفیت هوا','تراز صدا','شدت روشنایی'], a:0, cat:'بهداشت'},
+  {q:'بیماری سیلیکوزیس ناشی از استنشاق چیست؟', opts:['گرد و غبار سیلیس کریستالی','الیاف پنبه','بخار جیوه','دود جوش'], a:0, cat:'بهداشت'},
+  {q:'بیماری آزبستوزیس ناشی از مواجهه با چیست؟', opts:['الیاف آزبست (پنبه نسوز)','سیمان','رنگ روغنی','گردِ چوب'], a:0, cat:'بهداشت'},
+  {q:'کارتریج فیلتر بخار آلی (Organic Vapor) برای حفاظت در برابر چیست؟', opts:['بخارات حلال‌های آلی','ذرات فلزی درشت','گاز اکسیژن','گرد و غبار سیمان'], a:0, cat:'بهداشت'},
+  {q:'بالاترین فاکتور حفاظت تنفسی (APF) متعلق به کدام تجهیز است؟', opts:['SCBA فشار مثبت','ماسک نیم‌صورت','ماسک ساده جراحی','دستمال'], a:0, cat:'بهداشت'},
+  {q:'در چه غلظتی از اکسیژن استفاده از ماسک فیلتردار ممنوع و SCBA الزامی است؟', opts:['کمتر از ۱۹٫۵٪','کمتر از ۲۳٪','بیش از ۲۱٪','دقیقاً ۲۰٫۹٪'], a:0, cat:'بهداشت'},
+  {q:'معاینات طب کار شامل کدام موارد است؟', opts:['بدو استخدام، دوره‌ای و بازگشت به کار','فقط بدو استخدام','فقط هنگام بازنشستگی','فقط پس از حادثه'], a:0, cat:'بهداشت'},
+  {q:'هدف معاینه بدو استخدام چیست؟', opts:['تطبیق سلامت فرد با شغل و ثبت وضعیت سلامت پایه','افزایش حقوق','کاهش بیمه','ارزیابی مهارت فنی'], a:0, cat:'بهداشت'},
+  {q:'واحد اندازه‌گیری شدت روشنایی چیست؟', opts:['لوکس','دسی‌بل','ppm','گری'], a:0, cat:'بهداشت'},
+  {q:'عارضه چشمی ناشی از پرتو فرابنفش جوشکاری چه نام دارد؟', opts:['التهاب قرنیه/فتوکراتیت (چشم جوشکار)','آب‌مروارید فوری','شب‌کوری','رنگ‌کوری'], a:0, cat:'بهداشت'},
+  {q:'اصول سه‌گانه حفاظت در برابر پرتوهای یونیزان کدام است؟', opts:['زمان، فاصله، حفاظ','نور، صدا، گرما','آب، خاک، هوا','فشار، دما، حجم'], a:0, cat:'بهداشت'},
+  {q:'دزیمتر فردی چه کاربردی دارد؟', opts:['سنجش میزان دز پرتو دریافتی فرد','سنجش صدا','سنجش گاز','سنجش دما'], a:0, cat:'بهداشت'},
+  {q:'منبع رشد باکتری لژیونلا در محیط‌های صنعتی کجاست؟', opts:['آب راکد برج‌های خنک‌کننده','هوای خشک','سطوح فلزی داغ','روغن موتور'], a:0, cat:'بهداشت'},
+  {q:'اندازه ذرات «قابل استنشاق به آلوئل ریه» (Respirable) تقریباً چقدر است؟', opts:['کمتر از حدود ۴ تا ۱۰ میکرون','بزرگ‌تر از ۱۰۰ میکرون','حدود ۱ میلی‌متر','بی‌اهمیت'], a:0, cat:'بهداشت'},
+  {q:'BEI (شاخص مواجهه بیولوژیک) چه چیزی را می‌سنجد؟', opts:['غلظت ماده یا متابولیت آن در نمونه بیولوژیک فرد','تراز صدای محیط','شدت نور','دمای محیط'], a:0, cat:'بهداشت'},
+  {q:'علت کرامپ (گرفتگی عضلانی) گرمایی چیست؟', opts:['از دست رفتن آب و املاح بدن در اثر تعریق','کمبود نور','افزایش فشار هوا','کاهش صدا'], a:0, cat:'بهداشت'},
+  {q:'پایش محیطی عوامل شیمیایی چگونه انجام می‌شود؟', opts:['نمونه‌برداری از هوای محیط کار و مقایسه با حد مجاز (OEL)','حدس سرپرست','اندازه‌گیری وزن کارگر','شمارش افراد'], a:0, cat:'بهداشت'},
+  {q:'سندرم تونل کارپال در اثر چه عاملی ایجاد می‌شود؟', opts:['حرکات تکراری و فشار بر مچ دست','مواجهه با صدا','پرتو خورشید','کار شبانه'], a:0, cat:'بهداشت'},
+  {q:'مهم‌ترین ارکان بهداشت حرفه‌ای کدام است؟', opts:['شناسایی، ارزیابی و کنترل عوامل زیان‌آور','تولید، فروش، توزیع','حفاری، جوش، رنگ','استخدام، آموزش، اخراج'], a:0, cat:'بهداشت'},
+  {q:'ارتعاش تمام بدن (Whole-body) بیشتر چه عارضه‌ای ایجاد می‌کند؟', opts:['آسیب ستون فقرات و کمردرد','کم‌شنوایی','آب‌مروارید','سرطان پوست'], a:0, cat:'بهداشت'},
+  {q:'نوبت‌کاری شبانه بیشتر بر چه چیزی اثر منفی می‌گذارد؟', opts:['ریتم شبانه‌روزی و کیفیت خواب','قدرت شنوایی','بینایی رنگ','قد فرد'], a:0, cat:'بهداشت'},
+  {q:'اقدام اولیه و کلیدی در گرمازدگی چیست؟', opts:['خنک‌سازی فوری بدن و انتقال به محیط خنک','نوشاندن نوشیدنی داغ','ادامه کار سبک','قرار دادن در آفتاب'], a:0, cat:'بهداشت'},
+  {q:'هدف از نمونه‌برداری فردی (Personal Sampling) چیست؟', opts:['سنجش مواجهه واقعی فرد در ناحیه تنفسی','اندازه‌گیری دمای کارگاه','شمارش تجهیزات','سنجش رطوبت خاک'], a:0, cat:'بهداشت'},
+  {q:'فرسودگی شغلی (Burnout) پیامد چیست؟', opts:['استرس مزمن و فشار روانی طولانی‌مدت کار','تغذیه سالم','ورزش منظم','خواب کافی'], a:0, cat:'بهداشت'},
+  {q:'کدام واکسن برای کارکنان در تماس با فاضلاب توصیه می‌شود؟', opts:['کزاز و هپاتیت','فقط آنفولانزا','واکسن لازم نیست','واکسن سرخک'], a:0, cat:'بهداشت'},
+  {q:'روشنایی نامناسب محل کار چه عارضه‌ای ایجاد می‌کند؟', opts:['خستگی چشم و کاهش بازده و افزایش خطا','کم‌شنوایی','ارتعاش','گرمازدگی'], a:0, cat:'بهداشت'},
+  {q:'حد دز مجاز سالانه پرتوکاران معمولاً چقدر است؟', opts:['حدود ۲۰ میلی‌سیورت (میانگین در ۵ سال)','۲۰ سیورت','۲۰۰ میلی‌سیورت در روز','نامحدود'], a:0, cat:'بهداشت'},
+  {q:'روش کنترل مواجهه با گرد و غبار در منبع تولید چیست؟', opts:['تهویه موضعی مکنده (LEV) در محل تولید','افزایش دمای محیط','استفاده از نور بیشتر','کاهش صدا'], a:0, cat:'بهداشت'},
+  {q:'هدف از حدود مجاز مواجهه شغلی (OEL) چیست؟', opts:['تعیین سقفی که مواجهه زیر آن برای اکثر افراد بی‌خطر تلقی شود','تعیین حقوق','رتبه‌بندی شغل','ارزیابی مهارت'], a:0, cat:'بهداشت'},
+  {q:'جیوه فلزی عمدتاً چه اندامی را تحت تأثیر قرار می‌دهد؟', opts:['سیستم عصبی و کلیه','استخوان','قرنیه','مو'], a:0, cat:'بهداشت'},
+  {q:'هدف اصلی طب کار پیشگیرانه چیست؟', opts:['پیشگیری از بیماری‌های شغلی پیش از بروز','درمان پس از بازنشستگی','افزایش تولید','کاهش مالیات'], a:0, cat:'بهداشت'},
+  {q:'استاندارد ISO 14001 مربوط به چیست؟', opts:['سیستم مدیریت زیست‌محیطی','مدیریت کیفیت','ایمنی و بهداشت شغلی','امنیت اطلاعات'], a:0, cat:'محیط زیست'},
+  {q:'«جنبه زیست‌محیطی» (Environmental Aspect) چیست؟', opts:['عنصری از فعالیت سازمان که با محیط زیست تعامل دارد','نتیجه نهایی بر محیط','قانون زیست‌محیطی','هزینه پروژه'], a:0, cat:'محیط زیست'},
+  {q:'«پیامد زیست‌محیطی» (Impact) چیست؟', opts:['هرگونه تغییر در محیط زیست ناشی از یک جنبه','ابزار اندازه‌گیری','مجوز کار','گزارش مالی'], a:0, cat:'محیط زیست'},
+  {q:'پتانسیل گرمایش جهانی (GWP) متان نسبت به CO₂ در افق ۱۰۰ ساله تقریباً چند برابر است؟', opts:['حدود ۲۵ تا ۲۸ برابر','برابر','۲ برابر','۱۰۰۰ برابر'], a:0, cat:'محیط زیست'},
+  {q:'مهم‌ترین گاز گلخانه‌ای مرتبط با نشت در صنعت گاز کدام است؟', opts:['متان (CH₄)','نیتروژن','اکسیژن','آرگون'], a:0, cat:'محیط زیست'},
+  {q:'هدف از فلرینگ (Flaring) چیست؟', opts:['سوزاندن کنترل‌شده و ایمن گاز اضافی یا اضطراری','ذخیره گاز','سرمایش گاز','افزایش فشار'], a:0, cat:'محیط زیست'},
+  {q:'چرا ونتینگ (رهاسازی مستقیم) متان از فلرینگ زیان‌بارتر است؟', opts:['متان نسوخته اثر گلخانه‌ای بسیار بیشتری دارد','صدای کمتری دارد','ارزان‌تر است','قابل مشاهده نیست'], a:0, cat:'محیط زیست'},
+  {q:'لایه ازن استراتوسفر عمدتاً توسط چه موادی تخریب می‌شود؟', opts:['کلروفلوئوروکربن‌ها (CFC) و هالون‌ها','بخار آب','نیتروژن','اکسیژن'], a:0, cat:'محیط زیست'},
+  {q:'پروتکل مونترال درباره چیست؟', opts:['حذف تدریجی مواد مخرب لایه ازن','کاهش زباله شهری','حفاظت تالاب‌ها','کنترل صدا'], a:0, cat:'محیط زیست'},
+  {q:'توافق پاریس و پروتکل کیوتو بر چه چیزی تمرکز دارند؟', opts:['کاهش انتشار گازهای گلخانه‌ای','حذف CFCها','حفاظت گونه‌های دریایی','مدیریت پسماند هسته‌ای'], a:0, cat:'محیط زیست'},
+  {q:'پارامتر COD در پساب چه چیزی را نشان می‌دهد؟', opts:['اکسیژن مورد نیاز شیمیایی برای اکسایش مواد','کل جامدات معلق','اسیدیته','دمای پساب'], a:0, cat:'محیط زیست'},
+  {q:'پارامتر BOD در پساب چه چیزی را می‌سنجد؟', opts:['اکسیژن مورد نیاز زیستی برای تجزیه مواد آلی','شوری','کدورت','رنگ'], a:0, cat:'محیط زیست'},
+  {q:'نسبت بالای BOD/COD در پساب نشان‌دهنده چیست؟', opts:['تجزیه‌پذیری زیستی بالا','سمیت زیاد','عدم آلودگی','شوری بالا'], a:0, cat:'محیط زیست'},
+  {q:'TDS در آب به چه معناست؟', opts:['کل جامدات محلول','کل گازهای محلول','دمای آب','فشار آب'], a:0, cat:'محیط زیست'},
+  {q:'سلسله‌مراتب مدیریت پسماند، اولویت نخست را به چه می‌دهد؟', opts:['کاهش تولید از مبدأ (Reduce)','دفن','سوزاندن','بازیافت'], a:0, cat:'محیط زیست'},
+  {q:'ترتیب صحیح اصول مدیریت پسماند (4R) کدام است؟', opts:['کاهش، استفاده مجدد، بازیافت، بازیابی','بازیافت، دفن، سوزاندن، کاهش','دفن، کاهش، استفاده مجدد','سوزاندن، دفن، بازیافت'], a:0, cat:'محیط زیست'},
+  {q:'کدام مورد نمونه پسماند خطرناک در صنعت گاز است؟', opts:['روغن و کاتالیست مستعمل و لجن آغشته به هیدروکربن','کاغذ اداری','پسماند غذایی','بطری آب'], a:0, cat:'محیط زیست'},
+  {q:'کاربرد برگه اطلاعات ایمنی مواد (SDS/MSDS) چیست؟', opts:['ارائه اطلاعات ایمنی، بهداشتی و زیست‌محیطی ماده شیمیایی','تعیین قیمت ماده','ثبت تولید','گزارش فروش'], a:0, cat:'محیط زیست'},
+  {q:'نخستین اقدام هنگام نشت میعانات نفتی روی خاک چیست؟', opts:['مهار و جمع‌آوری برای جلوگیری از گسترش آلودگی','پاشیدن آب فراوان','رهاکردن برای تبخیر','پوشاندن با خاک'], a:0, cat:'محیط زیست'},
+  {q:'شاخص آلودگی خاک به هیدروکربن‌های نفتی چه نام دارد؟', opts:['TPH','BOD','pH','TDS'], a:0, cat:'محیط زیست'},
+  {q:'EIA پیش از اجرای پروژه به چه معناست؟', opts:['ارزیابی اثرات زیست‌محیطی','بازرسی ایمنی','ممیزی مالی','آزمون فشار'], a:0, cat:'محیط زیست'},
+  {q:'ذرات معلق هوا که بیشترین خطر تنفسی را دارند کدام‌اند؟', opts:['PM2.5 و PM10','CO₂','O₂','N₂'], a:0, cat:'محیط زیست'},
+  {q:'«ردپای کربن» (Carbon Footprint) چیست؟', opts:['کل انتشار گازهای گلخانه‌ای معادل CO₂ ناشی از یک فعالیت','مقدار آب مصرفی','میزان زباله','سطح اشغال‌شده'], a:0, cat:'محیط زیست'},
+  {q:'مهم‌ترین منبع نشت متان در شبکه توزیع گاز کجاست؟', opts:['نشتی اتصالات، شیرها و رگولاتورها','دودکش‌ها','مخازن آب','کابل‌های برق'], a:0, cat:'محیط زیست'},
+  {q:'روش نوین و دوستدار محیط‌زیست برای تشخیص نشت متان کدام است؟', opts:['دوربین تصویربرداری گازی مادون‌قرمز (OGI)','بو کشیدن دستی','حفاری','قطع کامل گاز'], a:0, cat:'محیط زیست'},
+  {q:'هدف مرحله بیولوژیک در تصفیه پساب چیست؟', opts:['حذف مواد آلی توسط میکروارگانیسم‌ها','افزایش دما','رنگ‌کردن آب','افزودن نمک'], a:0, cat:'محیط زیست'},
+  {q:'آلاینده اصلی ناشی از احتراق ناقص گاز طبیعی چیست؟', opts:['مونوکسیدکربن و دوده','بخار آب خالص','اکسیژن','نیتروژن خالص'], a:0, cat:'محیط زیست'},
+  {q:'گازهای NOx در فرآیند احتراق عمدتاً چگونه تولید می‌شوند؟', opts:['در اثر دمای بالای شعله و تثبیت نیتروژن هوا','از رطوبت سوخت','از گوگرد سوخت','از خاکستر'], a:0, cat:'محیط زیست'},
+  {q:'منشأ اصلی گازهای SOx در احتراق چیست؟', opts:['گوگرد موجود در سوخت','نیتروژن هوا','بخار آب','کربن خالص'], a:0, cat:'محیط زیست'},
+  {q:'بارش اسیدی عمدتاً ناشی از کدام آلاینده‌هاست؟', opts:['SOx و NOx','CO₂ و O₂','متان و آب','ازن و آرگون'], a:0, cat:'محیط زیست'},
+  {q:'کنوانسیون رامسر درباره حفاظت از چیست؟', opts:['تالاب‌ها','جنگل‌های بارانی','لایه ازن','گونه‌های دریایی'], a:0, cat:'محیط زیست'},
+  {q:'VOC مخفف چیست؟', opts:['ترکیبات آلی فرّار','کربن آلی محلول','اکسیژن محلول','گاز بی‌اثر'], a:0, cat:'محیط زیست'},
+  {q:'روش زیستی پاکسازی خاک آلوده به هیدروکربن چه نام دارد؟', opts:['زیست‌پالایی (Bioremediation)','سوزاندن','دفن عمیق','شست‌وشو با اسید'], a:0, cat:'محیط زیست'},
+  {q:'واحد متداول گزارش انتشار گازهای گلخانه‌ای چیست؟', opts:['تن معادل دی‌اکسیدکربن (tCO₂e)','لیتر','دسی‌بل','لوکس'], a:0, cat:'محیط زیست'},
+  {q:'اصل «آلوده‌کننده می‌پردازد» (Polluter Pays) چه می‌گوید؟', opts:['مسئولیت هزینه آلودگی بر عهده ایجادکننده آن است','دولت همه هزینه‌ها را می‌پردازد','آلودگی رایگان است','فقط جریمه نمادین'], a:0, cat:'محیط زیست'},
+  {q:'فایده اصلی سامانه بازیافت گاز فلر (Flare Gas Recovery) چیست؟', opts:['کاهش انتشار و بازیابی انرژی به‌جای سوزاندن','افزایش ارتفاع فلر','تولید صدای کمتر','رنگ شعله'], a:0, cat:'محیط زیست'},
+  {q:'مهم‌ترین چالش زیست‌محیطی «آب همراه» (Produced Water) چیست؟', opts:['شوری بالا و آلودگی هیدروکربنی','دمای پایین','کمبود حجم','شفافیت زیاد'], a:0, cat:'محیط زیست'},
+  {q:'نخستین گام استقرار ISO 14001 چیست؟', opts:['شناسایی جنبه‌ها و پیامدها و الزامات قانونی','صدور گواهینامه','خرید تجهیزات','تبلیغات'], a:0, cat:'محیط زیست'},
+  {q:'ممیزی زیست‌محیطی با چه هدفی انجام می‌شود؟', opts:['ارزیابی میزان انطباق با الزامات و بهبود عملکرد','افزایش تولید','کاهش حقوق','تغییر نام شرکت'], a:0, cat:'محیط زیست'},
+  {q:'کدام سوخت فسیلی به‌ازای انرژی برابر، کربن کمتری منتشر می‌کند؟', opts:['گاز طبیعی نسبت به نفت و زغال‌سنگ','زغال‌سنگ','مازوت','نفت کوره'], a:0, cat:'محیط زیست'},
+  {q:'منابع انرژی تجدیدپذیر کدام‌اند؟', opts:['خورشید و باد','گاز طبیعی و نفت','زغال‌سنگ','اورانیوم'], a:0, cat:'محیط زیست'},
+  {q:'اثر گلخانه‌ای از چه مکانیزمی ناشی می‌شود؟', opts:['جذب تابش فروسرخ زمین توسط گازهای گلخانه‌ای','انعکاس کامل نور','سرمایش جو','کاهش اکسیژن'], a:0, cat:'محیط زیست'},
+  {q:'کدام شاخص میزان اسیدی یا بازی بودن پساب را نشان می‌دهد؟', opts:['pH','COD','TDS','dBA'], a:0, cat:'محیط زیست'},
+  {q:'مقدار pH خنثی چقدر است؟', opts:['۷','۰','۱۴','۱'], a:0, cat:'محیط زیست'},
+  {q:'هدف از پایش پیوسته خروجی دودکش (CEMS) چیست؟', opts:['کنترل لحظه‌ای انتشار آلاینده‌های هوا','اندازه‌گیری صدا','سنجش دما خاک','شمارش کارکنان'], a:0, cat:'محیط زیست'},
+  {q:'تخلیه آب گرم صنعتی به رودخانه چه نوع آلودگی ایجاد می‌کند؟', opts:['آلودگی حرارتی','آلودگی صوتی','آلودگی نوری','آلودگی هسته‌ای'], a:0, cat:'محیط زیست'},
+  {q:'هدف از طرح مدیریت پسماند در یک تأسیسات گازی چیست؟', opts:['تفکیک، کاهش، نگهداری و دفع اصولی پسماندها','افزایش تولید پسماند','انباشت در محل','سوزاندن بدون کنترل'], a:0, cat:'محیط زیست'},
+  {q:'کدام اقدام بیشترین کاهش انتشار متان را در پی دارد؟', opts:['رفع سریع نشتی‌ها و جایگزینی ونتینگ با بازیافت','افزایش فشار خطوط','رنگ‌آمیزی لوله‌ها','افزایش دمای گاز'], a:0, cat:'محیط زیست'},
+  {q:'«تنوع زیستی» در ارزیابی پروژه چرا اهمیت دارد؟', opts:['حفظ زیستگاه‌ها و گونه‌ها در برابر تخریب','افزایش سرعت ساخت','کاهش هزینه مصالح','زیبایی منظر'], a:0, cat:'محیط زیست'},
+  {q:'هدف اصلی توسعه پایدار چیست؟', opts:['تأمین نیاز امروز بدون به‌خطرانداختن منابع نسل‌های آینده','حداکثر تولید کوتاه‌مدت','مصرف کامل منابع','افزایش جمعیت'], a:0, cat:'محیط زیست'},
+  {q:'پدافند غیرعامل چیست؟', opts:['مجموعه اقدامات غیرمسلحانه برای کاهش آسیب‌پذیری و تداوم خدمات در برابر تهدید','عملیات نظامی تهاجمی','استفاده از سلاح','رزمایش آتش'], a:0, cat:'پدافند غیرعامل'},
+  {q:'مهم‌ترین تفاوت پدافند غیرعامل با پدافند عامل چیست؟', opts:['عدم استفاده از سلاح و تجهیزات نظامی','استفاده از موشک','حمله پیش‌دستانه','به‌کارگیری پدافند هوایی'], a:0, cat:'پدافند غیرعامل'},
+  {q:'هدف اصلی پدافند غیرعامل چیست؟', opts:['کاهش آسیب‌پذیری و تضمین تداوم عملکرد زیرساخت‌های حیاتی','افزایش قدرت آتش','فتح سرزمین','تولید سلاح'], a:0, cat:'پدافند غیرعامل'},
+  {q:'«استتار» در پدافند غیرعامل یعنی چه؟', opts:['هم‌رنگ و هم‌شکل کردن هدف با محیط برای کاهش شناسایی','پنهان‌سازی کامل زیر زمین','ایجاد هدف کاذب','پراکنده‌کردن تأسیسات'], a:0, cat:'پدافند غیرعامل'},
+  {q:'«اختفا» به چه معناست؟', opts:['پنهان‌کردن کامل هدف از دید و سامانه‌های شناسایی دشمن','رنگ‌آمیزی هدف','ساخت ماکت کاذب','افزایش استحکام'], a:0, cat:'پدافند غیرعامل'},
+  {q:'«فریب» در پدافند غیرعامل چیست؟', opts:['ایجاد اهداف و نشانه‌های کاذب برای گمراه‌کردن دشمن','تقویت دیوارها','دفن تأسیسات','هشدار سریع'], a:0, cat:'پدافند غیرعامل'},
+  {q:'«پراکندگی» به چه منظوری انجام می‌شود؟', opts:['توزیع تأسیسات برای کاهش آسیب در یک حمله متمرکز','تجمیع همه امکانات در یک نقطه','افزایش ارتفاع','رنگ‌آمیزی'], a:0, cat:'پدافند غیرعامل'},
+  {q:'«مقاوم‌سازی» (Hardening) چیست؟', opts:['افزایش استحکام سازه‌ها در برابر موج انفجار و ضربه','استتار رنگی','ایجاد هدف کاذب','انتقال به سطح'], a:0, cat:'پدافند غیرعامل'},
+  {q:'زیرساخت حیاتی چه تعریفی دارد؟', opts:['تأسیساتی که اختلال در آن‌ها امنیت ملی و خدمات اساسی را تهدید می‌کند','هر ساختمان اداری','انبارهای کوچک','پارکینگ عمومی'], a:0, cat:'پدافند غیرعامل'},
+  {q:'صنعت گاز از نظر پدافند غیرعامل جزو کدام دسته زیرساخت است؟', opts:['حیاتی و حساس','کم‌اهمیت','موقت','تفریحی'], a:0, cat:'پدافند غیرعامل'},
+  {q:'سامانه SCADA در صنعت گاز چه وظیفه‌ای دارد؟', opts:['کنترل و پایش از راه دور تأسیسات و فرآیندها','حسابداری','پخش موسیقی','کنترل دما خانه‌ها'], a:0, cat:'پدافند غیرعامل'},
+  {q:'مهم‌ترین آسیب‌پذیری سامانه‌های SCADA چیست؟', opts:['نفوذ سایبری و اختلال در کنترل فرآیند','وزن زیاد','رنگ تجهیزات','مصرف کاغذ'], a:0, cat:'پدافند غیرعامل'},
+  {q:'هدف پدافند سایبری در زیرساخت‌های گاز چیست؟', opts:['حفاظت از سامانه‌های کنترل و اطلاعات در برابر حملات سایبری','افزایش سرعت اینترنت','فروش داده','تبلیغات'], a:0, cat:'پدافند غیرعامل'},
+  {q:'جداسازی شبکه کنترل صنعتی از اینترنت (Air Gap) چه فایده‌ای دارد؟', opts:['کاهش چشمگیر امکان نفوذ سایبری','افزایش سرعت تولید','کاهش هزینه برق','بهبود روشنایی'], a:0, cat:'پدافند غیرعامل'},
+  {q:'«افزونگی» (Redundancy) در پدافند به چه معناست؟', opts:['پیش‌بینی تجهیز یا مسیر پشتیبان برای تداوم عملکرد','حذف تجهیزات اضافی','کاهش پرسنل','تجمیع امکانات'], a:0, cat:'پدافند غیرعامل'},
+  {q:'«تک‌نقطه شکست» (Single Point of Failure) چیست؟', opts:['وابستگی کل سیستم به یک جزء که خرابی آن کل سیستم را متوقف می‌کند','داشتن چند مسیر پشتیبان','سیستم کاملاً ایمن','نقطه قوت سیستم'], a:0, cat:'پدافند غیرعامل'},
+  {q:'راه‌حل اصلی مقابله با «تک‌نقطه شکست» چیست؟', opts:['ایجاد افزونگی و توزیع','حذف پشتیبان‌ها','تمرکز بیشتر','کاهش نظارت'], a:0, cat:'پدافند غیرعامل'},
+  {q:'مراحل چرخه مدیریت بحران به ترتیب کدام‌اند؟', opts:['پیشگیری، آمادگی، مقابله، بازتوانی','مقابله، فروش، تبلیغ','بازتوانی، تعطیلی','فقط مقابله'], a:0, cat:'پدافند غیرعامل'},
+  {q:'«تاب‌آوری» (Resilience) در پدافند غیرعامل یعنی چه؟', opts:['توان جذب آسیب و بازگشت سریع به وضعیت عادی پس از بحران','تسلیم در برابر بحران','افزایش آسیب','توقف کامل خدمات'], a:0, cat:'پدافند غیرعامل'},
+  {q:'پدافند زیستی به مقابله با چه تهدیدی می‌پردازد؟', opts:['عوامل بیولوژیک و میکروبی','موج انفجار','نشت گاز','حمله سایبری'], a:0, cat:'پدافند غیرعامل'},
+  {q:'پدافند پرتوی به مقابله با چه تهدیدی می‌پردازد؟', opts:['تهدیدات هسته‌ای و پرتوی','عوامل شیمیایی','تهدید روانی','سیلاب'], a:0, cat:'پدافند غیرعامل'},
+  {q:'«تهدید نرم» نمونه‌اش کدام است؟', opts:['جنگ رسانه‌ای و روانی','حمله موشکی','بمباران','انفجار'], a:0, cat:'پدافند غیرعامل'},
+  {q:'«تهدید سخت» نمونه‌اش کدام است؟', opts:['حمله نظامی و موشکی','شایعه‌پراکنی','جنگ سایبری سطح پایین','تبلیغات'], a:0, cat:'پدافند غیرعامل'},
+  {q:'«تهدید ترکیبی» (Hybrid) چیست؟', opts:['به‌کارگیری هم‌زمان تهدیدهای سخت و نرم','فقط تهدید نظامی','فقط تهدید اقتصادی','نبود تهدید'], a:0, cat:'پدافند غیرعامل'},
+  {q:'اصل «نیاز به دانستن» (Need to Know) در حفاظت اطلاعات یعنی چه؟', opts:['دسترسی هر فرد فقط به اطلاعاتی که برای کارش لازم است','دسترسی همگانی به همه اسناد','حذف کامل اطلاعات','انتشار عمومی داده‌ها'], a:0, cat:'پدافند غیرعامل'},
+  {q:'هدف از طبقه‌بندی اطلاعات حساس چیست؟', opts:['جلوگیری از دسترسی دشمن به اطلاعات کلیدی','افزایش حجم بایگانی','تسهیل فروش داده','تبلیغات'], a:0, cat:'پدافند غیرعامل'},
+  {q:'نقش پناهگاه در پدافند غیرعامل چیست؟', opts:['حفاظت جانی افراد در برابر حملات و موج انفجار','انبار تجهیزات اضافی','محل تفریح','دفتر اداری'], a:0, cat:'پدافند غیرعامل'},
+  {q:'فایده اصلی سامانه هشدار سریع چیست؟', opts:['ایجاد فرصت واکنش، پناه‌گیری و تخلیه به‌موقع','کاهش هزینه','افزایش تولید','زیبایی محیط'], a:0, cat:'پدافند غیرعامل'},
+  {q:'چرا احداث تأسیسات حیاتی به‌صورت زیرزمینی یا پوشیده توصیه می‌شود؟', opts:['کاهش آسیب‌پذیری در برابر حملات هوایی و موشکی','کاهش هزینه ساخت','افزایش سرعت دسترسی','زیبایی ظاهری'], a:0, cat:'پدافند غیرعامل'},
+  {q:'یکی از اصول مکان‌یابی تأسیسات حیاتی چیست؟', opts:['رعایت فاصله ایمن از مرز و تمرکز جمعیت و تأسیسات پرخطر','ساخت در نزدیک‌ترین نقطه مرزی','تمرکز همه تأسیسات در یک نقطه','بی‌توجهی به تهدید'], a:0, cat:'پدافند غیرعامل'},
+  {q:'سازمان متولی پدافند غیرعامل در کشور کدام است؟', opts:['سازمان پدافند غیرعامل کشور','سازمان هواشناسی','سازمان ثبت احوال','سازمان بنادر'], a:0, cat:'پدافند غیرعامل'},
+  {q:'مهم‌ترین سرمایه و رکن موفقیت پدافند غیرعامل چیست؟', opts:['نیروی انسانی آگاه و آموزش‌دیده','تجهیزات گران‌قیمت','ساختمان بزرگ','بودجه تبلیغات'], a:0, cat:'پدافند غیرعامل'},
+  {q:'هدف از برگزاری مانور و رزمایش پدافندی چیست؟', opts:['سنجش میزان آمادگی و شناسایی و رفع نقاط ضعف','سرگرمی کارکنان','افزایش تولید','تبلیغات رسانه‌ای'], a:0, cat:'پدافند غیرعامل'},
+  {q:'رمزنگاری ارتباطات در پدافند سایبری چه هدفی دارد؟', opts:['جلوگیری از شنود و دستکاری اطلاعات','افزایش سرعت اینترنت','کاهش حجم داده','نمایش عمومی پیام‌ها'], a:0, cat:'پدافند غیرعامل'},
+  {q:'به‌روزرسانی منظم نرم‌افزارهای کنترل صنعتی چه نقشی دارد؟', opts:['رفع آسیب‌پذیری‌های امنیتی و کاهش خطر نفوذ','افزایش مصرف برق','کاهش سرعت','تغییر رنگ نمایشگر'], a:0, cat:'پدافند غیرعامل'},
+  {q:'ذخیره‌سازی راهبردی سوخت با چه هدفی انجام می‌شود؟', opts:['تضمین تداوم تأمین انرژی در شرایط بحران و قطع','افزایش قیمت','کاهش کیفیت','صادرات بیشتر'], a:0, cat:'پدافند غیرعامل'},
+  {q:'پدافند غیرعامل عمدتاً در چه زمانی طراحی و اجرا می‌شود؟', opts:['در زمان صلح و پیش از بروز بحران','فقط حین جنگ','پس از تخریب کامل','هیچ‌گاه'], a:0, cat:'پدافند غیرعامل'},
+  {q:'حفاظت از خطوط لوله انتقال گاز در پدافند غیرعامل چگونه تقویت می‌شود؟', opts:['دفن مناسب، پراکندگی مسیر و پایش مستمر','نصب روی سطح زمین','تمرکز همه خطوط در یک کریدور','رنگ‌آمیزی روشن'], a:0, cat:'پدافند غیرعامل'},
+  {q:'اطلاع‌رسانی به مردم در شرایط بحران باید چگونه باشد؟', opts:['دقیق، به‌موقع و از مرجع رسمی','پراکنده و دیرهنگام','از منابع غیررسمی','پنهان از مردم'], a:0, cat:'پدافند غیرعامل'},
+  {q:'هدف نهایی پدافند غیرعامل چیست؟', opts:['بازدارندگی، کاهش خسارت و تداوم حیات و خدمات حیاتی','افزایش تلفات دشمن','فتح سرزمین','تولید تسلیحات'], a:0, cat:'پدافند غیرعامل'},
+  {q:'کدام مورد جزو اصول اصلی پدافند غیرعامل است؟', opts:['استتار، اختفا، فریب و پراکندگی','حمله، تهاجم، اشغال','تبلیغ، فروش، توزیع','استخدام، اخراج، ارتقا'], a:0, cat:'پدافند غیرعامل'},
+  {q:'«پدافند کالبدی» بر چه چیزی تمرکز دارد؟', opts:['مقاوم‌سازی فیزیکی سازه‌ها و ابنیه','مدیریت مالی','تبلیغات رسانه‌ای','آموزش زبان'], a:0, cat:'پدافند غیرعامل'},
+  {q:'کاهش اثر موج انفجار بر یک سازه حیاتی چگونه ممکن است؟', opts:['طراحی مقاوم در برابر انفجار و رعایت فاصله ایمن','افزایش ارتفاع ساختمان','استفاده از شیشه بیشتر','رنگ روشن دیوار'], a:0, cat:'پدافند غیرعامل'},
+  {q:'کنترل تردد و احراز هویت در ورودی تأسیسات جزو کدام اقدام است؟', opts:['حفاظت فیزیکی و امنیت دسترسی','پدافند هوایی','پدافند زیستی','استتار'], a:0, cat:'پدافند غیرعامل'},
+  {q:'مدیریت پیامدهای نشت سمی یا شیمیایی در حمله جزو کدام پدافند است؟', opts:['پدافند شیمیایی','پدافند سایبری','پدافند اقتصادی','پدافند فرهنگی'], a:0, cat:'پدافند غیرعامل'},
+  {q:'هدف از مستندسازی و پشتیبان‌گیری اطلاعات حیاتی چیست؟', opts:['تضمین بازیابی و تداوم خدمات پس از حمله یا خرابی','افزایش حجم بایگانی کاغذی','فروش اطلاعات','تبلیغات'], a:0, cat:'پدافند غیرعامل'},
+  {q:'«نقطه کور پدافندی» در یک سیستم چیست؟', opts:['وابستگی پنهان به یک منبع یا مسیر واحد که آسیب‌پذیر است','نقطه دارای چند پشتیبان','بخش کاملاً ایمن','مرکز کنترل اصلی'], a:0, cat:'پدافند غیرعامل'},
+  {q:'کدام اقدام تاب‌آوری شبکه گاز را در برابر تهدید افزایش می‌دهد؟', opts:['ایجاد مسیرهای جایگزین و حلقوی‌کردن شبکه','حذف ایستگاه‌های پشتیبان','تک‌مسیره‌کردن انتقال','کاهش پایش'], a:0, cat:'پدافند غیرعامل'},
+  {q:'آموزش همگانی پدافند غیرعامل چه هدفی دارد؟', opts:['افزایش آگاهی و تاب‌آوری جامعه در برابر تهدیدها','سرگرمی','افزایش فروش','تبلیغات سیاسی'], a:0, cat:'پدافند غیرعامل'},
+  {q:'در پدافند غیرعامل، اولویت حفاظت در شبکه گاز با کدام تأسیسات است؟', opts:['ایستگاه‌های تقویت فشار و تقلیل و مراکز کنترل (دیسپچینگ)','انبار لوازم اداری','پارکینگ کارکنان','فضای سبز محوطه'], a:0, cat:'پدافند غیرعامل'}
 ];
 
 var quizQs=[], quizIdx=0, quizAns=[];
@@ -3376,15 +4506,16 @@ function quizFinish(){
   document.getElementById('quizRun').style.display='none';
   document.getElementById('quizResult').style.display='block';
   var total=quizQs.length, C=314.159;
-  var color = correct>=14?'#22FF88':(correct>=10?'#FF9500':'#FF5A5A');
+  var score = Math.round(correct/total*100);
+  var color = score>=70?'#22FF88':(score>=50?'#FF9500':'#FF5A5A');
   var fg=document.getElementById('resFg'); fg.setAttribute('stroke', color);
   fg.setAttribute('stroke-dashoffset', C);
   setTimeout(function(){ fg.setAttribute('stroke-dashoffset', C*(1-correct/total)); }, 80);
-  var rs=document.getElementById('resScore'); rs.textContent=faDigits(correct); rs.style.color=color;
+  var rs=document.getElementById('resScore'); rs.textContent=faDigits(score); rs.style.color=color;
   var t=document.getElementById('resTitle');
-  t.textContent = correct>=14?'عالی! دانش ایمنی خوبی داری':(correct>=10?'قابل قبول — کمی مرور لازم است':'نیاز به مطالعه‌ی بیشتر');
+  t.textContent = score>=70?'عالی! دانش HSE شما در سطح بالایی است':(score>=50?'قابل قبول — کمی مرور لازم است':'نیاز به مطالعه‌ی بیشتر');
   t.style.color=color;
-  document.getElementById('resOk').textContent='✓ '+faDigits(correct)+' صحیح';
+  document.getElementById('resOk').textContent='✓ '+faDigits(correct)+' صحیح از '+faDigits(total);
   document.getElementById('resBad').textContent='✕ '+faDigits(total-correct)+' اشتباه';
   var rev = wrong.length
     ? '<div class="rep-sub">مرور اشتباهات ('+faDigits(wrong.length)+')</div>'+wrong.map(function(w){
@@ -3410,11 +4541,442 @@ function toggleTheme(){
   applyTheme(cur==='light' ? 'dark' : 'light');
 }
 
+/* ================= صلاحیت افراد ================= */
+function faNorm(s){ return (s||'').replace(/[۰-۹]/g,function(d){return '۰۱۲۳۴۵۶۷۸۹'.indexOf(d);}).replace(/\s/g,'').trim(); }
+// نمونه برای آزمایش سازوکار — داده‌های واقعی پس از دریافت از کارفرما جایگزین می‌شود
+var PEOPLE = [
+  {nid:'0012345678', pno:'10234', name:'نمونه آزمایشی — علی رضایی', roles:[
+    {role:'مسئول محوطه', issued:'۱۴۰۳/۰۲/۱۵', expiry:'۱۴۰۵/۰۲/۱۵', status:'valid'},
+    {role:'آزمایش‌کننده گاز', issued:'۱۴۰۳/۰۶/۰۱', expiry:'۱۴۰۴/۰۶/۰۱', status:'soon'}
+  ]},
+  {nid:'0023456789', pno:'10235', name:'نمونه آزمایشی — مریم احمدی', roles:[
+    {role:'مسئول اجرا', issued:'۱۴۰۲/۱۱/۱۰', expiry:'۱۴۰۴/۱۱/۱۰', status:'valid'},
+    {role:'ناظر مطلع حفاری', issued:'۱۴۰۱/۰۳/۰۱', expiry:'۱۴۰۳/۰۳/۰۱', status:'expired'}
+  ]}
+];
+function lookupCompetency(){
+  var q=faNorm(document.getElementById('cmpQuery').value);
+  var err=document.getElementById('cmpErr'), box=document.getElementById('cmpResult');
+  if(!q){ err.style.display='none'; box.innerHTML=''; return; }
+  var p=PEOPLE.filter(function(x){return x.nid===q||x.pno===q;})[0];
+  if(!p){ err.style.display='block'; box.innerHTML=''; return; }
+  err.style.display='none';
+  var st={valid:{t:'معتبر',c:'tag-ok'}, soon:{t:'نزدیک انقضا',c:'tag-warn'}, expired:{t:'منقضی',c:'tag-bad'}};
+  var rows=p.roles.map(function(r){ var s=st[r.status]||st.valid;
+    return '<div class="risk-item"><div class="ri-haz">🎖️ '+r.role+' &nbsp;<span class="tag '+s.c+'">'+s.t+'</span></div>'+
+      '<div class="ri-meta"><span class="ri-chip">تاریخ اخذ: '+r.issued+'</span><span class="ri-chip">تاریخ انقضا: '+r.expiry+'</span></div></div>'; }).join('');
+  box.innerHTML='<div class="risk-card"><div class="rc-title">👤 '+p.name+'</div><div class="rc-sub">کد ملی: '+p.nid+' · شماره پرسنلی: '+p.pno+'</div>'+rows+'</div>';
+}
+
+/* ================= محوطه مشمول/مشروط ================= */
+var areaA={};
+function areaAns(q,v,btn){
+  areaA[q]=v;
+  var grp=btn.parentNode; grp.querySelectorAll('button').forEach(function(b){b.classList.remove('on');}); btn.classList.add('on');
+  evalArea();
+}
+function evalArea(){
+  var box=document.getElementById('areaResult');
+  if(!areaA[1]){ box.innerHTML=''; return; }
+  var cls,icon,verdict,sub;
+  if(areaA[1]==='n'){ cls='r-orange'; icon='ℹ️'; verdict='خارج از محوطه مشمول'; sub='این محل تحت نظارت سازمان نیست؛ نظام پروانه‌های کار بر آن اعمال نمی‌شود (با رعایت الزامات عمومی ایمنی).'; }
+  else if(areaA[2]!=='y'){ cls='r-red'; icon='📋'; verdict='محوطه مشمول — پروانه کار لازم است'; sub='هیچ فعالیتی بدون پروانه کارِ تکمیل و امضاشده توسط افراد صلاحیت‌دار مجاز نیست.'; }
+  else {
+    if(!areaA[3] || !areaA[4]){ box.innerHTML='<div class="result-box r-orange"><span class="icon">📝</span><div class="verdict">به پرسش‌های ۳ و ۴ پاسخ دهید</div></div>'; return; }
+    if(areaA[3]==='y' && areaA[4]==='y'){ cls='r-green'; icon='✅'; verdict='بدون پروانه مجاز است'; sub='فعالیت روزمره/تکراری پرسنل مخصوصِ محوطه مشروط — با رعایت کامل الزامات و دستورالعمل‌های ایمنی، بدون صدور پروانه قابل انجام است.'; }
+    else { cls='r-red'; icon='📋'; verdict='پروانه کار لازم است'; sub='فعالیت غیرروزمره یا انجام توسط پرسنل غیرمخصوص در محوطه مشروط — نیازمند صدور پروانه فعالیت است.'; }
+  }
+  box.innerHTML='<div class="result-box '+cls+'"><span class="icon">'+icon+'</span><div class="verdict">'+verdict+'</div><div class="sub">'+sub+'</div></div>';
+}
+
+/* ================= انتخاب PPE بر اساس فعالیت ================= */
+var PPE_DB = {
+  'امداد گاز و واکنش اضطراری':['لباس نسوز/آنتی‌استاتیک','دستگاه تنفسی هوای فشرده (SCBA)','گازسنج همراه کالیبره','کلاه ایمنی و سپر صورت','دستکش مقاوم حرارتی','کفش ایمنی نسوز','لباس شبرنگ','طناب و هارنس نجات'],
+  'جوشکاری و برشکاری':['ماسک/سپر جوشکاری با شیشه مناسب','لباس نسوز چرمی یا کتان ضخیم','دستکش بلند چرمی جوشکاری','پیش‌بند و ساق‌بند چرمی','عینک ایمنی زیر ماسک','کفش ایمنی','ماسک تنفسی ضد دود فلز','گوشی حفاظتی'],
+  'حفاری و خاکبرداری':['کلاه ایمنی','کفش ایمنی ساق‌بلند','دستکش کار','لباس شبرنگ','عینک ایمنی','گازسنج (در صورت احتمال حضور گاز)','ماسک ضدگردوغبار','گوشی حفاظتی (نزدیک ماشین‌آلات)'],
+  'کار در ارتفاع':['هارنس کامل بدن + لنیارد دوشاخه جذب‌انرژی','کلاه ایمنی با بند چانه','کفش ایمنی ضدلغزش','دستکش','نقطه اتکا و طناب نجات','کیف ابزار بنددار (ضد سقوط ابزار)'],
+  'برق‌کار':['دستکش عایق برق متناسب با کلاس ولتاژ','کفش/چکمه عایق','کلاه ایمنی عایق','سپر صورت مقاوم در برابر قوس الکتریکی','لباس مقاوم Arc-Flash','سکو/فرش عایق','ابزار عایق'],
+  'اپراتور بهره‌برداری':['کلاه ایمنی','کفش ایمنی','دستکش','لباس کار آنتی‌استاتیک','گازسنج همراه','عینک ایمنی','گوشی حفاظتی'],
+  'نشت‌یاب گاز':['گازسنج/نشت‌یاب کالیبره','کلاه ایمنی','کفش ایمنی','دستکش','لباس شبرنگ','چراغ‌قوه ضدانفجار'],
+  'رنگ‌کاری و عایق‌کاری':['ماسک تنفسی با فیلتر بخار آلی','دستکش مقاوم در برابر حلال','عینک ایمنی','لباس کار سرتاسری','کفش ایمنی','تهویه/هواکش هنگام کار در فضای بسته'],
+  'پرتونگاری صنعتی':['دزیمتر فردی و فیلم‌بج','دستگاه پایش پرتو (Survey Meter)','کلاه و کفش ایمنی','تابلو و طناب حصارکشی ناحیه پرتو','لباس کار','نشان و هشدار پرتو'],
+  'موتورسوار / پیک':['کلاه کاسکت استاندارد','دستکش','کفش ساق‌دار','لباس شبرنگ','زانوبند/آرنج‌بند در صورت نیاز'],
+  'راننده عملیاتی':['کفش ایمنی','لباس شبرنگ','کلاه ایمنی هنگام خروج در محوطه','دستکش','کپسول اطفا و جعبه کمک‌های اولیه در خودرو'],
+  'انباردار':['کفش ایمنی','دستکش کار','کلاه ایمنی (انبار مرتفع)','لباس کار','ماسک ضدگردوغبار'],
+  'ورود به فضای بسته':['دستگاه تنفسی هوای فشرده (SCBA) یا کپسول هوا','گازسنج چهارگانه (O₂/LEL/H₂S/CO)','هارنس کامل بدن + طناب نجات','کلاه ایمنی','چراغ ضدانفجار','دستکش و کفش ایمنی','نگهبان ورودی و تجهیزات نجات/وینچ'],
+  'آزمایش‌کننده گاز':['گازسنج کالیبره چندگانه','کلاه و کفش ایمنی','دستکش','لباس آنتی‌استاتیک','عینک ایمنی']
+};
+function initPPE(){ var s=document.getElementById('ppeSel'); if(!s) return; s.innerHTML='<option value="">— انتخاب فعالیت —</option>'+Object.keys(PPE_DB).map(function(a){return '<option value="'+a+'">'+a+'</option>';}).join(''); }
+function renderPPE(){
+  var a=document.getElementById('ppeSel').value, box=document.getElementById('ppeResult');
+  if(!a||!PPE_DB[a]){ box.innerHTML=''; return; }
+  box.innerHTML='<div class="req-list"><h3>🦺 تجهیزات حفاظت فردی لازم — '+a+'</h3><ul class="ri-ctrl">'+PPE_DB[a].map(function(x){return '<li>'+x+'</li>';}).join('')+'</ul></div>';
+}
+
+/* ================= ماتریس البسه (داده رسمی شرکت گاز استان تهران) ================= */
+var CLO_ITEMS=['پوتین ایمنی/کفش رانینگ','چکمه ایمنی و گتر جوشکاری','پوتین ایمنی عایق برق','چکمه ایمنی','لباسکار','البسه گرم','کت و پیش‌بند چرمی جوشکاری','لباس کار با مواد شیمیایی','اورکت','بارانی','دستکش چرمی','دستکش کار با مواد شیمیایی','دستکش کف دوبل چرمی','دستکش مخصوص کار با مواد شیمیایی','دستکش ساق بلند و آستین جوشکاری','دستکش عایق برق','دستکش خالدار','عینک ایمنی','عینک آفتابی','نقاب محافظ صورت (شیلد)','عینک ایمنی جوشکاری','ماسک فیلتردار HEPA','ماسک مواد شیمیایی (کارتریج)','گوشی حفاظتی Ear muff','گوشی حفاظتی Ear plug','کلاه ایمنی','کلاه آفتابی','مقنعه جوشکاری'];
+var CLO_ROLES=[{n:'مديرعامل',m:{0:24,8:36,18:24,23:60,24:12,25:60,26:12}},
+{n:'مشاور',m:{0:24,8:36,18:24,23:60,24:12,25:60,26:12}},
+{n:'رئيس امور HSE',m:{0:12,4:12,5:24,8:36,9:48,10:36,18:24,23:60,24:6,25:60,26:12}},
+{n:'مسئول حفاظت محيط زيست',m:{0:24,4:12,8:36,18:24,22:60,23:60,24:6,25:60,26:12}},
+{n:'كارشناس حفاظت محيط زيست',m:{0:24,4:12,8:36,18:24,22:60,23:60,24:6,25:60,26:12}},
+{n:'مسئول بهداشت صنعتي',m:{0:24,4:12,8:36,18:24,22:60,23:60,24:6,25:60,26:12}},
+{n:'كارشناس بهداشت صنعتي',m:{0:24,4:12,5:24,8:36,18:24,22:60,23:60,24:6,25:60,26:12}},
+{n:'رئيس ايمني و آتش نشاني',m:{0:12,3:60,4:12,5:12,8:24,9:48,10:12,16:3,17:36,18:24,23:36,24:3,25:60,26:12}},
+{n:'مسئول آتش نشاني',m:{0:12,3:60,4:12,5:12,8:24,9:48,10:12,16:3,17:36,18:24,23:36,24:3,25:60,26:12}},
+{n:'بازرس ارشد ايمني',m:{0:12,3:60,4:12,5:12,8:24,9:48,10:12,16:3,17:36,18:24,23:36,24:3,25:60,26:12}},
+{n:'بازرس ايمني',m:{0:12,3:60,4:12,5:12,8:24,9:48,10:12,16:3,17:36,18:24,23:36,24:2,25:60,26:12}},
+{n:'رئيس پدافند غيرعامل و مديريت بحران',m:{0:24,4:12,5:24,8:36,9:48,18:24,22:60,23:60,24:6,25:60,26:12}},
+{n:'كارشناس پدافند غيرعامل',m:{0:24,4:12,5:24,8:36,9:48,18:24,22:60,23:60,24:3,25:60,26:12}},
+{n:'كارشناس مديريت بحران',m:{0:24,4:12,8:36,9:48,18:24,22:60,23:60,24:3,25:60,26:12}},
+{n:'رئيس امورحقوقي و پيمان ها',m:{0:24,8:36,18:48,24:12,25:60,26:12}},
+{n:'رئيس امور حقوقي',m:{0:24,8:36,18:48,24:12,25:60,26:12}},
+{n:'كارشناس ارشد امور حقوقي',m:{0:24,8:36,18:48,24:12,25:60,26:12}},
+{n:'كارشناس امور حقوقي',m:{0:24,8:36,18:48,24:12,25:60,26:12}},
+{n:'كارشناس تحصيل اراضي',m:{0:12,3:60,5:24,8:36,18:48,24:12,25:60,26:12}},
+{n:'رئيس امور قراردادها',m:{0:24,8:36,24:12,25:60,26:12}},
+{n:'مهندس ارشد برآورد',m:{0:24,8:36,24:12,25:60,26:12}},
+{n:'مهندس برآورد',m:{0:24,8:36,24:12,25:60,26:12}},
+{n:'رئيس امور بازرسي فني',m:{0:12,4:12,5:24,8:36,9:48,16:3,17:36,18:24,23:60,24:6,25:60,26:12}},
+{n:'مسئول بازرسي فني',m:{0:12,4:12,5:24,8:36,9:48,16:3,17:36,18:24,23:60,24:6,25:60,26:12}},
+{n:'بازرس ارشد فني',m:{0:12,4:12,5:24,8:36,9:48,16:3,17:36,18:24,23:60,24:3,25:60,26:12}},
+{n:'بازرس فني',m:{0:12,4:12,5:24,8:36,9:48,16:3,17:36,18:24,23:60,24:2,25:60,26:12}},
+{n:'مسوول بازرسي خوردگي',m:{0:12,4:12,5:24,8:36,9:48,16:3,17:36,18:24,23:60,24:6,25:60,26:12}},
+{n:'مسئول نشت يابي',m:{0:12,4:12,5:12,8:24,9:48,16:3,18:24,23:60,24:12,25:60,26:12}},
+{n:'تكنسين ارشد نشت يابي',m:{0:12,4:12,5:12,8:24,9:48,16:1,18:24,23:60,24:6,25:60,26:6}},
+{n:'تكنسين نشت يابي',m:{0:12,4:12,5:12,8:24,9:48,16:1,18:24,23:60,24:6,25:60,26:6}},
+{n:'رئيس روابط عمومي',m:{0:24,8:36,18:24,23:60,24:12,25:60,26:12}},
+{n:'كارشناس روابط عمومي',m:{0:24,8:36,18:24,23:60,24:12,25:60,26:12}},
+{n:'كارشناس ارتباطات اجتماعي',m:{0:24,8:36,18:24,23:60,24:12,25:60,26:12}},
+{n:'رئيس امور برنامه ريزي',m:{0:24,8:36,18:36,24:12,25:60,26:12}},
+{n:'مسئول برنامه ريزي و كنترل تعميرات',m:{0:24,8:36,18:36,23:60,24:6,25:60,26:12}},
+{n:'مهندس ارشد برنامه ريزي و كنترل تعميرات',m:{0:24,8:36,18:36,23:60,24:6,25:60,26:12}},
+{n:'مهندس برنامه ريزي و كنترل تعميرات',m:{0:24,8:36,18:36,23:60,24:6,25:60,26:12}},
+{n:'مسئول برنامه ريزي و كنترل پروژه',m:{0:24,8:36,18:36,24:6,25:60,26:12}},
+{n:'كارشناس برنامه ريزي و كنترل پروژه',m:{0:24,8:36,18:36,24:6,25:60,26:12}},
+{n:'رئيس امور سيستم ها',m:{0:24,8:36,18:36,24:12,25:60,26:12}},
+{n:'كارشناس ارشد سيستم هاي مديريتي',m:{0:24,8:36,18:36,24:12,25:60,26:12}},
+{n:'كارشناس سيستم هاي مديريتي',m:{0:24,8:36,18:36,24:12,25:60,26:12}},
+{n:'مدير بهره برداري',m:{0:24,3:60,5:12,8:36,9:48,18:36,23:60,24:12,25:60,26:12}},
+{n:'معاون بهره برداري',m:{0:24,3:60,5:12,8:36,9:48,18:36,23:60,24:12,25:60,26:12}},
+{n:'رئيس بهره برداري شهرستان ها',m:{0:24,3:60,5:12,8:36,9:48,18:36,23:60,24:12,25:60,26:12}},
+{n:'رئيس بهره برداري مركز استان',m:{0:24,3:60,5:12,8:36,9:48,18:36,23:60,24:12,25:60,26:12}},
+{n:'كارشناس / كارشناس ارشد امور بهره برداري',m:{0:24,5:12,8:36,9:48,18:36,23:60,24:12,25:60,26:12}},
+{n:'رئيس اداره گاز',m:{0:24,3:60,4:12,5:12,8:36,9:48,16:3,17:36,18:24,23:60,24:12,25:60,26:12}},
+{n:'مسئول اداره گاز',m:{0:24,3:60,4:12,5:12,8:36,9:48,16:3,17:36,18:24,23:60,24:12,25:60,26:12}},
+{n:'مسئول اداري،مالي و كاال',m:{0:24,5:12,8:36,16:3,17:36,18:24,25:60,26:12}},
+{n:'رئيس اداري و پشتيباني',m:{0:24,5:12,8:36,16:3,17:36,18:24,25:60,26:12}},
+{n:'مسئول اداري و پشتيباني',m:{0:24,5:12,8:36,16:3,17:36,18:24,25:60,26:12}},
+{n:'كارمند ارشد اداري و پشتيباني',m:{0:24,5:12,8:36,16:3,17:36,18:24,25:60,26:12}},
+{n:'مسئول بهره برداري و تعميرات',m:{0:12,3:60,4:12,5:12,8:24,9:48,16:3,17:36,18:24,22:60,23:60,24:3,25:60,26:12}},
+{n:'رئيس بهره برداري و تعميرات',m:{0:12,3:60,4:12,5:12,8:24,9:48,16:3,17:36,18:24,22:60,23:60,24:3,25:60,26:12}},
+{n:'رئيس توسعه شبكه و نگهداري و تعميرات',m:{0:12,3:60,4:12,5:12,8:24,9:48,16:3,17:36,18:24,22:60,23:60,24:3,25:60,26:12}},
+{n:'مسئول توسعه شبكه و نگهداري و تعميرات',m:{0:12,3:60,4:12,5:12,8:24,9:48,16:3,17:36,18:24,22:60,23:60,24:3,25:60,26:12}},
+{n:'رئيس توسعه شبكه و بهره برداري و تعميرات',m:{0:12,3:60,4:12,5:12,8:24,9:48,16:3,17:36,18:24,22:60,23:60,24:3,25:60,26:12}},
+{n:'مسئول توسعه شبكه و بهره برداري و تعميرات',m:{0:12,3:60,4:12,5:12,8:24,9:48,16:3,17:36,18:24,22:60,23:60,24:3,25:60,26:12}},
+{n:'مسئول بهره برداري و امداد',m:{0:12,3:60,4:12,5:12,8:24,9:48,12:24,16:3,17:36,18:24,23:60,24:3,25:60,26:12}},
+{n:'مسئول نگهداري وتعميرات شبكه و انشعابات',m:{0:12,3:60,4:12,5:12,8:24,9:48,12:24,16:3,17:36,18:24,23:60,24:3,25:60,26:12}},
+{n:'مسئول نگهداري و تعميرات مكانيک تاسيسات و تجهيزات',m:{0:12,3:60,4:12,5:12,7:24,8:24,9:48,10:12,11:12,12:24,16:3,17:36,18:24,22:60,23:60,24:3,25:60,26:12}},
+{n:'مهندس نگهداري و تعميرات شبكه و انشعابات',m:{0:12,3:60,4:12,5:12,8:24,9:48,12:24,16:3,17:36,18:24,23:60,24:3,25:60,26:12}},
+{n:'مهندس / مهندس ارشد نگهداري و تعميرات مكانيک تاسيسات و تجهيزات',m:{0:12,3:60,4:12,5:12,8:24,9:48,12:24,16:3,17:36,18:24,23:60,24:3,25:60,26:12}},
+{n:'تكنسين تعميرات شبكه و انشعابات',m:{0:12,3:60,4:12,5:12,8:24,9:48,12:24,16:1,17:36,18:24,22:36,23:60,24:2,25:60,26:12}},
+{n:'استادكار مكانيک لوله',m:{0:12,3:60,4:12,5:12,8:24,9:48,12:24,16:1,17:36,18:24,23:60,24:2,25:60,26:12}},
+{n:'كارمند بهره برداري و امداد راننده',m:{0:24,4:12,5:12,8:36,16:1,17:36,18:24,25:60,26:12}},
+{n:'كارمند كنتورخوان',m:{0:24,4:12,5:12,8:36,9:48,16:1,17:36,18:24,25:60,26:12}},
+{n:'كنتورخوان',m:{0:24,4:12,5:12,8:36,9:48,16:1,17:36,18:24,25:60,26:12}},
+{n:'مهندس ارشد تعميرات وسائل و تأسيسات گازرساني',m:{0:24,4:12,5:12,8:36,9:48,16:3,17:36,18:36,22:36,23:60,24:3,25:60,26:12}},
+{n:'مهندس تعميرات وسايل و تأسيسات گازرساني',m:{0:24,4:12,5:12,8:36,9:48,16:3,17:36,18:36,22:36,23:60,24:3,25:60,26:12}},
+{n:'تكنسين ارشد تعميرات شبكه ، انشعابات و وسايل گازرساني',m:{0:12,3:60,4:12,5:12,8:24,9:48,12:24,16:1,17:36,18:24,22:36,23:60,24:2,25:60,26:12}},
+{n:'تكنسين تعميرات شبكه ، انشعابات و وسايل گازرساني',m:{0:12,3:60,4:12,5:12,8:24,9:48,12:24,16:1,17:36,18:24,22:36,23:60,24:2,25:60,26:12}},
+{n:'مكانيک وسائل و دستگاه هاي گازرساني',m:{0:12,3:60,4:6,5:12,8:24,9:48,10:6,11:24,16:1,17:36,18:24,22:36,23:60,24:2,25:60,26:12}},
+{n:'رئيس نصب انشعابات و تجهيزات',m:{0:24,4:12,5:12,8:36,9:48,16:3,17:36,18:24,23:60,24:6,25:60,26:12}},
+{n:'مسئول توسعه و نصب انشعابات',m:{0:24,4:12,5:12,8:36,9:48,16:3,17:36,18:24,23:60,24:6,25:60,26:12}},
+{n:'ناظر ارشد نصب انشعابات و تجهيزات',m:{0:12,4:12,5:12,8:24,9:48,16:3,17:36,18:24,23:60,24:3,25:60,26:6}},
+{n:'مهندس توسعه و نصب انشعابات',m:{0:12,4:12,5:12,8:24,9:48,16:3,17:36,18:24,23:60,24:3,25:60,26:6}},
+{n:'ناظرنصب انشعابات و تجهيزات',m:{0:12,4:12,5:12,8:24,9:48,16:3,17:36,18:24,23:60,24:2,25:60,26:6}},
+{n:'مسئول نصب انشعابات و تجهيزات و توسعه شبكه',m:{0:24,4:12,5:12,8:36,9:48,16:3,17:36,18:24,23:60,24:3,25:60,26:12}},
+{n:'مسئول نگهداري و تعميرات ايستگاه ها',m:{0:12,4:12,5:12,8:24,9:48,10:12,11:12,16:3,17:36,18:24,22:60,23:60,24:3,25:60,26:12}},
+{n:'مسئول نگهداري وتعميرات برق وحفاظت از زنگ',m:{0:12,2:36,4:12,5:12,8:24,9:24,10:12,11:12,15:36,16:3,17:36,18:24,23:60,24:6,25:60,26:12}},
+{n:'مسئول نگهداري و تعميرات برق و حفاظت از خوردگي تاسيسات و تجهيزات',m:{0:12,2:36,4:12,5:12,8:24,9:24,10:12,11:12,15:36,16:3,17:36,18:24,23:60,24:6,25:60,26:12}},
+{n:'مهندس نگهداري و تعميرات برق و حفاظت از خوردگي تاسيسات و تجهيزات',m:{0:12,2:36,4:12,5:12,8:24,9:24,10:12,11:12,15:36,16:3,17:36,18:24,23:60,24:6,25:60,26:12}},
+{n:'نوبتكار بهره برداري وامداد',m:{0:12,3:60,4:6,5:12,8:24,9:48,10:6,16:1,17:36,18:24,22:36,23:60,24:1,25:60,26:12}},
+{n:'مكانيک بهره برداري و امداد راننده',m:{0:12,3:60,4:6,5:12,8:24,9:48,10:6,11:24,16:1,17:36,18:24,22:36,23:60,24:2,25:60,26:12}},
+{n:'مسئول مركز پيام امداد و بهره برداري',m:{0:24,4:12,5:12,8:24,9:48,10:12,16:3,17:36,18:24,23:60,25:60,26:12}},
+{n:'رئيس مركز پيام و امداد مكانيزه',m:{0:24,4:12,5:12,8:24,9:48,10:12,16:3,17:36,18:24,23:60,25:60,26:12}},
+{n:'مسئول نگهداري و تعميرات',m:{0:12,3:60,4:12,5:12,8:24,9:48,10:12,11:12,16:3,17:36,18:24,22:60,23:60,24:6,25:60,26:12}},
+{n:'رئيس حمل و نقل',m:{0:24,4:12,5:12,8:24,9:48,16:3,17:36,18:24,23:60,24:12,25:60,26:12}},
+{n:'مسئول حمل و نقل',m:{0:12,4:12,5:12,8:24,9:48,11:36,16:3,17:36,18:24,23:60,24:12,25:60,26:12}},
+{n:'مسئول حمل ونقل و ماشين آالت',m:{0:12,4:12,5:12,8:24,9:48,11:36,16:3,17:36,18:24,23:60,24:12,25:60,26:12}},
+{n:'بازرس حمل و نقل',m:{0:12,4:12,5:12,8:24,9:48,11:36,16:3,17:36,18:24,23:60,24:12,25:60,26:12}},
+{n:'مسئول خدمات حمل و نقل',m:{0:24,8:36,18:24,24:12,26:12}},
+{n:'كارمند ارشد خدمات حمل و نقل',m:{0:24,8:36,18:24,24:12,26:12}},
+{n:'كارشناس حمل ونقل و ماشين آالت',m:{0:24,8:36,18:24,24:12,26:12}},
+{n:'مسئول تعميرات وسائل نقليه',m:{0:12,4:12,5:12,8:24,9:48,11:36,16:3,17:36,18:24,23:60,24:6,25:60,26:12}},
+{n:'تكنسين ارشد تعميرات وسائل نقليه',m:{0:12,4:12,5:12,8:24,9:48,11:36,16:1,17:36,18:24,23:60,24:6,25:60,26:12}},
+{n:'تكنسين تعميرات وسائل نقليه',m:{0:12,4:12,5:12,8:24,9:48,11:36,16:1,17:36,18:24,23:60,24:3,25:60,26:12}},
+{n:'رئيس امور خدمات فني و فروش عمده',m:{0:24,5:12,8:36,18:24,25:60,26:12}},
+{n:'رئيس خدمات متمركز فني',m:{0:24,5:12,8:36,18:24,25:60,26:12}},
+{n:'رئيس هماهنگي فروش و خدمات مشتركين',m:{0:24,8:36,18:24,26:12}},
+{n:'رئيس خدمات متمركز مشتركين',m:{0:24,5:12,8:36,18:24,25:60,26:12}},
+{n:'مسئول هماهنگي فروش و خدمات مشتركين',m:{0:24,8:36,18:24,26:12}},
+{n:'متصدي هماهنگي با سايرسازمانها و پيگيري خسارت',m:{0:24,5:12,8:36,18:24,25:60,26:12}},
+{n:'مسئول وصول مطالبات و پيگيري خسارات',m:{0:24,5:12,8:36,18:24,25:60,26:12}},
+{n:'كارشناس وصول مطالبات و پيگيري خسارات',m:{0:24,5:12,8:36,18:24,25:60,26:12}},
+{n:'مسوول سامانه اطالعات مكاني',m:{0:24,8:36,18:24,24:12,25:60,26:12}},
+{n:'كارشناس ارشد سامانه اطالعات مكاني',m:{0:24,4:24,8:36,18:24,24:12,25:60,26:12}},
+{n:'كارشناس سامانه اطالعات مكاني',m:{0:24,4:24,8:36,18:24,24:12,25:60,26:12}},
+{n:'مهندس فروش',m:{0:24,5:12,8:36,18:24,25:60,26:12}},
+{n:'كارشناس / كارشناس ارشد فروش',m:{0:24,5:12,8:36,18:24,25:60,26:12}},
+{n:'نگهداري و تعميرات خطوط انتقال و تغذيه',m:{0:12,3:60,4:12,5:12,8:24,9:48,12:24,16:3,17:36,18:24,23:60,24:3,25:60,26:12}},
+{n:'تكنسين ارشد نگهداري و تعميرات خطوط انتقال و تغذيه',m:{0:12,3:60,4:12,5:12,8:24,9:48,12:24,16:1,17:36,18:24,22:36,23:60,24:3,25:60,26:12}},
+{n:'تكنسين نگهداري و تعميرات خطوط انتقال و تغذيه',m:{0:12,3:60,4:12,5:12,8:24,9:48,12:24,16:1,17:36,18:24,22:36,23:60,24:3,25:60,26:12}},
+{n:'رئيس امور ارتباطات و فناوري اطالعات ICT',m:{0:24,8:36,9:48,18:24,24:12,25:60,26:12}},
+{n:'رئيس فناوري اطالعات',m:{0:36,8:36,18:24,24:12,26:12}},
+{n:'رئيس مخابرات و ارتباطات',m:{2:24,4:12,5:12,8:36,9:48,16:3,17:36,18:24,24:12,25:60,26:12}},
+{n:'مسئول مخابرات و ارتباطات',m:{2:12,4:12,5:12,8:36,9:48,15:12,16:3,17:36,18:24,24:12,25:60,26:12}},
+{n:'كارشناس شبكه و ارتباطات',m:{2:12,3:12,4:12,5:12,8:36,9:48,15:12,16:3,17:36,18:24,24:12,25:60,26:12}},
+{n:'مهندس سيستم هاي راديويي',m:{2:12,3:60,4:12,5:12,8:24,9:48,10:12,11:24,15:12,16:3,17:36,18:24,23:60,24:6,25:60,26:12}},
+{n:'مهندس سيستم هاي مخابراتي',m:{2:12,3:60,4:12,5:12,8:24,9:48,10:12,11:24,15:12,16:3,17:36,18:24,23:60,24:6,25:60,26:12}},
+{n:'تكنسين سيستم هاي مخابراتي',m:{2:12,3:60,4:12,5:12,8:24,9:48,10:12,11:24,15:12,16:1,17:36,18:24,23:60,24:6,25:60,26:12}},
+{n:'كارمند خدمات مخابرات',m:{2:12,3:60,4:12,5:12,8:24,9:48,10:12,11:24,15:12,16:3,17:36,18:24,23:60,25:60,26:12}},
+{n:'رئيس امور اندازه گيري و محاسبات گاز',m:{0:24,4:12,5:24,8:36,16:3,17:36,18:24,23:60,24:12,25:60,26:12}},
+{n:'مهندس ارشد كنترل و نظارت بر سيستم هاي اندازه گيري',m:{0:24,4:12,5:24,8:36,16:3,17:36,18:24,23:60,24:6,25:60,26:12}},
+{n:'مهندس كنترل و نظارت بر سيستم هاي اندازه گيري',m:{0:24,4:12,5:24,8:36,16:3,17:36,18:24,23:60,24:6,25:60,26:12}},
+{n:'مهندس ارشد اندازه گيري و محاسبات گاز',m:{0:24,4:12,5:24,8:36,16:3,17:36,18:24,23:60,24:12,25:60,26:12}},
+{n:'مهندس اندازه گيري و محاسبات گاز',m:{0:24,4:12,5:24,8:36,16:3,17:36,18:24,23:60,24:12,25:60,26:12}},
+{n:'مهندس اندازه گيري و توزيع گاز',m:{0:24,4:12,5:24,8:36,16:3,17:36,18:24,23:60,24:6,25:60,26:12}},
+{n:'مهندس توزيع گاز',m:{0:24,4:12,5:24,8:36,16:3,17:36,18:24,23:60,24:6,25:60,26:12}},
+{n:'مدير مهندسي و اجراي طرح ها',m:{0:24,8:36,18:24,23:60,24:12,25:60,26:12}},
+{n:'معاون مهندسي و اجراي طرح ها',m:{0:24,8:36,18:24,23:60,24:12,25:60,26:12}},
+{n:'رئيس امور مهندسي و اجراي طرح ها',m:{0:24,8:36,18:24,23:60,24:12,25:60,26:12}},
+{n:'رئيس گازرساني به صنايع و مجتمع هاي مسكوني',m:{0:24,5:12,8:36,18:24,23:60,24:6,25:60,26:12}},
+{n:'مهندس ارشد بازرسي لوله كشي داخلي و تبديل سوخت',m:{0:24,4:24,5:12,8:36,16:3,17:36,18:24,23:60,24:6,25:60,26:12}},
+{n:'مهندس بازرسي لوله كشي داخلي و تبديل سوخت',m:{0:24,4:24,5:12,8:36,16:3,17:36,18:24,23:60,24:6,25:60,26:12}},
+{n:'مهندس ارشد طراح ( گازرساني به صنايع و مجتمع هاي مسكوني )',m:{0:24,8:36,18:24,23:60,24:12,25:60,26:12}},
+{n:'رئيس اجراي طرح ها',m:{0:24,5:12,8:36,18:24,23:60,24:6,25:60,26:12}},
+{n:'مسئول اجراي طرح هاي شبكه',m:{0:24,4:24,5:12,8:36,16:3,17:36,18:24,23:60,24:6,25:60,26:12}},
+{n:'مهندس ارشد اجراي طرح هاي شبكه',m:{0:24,4:12,5:12,8:36,16:3,17:36,18:24,23:60,24:6,25:60,26:12}},
+{n:'مهندس اجراي طرح هاي شبكه',m:{0:24,4:12,5:12,8:36,16:3,17:36,18:24,23:60,24:6,25:60,26:12}},
+{n:'ناظر ارشد اجراي طرح هاي شبكه',m:{0:12,4:12,5:12,8:24,16:3,17:36,18:24,23:60,24:6,25:60,26:12}},
+{n:'ناظر اجراي طرح هاي شبكه',m:{0:12,4:12,5:12,8:24,16:3,17:36,18:24,23:60,24:3,25:60,26:12}},
+{n:'ناظر ارشد اجراي طرح ايستگاه ها',m:{0:12,4:12,5:12,8:24,16:3,17:36,18:24,23:60,24:6,25:60,26:12}},
+{n:'ناظر اجراي طرح ايستگاه ها',m:{0:12,4:12,5:12,8:24,16:3,17:36,18:24,23:60,24:3,25:60,26:12}},
+{n:'مسئول اجراي طرح هاي راه و ساختمان',m:{0:24,4:12,5:12,8:36,16:3,17:36,18:24,21:60,23:60,24:12,25:60,26:12}},
+{n:'مهندس ارشد اجراي طرح هاي راه و ساختمان',m:{0:24,4:12,5:12,8:36,16:3,17:36,18:24,21:60,23:60,24:12,25:60,26:12}},
+{n:'مهندس اجراي طرح هاي راه و ساختمان',m:{0:24,4:12,5:12,8:36,16:3,17:36,18:24,21:60,23:60,24:12,25:60,26:12}},
+{n:'ناظر ارشد اجراي طرحهاي راه و ساختمان',m:{0:12,4:12,5:12,8:24,16:3,17:36,18:24,21:60,23:60,24:12,25:60,26:12}},
+{n:'ناظر اجراي طرح هاي راه و ساختمان',m:{0:12,4:12,5:12,8:24,16:3,17:36,18:24,21:60,23:60,24:12,25:60,26:12}},
+{n:'مهندس اجراي طرح هاي برق و تأسيسات',m:{2:24,4:12,5:12,8:36,15:12,16:3,17:36,18:24,23:60,24:12,25:60,26:12}},
+{n:'ناظر ارشد طرح هاي برق و حفاظت از زنگ',m:{2:12,4:12,5:12,8:24,15:12,16:3,17:36,18:24,23:60,24:12,25:60,26:12}},
+{n:'ناظر طرح هاي برق و حفاظت از زنگ',m:{2:12,4:12,5:12,8:24,15:12,16:3,17:36,18:24,23:60,24:6,25:60,26:12}},
+{n:'ناظر ارشد اجراي طرحهاي برق و تأسيسات',m:{2:12,4:12,5:12,8:24,15:12,16:3,17:36,18:24,23:60,24:12,25:60,26:12}},
+{n:'رئيس طرح گازرساني',m:{0:24,8:36,18:24,23:60,24:12,25:60,26:12}},
+{n:'مسئول اجراي طرح ها',m:{0:24,5:12,8:36,18:24,23:60,24:6,25:60,26:12}},
+{n:'رييس امور پشتيباني طرح',m:{0:24,5:12,8:36,18:24,24:12,25:60,26:12}},
+{n:'مسئول / متصدي خدمات كاال',m:{0:24,5:12,8:36,16:3,18:24,25:60,26:12}},
+{n:'رئيس / مسوول خدمات طرح ها',m:{0:24,5:12,8:36,18:24,24:12,25:60,26:12}},
+{n:'مهندس ناظر',m:{0:12,4:12,5:24,8:36,16:3,17:36,18:24,20:36,23:60,24:2,25:60,26:12}},
+{n:'آزمايش هاي جوش',m:{0:12,4:12,5:24,8:36,16:3,17:36,18:24,20:36,23:60,24:2,25:60,26:12}},
+{n:'رئيس خدمات فني و مهندسي',m:{0:24,8:36,18:24,23:60,24:12,25:60,26:12}},
+{n:'مسئول طراحي شبكه',m:{0:24,8:36,18:24,23:60,24:12,25:60,26:12}},
+{n:'مهندس ارشد طراح شبكه',m:{0:24,8:36,18:24,23:60,24:12,25:60,26:12}},
+{n:'مهندس طراح شبكه',m:{0:24,8:36,18:24,23:60,24:12,25:60,26:12}},
+{n:'مسئول طراحي ساختمان و تاسيسات',m:{0:24,8:36,18:24,23:60,24:12,25:60,26:12}},
+{n:'مهندس ارشد طراح ساختمان و تأسيسات',m:{0:24,8:36,18:24,23:60,24:12,25:60,26:12}},
+{n:'مسئول طراح برق و حفاظت از زنگ',m:{2:24,8:36,18:24,23:60,24:12,25:60,26:12}},
+{n:'مهندس ارشد طراح برق و حفاظت از زنگ',m:{2:24,8:36,18:24,23:60,24:12,25:60,26:12}},
+{n:'مهندس طراح برق و حفاظت از زنگ',m:{2:24,8:36,18:24,23:60,24:12,25:60,26:12}},
+{n:'مهندس ارشد كنترل شبكه هاي گازرساني',m:{0:24,4:12,8:36,18:24,24:12,25:60,26:12}},
+{n:'مهندس كنترل شبكه هاي گازرساني',m:{0:24,4:12,8:36,18:24,24:12,25:60,26:12}},
+{n:'GIS مسوول نقشه هاي كاربردي',m:{0:24,4:24,8:36,18:24,23:60,24:12,25:60,26:12}},
+{n:'GIS مهندس ارشد نقشه هاي كاربردي',m:{0:24,4:24,8:36,18:24,23:60,24:12,25:60,26:12}},
+{n:'مهندس نقشه هاي كاربردي GIS',m:{0:24,4:24,8:36,18:24,23:60,24:12,25:60,26:12}},
+{n:'مسئول نقشه كشي و نقشه برداري',m:{0:24,4:24,8:36,18:24,24:12,25:60,26:12}},
+{n:'نقشه كش ارشد',m:{0:24,4:24,8:36,18:24,24:12,25:60,26:12}},
+{n:'نقشه بردار',m:{0:24,4:24,5:12,8:36,18:24,24:12,25:60,26:12}},
+{n:'كمک كار نقشه برداري',m:{0:24,4:24,5:12,8:36,18:24,24:12,25:60,26:12}},
+{n:'مسئول بررسي بازار و كدگذاري',m:{8:36,18:24,26:12}},
+{n:'كارمند ارشد بررسي بازار و كدگذاري',m:{8:36,18:24,26:12}},
+{n:'كارمند بررسي بازار و كدگذاري',m:{8:36,18:24,26:12}},
+{n:'تكنسين ساخت و نصب ايستگاه هاي تقليل فشار',m:{0:12,4:12,5:12,8:24,16:1,17:36,18:24,22:60,23:60,24:12,25:60,26:12}},
+{n:'معاون / رئيس امور مالي و پشتيباني',m:{0:48,8:36,18:24,25:60,26:12}},
+{n:'مدير / رييس امور مالي',m:{0:48,8:36,18:24,25:60,26:12}},
+{n:'مدير / رييس منابع انساني',m:{0:48,8:36,18:24,25:60,26:12}},
+{n:'رئيس خدمات اجتماعي و رفاهي',m:{0:24,8:36,18:24,25:60,26:12}},
+{n:'مسئول خدمات دفتري و ساختمان هاي اداري',m:{0:24,8:36,18:24,25:60,26:12}},
+{n:'مسئول خدمات رفاهي',m:{0:24,8:36,18:24,25:60,26:12}},
+{n:'كارمند ارشد خدمات رفاهي ( اجتماعي )',m:{0:24,8:36,18:24,25:60,26:12}},
+{n:'مسئول مستغالت',m:{0:24,4:24,5:24,8:36,9:48,16:3,17:36,18:24,23:60,25:60,26:12}},
+{n:'مسئول خدمات رفاهي و اجتماعي',m:{0:24,8:36,18:24,25:60,26:12}},
+{n:'مهندس تعميرات عمومي',m:{0:24,4:12,5:12,8:36,9:48,11:36,16:3,17:36,18:24,22:36,23:60,24:12,25:60,26:12}},
+{n:'مسئول خدمات منازل',m:{0:24,5:12,8:36,9:48,16:3,17:36,18:24,24:12,25:60,26:12}},
+{n:'كارمند خدمات منازل',m:{0:24,5:12,8:36,9:48,16:3,17:36,18:24,23:60,24:12,25:60,26:12}},
+{n:'تكنسين برق وتأسيسات',m:{2:12,4:6,5:12,8:24,9:48,10:12,11:36,15:12,16:1,17:36,18:24,23:60,25:60,26:12}},
+{n:'مهندس برق وتأسيسات',m:{2:24,4:12,5:12,8:36,9:48,11:36,15:12,16:3,17:36,18:24,22:36,23:60,25:60,26:12}},
+{n:'رئيس امور كاال',m:{0:24,4:24,5:12,8:36,16:3,17:36,18:24,25:60,26:12}},
+{n:'مسئول تدارك كاالهاي داخلي و خارجي',m:{8:36,18:24,26:12}},
+{n:'متصدي خريد داخلي',m:{8:36,18:24,26:12}},
+{n:'متصدي ترخيص و حمل كاال',m:{0:12,4:12,5:12,8:36,9:48,10:12,11:36,13:36,16:3,17:36,18:24,22:36,25:60,26:12}},
+{n:'مسئول رسيد و ارسال كاال',m:{0:12,4:12,5:12,8:36,9:48,10:12,11:36,13:36,16:3,17:36,18:24,22:36,25:60,26:12}},
+{n:'كارمند ارشد رسيد و ارسال كاال',m:{0:12,4:12,5:12,8:36,9:48,10:12,11:36,13:36,16:3,17:36,18:24,22:36,25:60,26:12}},
+{n:'كارمند رسيد و ارسال كاال',m:{0:12,4:12,5:12,8:36,9:48,10:12,11:36,13:36,16:3,17:36,18:24,22:36,25:60,26:12}},
+{n:'مسئول انبارها',m:{0:12,4:12,5:12,8:36,9:48,10:12,11:36,13:36,16:3,17:36,18:24,22:36,25:60,26:12}},
+{n:'بازرس ارشد انبارها',m:{0:12,4:12,5:12,8:36,9:48,10:12,11:36,13:36,16:3,17:36,18:24,22:36,25:60,26:12}},
+{n:'بازرس انبارها',m:{0:12,4:12,5:12,8:36,9:48,10:12,11:36,13:36,16:3,17:36,18:24,22:36,25:60,26:12}},
+{n:'مسوول كنترل كاال',m:{0:12,4:12,8:36,16:3,17:36,18:24,25:60,26:12}},
+{n:'آناليست ارشد كنترل كاال',m:{0:12,4:12,8:36,16:3,17:36,18:24,25:60,26:12}},
+{n:'آناليست كنترل كاال',m:{0:12,4:12,8:36,16:3,17:36,18:24,25:60,26:12}},
+{n:'انباردار ارشد',m:{0:12,4:12,5:12,8:36,9:48,10:12,11:36,13:36,16:3,17:36,18:24,22:36,25:60,26:12}},
+{n:'كارمند ارشد انبار',m:{0:12,4:12,5:12,8:36,9:48,10:12,11:36,13:36,16:3,17:36,18:24,22:36,25:60,26:12}},
+{n:'كمک انباردار',m:{0:12,4:12,5:12,8:36,9:48,10:12,11:36,13:36,16:1,17:36,18:24,22:36,25:60,26:12}},
+{n:'انباردار',m:{0:12,4:12,5:12,8:36,9:48,10:12,11:36,13:36,16:1,17:36,18:24,22:36,25:60,26:12}},
+{n:'رئيس بهينه سازي مصرف گاز',m:{0:24,5:12,8:36,18:24,24:12,25:60,26:12}},
+{n:'كارشناس ارشد بررسي هاي فني و اقتصادي بهينه سازي مصرف گاز',m:{0:24,5:12,8:36,18:24,24:12,25:60,26:12}},
+{n:'كارشناس بررسي هاي فني و اقتصادي بهينه سازي مصرف گاز',m:{0:24,5:12,8:36,18:24,24:12,25:60,26:12}},
+{n:'مهندس ارشد طراحي و اجراي طرح هاي بهينه سازي مصرف گاز',m:{0:24,5:12,8:36,16:3,17:36,18:24,23:60,24:12,25:60,26:12}},
+{n:'مهندس طراحي و اجراي طرح هاي بهينه سازي مصرف گاز',m:{0:24,5:12,8:36,16:3,17:36,18:24,23:60,24:12,25:60,26:12}}];
+
+function initClothing(){
+  var inp=document.getElementById('clSearch');
+  if(inp && !inp._bound){ inp._bound=1; inp.addEventListener('input',clFilter); inp.addEventListener('keyup',clFilter); }
+  var inp2=document.getElementById('clItemSearch');
+  if(inp2 && !inp2._bound){ inp2._bound=1; inp2.addEventListener('input',clItemFilter); inp2.addEventListener('keyup',clItemFilter); }
+  clMode('home');
+}
+function clMode(m){
+  var H=document.getElementById('clHome'), R=document.getElementById('clRoleView'), I=document.getElementById('clItemView');
+  if(!H) return;
+  H.style.display=(m==='home')?'block':'none';
+  R.style.display=(m==='role')?'block':'none';
+  I.style.display=(m==='item')?'block':'none';
+  if(m==='role') clFilter();
+  if(m==='item') clItemFilter();
+  window.scrollTo({top:0});
+}
+function clNorm(s){ return (s||'').replace(/[ي]/g,'ی').replace(/[ك]/g,'ک').replace(/‌/g,' ').replace(/\s+/g,' ').trim(); }
+/* ----- بر اساس تجهیز ----- */
+function clItemCount(k){ var c=0; for(var i=0;i<CLO_ROLES.length;i++){ if(CLO_ROLES[i].m[k]!=null) c++; } return c; }
+function clItemFilter(){
+  var inp=document.getElementById('clItemSearch'); var q=inp?clNorm(inp.value):'';
+  var box=document.getElementById('clItemList'); if(!box) return;
+  var list=[]; for(var k=0;k<CLO_ITEMS.length;k++){ if(!q||clNorm(CLO_ITEMS[k]).indexOf(q)>=0) list.push(k); }
+  if(list.length===0){ box.innerHTML='<div class="cl-more">موردی یافت نشد</div>'; return; }
+  box.innerHTML='<div class="cl-count">'+faDigits(list.length)+' قلم'+(q?' (نتیجهٔ جستجو)':' — یک قلم را انتخاب کنید')+'</div>'+
+    list.map(function(k){ var c=clItemCount(k);
+      var badge=c>0?'<span class="cl-badge">'+faDigits(c)+' سمت</span>':'<span class="cl-badge cl-badge-0">بدون تخصیص</span>';
+      return '<button class="cl-role" onclick="clItemPick('+k+')">'+CLO_ITEMS[k]+badge+'</button>';}).join('');
+}
+function clItemPick(k){
+  var box=document.getElementById('clItemResult'), rows=[];
+  for(var i=0;i<CLO_ROLES.length;i++){ if(CLO_ROLES[i].m[k]!=null) rows.push({n:CLO_ROLES[i].n,mo:CLO_ROLES[i].m[k]}); }
+  rows.sort(function(a,b){return a.mo-b.mo || a.n.localeCompare(b.n,'fa');});
+  var html=rows.map(function(r){return '<div class="sec-row"><span class="sk">'+r.n+'</span><span class="sv">هر '+faDigits(r.mo)+' ماه</span></div>';}).join('');
+  var empty='<div class="sec-row"><span class="sv">این قلم در ماتریس رسمی شرکت گاز استان تهران به هیچ سمت سازمانی‌ای تخصیص داده نشده است.</span></div>';
+  box.innerHTML='<div class="sec-block"><h3>🧰 '+CLO_ITEMS[k]+' — سمت‌های مشمول ('+faDigits(rows.length)+')</h3>'+(html||empty)+'</div>';
+  box.scrollIntoView({behavior:'smooth',block:'start'});
+}
+function clFilter(){
+  var inp=document.getElementById('clSearch'); if(!inp) return;
+  var q=clNorm(inp.value), box=document.getElementById('clList'); if(!box) return;
+  var list=[]; for(var i=0;i<CLO_ROLES.length;i++){ if(!q||clNorm(CLO_ROLES[i].n).indexOf(q)>=0) list.push(i); }
+  if(list.length===0){ box.innerHTML='<div class="cl-more">موردی یافت نشد</div>'; return; }
+  var head='<div class="cl-count">'+faDigits(list.length)+' سمت'+(q?' (نتیجهٔ جستجو)':' — برای پیداکردن، اسکرول یا تایپ کنید')+'</div>';
+  box.innerHTML=head+list.map(function(i){return '<button class="cl-role" onclick="clPick('+i+')">'+CLO_ROLES[i].n+'</button>';}).join('');
+}
+function clPick(i){
+  var r=CLO_ROLES[i], box=document.getElementById('clResult');
+  var keys=Object.keys(r.m).map(Number).sort(function(a,b){return a-b;});
+  var rows=keys.map(function(k){return '<div class="sec-row"><span class="sk">'+CLO_ITEMS[k]+'</span><span class="sv">هر '+faDigits(r.m[k])+' ماه</span></div>';}).join('');
+  box.innerHTML='<div class="sec-block"><h3>👕 '+r.n+'</h3>'+(rows||'<div class="sec-row"><span class="sv">قلمی ثبت نشد</span></div>')+'</div>';
+  box.scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+
+/* ================= تشخیص کار گرم و سرد ================= */
+// فهرست جامع فعالیت‌های صنعت گاز — t:'hot' کار گرم، t:'cold' کار سرد
+var HC_ACTIVITIES = [
+  // --- کار گرم (منبع جرقه/شعله/حرارت) ---
+  {n:'جوشکاری برق (قوس الکتریکی)', t:'hot', note:'تولید قوس، جرقه و حرارت بالا.'},
+  {n:'جوشکاری گاز (اکسی‌استیلن)', t:'hot', note:'شعله باز و حرارت مستقیم.'},
+  {n:'جوشکاری آرگون (TIG/MIG)', t:'hot', note:'قوس الکتریکی و حرارت.'},
+  {n:'جوش لوله پلی‌اتیلن — بات‌فیوژن', t:'hot', note:'ذوب حرارتی سر لوله با المنت داغ.'},
+  {n:'جوش لوله پلی‌اتیلن — الکتروفیوژن', t:'hot', note:'حرارت الکتریکی برای ذوب اتصال.'},
+  {n:'برشکاری با شعله (هوا-گاز/اکسی‌استیلن)', t:'hot', note:'شعله و پاشش فلز مذاب.'},
+  {n:'برشکاری با قوس پلاسما/کربن', t:'hot', note:'قوس و جرقه پرحرارت.'},
+  {n:'سنگ‌زنی و فرز (سنگ فرز)', t:'hot', note:'تولید جرقه فراوان.'},
+  {n:'برش با دیسک برش', t:'hot', note:'جرقه ناشی از سایش.'},
+  {n:'سوراخکاری روی خط گازدار (Hot Tap)', t:'hot', note:'کار گرم ویژه روی خط در حال بهره‌برداری.'},
+  {n:'لحیم‌کاری و سخت‌لحیم (برنز)', t:'hot', note:'شعله/حرارت برای ذوب فلز پرکننده.'},
+  {n:'شعله‌کاری و گرم‌کردن با مشعل', t:'hot', note:'شعله باز مستقیم.'},
+  {n:'ذوب و پاشش قیر/مشعل قیر', t:'hot', note:'شعله و سطح داغ.'},
+  {n:'سندبلاست/شات‌بلاست', t:'hot', note:'احتمال جرقه و الکتریسیته ساکن.'},
+  {n:'کار با موتور احتراق داخلی (ژنراتور/کمپرسور/خودرو) در محوطه گازدار', t:'hot', note:'منبع گرما و جرقه احتراق.'},
+  {n:'استفاده از ابزار برقی غیرضدانفجار در منطقه طبقه‌بندی‌شده', t:'hot', note:'احتمال جرقه الکتریکی.'},
+  {n:'استفاده از چراغ/تجهیزات روشنایی غیرضدانفجار در فضای دارای گاز', t:'hot', note:'منبع بالقوه اشتعال.'},
+  {n:'پرچ‌کاری گرم', t:'hot', note:'حرارت و جرقه.'},
+  {n:'استفاده از هیتر/بخاری شعله‌باز', t:'hot', note:'شعله باز.'},
+  {n:'خشک‌کردن/پخت رنگ با حرارت', t:'hot', note:'منبع حرارتی.'},
+  {n:'دریل/مته‌کاری روی فلز در محیط گازدار', t:'hot', note:'گرمای اصطکاکی و احتمال جرقه.'},
+  // --- کار سرد (بدون منبع اشتعال) ---
+  {n:'پیچ‌ومهره و مونتاژ مکانیکی', t:'cold', note:'بدون جرقه/شعله/حرارت.'},
+  {n:'باز و بستن فلنج و اتصالات', t:'cold', note:'با ابزار دستی و بدون جرقه.'},
+  {n:'تعویض شیر/والو دستی', t:'cold', note:'عملیات مکانیکی سرد.'},
+  {n:'رنگ‌کاری با قلم‌مو/غلتک', t:'cold', note:'بدون حرارت.'},
+  {n:'رنگ‌پاشی بدون حرارت (در صورت نبود گاز)', t:'cold', note:'بدون منبع اشتعال؛ تهویه و رعایت بخار حلال لازم است.'},
+  {n:'عایق‌کاری و نوارپیچی لوله', t:'cold', note:'دستی و سرد.'},
+  {n:'گریس‌کاری و روانکاری', t:'cold', note:'بدون منبع اشتعال.'},
+  {n:'حفاری دستی با بیل و کلنگ', t:'cold', note:'بدون جرقه (با کنترل برخورد به خطوط).'},
+  {n:'خاکبرداری و خاک‌ریزی دستی', t:'cold', note:'عملیات سرد.'},
+  {n:'گازسنجی و نشت‌یابی', t:'cold', note:'با دستگاه کالیبره؛ بدون منبع اشتعال.'},
+  {n:'قرائت کنتور', t:'cold', note:'فاقد منبع اشتعال.'},
+  {n:'بازرسی چشمی و بازدید', t:'cold', note:'فاقد منبع اشتعال.'},
+  {n:'تمیزکاری و نظافت دستی', t:'cold', note:'بدون حرارت/جرقه.'},
+  {n:'نقشه‌برداری', t:'cold', note:'عملیات سرد.'},
+  {n:'نصب علائم، تابلو و حصارکشی', t:'cold', note:'دستی و سرد.'},
+  {n:'داربست‌بندی (بدون برش گرم)', t:'cold', note:'مونتاژ مکانیکی سرد.'},
+  {n:'آبکشی و تخلیه آب', t:'cold', note:'بدون منبع اشتعال.'},
+  {n:'تست هیدرواستاتیک با آب', t:'cold', note:'با آب و بدون حرارت.'},
+  {n:'پرکردن کیسه شن و تثبیت', t:'cold', note:'عملیات سرد.'},
+  {n:'جابجایی دستی بار', t:'cold', note:'فاقد منبع اشتعال.'},
+  {n:'نمونه‌برداری', t:'cold', note:'بدون منبع اشتعال.'},
+  {n:'کالیبراسیون ابزار دقیق (بدون منبع اشتعال)', t:'cold', note:'عملیات سرد.'},
+  {n:'باز و بست شیر آب/تخلیه', t:'cold', note:'مکانیکی و سرد.'}
+];
+function initHCDet(){
+  var s=document.getElementById('hcdSel'); if(!s) return;
+  var opts=HC_ACTIVITIES.slice().sort(function(a,b){return a.n.localeCompare(b.n,'fa');});
+  s.innerHTML='<option value="">— انتخاب فعالیت —</option>'+opts.map(function(a,i){
+    var idx=HC_ACTIVITIES.indexOf(a); return '<option value="'+idx+'">'+a.n+'</option>'; }).join('');
+  renderHCDetRef();
+}
+function renderHCDet(){
+  var v=document.getElementById('hcdSel').value, box=document.getElementById('hcdResult');
+  if(v===''){ box.innerHTML=''; return; }
+  var a=HC_ACTIVITIES[+v]; if(!a){ box.innerHTML=''; return; }
+  var hot=a.t==='hot';
+  box.innerHTML='<div class="result-box '+(hot?'r-red':'r-green')+'"><span class="icon">'+(hot?'🔥':'❄️')+
+    '</span><div class="verdict">'+(hot?'کار گرم':'کار سرد')+'</div><div class="sub">'+a.n+' — '+a.note+'</div></div>';
+}
+function renderHCDetRef(){
+  var box=document.getElementById('hcdRef'); if(!box) return;
+  var hot=HC_ACTIVITIES.filter(function(a){return a.t==='hot';}).map(function(a){return '<li>'+a.n+'</li>';}).join('');
+  var cold=HC_ACTIVITIES.filter(function(a){return a.t==='cold';}).map(function(a){return '<li>'+a.n+'</li>';}).join('');
+  box.innerHTML='<div class="hc-cols">'+
+    '<div class="req-list"><h3>🔥 مصادیق کار گرم</h3><ul class="ri-ctrl">'+hot+'</ul></div>'+
+    '<div class="req-list"><h3>❄️ مصادیق کار سرد</h3><ul class="ri-ctrl">'+cold+'</ul></div>'+
+    '</div>';
+}
+
 // ساخت کارت‌های نوع حریق در بارگذاری
 buildFireGrid();
 initGasPage();
 initFAPage();
 initRiskPages();
+initClothing();
+initHCDet();
+taInit();
+initHazzone();
+initCalib();
 enhanceSelects();
 // اعمال تم ذخیره‌شده و هماهنگ‌کردن آیکون دکمه
 applyTheme(document.documentElement.getAttribute('data-theme')==='light' ? 'light' : 'dark');
@@ -3443,7 +5005,7 @@ if ('serviceWorker' in navigator) {
 <div class="img-modal" id="imgModal">
   <div class="im-box">
     <p class="im-hint">برای ذخیره، روی «دانلود تصویر» بزنید — یا روی تصویر انگشت را نگه دارید و گزینهٔ «Save Image / ذخیره تصویر» را انتخاب کنید.</p>
-    <img id="imModalImg" alt="خروجی ارزیابی ورود به منهول">
+    <img id="imModalImg" alt="خروجی ارزیابی ورود به فضای بسته">
     <div class="im-actions">
       <a class="im-dl" id="imModalDl" href="#" download>⬇️ دانلود تصویر</a>
       <button class="im-close" onclick="closeImageModal()">بستن</button>

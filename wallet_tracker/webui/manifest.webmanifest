@@ -1,0 +1,15 @@
+{
+  "name": "ردیاب کیف پول پلی‌مارکت",
+  "short_name": "PolyWallet",
+  "description": "موجودی USDC و سود/زیان معاملات پلی‌مارکت یک کیف پول در بازه زمانی دلخواه",
+  "lang": "fa",
+  "dir": "rtl",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0b1120",
+  "theme_color": "#0b1120",
+  "icons": [
+    { "src": "icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
