@@ -1,0 +1,40 @@
+name: Tehran gas-fire geo data
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - "claude/tehran-gas-fire-routes-*"
+    paths:
+      - "tehran_gas_fire_map/scripts/fetch_geo.py"
+      - "tehran_gas_fire_map/data/gas_offices.json"
+      - ".github/workflows/tehran-geo.yml"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: tehran-geo-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Fetch geo data (Overpass + Nominatim + OSRM)
+        run: python tehran_gas_fire_map/scripts/fetch_geo.py
+
+      - name: Commit results
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add tehran_gas_fire_map/data/geo_results.json
+          git diff --cached --quiet || git commit -m "chore: tehran gas-fire geo results [skip ci]"
+          git push
