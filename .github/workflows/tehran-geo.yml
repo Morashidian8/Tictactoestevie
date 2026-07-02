@@ -8,7 +8,7 @@ on:
     paths:
       - "tehran_gas_fire_map/scripts/fetch_geo.py"
       - "tehran_gas_fire_map/scripts/fetch_stations.py"
-      - "tehran_gas_fire_map/scripts/google_geocode.py"
+      - "tehran_gas_fire_map/scripts/google_maps_browser.py"
       - "tehran_gas_fire_map/scripts/build_map.py"
       - "tehran_gas_fire_map/scripts/inline_assets.py"
       - "tehran_gas_fire_map/data/gas_offices.json"
@@ -41,12 +41,14 @@ jobs:
             python tehran_gas_fire_map/scripts/fetch_geo.py
           fi
 
-      - name: Google Maps lookup for office coordinates
+      - name: Google Maps lookup for office coordinates (browser)
         run: |
           if [ -f tehran_gas_fire_map/data/google_coords.json ]; then
             echo "google_coords.json already present — skipping lookup"
           else
-            python tehran_gas_fire_map/scripts/google_geocode.py
+            pip install playwright
+            playwright install --with-deps chromium
+            python tehran_gas_fire_map/scripts/google_maps_browser.py
           fi
 
       - name: Fetch full fire-station list
