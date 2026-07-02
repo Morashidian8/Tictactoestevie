@@ -34,6 +34,8 @@ jobs:
 
       - name: Fetch geo data (Overpass + Nominatim + OSRM)
         # Slow (~15 min against public APIs); skip once results are committed.
+        env:
+          SKIP_BOUNDARY: "1"  # Overpass boundary query keeps timing out; map works without it
         run: |
           if [ -f tehran_gas_fire_map/data/geo_results.json ]; then
             echo "geo_results.json already present — skipping fetch"

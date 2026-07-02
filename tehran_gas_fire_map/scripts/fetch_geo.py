@@ -9,6 +9,7 @@ Uses stdlib only.
 """
 import json
 import math
+import os
 import time
 import urllib.parse
 import urllib.request
@@ -113,6 +114,8 @@ out geom;"""
 def refine_coords(offices):
     print("Refining office coordinates via Nominatim ...")
     for o in offices:
+        if o.get("source") == "google-maps":
+            continue  # user-verified Google Maps coords take precedence
         q = o.get("geocode")
         if not q:
             continue
@@ -149,8 +152,14 @@ def main():
     with open(f"{HERE}/data/gas_offices.json", encoding="utf-8") as f:
         offices = json.load(f)["offices"]
 
-    stations = fetch_fire_stations()
-    boundary = fetch_boundary()
+    stations_cache = f"{HERE}/data/stations.json"
+    if os.path.exists(stations_cache):
+        with open(stations_cache, encoding="utf-8") as f:
+            stations = json.load(f)["stations"]
+        print(f"Loaded {len(stations)} stations from cache")
+    else:
+        stations = fetch_fire_stations()
+    boundary = [] if os.environ.get("SKIP_BOUNDARY") else fetch_boundary()
     refine_coords(offices)
 
     results = []
