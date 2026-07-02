@@ -630,30 +630,39 @@ def longest_alt_flips(directions):
     return best
 
 
-def longest_completed_alt(directions, start, win):
+def completed_alt_or_drop(directions, start, win):
     """
-    Longest COMPLETED alternation (in flips) inside the window of `win` candles
-    beginning at index `start`.
+    Longest alternation (in flips) inside the window of `win` candles beginning
+    at index `start` — but ONLY if that biggest alternation is safely completed
+    before the window's last candle. Otherwise the whole window is discarded.
 
-    A run that reaches the window's LAST candle is still going when the window
-    closes, so it is excluded (it may continue into the next window). Only runs
-    that ended *before* the last candle — i.e. there is a non-alternating candle
-    within the window after them — are counted. This avoids treating an
-    alternation that is still ongoing at the last 5-minute candle as finished.
+    Rather than shrinking the reported number (which would be misleading — a
+    window whose true longest run is 6 must not be reported as 3), we keep the
+    honest value for "clean-edged" windows and drop the rest entirely:
+
+      * completed_best = longest run that ends *before* the last candle.
+      * edge_run       = length of the run that reaches the last candle (0 if
+                         the last transition is not a flip).
+      * If edge_run > completed_best the window's biggest alternation is still
+        going at the edge (you could get trapped as it continues into the next
+        window) -> return None so the caller skips this window.
+      * Otherwise return completed_best, the TRUE longest alternation, which is
+        guaranteed to have finished before the last candle.
     """
-    best = 0
+    completed_best = 0
     cur = 0
     for j in range(start + 1, start + win):  # j runs up to the last candle
         a, b = directions[j], directions[j - 1]
         if a != 0 and b != 0 and a == -b:
             cur += 1
         else:
-            if cur > best:  # a run just ended (broke inside the window)
-                best = cur
+            if cur > completed_best:  # a run just ended inside the window
+                completed_best = cur
             cur = 0
-    # `cur` now holds the run that reaches the last candle; it is still ongoing
-    # at the window's edge, so it is intentionally NOT counted.
-    return best
+    edge_run = cur  # run still open at the last candle (0 if it ended earlier)
+    if edge_run > completed_best:
+        return None  # biggest alternation touches the edge -> drop the window
+    return completed_best
 
 
 # ---------------------------------------------------------------------------
@@ -750,7 +759,9 @@ def build_hour_samples(candles, tz):
     for (date, weekday, hour), items in buckets.items():
         items.sort(key=lambda x: x[0])  # chronological within the hour
         dirs = [d for _, d in items]
-        flips = longest_completed_alt(dirs, 0, len(dirs))
+        flips = completed_alt_or_drop(dirs, 0, len(dirs))
+        if flips is None:
+            continue  # biggest alternation touches the last candle -> skip
         samples[weekday][hour].append(flips)
     return samples
 
@@ -783,7 +794,9 @@ def build_rolling_samples(candles, tz, win=None, with_times=False):
     for i in range(n - win + 1):
         if times[i + win - 1] - times[i] != full_span:
             continue  # a candle is missing inside this window -> skip
-        flips = longest_completed_alt(dirs, i, win)
+        flips = completed_alt_or_drop(dirs, i, win)
+        if flips is None:
+            continue  # biggest alternation touches the last candle -> skip
         dt = datetime.fromtimestamp(times[i], tz=timezone.utc).astimezone(tz)
         key = (dt.hour, dt.minute)
         samples[dt.weekday()].setdefault(key, []).append(
