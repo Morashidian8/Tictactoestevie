@@ -630,6 +630,32 @@ def longest_alt_flips(directions):
     return best
 
 
+def longest_completed_alt(directions, start, win):
+    """
+    Longest COMPLETED alternation (in flips) inside the window of `win` candles
+    beginning at index `start`.
+
+    A run that reaches the window's LAST candle is still going when the window
+    closes, so it is excluded (it may continue into the next window). Only runs
+    that ended *before* the last candle — i.e. there is a non-alternating candle
+    within the window after them — are counted. This avoids treating an
+    alternation that is still ongoing at the last 5-minute candle as finished.
+    """
+    best = 0
+    cur = 0
+    for j in range(start + 1, start + win):  # j runs up to the last candle
+        a, b = directions[j], directions[j - 1]
+        if a != 0 and b != 0 and a == -b:
+            cur += 1
+        else:
+            if cur > best:  # a run just ended (broke inside the window)
+                best = cur
+            cur = 0
+    # `cur` now holds the run that reaches the last candle; it is still ongoing
+    # at the window's edge, so it is intentionally NOT counted.
+    return best
+
+
 # ---------------------------------------------------------------------------
 # Whole-series alternation runs and the gap to the next run
 # ---------------------------------------------------------------------------
@@ -724,7 +750,7 @@ def build_hour_samples(candles, tz):
     for (date, weekday, hour), items in buckets.items():
         items.sort(key=lambda x: x[0])  # chronological within the hour
         dirs = [d for _, d in items]
-        flips = longest_alt_flips(dirs)
+        flips = longest_completed_alt(dirs, 0, len(dirs))
         samples[weekday][hour].append(flips)
     return samples
 
@@ -757,7 +783,7 @@ def build_rolling_samples(candles, tz, win=None, with_times=False):
     for i in range(n - win + 1):
         if times[i + win - 1] - times[i] != full_span:
             continue  # a candle is missing inside this window -> skip
-        flips = longest_alt_flips(dirs[i : i + win])
+        flips = longest_completed_alt(dirs, i, win)
         dt = datetime.fromtimestamp(times[i], tz=timezone.utc).astimezone(tz)
         key = (dt.hour, dt.minute)
         samples[dt.weekday()].setdefault(key, []).append(
