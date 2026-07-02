@@ -35,7 +35,7 @@ CONFIGS = [
 # Rolling-window lengths to precompute (minutes), 30m … 10h. A window is only
 # built for a timeframe when it spans at least 2 candles (so 1h windows are
 # skipped on the 1-hour timeframe, 30m only applies to 5m/15m, etc.).
-WIN_LENGTHS = [30, 60, 120, 180, 240, 300, 360, 480, 600]
+WIN_LENGTHS = [30, 60, 90, 120, 180, 240, 300, 360, 480, 600]
 RECENT_K = 6  # how many most-recent occurrences of each window to keep
 
 
@@ -75,10 +75,14 @@ def build_dataset(tz, source, interval, granularity, product, ex_label, tf_label
             c.sort(key=lambda x: x["start"])
             clock_out[str(wd)] = c
 
-    # Rolling windows for each length that spans >= 2 candles on this timeframe.
+    # Rolling windows for each length that is a whole number (>=2) of candles
+    # on this timeframe (e.g. 90m is valid on 5m/15m but not on 1h).
+    tf_min = granularity // 60
     rolling_out = {}
     for wm in WIN_LENGTHS:
-        win = round(wm * 60 / granularity)  # candles per window
+        if wm % tf_min != 0:
+            continue  # not an exact number of candles on this timeframe
+        win = wm // tf_min  # candles per window
         if win < 2:
             continue  # window too short for this timeframe (e.g. 1h on 1h)
         samples = A.build_rolling_samples(candles, tz, win=win, with_times=True)
