@@ -47,6 +47,7 @@ function histBars(hist) {
 }
 
 function winLabel(min) {
+  if (min === 90) return '۱.۵ ساعت';
   const h = min / 60;
   return Number.isInteger(h) ? `${h.toLocaleString('fa')} ساعت` : `${min} دقیقه`;
 }
