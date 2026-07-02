@@ -14,6 +14,7 @@ the entries below are seeded as placeholders and may not all exist yet.
 | HSE PWA | `hse_pwa/` | Progressive web app for HSE inspection. |
 | Manhole PWA | `manhole_pwa/` | Progressive web app for manhole inspection. |
 | PWA | `pwa/` | Shared / generic PWA assets. |
+| Tehran gas–fire map | `tehran_gas_fire_map/` | Interactive Persian map of Tehran-city gas offices, their nearest fire station (OSM data + OSRM routing fetched via GitHub Actions), route, distance, and ETA. |
 | Wallet tracker | `wallet_tracker/` | Standalone PWA + FastAPI backend that reports a Polymarket wallet's USDC cash balance and the FIFO-accurate realized PnL of its trades over a chosen time window. No dependency on `polybot`. |
 
 When a skill needs the domain language for a given area, read the `CONTEXT.md` for the matching
