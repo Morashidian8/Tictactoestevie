@@ -630,39 +630,53 @@ def longest_alt_flips(directions):
     return best
 
 
-def completed_alt_or_drop(directions, start, win):
+def window_true_alt(directions, times, step, start, win):
     """
-    Longest alternation (in flips) inside the window of `win` candles beginning
-    at index `start` — but ONLY if that biggest alternation is safely completed
-    before the window's last candle. Otherwise the whole window is discarded.
+    Longest TRUE alternating run (in flips) active during the window of `win`
+    candles beginning at index `start`.
 
-    Rather than shrinking the reported number (which would be misleading — a
-    window whose true longest run is 6 must not be reported as 3), we keep the
-    honest value for "clean-edged" windows and drop the rest entirely:
+    The window edge must not distort the number. A run that is still going at the
+    window's LAST candle is not cut off there — it is followed FORWARD past the
+    boundary (into the next hour / later candles) until it actually breaks, and
+    its FULL length is credited to this window. So a window whose big alternation
+    spills into the next hour reports that alternation's real (high) length,
+    correctly flagging the hour as risky, instead of hiding or shrinking it.
 
-      * completed_best = longest run that ends *before* the last candle.
-      * edge_run       = length of the run that reaches the last candle (0 if
-                         the last transition is not a flip).
-      * If edge_run > completed_best the window's biggest alternation is still
-        going at the edge (you could get trapped as it continues into the next
-        window) -> return None so the caller skips this window.
-      * Otherwise return completed_best, the TRUE longest alternation, which is
-        guaranteed to have finished before the last candle.
+      * Runs that end inside the window count at their in-window length.
+      * A run open at the last candle is extended forward through `directions`
+        (stopping at the series end or a data gap, detected via `times`/`step`)
+        and its full length is taken.
+
+    `times` and `step` (seconds between candles) are the global series arrays so
+    the forward walk can tell a real next candle from a gap.
     """
-    completed_best = 0
+    n = len(directions)
+    end = start + win  # first index past the window
+    best = 0
     cur = 0
-    for j in range(start + 1, start + win):  # j runs up to the last candle
+    for j in range(start + 1, end):  # j runs up to the last candle
         a, b = directions[j], directions[j - 1]
         if a != 0 and b != 0 and a == -b:
             cur += 1
         else:
-            if cur > completed_best:  # a run just ended inside the window
-                completed_best = cur
+            if cur > best:  # a run just ended inside the window
+                best = cur
             cur = 0
-    edge_run = cur  # run still open at the last candle (0 if it ended earlier)
-    if edge_run > completed_best:
-        return None  # biggest alternation touches the edge -> drop the window
-    return completed_best
+    # `cur` now holds a run still open at the last candle; follow it forward
+    # (across the window boundary) to its true end, as long as candles are
+    # contiguous, then count its full length.
+    if cur > 0:
+        j = end
+        while j < n and times[j] - times[j - 1] == step:
+            a, b = directions[j], directions[j - 1]
+            if a != 0 and b != 0 and a == -b:
+                cur += 1
+                j += 1
+            else:
+                break
+    if cur > best:
+        best = cur
+    return best
 
 
 # ---------------------------------------------------------------------------
@@ -745,23 +759,36 @@ def build_hour_samples(candles, tz):
     Returns: samples[weekday][hour] = list of per-instance flip counts.
 
     Each instance is one (calendar date, hour) bucket containing that hour's
-    five-minute candles, in time order.
+    five-minute candles, in time order. An alternation still going at the end of
+    the hour is followed forward into the next hour (see window_true_alt), so a
+    risky hour whose alternation spills over reports its real length.
     """
-    # Group candle directions by (date, weekday, hour) in the target timezone.
     dirs_all = directions_of(candles)
-    buckets = {}  # (date, weekday, hour) -> list of (minute_key, direction)
+    times_all = [c["time"] for c in candles]
+    n = len(candles)
+    diffs = [times_all[i + 1] - times_all[i] for i in range(min(n - 1, 1000))]
+    step = min((d for d in diffs if d > 0), default=GRANULARITY)
+
+    # Group GLOBAL candle indices by (date, weekday, hour) so we can extend a
+    # run past the hour boundary using the whole series.
+    buckets = {}  # (date, weekday, hour) -> list of global indices
     for idx, c in enumerate(candles):
         dt = datetime.fromtimestamp(c["time"], tz=timezone.utc).astimezone(tz)
         key = (dt.date(), dt.weekday(), dt.hour)
-        buckets.setdefault(key, []).append((c["time"], dirs_all[idx]))
+        buckets.setdefault(key, []).append(idx)
 
     samples = {wd: {h: [] for h in range(24)} for wd in range(7)}
-    for (date, weekday, hour), items in buckets.items():
-        items.sort(key=lambda x: x[0])  # chronological within the hour
-        dirs = [d for _, d in items]
-        flips = completed_alt_or_drop(dirs, 0, len(dirs))
-        if flips is None:
-            continue  # biggest alternation touches the last candle -> skip
+    for (date, weekday, hour), idxs in buckets.items():
+        idxs.sort()
+        start, win = idxs[0], len(idxs)
+        # Only count an hour that is a contiguous block of candles (no gap
+        # inside the hour), mirroring the rolling windows' gap handling.
+        if idxs[-1] - start + 1 != win:
+            continue
+        if any(times_all[start + k] - times_all[start + k - 1] != step
+               for k in range(1, win)):
+            continue
+        flips = window_true_alt(dirs_all, times_all, step, start, win)
         samples[weekday][hour].append(flips)
     return samples
 
@@ -794,9 +821,7 @@ def build_rolling_samples(candles, tz, win=None, with_times=False):
     for i in range(n - win + 1):
         if times[i + win - 1] - times[i] != full_span:
             continue  # a candle is missing inside this window -> skip
-        flips = completed_alt_or_drop(dirs, i, win)
-        if flips is None:
-            continue  # biggest alternation touches the last candle -> skip
+        flips = window_true_alt(dirs, times, step, i, win)
         dt = datetime.fromtimestamp(times[i], tz=timezone.utc).astimezone(tz)
         key = (dt.hour, dt.minute)
         samples[dt.weekday()].setdefault(key, []).append(
