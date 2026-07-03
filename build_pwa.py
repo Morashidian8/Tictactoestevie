@@ -1,6 +1,7 @@
 """
 Build the static PWA data: precompute the full alternation statistics for every
-window (clock-hour and rolling) and every weekday over the past year, for each
+window (clock-hour and rolling) and every weekday over a growing window that
+starts at a fixed date (see ANALYSIS_START) and extends to now, for each
 combination of exchange (Binance, Coinbase) and timeframe (5m, 15m), into
 site/data.json. Then copy the PWA shell (pwa/*) next to it.
 
@@ -12,7 +13,9 @@ Run (where the exchanges are reachable, e.g. in CI):
 """
 
 import os
+import csv
 import json
+import time
 import shutil
 from datetime import datetime, timezone
 
@@ -20,8 +23,23 @@ os.environ.setdefault("ANALYSIS_TZ", "Asia/Tehran")
 import analyze_history as A  # noqa: E402  (env must be set first)
 
 OUT = os.environ.get("PWA_OUT", "site").strip()
-DAYS = int(os.environ.get("ANALYSIS_DAYS", "365"))
 HERE = os.path.dirname(os.path.abspath(__file__))
+CACHE_DIR = os.path.join(HERE, ".cache")
+
+# Fixed analysis START date (locked). The analysed range runs from this date to
+# "now", so it GROWS every day instead of sliding as a rolling 1-year window.
+# Candles are cached per dataset and only the new tail is downloaded on each
+# build, so the range can grow indefinitely without re-downloading everything.
+ANALYSIS_START = os.environ.get("ANALYSIS_START", "2025-07-03").strip()
+START_TS = int(datetime.strptime(ANALYSIS_START, "%Y-%m-%d")
+               .replace(tzinfo=timezone.utc).timestamp())
+
+
+def _days_since(ts):
+    return max(2, (int(time.time()) - ts) // 86400 + 1)
+
+
+DAYS = _days_since(START_TS)  # span currently covered (for meta/reporting only)
 
 # (key, exchange-label, timeframe-label, source, interval, granularity, product)
 CONFIGS = [
@@ -35,7 +53,7 @@ CONFIGS = [
 # Rolling-window lengths to precompute (minutes), 30m … 10h. A window is only
 # built for a timeframe when it spans at least 2 candles (so 1h windows are
 # skipped on the 1-hour timeframe, 30m only applies to 5m/15m, etc.).
-WIN_LENGTHS = [30, 60, 120, 180, 240, 300, 360, 480, 600]
+WIN_LENGTHS = [30, 60, 90, 120, 180, 240, 300, 360, 480, 600]
 RECENT_K = 6  # how many most-recent occurrences of each window to keep
 
 
@@ -50,10 +68,71 @@ def pack(stats):
     }
 
 
-def fetch(source, interval, granularity, product):
+def _cache_path(source, interval, product):
+    safe = product.replace("/", "-")
+    return os.path.join(CACHE_DIR, f"pwa_{source}_{interval}_{safe}.csv")
+
+
+def _load_candles_csv(path):
+    if not os.path.exists(path):
+        return []
+    try:
+        with open(path, newline="") as f:
+            out = [{"time": int(r["time"]), "open": float(r["open"]),
+                    "high": float(r["high"]), "low": float(r["low"]),
+                    "close": float(r["close"])} for r in csv.DictReader(f)]
+    except Exception:
+        return []
+    out.sort(key=lambda c: c["time"])
+    return out
+
+
+def _save_candles_csv(path, candles):
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w", newline="") as f:
+        w = csv.DictWriter(f, fieldnames=["time", "open", "high", "low", "close"])
+        w.writeheader()
+        w.writerows(candles)
+
+
+def _merge_candles(base, extra):
+    """Union two candle lists by timestamp (extra wins on overlap), sorted."""
+    d = {c["time"]: c for c in base}
+    for c in extra:
+        d[c["time"]] = c
+    return [d[k] for k in sorted(d)]
+
+
+def _raw_fetch(source, interval, granularity, days, product):
     if source == "coinbase":
-        return A.fetch_coinbase(granularity, DAYS, product)
-    return A.fetch_binance(interval, granularity, DAYS, product)
+        return A.fetch_coinbase(granularity, days, product)
+    return A.fetch_binance(interval, granularity, days, product)
+
+
+def fetch(source, interval, granularity, product):
+    """
+    Incrementally-cached fetch from the fixed START date to now.
+
+    First build downloads the whole span and caches it; later builds only fetch
+    the new tail (candles since the newest cached one) and append it, so the
+    analysed range GROWS over time instead of re-downloading a year each run.
+    The cache lives in .cache/ which CI persists between runs.
+    """
+    path = _cache_path(source, interval, product)
+    cached = _load_candles_csv(path)
+    now = int(time.time())
+    if cached and cached[0]["time"] <= START_TS + granularity * 2:
+        # Cache already reaches back to the fixed start: fetch only the recent
+        # tail since the newest cached candle (small download) and append it.
+        gap_days = max(1, (now - cached[-1]["time"]) // 86400 + 2)
+        tail = _raw_fetch(source, interval, granularity, gap_days, product)
+        merged = _merge_candles(cached, tail)
+    else:
+        # No cache yet (or it doesn't reach the start) -> full span download.
+        merged = _merge_candles(cached, _raw_fetch(
+            source, interval, granularity, _days_since(START_TS), product))
+    _save_candles_csv(path, merged)
+    return [c for c in merged if c["time"] >= START_TS]
 
 
 def build_dataset(tz, source, interval, granularity, product, ex_label, tf_label):
@@ -75,10 +154,14 @@ def build_dataset(tz, source, interval, granularity, product, ex_label, tf_label
             c.sort(key=lambda x: x["start"])
             clock_out[str(wd)] = c
 
-    # Rolling windows for each length that spans >= 2 candles on this timeframe.
+    # Rolling windows for each length that is a whole number (>=2) of candles
+    # on this timeframe (e.g. 90m is valid on 5m/15m but not on 1h).
+    tf_min = granularity // 60
     rolling_out = {}
     for wm in WIN_LENGTHS:
-        win = round(wm * 60 / granularity)  # candles per window
+        if wm % tf_min != 0:
+            continue  # not an exact number of candles on this timeframe
+        win = wm // tf_min  # candles per window
         if win < 2:
             continue  # window too short for this timeframe (e.g. 1h on 1h)
         samples = A.build_rolling_samples(candles, tz, win=win, with_times=True)
@@ -180,6 +263,7 @@ def main():
             "generated": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
             "win_lengths": WIN_LENGTHS,
             "days": DAYS,
+            "start": ANALYSIS_START,
         },
         "order": A.WEEKDAY_DISPLAY_ORDER,
         "names": {str(k): v for k, v in A.PERSIAN_WEEKDAY.items()},
