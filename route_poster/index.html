@@ -1,0 +1,747 @@
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>پوسترساز مسیر اضطراری</title>
+
+<!-- Vazirmatn -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" />
+<!-- Leaflet -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<!-- html2canvas -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+<style>
+:root{
+  --navy:#0F3B5C;
+  --navy2:#164e78;
+  --red:#C8102E;
+  --orange:#F26A21;
+  --bg:#F6F8FA;
+  --ink:#1b2733;
+  --line:#d7dee6;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  font-family:'Vazirmatn',system-ui,sans-serif;
+  direction:rtl; text-align:right;
+  background:var(--bg); color:var(--ink);
+  -webkit-print-color-adjust:exact; print-color-adjust:exact;
+}
+button{font-family:inherit;cursor:pointer}
+input,textarea{font-family:inherit;direction:rtl}
+
+/* ---------- App chrome ---------- */
+#app{display:flex;flex-direction:column;min-height:100vh}
+#topbar{
+  position:sticky;top:0;z-index:1200;
+  background:var(--navy);color:#fff;
+  display:flex;flex-wrap:wrap;align-items:center;gap:10px;
+  padding:10px 16px;box-shadow:0 2px 10px rgba(0,0,0,.15);
+}
+#topbar h1{font-size:18px;margin:0 8px 0 0;font-weight:800}
+#topbar .grow{flex:1}
+.tb-btn{
+  background:#ffffff1a;border:1px solid #ffffff40;color:#fff;
+  padding:8px 12px;border-radius:9px;font-size:13px;font-weight:600;
+  display:inline-flex;align-items:center;gap:6px;
+}
+.tb-btn:hover{background:#ffffff33}
+.tb-btn.primary{background:var(--red);border-color:var(--red)}
+.tb-btn.primary:hover{background:#a60d26}
+.tb-btn.green{background:#1f9d55;border-color:#1f9d55}
+
+#work{display:flex;gap:14px;padding:14px;align-items:flex-start}
+@media(max-width:1100px){#work{flex-direction:column;align-items:stretch}}
+
+/* ---------- Side toolbar / panels ---------- */
+#side{width:300px;flex:0 0 300px;display:flex;flex-direction:column;gap:12px}
+@media(max-width:1100px){#side{width:100%;flex:1}}
+.panel{background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px;box-shadow:0 1px 4px rgba(15,59,92,.05)}
+.panel h3{margin:0 0 10px;font-size:14px;color:var(--navy);font-weight:800;display:flex;align-items:center;gap:6px}
+.panel h3 .dot{width:9px;height:9px;border-radius:50%;background:var(--red);display:inline-block}
+.tools{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.tool{
+  border:1px solid var(--line);background:#fff;border-radius:10px;
+  padding:9px 8px;font-size:12.5px;font-weight:600;color:var(--ink);
+  display:flex;flex-direction:column;align-items:center;gap:4px;text-align:center;
+}
+.tool .ic{font-size:18px;line-height:1}
+.tool:hover{border-color:var(--navy)}
+.tool.active{background:var(--navy);color:#fff;border-color:var(--navy)}
+.tool.wide{grid-column:1/-1;flex-direction:row;justify-content:center}
+.tool.danger.active,.tool.danger:hover{background:var(--red);color:#fff;border-color:var(--red)}
+
+.search-row{display:flex;gap:6px;margin-bottom:8px}
+.search-row input{flex:1;padding:8px;border:1px solid var(--line);border-radius:8px;font-size:12.5px}
+.search-row button{background:var(--navy);color:#fff;border:none;border-radius:8px;padding:0 10px;font-size:12.5px;font-weight:700}
+.hint{font-size:11.5px;color:#5b6b7a;line-height:1.7;margin:6px 0 0}
+
+/* Properties panel */
+#propPanel{display:none}
+#propPanel.show{display:block}
+.prop-row{display:flex;align-items:center;gap:8px;margin-bottom:9px;font-size:12.5px}
+.prop-row label{flex:0 0 78px;color:#4a5a68;font-weight:600}
+.prop-row input[type=text],.prop-row textarea{flex:1;padding:7px;border:1px solid var(--line);border-radius:8px;font-size:12.5px}
+.prop-row input[type=range]{flex:1}
+.mini{border:1px solid var(--line);background:#fff;border-radius:8px;padding:5px 9px;font-size:13px;font-weight:700}
+.mini:hover{background:#eef2f6}
+.prop-del{width:100%;background:var(--red);color:#fff;border:none;border-radius:9px;padding:9px;font-weight:700;font-size:13px;margin-top:4px}
+
+/* ---------- Poster ---------- */
+#stage{flex:1;display:flex;justify-content:center;overflow:auto}
+#poster{
+  width:210mm;min-height:297mm;background:#fff;
+  box-shadow:0 6px 30px rgba(15,59,92,.18);
+  display:flex;flex-direction:column;overflow:hidden;position:relative;
+}
+[contenteditable]{outline:none}
+[contenteditable]:focus{background:#fff59d55;border-radius:4px}
+
+/* Header */
+.p-header{position:relative;background:linear-gradient(135deg,var(--navy) 0%,var(--navy2) 100%);color:#fff;padding:20px 26px 16px}
+.p-header .badge{
+  position:absolute;left:26px;top:16px;background:var(--red);color:#fff;
+  width:64px;height:64px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-size:26px;font-weight:800;box-shadow:0 4px 12px rgba(0,0,0,.25);border:3px solid #fff3;
+}
+.p-header .kicker{font-size:12.5px;opacity:.85;font-weight:600;letter-spacing:.5px}
+.p-header .title{font-size:30px;font-weight:800;margin:2px 0 4px;line-height:1.2}
+.p-header .sub{font-size:14px;opacity:.9;font-weight:600}
+.stripe{height:9px;background:repeating-linear-gradient(-45deg,var(--red) 0 16px,#fff 16px 32px)}
+
+/* Stats */
+.p-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;padding:16px 20px 4px}
+.stat{border:1px solid var(--line);border-radius:12px;padding:12px;text-align:center;background:#fff}
+.stat .k{font-size:11.5px;color:#6b7b8a;font-weight:700}
+.stat .v{font-size:21px;color:var(--navy);font-weight:800;margin-top:3px}
+.stat.hl{background:var(--navy);border-color:var(--navy)}
+.stat.hl .k{color:#cfe0ee}.stat.hl .v{color:#fff}
+
+/* Map box */
+.p-mapwrap{padding:6px 20px 4px}
+.p-maphead{display:flex;align-items:center;justify-content:space-between;margin:8px 4px 6px}
+.p-maphead .t{font-size:14px;font-weight:800;color:var(--navy)}
+.map-box{position:relative;border:2px solid var(--navy);border-radius:12px;overflow:hidden;height:360px}
+#map{position:absolute;inset:0}
+.compass{position:absolute;top:10px;left:10px;z-index:600;width:46px;height:46px;background:#fffffff2;border-radius:50%;border:2px solid var(--navy);display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,.2)}
+.compass svg{width:34px;height:34px}
+
+/* Steps */
+.p-steps{display:flex;flex-wrap:wrap;gap:10px;padding:14px 20px 4px}
+.stepcard{flex:1 1 0;min-width:120px;border:1px solid var(--line);border-radius:11px;padding:10px 12px;position:relative;background:#fff}
+.stepcard .n{position:absolute;top:-11px;right:12px;width:24px;height:24px;border-radius:50%;background:var(--red);color:#fff;font-size:12.5px;font-weight:800;display:flex;align-items:center;justify-content:center}
+.stepcard .h{font-size:13px;font-weight:800;color:var(--navy);margin-bottom:3px}
+.stepcard .d{font-size:11.5px;color:#5b6b7a;line-height:1.6}
+.stepcard.dest{background:var(--navy);border-color:var(--navy)}
+.stepcard.dest .h{color:#fff}.stepcard.dest .d{color:#d7e4ee}
+.stepcard.dest .n{background:#fff;color:var(--navy)}
+.step-add{align-self:center;background:#eef2f6;border:1px dashed var(--navy);color:var(--navy);border-radius:10px;width:34px;height:34px;font-size:20px;font-weight:800;flex:0 0 auto}
+
+/* Warning + footer */
+.p-warn{margin:14px 20px 0;background:#fff3ec;border:1px solid var(--orange);border-right:6px solid var(--orange);border-radius:10px;padding:12px 14px}
+.p-warn .wt{font-size:13px;font-weight:800;color:var(--orange);margin-bottom:3px;display:flex;align-items:center;gap:6px}
+.p-warn .wd{font-size:12px;color:#7a4a2a;line-height:1.7}
+.p-foot{margin-top:auto;background:var(--navy);color:#dfe9f2;font-size:12px;padding:10px 22px;display:flex;justify-content:space-between;gap:10px}
+
+/* ---------- Leaflet overlay elements ---------- */
+.ov{cursor:move;user-select:none}
+.ov.sel .ov-inner{outline:2px solid var(--red);outline-offset:2px}
+.lbl .ov-inner{background:#fff;border:1px solid var(--navy);border-radius:6px;padding:2px 8px;font-weight:800;color:var(--navy);white-space:nowrap;box-shadow:0 1px 4px rgba(0,0,0,.15)}
+.freetext .ov-inner{color:var(--navy);font-weight:800;white-space:nowrap;text-shadow:0 1px 2px #fff,0 0 3px #fff}
+.stepnum .ov-inner{width:26px;height:26px;border-radius:50%;background:var(--red);color:#fff;font-weight:800;font-size:14px;display:flex;align-items:center;justify-content:center;border:2px solid #fff;box-shadow:0 2px 5px rgba(0,0,0,.3)}
+.pin{position:relative}
+.pin .ov-inner{width:30px;height:30px}
+.pin svg{filter:drop-shadow(0 2px 3px rgba(0,0,0,.35))}
+.imgcard .ov-inner{background:#fff;border:3px solid #fff;border-radius:8px;box-shadow:0 3px 12px rgba(0,0,0,.28);padding:4px;text-align:center}
+.imgcard img{display:block;width:100%;height:auto;border-radius:4px;pointer-events:none}
+.imgcard .cap{font-size:11px;font-weight:700;color:var(--navy);margin-top:4px;padding:0 2px;min-width:60px}
+.imgcard .rsz{position:absolute;left:-6px;bottom:-6px;width:16px;height:16px;background:var(--red);border:2px solid #fff;border-radius:50%;cursor:nwse-resize;box-shadow:0 1px 3px rgba(0,0,0,.3)}
+.imgcard .leadbtn{position:absolute;right:-8px;top:-8px;width:20px;height:20px;background:var(--navy);color:#fff;border:2px solid #fff;border-radius:50%;font-size:11px;line-height:16px;text-align:center;cursor:pointer}
+.wp{background:#fff;border:2px solid var(--red);border-radius:50%;width:14px;height:14px;box-shadow:0 1px 3px rgba(0,0,0,.3);cursor:move}
+.lineh{background:var(--navy);border:2px solid #fff;border-radius:50%;width:14px;height:14px;cursor:move}
+.arrowhead .ov-inner{width:0;height:0}
+
+/* toast */
+#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--navy);color:#fff;padding:10px 18px;border-radius:10px;font-size:13px;z-index:3000;opacity:0;transition:.25s;pointer-events:none}
+#toast.show{opacity:1}
+
+/* ---------- Print ---------- */
+@page{size:A4 portrait;margin:0}
+@media print{
+  #topbar,#side,#toast{display:none!important}
+  body{background:#fff}
+  #work{padding:0}#stage{overflow:visible}
+  #poster{box-shadow:none;width:210mm;min-height:297mm}
+  .leaflet-control-container,.imgcard .rsz,.imgcard .leadbtn,.step-add,.compass{ }
+  .leaflet-control-zoom,.leaflet-control-attribution{display:none!important}
+  .imgcard .rsz,.imgcard .leadbtn,.step-add{display:none!important}
+  .ov.sel .ov-inner{outline:none!important}
+}
+</style>
+
+<div id="app">
+  <div id="topbar">
+    <h1>🚒 پوسترساز مسیر اضطراری</h1>
+    <span class="grow"></span>
+    <button class="tb-btn" id="btnUndo" title="واگرد">↩ واگرد</button>
+    <button class="tb-btn" id="btnClear">🗑 پروژه جدید</button>
+    <button class="tb-btn green" id="btnPng">🖼 ذخیره PNG</button>
+    <button class="tb-btn primary" id="btnPrint">🖨 چاپ</button>
+  </div>
+
+  <div id="work">
+    <!-- SIDEBAR -->
+    <div id="side">
+      <div class="panel">
+        <h3><span class="dot"></span> مبدأ و مقصد</h3>
+        <div class="search-row">
+          <input id="searchOrigin" placeholder="جست‌وجوی مبدأ (مثلاً ایستگاه آتش‌نشانی…)"/>
+          <button data-t="origin">🔍</button>
+        </div>
+        <div class="search-row">
+          <input id="searchDest" placeholder="جست‌وجوی مقصد…"/>
+          <button data-t="dest">🔍</button>
+        </div>
+        <p class="hint">با ابزارهای «مبدأ»/«مقصد» هم می‌توانید روی نقشه کلیک کنید. با کلیک روی خطِ مسیر، نقطهٔ میانی اضافه می‌شود که با کشیدن، مسیر دوباره محاسبه می‌شود.</p>
+      </div>
+
+      <div class="panel">
+        <h3><span class="dot"></span> ابزارها</h3>
+        <div class="tools">
+          <button class="tool active" data-tool="select"><span class="ic">🖱</span>انتخاب</button>
+          <button class="tool" data-tool="origin"><span class="ic">📍</span>مبدأ</button>
+          <button class="tool" data-tool="dest"><span class="ic">🏢</span>مقصد</button>
+          <button class="tool" data-tool="label"><span class="ic">🏷</span>برچسب خیابان</button>
+          <button class="tool" data-tool="step"><span class="ic">①</span>شماره مرحله</button>
+          <button class="tool" data-tool="text"><span class="ic">🔤</span>متن آزاد</button>
+          <button class="tool" data-tool="line"><span class="ic">╱</span>خط</button>
+          <button class="tool" data-tool="arrow"><span class="ic">➤</span>فلش</button>
+          <button class="tool wide" data-tool="image"><span class="ic">🖼</span>افزودن عکس از دستگاه</button>
+        </div>
+        <p class="hint">ابزار را انتخاب کنید و روی نقشه کلیک کنید. هر عنصر با کلیک انتخاب و با کلید Delete حذف می‌شود.</p>
+        <input type="file" id="imgInput" accept="image/*" multiple hidden />
+      </div>
+
+      <!-- context properties -->
+      <div class="panel" id="propPanel">
+        <h3><span class="dot"></span> ویرایش عنصر</h3>
+        <div id="propBody"></div>
+      </div>
+    </div>
+
+    <!-- POSTER -->
+    <div id="stage">
+      <div id="poster">
+        <div class="p-header">
+          <div class="badge">۱۲۵</div>
+          <div class="kicker" contenteditable data-meta="kicker">راهنمای دسترسی اضطراری</div>
+          <div class="title" contenteditable data-meta="title">مسیر دسترسی خودروی آتش‌نشانی</div>
+          <div class="sub" contenteditable data-meta="sub">واحد ایمنی، بهداشت و محیط‌زیست (HSE)</div>
+        </div>
+        <div class="stripe"></div>
+
+        <div class="p-stats">
+          <div class="stat"><div class="k">مسافت مسیر</div><div class="v" contenteditable data-meta="dist">—</div></div>
+          <div class="stat"><div class="k">زمان تقریبی</div><div class="v" contenteditable data-meta="time">—</div></div>
+          <div class="stat"><div class="k">نقطهٔ مبدأ</div><div class="v" contenteditable data-meta="from" style="font-size:15px">—</div></div>
+        </div>
+
+        <div class="p-mapwrap">
+          <div class="p-maphead">
+            <span class="t" contenteditable data-meta="maptitle">نقشهٔ مسیر دسترسی</span>
+            <span class="t" style="color:#8a97a4;font-size:11.5px" contenteditable data-meta="scale">مقیاس تقریبی</span>
+          </div>
+          <div class="map-box">
+            <div id="map"></div>
+            <div class="compass" aria-hidden="true">
+              <svg viewBox="0 0 40 40"><polygon points="20,4 26,22 20,17 14,22" fill="#C8102E"/><polygon points="20,36 26,22 20,25 14,22" fill="#0F3B5C"/><text x="20" y="12" font-size="8" text-anchor="middle" fill="#0F3B5C" font-weight="bold" font-family="Vazirmatn">ش</text></svg>
+            </div>
+          </div>
+        </div>
+
+        <div class="p-steps" id="posterSteps"></div>
+
+        <div class="p-warn">
+          <div class="wt">⚠ هشدار ایمنی</div>
+          <div class="wd" contenteditable data-meta="warn">در طول مسیر از توقف خودرو در محل‌های ممنوعه خودداری کنید. عرض مفید مسیر باید همواره برای عبور خودروی سنگین آتش‌نشانی باز نگه داشته شود.</div>
+        </div>
+
+        <div class="p-foot">
+          <span contenteditable data-meta="footL">تهیه‌کننده: واحد HSE</span>
+          <span contenteditable data-meta="footR">تاریخ تهیه: —</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+/* ======================= helpers ======================= */
+const $  = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+const fa = s => String(s).replace(/[0-9]/g,d=>'۰۱۲۳۴۵۶۷۸۹'[d]);
+const uid = () => 'e'+Math.random().toString(36).slice(2,9);
+let toastT;
+function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),2200);}
+
+const NAVY='#0F3B5C', RED='#C8102E';
+
+/* ======================= map ======================= */
+const map = L.map('map',{zoomControl:true,attributionControl:true}).setView([35.6997,51.3380],14);
+L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}.png',{
+  subdomains:'abcd', maxZoom:20, crossOrigin:true,
+  attribution:'© OpenStreetMap © CARTO'
+}).addTo(map);
+
+/* layer groups */
+const routeCasing = L.polyline([],{color:'#fff',weight:11,opacity:.95,lineJoin:'round',lineCap:'round'}).addTo(map);
+const routeMain   = L.polyline([],{color:RED,weight:6,opacity:1,lineJoin:'round',lineCap:'round'}).addTo(map);
+routeMain.on('click',e=>{ L.DomEvent.stop(e); addWaypoint(e.latlng); });
+
+/* ======================= state ======================= */
+let state = {
+  origin:null, dest:null, waypoints:[], elements:[],
+  meta:{}, routeSummary:null
+};
+const markers = {};      // id -> {el, marker, extras...}
+let originM=null, destM=null;
+const wpMarkers = [];    // waypoint markers
+let tool='select';
+let selected=null;       // id of selected element
+const undoStack=[];
+
+/* ======================= tool selection ======================= */
+$$('.tool').forEach(b=>b.onclick=()=>{
+  if(b.dataset.tool==='image'){ $('#imgInput').click(); return; }
+  setTool(b.dataset.tool);
+});
+function setTool(t){
+  tool=t;
+  $$('.tool').forEach(x=>x.classList.toggle('active',x.dataset.tool===t));
+  map.getContainer().style.cursor = (t==='select')?'':'crosshair';
+}
+
+/* ======================= map click ======================= */
+let lineDraft=null;  // for line/arrow: first point
+let leaderFor=null;  // image id awaiting leader target
+map.on('click',e=>{
+  if(leaderFor){ setLeader(leaderFor,e.latlng); leaderFor=null; setTool('select'); return; }
+  switch(tool){
+    case 'origin': setOrigin(e.latlng); reverseName(e.latlng,'origin'); route(); setTool('select'); break;
+    case 'dest':   setDest(e.latlng);   reverseName(e.latlng,'dest');   route(); setTool('select'); break;
+    case 'label':  { const t=prompt('نام خیابان/محل:'); if(t){ pushUndo(); addElement({type:'label',lat:e.latlng.lat,lng:e.latlng.lng,text:t,fontSize:14,rotation:0}); } setTool('select'); break; }
+    case 'text':   { const t=prompt('متن:'); if(t){ pushUndo(); addElement({type:'text',lat:e.latlng.lat,lng:e.latlng.lng,text:t,fontSize:16}); } setTool('select'); break; }
+    case 'step':   { pushUndo(); const n=state.elements.filter(x=>x.type==='step').length+1; addElement({type:'step',lat:e.latlng.lat,lng:e.latlng.lng,num:n}); setTool('select'); break; }
+    case 'line': case 'arrow':
+      if(!lineDraft){ lineDraft=e.latlng; toast('نقطهٔ پایان خط را کلیک کنید'); }
+      else { pushUndo(); addElement({type:'line',a:xy(lineDraft),b:xy(e.latlng),arrow:tool==='arrow'}); lineDraft=null; setTool('select'); }
+      break;
+    default:
+      // click on empty map in select mode -> deselect
+      select(null);
+  }
+});
+const xy = ll => ({lat:ll.lat,lng:ll.lng});
+
+/* ======================= origin / dest ======================= */
+function pinIcon(color){
+  return L.divIcon({className:'ov pin',html:
+    `<div class="ov-inner"><svg width="30" height="30" viewBox="0 0 24 24"><path fill="${color}" d="M12 2C7.6 2 4 5.6 4 10c0 5.4 7 11.5 7.3 11.7.4.4 1 .4 1.4 0C13 21.5 20 15.4 20 10c0-4.4-3.6-8-8-8z"/><circle cx="12" cy="10" r="3" fill="#fff"/></svg></div>`,
+    iconSize:[30,30], iconAnchor:[15,29]});
+}
+function setOrigin(ll){
+  state.origin=xy(ll);
+  if(originM) originM.setLatLng(ll);
+  else { originM=L.marker(ll,{icon:pinIcon(RED),draggable:true,zIndexOffset:900}).addTo(map);
+         originM.on('dragend',()=>{state.origin=xy(originM.getLatLng());reverseName(originM.getLatLng(),'origin');route();}); }
+  save();
+}
+function setDest(ll){
+  state.dest=xy(ll);
+  if(destM) destM.setLatLng(ll);
+  else { destM=L.marker(ll,{icon:pinIcon(NAVY),draggable:true,zIndexOffset:900}).addTo(map);
+         destM.on('dragend',()=>{state.dest=xy(destM.getLatLng());reverseName(destM.getLatLng(),'dest');route();}); }
+  save();
+}
+
+/* ======================= waypoints ======================= */
+function addWaypoint(ll){
+  if(!state.origin||!state.dest){ toast('ابتدا مبدأ و مقصد را مشخص کنید'); return; }
+  pushUndo();
+  // insert into the segment closest to the click, keeping order along the route
+  const idx = bestInsertIndex(ll);
+  state.waypoints.splice(idx,0,xy(ll));
+  rebuildWaypoints(); route();
+}
+function bestInsertIndex(ll){
+  // build ordered list of anchor points: origin, ...wps, dest ; find nearest segment
+  const pts=[state.origin,...state.waypoints,state.dest].map(p=>L.latLng(p.lat,p.lng));
+  let best=0,bd=Infinity;
+  for(let i=0;i<pts.length-1;i++){
+    const d=distToSeg(map.latLngToLayerPoint(ll),map.latLngToLayerPoint(pts[i]),map.latLngToLayerPoint(pts[i+1]));
+    if(d<bd){bd=d;best=i;}
+  }
+  return best; // insert after anchor `best` in origin..dest space => waypoint index = best
+}
+function distToSeg(p,a,b){
+  const dx=b.x-a.x,dy=b.y-a.y; const l2=dx*dx+dy*dy||1;
+  let t=((p.x-a.x)*dx+(p.y-a.y)*dy)/l2; t=Math.max(0,Math.min(1,t));
+  const cx=a.x+t*dx,cy=a.y+t*dy; return Math.hypot(p.x-cx,p.y-cy);
+}
+function rebuildWaypoints(){
+  wpMarkers.forEach(m=>map.removeLayer(m)); wpMarkers.length=0;
+  state.waypoints.forEach((w,i)=>{
+    const m=L.marker([w.lat,w.lng],{icon:L.divIcon({className:'wp',iconSize:[14,14]}),draggable:true,zIndexOffset:800}).addTo(map);
+    m.on('drag',()=>{state.waypoints[i]=xy(m.getLatLng());});
+    m.on('dragend',()=>route());
+    m.on('contextmenu',()=>{pushUndo();state.waypoints.splice(i,1);rebuildWaypoints();route();});
+    m.bindTooltip('برای حذف: کلیک راست',{direction:'top'});
+    wpMarkers.push(m);
+  });
+}
+
+/* ======================= routing (OSRM) ======================= */
+let routeTimer;
+function route(){ clearTimeout(routeTimer); routeTimer=setTimeout(_route,250); }
+async function _route(){
+  if(!state.origin||!state.dest){ routeCasing.setLatLngs([]); routeMain.setLatLngs([]); return; }
+  const pts=[state.origin,...state.waypoints,state.dest].map(p=>`${p.lng},${p.lat}`).join(';');
+  const url=`https://router.project-osrm.org/route/v1/driving/${pts}?overview=full&geometries=geojson`;
+  try{
+    const r=await fetch(url); const j=await r.json();
+    if(!j.routes||!j.routes.length){ toast('مسیری یافت نشد'); return; }
+    const rt=j.routes[0];
+    const line=rt.geometry.coordinates.map(c=>[c[1],c[0]]);
+    routeCasing.setLatLngs(line); routeMain.setLatLngs(line);
+    state.routeSummary={distance:rt.distance,duration:rt.duration};
+    const km=(rt.distance/1000);
+    setMeta('dist', fa((km<10?km.toFixed(1):Math.round(km))+' کیلومتر'));
+    setMeta('time', fa(Math.max(1,Math.round(rt.duration/60))+' دقیقه'));
+    if(!fitOnce){ map.fitBounds(routeMain.getBounds(),{padding:[40,40]}); fitOnce=true; }
+    save();
+  }catch(err){ toast('خطا در ارتباط با سرویس مسیریابی'); }
+}
+let fitOnce=false;
+
+/* ======================= geocoding (Nominatim) ======================= */
+$$('.search-row button').forEach(b=>b.onclick=()=>doSearch(b.dataset.t));
+$('#searchOrigin').addEventListener('keydown',e=>{if(e.key==='Enter')doSearch('origin');});
+$('#searchDest').addEventListener('keydown',e=>{if(e.key==='Enter')doSearch('dest');});
+async function doSearch(which){
+  const q=(which==='origin'?$('#searchOrigin'):$('#searchDest')).value.trim();
+  if(!q)return;
+  try{
+    const url=`https://nominatim.openstreetmap.org/search?format=json&limit=1&accept-language=fa&q=${encodeURIComponent(q)}`;
+    const r=await fetch(url,{headers:{'Accept-Language':'fa'}}); const j=await r.json();
+    if(!j.length){ toast('نتیجه‌ای یافت نشد'); return; }
+    const ll=L.latLng(+j[0].lat,+j[0].lon);
+    const name=j[0].display_name.split(',')[0];
+    if(which==='origin'){ setOrigin(ll); setMeta('from',name); state.meta.originName=name; }
+    else setDest(ll);
+    map.setView(ll,15); route();
+  }catch(e){ toast('خطا در جست‌وجو'); }
+}
+async function reverseName(ll,which){
+  try{
+    const url=`https://nominatim.openstreetmap.org/reverse?format=json&accept-language=fa&lat=${ll.lat}&lon=${ll.lng}`;
+    const r=await fetch(url); const j=await r.json();
+    const name=(j.name||(j.display_name||'').split(',')[0]||'');
+    if(which==='origin'&&name){ setMeta('from',name); state.meta.originName=name; }
+  }catch(e){}
+}
+
+/* ======================= generic elements ======================= */
+function addElement(data){
+  data.id = data.id || uid();
+  state.elements.push(data);
+  renderElement(data);
+  select(data.id);
+  save();
+}
+function renderElement(d){
+  if(markers[d.id]) removeMarker(d.id,true);
+  if(d.type==='label')  return renderLabel(d);
+  if(d.type==='text')   return renderText(d);
+  if(d.type==='step')   return renderStep(d);
+  if(d.type==='image')  return renderImage(d);
+  if(d.type==='line')   return renderLine(d);
+}
+function baseDrag(marker,d){
+  marker.on('dragend',()=>{ const ll=marker.getLatLng(); d.lat=ll.lat; d.lng=ll.lng; save(); updateLeaders(d.id); });
+  marker.on('click',ev=>{ L.DomEvent.stop(ev); select(d.id); });
+}
+function makeMarker(d,className,html){
+  const m=L.marker([d.lat,d.lng],{icon:L.divIcon({className,html:`<div class="ov-inner">${html}</div>`,iconSize:null}),draggable:true,zIndexOffset:700}).addTo(map);
+  markers[d.id]={marker:m,d};
+  baseDrag(m,d);
+  return m;
+}
+function renderLabel(d){
+  const m=makeMarker(d,'ov lbl','');
+  applyLabel(d);
+}
+function applyLabel(d){
+  const el=markers[d.id].marker.getElement(); if(!el)return;
+  const inner=el.querySelector('.ov-inner');
+  inner.textContent=d.text;
+  inner.style.fontSize=d.fontSize+'px';
+  inner.style.transform=`rotate(${d.rotation||0}deg)`;
+}
+function renderText(d){
+  makeMarker(d,'ov freetext','');
+  const el=markers[d.id].marker.getElement();const inner=el.querySelector('.ov-inner');
+  inner.textContent=d.text; inner.style.fontSize=d.fontSize+'px';
+}
+function renderStep(d){
+  makeMarker(d,'ov stepnum','');
+  markers[d.id].marker.getElement().querySelector('.ov-inner').textContent=fa(d.num);
+}
+function renderImage(d){
+  const html=`<img src="${d.src}" style="width:${d.w}px"><div class="cap">${escapeHtml(d.title||'')}</div><div class="rsz"></div><div class="leadbtn" title="خط راهنما">⤶</div>`;
+  const m=makeMarker(d,'ov imgcard',html);
+  const el=m.getElement(); const inner=el.querySelector('.ov-inner');
+  // resize
+  const rsz=inner.querySelector('.rsz');
+  L.DomEvent.on(rsz,'mousedown',ev=>{
+    ev.preventDefault();ev.stopPropagation();
+    map.dragging.disable(); const img=inner.querySelector('img');
+    const sx=ev.clientX, sw=img.offsetWidth;
+    function mv(e){ let w=Math.max(70, sw + (sx-e.clientX)); img.style.width=w+'px'; d.w=w; updateLeaders(d.id); }
+    function up(){ document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up); map.dragging.enable(); save(); }
+    document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up);
+  });
+  // leader button
+  const lb=inner.querySelector('.leadbtn');
+  L.DomEvent.on(lb,'mousedown',ev=>{ev.stopPropagation();});
+  L.DomEvent.on(lb,'click',ev=>{ev.stopPropagation(); leaderFor=d.id; toast('روی نقشه، مقصد خط راهنما را کلیک کنید'); });
+  if(d.leader) drawLeader(d);
+}
+function renderLine(d){
+  const a=L.latLng(d.a.lat,d.a.lng), b=L.latLng(d.b.lat,d.b.lng);
+  const poly=L.polyline([a,b],{color:NAVY,weight:3}).addTo(map);
+  const ha=L.marker(a,{icon:L.divIcon({className:'lineh',iconSize:[14,14]}),draggable:true,zIndexOffset:750}).addTo(map);
+  const hb=L.marker(b,{icon:L.divIcon({className:'lineh',iconSize:[14,14]}),draggable:true,zIndexOffset:750}).addTo(map);
+  let arrow=null;
+  const rec={marker:ha,extra:[poly,hb],d,poly,ha,hb};
+  markers[d.id]=rec;
+  function refresh(){
+    const A=ha.getLatLng(),B=hb.getLatLng();
+    poly.setLatLngs([A,B]); d.a=xy(A); d.b=xy(B);
+    if(d.arrow){ if(arrow)map.removeLayer(arrow); arrow=makeArrow(A,B); rec.extra=[poly,hb,arrow]; }
+  }
+  ha.on('drag',refresh); hb.on('drag',refresh);
+  ha.on('dragend',save); hb.on('dragend',save);
+  ha.on('click',e=>{L.DomEvent.stop(e);select(d.id);});
+  hb.on('click',e=>{L.DomEvent.stop(e);select(d.id);});
+  poly.on('click',e=>{L.DomEvent.stop(e);select(d.id);});
+  if(d.arrow){ arrow=makeArrow(a,b); rec.extra=[poly,hb,arrow]; }
+}
+function makeArrow(a,b){
+  const pa=map.latLngToLayerPoint(a),pb=map.latLngToLayerPoint(b);
+  const ang=Math.atan2(pb.y-pa.y,pb.x-pa.x)*180/Math.PI;
+  const html=`<div class="ov-inner" style="width:0;height:0;border-right:9px solid transparent;border-left:9px solid transparent;border-bottom:16px solid ${NAVY};transform:rotate(${ang+90}deg)"></div>`;
+  return L.marker(b,{icon:L.divIcon({className:'ov arrowhead',html,iconSize:[18,16],iconAnchor:[9,8]}),interactive:false,zIndexOffset:740}).addTo(map);
+}
+function escapeHtml(s){return (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+
+/* ======================= leader lines (image -> map point) ======================= */
+const leaders={}; // id -> polyline
+function setLeader(id,ll){ pushUndo(); const d=find(id); d.leader=xy(ll); drawLeader(d); save(); }
+function drawLeader(d){
+  if(leaders[d.id]) map.removeLayer(leaders[d.id]);
+  const from=markers[d.id].marker.getLatLng();
+  leaders[d.id]=L.polyline([from,[d.leader.lat,d.leader.lng]],{color:NAVY,weight:2,dashArray:'6 5'}).addTo(map);
+  leaders[d.id].bringToBack?.();
+}
+function updateLeaders(id){ const d=find(id); if(d&&d.leader) drawLeader(d); }
+map.on('zoomend moveend',()=>{ // keep arrows aligned
+  state.elements.filter(e=>e.type==='line'&&e.arrow).forEach(e=>{ const r=markers[e.id]; if(r){ /* arrow recomputed on drag; refresh here */ } });
+});
+
+/* ======================= selection ======================= */
+function select(id){
+  if(selected&&markers[selected]){ const el=markers[selected].marker.getElement(); el&&el.classList.remove('sel'); }
+  selected=id;
+  if(id&&markers[id]){ const el=markers[id].marker.getElement(); el&&el.classList.add('sel'); showProps(find(id)); }
+  else hideProps();
+}
+document.addEventListener('keydown',e=>{
+  if(e.key==='Delete'||e.key==='Backspace'){
+    if(document.activeElement&&(document.activeElement.isContentEditable||['INPUT','TEXTAREA'].includes(document.activeElement.tagName)))return;
+    if(selected){ e.preventDefault(); deleteSelected(); }
+  }
+});
+function deleteSelected(){ if(!selected)return; pushUndo(); removeElement(selected); selected=null; hideProps(); save(); }
+function removeElement(id){
+  const idx=state.elements.findIndex(e=>e.id===id);
+  if(idx>=0) state.elements.splice(idx,1);
+  removeMarker(id);
+}
+function removeMarker(id,keepData){
+  const r=markers[id]; if(!r)return;
+  map.removeLayer(r.marker); (r.extra||[]).forEach(l=>map.removeLayer(l));
+  if(leaders[id]){map.removeLayer(leaders[id]);delete leaders[id];}
+  delete markers[id];
+}
+function find(id){return state.elements.find(e=>e.id===id);}
+
+/* ======================= properties panel ======================= */
+function hideProps(){ $('#propPanel').classList.remove('show'); }
+function showProps(d){
+  const p=$('#propPanel'), body=$('#propBody'); p.classList.add('show');
+  let h='';
+  if(d.type==='label'||d.type==='text'){
+    h+=row('متن',`<input type="text" id="pText" value="${escapeHtml(d.text)}">`);
+    h+=row('اندازه',`<button class="mini" data-f="-">−</button><span style="width:34px;text-align:center">${fa(d.fontSize)}</span><button class="mini" data-f="+">＋</button>`);
+    if(d.type==='label') h+=row('چرخش',`<input type="range" id="pRot" min="-90" max="90" value="${d.rotation||0}"><span id="pRotV" style="width:38px">${fa(d.rotation||0)}°</span>`);
+  }
+  if(d.type==='step'){
+    h+=row('شماره',`<button class="mini" data-n="-">−</button><span style="width:34px;text-align:center">${fa(d.num)}</span><button class="mini" data-n="+">＋</button>`);
+  }
+  if(d.type==='image'){
+    h+=row('عنوان',`<input type="text" id="pCap" value="${escapeHtml(d.title||'')}">`);
+    h+=row('اندازه',`<input type="range" id="pW" min="70" max="380" value="${d.w}">`);
+    h+=`<div class="hint">برای خط راهنما، دکمهٔ ⤶ روی عکس را بزنید.</div>`;
+    if(d.leader) h+=row('',`<button class="mini" id="pRmLead">حذف خط راهنما</button>`);
+  }
+  if(d.type==='line'){
+    h+=row('حالت',`<button class="mini" id="pArrow">${d.arrow?'تبدیل به خط ساده':'تبدیل به فلش'}</button>`);
+  }
+  h+=`<button class="prop-del" id="pDel">🗑 حذف این عنصر</button>`;
+  body.innerHTML=h;
+
+  // bind
+  const t=$('#pText'); if(t) t.oninput=()=>{ d.text=t.value; if(d.type==='label') applyLabel(d); else markers[d.id].marker.getElement().querySelector('.ov-inner').textContent=t.value; save(); };
+  body.querySelectorAll('[data-f]').forEach(b=>b.onclick=()=>{ d.fontSize=Math.max(8,Math.min(60,d.fontSize+(b.dataset.f==='+'?2:-2))); d.type==='label'?applyLabel(d):markers[d.id].marker.getElement().querySelector('.ov-inner').style.fontSize=d.fontSize+'px'; showProps(d); save(); });
+  const rot=$('#pRot'); if(rot) rot.oninput=()=>{ d.rotation=+rot.value; $('#pRotV').textContent=fa(d.rotation)+'°'; applyLabel(d); save(); };
+  body.querySelectorAll('[data-n]').forEach(b=>b.onclick=()=>{ d.num=Math.max(1,d.num+(b.dataset.n==='+'?1:-1)); markers[d.id].marker.getElement().querySelector('.ov-inner').textContent=fa(d.num); showProps(d); save(); });
+  const cap=$('#pCap'); if(cap) cap.oninput=()=>{ d.title=cap.value; markers[d.id].marker.getElement().querySelector('.cap').textContent=cap.value; save(); };
+  const w=$('#pW'); if(w) w.oninput=()=>{ d.w=+w.value; markers[d.id].marker.getElement().querySelector('img').style.width=d.w+'px'; updateLeaders(d.id); save(); };
+  const rml=$('#pRmLead'); if(rml) rml.onclick=()=>{ delete d.leader; if(leaders[d.id]){map.removeLayer(leaders[d.id]);delete leaders[d.id];} showProps(d); save(); };
+  const ar=$('#pArrow'); if(ar) ar.onclick=()=>{ pushUndo(); d.arrow=!d.arrow; renderElement(d); select(d.id); save(); };
+  $('#pDel').onclick=deleteSelected;
+}
+function row(label,html){ return `<div class="prop-row"><label>${label}</label>${html}</div>`; }
+
+/* ======================= image upload ======================= */
+$('#imgInput').onchange=e=>{
+  const files=[...e.target.files]; e.target.value='';
+  const c=map.getCenter(); let off=0;
+  files.forEach(f=>{
+    const rd=new FileReader();
+    rd.onload=()=>{ pushUndo(); addElement({type:'image',lat:c.lat+off*0.001,lng:c.lng+off*0.0015,src:rd.result,title:'عنوان عکس',w:150,leader:null}); off++; };
+    rd.readAsDataURL(f);
+  });
+  setTool('select');
+};
+
+/* ======================= poster meta (contenteditable) ======================= */
+$$('[data-meta]').forEach(el=>{
+  el.addEventListener('input',()=>{ state.meta[el.dataset.meta]=el.innerHTML; save(); });
+});
+function setMeta(key,val){ const el=$(`[data-meta="${key}"]`); if(el){ el.textContent=val; state.meta[key]=el.innerHTML; } }
+
+/* ======================= poster step cards ======================= */
+const posterSteps=$('#posterSteps');
+function defaultSteps(){ return [
+  {h:'شروع',d:'حرکت از مبدأ'},
+  {h:'مسیر اصلی',d:'ادامه در مسیر مشخص‌شده'},
+  {h:'مقصد',d:'رسیدن به نقطهٔ هدف',dest:true}
+];}
+function renderPosterSteps(){
+  const steps=state.meta.steps||defaultSteps();
+  posterSteps.innerHTML='';
+  steps.forEach((s,i)=>{
+    const card=document.createElement('div');
+    card.className='stepcard'+(s.dest?' dest':'');
+    card.innerHTML=`<div class="n">${fa(i+1)}</div>
+      <div class="h" contenteditable>${s.h}</div>
+      <div class="d" contenteditable>${s.d}</div>
+      <div class="del" title="حذف" style="position:absolute;left:6px;top:4px;color:#c8102e;cursor:pointer;font-weight:800;font-size:12px">×</div>`;
+    card.querySelector('.h').oninput=e=>{steps[i].h=e.target.textContent;state.meta.steps=steps;save();};
+    card.querySelector('.d').oninput=e=>{steps[i].d=e.target.textContent;state.meta.steps=steps;save();};
+    card.querySelector('.del').onclick=()=>{steps.splice(i,1);state.meta.steps=steps;renderPosterSteps();save();};
+    posterSteps.appendChild(card);
+  });
+  const add=document.createElement('button');
+  add.className='step-add'; add.textContent='＋'; add.title='افزودن مرحله';
+  add.onclick=()=>{ const arr=state.meta.steps||defaultSteps(); const destI=arr.findIndex(x=>x.dest); const item={h:'مرحلهٔ جدید',d:'توضیحات'}; if(destI>=0)arr.splice(destI,0,item);else arr.push(item); state.meta.steps=arr; renderPosterSteps(); save(); };
+  posterSteps.appendChild(add);
+  state.meta.steps=steps;
+}
+
+/* ======================= undo ======================= */
+function pushUndo(){ undoStack.push(serialize()); if(undoStack.length>40)undoStack.shift(); }
+$('#btnUndo').onclick=()=>{
+  if(!undoStack.length){toast('چیزی برای واگرد نیست');return;}
+  const snap=undoStack.pop(); restore(JSON.parse(snap)); save();
+};
+
+/* ======================= serialize / persist ======================= */
+function serialize(){
+  return JSON.stringify({
+    origin:state.origin, dest:state.dest, waypoints:state.waypoints,
+    elements:state.elements, meta:state.meta, routeSummary:state.routeSummary
+  });
+}
+function save(){ try{ localStorage.setItem('routePoster', serialize()); }catch(e){} }
+function clearAllLayers(){
+  Object.keys(markers).forEach(id=>removeMarker(id));
+  wpMarkers.forEach(m=>map.removeLayer(m)); wpMarkers.length=0;
+  if(originM){map.removeLayer(originM);originM=null;}
+  if(destM){map.removeLayer(destM);destM=null;}
+  routeCasing.setLatLngs([]);routeMain.setLatLngs([]);
+}
+function restore(data){
+  clearAllLayers();
+  state.origin=data.origin||null; state.dest=data.dest||null;
+  state.waypoints=data.waypoints||[]; state.elements=data.elements||[];
+  state.meta=data.meta||{}; state.routeSummary=data.routeSummary||null;
+  if(state.origin) setOrigin(L.latLng(state.origin.lat,state.origin.lng));
+  if(state.dest)   setDest(L.latLng(state.dest.lat,state.dest.lng));
+  rebuildWaypoints();
+  state.elements.forEach(renderElement);
+  // meta into DOM
+  $$('[data-meta]').forEach(el=>{ const k=el.dataset.meta; if(state.meta[k]!==undefined) el.innerHTML=state.meta[k]; });
+  renderPosterSteps();
+  selected=null; hideProps();
+  if(state.origin&&state.dest){ fitOnce=true; route(); }
+}
+
+/* ======================= export ======================= */
+$('#btnPrint').onclick=()=>window.print();
+$('#btnPng').onclick=async()=>{
+  select(null);
+  toast('در حال ساخت تصویر…');
+  // wait a tick for outline removal
+  await new Promise(r=>setTimeout(r,120));
+  try{
+    const canvas=await html2canvas($('#poster'),{scale:3,useCORS:true,allowTaint:false,backgroundColor:'#fff',logging:false});
+    const a=document.createElement('a');
+    a.download='poster-masir-ezterari.png';
+    a.href=canvas.toDataURL('image/png');
+    a.click();
+    toast('تصویر ذخیره شد ✅');
+  }catch(e){ toast('خطا در ساخت تصویر (کاشی‌های نقشه ممکن است بارگیری نشده باشند)'); }
+};
+$('#btnClear').onclick=()=>{
+  if(!confirm('پروژهٔ جدید؟ همهٔ تغییرات فعلی پاک می‌شود.'))return;
+  localStorage.removeItem('routePoster');
+  location.reload();
+};
+
+/* ======================= init ======================= */
+(function init(){
+  // footer date default
+  const today=new Date();
+  const jd=today.toLocaleDateString('fa-IR');
+  const saved=localStorage.getItem('routePoster');
+  if(saved){ try{ restore(JSON.parse(saved)); }catch(e){ renderPosterSteps(); } }
+  else { renderPosterSteps(); setMeta('footR','تاریخ تهیه: '+jd); }
+  setTool('select');
+  setTimeout(()=>map.invalidateSize(),300);
+})();
+</script>
