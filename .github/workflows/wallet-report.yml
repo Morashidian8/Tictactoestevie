@@ -30,14 +30,7 @@ jobs:
         with:
           python-version: "3.11"
       - run: pip install requests
-      - name: Raw API probe (first rows, to verify field names)
-        run: |
-          ADDR=$(echo "${{ inputs.address }}" | tr 'A-Z' 'a-z')
-          echo "== /value =="
-          curl -sS "https://data-api.polymarket.com/value?user=$ADDR" | head -c 600; echo; echo
-          echo "== /positions (2) =="
-          curl -sS "https://data-api.polymarket.com/positions?user=$ADDR&limit=2" | head -c 1500; echo; echo
-          echo "== /activity (3 newest) =="
-          curl -sS "https://data-api.polymarket.com/activity?user=$ADDR&limit=3&sortBy=TIMESTAMP&sortDirection=DESC" | head -c 2500; echo
-      - name: Full report (JSON)
+      - name: Full diagnostic (raw shapes + engine vs official pnl)
+        run: python -m wallet_tracker.diagnose "${{ inputs.address }}"
+      - name: Windowed report (JSON)
         run: python -m wallet_tracker.cli "${{ inputs.address }}" --minutes "${{ inputs.minutes }}" --json
