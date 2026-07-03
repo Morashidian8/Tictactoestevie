@@ -129,7 +129,7 @@ function render() {
       div.innerHTML =
         `<span class="badge">${i + 1}</span>` +
         `<div class="t">${w.label}${star}</div>` +
-        `<div class="row"><span>تکرار در سال</span><b>${w.n} بار</b></div>` +
+        `<div class="row"><span>تعداد نمونه</span><b>${w.n} بار</b></div>` +
         `<div class="row"><span>میانگین تناوب</span><b>${w.avg.toFixed(2)}</b></div>` +
         `<div class="row"><span>احتمال تناوب بالای میانگین</span><b>${w.ap}%</b></div>` +
         `<div class="row"><span>بیشینه</span><b>${w.mx} (${w.mxc} بار)</b></div>`;
