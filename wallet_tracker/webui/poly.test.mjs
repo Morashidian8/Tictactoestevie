@@ -42,5 +42,38 @@ w = Poly.windowSlice(r.events, rows, 0, 1500);
 eq(w.realized, 0, "window [0,1500] realized = 0");
 eq(w.net_cash_flow, -40, "window [0,1500] cash flow = -40");
 
+// REDEEM with empty asset matches lots via conditionId (real API shape)
+r = Poly.fifoPnl([
+  { type: "TRADE", side: "BUY", asset: "TOK", conditionId: "C1", size: 100, price: 0.45, usdcSize: 45, timestamp: 1000, title: "BTC 5m", outcome: "Up" },
+  { type: "REDEEM", asset: "", conditionId: "C1", size: 100, usdcSize: 100, timestamp: 2000, title: "BTC 5m" },
+]);
+eq(r.events[0].cost_basis, 45, "redeem-by-condition cost basis = 45");
+eq(r.events[0].realized, 55, "redeem-by-condition realized = 55");
+if (r.warnings.length) { console.error("✗ redeem-by-condition should not warn"); failed++; }
+
+// worthless (resolved, never redeemed) position realizes a LOST event at endDate
+r = Poly.fifoPnl(
+  [{ type: "TRADE", side: "BUY", asset: "TOK", conditionId: "C1", size: 100, price: 0.5, usdcSize: 50, timestamp: 1000, title: "BTC 5m", outcome: "Down" }],
+  [{ asset: "TOK", size: 100, curPrice: 0, avgPrice: 0.5, title: "BTC 5m", outcome: "Down", endDate: "1970-01-01T00:50:00Z" }],
+  10000
+);
+const lostEv = r.events.find((e) => e.kind === "LOST");
+eq(lostEv.realized, -50, "worthless position realized = -50");
+eq(lostEv.timestamp, 3000, "worthless position ts = endDate (3000)");
+eq(r.lostAssets.length, 1, "lostAssets has 1 entry");
+let wl = Poly.windowSlice(r.events, [], 2500, 3500);
+eq(wl.realized, -50, "LOST lands in its endDate window");
+wl = Poly.windowSlice(r.events, [], 5000, 10000);
+eq(wl.realized, 0, "LOST excluded from later windows");
+
+// open position with a live price is NOT worthless
+r = Poly.fifoPnl(
+  [{ type: "TRADE", side: "BUY", asset: "TOK", conditionId: "C1", size: 10, price: 0.5, usdcSize: 5, timestamp: 1000, title: "m" }],
+  [{ asset: "TOK", size: 10, curPrice: 0.42, avgPrice: 0.5 }],
+  2000
+);
+eq(r.lostAssets.length, 0, "live-priced position not treated as lost");
+eq(r.realizedTotal, 0, "no realized pnl for open position");
+
 if (failed) { console.error(`\n${failed} test(s) failed`); process.exit(1); }
 console.log("\nall browser-engine tests passed");

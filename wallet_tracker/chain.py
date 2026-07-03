@@ -20,6 +20,14 @@ import os
 from typing import Any, Callable, Dict, Optional
 
 DEFAULT_RPC = "https://polygon-rpc.com"
+# Public endpoints differ in uptime/rate limits (polygon-rpc.com intermittently
+# returns 401); try these in order until one answers.
+FALLBACK_RPCS = [
+    "https://polygon-bor-rpc.publicnode.com",
+    "https://polygon-rpc.com",
+    "https://1rpc.io/matic",
+    "https://polygon.drpc.org",
+]
 
 USDC_E = "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174"  # bridged, Polymarket collateral
 USDC_NATIVE = "0x3c499c542cEF5E3811e1192ce70d8cc03d5c3359"
@@ -38,7 +46,12 @@ class PolygonClient:
         http_post: Optional[Callable[[str, Dict[str, Any]], Any]] = None,
         timeout: int = 20,
     ) -> None:
-        self.rpc_url = rpc_url or os.environ.get("POLYGON_RPC_URL") or DEFAULT_RPC
+        explicit = rpc_url or os.environ.get("POLYGON_RPC_URL")
+        # An explicit URL goes first, but the public fallbacks stay behind it.
+        self.rpc_urls = ([explicit] if explicit else []) + [
+            u for u in FALLBACK_RPCS if u != explicit
+        ]
+        self.rpc_url = self.rpc_urls[0]
         self.timeout = timeout
         self._http_post = http_post
         self._session = None
@@ -51,9 +64,20 @@ class PolygonClient:
             import requests
 
             self._session = requests.Session()
-        resp = self._session.post(self.rpc_url, json=payload, timeout=self.timeout)
-        resp.raise_for_status()
-        return resp.json()
+        last_exc: Optional[Exception] = None
+        for url in self.rpc_urls:  # pragma: no cover - needs network
+            try:
+                resp = self._session.post(url, json=payload, timeout=self.timeout)
+                resp.raise_for_status()
+                data = resp.json()
+                if isinstance(data, dict) and data.get("result") is not None:
+                    return data
+                last_exc = RuntimeError(f"{url}: {str(data)[:120]}")
+            except Exception as exc:  # noqa: BLE001 - try the next endpoint
+                last_exc = exc
+        if last_exc is not None:
+            raise last_exc
+        return None
 
     def erc20_balance(self, token: str, address: str, decimals: int = USDC_DECIMALS) -> Optional[float]:
         """Return token balance as a human float, or None if the call fails."""

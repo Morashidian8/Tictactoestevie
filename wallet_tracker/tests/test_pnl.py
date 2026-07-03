@@ -75,3 +75,58 @@ def test_close_without_basis_warns_but_keeps_going():
     eng = PnLEngine().load([_sell("A", 100, 0.60, 2000)])
     assert eng.warnings
     assert round(eng.closing_events[0].realized, 6) == 60.0  # basis 0 → all proceeds
+
+
+def test_redeem_with_empty_asset_matches_by_condition():
+    # Real API shape: REDEEM rows have asset="" but carry conditionId.
+    eng = PnLEngine().load([
+        {"type": "TRADE", "side": "BUY", "asset": "TOK", "conditionId": "C1",
+         "size": 100, "price": 0.45, "usdcSize": 45.0, "timestamp": 1000,
+         "title": "BTC 5m", "outcome": "Up"},
+        {"type": "REDEEM", "asset": "", "conditionId": "C1", "size": 100,
+         "usdcSize": 100.0, "timestamp": 2000, "title": "BTC 5m"},
+    ])
+    ev = eng.closing_events[0]
+    assert ev.kind == "REDEEM"
+    assert round(ev.cost_basis, 6) == 45.0
+    assert round(ev.realized, 6) == 55.0        # 100 payout − 45 cost
+    assert not eng.warnings
+
+
+def test_worthless_position_realizes_loss_at_end_date():
+    eng = PnLEngine().load([
+        {"type": "TRADE", "side": "BUY", "asset": "TOK", "conditionId": "C1",
+         "size": 100, "price": 0.50, "usdcSize": 50.0, "timestamp": 1000,
+         "title": "BTC 5m", "outcome": "Down"},
+    ])
+    positions = [{"asset": "TOK", "size": 100, "curPrice": 0, "avgPrice": 0.5,
+                  "title": "BTC 5m", "outcome": "Down",
+                  "endDate": "1970-01-01T00:50:00Z"}]  # ts = 3000
+    lost = eng.close_worthless(positions, now_ts=10_000)
+    assert lost == ["TOK"]
+    ev = eng.closing_events[-1]
+    assert ev.kind == "LOST"
+    assert ev.timestamp == 3000
+    assert round(ev.realized, 6) == -50.0
+    # the loss lands in a window that covers ts=3000, not later windows
+    assert round(eng.window(2500, 3500, []).realized, 6) == -50.0
+    assert round(eng.window(5000, 10_000, []).realized, 6) == 0.0
+
+
+def test_worthless_position_without_lots_uses_avg_price():
+    eng = PnLEngine()  # empty history (truncated)
+    positions = [{"asset": "TOK", "size": 40, "curPrice": 0, "avgPrice": 0.5,
+                  "title": "BTC 5m", "outcome": "Up"}]
+    lost = eng.close_worthless(positions, now_ts=9000)
+    assert lost == ["TOK"]
+    assert round(eng.closing_events[-1].realized, 6) == -20.0
+
+
+def test_open_position_with_price_is_not_worthless():
+    eng = PnLEngine().load([
+        {"type": "TRADE", "side": "BUY", "asset": "TOK", "conditionId": "C1",
+         "size": 10, "price": 0.5, "usdcSize": 5.0, "timestamp": 1000, "title": "m"},
+    ])
+    positions = [{"asset": "TOK", "size": 10, "curPrice": 0.42, "avgPrice": 0.5}]
+    assert eng.close_worthless(positions, now_ts=2000) == []
+    assert eng.realized_total == 0.0

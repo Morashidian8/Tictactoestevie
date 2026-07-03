@@ -118,7 +118,7 @@ function renderEvents(box, events) {
     return;
   }
   box.innerHTML = events.map((e) => {
-    const kind = { SELL: "فروش", REDEEM: "تسویه", MERGE: "ادغام", REWARD: "پاداش" }[e.kind] || e.kind;
+    const kind = { SELL: "فروش", REDEEM: "تسویه", MERGE: "ادغام", REWARD: "پاداش", LOST: "باخت در سررسید" }[e.kind] || e.kind;
     return `<div class="row">
       <div style="min-width:0">
         <div class="title">${esc(e.title || e.outcome || e.asset.slice(0, 12))}</div>

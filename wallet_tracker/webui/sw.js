@@ -1,5 +1,5 @@
 // Minimal service worker: cache the app shell, never cache live API responses.
-const CACHE = "polywallet-v3";
+const CACHE = "polywallet-v4";
 const SHELL = [
   "./",
   "index.html",

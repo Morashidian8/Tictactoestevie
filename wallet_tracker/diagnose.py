@@ -41,34 +41,41 @@ def main() -> None:
     for a in acts[-12:]:
         print("  ", {k: a.get(k) for k in ("timestamp", "type", "side", "size", "usdcSize", "price", "outcome", "title")})
 
-    eng = PnLEngine().load(acts)
+    redeems = [a for a in acts if str(a.get("type", "")).upper() == "REDEEM"]
+    if redeems:
+        print("\n--- one raw REDEEM row (all fields) ---")
+        print(json.dumps(redeems[-1])[:900])
+
+    try:
+        pos = c.positions(addr)
+    except Exception as e:  # noqa: BLE001
+        pos = []
+        print("positions ERROR:", e)
+    if pos:
+        print("\n--- one raw positions row (all fields) ---")
+        print(json.dumps(pos[0])[:900])
+
     now = int(time.time())
-    print("\n=== FIFO engine ===")
+    eng = PnLEngine().load(acts)
+    lost = eng.close_worthless(pos, now)
+    print("\n=== FIFO engine (condition-matched redeems + worthless losses) ===")
     print("realized_total (all time):", round(eng.realized_total, 2))
+    print("worthless positions realized as LOST:", len(lost))
     for label, mins in (("1h", 60), ("6h", 360), ("24h", 1440), ("7d", 10080), ("30d", 43200)):
         w = eng.window(now - mins * 60, now, acts)
         print(f"  window {label:>4}: total={w.total:+9.2f}  realized={w.realized:+9.2f}  "
               f"rewards={w.rewards:+7.2f}  cashflow={w.net_cash_flow:+9.2f}  trades={w.trades_count}")
-    print("--- newest 8 closing events ---")
-    for e in eng.closing_events[-8:]:
+    print("--- newest 10 closing events ---")
+    for e in eng.closing_events[-10:]:
         print("  ", e.kind, e.timestamp, f"size={e.size:.2f}", f"proceeds={e.proceeds:.2f}",
               f"cost={e.cost_basis:.2f}", f"pnl={e.realized:+.2f}", (e.title or "")[:40])
     if eng.warnings:
         print(f"warnings: {len(eng.warnings)}  e.g. {eng.warnings[0]}")
 
-    print("\n=== /positions ===")
-    try:
-        pos = c.positions(addr)
-        print("count:", len(pos))
-        for p in pos[:6]:
-            print("  ", {k: p.get(k) for k in ("title", "outcome", "size", "avgPrice", "curPrice",
-                                               "currentValue", "cashPnl", "redeemable")})
-        zeros = [p for p in pos if not p.get("curPrice")]
-        print("positions with curPrice==0 (resolved/lost, unredeemed):", len(zeros))
-        for p in zeros[:6]:
-            print("   LOST?", {k: p.get(k) for k in ("title", "outcome", "size", "avgPrice", "currentValue", "redeemable")})
-    except Exception as e:  # noqa: BLE001
-        print("ERROR:", e)
+    lost_set = set(lost)
+    remaining = [p for p in pos if str(p.get("asset", "") or "") not in lost_set]
+    print("\nopen positions after excluding LOST:", len(remaining), " (raw:", len(pos), ")")
+    print("ENGINE_TOTAL_FOR_COMPARE:", round(eng.realized_total, 2))
 
     # Official Polymarket PnL series (what the profile chart shows) — ground truth.
     print("\n=== official user-pnl API ===")
