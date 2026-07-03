@@ -1,0 +1,43 @@
+name: Wallet Report (diagnostic)
+
+# Manual diagnostic for the wallet tracker: runs where outbound network is OPEN
+# (unlike the cloud dev sandbox, which blocks Polymarket hosts). Dumps the raw
+# Data API responses for an address plus the full CLI report, so schema
+# mismatches can be seen and fixed against real data.
+on:
+  workflow_dispatch:
+    inputs:
+      address:
+        description: "آدرس کیف پول (0x...)"
+        required: true
+        type: string
+      minutes:
+        description: "طول بازه به دقیقه"
+        required: false
+        default: "1440"
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install requests
+      - name: Raw API probe (first rows, to verify field names)
+        run: |
+          ADDR=$(echo "${{ inputs.address }}" | tr 'A-Z' 'a-z')
+          echo "== /value =="
+          curl -sS "https://data-api.polymarket.com/value?user=$ADDR" | head -c 600; echo; echo
+          echo "== /positions (2) =="
+          curl -sS "https://data-api.polymarket.com/positions?user=$ADDR&limit=2" | head -c 1500; echo; echo
+          echo "== /activity (3 newest) =="
+          curl -sS "https://data-api.polymarket.com/activity?user=$ADDR&limit=3&sortBy=TIMESTAMP&sortDirection=DESC" | head -c 2500; echo
+      - name: Full report (JSON)
+        run: python -m wallet_tracker.cli "${{ inputs.address }}" --minutes "${{ inputs.minutes }}" --json

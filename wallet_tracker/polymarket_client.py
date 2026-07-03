@@ -59,7 +59,9 @@ class PolymarketClient:
 
     def portfolio_value(self, address: str) -> Optional[float]:
         """Total mark-to-market value of the user's open positions (USD)."""
-        data = self._get("/value", {"user": address})
+        # The data API matches addresses case-sensitively (lowercase); a
+        # checksummed address silently returns empty results, so normalize.
+        data = self._get("/value", {"user": address.lower()})
         # API returns e.g. [{"user": "0x..", "value": 123.45}] or {"value": ..}.
         if isinstance(data, list):
             data = data[0] if data else {}
@@ -71,7 +73,7 @@ class PolymarketClient:
         """Open positions with their current unrealized PnL."""
         data = self._get(
             "/positions",
-            {"user": address, "limit": limit, "sortBy": "CURRENT", "sortDirection": "DESC"},
+            {"user": address.lower(), "limit": limit, "sortBy": "CURRENT", "sortDirection": "DESC"},
         )
         return _as_rows(data)
 
@@ -96,7 +98,7 @@ class PolymarketClient:
         offset = 0
         while len(rows) < max_rows:
             params: Dict[str, Any] = {
-                "user": address,
+                "user": address.lower(),
                 "limit": PAGE_LIMIT,
                 "offset": offset,
                 "sortBy": "TIMESTAMP",

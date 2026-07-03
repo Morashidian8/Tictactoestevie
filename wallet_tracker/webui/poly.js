@@ -204,6 +204,9 @@
 
   // -- top-level report (browser) ------------------------------------------ //
   async function buildReport(address, windowMinutes, rpcUrl = DEFAULT_RPC) {
+    // Polymarket's data API matches addresses case-sensitively (lowercase).
+    // A checksummed 0xAbC... input silently returns empty lists, so normalize.
+    address = String(address).trim().toLowerCase();
     const now = Math.floor(Date.now() / 1000);
     const startTs = now - Math.round(windowMinutes * 60);
     const warnings = [];
@@ -233,6 +236,9 @@
       pnl_window: win,
       open_positions: open,
       activity_total_rows: (actRows || []).length,
+      // Distinguish "the API call failed" from "the address genuinely has no
+      // Polymarket history" — the UI reacts very differently to each.
+      activity_failed: actRows === null,
       warnings,
     };
   }
