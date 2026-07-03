@@ -243,7 +243,16 @@ class PnLEngine:
             cur = _float(p.get("curPrice"))
             if not asset or size <= 1e-6 or cur is None or cur > 1e-9:
                 continue
-            end_ts = _parse_end_ts(p.get("endDate")) or self._asset_last_ts.get(asset) or now_ts
+            # Best resolution-time source first: recurring up/down markets encode
+            # the window start in their slug (…-5m-<unix>), while `endDate` is
+            # date-only (midnight) — far too coarse for hourly PnL windows.
+            end_ts = (
+                _slug_end_ts(p.get("slug") or p.get("eventSlug"))
+                or _parse_end_ts(p.get("endDate"))
+                or self._asset_last_ts.get(asset)
+                or now_ts
+            )
+            end_ts = max(end_ts, self._asset_last_ts.get(asset, 0))
             end_ts = min(end_ts, now_ts)
             cost = self._drain_all(asset)
             if cost <= 1e-9:
@@ -305,6 +314,36 @@ class PnLEngine:
 # --------------------------------------------------------------------------- #
 # helpers
 # --------------------------------------------------------------------------- #
+
+_SLUG_TS = None  # compiled lazily
+
+
+def _slug_end_ts(slug: Any) -> Optional[int]:
+    """Market end time from recurring-market slugs like btc-updown-5m-1783090500.
+
+    The trailing number is the window START (unix seconds); add the window
+    length encoded as -5m- / -15m- / -1h- / -4h- / -1d-.
+    """
+    global _SLUG_TS
+    if not slug:
+        return None
+    if _SLUG_TS is None:
+        import re
+
+        _SLUG_TS = re.compile(r"-(\d{9,11})$")
+    m = _SLUG_TS.search(str(slug))
+    if not m:
+        return None
+    base = int(m.group(1))
+    if not (1_000_000_000 <= base <= 4_000_000_000):
+        return None
+    text = str(slug)
+    for token, seconds in (("-5m-", 300), ("-15m-", 900), ("-1h-", 3600),
+                           ("-4h-", 14_400), ("-1d-", 86_400)):
+        if token in text:
+            return base + seconds
+    return base
+
 
 def _parse_end_ts(value: Any) -> Optional[int]:
     """Parse the positions API `endDate` (ISO 8601) to unix seconds."""

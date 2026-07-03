@@ -210,6 +210,21 @@
       }
     }
 
+    // Market end time from recurring-market slugs like btc-updown-5m-1783090500:
+    // the trailing number is the window START; add the length token. `endDate`
+    // is date-only (midnight) — too coarse for hourly PnL windows.
+    const slugEndTs = (slug) => {
+      const m = /-(\d{9,11})$/.exec(String(slug || ""));
+      if (!m) return null;
+      const base = Number(m[1]);
+      if (base < 1e9 || base > 4e9) return null;
+      const s = String(slug);
+      for (const [tok, sec] of [["-5m-", 300], ["-15m-", 900], ["-1h-", 3600], ["-4h-", 14400], ["-1d-", 86400]]) {
+        if (s.includes(tok)) return base + sec;
+      }
+      return base;
+    };
+
     // Resolved-but-never-redeemed losers: the loss became real when the market
     // resolved, even though no activity row exists. positions shows them as
     // size>0 & curPrice==0. Book each as LOST at the market end time.
@@ -219,9 +234,13 @@
       const size = num(p.size) || 0;
       const cur = num(p.curPrice);
       if (!asset || size <= 1e-6 || cur == null || cur > 1e-9) continue;
-      let endTs = Date.parse(p.endDate || "") / 1000;
-      if (!Number.isFinite(endTs)) endTs = lastTs.get(asset) || now;
-      endTs = Math.min(Math.floor(endTs), now);
+      let endTs = slugEndTs(p.slug || p.eventSlug);
+      if (endTs == null) {
+        endTs = Date.parse(p.endDate || "") / 1000;
+        if (!Number.isFinite(endTs)) endTs = lastTs.get(asset) || now;
+      }
+      endTs = Math.max(Math.floor(endTs), lastTs.get(asset) || 0);
+      endTs = Math.min(endTs, now);
       let cost = drainAll(asset);
       if (cost <= 1e-9) {
         cost = num(p.initialValue) || size * (num(p.avgPrice) || 0);

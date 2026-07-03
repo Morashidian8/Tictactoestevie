@@ -122,6 +122,23 @@ def test_worthless_position_without_lots_uses_avg_price():
     assert round(eng.closing_events[-1].realized, 6) == -20.0
 
 
+def test_worthless_uses_slug_time_over_date_only_end_date():
+    # Recurring 5m markets: slug encodes the window start; endDate is just a
+    # date (midnight) and must NOT win over the slug-derived end time.
+    eng = PnLEngine().load([
+        {"type": "TRADE", "side": "BUY", "asset": "TOK", "conditionId": "C1",
+         "size": 10, "price": 0.5, "usdcSize": 5.0, "timestamp": 5000, "title": "m"},
+    ])
+    positions = [{"asset": "TOK", "size": 10, "curPrice": 0, "avgPrice": 0.5,
+                  "slug": "btc-updown-5m-5100", "endDate": "1970-01-01T00:00:00Z"}]
+    # slug ts (5100) is below the 1e9 sanity floor → falls back… so use a real-range ts
+    positions[0]["slug"] = "btc-updown-5m-1783090200"
+    eng._asset_last_ts["TOK"] = 1783090213
+    lost = eng.close_worthless(positions, now_ts=1783099999)
+    assert lost == ["TOK"]
+    assert eng.closing_events[-1].timestamp == 1783090500  # start + 5m
+
+
 def test_open_position_with_price_is_not_worthless():
     eng = PnLEngine().load([
         {"type": "TRADE", "side": "BUY", "asset": "TOK", "conditionId": "C1",
