@@ -72,9 +72,19 @@ input,textarea{font-family:inherit;direction:rtl}
 .tool.wide{grid-column:1/-1;flex-direction:row;justify-content:center}
 .tool.danger.active,.tool.danger:hover{background:var(--red);color:#fff;border-color:var(--red)}
 
-.search-row{display:flex;gap:6px;margin-bottom:8px}
-.search-row input{flex:1;padding:8px;border:1px solid var(--line);border-radius:8px;font-size:12.5px}
-.search-row button{background:var(--navy);color:#fff;border:none;border-radius:8px;padding:0 10px;font-size:12.5px;font-weight:700}
+.geo{position:relative;margin-bottom:8px}
+.search-row{display:flex;gap:6px;align-items:stretch}
+.search-row input{flex:1;padding:9px;border:1px solid var(--line);border-radius:8px;font-size:12.5px}
+.pinlbl{flex:0 0 auto;display:flex;align-items:center;padding:0 9px;border-radius:8px;font-size:11.5px;font-weight:800;color:#fff}
+.pinlbl.red{background:var(--red)} .pinlbl.navy{background:var(--navy)}
+.suggest{position:absolute;z-index:1500;right:0;left:0;top:100%;background:#fff;border:1px solid var(--line);border-radius:8px;box-shadow:0 6px 18px rgba(15,59,92,.18);margin-top:3px;max-height:230px;overflow:auto;display:none}
+.suggest.show{display:block}
+.suggest .it{padding:9px 10px;font-size:12px;line-height:1.5;border-bottom:1px solid #eef2f6;cursor:pointer}
+.suggest .it:last-child{border-bottom:none}
+.suggest .it:hover,.suggest .it.act{background:#eef4f9}
+.suggest .it b{color:var(--navy);font-weight:800}
+.suggest .it small{color:#8291a0}
+.suggest .st{padding:9px 10px;font-size:12px;color:#8291a0}
 .hint{font-size:11.5px;color:#5b6b7a;line-height:1.7;margin:6px 0 0}
 
 /* Properties panel */
@@ -174,7 +184,8 @@ input,textarea{font-family:inherit;direction:rtl}
   #work{padding:0}#stage{overflow:visible}
   #poster{box-shadow:none;width:210mm;min-height:297mm}
   .leaflet-control-container,.imgcard .rsz,.imgcard .leadbtn,.step-add,.compass{ }
-  .leaflet-control-zoom,.leaflet-control-attribution{display:none!important}
+  .leaflet-control-zoom,.leaflet-control-attribution,.leaflet-control-layers{display:none!important}
+  .suggest{display:none!important}
   .imgcard .rsz,.imgcard .leadbtn,.step-add{display:none!important}
   .ov.sel .ov-inner{outline:none!important}
 }
@@ -195,15 +206,21 @@ input,textarea{font-family:inherit;direction:rtl}
     <div id="side">
       <div class="panel">
         <h3><span class="dot"></span> مبدأ و مقصد</h3>
-        <div class="search-row">
-          <input id="searchOrigin" placeholder="جست‌وجوی مبدأ (مثلاً ایستگاه آتش‌نشانی…)"/>
-          <button data-t="origin">🔍</button>
+        <div class="geo">
+          <div class="search-row">
+            <span class="pinlbl red">مبدأ</span>
+            <input id="searchOrigin" autocomplete="off" placeholder="جست‌وجوی مبدأ (خیابان، محله، مکان…)"/>
+          </div>
+          <div class="suggest" id="sugOrigin"></div>
         </div>
-        <div class="search-row">
-          <input id="searchDest" placeholder="جست‌وجوی مقصد…"/>
-          <button data-t="dest">🔍</button>
+        <div class="geo">
+          <div class="search-row">
+            <span class="pinlbl navy">مقصد</span>
+            <input id="searchDest" autocomplete="off" placeholder="جست‌وجوی مقصد…"/>
+          </div>
+          <div class="suggest" id="sugDest"></div>
         </div>
-        <p class="hint">با ابزارهای «مبدأ»/«مقصد» هم می‌توانید روی نقشه کلیک کنید. با کلیک روی خطِ مسیر، نقطهٔ میانی اضافه می‌شود که با کشیدن، مسیر دوباره محاسبه می‌شود.</p>
+        <p class="hint">هنگام تایپ، پیشنهادها ظاهر می‌شوند؛ روی پیشنهاد بزنید تا نقطه روی نقشه قرار گیرد. با تعیین مبدأ و مقصد، مسیر به‌صورت خط قرمز ضخیم رسم می‌شود. برای ویرایش، روی خط مسیر بزنید تا نقطهٔ میانیِ قابل‌کشیدن اضافه شود (کلیک‌راست = حذف نقطه).</p>
       </div>
 
       <div class="panel">
@@ -291,15 +308,29 @@ const NAVY='#0F3B5C', RED='#C8102E';
 
 /* ======================= map ======================= */
 const map = L.map('map',{zoomControl:true,attributionControl:true}).setView([35.6997,51.3380],14);
-L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}.png',{
-  subdomains:'abcd', maxZoom:20, crossOrigin:true,
-  attribution:'© OpenStreetMap © CARTO'
-}).addTo(map);
+
+/* base layers: detailed (with Persian street names) + clean (no labels, for print) */
+const baseDetailed = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{
+  maxZoom:20, crossOrigin:true, attribution:'© OpenStreetMap'
+});
+const baseVoyager = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png',{
+  subdomains:'abcd', maxZoom:20, crossOrigin:true, attribution:'© OpenStreetMap © CARTO'
+});
+const baseClean = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}.png',{
+  subdomains:'abcd', maxZoom:20, crossOrigin:true, attribution:'© OpenStreetMap © CARTO'
+});
+baseDetailed.addTo(map);   // default: full router-style map with street names
+L.control.layers({
+  'نقشهٔ کامل (نام خیابان‌ها)':baseDetailed,
+  'نقشهٔ روشن (Voyager)':baseVoyager,
+  'بدون برچسب (پوستر تمیز)':baseClean
+},null,{position:'topright',collapsed:true}).addTo(map);
 
 /* layer groups */
-const routeCasing = L.polyline([],{color:'#fff',weight:11,opacity:.95,lineJoin:'round',lineCap:'round'}).addTo(map);
-const routeMain   = L.polyline([],{color:RED,weight:6,opacity:1,lineJoin:'round',lineCap:'round'}).addTo(map);
+const routeCasing = L.polyline([],{color:'#fff',weight:13,opacity:1,lineJoin:'round',lineCap:'round'}).addTo(map);
+const routeMain   = L.polyline([],{color:RED,weight:8,opacity:1,lineJoin:'round',lineCap:'round'}).addTo(map);
 routeMain.on('click',e=>{ L.DomEvent.stop(e); addWaypoint(e.latlng); });
+routeMain.bindTooltip('برای ویرایش مسیر، روی خط بزنید تا نقطهٔ میانی اضافه شود',{sticky:true});
 
 /* ======================= state ======================= */
 let state = {
@@ -426,23 +457,65 @@ async function _route(){
 }
 let fitOnce=false;
 
-/* ======================= geocoding (Nominatim) ======================= */
-$$('.search-row button').forEach(b=>b.onclick=()=>doSearch(b.dataset.t));
-$('#searchOrigin').addEventListener('keydown',e=>{if(e.key==='Enter')doSearch('origin');});
-$('#searchDest').addEventListener('keydown',e=>{if(e.key==='Enter')doSearch('dest');});
-async function doSearch(which){
-  const q=(which==='origin'?$('#searchOrigin'):$('#searchDest')).value.trim();
-  if(!q)return;
-  try{
-    const url=`https://nominatim.openstreetmap.org/search?format=json&limit=1&accept-language=fa&q=${encodeURIComponent(q)}`;
-    const r=await fetch(url,{headers:{'Accept-Language':'fa'}}); const j=await r.json();
-    if(!j.length){ toast('نتیجه‌ای یافت نشد'); return; }
-    const ll=L.latLng(+j[0].lat,+j[0].lon);
-    const name=j[0].display_name.split(',')[0];
-    if(which==='origin'){ setOrigin(ll); setMeta('from',name); state.meta.originName=name; }
-    else setDest(ll);
-    map.setView(ll,15); route();
-  }catch(e){ toast('خطا در جست‌وجو'); }
+/* ======================= geocoding (Nominatim autocomplete, Iran-biased) ======================= */
+attachGeocoder($('#searchOrigin'), $('#sugOrigin'), 'origin');
+attachGeocoder($('#searchDest'),   $('#sugDest'),   'dest');
+
+function attachGeocoder(input, box, which){
+  let timer, seq=0, items=[], act=-1;
+  input.addEventListener('input',()=>{
+    const q=input.value.trim();
+    clearTimeout(timer);
+    if(q.length<2){ box.classList.remove('show'); box.innerHTML=''; return; }
+    box.innerHTML='<div class="st">در حال جست‌وجو…</div>'; box.classList.add('show');
+    timer=setTimeout(()=>runSearch(q),380);
+  });
+  input.addEventListener('keydown',e=>{
+    if(!box.classList.contains('show'))return;
+    if(e.key==='ArrowDown'){ e.preventDefault(); act=Math.min(items.length-1,act+1); paintAct(); }
+    else if(e.key==='ArrowUp'){ e.preventDefault(); act=Math.max(0,act-1); paintAct(); }
+    else if(e.key==='Enter'){ e.preventDefault(); if(items[act]) choose(items[act]); else if(items[0]) choose(items[0]); }
+    else if(e.key==='Escape'){ box.classList.remove('show'); }
+  });
+  input.addEventListener('blur',()=>setTimeout(()=>box.classList.remove('show'),200));
+  input.addEventListener('focus',()=>{ if(items.length) box.classList.add('show'); });
+
+  async function runSearch(q){
+    const my=++seq;
+    // viewbox biases results toward the current map view; countrycodes=ir keeps it in Iran
+    const b=map.getBounds();
+    const vb=`${b.getWest()},${b.getNorth()},${b.getEast()},${b.getSouth()}`;
+    const url=`https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=7&countrycodes=ir&accept-language=fa&viewbox=${vb}&bounded=0&q=${encodeURIComponent(q)}`;
+    try{
+      const r=await fetch(url); if(my!==seq)return; const j=await r.json(); if(my!==seq)return;
+      items=j||[]; act=-1;
+      if(!items.length){ box.innerHTML='<div class="st">نتیجه‌ای یافت نشد</div>'; return; }
+      box.innerHTML=items.map((it,i)=>{
+        const nm=primaryName(it);
+        const rest=(it.display_name||'').split(',').slice(1,4).join('،');
+        return `<div class="it" data-i="${i}"><b>${escapeHtml(nm)}</b><br><small>${escapeHtml(rest)}</small></div>`;
+      }).join('');
+      box.querySelectorAll('.it').forEach(el=>{
+        el.addEventListener('mousedown',ev=>{ ev.preventDefault(); choose(items[+el.dataset.i]); });
+      });
+      box.classList.add('show');
+    }catch(e){ box.innerHTML='<div class="st">خطا در جست‌وجو (اتصال اینترنت را بررسی کنید)</div>'; }
+  }
+  function paintAct(){ box.querySelectorAll('.it').forEach((el,i)=>el.classList.toggle('act',i===act)); }
+  function choose(it){
+    const ll=L.latLng(+it.lat,+it.lon);
+    const name=primaryName(it);
+    if(which==='origin'){ setOrigin(ll); setMeta('from',name); state.meta.originName=name; input.value=name; }
+    else { setDest(ll); input.value=name; }
+    box.classList.remove('show');
+    map.setView(ll, Math.max(map.getZoom(),15));
+    route();
+  }
+}
+function primaryName(it){
+  const a=it.address||{};
+  return it.name || a.road || a.pedestrian || a.neighbourhood || a.suburb ||
+         (it.display_name||'').split(',')[0] || 'بدون نام';
 }
 async function reverseName(ll,which){
   try{
