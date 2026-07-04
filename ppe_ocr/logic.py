@@ -178,10 +178,27 @@ def backfill_codes(vouchers: list[dict]) -> None:
                     p["code"] = known[key]
 
 
+def group_by_person(rows: list[dict]) -> list[dict]:
+    """ردیف‌های هر نفر را کنار هم می‌چیند (همه‌ی اقلامِ یک نفر زیر هم)."""
+    order: list[str] = []
+    groups: dict[str, list[dict]] = {}
+    for r in rows:
+        key = _digits(r.get("کد پرسنلی")) or _digits(r.get("کد ملی")) \
+            or f"{r.get('نام') or ''}|{r.get('نام خانوادگی') or ''}"
+        if key not in groups:
+            groups[key] = []
+            order.append(key)
+        groups[key].append(r)
+    out: list[dict] = []
+    for k in order:
+        out.extend(groups[k])
+    return out
+
+
 def build_all(vouchers: list[dict]) -> list[dict]:
-    """چند حواله را با هم پردازش می‌کند (با پُرکردنِ کدهای جا‌افتاده از بین حواله‌ها)."""
+    """چند حواله را با هم پردازش می‌کند: پُرکردنِ کدهای جا‌افتاده + چیدنِ اسامی مشابه پشت هم."""
     backfill_codes(vouchers)
     rows: list[dict] = []
     for v in vouchers:
         rows.extend(build_rows(v))
-    return rows
+    return group_by_person(rows)

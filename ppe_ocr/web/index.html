@@ -163,6 +163,17 @@ function buildRows(v){
 }
 function normalize(d){d=d||{};["voucher_number","requesting_unit","delivery_date","personnel_type","company","contract_number"].forEach(k=>{if(!(k in d))d[k]=null;});d.items=d.items||[];d.personnel=d.personnel||[];return d;}
 
+// ردیف‌های هر نفر را کنار هم می‌چیند (همه‌ی اقلامِ یک نفر زیر هم)
+function groupByPerson(rows){
+  const order=[], groups={};
+  rows.forEach(r=>{
+    const key=digits(r["کد پرسنلی"])||digits(r["کد ملی"])||((r["نام"]||"")+"|"+(r["نام خانوادگی"]||""));
+    if(!(key in groups)){groups[key]=[];order.push(key);}
+    groups[key].push(r);
+  });
+  let out=[]; order.forEach(k=>out=out.concat(groups[k])); return out;
+}
+
 // اگر کد کسی در یک حواله خوانده نشد، از حواله‌ای دیگر که همان نام کدش را دارد پُر می‌کند
 function backfillCodes(vouchers){
   const nk=p=>((p.first_name||"").trim()+"|"+(p.last_name||"").trim());
@@ -274,6 +285,7 @@ $("run").addEventListener("click",async()=>{
     const finalV=vouchers.map(v=> names.length ? {...v,personnel:names} : v);
     backfillCodes(finalV);
     finalV.forEach(v=>{ rows=rows.concat(buildRows(v)); });
+    rows=groupByPerson(rows);  // اسامی مشابه پشت هم
     if(!rows.length){log("هیچ ردیفی استخراج نشد. کیفیت عکس را بهتر کن.","err");$("run").disabled=false;return;}
     LAST_ROWS=rows;
     log("تمام شد ✓","ok");

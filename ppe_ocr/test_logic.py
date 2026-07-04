@@ -134,6 +134,19 @@ def _run():
     logic.backfill_codes([va, vb])
     check(vb["personnel"][0]["code"] == "576058", "کدِ جا‌افتاده باید از حواله‌ی دیگر پُر شود")
 
+    # تست: ردیف‌های یک نفر (که در دو حواله آمده) باید پشت هم باشند
+    g1 = {"voucher_number": "G1", "requesting_unit": None, "delivery_date": None, "personnel_type": "official",
+          "company": None, "contract_number": None, "items": [{"mesc_code": None, "item_name": "کلاه ایمنی", "unit": "NO", "req_qty": 1}],
+          "personnel": [{"first_name": "علی", "last_name": "الف", "code": "100001", "job_title": None, "size": None},
+                        {"first_name": "رضا", "last_name": "ب", "code": "100002", "job_title": None, "size": None}]}
+    g2 = {"voucher_number": "G2", "requesting_unit": None, "delivery_date": None, "personnel_type": "official",
+          "company": None, "contract_number": None, "items": [{"mesc_code": None, "item_name": "عینک ایمنی", "unit": "NO", "req_qty": 1}],
+          "personnel": [{"first_name": "علی", "last_name": "الف", "code": "100001", "job_title": None, "size": None},
+                        {"first_name": "رضا", "last_name": "ب", "code": "100002", "job_title": None, "size": None}]}
+    allrows = logic.build_all([g1, g2])
+    codes_order = [r["کد پرسنلی"] for r in allrows]
+    check(codes_order == ["100001", "100001", "100002", "100002"], f"ردیف‌های هر نفر باید پشت هم باشند، شد {codes_order}")
+
     if failures:
         print("❌ تست‌های ناموفق:")
         for m in failures:
