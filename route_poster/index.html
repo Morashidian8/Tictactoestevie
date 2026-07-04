@@ -86,6 +86,13 @@ input,textarea{font-family:inherit;direction:rtl}
 .suggest .it small{color:#8291a0}
 .suggest .st{padding:9px 10px;font-size:12px;color:#8291a0}
 .hint{font-size:11.5px;color:#5b6b7a;line-height:1.7;margin:6px 0 0}
+.btnrow{display:flex;gap:7px;margin-top:8px}
+.btnrow .act{flex:1;border:1px solid var(--line);background:#fff;border-radius:9px;padding:9px 6px;font-size:12px;font-weight:700;color:var(--navy)}
+.btnrow .act:hover{background:#eef2f6}
+.btnrow .act.red{border-color:var(--red);color:var(--red)} .btnrow .act.red:hover{background:#fdecef}
+.btnrow .act.navy{border-color:var(--navy)} .btnrow .act.navy:hover{background:#eef4f9}
+.chk{display:flex;align-items:center;gap:7px;margin-top:9px;font-size:12px;font-weight:600;color:#4a5a68;cursor:pointer}
+.chk input{width:16px;height:16px;accent-color:var(--navy)}
 
 /* Properties panel */
 #propPanel{display:none}
@@ -136,6 +143,12 @@ input,textarea{font-family:inherit;direction:rtl}
 #map{position:absolute;inset:0}
 .compass{position:absolute;top:10px;left:10px;z-index:600;width:46px;height:46px;background:#fffffff2;border-radius:50%;border:2px solid var(--navy);display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,.2)}
 .compass svg{width:34px;height:34px}
+.legend{position:absolute;bottom:10px;left:10px;z-index:600;background:#ffffffee;border:1px solid var(--line);border-radius:9px;padding:7px 10px;box-shadow:0 2px 6px rgba(0,0,0,.18);font-size:11.5px;font-weight:700;color:var(--navy)}
+.legend .lg{display:flex;align-items:center;gap:6px;margin:2px 0}
+.legend .sw{width:16px;height:16px;display:inline-block;flex:0 0 auto}
+.legend .sw.pin-r{background:var(--red);border-radius:50% 50% 50% 0;transform:rotate(-45deg)}
+.legend .sw.pin-n{background:var(--navy);border-radius:50% 50% 50% 0;transform:rotate(-45deg)}
+.legend .sw.ln{height:5px;border-radius:3px;background:var(--red);border:1px solid #fff;box-shadow:0 0 0 1px var(--red)}
 
 /* Steps */
 .p-steps{display:flex;flex-wrap:wrap;gap:10px;padding:14px 20px 4px}
@@ -158,7 +171,16 @@ input,textarea{font-family:inherit;direction:rtl}
 .ov{cursor:move;user-select:none}
 .ov.sel .ov-inner{outline:2px solid var(--red);outline-offset:2px}
 .lbl .ov-inner{background:#fff;border:1px solid var(--navy);border-radius:6px;padding:2px 8px;font-weight:800;color:var(--navy);white-space:nowrap;box-shadow:0 1px 4px rgba(0,0,0,.15)}
-.freetext .ov-inner{color:var(--navy);font-weight:800;white-space:nowrap;text-shadow:0 1px 2px #fff,0 0 3px #fff}
+.freetext .ov-inner{background:#fff;border:1px solid #d0d9e2;border-radius:6px;padding:2px 9px;color:var(--navy);font-weight:800;white-space:nowrap;box-shadow:0 1px 4px rgba(0,0,0,.18)}
+/* auto route street-name labels */
+.routelbl .ov-inner{background:#fff;border:1px solid var(--navy);border-radius:5px;padding:1.5px 7px;color:var(--navy);font-weight:800;font-size:12.5px;white-space:nowrap;box-shadow:0 1px 4px rgba(0,0,0,.3)}
+/* permanent name callouts on origin/dest pins */
+.leaflet-tooltip.callout{background:#fff;border:0;border-radius:7px;font-family:'Vazirmatn',sans-serif;font-weight:800;font-size:12px;padding:3px 9px;box-shadow:0 2px 8px rgba(0,0,0,.28);color:var(--navy);max-width:170px;white-space:normal;text-align:center}
+.leaflet-tooltip.callout.red{border-top:3px solid var(--red)}
+.leaflet-tooltip.callout.navy{border-top:3px solid var(--navy)}
+.leaflet-tooltip.callout:before{display:none}
+.imgcard.anchor-o .ov-inner{border-color:var(--red);box-shadow:0 3px 12px rgba(200,16,46,.32)}
+.imgcard.anchor-d .ov-inner{border-color:var(--navy);box-shadow:0 3px 12px rgba(15,59,92,.32)}
 .stepnum .ov-inner{width:26px;height:26px;border-radius:50%;background:var(--red);color:#fff;font-weight:800;font-size:14px;display:flex;align-items:center;justify-content:center;border:2px solid #fff;box-shadow:0 2px 5px rgba(0,0,0,.3)}
 .pin{position:relative}
 .pin .ov-inner{width:30px;height:30px}
@@ -220,7 +242,16 @@ input,textarea{font-family:inherit;direction:rtl}
           </div>
           <div class="suggest" id="sugDest"></div>
         </div>
-        <p class="hint">هنگام تایپ، پیشنهادها ظاهر می‌شوند؛ روی پیشنهاد بزنید تا نقطه روی نقشه قرار گیرد. با تعیین مبدأ و مقصد، مسیر به‌صورت خط قرمز ضخیم رسم می‌شود. برای ویرایش، روی خط مسیر بزنید تا نقطهٔ میانیِ قابل‌کشیدن اضافه شود (کلیک‌راست = حذف نقطه).</p>
+        <div class="btnrow">
+          <button class="act" id="btnFocus">🎯 تمرکز روی مسیر</button>
+          <button class="act" id="btnAutoSteps">🧭 مراحل خودکار</button>
+        </div>
+        <div class="btnrow">
+          <button class="act red" id="btnPhotoOrigin">📷 عکس مبدأ</button>
+          <button class="act navy" id="btnPhotoDest">📷 عکس مقصد</button>
+        </div>
+        <label class="chk"><input type="checkbox" id="chkLabels" checked/> نمایش خودکار نام خیابان‌های مسیر</label>
+        <p class="hint">با تعیین مبدأ و مقصد، مسیر پررنگ رسم و فقط نام خیابان‌های همان مسیر روی نقشه نوشته می‌شود. روی خط مسیر بزنید تا نقطهٔ میانیِ قابل‌کشیدن اضافه شود (کلیک‌راست = حذف). «عکس مبدأ/مقصد» عکس را کنار نقطه می‌گذارد و با خط‌چین به آن وصل می‌کند.</p>
       </div>
 
       <div class="panel">
@@ -274,6 +305,11 @@ input,textarea{font-family:inherit;direction:rtl}
             <div class="compass" aria-hidden="true">
               <svg viewBox="0 0 40 40"><polygon points="20,4 26,22 20,17 14,22" fill="#C8102E"/><polygon points="20,36 26,22 20,25 14,22" fill="#0F3B5C"/><text x="20" y="12" font-size="8" text-anchor="middle" fill="#0F3B5C" font-weight="bold" font-family="Vazirmatn">ش</text></svg>
             </div>
+            <div class="legend" aria-hidden="true">
+              <div class="lg"><span class="sw pin-r"></span> مبدأ</div>
+              <div class="lg"><span class="sw pin-n"></span> مقصد</div>
+              <div class="lg"><span class="sw ln"></span> مسیر</div>
+            </div>
           </div>
         </div>
 
@@ -319,18 +355,25 @@ const baseVoyager = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/v
 const baseClean = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}.png',{
   subdomains:'abcd', maxZoom:20, crossOrigin:true, attribution:'© OpenStreetMap © CARTO'
 });
-baseDetailed.addTo(map);   // default: full router-style map with street names
+baseClean.addTo(map);   // default: clean schematic base — only the route's own street names show
 L.control.layers({
-  'نقشهٔ کامل (نام خیابان‌ها)':baseDetailed,
+  'بدون برچسب (پوستر تمیز)':baseClean,
   'نقشهٔ روشن (Voyager)':baseVoyager,
-  'بدون برچسب (پوستر تمیز)':baseClean
+  'نقشهٔ کامل (همهٔ نام‌ها)':baseDetailed
 },null,{position:'topright',collapsed:true}).addTo(map);
 
 /* layer groups */
-const routeCasing = L.polyline([],{color:'#fff',weight:13,opacity:1,lineJoin:'round',lineCap:'round'}).addTo(map);
-const routeMain   = L.polyline([],{color:RED,weight:8,opacity:1,lineJoin:'round',lineCap:'round'}).addTo(map);
+const routeCasing = L.polyline([],{color:'#fff',weight:15,opacity:1,lineJoin:'round',lineCap:'round'}).addTo(map);
+const routeMain   = L.polyline([],{color:RED,weight:9,opacity:1,lineJoin:'round',lineCap:'round'}).addTo(map);
+const routeLabels = L.layerGroup().addTo(map);   // auto street-name labels along the route
 routeMain.on('click',e=>{ L.DomEvent.stop(e); addWaypoint(e.latlng); });
 routeMain.bindTooltip('برای ویرایش مسیر، روی خط بزنید تا نقطهٔ میانی اضافه شود',{sticky:true});
+let shouldFit=false;   // set when the view should re-focus on the whole route
+function focusRoute(){
+  const pts=routeMain.getLatLngs();
+  if(pts&&pts.length){ map.fitBounds(routeMain.getBounds(),{padding:[55,55],maxZoom:17}); }
+  else if(state.origin&&state.dest){ map.fitBounds(L.latLngBounds([state.origin,state.dest]),{padding:[70,70],maxZoom:16}); }
+}
 
 /* ======================= state ======================= */
 let state = {
@@ -361,8 +404,8 @@ let leaderFor=null;  // image id awaiting leader target
 map.on('click',e=>{
   if(leaderFor){ setLeader(leaderFor,e.latlng); leaderFor=null; setTool('select'); return; }
   switch(tool){
-    case 'origin': setOrigin(e.latlng); reverseName(e.latlng,'origin'); route(); setTool('select'); break;
-    case 'dest':   setDest(e.latlng);   reverseName(e.latlng,'dest');   route(); setTool('select'); break;
+    case 'origin': shouldFit=true; setOrigin(e.latlng); reverseName(e.latlng,'origin'); route(); setTool('select'); break;
+    case 'dest':   shouldFit=true; setDest(e.latlng);   reverseName(e.latlng,'dest');   route(); setTool('select'); break;
     case 'label':  { const t=prompt('نام خیابان/محل:'); if(t){ pushUndo(); addElement({type:'label',lat:e.latlng.lat,lng:e.latlng.lng,text:t,fontSize:14,rotation:0}); } setTool('select'); break; }
     case 'text':   { const t=prompt('متن:'); if(t){ pushUndo(); addElement({type:'text',lat:e.latlng.lat,lng:e.latlng.lng,text:t,fontSize:16}); } setTool('select'); break; }
     case 'step':   { pushUndo(); const n=state.elements.filter(x=>x.type==='step').length+1; addElement({type:'step',lat:e.latlng.lat,lng:e.latlng.lng,num:n}); setTool('select'); break; }
@@ -387,15 +430,22 @@ function setOrigin(ll){
   state.origin=xy(ll);
   if(originM) originM.setLatLng(ll);
   else { originM=L.marker(ll,{icon:pinIcon(RED),draggable:true,zIndexOffset:900}).addTo(map);
-         originM.on('dragend',()=>{state.origin=xy(originM.getLatLng());reverseName(originM.getLatLng(),'origin');route();}); }
-  save();
+         originM.on('dragend',()=>{state.origin=xy(originM.getLatLng());reverseName(originM.getLatLng(),'origin');refreshAnchorLeaders('origin');route();}); }
+  bindCallout(originM,state.meta.originName||'مبدأ','red');
+  refreshAnchorLeaders('origin'); save();
 }
 function setDest(ll){
   state.dest=xy(ll);
   if(destM) destM.setLatLng(ll);
   else { destM=L.marker(ll,{icon:pinIcon(NAVY),draggable:true,zIndexOffset:900}).addTo(map);
-         destM.on('dragend',()=>{state.dest=xy(destM.getLatLng());reverseName(destM.getLatLng(),'dest');route();}); }
-  save();
+         destM.on('dragend',()=>{state.dest=xy(destM.getLatLng());reverseName(destM.getLatLng(),'dest');refreshAnchorLeaders('dest');route();}); }
+  bindCallout(destM,state.meta.destName||'مقصد','navy');
+  refreshAnchorLeaders('dest'); save();
+}
+function bindCallout(m,text,cls){
+  if(!m)return;
+  m.unbindTooltip();
+  m.bindTooltip(text,{permanent:true,direction:'top',offset:[0,-26],className:'callout '+cls});
 }
 
 /* ======================= waypoints ======================= */
@@ -438,9 +488,9 @@ function rebuildWaypoints(){
 let routeTimer;
 function route(){ clearTimeout(routeTimer); routeTimer=setTimeout(_route,250); }
 async function _route(){
-  if(!state.origin||!state.dest){ routeCasing.setLatLngs([]); routeMain.setLatLngs([]); return; }
+  if(!state.origin||!state.dest){ routeCasing.setLatLngs([]); routeMain.setLatLngs([]); routeLabels.clearLayers(); lastRoute=null; return; }
   const pts=[state.origin,...state.waypoints,state.dest].map(p=>`${p.lng},${p.lat}`).join(';');
-  const url=`https://router.project-osrm.org/route/v1/driving/${pts}?overview=full&geometries=geojson`;
+  const url=`https://router.project-osrm.org/route/v1/driving/${pts}?overview=full&geometries=geojson&steps=true`;
   try{
     const r=await fetch(url); const j=await r.json();
     if(!j.routes||!j.routes.length){ toast('مسیری یافت نشد'); return; }
@@ -451,11 +501,73 @@ async function _route(){
     const km=(rt.distance/1000);
     setMeta('dist', fa((km<10?km.toFixed(1):Math.round(km))+' کیلومتر'));
     setMeta('time', fa(Math.max(1,Math.round(rt.duration/60))+' دقیقه'));
-    if(!fitOnce){ map.fitBounds(routeMain.getBounds(),{padding:[40,40]}); fitOnce=true; }
+    lastRoute=rt;
+    buildRouteLabels(rt);
+    if(!state.meta.stepsEdited) buildAutoSteps(rt);   // live turn-by-turn until the user edits a card
+    if(shouldFit){ focusRoute(); shouldFit=false; }
     save();
   }catch(err){ toast('خطا در ارتباط با سرویس مسیریابی'); }
 }
-let fitOnce=false;
+
+/* auto street-name labels: only the roads the route actually uses */
+let lastRoute=null, lblTimer;
+function buildRouteLabels(rt){
+  routeLabels.clearLayers();
+  if(!rt || state.meta.autoLabels===false) return;
+  const placed=[];  // {name, pt, w} in screen pixels for collision avoidance
+  (rt.legs||[]).forEach(leg=>(leg.steps||[]).forEach(st=>{
+    const name=(st.name||'').trim();
+    if(!name || (st.distance||0)<70) return;
+    const co=st.geometry&&st.geometry.coordinates;
+    if(!co||co.length<2) return;
+    const mid=co[Math.floor(co.length/2)];
+    const a=co[0], b=co[co.length-1];
+    const ll=L.latLng(mid[1],mid[0]);
+    const pa=map.latLngToLayerPoint(L.latLng(a[1],a[0]));
+    const pb=map.latLngToLayerPoint(L.latLng(b[1],b[0]));
+    let ang=Math.atan2(pb.y-pa.y,pb.x-pa.x)*180/Math.PI;
+    if(ang>90)ang-=180; if(ang<-90)ang+=180;
+    const pll=map.latLngToLayerPoint(ll);
+    const halfW=Math.max(30, name.length*4.2);   // rough label half-width
+    // collision: reject if it would overlap ANY placed label (larger gap for same name)
+    if(placed.some(p=>{ const d=p.pt.distanceTo(pll); return d < (p.name===name?110:(halfW+p.w+14)); })) return;
+    placed.push({name,pt:pll,w:halfW});
+    const icon=L.divIcon({className:'ov routelbl',html:`<div class="ov-inner" style="transform:rotate(${ang.toFixed(1)}deg)">${escapeHtml(name)}</div>`,iconSize:null});
+    L.marker(ll,{icon,interactive:false,keyboard:false,zIndexOffset:650}).addTo(routeLabels);
+  }));
+}
+/* re-thin labels to match the current zoom so they never crowd */
+map.on('zoomend',()=>{ if(!lastRoute)return; clearTimeout(lblTimer); lblTimer=setTimeout(()=>buildRouteLabels(lastRoute),180); });
+
+/* Persian turn-by-turn from OSRM maneuvers */
+function maneuverFa(st){
+  const m=st.maneuver||{}, t=m.type, mod=m.modifier||'', name=(st.name||'').trim();
+  const dir={'left':'به چپ','right':'به راست','slight left':'کمی به چپ','slight right':'کمی به راست','sharp left':'به چپِ تند','sharp right':'به راستِ تند','straight':'مستقیم','uturn':'دور بزنید'}[mod]||'';
+  if(t==='depart')  return {h:'شروع', d:'حرکت از مبدأ'+(name?(' در '+name):'')};
+  if(t==='arrive')  return {h:'مقصد', d:'رسیدن به مقصد', dest:true};
+  if(t==='roundabout'||t==='rotary') return {h:'میدان', d:'در میدان'+(m.exit?('، خروجی '+fa(m.exit)):'')+(name?(' به '+name):'')};
+  if(t==='new name'||t==='continue') return {h:'ادامه', d:'ادامه'+(name?(' در '+name):'')};
+  if(t==='merge')   return {h:'ورود', d:'ورود به '+(name||'مسیر')};
+  if(t==='fork')    return {h:'دوراهی', d:(dir||'انتخاب مسیر')+(name?(' به سمت '+name):'')};
+  if(t==='end of road') return {h:'انتهای خیابان', d:(dir||'بپیچید')+(name?(' به '+name):'')};
+  return {h: dir?('بپیچید '+dir):'ادامه', d:(dir?(dir+' بپیچید'):'ادامه')+(name?(' به '+name):'')};
+}
+function buildAutoSteps(rt){
+  let steps=[];
+  (rt.legs||[]).forEach(leg=>(leg.steps||[]).forEach(st=>{
+    const f=maneuverFa(st);
+    if(steps.length && steps[steps.length-1].d===f.d) return;
+    steps.push(f);
+  }));
+  if(!steps.length) return;
+  steps[steps.length-1]={h:'مقصد',d:'رسیدن به مقصد',dest:true};
+  if(steps.length>8){
+    const keep=[steps[0]], stp=(steps.length-2)/6;
+    for(let i=1;i<=6;i++) keep.push(steps[Math.round(i*stp)]);
+    keep.push(steps[steps.length-1]); steps=keep;
+  }
+  state.meta.steps=steps; renderPosterSteps(); save();
+}
 
 /* ======================= geocoding (Nominatim autocomplete, Iran-biased) ======================= */
 attachGeocoder($('#searchOrigin'), $('#sugOrigin'), 'origin');
@@ -505,10 +617,10 @@ function attachGeocoder(input, box, which){
   function choose(it){
     const ll=L.latLng(+it.lat,+it.lon);
     const name=primaryName(it);
-    if(which==='origin'){ setOrigin(ll); setMeta('from',name); state.meta.originName=name; input.value=name; }
-    else { setDest(ll); input.value=name; }
+    shouldFit=true;
+    if(which==='origin'){ state.meta.originName=name; setOrigin(ll); setMeta('from',name); input.value=name; }
+    else { state.meta.destName=name; setDest(ll); input.value=name; }
     box.classList.remove('show');
-    map.setView(ll, Math.max(map.getZoom(),15));
     route();
   }
 }
@@ -522,7 +634,10 @@ async function reverseName(ll,which){
     const url=`https://nominatim.openstreetmap.org/reverse?format=json&accept-language=fa&lat=${ll.lat}&lon=${ll.lng}`;
     const r=await fetch(url); const j=await r.json();
     const name=(j.name||(j.display_name||'').split(',')[0]||'');
-    if(which==='origin'&&name){ setMeta('from',name); state.meta.originName=name; }
+    if(!name)return;
+    if(which==='origin'){ setMeta('from',name); state.meta.originName=name; bindCallout(originM,name,'red'); }
+    else { state.meta.destName=name; bindCallout(destM,name,'navy'); }
+    save();
   }catch(e){}
 }
 
@@ -590,7 +705,31 @@ function renderImage(d){
   const lb=inner.querySelector('.leadbtn');
   L.DomEvent.on(lb,'mousedown',ev=>{ev.stopPropagation();});
   L.DomEvent.on(lb,'click',ev=>{ev.stopPropagation(); leaderFor=d.id; toast('روی نقشه، مقصد خط راهنما را کلیک کنید'); });
-  if(d.leader) drawLeader(d);
+  if(d.anchor) el.classList.add(d.anchor==='origin'?'anchor-o':'anchor-d');
+  if(d.leader||d.anchor) drawLeader(d);
+}
+/* Upload a photo for origin/destination, auto-place it near the point + auto leader line */
+function addAnchorPhoto(which){
+  const pt = which==='origin'?state.origin:state.dest;
+  if(!pt){ toast(which==='origin'?'ابتدا مبدأ را مشخص کنید':'ابتدا مقصد را مشخص کنید'); return; }
+  const inp=document.createElement('input'); inp.type='file'; inp.accept='image/*';
+  inp.onchange=e=>{
+    const f=e.target.files[0]; if(!f)return;
+    const rd=new FileReader();
+    rd.onload=()=>{
+      pushUndo();
+      const base=map.latLngToContainerPoint(L.latLng(pt.lat,pt.lng));
+      const sz=map.getSize();
+      let cx=base.x+(which==='origin'?-160:160), cy=base.y-130;
+      cx=Math.max(90,Math.min(sz.x-90,cx)); cy=Math.max(80,Math.min(sz.y-80,cy));
+      const ll=map.containerPointToLatLng(L.point(cx,cy));
+      addElement({type:'image',lat:ll.lat,lng:ll.lng,src:rd.result,
+        title:which==='origin'?(state.meta.originName||'مبدأ'):(state.meta.destName||'مقصد'),
+        w:150,leader:null,anchor:which});
+    };
+    rd.readAsDataURL(f);
+  };
+  inp.click();
 }
 function renderLine(d){
   const a=L.latLng(d.a.lat,d.a.lng), b=L.latLng(d.b.lat,d.b.lng);
@@ -623,16 +762,22 @@ function escapeHtml(s){return (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&l
 /* ======================= leader lines (image -> map point) ======================= */
 const leaders={}; // id -> polyline
 function setLeader(id,ll){ pushUndo(); const d=find(id); d.leader=xy(ll); drawLeader(d); save(); }
+function anchorLatLng(which){ const p=which==='origin'?state.origin:state.dest; return p?L.latLng(p.lat,p.lng):null; }
 function drawLeader(d){
   if(leaders[d.id]) map.removeLayer(leaders[d.id]);
+  if(!markers[d.id])return;
   const from=markers[d.id].marker.getLatLng();
-  leaders[d.id]=L.polyline([from,[d.leader.lat,d.leader.lng]],{color:NAVY,weight:2,dashArray:'6 5'}).addTo(map);
+  let to, col=NAVY;
+  if(d.anchor){ to=anchorLatLng(d.anchor); col=d.anchor==='origin'?RED:NAVY; }
+  else if(d.leader){ to=L.latLng(d.leader.lat,d.leader.lng); }
+  if(!to)return;
+  leaders[d.id]=L.polyline([from,to],{color:col,weight:2.5,dashArray:'2 6',lineCap:'round'}).addTo(map);
   leaders[d.id].bringToBack?.();
 }
-function updateLeaders(id){ const d=find(id); if(d&&d.leader) drawLeader(d); }
-map.on('zoomend moveend',()=>{ // keep arrows aligned
-  state.elements.filter(e=>e.type==='line'&&e.arrow).forEach(e=>{ const r=markers[e.id]; if(r){ /* arrow recomputed on drag; refresh here */ } });
-});
+function updateLeaders(id){ const d=find(id); if(d&&(d.leader||d.anchor)) drawLeader(d); }
+function refreshAnchorLeaders(which){
+  state.elements.filter(e=>e.type==='image'&&e.anchor&&(!which||e.anchor===which)).forEach(e=>{ if(markers[e.id]) drawLeader(e); });
+}
 
 /* ======================= selection ======================= */
 function select(id){
@@ -711,6 +856,17 @@ $('#imgInput').onchange=e=>{
   setTool('select');
 };
 
+/* ======================= route tool buttons ======================= */
+$('#btnFocus').onclick=()=>{ if(!state.origin||!state.dest){ toast('ابتدا مبدأ و مقصد را مشخص کنید'); return;} focusRoute(); };
+$('#btnAutoSteps').onclick=async()=>{
+  if(!state.origin||!state.dest){ toast('ابتدا مبدأ و مقصد را مشخص کنید'); return;}
+  state.meta.stepsEdited=false;
+  toast('در حال ساخت مراحل از مسیر…'); await _route(); toast('مراحل به‌روزرسانی شد ✅');
+};
+$('#btnPhotoOrigin').onclick=()=>addAnchorPhoto('origin');
+$('#btnPhotoDest').onclick=()=>addAnchorPhoto('dest');
+$('#chkLabels').onchange=e=>{ state.meta.autoLabels=e.target.checked; if(!e.target.checked) routeLabels.clearLayers(); save(); if(e.target.checked) route(); };
+
 /* ======================= poster meta (contenteditable) ======================= */
 $$('[data-meta]').forEach(el=>{
   el.addEventListener('input',()=>{ state.meta[el.dataset.meta]=el.innerHTML; save(); });
@@ -734,14 +890,14 @@ function renderPosterSteps(){
       <div class="h" contenteditable>${s.h}</div>
       <div class="d" contenteditable>${s.d}</div>
       <div class="del" title="حذف" style="position:absolute;left:6px;top:4px;color:#c8102e;cursor:pointer;font-weight:800;font-size:12px">×</div>`;
-    card.querySelector('.h').oninput=e=>{steps[i].h=e.target.textContent;state.meta.steps=steps;save();};
-    card.querySelector('.d').oninput=e=>{steps[i].d=e.target.textContent;state.meta.steps=steps;save();};
-    card.querySelector('.del').onclick=()=>{steps.splice(i,1);state.meta.steps=steps;renderPosterSteps();save();};
+    card.querySelector('.h').oninput=e=>{steps[i].h=e.target.textContent;state.meta.steps=steps;state.meta.stepsEdited=true;save();};
+    card.querySelector('.d').oninput=e=>{steps[i].d=e.target.textContent;state.meta.steps=steps;state.meta.stepsEdited=true;save();};
+    card.querySelector('.del').onclick=()=>{steps.splice(i,1);state.meta.steps=steps;state.meta.stepsEdited=true;renderPosterSteps();save();};
     posterSteps.appendChild(card);
   });
   const add=document.createElement('button');
   add.className='step-add'; add.textContent='＋'; add.title='افزودن مرحله';
-  add.onclick=()=>{ const arr=state.meta.steps||defaultSteps(); const destI=arr.findIndex(x=>x.dest); const item={h:'مرحلهٔ جدید',d:'توضیحات'}; if(destI>=0)arr.splice(destI,0,item);else arr.push(item); state.meta.steps=arr; renderPosterSteps(); save(); };
+  add.onclick=()=>{ const arr=state.meta.steps||defaultSteps(); const destI=arr.findIndex(x=>x.dest); const item={h:'مرحلهٔ جدید',d:'توضیحات'}; if(destI>=0)arr.splice(destI,0,item);else arr.push(item); state.meta.steps=arr; state.meta.stepsEdited=true; renderPosterSteps(); save(); };
   posterSteps.appendChild(add);
   state.meta.steps=steps;
 }
@@ -779,9 +935,10 @@ function restore(data){
   state.elements.forEach(renderElement);
   // meta into DOM
   $$('[data-meta]').forEach(el=>{ const k=el.dataset.meta; if(state.meta[k]!==undefined) el.innerHTML=state.meta[k]; });
+  $('#chkLabels').checked = state.meta.autoLabels!==false;
   renderPosterSteps();
   selected=null; hideProps();
-  if(state.origin&&state.dest){ fitOnce=true; route(); }
+  if(state.origin&&state.dest){ shouldFit=true; route(); }
 }
 
 /* ======================= export ======================= */
