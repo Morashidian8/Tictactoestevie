@@ -104,7 +104,7 @@
       <label>حداقل تعدادِ تناوب برای فعال‌سازی (تغییرِ رنگِ پیاپی)</label>
       <input id="altN" type="number" value="5" min="1">
       <div style="font-size:12px;color:var(--muted);margin-top:4px">
-        وقتی رنگ‌ها این تعداد یکی‌درمیان شدند و بعد ۲ کندلِ هم‌رنگ دیده شد، هم‌رنگِ کندلِ قبلی وارد می‌شود و تا اولین برد مارتینگل می‌کند، سپس تا تناوبِ بعدی متوقف می‌ماند.
+        وقتی رنگ‌ها این تعداد یکی‌درمیان شدند و ۲ کندلِ هم‌رنگ دیده شد، هم‌جهتِ کندلِ قبلی وارد می‌شود و تا ۳ پله مارتینگل می‌کند (مثلاً ۱۰-۲۰-۴۰). اگر هر سه باختند، متوقف می‌ماند تا تناوبِ بعدی؛ سپس همان مارتینگل را از پلهٔ بعد (۸۰) ادامه می‌دهد تا اولین برد. با هر برد به پلهٔ اول (۱۰) برمی‌گردد و سیکل از نو.
       </div>
     </div>
     <label>حداقل استریک (بعد از N کندلِ هم‌رنگ وارد شو)</label>
@@ -146,7 +146,7 @@ let pollTimer=null, cdTimer=null, busy=false;
 let lastClosedOpen=null, formingClose=0, curPrice=null, curColor='none';
 let bal=100, start=100, openBet=null, trades=[], wins=0, losses=0, step=0, lastStake=null;
 let prevColor=null, streakLen=0;
-let altLen=0, abArmed=false;   // altbreak: alternation length + "armed/trading" flag
+let altLen=0, abArmed=false, abCommitted=false;   // altbreak: alt length, armed flag, probe-failed flag
 
 function fmt(n){return (n==null?0:n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});}
 function clk(ms){try{return new Date(ms).toLocaleTimeString('fa-IR');}catch(e){return '—';}}
@@ -187,20 +187,22 @@ function decideAlt(color){
   const need=Math.max(1,parseInt(document.getElementById('altN').value)||5);
   const isFlip = (prevColor && color!=='none' && color!==prevColor);
   const same = (prevColor && color!=='none' && color===prevColor);
-  // a same-colour candle breaks the alternation; if the run was long enough, arm now
-  if(same && !abArmed && altLen>=need){ abArmed=true; step=0; }
+  // a same-colour candle breaks the alternation; if the run was long enough, arm now.
+  // A fresh probe starts at base (step 0); a committed window resumes the carried step.
+  if(same && !abArmed && altLen>=need){ abArmed=true; if(!abCommitted) step=0; }
   // update the alternation counter
   if(color==='none') altLen=0;
   else if(isFlip) altLen++;
   else altLen=0;              // 2 same-colour candles reset the alternating run
   prevColor=color;
-  // while armed, martingale until a win disarms us. First 3 positions FOLLOW the
-  // previous candle (10-20-40); from the 4th position on, keep martingaling but
-  // FADE (bet opposite the previous candle) until the first win.
+  // Trade window — always FOLLOW the previous candle, martingale sizing:
+  //  • PROBE (fresh trigger): take up to 3 steps (10-20-40). If all 3 lose, stand
+  //    down and wait for the NEXT 5-alternation trigger, carrying the martingale step.
+  //  • COMMITTED (probe failed): resume from the carried step (80) and martingale
+  //    every candle until the first win. Any win resets to step 0 (back to probe).
   if(abArmed && color!=='none'){
-    let sig = color==='green'?'up':'down';        // FOLLOW
-    if(step>=3) sig = (sig==='up'?'down':'up');    // 4th position onward: FADE
-    return sig;
+    if(!abCommitted && step>=3){ abArmed=false; abCommitted=true; return null; }  // probe exhausted -> wait for next trigger
+    return color==='green'?'up':'down';
   }
   return null;
 }
@@ -274,7 +276,7 @@ async function onClosedCandle(o,c,closeTime,place){
   if(openBet){
     const won=(openBet.signal==='up'&&color==='green')||(openBet.signal==='down'&&color==='red');
     openBet.won=won;
-    if(won){openBet.pnl=openBet.stake*(openBet.m-1); bal+=openBet.stake*openBet.m; wins++; step=0; abArmed=false;}
+    if(won){openBet.pnl=openBet.stake*(openBet.m-1); bal+=openBet.stake*openBet.m; wins++; step=0; abArmed=false; abCommitted=false;}
     else {openBet.pnl=-openBet.stake; losses++; step=Math.min(step+1,8);}
     trades.unshift(openBet); trades=trades.slice(0,12); openBet=null;
   }
@@ -335,7 +337,7 @@ async function poll(){
       // Don't fabricate the missed candles — refund any dangling bet, reset the
       // streak + martingale, and continue cleanly from the current candle.
       if(openBet){ bal+=openBet.stake; openBet=null; }
-      step=0; streakLen=0; prevColor=null; altLen=0; abArmed=false;
+      step=0; streakLen=0; prevColor=null; altLen=0; abArmed=false; abCommitted=false;
       lastClosedOpen=lastOid;
       await onClosedCandle(o,c,ct,true);
       setMsg('از کندلِ فعلی ادامه داد. بازه‌ی نبودنت معامله نشد و مارتینگل ریست شد (مرورگر در پس‌زمینه معامله نمی‌کند).');
@@ -356,7 +358,7 @@ function val(id){return document.getElementById(id).value;}
 function setVal(id,v){ if(v!=null && document.getElementById(id)) document.getElementById(id).value=v; }
 function saveState(){
   try{ localStorage.setItem('polybot', JSON.stringify({
-    running: !!pollTimer, bal, start, openBet, trades, wins, losses, step, prevColor, streakLen, lastClosedOpen, altLen, abArmed,
+    running: !!pollTimer, bal, start, openBet, trades, wins, losses, step, prevColor, streakLen, lastClosedOpen, altLen, abArmed, abCommitted,
     cfg:{tf:val('tf'),dir:val('dir'),streak:val('streak'),sizing:val('sizing'),
       amt:val('amt'),bal:val('bal'),mode:val('mode'),maxEntry:val('maxEntry'),altN:val('altN')}
   })); }catch(e){}
@@ -366,7 +368,7 @@ function loadState(){            // returns running flag, or null if nothing sav
   if(!s) return null;
   bal=s.bal; start=s.start; openBet=s.openBet||null; trades=s.trades||[]; wins=s.wins||0; losses=s.losses||0;
   step=s.step||0; prevColor=s.prevColor||null; streakLen=s.streakLen||0;
-  altLen=s.altLen||0; abArmed=!!s.abArmed;
+  altLen=s.altLen||0; abArmed=!!s.abArmed; abCommitted=!!s.abCommitted;
   lastClosedOpen=(s.lastClosedOpen!=null)?s.lastClosedOpen:null;
   if(s.cfg){const c=s.cfg; setVal('tf',c.tf);setVal('dir',c.dir);setVal('streak',c.streak);
     setVal('sizing',c.sizing); setVal('amt',c.amt);setVal('bal',c.bal);
@@ -432,7 +434,7 @@ function stop(){
 function reset(){
   stop();
   lastClosedOpen=null; formingClose=0; curPrice=null; curColor='none';
-  openBet=null; trades=[]; wins=0; losses=0; step=0; prevColor=null; streakLen=0; altLen=0; abArmed=false;
+  openBet=null; trades=[]; wins=0; losses=0; step=0; prevColor=null; streakLen=0; altLen=0; abArmed=false; abCommitted=false;
   lastStake=null;
   bal=parseFloat(document.getElementById('bal').value)||100; start=bal;
   setMsg(''); document.getElementById('cd').textContent='—';
@@ -478,7 +480,7 @@ async function runBacktest(){
     if(candles.length>3000){ candles=candles.slice(0,3000); note=' (بازه بزرگ بود؛ ۳۰۰۰ کندلِ اول)'; }
     // fresh trading state for the backtest
     bal=parseFloat(document.getElementById('bal').value)||100; start=bal;
-    openBet=null; trades=[]; wins=0; losses=0; step=0; prevColor=null; streakLen=0; altLen=0; abArmed=false;
+    openBet=null; trades=[]; wins=0; losses=0; step=0; prevColor=null; streakLen=0; altLen=0; abArmed=false; abCommitted=false;
   lastStake=null; lastClosedOpen=null;
     btCandles=candles; btIdx=0;
     const speed=Math.max(0.2,parseFloat(document.getElementById('btSpeed').value)||2)*1000;
@@ -494,7 +496,7 @@ function btStep(o,c,ct){
   if(openBet){
     const won=(openBet.signal==='up'&&color==='green')||(openBet.signal==='down'&&color==='red');
     openBet.won=won;
-    if(won){openBet.pnl=openBet.stake*(openBet.m-1); bal+=openBet.stake*openBet.m; wins++; step=0; abArmed=false;}
+    if(won){openBet.pnl=openBet.stake*(openBet.m-1); bal+=openBet.stake*openBet.m; wins++; step=0; abArmed=false; abCommitted=false;}
     else {openBet.pnl=-openBet.stake; losses++; step=Math.min(step+1,8);}
     trades.unshift(openBet); trades=trades.slice(0,12); openBet=null;
   }
