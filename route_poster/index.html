@@ -152,13 +152,16 @@ input,textarea{font-family:inherit;direction:rtl}
 
 /* Steps */
 .p-steps{display:flex;flex-wrap:wrap;gap:10px;padding:14px 20px 4px}
-.stepcard{flex:1 1 0;min-width:120px;border:1px solid var(--line);border-radius:11px;padding:10px 12px;position:relative;background:#fff}
+.stepcard{flex:0 1 auto;min-width:96px;max-width:150px;border:1px solid var(--line);border-radius:11px;padding:12px 12px 9px;position:relative;background:#fff;text-align:center}
 .stepcard .n{position:absolute;top:-11px;right:12px;width:24px;height:24px;border-radius:50%;background:var(--red);color:#fff;font-size:12.5px;font-weight:800;display:flex;align-items:center;justify-content:center}
-.stepcard .h{font-size:13px;font-weight:800;color:var(--navy);margin-bottom:3px}
-.stepcard .d{font-size:11.5px;color:#5b6b7a;line-height:1.6}
+.stepcard .h{font-size:14px;font-weight:800;color:var(--navy);margin-bottom:2px;line-height:1.35}
+.stepcard .d{font-size:10.5px;color:#8291a0;line-height:1.5}
+.stepcard.start{background:#fff5f0;border-color:var(--red)}
+.stepcard.start .h{color:var(--red)}
 .stepcard.dest{background:var(--navy);border-color:var(--navy)}
 .stepcard.dest .h{color:#fff}.stepcard.dest .d{color:#d7e4ee}
 .stepcard.dest .n{background:#fff;color:var(--navy)}
+.steparrow{align-self:center;color:var(--red);font-size:16px;font-weight:800;flex:0 0 auto;margin:0 -2px}
 .step-add{align-self:center;background:#eef2f6;border:1px dashed var(--navy);color:var(--navy);border-radius:10px;width:34px;height:34px;font-size:20px;font-weight:800;flex:0 0 auto}
 
 /* Warning + footer */
@@ -188,8 +191,9 @@ input,textarea{font-family:inherit;direction:rtl}
 .imgcard .ov-inner{background:#fff;border:3px solid #fff;border-radius:8px;box-shadow:0 3px 12px rgba(0,0,0,.28);padding:4px;text-align:center}
 .imgcard img{display:block;width:100%;height:auto;border-radius:4px;pointer-events:none}
 .imgcard .cap{font-size:11px;font-weight:700;color:var(--navy);margin-top:4px;padding:0 2px;min-width:60px}
-.imgcard .rsz{position:absolute;left:-6px;bottom:-6px;width:16px;height:16px;background:var(--red);border:2px solid #fff;border-radius:50%;cursor:nwse-resize;box-shadow:0 1px 3px rgba(0,0,0,.3)}
-.imgcard .leadbtn{position:absolute;right:-8px;top:-8px;width:20px;height:20px;background:var(--navy);color:#fff;border:2px solid #fff;border-radius:50%;font-size:11px;line-height:16px;text-align:center;cursor:pointer}
+.imgcard .rsz{position:absolute;left:-10px;bottom:-10px;width:24px;height:24px;background:var(--red);border:2px solid #fff;border-radius:50%;cursor:nwse-resize;box-shadow:0 1px 4px rgba(0,0,0,.35);touch-action:none;display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px}
+.imgcard .rsz:after{content:'⤡';line-height:1}
+.imgcard .leadbtn{position:absolute;right:-11px;top:-11px;width:26px;height:26px;background:var(--navy);color:#fff;border:2px solid #fff;border-radius:50%;font-size:13px;line-height:22px;text-align:center;cursor:pointer;touch-action:none}
 .wp{background:#fff;border:2px solid var(--red);border-radius:50%;width:14px;height:14px;box-shadow:0 1px 3px rgba(0,0,0,.3);cursor:move}
 .lineh{background:var(--navy);border:2px solid #fff;border-radius:50%;width:14px;height:14px;cursor:move}
 .arrowhead .ov-inner{width:0;height:0}
@@ -539,33 +543,31 @@ function buildRouteLabels(rt){
 /* re-thin labels to match the current zoom so they never crowd */
 map.on('zoomend',()=>{ if(!lastRoute)return; clearTimeout(lblTimer); lblTimer=setTimeout(()=>buildRouteLabels(lastRoute),180); });
 
-/* Persian turn-by-turn from OSRM maneuvers */
-function maneuverFa(st){
-  const m=st.maneuver||{}, t=m.type, mod=m.modifier||'', name=(st.name||'').trim();
-  const dir={'left':'به چپ','right':'به راست','slight left':'کمی به چپ','slight right':'کمی به راست','sharp left':'به چپِ تند','sharp right':'به راستِ تند','straight':'مستقیم','uturn':'دور بزنید'}[mod]||'';
-  if(t==='depart')  return {h:'شروع', d:'حرکت از مبدأ'+(name?(' در '+name):'')};
-  if(t==='arrive')  return {h:'مقصد', d:'رسیدن به مقصد', dest:true};
-  if(t==='roundabout'||t==='rotary') return {h:'میدان', d:'در میدان'+(m.exit?('، خروجی '+fa(m.exit)):'')+(name?(' به '+name):'')};
-  if(t==='new name'||t==='continue') return {h:'ادامه', d:'ادامه'+(name?(' در '+name):'')};
-  if(t==='merge')   return {h:'ورود', d:'ورود به '+(name||'مسیر')};
-  if(t==='fork')    return {h:'دوراهی', d:(dir||'انتخاب مسیر')+(name?(' به سمت '+name):'')};
-  if(t==='end of road') return {h:'انتهای خیابان', d:(dir||'بپیچید')+(name?(' به '+name):'')};
-  return {h: dir?('بپیچید '+dir):'ادامه', d:(dir?(dir+' بپیچید'):'ادامه')+(name?(' به '+name):'')};
-}
+/* Step cards = ordered list of the MAIN street names the route follows */
 function buildAutoSteps(rt){
-  let steps=[];
+  const names=[];
   (rt.legs||[]).forEach(leg=>(leg.steps||[]).forEach(st=>{
-    const f=maneuverFa(st);
-    if(steps.length && steps[steps.length-1].d===f.d) return;
-    steps.push(f);
+    const nm=(st.name||'').trim();
+    if(!nm) return;
+    if((st.distance||0)<90) return;                         // skip tiny connectors → main streets only
+    if(names.length && names[names.length-1]===nm) return;  // no consecutive repeats
+    names.push(nm);
   }));
-  if(!steps.length) return;
-  steps[steps.length-1]={h:'مقصد',d:'رسیدن به مقصد',dest:true};
-  if(steps.length>8){
-    const keep=[steps[0]], stp=(steps.length-2)/6;
-    for(let i=1;i<=6;i++) keep.push(steps[Math.round(i*stp)]);
-    keep.push(steps[steps.length-1]); steps=keep;
+  // drop a leading street that equals the origin's own name (avoid duplicate with «شروع»)
+  const oName=(state.meta.originName||'').trim();
+  const dName=(state.meta.destName||'').trim();
+  let mids=names.slice();
+  if(mids.length && oName && mids[0]===oName) mids.shift();
+  if(mids.length && dName && mids[mids.length-1]===dName) mids.pop();
+  // cap the number of middle streets so the row stays clean
+  if(mids.length>9){
+    const keep=[]; const stp=mids.length/9;
+    for(let i=0;i<9;i++) keep.push(mids[Math.floor(i*stp)]);
+    mids=keep.filter((v,i,a)=>i===0||v!==a[i-1]);
   }
+  const steps=[{h:'شروع', d: state.meta.originName||'مبدأ', start:true}];
+  mids.forEach(nm=> steps.push({h:nm, d:'خیابان'}));
+  steps.push({h:'مقصد', d: state.meta.destName||'مقصد', dest:true});
   state.meta.steps=steps; renderPosterSteps(); save();
 }
 
@@ -691,19 +693,25 @@ function renderImage(d){
   const html=`<img src="${d.src}" style="width:${d.w}px"><div class="cap">${escapeHtml(d.title||'')}</div><div class="rsz"></div><div class="leadbtn" title="خط راهنما">⤶</div>`;
   const m=makeMarker(d,'ov imgcard',html);
   const el=m.getElement(); const inner=el.querySelector('.ov-inner');
-  // resize
+  // resize (mouse + touch)
   const rsz=inner.querySelector('.rsz');
-  L.DomEvent.on(rsz,'mousedown',ev=>{
-    ev.preventDefault();ev.stopPropagation();
-    map.dragging.disable(); const img=inner.querySelector('img');
-    const sx=ev.clientX, sw=img.offsetWidth;
-    function mv(e){ let w=Math.max(70, sw + (sx-e.clientX)); img.style.width=w+'px'; d.w=w; updateLeaders(d.id); }
-    function up(){ document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up); map.dragging.enable(); save(); }
+  function startResize(ev){
+    const p0=ev.touches?ev.touches[0]:ev;
+    L.DomEvent.stop(ev);
+    map.dragging.disable(); if(map.tap)map.tap.disable();
+    const img=inner.querySelector('img');
+    const sx=p0.clientX, sw=img.offsetWidth;
+    function mv(e){ const q=e.touches?e.touches[0]:e; const w=Math.max(60,Math.min(420, sw+(sx-q.clientX))); img.style.width=w+'px'; d.w=w; updateLeaders(d.id); if(e.cancelable)e.preventDefault(); }
+    function up(){ document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up); document.removeEventListener('touchmove',mv);document.removeEventListener('touchend',up); map.dragging.enable(); if(map.tap)map.tap.enable(); save(); showProps(d); }
     document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up);
-  });
+    document.addEventListener('touchmove',mv,{passive:false});document.addEventListener('touchend',up);
+  }
+  L.DomEvent.on(rsz,'mousedown',startResize);
+  L.DomEvent.on(rsz,'touchstart',startResize);
   // leader button
   const lb=inner.querySelector('.leadbtn');
   L.DomEvent.on(lb,'mousedown',ev=>{ev.stopPropagation();});
+  L.DomEvent.on(lb,'touchstart',ev=>{ev.stopPropagation();});
   L.DomEvent.on(lb,'click',ev=>{ev.stopPropagation(); leaderFor=d.id; toast('روی نقشه، مقصد خط راهنما را کلیک کنید'); });
   if(d.anchor) el.classList.add(d.anchor==='origin'?'anchor-o':'anchor-d');
   if(d.leader||d.anchor) drawLeader(d);
@@ -876,19 +884,20 @@ function setMeta(key,val){ const el=$(`[data-meta="${key}"]`); if(el){ el.textCo
 /* ======================= poster step cards ======================= */
 const posterSteps=$('#posterSteps');
 function defaultSteps(){ return [
-  {h:'شروع',d:'حرکت از مبدأ'},
-  {h:'مسیر اصلی',d:'ادامه در مسیر مشخص‌شده'},
-  {h:'مقصد',d:'رسیدن به نقطهٔ هدف',dest:true}
+  {h:'شروع',d:'مبدأ',start:true},
+  {h:'مسیر اصلی',d:'خیابان'},
+  {h:'مقصد',d:'نقطهٔ هدف',dest:true}
 ];}
 function renderPosterSteps(){
   const steps=state.meta.steps||defaultSteps();
   posterSteps.innerHTML='';
   steps.forEach((s,i)=>{
+    if(i>0){ const ar=document.createElement('div'); ar.className='steparrow'; ar.textContent='◀'; posterSteps.appendChild(ar); }
     const card=document.createElement('div');
-    card.className='stepcard'+(s.dest?' dest':'');
+    card.className='stepcard'+(s.dest?' dest':'')+(s.start?' start':'');
     card.innerHTML=`<div class="n">${fa(i+1)}</div>
       <div class="h" contenteditable>${s.h}</div>
-      <div class="d" contenteditable>${s.d}</div>
+      <div class="d" contenteditable>${s.d||''}</div>
       <div class="del" title="حذف" style="position:absolute;left:6px;top:4px;color:#c8102e;cursor:pointer;font-weight:800;font-size:12px">×</div>`;
     card.querySelector('.h').oninput=e=>{steps[i].h=e.target.textContent;state.meta.steps=steps;state.meta.stepsEdited=true;save();};
     card.querySelector('.d').oninput=e=>{steps[i].d=e.target.textContent;state.meta.steps=steps;state.meta.stepsEdited=true;save();};
