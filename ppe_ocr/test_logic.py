@@ -109,6 +109,31 @@ def _run():
     check(all(s in {"M", "L", "XL", "XXL", "XXXL"} for s in sizes), "لباس کار باید سایز حرفی بگیرد")
     check(len(set(sizes)) == 3, "سه نفر باید سه سایز متفاوت بگیرند (توزیع چرخشی)")
 
+    # تست: سایزِ یک نفر در دو قلم البسه باید یکسان باشد
+    two_garments = {
+        "voucher_number": "3", "requesting_unit": "م", "delivery_date": None,
+        "personnel_type": "official", "company": None, "contract_number": None,
+        "items": [{"mesc_code": None, "item_name": "لباس کار", "unit": "NO", "req_qty": 2},
+                  {"mesc_code": None, "item_name": "لباس گرم", "unit": "NO", "req_qty": 2}],
+        "personnel": [{"first_name": "علی", "last_name": "الف", "code": "111111", "job_title": None, "size": None},
+                      {"first_name": "رضا", "last_name": "ب", "code": "222222", "job_title": None, "size": None}],
+    }
+    tg = logic.build_rows(two_garments)
+    by_person = {}
+    for r in tg:
+        by_person.setdefault(r["نام خانوادگی"], set()).add(r["سایز"])
+    check(all(len(s) == 1 for s in by_person.values()), "سایزِ هر نفر باید در همه‌ی البسه یکسان باشد")
+
+    # تست: پُرشدنِ کد جا‌افتاده از حواله‌ی دیگر
+    va = {"voucher_number": "A", "requesting_unit": None, "delivery_date": None, "personnel_type": "official",
+          "company": None, "contract_number": None, "items": [{"mesc_code": None, "item_name": "کلاه ایمنی", "unit": "NO", "req_qty": 1}],
+          "personnel": [{"first_name": "علی", "last_name": "حسینی", "code": "576058", "job_title": None, "size": None}]}
+    vb = {"voucher_number": "B", "requesting_unit": None, "delivery_date": None, "personnel_type": "official",
+          "company": None, "contract_number": None, "items": [{"mesc_code": None, "item_name": "کلاه ایمنی", "unit": "NO", "req_qty": 1}],
+          "personnel": [{"first_name": "علی", "last_name": "حسینی", "code": None, "job_title": None, "size": None}]}
+    logic.backfill_codes([va, vb])
+    check(vb["personnel"][0]["code"] == "576058", "کدِ جا‌افتاده باید از حواله‌ی دیگر پُر شود")
+
     if failures:
         print("❌ تست‌های ناموفق:")
         for m in failures:

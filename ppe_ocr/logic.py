@@ -7,7 +7,6 @@
 from __future__ import annotations
 
 import re
-from itertools import cycle
 
 from . import config
 
@@ -74,11 +73,11 @@ def is_sized(item_name: str, item: dict | None = None) -> bool:
     return any(key in item_name for key in config.size_pools().keys())
 
 
-def _size_cycle(item_name: str):
-    """یک چرخه‌ی سایز برای توزیع بین نفرات (وقتی سایز نفری مشخص نشده)."""
+def _pool_for(item_name: str):
+    """مخزن سایزِ مربوط به این کالا را برمی‌گرداند (یا None)."""
     for key, pool in config.size_pools().items():
         if key in item_name and pool:
-            return cycle(pool)
+            return pool
     return None
 
 
@@ -98,9 +97,6 @@ def build_rows(voucher: dict) -> list[dict]:
     items = voucher.get("items", []) or []
 
     rows: list[dict] = []
-    # یک چرخه‌ی سایز به‌ازای هر قلم (تا توزیع بین نفرات یکنواخت باشد)
-    size_cycles = {id(it): _size_cycle(resolve_item_name(it)) for it in items}
-
     n_people = len(people) or 1
     for item in items:
         item_name = resolve_item_name(item)
@@ -108,8 +104,8 @@ def build_rows(voucher: dict) -> list[dict]:
         raw_qty = item.get("req_qty")
         qty = max(1, round(raw_qty / n_people)) if raw_qty else 1
         sized = is_sized(item_name, item)
-        scyc = size_cycles[id(item)]
-        for person in people:
+        pool = _pool_for(item_name)
+        for idx, person in enumerate(people):
             code_field = person.get("code", "")
             C, D, contract = classify_code(code_field)
             # جمله‌ی «پرسنل رسمی/پیمانکاری» روی حواله می‌تواند نوع قرارداد را تأیید کند
@@ -120,10 +116,10 @@ def build_rows(voucher: dict) -> list[dict]:
             if not job:
                 job = c["shoghl_official_default"] if contract == "رسمی" else ""
 
-            # سایز
+            # سایزِ هر نفر ثابت است (بر اساس جایگاهِ همان نفر) تا همه‌ی البسه‌اش یک سایز شود
             size = (person.get("size") or "").strip() or None
-            if size is None and sized and scyc is not None:
-                size = next(scyc)
+            if size is None and sized and pool:
+                size = pool[idx % len(pool)]
 
             rows.append({
                 "نام": (person.get("first_name") or "").strip() or None,
@@ -162,8 +158,29 @@ def combine_namelist_with_voucher(name_list: dict, voucher: dict) -> dict:
     return merged
 
 
+def backfill_codes(vouchers: list[dict]) -> None:
+    """اگر کدِ کسی در یک حواله خوانده نشد، از حواله‌ای دیگر که همان نام کدش را دارد پُر می‌کند."""
+    def nk(p):
+        return (p.get("first_name") or "").strip() + "|" + (p.get("last_name") or "").strip()
+
+    known: dict[str, str] = {}
+    for v in vouchers:
+        for p in v.get("personnel", []) or []:
+            code = _digits(p.get("code"))
+            key = nk(p)
+            if code and len(key) > 1 and key not in known:
+                known[key] = p["code"]
+    for v in vouchers:
+        for p in v.get("personnel", []) or []:
+            if not _digits(p.get("code")):
+                key = nk(p)
+                if key in known:
+                    p["code"] = known[key]
+
+
 def build_all(vouchers: list[dict]) -> list[dict]:
-    """چند حواله را با هم پردازش می‌کند."""
+    """چند حواله را با هم پردازش می‌کند (با پُرکردنِ کدهای جا‌افتاده از بین حواله‌ها)."""
+    backfill_codes(vouchers)
     rows: list[dict] = []
     for v in vouchers:
         rows.extend(build_rows(v))

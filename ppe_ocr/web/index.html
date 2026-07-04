@@ -109,7 +109,7 @@ const HEADERS = ["نام","نام خانوادگی","کد پرسنلی","کد م
 const PROMPT_V = `این تصویر یک «حواله صدور کالا / MATERIAL ISSUE VOUCHER» شرکت گاز است. تمام اطلاعات را دقیق استخراج کن:
 - شماره حواله: عدد چاپی کنار «جمع مقادیر/TOTAL QTY» یا بالای برگه.
 - اقلام: هر قلم یک MESC NO، یک شرح (DESCRIPTION مثل کلاه ایمنی)، واحد (NO/PR) و REQ.QTY دارد.
-- افراد: در قسمت DESCRIPTION دست‌نویس، هر نفر با یک شماره ردیف (۱- ۲- ۳- …) مشخص است و نام، نام خانوادگی و یک کد دارد. نام و نام خانوادگی ممکن است به خط بعد بشکند؛ حتماً نام خانوادگیِ کاملِ هر نفر را بیاور و آن را با کد و شماره ردیفِ درست همان نفر تطبیق بده. هیچ نفری را جا نینداز. کد ۵ تا ۷ رقمی=کد پرسنلی؛ ۱۰ رقمی=کد ملی. اگر جلوی اسم شغل نوشته شده (امداد/تعمیرات/تکنسین) در job_title بگذار.
+- افراد: در قسمت DESCRIPTION دست‌نویس، هر نفر با یک شماره ردیف (۱- ۲- ۳- …) مشخص است و نام، نام خانوادگی و یک کد دارد. نام و نام خانوادگی ممکن است به خط بعد بشکند؛ حتماً نام خانوادگیِ کاملِ هر نفر را بیاور و آن را با کد و شماره ردیفِ درست همان نفر تطبیق بده. هیچ نفری را جا نینداز. تقریباً هر نفر یک کد جلوی نامش دارد؛ کد را با دقت بخوان و تا جای ممکن خالی نگذار. کد ۵ تا ۷ رقمی=کد پرسنلی؛ ۱۰ رقمی=کد ملی. اگر جلوی اسم شغل نوشته شده (امداد/تعمیرات/تکنسین) در job_title بگذار.
 - req_qty همان REQ.QTY است و «مقدار کل برای همه‌ی نفرات» است (نه سهم هر نفر). همان عدد کل را بده.
 - واحد متقاضی/شرح کار = منطقه (requesting_unit).
 - اگر جمله «پرسنل رسمی» یا «پیمانکاری» دیدی، personnel_type را تعیین کن.
@@ -143,14 +143,15 @@ function buildRows(v){
     // REQ.QTY روی حواله «مقدار کل» برای همه‌ی نفرات است؛ سهم هر نفر = کل ÷ تعداد نفرات
     const n=people.length||1;
     const qty=(it.req_qty!=null)?Math.max(1,Math.round(it.req_qty/n)):1;
-    const pool=poolFor(nm); let si=0;
-    people.forEach(p=>{
+    const pool=poolFor(nm);
+    people.forEach((p,pIdx)=>{
       let [C,D,contract]=classifyCode(p.code);
       if(D===null&&ptype==="contractor")contract="پیمانکاری";
       let job=(p.job_title||"").trim();
       if(!job)job=(contract==="رسمی")?CONST.job:"";
       let size=(p.size||"").trim()||null;
-      if(size===null&&sized&&pool){size=pool[si%pool.length];si++;}
+      // سایزِ هر نفر ثابت است (بر اساس جایگاهِ همان نفر) تا همه‌ی البسه‌اش یک سایز شود
+      if(size===null&&sized&&pool){size=pool[pIdx%pool.length];}
       rows.push({"نام":(p.first_name||"").trim()||null,"نام خانوادگی":(p.last_name||"").trim()||null,
         "کد پرسنلی":C,"کد ملی":D,"جنسیت":inferGender(p.first_name),"مدیریت":null,
         "شهرستان/منطقه":region,"نوع قرارداد":contract,"شماره پیمان":peyman,"نام شرکت":sherkat,
@@ -161,6 +162,14 @@ function buildRows(v){
   return rows;
 }
 function normalize(d){d=d||{};["voucher_number","requesting_unit","delivery_date","personnel_type","company","contract_number"].forEach(k=>{if(!(k in d))d[k]=null;});d.items=d.items||[];d.personnel=d.personnel||[];return d;}
+
+// اگر کد کسی در یک حواله خوانده نشد، از حواله‌ای دیگر که همان نام کدش را دارد پُر می‌کند
+function backfillCodes(vouchers){
+  const nk=p=>((p.first_name||"").trim()+"|"+(p.last_name||"").trim());
+  const map={};
+  vouchers.forEach(v=>(v.personnel||[]).forEach(p=>{const c=digits(p.code);const k=nk(p);if(c&&k.length>1&&!map[k])map[k]=p.code;}));
+  vouchers.forEach(v=>(v.personnel||[]).forEach(p=>{if(!digits(p.code)){const k=nk(p);if(map[k])p.code=map[k];}}));
+}
 
 // ---------------- Gemini ----------------
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
@@ -262,7 +271,9 @@ $("run").addEventListener("click",async()=>{
     for(let i=0;i<nfs.length;i++){log("خواندن لیست اسامی "+(i+1)+"/"+nfs.length+" …");
       const {b64,mime}=await fileToB64(nfs[i]); const nl=await extract(b64,mime,"namelist"); names=names.concat(nl.personnel||[]);}
     let rows=[];
-    vouchers.forEach(v=>{ if(names.length) v={...v,personnel:names}; rows=rows.concat(buildRows(v)); });
+    const finalV=vouchers.map(v=> names.length ? {...v,personnel:names} : v);
+    backfillCodes(finalV);
+    finalV.forEach(v=>{ rows=rows.concat(buildRows(v)); });
     if(!rows.length){log("هیچ ردیفی استخراج نشد. کیفیت عکس را بهتر کن.","err");$("run").disabled=false;return;}
     LAST_ROWS=rows;
     log("تمام شد ✓","ok");
