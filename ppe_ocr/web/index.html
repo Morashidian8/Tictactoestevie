@@ -43,9 +43,21 @@
 <div class="wrap">
 
   <div class="card">
-    <label>۱) کلید رایگان Google Gemini</label>
-    <input id="key" type="password" placeholder="کلید را اینجا بچسبان (یک‌بار)">
-    <p class="hint">کلید رایگان از <a href="https://aistudio.google.com/apikey" target="_blank">aistudio.google.com/apikey</a> بگیر → «Create API key». روی همین گوشی ذخیره می‌شود و جایی فرستاده نمی‌شود.</p>
+    <label>۱) موتور استخراج</label>
+    <div style="display:flex;gap:8px;margin-bottom:10px">
+      <label style="flex:1;text-align:center;padding:10px;border:1px solid #2b3b4d;border-radius:10px;background:#0e1620;color:var(--tx)">
+        <input type="radio" name="prov" value="gemini" checked> Gemini (رایگان)</label>
+      <label style="flex:1;text-align:center;padding:10px;border:1px solid #2b3b4d;border-radius:10px;background:#0e1620;color:var(--tx)">
+        <input type="radio" name="prov" value="claude"> Claude (دقیق‌تر)</label>
+    </div>
+    <div id="box-gemini">
+      <input id="key" type="password" placeholder="کلید Gemini (با AIza شروع می‌شود)">
+      <p class="hint">کلید رایگان از <a href="https://aistudio.google.com/apikey" target="_blank">aistudio.google.com/apikey</a> → «Create API key». روی همین گوشی ذخیره می‌شود.</p>
+    </div>
+    <div id="box-claude" style="display:none">
+      <input id="ckey" type="password" placeholder="کلید Claude (با sk-ant- شروع می‌شود)">
+      <p class="hint">دقت بالاتر روی دست‌خط. از <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a>. با اعتبار خودت مصرف می‌شود. روی همین گوشی ذخیره می‌شود.</p>
+    </div>
   </div>
 
   <div class="card">
@@ -152,38 +164,52 @@ function normalize(d){d=d||{};["voucher_number","requesting_unit","delivery_date
 
 // ---------------- Gemini ----------------
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
-async function extract(b64,mime,mode){
+const CLAUDE_MODEL="claude-opus-4-8";
+function parseJson(txt){const m=(txt||"").match(/\{[\s\S]*\}/);return normalize(JSON.parse(m?m[0]:"{}"));}
+
+async function callGemini(b64,mime,prompt){
   const key=document.getElementById("key").value.trim();
-  const prompt=(mode==="namelist"?PROMPT_N:PROMPT_V)+JSON_TMPL;
   const body={contents:[{parts:[{inline_data:{mime_type:mime,data:b64}},{text:prompt}]}],
     generationConfig:{response_mime_type:"application/json",temperature:0}};
   let lastErr=null;
-  // اگر مدلی شلوغ بود، چند بار دوباره تلاش و بعد سراغ مدل جایگزین
   for(let mi=0; mi<MODELS.length; mi++){
-    const model=MODELS[mi];
-    const url=`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(key)}`;
+    const url=`https://generativelanguage.googleapis.com/v1beta/models/${MODELS[mi]}:generateContent?key=${encodeURIComponent(key)}`;
     for(let att=0; att<3; att++){
       try{
         const r=await fetch(url,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
-        if(r.status===503||r.status===429||r.status===500){
-          lastErr=new Error("شلوغی موقت ("+r.status+")");
-          if(typeof log==="function")log("سرور شلوغ بود، تلاش دوباره… ("+model+")");
-          await sleep(1500*(att+1)); continue;
-        }
+        if(r.status===503||r.status===429||r.status===500){lastErr=new Error("شلوغی موقت ("+r.status+")");if(typeof log==="function")log("سرور شلوغ بود، تلاش دوباره…");await sleep(1500*(att+1));continue;}
         if(!r.ok){const t=await r.text();throw new Error("خطای Gemini ("+r.status+"): "+t.slice(0,200));}
         const j=await r.json();
-        let txt=(((j.candidates||[])[0]||{}).content||{}).parts?.[0]?.text||"{}";
-        const m=txt.match(/\{[\s\S]*\}/); if(m)txt=m[0];
-        return normalize(JSON.parse(txt));
-      }catch(e){
-        lastErr=e;
-        // خطای شبکه‌ای گذرا: یک مکث و تلاش دوباره
-        if(/Failed to fetch|NetworkError|شلوغی/.test(e.message)){await sleep(1200); continue;}
-        throw e;
-      }
+        return parseJson((((j.candidates||[])[0]||{}).content||{}).parts?.[0]?.text);
+      }catch(e){lastErr=e;if(/Failed to fetch|NetworkError|شلوغی/.test(e.message)){await sleep(1200);continue;}throw e;}
     }
   }
   throw lastErr||new Error("خطای نامشخص");
+}
+
+async function callClaude(b64,mime,prompt){
+  const key=document.getElementById("ckey").value.trim();
+  const body={model:CLAUDE_MODEL,max_tokens:8000,messages:[{role:"user",content:[
+    {type:"image",source:{type:"base64",media_type:mime,data:b64}},{type:"text",text:prompt}]}]};
+  let lastErr=null;
+  for(let att=0; att<4; att++){
+    try{
+      const r=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",
+        headers:{"content-type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
+        body:JSON.stringify(body)});
+      if(r.status===529||r.status===429||r.status>=500){lastErr=new Error("شلوغی موقت ("+r.status+")");if(typeof log==="function")log("سرور شلوغ بود، تلاش دوباره…");await sleep(1500*(att+1));continue;}
+      if(!r.ok){const t=await r.text();throw new Error("خطای Claude ("+r.status+"): "+t.slice(0,220));}
+      const j=await r.json();
+      return parseJson((j.content||[]).filter(b=>b.type==="text").map(b=>b.text).join(""));
+    }catch(e){lastErr=e;if(/Failed to fetch|NetworkError|شلوغی/.test(e.message)){await sleep(1200);continue;}throw e;}
+  }
+  throw lastErr||new Error("Claude ناموفق");
+}
+
+function currentProvider(){const el=document.querySelector('input[name=prov]:checked');return el?el.value:"gemini";}
+async function extract(b64,mime,mode){
+  const prompt=(mode==="namelist"?PROMPT_N:PROMPT_V)+JSON_TMPL;
+  return currentProvider()==="claude"?callClaude(b64,mime,prompt):callGemini(b64,mime,prompt);
 }
 function fileToB64(f){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res({b64:r.result.split(",")[1],mime:f.type||"image/jpeg"});r.onerror=rej;r.readAsDataURL(f);});}
 
@@ -207,15 +233,24 @@ function preview(rows){
 // ---------------- رابط ----------------
 const $=id=>document.getElementById(id);
 const savedKey=localStorage.getItem("gemini_key"); if(savedKey)$("key").value=savedKey;
+const savedCKey=localStorage.getItem("claude_key"); if(savedCKey)$("ckey").value=savedCKey;
 $("key").addEventListener("change",()=>localStorage.setItem("gemini_key",$("key").value.trim()));
+$("ckey").addEventListener("change",()=>localStorage.setItem("claude_key",$("ckey").value.trim()));
+function applyProv(){const p=currentProvider();$("box-gemini").style.display=(p==="gemini")?"block":"none";$("box-claude").style.display=(p==="claude")?"block":"none";localStorage.setItem("provider",p);}
+document.querySelectorAll('input[name=prov]').forEach(r=>r.addEventListener("change",applyProv));
+const savedProv=localStorage.getItem("provider");
+if(savedProv){const el=document.querySelector('input[name=prov][value="'+savedProv+'"]');if(el)el.checked=true;}
+applyProv();
 $("vf").addEventListener("change",e=>$("vc").textContent=e.target.files.length?e.target.files.length+" عکس حواله انتخاب شد":"");
 $("nf").addEventListener("change",e=>$("nc").textContent=e.target.files.length?e.target.files.length+" عکس لیست اسامی انتخاب شد":"");
 function log(m,cls){const el=$("log");el.innerHTML+=(cls?`<span class="${cls}">${m}</span>`:m)+"\n";el.scrollTop=el.scrollHeight;}
 
 $("run").addEventListener("click",async()=>{
-  const key=$("key").value.trim();
-  if(!key){alert("اول کلید رایگان Gemini را وارد کن.");return;}
-  localStorage.setItem("gemini_key",key);
+  const prov=currentProvider();
+  const key=(prov==="claude"?$("ckey"):$("key")).value.trim();
+  if(!key){alert(prov==="claude"?"اول کلید Claude را وارد کن.":"اول کلید Gemini را وارد کن.");return;}
+  localStorage.setItem("gemini_key",$("key").value.trim());
+  localStorage.setItem("claude_key",$("ckey").value.trim());
   const vfs=[...$("vf").files]; if(!vfs.length){alert("حداقل یک عکس حواله انتخاب کن.");return;}
   const nfs=[...$("nf").files];
   $("run").disabled=true; $("log").textContent=""; $("result").style.display="none";
