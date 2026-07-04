@@ -101,7 +101,12 @@
     </select>
     <label>حداقل استریک (بعد از N کندلِ هم‌رنگ وارد شو)</label>
     <input id="streak" type="number" value="1" min="1">
-    <div class="sw"><input type="checkbox" id="mart" checked><span>مارتینگل (بعد از باخت دوبرابر) — ⚠️ پرریسک</span></div>
+    <label>روشِ حجمِ معامله</label>
+    <select id="sizing">
+      <option value="fixed">ثابت (بدون مارتینگل)</option>
+      <option value="mart">مارتینگلِ کامل (هر باخت دوبرابر) — ⚠️ پرریسک</option>
+      <option value="mart3" selected>مارتینگلِ محدود — ۳ باختِ اول دوبرابر، بعد ثابت تا برد</option>
+    </select>
     <label>مبلغِ هر معامله ($)</label>
     <input id="amt" type="number" value="1" min="0">
     <label>موجودیِ شروع ($)</label>
@@ -162,8 +167,12 @@ function decide(color){
 }
 function stake(){
   const base=parseFloat(document.getElementById('amt').value)||1;
-  if(!document.getElementById('mart').checked) return Math.min(base,bal);
-  return Math.min(base*Math.pow(2,step), bal);
+  const m=document.getElementById('sizing').value;
+  let s;
+  if(m==='fixed') s=base;
+  else if(m==='mart') s=base*Math.pow(2,step);           // full martingale
+  else s = (step<=3) ? base*Math.pow(2,step) : base;     // mart3: double for 3 losses, then flat until a win
+  return Math.min(s,bal);
 }
 
 // --- live Polymarket odds (browser-direct; CORS is allowed) ---
@@ -298,7 +307,7 @@ function setVal(id,v){ if(v!=null && document.getElementById(id)) document.getEl
 function saveState(){
   try{ localStorage.setItem('polybot', JSON.stringify({
     running: !!pollTimer, bal, start, openBet, trades, wins, losses, step, prevColor, streakLen, lastClosedOpen,
-    cfg:{tf:val('tf'),dir:val('dir'),streak:val('streak'),mart:document.getElementById('mart').checked,
+    cfg:{tf:val('tf'),dir:val('dir'),streak:val('streak'),sizing:val('sizing'),
       amt:val('amt'),bal:val('bal'),mode:val('mode'),maxEntry:val('maxEntry')}
   })); }catch(e){}
 }
@@ -309,7 +318,7 @@ function loadState(){            // returns running flag, or null if nothing sav
   step=s.step||0; prevColor=s.prevColor||null; streakLen=s.streakLen||0;
   lastClosedOpen=(s.lastClosedOpen!=null)?s.lastClosedOpen:null;
   if(s.cfg){const c=s.cfg; setVal('tf',c.tf);setVal('dir',c.dir);setVal('streak',c.streak);
-    document.getElementById('mart').checked=!!c.mart; setVal('amt',c.amt);setVal('bal',c.bal);
+    setVal('sizing',c.sizing); setVal('amt',c.amt);setVal('bal',c.bal);
     setVal('mode',c.mode); setVal('maxEntry',c.maxEntry); onMode();}
   return !!s.running;
 }
