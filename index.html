@@ -108,6 +108,21 @@
     <input id="bal" type="number" value="100" min="1">
   </div>
 
+  <h2>بک‌تست (روی کندل‌های واقعیِ گذشته)</h2>
+  <div class="card">
+    <div class="muted" style="margin-bottom:8px">هر بازه‌ای از یک سالِ گذشته را انتخاب کن؛ روی کندل‌های <b>واقعیِ</b> بیت‌کوین (Binance) سریع پخش می‌شود. نرخِ ورود چون تاریخی است، فرضی است.</div>
+    <label>از تاریخ/ساعت</label>
+    <input id="btStart" type="datetime-local">
+    <label>تا تاریخ/ساعت</label>
+    <input id="btEnd" type="datetime-local">
+    <label>نرخِ فرضیِ ورود (odds) — بین ۰ تا ۱</label>
+    <input id="btOdds" type="number" value="0.5" min="0.01" max="0.99" step="0.01">
+    <label>سرعت — هر کندل چند ثانیه</label>
+    <input id="btSpeed" type="number" value="2" min="0.2" step="0.1">
+    <div class="btns" style="margin-top:12px"><button id="btBtn" onclick="toggleBacktest()">▶ شروعِ بک‌تست</button></div>
+    <div id="btMsg" class="muted" style="margin-top:8px">تایم‌فریم از بخشِ «تنظیمات» گرفته می‌شود (پیش‌فرض ۵ دقیقه).</div>
+  </div>
+
   <p class="muted" style="text-align:center;margin:18px 0">دادهٔ کندل از Binance (همان قیمتی که بازارهای up/down روی آن resolve می‌شوند). مشاورهٔ مالی نیست.</p>
 
 <script>
@@ -338,6 +353,7 @@ function countdown(){
 function toggle(){ pollTimer? stop() : run(); }
 function run(){
   if(pollTimer) return;
+  stopBacktest();
   if(!trades.length && !openBet){ bal=parseFloat(document.getElementById('bal').value)||100; start=bal; }
   setMsg('در حال اتصال به دادهٔ واقعی…');
   poll();
@@ -363,6 +379,102 @@ function reset(){
   try{ localStorage.removeItem('polybot'); }catch(e){}
   render();
 }
+
+// ---------------- BACKTEST (real past candles, fast replay) ----------------
+let btTimer=null, btCandles=[], btIdx=0;
+function toggleBacktest(){ btTimer? stopBacktest() : runBacktest(); }
+
+async function fetchHistory(sMs,eMs){
+  const tf=document.getElementById('tf').value;
+  let all=[], cursor=sMs, guard=0;
+  while(cursor<eMs && guard<6){          // up to ~6000 candles
+    guard++;
+    let rows=null;
+    for(const h of HOSTS){
+      try{ const r=await fetch(h+'/api/v3/klines?symbol=BTCUSDT&interval='+tf+'&startTime='+cursor+'&endTime='+eMs+'&limit=1000');
+        if(r.ok){ rows=await r.json(); break; } }catch(e){}
+    }
+    if(!rows||!rows.length) break;
+    all=all.concat(rows);
+    cursor=parseInt(rows[rows.length-1][6])+1;
+    if(rows.length<1000) break;
+  }
+  return all;
+}
+
+async function runBacktest(){
+  stop();                                 // stop live if running
+  const bm=document.getElementById('btMsg');
+  const sMs=new Date(document.getElementById('btStart').value).getTime();
+  const eMs=new Date(document.getElementById('btEnd').value).getTime();
+  if(!sMs||!eMs||sMs>=eMs){ bm.textContent='بازه‌ی تاریخ نامعتبر است.'; return; }
+  if(sMs < Date.now()-366*864e5){ bm.textContent='فقط تا یک سالِ گذشته پشتیبانی می‌شود.'; return; }
+  bm.textContent='در حال گرفتنِ کندل‌های واقعی…';
+  try{
+    let candles=await fetchHistory(sMs,eMs);
+    if(!candles.length){ bm.textContent='کندلی در این بازه پیدا نشد.'; return; }
+    let note='';
+    if(candles.length>3000){ candles=candles.slice(0,3000); note=' (بازه بزرگ بود؛ ۳۰۰۰ کندلِ اول)'; }
+    // fresh trading state for the backtest
+    bal=parseFloat(document.getElementById('bal').value)||100; start=bal;
+    openBet=null; trades=[]; wins=0; losses=0; step=0; prevColor=null; streakLen=0; lastClosedOpen=null;
+    btCandles=candles; btIdx=0;
+    const speed=Math.max(0.2,parseFloat(document.getElementById('btSpeed').value)||2)*1000;
+    document.getElementById('btBtn').textContent='● در حال بک‌تست — توقف';
+    document.getElementById('btBtn').classList.add('ghost');
+    bm.textContent='شروع شد: '+candles.length+' کندل'+note;
+    btTimer=setInterval(btTick, speed);
+  }catch(e){ bm.textContent='❌ گرفتنِ کندل‌ها نشد (CORS/شبکه).'; }
+}
+
+function btStep(o,c,ct){
+  const color=colorOf(o,c);
+  if(openBet){
+    const won=(openBet.signal==='up'&&color==='green')||(openBet.signal==='down'&&color==='red');
+    openBet.won=won;
+    if(won){openBet.pnl=openBet.stake*(openBet.m-1); bal+=openBet.stake*openBet.m; wins++; step=0;}
+    else {openBet.pnl=-openBet.stake; losses++; step=Math.min(step+1,8);}
+    trades.unshift(openBet); trades=trades.slice(0,12); openBet=null;
+  }
+  const sig=decide(color);
+  if(sig){
+    const s=stake();
+    if(s>=0.01 && bal>=s){
+      let odds=parseFloat(document.getElementById('btOdds').value)||0.5;
+      odds=Math.min(0.99,Math.max(0.01,odds));
+      bal-=s;
+      openBet={signal:sig,stake:s,entry:Math.round(c),time:clk(ct),won:null,pnl:0,m:1/odds,odds:odds,live:false};
+    }
+  }
+}
+
+function btTick(){
+  if(btIdx>=btCandles.length){ stopBacktest();
+    document.getElementById('btMsg').textContent='بک‌تست تمام شد ✅ — '+btCandles.length+' کندل. نتیجه بالا.'; return; }
+  const row=btCandles[btIdx++];
+  const o=parseFloat(row[1]), c=parseFloat(row[4]), ct=parseInt(row[6]);
+  curPrice=Math.round(c); curColor=colorOf(o,c); formingClose=0;
+  btStep(o,c,ct);
+  document.getElementById('lastc').innerHTML='کندلِ بک‌تست: <span class="dot" style="background:'+(curColor==='green'?'var(--green)':'var(--red)')+'"></span> '+
+    (curColor==='green'?'سبز':'قرمز')+' @ $'+curPrice.toLocaleString('en-US')+' · '+new Date(ct).toLocaleString('fa-IR');
+  document.getElementById('btMsg').textContent='کندل '+btIdx+' از '+btCandles.length+' — '+new Date(ct).toLocaleString('fa-IR');
+  render();
+  if(bal+(openBet?openBet.stake:0)<=0.01){ stopBacktest(); document.getElementById('btMsg').textContent='موجودی تمام شد — بک‌تست متوقف شد ('+btIdx+' کندل).'; }
+}
+
+function stopBacktest(){
+  clearInterval(btTimer); btTimer=null;
+  document.getElementById('btBtn').textContent='▶ شروعِ بک‌تست';
+  document.getElementById('btBtn').classList.remove('ghost');
+}
+
+// default the backtest range to the last 24 hours
+(function(){ const p=n=>String(n).padStart(2,'0');
+  const f=d=>d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+'T'+p(d.getHours())+':'+p(d.getMinutes());
+  const s=document.getElementById('btStart'), e=document.getElementById('btEnd');
+  if(e&&!e.value) e.value=f(new Date());
+  if(s&&!s.value) s.value=f(new Date(Date.now()-24*3600*1000));
+})();
 
 // On open: restore the saved session and resume (catching up while you were away).
 const _wasRunning = loadState();
