@@ -13,7 +13,7 @@ import re
 from .extractor import _PROMPT_NAMELIST, _PROMPT_VOUCHER, _media_type
 
 # مدل‌ها به ترتیب اولویت؛ اگر یکی شلوغ بود (503) بعدی امتحان می‌شود.
-MODELS = [os.getenv("PPE_GEMINI_MODEL", "gemini-2.5-flash"), "gemini-2.0-flash", "gemini-2.5-flash-lite"]
+MODELS = [os.getenv("PPE_GEMINI_MODEL", "gemini-2.5-pro"), "gemini-2.5-flash", "gemini-2.0-flash"]
 MODEL = MODELS[0]
 
 # قالب JSON که از مدل می‌خواهیم دقیقاً همین شکل را برگرداند.
