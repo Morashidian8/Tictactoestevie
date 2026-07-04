@@ -76,7 +76,7 @@
 
 <script>
 // ---------------- پیکربندی ----------------
-const MODEL = "gemini-2.5-flash";
+const MODELS = ["gemini-2.5-flash","gemini-2.0-flash","gemini-2.5-flash-lite"];
 const MESC = {
   "9643210042":{item:"دستکش حالدار",unit:"PR",sized:false},
   "9649108222":{item:"عینک ایمنی",unit:"NO",sized:false},
@@ -151,18 +151,39 @@ function buildRows(v){
 function normalize(d){d=d||{};["voucher_number","requesting_unit","delivery_date","personnel_type","company","contract_number"].forEach(k=>{if(!(k in d))d[k]=null;});d.items=d.items||[];d.personnel=d.personnel||[];return d;}
 
 // ---------------- Gemini ----------------
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 async function extract(b64,mime,mode){
   const key=document.getElementById("key").value.trim();
   const prompt=(mode==="namelist"?PROMPT_N:PROMPT_V)+JSON_TMPL;
-  const url=`https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${encodeURIComponent(key)}`;
   const body={contents:[{parts:[{inline_data:{mime_type:mime,data:b64}},{text:prompt}]}],
     generationConfig:{response_mime_type:"application/json",temperature:0}};
-  const r=await fetch(url,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
-  if(!r.ok){const t=await r.text();throw new Error("خطای Gemini ("+r.status+"): "+t.slice(0,200));}
-  const j=await r.json();
-  let txt=(((j.candidates||[])[0]||{}).content||{}).parts?.[0]?.text||"{}";
-  const m=txt.match(/\{[\s\S]*\}/); if(m)txt=m[0];
-  return normalize(JSON.parse(txt));
+  let lastErr=null;
+  // اگر مدلی شلوغ بود، چند بار دوباره تلاش و بعد سراغ مدل جایگزین
+  for(let mi=0; mi<MODELS.length; mi++){
+    const model=MODELS[mi];
+    const url=`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(key)}`;
+    for(let att=0; att<3; att++){
+      try{
+        const r=await fetch(url,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
+        if(r.status===503||r.status===429||r.status===500){
+          lastErr=new Error("شلوغی موقت ("+r.status+")");
+          if(typeof log==="function")log("سرور شلوغ بود، تلاش دوباره… ("+model+")");
+          await sleep(1500*(att+1)); continue;
+        }
+        if(!r.ok){const t=await r.text();throw new Error("خطای Gemini ("+r.status+"): "+t.slice(0,200));}
+        const j=await r.json();
+        let txt=(((j.candidates||[])[0]||{}).content||{}).parts?.[0]?.text||"{}";
+        const m=txt.match(/\{[\s\S]*\}/); if(m)txt=m[0];
+        return normalize(JSON.parse(txt));
+      }catch(e){
+        lastErr=e;
+        // خطای شبکه‌ای گذرا: یک مکث و تلاش دوباره
+        if(/Failed to fetch|NetworkError|شلوغی/.test(e.message)){await sleep(1200); continue;}
+        throw e;
+      }
+    }
+  }
+  throw lastErr||new Error("خطای نامشخص");
 }
 function fileToB64(f){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res({b64:r.result.split(",")[1],mime:f.type||"image/jpeg"});r.onerror=rej;r.readAsDataURL(f);});}
 

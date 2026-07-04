@@ -12,8 +12,9 @@ import re
 
 from .extractor import _PROMPT_NAMELIST, _PROMPT_VOUCHER, _media_type
 
-# مدل پیش‌فرض؛ با متغیر PPE_GEMINI_MODEL قابل تغییر است.
-MODEL = os.getenv("PPE_GEMINI_MODEL", "gemini-2.5-flash")
+# مدل‌ها به ترتیب اولویت؛ اگر یکی شلوغ بود (503) بعدی امتحان می‌شود.
+MODELS = [os.getenv("PPE_GEMINI_MODEL", "gemini-2.5-flash"), "gemini-2.0-flash", "gemini-2.5-flash-lite"]
+MODEL = MODELS[0]
 
 # قالب JSON که از مدل می‌خواهیم دقیقاً همین شکل را برگرداند.
 _JSON_TEMPLATE = """
@@ -53,15 +54,26 @@ def _strip_code_fence(text: str) -> str:
 
 
 def extract_gemini(image_bytes: bytes, filename: str = "voucher.jpg", mode: str = "voucher") -> dict:
+    import time
+
     import google.generativeai as genai
 
     genai.configure(api_key=_api_key())
     base = _PROMPT_NAMELIST if mode == "namelist" else _PROMPT_VOUCHER
     prompt = base + "\n" + _JSON_TEMPLATE
+    parts = [{"mime_type": _media_type(filename), "data": image_bytes}, prompt]
+    cfg = {"response_mime_type": "application/json", "temperature": 0}
 
-    model = genai.GenerativeModel(MODEL)
-    resp = model.generate_content(
-        [{"mime_type": _media_type(filename), "data": image_bytes}, prompt],
-        generation_config={"response_mime_type": "application/json", "temperature": 0},
-    )
-    return json.loads(_strip_code_fence(resp.text))
+    last = None
+    for name in MODELS:  # اگر مدلی شلوغ بود، بعدی
+        for attempt in range(3):
+            try:
+                resp = genai.GenerativeModel(name).generate_content(parts, generation_config=cfg)
+                return json.loads(_strip_code_fence(resp.text))
+            except Exception as e:  # noqa: BLE001
+                last = e
+                if any(s in str(e) for s in ("503", "429", "500", "overloaded", "UNAVAILABLE")):
+                    time.sleep(1.5 * (attempt + 1))
+                    continue
+                break
+    raise last if last else RuntimeError("Gemini extraction failed")
