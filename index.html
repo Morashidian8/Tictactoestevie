@@ -40,7 +40,8 @@
 </head>
 <body>
 
-  <h2 style="font-size:22px;color:var(--text)">PolyBot — کندلِ واقعیِ ۵ دقیقه‌ای</h2>
+  <h2 style="font-size:22px;color:var(--text)">PolyBot — کندلِ واقعیِ ۵ دقیقه‌ای
+    <span id="ver" style="font-size:12px;color:var(--indigo);font-weight:700"></span></h2>
   <div class="banner">پولِ فرضی · کندلِ واقعیِ بیت‌کوین · سینک با ساعتِ واقعی. هر کندل که بسته شه، یک تصمیم.</div>
 
   <div class="card">
@@ -540,6 +541,10 @@ function stopBacktest(){
   if(e&&!e.value) e.value=f(new Date());
   if(s&&!s.value) s.value=f(new Date(Date.now()-24*3600*1000));
 })();
+
+// Version badge — lets you confirm the browser isn't showing a cached old copy.
+const APP_VERSION = "v11";
+try{ document.getElementById('ver').textContent = APP_VERSION; }catch(e){}
 
 // On open: restore the saved session and resume (catching up while you were away).
 const _wasRunning = loadState();
