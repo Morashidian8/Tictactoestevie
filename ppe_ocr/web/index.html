@@ -55,8 +55,10 @@
       <p class="hint">کلید رایگان از <a href="https://aistudio.google.com/apikey" target="_blank">aistudio.google.com/apikey</a> → «Create API key». روی همین گوشی ذخیره می‌شود.</p>
     </div>
     <div id="box-claude" style="display:none">
-      <input id="ckey" type="password" placeholder="کلید Claude (با sk-ant- شروع می‌شود)">
-      <p class="hint">دقت بالاتر روی دست‌خط. از <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a>. با اعتبار خودت مصرف می‌شود. روی همین گوشی ذخیره می‌شود.</p>
+      <input id="ckey" type="password" placeholder="کلید Claude یا روتر (با sk- شروع می‌شود)">
+      <input id="cbase" type="text" placeholder="آدرس سرور (اختیاری) — خالی = Anthropic رسمی" style="margin-top:8px">
+      <input id="cmodel" type="text" placeholder="مدل (اختیاری) — پیش‌فرض claude-opus-4-8" style="margin-top:8px">
+      <p class="hint">کلید رسمی از <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a>. اگر کلیدت از <b>agentrouter.org</b> است: آدرس را <b>https://agentrouter.org</b> بگذار و مدل را مثلاً <b>claude-sonnet-4-5</b> (از لیست مدل‌های agentrouter). همه روی همین گوشی ذخیره می‌شود.</p>
     </div>
   </div>
 
@@ -209,12 +211,14 @@ async function callGemini(b64,mime,prompt){
 
 async function callClaude(b64,mime,prompt){
   const key=document.getElementById("ckey").value.trim();
-  const body={model:CLAUDE_MODEL,max_tokens:8000,messages:[{role:"user",content:[
+  const base=(document.getElementById("cbase").value.trim()||"https://api.anthropic.com").replace(/\/+$/,"");
+  const model=document.getElementById("cmodel").value.trim()||CLAUDE_MODEL;
+  const body={model:model,max_tokens:8000,messages:[{role:"user",content:[
     {type:"image",source:{type:"base64",media_type:mime,data:b64}},{type:"text",text:prompt}]}]};
   let lastErr=null;
   for(let att=0; att<4; att++){
     try{
-      const r=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",
+      const r=await fetch(base+"/v1/messages",{method:"POST",
         headers:{"content-type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
         body:JSON.stringify(body)});
       if(r.status===529||r.status===429||r.status>=500){lastErr=new Error("شلوغی موقت ("+r.status+")");if(typeof log==="function")log("سرور شلوغ بود، تلاش دوباره…");await sleep(1500*(att+1));continue;}
@@ -254,8 +258,12 @@ function preview(rows){
 const $=id=>document.getElementById(id);
 const savedKey=localStorage.getItem("gemini_key"); if(savedKey)$("key").value=savedKey;
 const savedCKey=localStorage.getItem("claude_key"); if(savedCKey)$("ckey").value=savedCKey;
+const savedBase=localStorage.getItem("claude_base"); if(savedBase)$("cbase").value=savedBase;
+const savedModel=localStorage.getItem("claude_model"); if(savedModel)$("cmodel").value=savedModel;
 $("key").addEventListener("change",()=>localStorage.setItem("gemini_key",$("key").value.trim()));
 $("ckey").addEventListener("change",()=>localStorage.setItem("claude_key",$("ckey").value.trim()));
+$("cbase").addEventListener("change",()=>localStorage.setItem("claude_base",$("cbase").value.trim()));
+$("cmodel").addEventListener("change",()=>localStorage.setItem("claude_model",$("cmodel").value.trim()));
 function applyProv(){const p=currentProvider();$("box-gemini").style.display=(p==="gemini")?"block":"none";$("box-claude").style.display=(p==="claude")?"block":"none";localStorage.setItem("provider",p);}
 document.querySelectorAll('input[name=prov]').forEach(r=>r.addEventListener("change",applyProv));
 const savedProv=localStorage.getItem("provider");
