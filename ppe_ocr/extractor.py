@@ -84,8 +84,32 @@ def _media_type(filename: str) -> str:
             ".webp": "image/webp", ".gif": "image/gif"}.get(ext, "image/jpeg")
 
 
-def extract(image_bytes: bytes, filename: str = "voucher.jpg", mode: str = "voucher") -> dict:
-    """یک عکس را می‌خواند و ساختار حواله (یا لیست اسامی) را برمی‌گرداند."""
+def _normalize(data: dict) -> dict:
+    """اطمینان از وجود همه‌ی کلیدها تا logic.py هرگز خطا نگیرد."""
+    data = dict(data or {})
+    for key in ("voucher_number", "requesting_unit", "delivery_date",
+                "personnel_type", "company", "contract_number"):
+        data.setdefault(key, None)
+    data.setdefault("items", [])
+    data.setdefault("personnel", [])
+    return data
+
+
+def extract(image_bytes: bytes, filename: str = "voucher.jpg",
+            mode: str = "voucher", provider: str | None = None) -> dict:
+    """یک عکس را می‌خواند و ساختار حواله (یا لیست اسامی) را برمی‌گرداند.
+
+    provider: "gemini" (پیش‌فرض، رایگان) یا "anthropic". با متغیر PPE_PROVIDER هم قابل تنظیم.
+    """
+    provider = provider or os.getenv("PPE_PROVIDER", "gemini")
+    if provider == "gemini":
+        from . import extractor_gemini
+        return _normalize(extractor_gemini.extract_gemini(image_bytes, filename, mode))
+    return _normalize(_extract_anthropic(image_bytes, filename, mode))
+
+
+def _extract_anthropic(image_bytes: bytes, filename: str = "voucher.jpg", mode: str = "voucher") -> dict:
+    """پیاده‌سازی با Anthropic Claude (نیازمند ANTHROPIC_API_KEY)."""
     prompt = _PROMPT_NAMELIST if mode == "namelist" else _PROMPT_VOUCHER
     b64 = base64.standard_b64encode(image_bytes).decode("utf-8")
     client = _client()

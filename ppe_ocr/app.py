@@ -33,6 +33,11 @@ with st.sidebar:
     st.write("۳) دکمه‌ی «استخراج و ساخت اکسل» را بزنید.")
     st.write("۴) فایل خروجی را دانلود کنید.")
     st.divider()
+    import os as _os
+    _has_key = bool(_os.getenv("GOOGLE_API_KEY") or _os.getenv("GEMINI_API_KEY"))
+    st.caption(f"موتور: Google Gemini (رایگان) — کلید تنظیم شده: {'✅' if _has_key else '❌'}")
+    if not _has_key:
+        st.warning("کلید رایگان از aistudio.google.com/apikey بگیر و در GOOGLE_API_KEY بگذار.")
     st.caption("ستون‌ها: نام، خانوادگی، کد پرسنلی/ملی، جنسیت، منطقه، نوع قرارداد، لوازم، سایز، تعداد، تاریخ تحویل، شماره حواله …")
 
 col1, col2 = st.columns(2)

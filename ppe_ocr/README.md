@@ -19,15 +19,24 @@
 
 اگر **لیست اسامی جدا** از حواله‌ی تجهیزات بدهید، اپ اسامی را به اقلامِ حواله تخصیص می‌دهد.
 
-## اجرا
+## اجرا (با کلید رایگان Google Gemini)
+
+۱) یک کلید **رایگان** بگیرید: به <https://aistudio.google.com/apikey> بروید و «Create API key» بزنید.
+
+۲) اپ را اجرا کنید:
 
 ```bash
 pip install -r ppe_ocr/requirements.txt
-export ANTHROPIC_API_KEY=...        # کلید API
+export GOOGLE_API_KEY=کلید_رایگان_شما
 streamlit run ppe_ocr/app.py
 ```
 
 سپس در مرورگر: عکس‌ها را آپلود کنید و دکمه‌ی «استخراج و ساخت اکسل» را بزنید.
+
+### موتور استخراج (Gemini پیش‌فرض)
+
+- پیش‌فرض **Google Gemini** است (رایگان). مدل پیش‌فرض `gemini-2.5-flash`؛ با `PPE_GEMINI_MODEL` قابل تغییر.
+- اگر خواستید از Anthropic استفاده کنید: `export PPE_PROVIDER=anthropic` و `export ANTHROPIC_API_KEY=...`.
 
 ## تست منطق (بدون نیاز به API)
 
