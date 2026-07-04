@@ -74,10 +74,14 @@ def build_report(
     activity = _safe(warnings, "تاریخچه فعالیت", lambda: client.activity(addr)) or []
 
     engine = PnLEngine().load(activity)
+    # Resolved-but-never-redeemed losers are realized losses, not open positions.
+    lost_assets = set(engine.close_worthless(positions, now))
     warnings.extend(engine.warnings)
     win = engine.window(start_ts, now, activity)
 
-    open_pos = _summarize_positions(positions)
+    open_pos = _summarize_positions(
+        [p for p in positions if str(p.get("asset", "") or "") not in lost_assets]
+    )
 
     return {
         "address": addr,

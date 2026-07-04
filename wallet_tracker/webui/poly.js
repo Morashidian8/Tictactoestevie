@@ -9,7 +9,15 @@
   "use strict";
 
   const DATA_BASE = "https://data-api.polymarket.com";
-  const DEFAULT_RPC = "https://polygon-rpc.com";
+  // Public RPCs differ in uptime (polygon-rpc.com intermittently 401s); the
+  // balance reader walks this list until one answers.
+  const FALLBACK_RPCS = [
+    "https://polygon-bor-rpc.publicnode.com",
+    "https://polygon-rpc.com",
+    "https://1rpc.io/matic",
+    "https://polygon.drpc.org",
+  ];
+  const DEFAULT_RPC = FALLBACK_RPCS[0];
   const USDC_E = "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174"; // Polymarket collateral
   const USDC_NATIVE = "0x3c499c542cEF5E3811e1192ce70d8cc03d5c3359";
   const USDC_DECIMALS = 6;
@@ -36,13 +44,18 @@
     return Number(BigInt(raw)) / 10 ** decimals;
   }
 
-  async function usdcBalances(address, rpcUrl = DEFAULT_RPC) {
-    const [e, n] = await Promise.all([
-      erc20Balance(rpcUrl, USDC_E, address).catch(() => null),
-      erc20Balance(rpcUrl, USDC_NATIVE, address).catch(() => null),
-    ]);
-    const total = e == null && n == null ? null : (e || 0) + (n || 0);
-    return { usdc_e: e, usdc_native: n, total };
+  async function usdcBalances(address, rpcUrl) {
+    const rpcs = rpcUrl ? [rpcUrl, ...FALLBACK_RPCS.filter((u) => u !== rpcUrl)] : FALLBACK_RPCS;
+    for (const url of rpcs) {
+      const [e, n] = await Promise.all([
+        erc20Balance(url, USDC_E, address).catch(() => null),
+        erc20Balance(url, USDC_NATIVE, address).catch(() => null),
+      ]);
+      if (e != null || n != null) {
+        return { usdc_e: e, usdc_native: n, total: (e || 0) + (n || 0) };
+      }
+    }
+    return { usdc_e: null, usdc_native: null, total: null };
   }
 
   // -- Polymarket Data API ------------------------------------------------- //
@@ -92,11 +105,14 @@
   // Replays activity oldest-first, keeps per-asset FIFO lots, emits one closing
   // event per SELL/REDEEM/MERGE (and REWARD as income). Returns { events,
   // realizedTotal, warnings }.
-  function fifoPnl(rows) {
-    const lots = new Map(); // asset -> [{size, price}]
-    const meta = new Map(); // asset -> {title, outcome}
+  function fifoPnl(rows, positions, nowTs) {
+    const lots = new Map();       // asset -> [{size, price}]
+    const meta = new Map();       // asset -> {title, outcome}
+    const condAssets = new Map(); // conditionId -> [asset]
+    const lastTs = new Map();     // asset -> last activity ts
     const events = [];
     const warnings = [];
+    const lostAssets = [];
     let realizedTotal = 0;
 
     const buyPrice = (price, usdc, size) =>
@@ -106,6 +122,14 @@
       if (size <= 0) return;
       if (!lots.has(asset)) lots.set(asset, []);
       lots.get(asset).push({ size, price });
+    };
+
+    // Remove every remaining lot of `asset`, returning total cost.
+    const drainAll = (asset) => {
+      const q = lots.get(asset) || [];
+      let cost = 0;
+      while (q.length) { const lot = q.shift(); cost += lot.size * lot.price; }
+      return cost;
     };
 
     const close = (ts, kind, asset, size, proceeds) => {
@@ -129,6 +153,24 @@
       events.push({ timestamp: ts, kind, asset, title: m.title, outcome: m.outcome, size, proceeds, cost_basis: cost, realized });
     };
 
+    // Redemption settles the whole condition: winners pay $1, losers pay $0,
+    // nothing remains. REDEEM rows carry an EMPTY asset, so match lots via
+    // conditionId (fallbacks: title) and close them all against the payout.
+    const closeCondition = (ts, cond, title, size, proceeds) => {
+      let assets = (condAssets.get(cond) || []).slice();
+      if (!assets.length && title) {
+        assets = [...meta.entries()].filter(([, m]) => m.title === title).map(([a]) => a);
+      }
+      let cost = 0;
+      for (const a of assets) cost += drainAll(a);
+      if (!assets.length) {
+        warnings.push("یک تسویه (REDEEM) به هیچ خریدی وصل نشد؛ ممکن است تاریخچه کامل نباشد.");
+      }
+      const realized = proceeds - cost;
+      realizedTotal += realized;
+      events.push({ timestamp: ts, kind: "REDEEM", asset: cond, title, outcome: "", size, proceeds, cost_basis: cost, realized });
+    };
+
     for (const r of rows) {
       const asset = String(r.asset || "");
       const type = String(r.type || "").toUpperCase();
@@ -139,7 +181,16 @@
       const price = num(r.price);
       const title = String(r.title || "");
       const outcome = String(r.outcome || "");
-      if (asset) meta.set(asset, { title, outcome });
+      const cond = String(r.conditionId || "");
+      if (asset) {
+        meta.set(asset, { title, outcome });
+        lastTs.set(asset, Math.max(ts, lastTs.get(asset) || 0));
+        if (cond) {
+          if (!condAssets.has(cond)) condAssets.set(cond, []);
+          const bucket = condAssets.get(cond);
+          if (!bucket.includes(asset)) bucket.push(asset);
+        }
+      }
 
       if (type === "REWARD") {
         events.push({ timestamp: ts, kind: "REWARD", asset, title, outcome, size: 0, proceeds: usdc, cost_basis: 0, realized: usdc });
@@ -155,10 +206,57 @@
       } else if (type === "MERGE") {
         close(ts, "MERGE", asset, size, usdc || size * (price || 0));
       } else if (type === "REDEEM") {
-        close(ts, "REDEEM", asset, size, usdc);
+        closeCondition(ts, cond, title, size, usdc);
       }
     }
-    return { events, realizedTotal, warnings };
+
+    // Market end time from recurring-market slugs like btc-updown-5m-1783090500:
+    // the trailing number is the window START; add the length token. `endDate`
+    // is date-only (midnight) — too coarse for hourly PnL windows.
+    const slugEndTs = (slug) => {
+      const m = /-(\d{9,11})$/.exec(String(slug || ""));
+      if (!m) return null;
+      const base = Number(m[1]);
+      if (base < 1e9 || base > 4e9) return null;
+      const s = String(slug);
+      for (const [tok, sec] of [["-5m-", 300], ["-15m-", 900], ["-1h-", 3600], ["-4h-", 14400], ["-1d-", 86400]]) {
+        if (s.includes(tok)) return base + sec;
+      }
+      return base;
+    };
+
+    // Resolved-but-never-redeemed losers: the loss became real when the market
+    // resolved, even though no activity row exists. positions shows them as
+    // size>0 & curPrice==0. Book each as LOST at the market end time.
+    const now = nowTs || Math.floor(Date.now() / 1000);
+    for (const p of positions || []) {
+      const asset = String(p.asset || "");
+      const size = num(p.size) || 0;
+      const cur = num(p.curPrice);
+      if (!asset || size <= 1e-6 || cur == null || cur > 1e-9) continue;
+      let endTs = slugEndTs(p.slug || p.eventSlug);
+      if (endTs == null) {
+        endTs = Date.parse(p.endDate || "") / 1000;
+        if (!Number.isFinite(endTs)) endTs = lastTs.get(asset) || now;
+      }
+      endTs = Math.max(Math.floor(endTs), lastTs.get(asset) || 0);
+      endTs = Math.min(endTs, now);
+      let cost = drainAll(asset);
+      if (cost <= 1e-9) {
+        cost = num(p.initialValue) || size * (num(p.avgPrice) || 0);
+        if (cost <= 1e-9) continue;
+      }
+      realizedTotal += -cost;
+      events.push({
+        timestamp: endTs, kind: "LOST", asset,
+        title: String(p.title || ""), outcome: String(p.outcome || ""),
+        size, proceeds: 0, cost_basis: cost, realized: -cost,
+      });
+      lostAssets.push(asset);
+    }
+    events.sort((a, b) => a.timestamp - b.timestamp);
+
+    return { events, realizedTotal, warnings, lostAssets };
   }
 
   // Slice the replayed events + raw activity into one window.
@@ -204,6 +302,9 @@
 
   // -- top-level report (browser) ------------------------------------------ //
   async function buildReport(address, windowMinutes, rpcUrl = DEFAULT_RPC) {
+    // Polymarket's data API matches addresses case-sensitively (lowercase).
+    // A checksummed 0xAbC... input silently returns empty lists, so normalize.
+    address = String(address).trim().toLowerCase();
     const now = Math.floor(Date.now() / 1000);
     const startTs = now - Math.round(windowMinutes * 60);
     const warnings = [];
@@ -220,10 +321,12 @@
       safe("تاریخچه فعالیت", () => activity(address)),
     ]);
 
-    const { events, warnings: pnlWarn } = fifoPnl(actRows || []);
+    const { events, warnings: pnlWarn, lostAssets } = fifoPnl(actRows || [], posRows || [], now);
     warnings.push(...pnlWarn);
     const win = windowSlice(events, actRows || [], startTs, now);
-    const open = summarizePositions(posRows || []);
+    // Resolved losers were just realized above — they are not open positions.
+    const lostSet = new Set(lostAssets);
+    const open = summarizePositions((posRows || []).filter((p) => !lostSet.has(String(p.asset || ""))));
 
     return {
       address, generated_at: now,
@@ -233,6 +336,9 @@
       pnl_window: win,
       open_positions: open,
       activity_total_rows: (actRows || []).length,
+      // Distinguish "the API call failed" from "the address genuinely has no
+      // Polymarket history" — the UI reacts very differently to each.
+      activity_failed: actRows === null,
       warnings,
     };
   }

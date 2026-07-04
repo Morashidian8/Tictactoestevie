@@ -93,6 +93,10 @@ class PnLEngine:
         self.realized_total: float = 0.0
         self.warnings: List[str] = []
         self._meta: Dict[str, Tuple[str, str]] = {}  # asset -> (title, outcome)
+        # REDEEM rows carry a conditionId but an EMPTY `asset`, so lots must
+        # also be reachable by condition (and, as a fallback, by title).
+        self._cond_assets: Dict[str, List[str]] = {}
+        self._asset_last_ts: Dict[str, int] = {}
 
     # -- ingestion --------------------------------------------------------- #
 
@@ -112,8 +116,14 @@ class PnLEngine:
         price = _float(row.get("price"))
         title = str(row.get("title", "") or "")
         outcome = str(row.get("outcome", "") or "")
+        cond = str(row.get("conditionId", "") or "")
         if asset:
             self._meta[asset] = (title, outcome)
+            self._asset_last_ts[asset] = max(ts, self._asset_last_ts.get(asset, 0))
+            if cond:
+                bucket = self._cond_assets.setdefault(cond, [])
+                if asset not in bucket:
+                    bucket.append(asset)
 
         if atype == "REWARD":
             self.closing_events.append(
@@ -143,7 +153,12 @@ class PnLEngine:
             self._close(ts, "MERGE", asset, size, usdc if usdc else size * (price or 0.0))
             return
         if atype == "REDEEM":
-            self._close(ts, "REDEEM", asset, size, usdc)
+            # Redemption settles the WHOLE condition for this wallet: winning
+            # shares pay $1, losing shares pay $0, nothing remains after. The
+            # row's `asset` is empty, so match lots via conditionId (fallbacks:
+            # the asset itself, then title) and close them all against the
+            # payout — that books the winner's gain AND the loser's loss.
+            self._close_condition(ts, cond, asset, title, size, usdc)
             return
 
         # Unknown / unhandled type: record once so the report can surface it.
@@ -181,6 +196,82 @@ class PnLEngine:
         self.closing_events.append(
             ClosingEvent(ts, kind, asset, title, outcome, size, proceeds, cost, realized)
         )
+
+    def _drain_all(self, asset: str) -> float:
+        """Remove every remaining lot of `asset`, returning their total cost."""
+        cost = 0.0
+        lots = self._lots.get(asset)
+        while lots:
+            lot = lots.popleft()
+            cost += lot.size * lot.price
+        return cost
+
+    def _close_condition(self, ts: int, cond: str, asset: str, title: str,
+                         size: float, proceeds: float) -> None:
+        assets = list(self._cond_assets.get(cond, []))
+        if not assets and asset and self._lots.get(asset):
+            assets = [asset]
+        if not assets and title:
+            assets = [a for a, (t, _o) in self._meta.items() if t and t == title]
+        cost = sum(self._drain_all(a) for a in assets)
+        if not assets:
+            self.warnings.append(
+                "یک تسویه (REDEEM) به هیچ خریدی وصل نشد؛ ممکن است تاریخچه کامل نباشد."
+            )
+        if not title and assets:
+            title = self._meta.get(assets[0], ("", ""))[0]
+        realized = proceeds - cost
+        self.realized_total += realized
+        self.closing_events.append(
+            ClosingEvent(ts, "REDEEM", cond or asset, title, "", size, proceeds, cost, realized)
+        )
+
+    def close_worthless(self, positions: List[Dict[str, Any]], now_ts: int) -> List[str]:
+        """Realize losses for resolved-and-lost positions that were never redeemed.
+
+        A losing outcome pays nothing, so most users never claim it and no
+        REDEEM row ever appears — but the loss became real the moment the
+        market resolved. The positions API shows these as size>0, curPrice==0.
+        Books each as a LOST closing event at the market's end time (fallback:
+        last trade time, then now). Returns the affected asset ids so the
+        report can exclude them from "open positions".
+        """
+        lost: List[str] = []
+        for p in positions:
+            asset = str(p.get("asset", "") or "")
+            size = _float(p.get("size")) or 0.0
+            cur = _float(p.get("curPrice"))
+            if not asset or size <= 1e-6 or cur is None or cur > 1e-9:
+                continue
+            # Best resolution-time source first: recurring up/down markets encode
+            # the window start in their slug (…-5m-<unix>), while `endDate` is
+            # date-only (midnight) — far too coarse for hourly PnL windows.
+            end_ts = (
+                _slug_end_ts(p.get("slug") or p.get("eventSlug"))
+                or _parse_end_ts(p.get("endDate"))
+                or self._asset_last_ts.get(asset)
+                or now_ts
+            )
+            end_ts = max(end_ts, self._asset_last_ts.get(asset, 0))
+            end_ts = min(end_ts, now_ts)
+            cost = self._drain_all(asset)
+            if cost <= 1e-9:
+                # No recorded lots (history truncated) — fall back to the
+                # position's own average cost so the loss is still counted.
+                avg = _float(p.get("avgPrice")) or 0.0
+                cost = _float(p.get("initialValue")) or (size * avg)
+                if cost <= 1e-9:
+                    continue
+            title = str(p.get("title", "") or "")
+            outcome = str(p.get("outcome", "") or "")
+            realized = -cost
+            self.realized_total += realized
+            self.closing_events.append(
+                ClosingEvent(end_ts, "LOST", asset, title, outcome, size, 0.0, cost, realized)
+            )
+            lost.append(asset)
+        self.closing_events.sort(key=lambda e: e.timestamp)
+        return lost
 
     # -- queries ----------------------------------------------------------- #
 
@@ -223,6 +314,54 @@ class PnLEngine:
 # --------------------------------------------------------------------------- #
 # helpers
 # --------------------------------------------------------------------------- #
+
+_SLUG_TS = None  # compiled lazily
+
+
+def _slug_end_ts(slug: Any) -> Optional[int]:
+    """Market end time from recurring-market slugs like btc-updown-5m-1783090500.
+
+    The trailing number is the window START (unix seconds); add the window
+    length encoded as -5m- / -15m- / -1h- / -4h- / -1d-.
+    """
+    global _SLUG_TS
+    if not slug:
+        return None
+    if _SLUG_TS is None:
+        import re
+
+        _SLUG_TS = re.compile(r"-(\d{9,11})$")
+    m = _SLUG_TS.search(str(slug))
+    if not m:
+        return None
+    base = int(m.group(1))
+    if not (1_000_000_000 <= base <= 4_000_000_000):
+        return None
+    text = str(slug)
+    for token, seconds in (("-5m-", 300), ("-15m-", 900), ("-1h-", 3600),
+                           ("-4h-", 14_400), ("-1d-", 86_400)):
+        if token in text:
+            return base + seconds
+    return base
+
+
+def _parse_end_ts(value: Any) -> Optional[int]:
+    """Parse the positions API `endDate` (ISO 8601) to unix seconds."""
+    if not value:
+        return None
+    if isinstance(value, (int, float)):
+        return int(value)
+    try:
+        from datetime import datetime, timezone
+
+        text = str(value).strip().replace("Z", "+00:00")
+        dt = datetime.fromisoformat(text)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return int(dt.timestamp())
+    except (ValueError, TypeError):
+        return None
+
 
 def _buy_price(price: Optional[float], usdc: float, size: float) -> float:
     if price is not None and price > 0:

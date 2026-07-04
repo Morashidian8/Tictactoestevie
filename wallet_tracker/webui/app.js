@@ -32,10 +32,15 @@ try {
 
 // -- main: everything runs in the browser, no backend ----------------------
 async function run() {
-  const address = $("address").value.trim();
-  if (!/^0x[0-9a-fA-F]{40}$/.test(address)) {
-    return showStatus("آدرس نامعتبر است. یک آدرس 0x... روی شبکه Polygon وارد کنید.", true);
+  // Accept a raw 0x address OR a pasted profile URL like
+  // https://polymarket.com/profile/0x... — extract the address either way.
+  const raw = $("address").value.trim();
+  const m = raw.match(/0x[0-9a-fA-F]{40}/);
+  if (!m) {
+    return showStatus("آدرس نامعتبر است. آدرس 0x... یا لینک پروفایل پلی‌مارکت را وارد کنید.", true);
   }
+  const address = m[0].toLowerCase();
+  $("address").value = address;
   const rpc = ($("rpc") && $("rpc").value.trim()) || undefined;
   try {
     localStorage.setItem("pw_addr", address);
@@ -47,7 +52,11 @@ async function run() {
   try {
     const data = await window.Poly.buildReport(address, windowMinutes, rpc);
     render(data);
-    $("status").hidden = true;
+    if (data.activity_failed) {
+      showStatus("مرورگر نتوانست به سرور پلی‌مارکت وصل شود (فیلترینگ یا CORS). با VPN یا مرورگر دیگری امتحان کن.", true);
+    } else {
+      $("status").hidden = true;
+    }
   } catch (err) {
     showStatus("خطا: " + err.message, true);
     $("results").hidden = true;
@@ -80,10 +89,21 @@ function render(d) {
   renderPositions($("positions"), op.positions);
 
   const wbox = $("warnings");
-  if (d.warnings && d.warnings.length) {
+  // The #1 real-world cause of an all-zero report: the entered address is the
+  // user's MetaMask/login wallet, not their Polymarket profile (proxy) wallet.
+  // Say so explicitly instead of showing silent zeros.
+  let extra = "";
+  if (!d.activity_failed && d.activity_total_rows === 0) {
+    extra = `<li>برای این آدرس <b>هیچ فعالیتی در پلی‌مارکت ثبت نشده</b>. اگر مطمئنی معامله داشته،
+      احتمالاً این آدرسِ متامسک/ورود توست، نه آدرس پروفایل پلی‌مارکت.
+      <a href="https://polymarket.com/profile/${d.address}" target="_blank" rel="noopener">این لینک پروفایل</a>
+      را باز کن — اگر خالی بود، وارد polymarket.com شو، روی پروفایلت بزن و آدرس داخل URL را همین‌جا کپی کن
+      (می‌توانی کل لینک پروفایل را هم مستقیم اینجا پیست کنی).</li>`;
+  }
+  if (extra || (d.warnings && d.warnings.length)) {
     wbox.hidden = false;
-    wbox.innerHTML = "<strong>هشدارها</strong><ul>" +
-      d.warnings.map((x) => `<li>${esc(x)}</li>`).join("") + "</ul>";
+    wbox.innerHTML = "<strong>هشدارها</strong><ul>" + extra +
+      (d.warnings || []).map((x) => `<li>${esc(x)}</li>`).join("") + "</ul>";
   } else {
     wbox.hidden = true;
   }
@@ -98,7 +118,7 @@ function renderEvents(box, events) {
     return;
   }
   box.innerHTML = events.map((e) => {
-    const kind = { SELL: "فروش", REDEEM: "تسویه", MERGE: "ادغام", REWARD: "پاداش" }[e.kind] || e.kind;
+    const kind = { SELL: "فروش", REDEEM: "تسویه", MERGE: "ادغام", REWARD: "پاداش", LOST: "باخت در سررسید" }[e.kind] || e.kind;
     return `<div class="row">
       <div style="min-width:0">
         <div class="title">${esc(e.title || e.outcome || e.asset.slice(0, 12))}</div>
