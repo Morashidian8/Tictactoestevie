@@ -66,9 +66,13 @@ function syncWinlen(ds) {
 
 function render() {
   if (!DATA) return;
-  const key = $('exchange').value + '_' + $('tf').value;
+  const coin = $('coin').value || 'btc';
+  const key = coin + '_' + $('exchange').value + '_' + $('tf').value;
   const ds = DATA.datasets[key];
   const out = $('out');
+  const coins = DATA.meta.coins || [['btc', 'بیت‌کوین']];
+  const coinName = (coins.find((c) => c[0] === coin) || [, ''])[1];
+  $('title').textContent = `📊 تناوب کندل ${coinName}`;
   if (!ds) {
     $('meta').textContent = 'برای این ترکیب صرافی/تایم‌فریم داده‌ای موجود نیست.';
     out.innerHTML = '';
@@ -204,7 +208,7 @@ function distBars(hist, unit) {
 
 function renderGap() {
   if (!DATA) return;
-  const key = $('exchange').value + '_' + $('tf').value;
+  const key = ($('coin').value || 'btc') + '_' + $('exchange').value + '_' + $('tf').value;
   const ds = DATA.datasets[key];
   const box = $('gapOut');
   box.innerHTML = '';
@@ -261,6 +265,18 @@ function fillWeekdays() {
   }
 }
 
+// Populate the coin selector from the datasets that were actually built.
+function fillCoins() {
+  const sel = $('coin');
+  const coins = (DATA.meta && DATA.meta.coins) || [['btc', 'بیت‌کوین']];
+  for (const [key, label] of coins) {
+    const o = document.createElement('option');
+    o.value = key;
+    o.textContent = label;
+    sel.appendChild(o);
+  }
+}
+
 async function init() {
   try {
     const res = await fetch('./data.json', { cache: 'no-cache' });
@@ -269,8 +285,9 @@ async function init() {
     $('meta').textContent = 'خطا در بارگذاری داده.';
     return;
   }
+  fillCoins();
   fillWeekdays();
-  ['exchange', 'tf', 'window', 'winlen', 'order', 'weekday', 'topn', 'nooverlap', 'hist']
+  ['coin', 'exchange', 'tf', 'window', 'winlen', 'order', 'weekday', 'topn', 'nooverlap', 'hist']
     .forEach((id) => $(id).addEventListener('input', render));
   $('gapN').addEventListener('input', renderGap);
   render();

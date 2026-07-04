@@ -41,14 +41,25 @@ def _days_since(ts):
 
 DAYS = _days_since(START_TS)  # span currently covered (for meta/reporting only)
 
-# (key, exchange-label, timeframe-label, source, interval, granularity, product)
+# Coins to analyse: (key, Persian label, Binance symbol, Coinbase product).
+COINS = [
+    ("btc", "بیت‌کوین", "BTCUSDT", "BTC-USD"),
+    ("eth", "اتریوم", "ETHUSDT", "ETH-USD"),
+    ("sol", "سولانا", "SOLUSDT", "SOL-USD"),
+]
+EXCHANGES = [("binance", "Binance"), ("coinbase", "Coinbase")]
+TIMEFRAMES = [("5m", "۵ دقیقه", 300), ("15m", "۱۵ دقیقه", 900), ("1h", "۱ ساعت", 3600)]
+
+# One dataset per coin × exchange × timeframe. Dataset key = "<coin>_<src>_<tf>"
+# (e.g. "eth_binance_5m"). Each entry:
+#   (key, coin-key, coin-label, exchange-label, tf-label, source, interval,
+#    granularity, product)
 CONFIGS = [
-    ("binance_5m", "Binance", "۵ دقیقه", "binance", "5m", 300, "BTCUSDT"),
-    ("binance_15m", "Binance", "۱۵ دقیقه", "binance", "15m", 900, "BTCUSDT"),
-    ("binance_1h", "Binance", "۱ ساعت", "binance", "1h", 3600, "BTCUSDT"),
-    ("coinbase_5m", "Coinbase", "۵ دقیقه", "coinbase", "5m", 300, "BTC-USD"),
-    ("coinbase_15m", "Coinbase", "۱۵ دقیقه", "coinbase", "15m", 900, "BTC-USD"),
-    ("coinbase_1h", "Coinbase", "۱ ساعت", "coinbase", "1h", 3600, "BTC-USD"),
+    (f"{ck}_{src}_{interval}", ck, clabel, exlabel, tflabel, src, interval, gran,
+     (bsym if src == "binance" else cprod))
+    for ck, clabel, bsym, cprod in COINS
+    for src, exlabel in EXCHANGES
+    for interval, tflabel, gran in TIMEFRAMES
 ]
 # Rolling-window lengths to precompute (minutes), 30m … 10h. A window is only
 # built for a timeframe when it spans at least 2 candles (so 1h windows are
@@ -135,7 +146,8 @@ def fetch(source, interval, granularity, product):
     return [c for c in merged if c["time"] >= START_TS]
 
 
-def build_dataset(tz, source, interval, granularity, product, ex_label, tf_label):
+def build_dataset(tz, source, interval, granularity, product, ex_label, tf_label,
+                  coin_key="btc", coin_label="بیت‌کوین"):
     candles = fetch(source, interval, granularity, product)
     if not candles:
         print(f"  ⚠️  no candles for {source} {interval}")
@@ -195,6 +207,7 @@ def build_dataset(tz, source, interval, granularity, product, ex_label, tf_label
 
     return {
         "meta": {
+            "coin": coin_key, "coin_label": coin_label,
             "exchange": ex_label, "timeframe": tf_label, "source": source,
             "interval": interval, "candles": len(candles),
             "oldest": oldest.strftime("%Y-%m-%d %H:%M"),
@@ -219,10 +232,12 @@ def lowest_rolling(ds, wd, wm):
 def main():
     tz, tz_name = A.get_tz()
     datasets = {}
-    for key, ex_label, tf_label, source, interval, gran, product in CONFIGS:
-        print(f"== building {key} ({ex_label} {tf_label}) ==")
+    for (key, coin_key, coin_label, ex_label, tf_label,
+         source, interval, gran, product) in CONFIGS:
+        print(f"== building {key} ({coin_label} {ex_label} {tf_label}) ==")
         try:
-            ds = build_dataset(tz, source, interval, gran, product, ex_label, tf_label)
+            ds = build_dataset(tz, source, interval, gran, product, ex_label,
+                               tf_label, coin_key, coin_label)
         except Exception as exc:  # one exchange failing must not kill the rest
             print(f"  ⚠️  {key} failed: {exc}")
             ds = None
@@ -233,22 +248,27 @@ def main():
     if not datasets:
         raise SystemExit("No datasets built.")
 
+    # Coins that actually produced at least one dataset, in COINS order — the
+    # app builds its coin selector from this so new coins appear automatically.
+    coins_built = [[ck, clabel] for ck, clabel, *_ in COINS
+                   if any(k.startswith(ck + "_") for k in datasets)]
+
     # Real-data verification: highest 1-hour-window alternation actually seen
-    # per weekday on Binance 5m, with where/how often — so the deploy log
+    # per weekday on BTC Binance 5m, with where/how often — so the deploy log
     # proves the stats capture high alternations (e.g. 7).
-    bds = datasets.get("binance_5m")
+    bds = datasets.get("btc_binance_5m")
     if bds and "60" in bds["rolling"]:
-        print("\n--- بازرسی داده‌ی واقعی: بیشترین تناوبِ بازه‌ی ۱ساعته در هر روز (Binance 5m) ---")
+        print("\n--- بازرسی داده‌ی واقعی: بیشترین تناوبِ بازه‌ی ۱ساعته در هر روز (BTC Binance 5m) ---")
         for wd in A.WEEKDAY_DISPLAY_ORDER:
             wins = bds["rolling"]["60"][str(wd)]
             top = max(wins, key=lambda w: w["mx"])
             print(f"{A.PERSIAN_WEEKDAY[wd]:>9}: بیشینه‌ی واقعی={top['mx']} "
-                  f"(در بازه {top['label']}، {top['mxc']} بار طی سال)")
+                  f"(در بازه {top['label']}، {top['mxc']} بار)")
 
-    # Console comparison: Binance vs Coinbase, calmest rolling window per weekday.
-    # 5m uses 60-min windows; 15m uses the new 120-min (8-candle) windows.
+    # Console comparison: Binance vs Coinbase for BTC, calmest rolling window per
+    # weekday. 5m uses 60-min windows; 15m uses 120-min (8-candle) windows.
     for tf, wm in (("5m", 60), ("15m", 120)):
-        bk, ck = f"binance_{tf}", f"coinbase_{tf}"
+        bk, ck = f"btc_binance_{tf}", f"btc_coinbase_{tf}"
         if bk in datasets and ck in datasets:
             print(f"\n--- مقایسه Binance vs Coinbase ({tf}, بازه {wm} دقیقه) ---")
             for wd in A.WEEKDAY_DISPLAY_ORDER:
@@ -264,6 +284,7 @@ def main():
             "win_lengths": WIN_LENGTHS,
             "days": DAYS,
             "start": ANALYSIS_START,
+            "coins": coins_built,
         },
         "order": A.WEEKDAY_DISPLAY_ORDER,
         "names": {str(k): v for k, v in A.PERSIAN_WEEKDAY.items()},
