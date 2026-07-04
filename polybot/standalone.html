@@ -95,38 +95,15 @@
       <option value="1m">۱ دقیقه (واقعی)</option>
       <option value="15m">۱۵ دقیقه (واقعی)</option>
     </select>
-    <label>جهت</label>
-    <select id="dir" onchange="onDir()">
-      <option value="follow">دنبالِ کندلِ قبلی (قرمز→پایین، سبز→بالا)</option>
-      <option value="fade">برعکسِ کندلِ قبلی (قرمز→بالا، سبز→پایین)</option>
-      <option value="altbreak">شکارِ شکستِ تناوب — بعد از ۵+ تناوب، شکست را دنبال کن (مارتینگل تا اولین برد)</option>
-      <option value="altrestart">شکارِ تناوب (ری‌استارت) — ۳ پله، اگر نشد از اول شروع کن (ورودِ مجدد ۳تایی)</option>
-    </select>
-    <div id="altBox" style="display:none">
-      <label>حداقل تناوب برای ورودِ اول (تغییرِ رنگِ پیاپی)</label>
-      <input id="altN" type="number" value="5" min="1">
-      <div id="altDescBreak" style="display:none;font-size:12px;color:var(--muted);margin-top:4px">
-        وقتی رنگ‌ها این تعداد یکی‌درمیان شدند و ۲ کندلِ هم‌رنگ دیده شد، هم‌جهتِ کندلِ قبلی وارد می‌شود و تا ۳ پله مارتینگل می‌کند (مثلاً ۱۰-۲۰-۴۰). اگر هر سه باختند، متوقف می‌ماند تا تناوبِ بعدی؛ سپس همان مارتینگل را از پلهٔ بعد (۸۰) ادامه می‌دهد تا اولین برد. با هر برد به پلهٔ اول (۱۰) برمی‌گردد و سیکل از نو.
-      </div>
-      <div id="altBox2" style="display:none">
-        <label>تناوبِ لازم برای ورودِ مجدد (بعد از کاوشِ ناموفق)</label>
-        <input id="altN2" type="number" value="3" min="1">
-        <div style="font-size:12px;color:var(--muted);margin-top:4px">
-          ورودِ اول بعد از این تعدادِ تناوبِ اول؛ هم‌جهتِ کندلِ قبلی تا ۳ پله مارتینگل (۱۰-۲۰-۴۰). اگر هر سه باختند، دیگر بالاتر نمی‌رود؛ منتظرِ تناوبِ ورودِ مجدد می‌ماند و باز از پلهٔ اول (۱۰) شروع می‌کند. با هر برد به آستانهٔ ورودِ اول برمی‌گردد.
-        </div>
-      </div>
+    <div style="font-size:13px;color:var(--text);background:var(--surfaceVar);border-radius:10px;padding:10px;margin-top:6px">
+      <b>استراتژی: مارتینگلِ تناوبی</b><br>
+      <span style="color:var(--muted);font-size:12px">وقتی رنگ‌ها به تعدادِ «شروع» یکی‌درمیان شدند و بعد ۲ کندلِ هم‌رنگ دیده شد، هم‌جهتِ کندلِ قبلی وارد می‌شود و مارتینگل می‌کند (هر باخت دوبرابر). تا سقفِ پله‌ها ادامه؛ اگر برد نشد دیگر بالاتر نمی‌رود، منتظرِ تناوبِ بعدی می‌ماند و از پلهٔ اول شروع می‌کند. با هر برد هم به پلهٔ اول برمی‌گردد.</span>
     </div>
-    <label>حداقل استریک (بعد از N کندلِ هم‌رنگ وارد شو)</label>
-    <input id="streak" type="number" value="1" min="1">
-    <label>روشِ حجمِ معامله</label>
-    <select id="sizing">
-      <option value="fixed">ثابت (بدون مارتینگل)</option>
-      <option value="mart">مارتینگلِ کامل (هر باخت دوبرابر) — ⚠️ پرریسک</option>
-      <option value="mart2">مارتینگلِ محدود — ۲ باختِ اول دوبرابر، بعد ثابت تا برد</option>
-      <option value="mart3" selected>مارتینگلِ محدود — ۳ باختِ اول دوبرابر، بعد ثابت تا برد</option>
-      <option value="comp">ترکیبی — برد: دوبرابر · باخت: از همان اندازه مارتینگل (بدونِ ریست)</option>
-    </select>
-    <label>مبلغِ هر معامله ($)</label>
+    <label>از چند تناوب به بعد شروع کند (تعدادِ یکی‌درمیانِ رنگ‌ها)</label>
+    <input id="altN" type="number" value="5" min="1">
+    <label>حداکثر پله‌های مارتینگل (بیشتر از این نرود؛ بعد از تناوبِ بعدی از اول)</label>
+    <input id="maxStep" type="number" value="3" min="1">
+    <label>مبلغِ پایه ($)</label>
     <input id="amt" type="number" value="1" min="0">
     <label>موجودیِ شروع ($)</label>
     <input id="bal" type="number" value="100" min="1">
@@ -174,77 +151,32 @@ async function getKlines(){
   throw err||new Error('fetch');
 }
 
+// The only strategy: alternation-triggered martingale.
+// Wait for colours to alternate (R,G,R,G,…) at least `altN` times; the moment the
+// alternation breaks (2 same-colour candles in a row) enter FOLLOW and martingale.
+// Cap at `maxStep` steps — if none of them win, stand down and wait for the NEXT
+// alternation trigger, restarting from the base step. Any win also resets to base.
+function maxStepVal(){ return Math.max(1,parseInt(document.getElementById('maxStep').value)||3); }
 function decide(color){
-  const d=document.getElementById('dir').value;
-  if(d==='altbreak'||d==='altrestart') return decideAlt(color);
-  if(color==='none'){streakLen=0;}
-  else if(color===prevColor){streakLen++;}
-  else {streakLen=1;}
-  prevColor=color;
-  const need=Math.max(1,parseInt(document.getElementById('streak').value)||1);
-  if(color==='none'||streakLen<need) return null;
-  let sig=color==='green'?'up':'down';
-  if(document.getElementById('dir').value==='fade') sig=sig==='up'?'down':'up';
-  return sig;
-}
-
-// Alternation-break hunter: wait for colors to alternate (R,G,R,G,…) more than N
-// times, then the moment the alternation breaks (2 same-colour candles in a row)
-// enter FOLLOW and martingale until the first win, then stand down until the next
-// qualifying alternation. `altLen` counts consecutive colour-flips; `abArmed` means
-// we are in the trade window (betting every candle until a win).
-function decideAlt(color){
-  const restart = (document.getElementById('dir').value==='altrestart');
-  // altrestart: first entry needs altN alternations; after a failed probe, re-entry needs altN2.
-  // altbreak: always needs altN.
-  const need = restart
-    ? (abReentry ? Math.max(1,parseInt(document.getElementById('altN2').value)||3)
-                 : Math.max(1,parseInt(document.getElementById('altN').value)||5))
-    : Math.max(1,parseInt(document.getElementById('altN').value)||5);
+  const need=Math.max(1,parseInt(document.getElementById('altN').value)||5);
   const isFlip = (prevColor && color!=='none' && color!==prevColor);
   const same = (prevColor && color!=='none' && color===prevColor);
-  // a same-colour candle breaks the alternation; if the run was long enough, arm now.
-  if(same && !abArmed && altLen>=need){
-    abArmed=true;
-    if(restart) step=0;              // altrestart: every window starts fresh from base
-    else if(!abCommitted) step=0;    // altbreak: fresh probe from base; committed resumes carried step
-  }
+  // a same-colour candle breaks the alternation; if the run was long enough, arm now (from base)
+  if(same && !abArmed && altLen>=need){ abArmed=true; step=0; }
   // update the alternation counter
   if(color==='none') altLen=0;
   else if(isFlip) altLen++;
   else altLen=0;              // 2 same-colour candles reset the alternating run
   prevColor=color;
-  // Trade window — always FOLLOW the previous candle, martingale sizing:
   if(abArmed && color!=='none'){
-    if(restart){
-      // altrestart: 3-step probe, NEVER above step 3. If all 3 lose, restart next time
-      // with the (lower) re-entry threshold, from base again. Any win resets to step 0
-      // and back to the first-entry threshold.
-      if(step>=3){ abArmed=false; abReentry=true; return null; }
-      return color==='green'?'up':'down';
-    }
-    // altbreak: 3-step probe, then a committed uncapped window from the carried step.
-    if(!abCommitted && step>=3){ abArmed=false; abCommitted=true; return null; }
-    return color==='green'?'up':'down';
+    if(step>=maxStepVal()){ abArmed=false; return null; }  // hit the cap -> wait for next trigger, restart from base
+    return color==='green'?'up':'down';                    // FOLLOW the previous candle
   }
   return null;
 }
 function stake(){
   const base=parseFloat(document.getElementById('amt').value)||1;
-  // the alt-break / alt-restart strategies are martingale by definition, regardless of the sizing menu
-  const _d=document.getElementById('dir').value;
-  const m=(_d==='altbreak'||_d==='altrestart') ? 'mart' : document.getElementById('sizing').value;
-  let s;
-  if(m==='fixed') s=base;
-  else if(m==='mart') s=base*Math.pow(2,step);                  // full martingale
-  else if(m==='mart2') s=(step<=2)?base*Math.pow(2,step):base;  // double for 2 losses, then flat
-  else if(m==='mart3') s=(step<=3)?base*Math.pow(2,step):base;  // double for 3 losses, then flat
-  else if(m==='comp'){                                          // Method A: compound wins + martingale losses
-    if(lastStake==null) s=base;
-    else if(step===0) s=lastStake*2;   // last bet WON -> double up
-    else if(step===1) s=lastStake;     // first loss -> retry same size
-    else s=lastStake*2;                // consecutive losses -> martingale
-  } else s=base;
+  const s=base*Math.pow(2,step);   // martingale: each loss doubles, capped by maxStep in decide()
   return Math.min(s,bal);
 }
 
@@ -277,13 +209,6 @@ async function entryOddsRetry(side){
 }
 function onMode(){ document.getElementById('limitBox').style.display =
   document.getElementById('mode').value==='limit' ? 'block' : 'none'; }
-function onDir(){
-  const d=document.getElementById('dir').value;
-  const alt = (d==='altbreak'||d==='altrestart');
-  document.getElementById('altBox').style.display = alt ? 'block' : 'none';
-  document.getElementById('altDescBreak').style.display = (d==='altbreak') ? 'block' : 'none';
-  document.getElementById('altBox2').style.display = (d==='altrestart') ? 'block' : 'none';
-}
 async function testPoly(){
   const out=document.getElementById('polyMsg');
   out.textContent='در حال تست…'; out.style.color='var(--muted)';
@@ -306,7 +231,7 @@ async function onClosedCandle(o,c,closeTime,place){
     const won=(openBet.signal==='up'&&color==='green')||(openBet.signal==='down'&&color==='red');
     openBet.won=won;
     if(won){openBet.pnl=openBet.stake*(openBet.m-1); bal+=openBet.stake*openBet.m; wins++; step=0; abArmed=false; abCommitted=false; abReentry=false;}
-    else {openBet.pnl=-openBet.stake; losses++; step=Math.min(step+1,8);}
+    else {openBet.pnl=-openBet.stake; losses++; step=Math.min(step+1,30);}
     trades.unshift(openBet); trades=trades.slice(0,12); openBet=null;
   }
   // 2) update the streak, and (only on the live candle) maybe open a new bet
@@ -388,8 +313,8 @@ function setVal(id,v){ if(v!=null && document.getElementById(id)) document.getEl
 function saveState(){
   try{ localStorage.setItem('polybot', JSON.stringify({
     running: !!pollTimer, bal, start, openBet, trades, wins, losses, step, prevColor, streakLen, lastClosedOpen, altLen, abArmed, abCommitted, abReentry,
-    cfg:{tf:val('tf'),dir:val('dir'),streak:val('streak'),sizing:val('sizing'),
-      amt:val('amt'),bal:val('bal'),mode:val('mode'),maxEntry:val('maxEntry'),altN:val('altN'),altN2:val('altN2')}
+    cfg:{tf:val('tf'),amt:val('amt'),bal:val('bal'),mode:val('mode'),
+      maxEntry:val('maxEntry'),altN:val('altN'),maxStep:val('maxStep')}
   })); }catch(e){}
 }
 function loadState(){            // returns running flag, or null if nothing saved
@@ -399,9 +324,8 @@ function loadState(){            // returns running flag, or null if nothing sav
   step=s.step||0; prevColor=s.prevColor||null; streakLen=s.streakLen||0;
   altLen=s.altLen||0; abArmed=!!s.abArmed; abCommitted=!!s.abCommitted; abReentry=!!s.abReentry;
   lastClosedOpen=(s.lastClosedOpen!=null)?s.lastClosedOpen:null;
-  if(s.cfg){const c=s.cfg; setVal('tf',c.tf);setVal('dir',c.dir);setVal('streak',c.streak);
-    setVal('sizing',c.sizing); setVal('amt',c.amt);setVal('bal',c.bal);
-    setVal('mode',c.mode); setVal('maxEntry',c.maxEntry); setVal('altN',c.altN); setVal('altN2',c.altN2); onMode(); onDir();}
+  if(s.cfg){const c=s.cfg; setVal('tf',c.tf); setVal('amt',c.amt);setVal('bal',c.bal);
+    setVal('mode',c.mode); setVal('maxEntry',c.maxEntry); setVal('altN',c.altN); setVal('maxStep',c.maxStep); onMode();}
   return !!s.running;
 }
 
@@ -526,7 +450,7 @@ function btStep(o,c,ct){
     const won=(openBet.signal==='up'&&color==='green')||(openBet.signal==='down'&&color==='red');
     openBet.won=won;
     if(won){openBet.pnl=openBet.stake*(openBet.m-1); bal+=openBet.stake*openBet.m; wins++; step=0; abArmed=false; abCommitted=false; abReentry=false;}
-    else {openBet.pnl=-openBet.stake; losses++; step=Math.min(step+1,8);}
+    else {openBet.pnl=-openBet.stake; losses++; step=Math.min(step+1,30);}
     trades.unshift(openBet); trades=trades.slice(0,12); openBet=null;
   }
   const sig=decide(color);
@@ -571,7 +495,7 @@ function stopBacktest(){
 })();
 
 // Version badge — lets you confirm the browser isn't showing a cached old copy.
-const APP_VERSION = "v12";
+const APP_VERSION = "v13";
 try{ document.getElementById('ver').textContent = APP_VERSION; }catch(e){}
 
 // On open: restore the saved session and resume (catching up while you were away).
