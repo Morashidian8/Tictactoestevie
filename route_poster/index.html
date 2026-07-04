@@ -176,11 +176,11 @@ input,textarea{font-family:inherit;direction:rtl}
 .lbl .ov-inner{background:#fff;border:1px solid var(--navy);border-radius:6px;padding:2px 8px;font-weight:800;color:var(--navy);white-space:nowrap;box-shadow:0 1px 4px rgba(0,0,0,.15)}
 .freetext .ov-inner{background:#fff;border:1px solid #d0d9e2;border-radius:6px;padding:2px 9px;color:var(--navy);font-weight:800;white-space:nowrap;box-shadow:0 1px 4px rgba(0,0,0,.18)}
 /* auto route street-name labels */
-.routelbl .ov-inner{background:#fff;border:1px solid var(--navy);border-radius:5px;padding:1.5px 7px;color:var(--navy);font-weight:800;font-size:12.5px;white-space:nowrap;box-shadow:0 1px 4px rgba(0,0,0,.3)}
+.routelbl .ov-inner{background:#fff;border:2px solid var(--navy);border-radius:7px;padding:3px 11px;color:var(--navy);font-weight:800;font-size:15px;white-space:nowrap;box-shadow:0 2px 7px rgba(15,59,92,.4);letter-spacing:.2px}
 /* permanent name callouts on origin/dest pins */
-.leaflet-tooltip.callout{background:#fff;border:0;border-radius:7px;font-family:'Vazirmatn',sans-serif;font-weight:800;font-size:12px;padding:3px 9px;box-shadow:0 2px 8px rgba(0,0,0,.28);color:var(--navy);max-width:170px;white-space:normal;text-align:center}
-.leaflet-tooltip.callout.red{border-top:3px solid var(--red)}
-.leaflet-tooltip.callout.navy{border-top:3px solid var(--navy)}
+.leaflet-tooltip.callout{background:#fff;border:0;border-radius:8px;font-family:'Vazirmatn',sans-serif;font-weight:800;font-size:13.5px;padding:5px 12px;box-shadow:0 3px 10px rgba(0,0,0,.32);color:var(--navy);max-width:190px;white-space:normal;text-align:center}
+.leaflet-tooltip.callout.red{border-bottom:4px solid var(--red)}
+.leaflet-tooltip.callout.navy{border-bottom:4px solid var(--navy)}
 .leaflet-tooltip.callout:before{display:none}
 .imgcard.anchor-o .ov-inner{border-color:var(--red);box-shadow:0 3px 12px rgba(200,16,46,.32)}
 .imgcard.anchor-d .ov-inner{border-color:var(--navy);box-shadow:0 3px 12px rgba(15,59,92,.32)}
@@ -367,8 +367,8 @@ L.control.layers({
 },null,{position:'topright',collapsed:true}).addTo(map);
 
 /* layer groups */
-const routeCasing = L.polyline([],{color:'#fff',weight:15,opacity:1,lineJoin:'round',lineCap:'round'}).addTo(map);
-const routeMain   = L.polyline([],{color:RED,weight:9,opacity:1,lineJoin:'round',lineCap:'round'}).addTo(map);
+const routeCasing = L.polyline([],{color:'#fff',weight:18,opacity:1,lineJoin:'round',lineCap:'round'}).addTo(map);
+const routeMain   = L.polyline([],{color:RED,weight:11,opacity:1,lineJoin:'round',lineCap:'round'}).addTo(map);
 const routeLabels = L.layerGroup().addTo(map);   // auto street-name labels along the route
 routeMain.on('click',e=>{ L.DomEvent.stop(e); addWaypoint(e.latlng); });
 routeMain.bindTooltip('برای ویرایش مسیر، روی خط بزنید تا نقطهٔ میانی اضافه شود',{sticky:true});
@@ -521,7 +521,7 @@ function buildRouteLabels(rt){
   const placed=[];  // {name, pt, w} in screen pixels for collision avoidance
   (rt.legs||[]).forEach(leg=>(leg.steps||[]).forEach(st=>{
     const name=(st.name||'').trim();
-    if(!name || (st.distance||0)<70) return;
+    if(!name || (st.distance||0)<120) return;    // only meaningful streets get a label
     const co=st.geometry&&st.geometry.coordinates;
     if(!co||co.length<2) return;
     const mid=co[Math.floor(co.length/2)];
@@ -531,10 +531,11 @@ function buildRouteLabels(rt){
     const pb=map.latLngToLayerPoint(L.latLng(b[1],b[0]));
     let ang=Math.atan2(pb.y-pa.y,pb.x-pa.x)*180/Math.PI;
     if(ang>90)ang-=180; if(ang<-90)ang+=180;
+    if(Math.abs(ang)<25) ang=0;                  // snap near-horizontal streets flat for readability
     const pll=map.latLngToLayerPoint(ll);
-    const halfW=Math.max(30, name.length*4.2);   // rough label half-width
+    const halfW=Math.max(42, name.length*5.4);    // bigger labels → wider footprint
     // collision: reject if it would overlap ANY placed label (larger gap for same name)
-    if(placed.some(p=>{ const d=p.pt.distanceTo(pll); return d < (p.name===name?110:(halfW+p.w+14)); })) return;
+    if(placed.some(p=>{ const d=p.pt.distanceTo(pll); return d < (p.name===name?150:(halfW+p.w+22)); })) return;
     placed.push({name,pt:pll,w:halfW});
     const icon=L.divIcon({className:'ov routelbl',html:`<div class="ov-inner" style="transform:rotate(${ang.toFixed(1)}deg)">${escapeHtml(name)}</div>`,iconSize:null});
     L.marker(ll,{icon,interactive:false,keyboard:false,zIndexOffset:650}).addTo(routeLabels);
