@@ -100,12 +100,20 @@
       <option value="follow">دنبالِ کندلِ قبلی (قرمز→پایین، سبز→بالا)</option>
       <option value="fade">برعکسِ کندلِ قبلی (قرمز→بالا، سبز→پایین)</option>
       <option value="altbreak">شکارِ شکستِ تناوب — بعد از ۵+ تناوب، شکست را دنبال کن (مارتینگل تا اولین برد)</option>
+      <option value="altrestart">شکارِ تناوب (ری‌استارت) — ۳ پله، اگر نشد از اول شروع کن (ورودِ مجدد ۳تایی)</option>
     </select>
     <div id="altBox" style="display:none">
-      <label>حداقل تعدادِ تناوب برای فعال‌سازی (تغییرِ رنگِ پیاپی)</label>
+      <label>حداقل تناوب برای ورودِ اول (تغییرِ رنگِ پیاپی)</label>
       <input id="altN" type="number" value="5" min="1">
-      <div style="font-size:12px;color:var(--muted);margin-top:4px">
+      <div id="altDescBreak" style="display:none;font-size:12px;color:var(--muted);margin-top:4px">
         وقتی رنگ‌ها این تعداد یکی‌درمیان شدند و ۲ کندلِ هم‌رنگ دیده شد، هم‌جهتِ کندلِ قبلی وارد می‌شود و تا ۳ پله مارتینگل می‌کند (مثلاً ۱۰-۲۰-۴۰). اگر هر سه باختند، متوقف می‌ماند تا تناوبِ بعدی؛ سپس همان مارتینگل را از پلهٔ بعد (۸۰) ادامه می‌دهد تا اولین برد. با هر برد به پلهٔ اول (۱۰) برمی‌گردد و سیکل از نو.
+      </div>
+      <div id="altBox2" style="display:none">
+        <label>تناوبِ لازم برای ورودِ مجدد (بعد از کاوشِ ناموفق)</label>
+        <input id="altN2" type="number" value="3" min="1">
+        <div style="font-size:12px;color:var(--muted);margin-top:4px">
+          ورودِ اول بعد از این تعدادِ تناوبِ اول؛ هم‌جهتِ کندلِ قبلی تا ۳ پله مارتینگل (۱۰-۲۰-۴۰). اگر هر سه باختند، دیگر بالاتر نمی‌رود؛ منتظرِ تناوبِ ورودِ مجدد می‌ماند و باز از پلهٔ اول (۱۰) شروع می‌کند. با هر برد به آستانهٔ ورودِ اول برمی‌گردد.
+        </div>
       </div>
     </div>
     <label>حداقل استریک (بعد از N کندلِ هم‌رنگ وارد شو)</label>
@@ -147,7 +155,7 @@ let pollTimer=null, cdTimer=null, busy=false;
 let lastClosedOpen=null, formingClose=0, curPrice=null, curColor='none';
 let bal=100, start=100, openBet=null, trades=[], wins=0, losses=0, step=0, lastStake=null;
 let prevColor=null, streakLen=0;
-let altLen=0, abArmed=false, abCommitted=false;   // altbreak: alt length, armed flag, probe-failed flag
+let altLen=0, abArmed=false, abCommitted=false, abReentry=false;   // altbreak/altrestart state
 
 function fmt(n){return (n==null?0:n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});}
 function clk(ms){try{return new Date(ms).toLocaleTimeString('fa-IR');}catch(e){return '—';}}
@@ -167,7 +175,8 @@ async function getKlines(){
 }
 
 function decide(color){
-  if(document.getElementById('dir').value==='altbreak') return decideAlt(color);
+  const d=document.getElementById('dir').value;
+  if(d==='altbreak'||d==='altrestart') return decideAlt(color);
   if(color==='none'){streakLen=0;}
   else if(color===prevColor){streakLen++;}
   else {streakLen=1;}
@@ -185,32 +194,46 @@ function decide(color){
 // qualifying alternation. `altLen` counts consecutive colour-flips; `abArmed` means
 // we are in the trade window (betting every candle until a win).
 function decideAlt(color){
-  const need=Math.max(1,parseInt(document.getElementById('altN').value)||5);
+  const restart = (document.getElementById('dir').value==='altrestart');
+  // altrestart: first entry needs altN alternations; after a failed probe, re-entry needs altN2.
+  // altbreak: always needs altN.
+  const need = restart
+    ? (abReentry ? Math.max(1,parseInt(document.getElementById('altN2').value)||3)
+                 : Math.max(1,parseInt(document.getElementById('altN').value)||5))
+    : Math.max(1,parseInt(document.getElementById('altN').value)||5);
   const isFlip = (prevColor && color!=='none' && color!==prevColor);
   const same = (prevColor && color!=='none' && color===prevColor);
   // a same-colour candle breaks the alternation; if the run was long enough, arm now.
-  // A fresh probe starts at base (step 0); a committed window resumes the carried step.
-  if(same && !abArmed && altLen>=need){ abArmed=true; if(!abCommitted) step=0; }
+  if(same && !abArmed && altLen>=need){
+    abArmed=true;
+    if(restart) step=0;              // altrestart: every window starts fresh from base
+    else if(!abCommitted) step=0;    // altbreak: fresh probe from base; committed resumes carried step
+  }
   // update the alternation counter
   if(color==='none') altLen=0;
   else if(isFlip) altLen++;
   else altLen=0;              // 2 same-colour candles reset the alternating run
   prevColor=color;
   // Trade window — always FOLLOW the previous candle, martingale sizing:
-  //  • PROBE (fresh trigger): take up to 3 steps (10-20-40). If all 3 lose, stand
-  //    down and wait for the NEXT 5-alternation trigger, carrying the martingale step.
-  //  • COMMITTED (probe failed): resume from the carried step (80) and martingale
-  //    every candle until the first win. Any win resets to step 0 (back to probe).
   if(abArmed && color!=='none'){
-    if(!abCommitted && step>=3){ abArmed=false; abCommitted=true; return null; }  // probe exhausted -> wait for next trigger
+    if(restart){
+      // altrestart: 3-step probe, NEVER above step 3. If all 3 lose, restart next time
+      // with the (lower) re-entry threshold, from base again. Any win resets to step 0
+      // and back to the first-entry threshold.
+      if(step>=3){ abArmed=false; abReentry=true; return null; }
+      return color==='green'?'up':'down';
+    }
+    // altbreak: 3-step probe, then a committed uncapped window from the carried step.
+    if(!abCommitted && step>=3){ abArmed=false; abCommitted=true; return null; }
     return color==='green'?'up':'down';
   }
   return null;
 }
 function stake(){
   const base=parseFloat(document.getElementById('amt').value)||1;
-  // the alt-break strategy is martingale-until-win by definition, regardless of the sizing menu
-  const m=document.getElementById('dir').value==='altbreak' ? 'mart' : document.getElementById('sizing').value;
+  // the alt-break / alt-restart strategies are martingale by definition, regardless of the sizing menu
+  const _d=document.getElementById('dir').value;
+  const m=(_d==='altbreak'||_d==='altrestart') ? 'mart' : document.getElementById('sizing').value;
   let s;
   if(m==='fixed') s=base;
   else if(m==='mart') s=base*Math.pow(2,step);                  // full martingale
@@ -254,8 +277,13 @@ async function entryOddsRetry(side){
 }
 function onMode(){ document.getElementById('limitBox').style.display =
   document.getElementById('mode').value==='limit' ? 'block' : 'none'; }
-function onDir(){ document.getElementById('altBox').style.display =
-  document.getElementById('dir').value==='altbreak' ? 'block' : 'none'; }
+function onDir(){
+  const d=document.getElementById('dir').value;
+  const alt = (d==='altbreak'||d==='altrestart');
+  document.getElementById('altBox').style.display = alt ? 'block' : 'none';
+  document.getElementById('altDescBreak').style.display = (d==='altbreak') ? 'block' : 'none';
+  document.getElementById('altBox2').style.display = (d==='altrestart') ? 'block' : 'none';
+}
 async function testPoly(){
   const out=document.getElementById('polyMsg');
   out.textContent='در حال تست…'; out.style.color='var(--muted)';
@@ -277,7 +305,7 @@ async function onClosedCandle(o,c,closeTime,place){
   if(openBet){
     const won=(openBet.signal==='up'&&color==='green')||(openBet.signal==='down'&&color==='red');
     openBet.won=won;
-    if(won){openBet.pnl=openBet.stake*(openBet.m-1); bal+=openBet.stake*openBet.m; wins++; step=0; abArmed=false; abCommitted=false;}
+    if(won){openBet.pnl=openBet.stake*(openBet.m-1); bal+=openBet.stake*openBet.m; wins++; step=0; abArmed=false; abCommitted=false; abReentry=false;}
     else {openBet.pnl=-openBet.stake; losses++; step=Math.min(step+1,8);}
     trades.unshift(openBet); trades=trades.slice(0,12); openBet=null;
   }
@@ -338,7 +366,7 @@ async function poll(){
       // Don't fabricate the missed candles — refund any dangling bet, reset the
       // streak + martingale, and continue cleanly from the current candle.
       if(openBet){ bal+=openBet.stake; openBet=null; }
-      step=0; streakLen=0; prevColor=null; altLen=0; abArmed=false; abCommitted=false;
+      step=0; streakLen=0; prevColor=null; altLen=0; abArmed=false; abCommitted=false; abReentry=false;
       lastClosedOpen=lastOid;
       await onClosedCandle(o,c,ct,true);
       setMsg('از کندلِ فعلی ادامه داد. بازه‌ی نبودنت معامله نشد و مارتینگل ریست شد (مرورگر در پس‌زمینه معامله نمی‌کند).');
@@ -359,9 +387,9 @@ function val(id){return document.getElementById(id).value;}
 function setVal(id,v){ if(v!=null && document.getElementById(id)) document.getElementById(id).value=v; }
 function saveState(){
   try{ localStorage.setItem('polybot', JSON.stringify({
-    running: !!pollTimer, bal, start, openBet, trades, wins, losses, step, prevColor, streakLen, lastClosedOpen, altLen, abArmed, abCommitted,
+    running: !!pollTimer, bal, start, openBet, trades, wins, losses, step, prevColor, streakLen, lastClosedOpen, altLen, abArmed, abCommitted, abReentry,
     cfg:{tf:val('tf'),dir:val('dir'),streak:val('streak'),sizing:val('sizing'),
-      amt:val('amt'),bal:val('bal'),mode:val('mode'),maxEntry:val('maxEntry'),altN:val('altN')}
+      amt:val('amt'),bal:val('bal'),mode:val('mode'),maxEntry:val('maxEntry'),altN:val('altN'),altN2:val('altN2')}
   })); }catch(e){}
 }
 function loadState(){            // returns running flag, or null if nothing saved
@@ -369,11 +397,11 @@ function loadState(){            // returns running flag, or null if nothing sav
   if(!s) return null;
   bal=s.bal; start=s.start; openBet=s.openBet||null; trades=s.trades||[]; wins=s.wins||0; losses=s.losses||0;
   step=s.step||0; prevColor=s.prevColor||null; streakLen=s.streakLen||0;
-  altLen=s.altLen||0; abArmed=!!s.abArmed; abCommitted=!!s.abCommitted;
+  altLen=s.altLen||0; abArmed=!!s.abArmed; abCommitted=!!s.abCommitted; abReentry=!!s.abReentry;
   lastClosedOpen=(s.lastClosedOpen!=null)?s.lastClosedOpen:null;
   if(s.cfg){const c=s.cfg; setVal('tf',c.tf);setVal('dir',c.dir);setVal('streak',c.streak);
     setVal('sizing',c.sizing); setVal('amt',c.amt);setVal('bal',c.bal);
-    setVal('mode',c.mode); setVal('maxEntry',c.maxEntry); setVal('altN',c.altN); onMode(); onDir();}
+    setVal('mode',c.mode); setVal('maxEntry',c.maxEntry); setVal('altN',c.altN); setVal('altN2',c.altN2); onMode(); onDir();}
   return !!s.running;
 }
 
@@ -435,7 +463,7 @@ function stop(){
 function reset(){
   stop();
   lastClosedOpen=null; formingClose=0; curPrice=null; curColor='none';
-  openBet=null; trades=[]; wins=0; losses=0; step=0; prevColor=null; streakLen=0; altLen=0; abArmed=false; abCommitted=false;
+  openBet=null; trades=[]; wins=0; losses=0; step=0; prevColor=null; streakLen=0; altLen=0; abArmed=false; abCommitted=false; abReentry=false;
   lastStake=null;
   bal=parseFloat(document.getElementById('bal').value)||100; start=bal;
   setMsg(''); document.getElementById('cd').textContent='—';
@@ -481,7 +509,7 @@ async function runBacktest(){
     if(candles.length>3000){ candles=candles.slice(0,3000); note=' (بازه بزرگ بود؛ ۳۰۰۰ کندلِ اول)'; }
     // fresh trading state for the backtest
     bal=parseFloat(document.getElementById('bal').value)||100; start=bal;
-    openBet=null; trades=[]; wins=0; losses=0; step=0; prevColor=null; streakLen=0; altLen=0; abArmed=false; abCommitted=false;
+    openBet=null; trades=[]; wins=0; losses=0; step=0; prevColor=null; streakLen=0; altLen=0; abArmed=false; abCommitted=false; abReentry=false;
   lastStake=null; lastClosedOpen=null;
     btCandles=candles; btIdx=0;
     const speed=Math.max(0.2,parseFloat(document.getElementById('btSpeed').value)||2)*1000;
@@ -497,7 +525,7 @@ function btStep(o,c,ct){
   if(openBet){
     const won=(openBet.signal==='up'&&color==='green')||(openBet.signal==='down'&&color==='red');
     openBet.won=won;
-    if(won){openBet.pnl=openBet.stake*(openBet.m-1); bal+=openBet.stake*openBet.m; wins++; step=0; abArmed=false; abCommitted=false;}
+    if(won){openBet.pnl=openBet.stake*(openBet.m-1); bal+=openBet.stake*openBet.m; wins++; step=0; abArmed=false; abCommitted=false; abReentry=false;}
     else {openBet.pnl=-openBet.stake; losses++; step=Math.min(step+1,8);}
     trades.unshift(openBet); trades=trades.slice(0,12); openBet=null;
   }
@@ -543,7 +571,7 @@ function stopBacktest(){
 })();
 
 // Version badge — lets you confirm the browser isn't showing a cached old copy.
-const APP_VERSION = "v11";
+const APP_VERSION = "v12";
 try{ document.getElementById('ver').textContent = APP_VERSION; }catch(e){}
 
 // On open: restore the saved session and resume (catching up while you were away).
