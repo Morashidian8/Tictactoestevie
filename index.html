@@ -185,17 +185,23 @@ function decide(color){
 // we are in the trade window (betting every candle until a win).
 function decideAlt(color){
   const need=Math.max(1,parseInt(document.getElementById('altN').value)||5);
-  const flip = (prevColor && color!=='none' && color!==prevColor);
+  const isFlip = (prevColor && color!=='none' && color!==prevColor);
   const same = (prevColor && color!=='none' && color===prevColor);
   // a same-colour candle breaks the alternation; if the run was long enough, arm now
   if(same && !abArmed && altLen>=need){ abArmed=true; step=0; }
   // update the alternation counter
   if(color==='none') altLen=0;
-  else if(flip) altLen++;
+  else if(isFlip) altLen++;
   else altLen=0;              // 2 same-colour candles reset the alternating run
   prevColor=color;
-  // while armed, follow every closed candle (martingale sizing) until a win disarms us
-  if(abArmed && color!=='none') return color==='green'?'up':'down';
+  // while armed, martingale until a win disarms us. First 3 positions FOLLOW the
+  // previous candle (10-20-40); from the 4th position on, keep martingaling but
+  // FADE (bet opposite the previous candle) until the first win.
+  if(abArmed && color!=='none'){
+    let sig = color==='green'?'up':'down';        // FOLLOW
+    if(step>=3) sig = (sig==='up'?'down':'up');    // 4th position onward: FADE
+    return sig;
+  }
   return null;
 }
 function stake(){
