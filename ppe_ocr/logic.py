@@ -101,9 +101,12 @@ def build_rows(voucher: dict) -> list[dict]:
     # یک چرخه‌ی سایز به‌ازای هر قلم (تا توزیع بین نفرات یکنواخت باشد)
     size_cycles = {id(it): _size_cycle(resolve_item_name(it)) for it in items}
 
+    n_people = len(people) or 1
     for item in items:
         item_name = resolve_item_name(item)
-        qty = item.get("req_qty") or 1
+        # REQ.QTY روی حواله «مقدار کل» برای همه‌ی نفرات است؛ سهم هر نفر = کل ÷ تعداد نفرات
+        raw_qty = item.get("req_qty")
+        qty = max(1, round(raw_qty / n_people)) if raw_qty else 1
         sized = is_sized(item_name, item)
         scyc = size_cycles[id(item)]
         for person in people:

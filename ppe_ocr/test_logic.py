@@ -66,7 +66,20 @@ def _run():
     check(len(rows2) == 6, f"14040509 باید ۶ ردیف باشد، شد {len(rows2)}")
     items = {r["عنوان لوازم"] for r in rows2}
     check(items == {"دستکش حالدار", "عینک ایمنی"}, "دو قلم باید باشد")
-    check(all(r["تعداد"] == 3 for r in rows2), "تعداد همه باید ۳ باشد")
+    # REQ.QTY=3 برای ۳ نفر => سهم هر نفر ۱
+    check(all(r["تعداد"] == 1 for r in rows2), "تعداد هر نفر باید ۱ باشد (کل۳÷۳نفر)")
+
+    # تست تقسیم مقدار کل: ۱۷ عدد برای ۱۷ نفر => هر نفر ۱
+    many = {
+        "voucher_number": "14040536", "requesting_unit": "اجرای طرح‌ها", "delivery_date": None,
+        "personnel_type": "official", "company": None, "contract_number": None,
+        "items": [{"mesc_code": "9646108242", "item_name": "عینک آفتابی", "unit": "NO", "req_qty": 17}],
+        "personnel": [{"first_name": "علی", "last_name": f"ن{i}", "code": f"50000{i}", "job_title": None, "size": None}
+                      for i in range(17)],
+    }
+    mrows = logic.build_rows(many)
+    check(len(mrows) == 17, f"باید ۱۷ ردیف باشد، شد {len(mrows)}")
+    check(all(r["تعداد"] == 1 for r in mrows), "هر نفر باید ۱ بگیرد نه ۱۷ (کل۱۷÷۱۷نفر)")
 
     # تست کد ملی ۱۰ رقمی -> پیمانکاری
     contractor = {
