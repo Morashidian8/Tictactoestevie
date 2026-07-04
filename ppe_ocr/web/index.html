@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>حواله تجهیزات → اکسل</title>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+  :root{--bg:#0f1720;--card:#182430;--ac:#2f80ed;--ok:#27ae60;--tx:#e8eef4;--mut:#9fb0c0;}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:Tahoma,system-ui,sans-serif;background:var(--bg);color:var(--tx);
+       -webkit-text-size-adjust:100%}
+  header{padding:16px;text-align:center;background:linear-gradient(180deg,#1b2a3a,#0f1720)}
+  header h1{font-size:19px;margin:0 0 4px}
+  header p{font-size:12px;color:var(--mut);margin:0}
+  .wrap{max-width:620px;margin:0 auto;padding:12px}
+  .card{background:var(--card);border-radius:14px;padding:14px;margin:12px 0;box-shadow:0 2px 10px #0006}
+  label{display:block;font-size:13px;margin:0 0 6px;color:var(--mut)}
+  input[type=password],input[type=text]{width:100%;padding:12px;border-radius:10px;border:1px solid #2b3b4d;
+       background:#0e1620;color:var(--tx);font-size:15px}
+  .file{display:block;width:100%;padding:14px;border:2px dashed #2f80ed66;border-radius:12px;
+        background:#0e1620;text-align:center;color:var(--mut);font-size:14px}
+  input[type=file]{display:none}
+  .count{font-size:12px;color:var(--ac);margin-top:6px;text-align:center}
+  button{width:100%;padding:15px;border:0;border-radius:12px;font-size:16px;font-weight:bold;color:#fff;
+         background:var(--ac);margin-top:6px}
+  button:disabled{opacity:.5}
+  .btn-dl{background:var(--ok)}
+  .log{font-size:12px;color:var(--mut);white-space:pre-wrap;margin-top:8px;max-height:150px;overflow:auto}
+  .hint{font-size:12px;color:var(--mut);line-height:1.7}
+  .hint a{color:var(--ac)}
+  table{width:100%;border-collapse:collapse;font-size:11px;margin-top:8px;display:block;overflow:auto;max-height:320px}
+  th,td{border:1px solid #2b3b4d;padding:4px 6px;white-space:nowrap}
+  th{background:#1f3348;position:sticky;top:0}
+  .ok{color:var(--ok)} .err{color:#e74c3c}
+</style>
+</head>
+<body>
+<header>
+  <h1>📋 حواله تجهیزات → اکسل</h1>
+  <p>عکس حواله را بده، فایل اکسل بگیر. همه‌چیز روی همین گوشی.</p>
+</header>
+<div class="wrap">
+
+  <div class="card">
+    <label>۱) کلید رایگان Google Gemini</label>
+    <input id="key" type="password" placeholder="کلید را اینجا بچسبان (یک‌بار)">
+    <p class="hint">کلید رایگان از <a href="https://aistudio.google.com/apikey" target="_blank">aistudio.google.com/apikey</a> بگیر → «Create API key». روی همین گوشی ذخیره می‌شود و جایی فرستاده نمی‌شود.</p>
+  </div>
+
+  <div class="card">
+    <label>۲) عکس حواله‌های تجهیزات</label>
+    <label class="file" for="vf">📷 گرفتن/انتخاب عکس حواله‌ها</label>
+    <input id="vf" type="file" accept="image/*" capture="environment" multiple>
+    <div class="count" id="vc"></div>
+
+    <label style="margin-top:12px">۳) (اختیاری) عکس لیست اسامی جدا</label>
+    <label class="file" for="nf">👥 عکس لیست اسامی</label>
+    <input id="nf" type="file" accept="image/*" capture="environment" multiple>
+    <div class="count" id="nc"></div>
+  </div>
+
+  <button id="run">🚀 استخراج و ساخت اکسل</button>
+  <div class="log" id="log"></div>
+
+  <div class="card" id="result" style="display:none">
+    <div id="summary" class="ok"></div>
+    <button class="btn-dl" id="dl">⬇️ دانلود فایل اکسل</button>
+    <div id="preview"></div>
+  </div>
+
+  <p class="hint" style="text-align:center;margin-top:18px">
+    جنسیت از روی نام حدس زده می‌شود؛ سایزِ ننوشته به‌صورت چرخشی پر می‌شود. قبل از استفاده یک مرور کوتاه بکن.
+  </p>
+</div>
+
+<script>
+// ---------------- پیکربندی ----------------
+const MODEL = "gemini-2.5-flash";
+const MESC = {
+  "9643210042":{item:"دستکش حالدار",unit:"PR",sized:false},
+  "9649108222":{item:"عینک ایمنی",unit:"NO",sized:false},
+  "9646108242":{item:"عینک آفتابی",unit:"NO",sized:false},
+  "9643302722":{item:"کلاه ایمنی",unit:"NO",sized:false}
+};
+const SIZE_POOLS = {
+  "لباس":["M","L","XL","XXL","XXXL"],
+  "کاپشن":["M","L","XL","XXL","XXXL"],
+  "کفش":["40","41","42","43","44","45"],
+  "پوتین":["40","41","42","43","44","45"]
+};
+const FEMALE = new Set(["فاطمه","زهرا","مریم","معصومه","سمیه","زینب","نرگس","الهام","مرضیه","سارا","نسرین","شیما","لیلا","ناهید","اکرم","فرشته","مینا","رویا","سمانه","طاهره","منیره","پروین","ملیحه","مهسا","سحر","نگار","هانیه","راضیه","صدیقه","فرزانه","شهناز","آزاده","بهاره","مهناز","نازنین","الناز","نیلوفر","یاسمن","ندا","سمیرا","فریبا","افسانه","زهره","طیبه","کبری","رقیه","خدیجه","سکینه","الهه","مبینا","ستاره","پریسا","شبنم","آتنا","آیدا","غزل","کیمیا","ریحانه"]);
+const AMBIG = new Set(["شادی","پروانه","پرستو","فرح","هما","نسیم"]);
+const CONST = {sherkat:"شرکت گاز استان تهران",peyman:"035982",job:"کارمند رسمی"};
+const HEADERS = ["نام","نام خانوادگی","کد پرسنلی","کد ملی","جنسیت","مدیریت","شهرستان/منطقه","نوع قرارداد","شماره پیمان","نام شرکت","عنوان شغل","شماره سند","عنوان لوازم","سایز","تعداد","تاریخ تحویل","شماره حواله"];
+
+const PROMPT_V = `این تصویر یک «حواله صدور کالا / MATERIAL ISSUE VOUCHER» شرکت گاز است. تمام اطلاعات را دقیق استخراج کن:
+- شماره حواله: عدد چاپی کنار «جمع مقادیر/TOTAL QTY» یا بالای برگه.
+- اقلام: هر قلم یک MESC NO، یک شرح (DESCRIPTION مثل کلاه ایمنی)، واحد (NO/PR) و REQ.QTY دارد.
+- افراد: در قسمت DESCRIPTION دست‌نویس، هر نفر شماره ردیف، نام و نام خانوادگی و یک کد دارد. کد ۵ تا ۷ رقمی=کد پرسنلی؛ ۱۰ رقمی=کد ملی. اگر جلوی اسم شغل نوشته شده (امداد/تعمیرات/تکنسین) در job_title بگذار.
+- واحد متقاضی/شرح کار = منطقه (requesting_unit).
+- اگر جمله «پرسنل رسمی» یا «پیمانکاری» دیدی، personnel_type را تعیین کن.
+- تاریخ تحویل دست‌نویس معمولاً کنار امضای تحویل‌گیرنده است؛ ماه و سال کافی است.
+ارقام را دقیق بخوان؛ ناخوانا=null (حدس نزن).`;
+const PROMPT_N = `این تصویر یک لیست اسامی پرسنل است. فقط افراد را استخراج کن: نام، نام خانوادگی، کد پرسنلی(۵-۷ رقم) یا کد ملی(۱۰ رقم)، و شغل اگر نوشته شده. اگر منطقه یا تاریخ روی برگه بود پر کن. items را خالی بگذار. ناخوانا=null.`;
+const JSON_TMPL = `\nخروجی را فقط یک شیء JSON با این ساختار بده (بدون توضیح):
+{"voucher_number":"یا null","requesting_unit":"یا null","delivery_date":"یا null","personnel_type":"official/contractor/null","company":"یا null","contract_number":"یا null","items":[{"mesc_code":"یا null","item_name":"یا null","unit":"یا null","req_qty":عدد یا null}],"personnel":[{"first_name":"یا null","last_name":"یا null","code":"یا null","job_title":"یا null","size":"یا null"}]}`;
+
+// ---------------- منطق ----------------
+function toLatin(s){return (s==null?"":String(s)).replace(/[۰-۹٠-٩]/g,d=>"0123456789".charAt("۰۱۲۳۴۵۶۷۸۹".indexOf(d)>=0?"۰۱۲۳۴۵۶۷۸۹".indexOf(d):"٠١٢٣٤٥٦٧٨٩".indexOf(d)));}
+function digits(s){return toLatin(s).replace(/\D/g,"");}
+function inferGender(fn){const f=(fn||"").trim().split(/\s+/)[0]||"";if(FEMALE.has(f))return "زن";if(AMBIG.has(f))return "نامشخص(بررسی شود)";return "مرد";}
+function classifyCode(code){const d=digits(code);if(d.length===10)return[null,d,"پیمانکاری"];if(d.length>=5&&d.length<=7)return[d,null,"رسمی"];return[d||null,null,"رسمی"];}
+function mescLookup(c){return MESC[digits(c)]||{};}
+function itemName(it){const n=(it.item_name||"").trim();return n||(mescLookup(it.mesc_code).item||"");}
+function poolFor(name){for(const k in SIZE_POOLS){if(name.indexOf(k)>=0)return SIZE_POOLS[k];}return null;}
+function isSized(name,it){const info=it?mescLookup(it.mesc_code):{};if(info.sized)return true;return poolFor(name)!==null;}
+
+function buildRows(v){
+  const region=(v.requesting_unit||"").trim()||null;
+  const delivery=(v.delivery_date||"").trim()||null;
+  const ptype=v.personnel_type;
+  const vno=digits(v.voucher_number)||null;
+  const sherkat=(v.company||CONST.sherkat).trim();
+  const peyman=(v.contract_number||CONST.peyman).trim();
+  const people=v.personnel||[], items=v.items||[];
+  const rows=[];
+  items.forEach(it=>{
+    const nm=itemName(it), qty=it.req_qty||1, sized=isSized(nm,it);
+    const pool=poolFor(nm); let si=0;
+    people.forEach(p=>{
+      let [C,D,contract]=classifyCode(p.code);
+      if(D===null&&ptype==="contractor")contract="پیمانکاری";
+      let job=(p.job_title||"").trim();
+      if(!job)job=(contract==="رسمی")?CONST.job:"";
+      let size=(p.size||"").trim()||null;
+      if(size===null&&sized&&pool){size=pool[si%pool.length];si++;}
+      rows.push({"نام":(p.first_name||"").trim()||null,"نام خانوادگی":(p.last_name||"").trim()||null,
+        "کد پرسنلی":C,"کد ملی":D,"جنسیت":inferGender(p.first_name),"مدیریت":null,
+        "شهرستان/منطقه":region,"نوع قرارداد":contract,"شماره پیمان":peyman,"نام شرکت":sherkat,
+        "عنوان شغل":job||null,"شماره سند":null,"عنوان لوازم":nm||null,"سایز":size,"تعداد":qty,
+        "تاریخ تحویل":delivery,"شماره حواله":vno});
+    });
+  });
+  return rows;
+}
+function normalize(d){d=d||{};["voucher_number","requesting_unit","delivery_date","personnel_type","company","contract_number"].forEach(k=>{if(!(k in d))d[k]=null;});d.items=d.items||[];d.personnel=d.personnel||[];return d;}
+
+// ---------------- Gemini ----------------
+async function extract(b64,mime,mode){
+  const key=document.getElementById("key").value.trim();
+  const prompt=(mode==="namelist"?PROMPT_N:PROMPT_V)+JSON_TMPL;
+  const url=`https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${encodeURIComponent(key)}`;
+  const body={contents:[{parts:[{inline_data:{mime_type:mime,data:b64}},{text:prompt}]}],
+    generationConfig:{response_mime_type:"application/json",temperature:0}};
+  const r=await fetch(url,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
+  if(!r.ok){const t=await r.text();throw new Error("خطای Gemini ("+r.status+"): "+t.slice(0,200));}
+  const j=await r.json();
+  let txt=(((j.candidates||[])[0]||{}).content||{}).parts?.[0]?.text||"{}";
+  const m=txt.match(/\{[\s\S]*\}/); if(m)txt=m[0];
+  return normalize(JSON.parse(txt));
+}
+function fileToB64(f){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res({b64:r.result.split(",")[1],mime:f.type||"image/jpeg"});r.onerror=rej;r.readAsDataURL(f);});}
+
+// ---------------- اکسل ----------------
+let LAST_ROWS=null;
+function makeXlsx(rows){
+  const aoa=[HEADERS].concat(rows.map(r=>HEADERS.map(h=>r[h]==null?"":r[h])));
+  const ws=XLSX.utils.aoa_to_sheet(aoa);
+  ws["!cols"]=HEADERS.map(h=>({wch:["نام خانوادگی","نام شرکت"].includes(h)?18:(h==="شهرستان/منطقه"?16:12)}));
+  const wb=XLSX.utils.book_new(); wb.Workbook={Views:[{RTL:true}]};
+  XLSX.utils.book_append_sheet(wb,ws,"جدول پرسنل");
+  XLSX.writeFile(wb,"جدول_پرسنل.xlsx");
+}
+function preview(rows){
+  const cols=["نام","نام خانوادگی","کد پرسنلی","کد ملی","جنسیت","شهرستان/منطقه","نوع قرارداد","عنوان لوازم","سایز","تعداد","تاریخ تحویل","شماره حواله"];
+  let h="<table><tr>"+cols.map(c=>"<th>"+c+"</th>").join("")+"</tr>";
+  rows.forEach(r=>{h+="<tr>"+cols.map(c=>"<td>"+(r[c]==null?"":r[c])+"</td>").join("")+"</tr>";});
+  document.getElementById("preview").innerHTML=h+"</table>";
+}
+
+// ---------------- رابط ----------------
+const $=id=>document.getElementById(id);
+const savedKey=localStorage.getItem("gemini_key"); if(savedKey)$("key").value=savedKey;
+$("key").addEventListener("change",()=>localStorage.setItem("gemini_key",$("key").value.trim()));
+$("vf").addEventListener("change",e=>$("vc").textContent=e.target.files.length?e.target.files.length+" عکس حواله انتخاب شد":"");
+$("nf").addEventListener("change",e=>$("nc").textContent=e.target.files.length?e.target.files.length+" عکس لیست اسامی انتخاب شد":"");
+function log(m,cls){const el=$("log");el.innerHTML+=(cls?`<span class="${cls}">${m}</span>`:m)+"\n";el.scrollTop=el.scrollHeight;}
+
+$("run").addEventListener("click",async()=>{
+  const key=$("key").value.trim();
+  if(!key){alert("اول کلید رایگان Gemini را وارد کن.");return;}
+  localStorage.setItem("gemini_key",key);
+  const vfs=[...$("vf").files]; if(!vfs.length){alert("حداقل یک عکس حواله انتخاب کن.");return;}
+  const nfs=[...$("nf").files];
+  $("run").disabled=true; $("log").textContent=""; $("result").style.display="none";
+  try{
+    const vouchers=[];
+    for(let i=0;i<vfs.length;i++){log("خواندن حواله "+(i+1)+"/"+vfs.length+" …");
+      const {b64,mime}=await fileToB64(vfs[i]); vouchers.push(await extract(b64,mime,"voucher"));}
+    let names=[];
+    for(let i=0;i<nfs.length;i++){log("خواندن لیست اسامی "+(i+1)+"/"+nfs.length+" …");
+      const {b64,mime}=await fileToB64(nfs[i]); const nl=await extract(b64,mime,"namelist"); names=names.concat(nl.personnel||[]);}
+    let rows=[];
+    vouchers.forEach(v=>{ if(names.length) v={...v,personnel:names}; rows=rows.concat(buildRows(v)); });
+    if(!rows.length){log("هیچ ردیفی استخراج نشد. کیفیت عکس را بهتر کن.","err");$("run").disabled=false;return;}
+    LAST_ROWS=rows;
+    log("تمام شد ✓","ok");
+    $("summary").textContent="✅ "+rows.length+" ردیف آماده شد.";
+    preview(rows); $("result").style.display="block";
+  }catch(e){log("خطا: "+e.message,"err");alert("خطا: "+e.message);}
+  $("run").disabled=false;
+});
+$("dl").addEventListener("click",()=>{if(LAST_ROWS)makeXlsx(LAST_ROWS);});
+</script>
+</body>
+</html>
