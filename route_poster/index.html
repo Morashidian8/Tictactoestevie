@@ -177,6 +177,7 @@ input,textarea{font-family:inherit;direction:rtl}
 .freetext .ov-inner{background:#fff;border:1px solid #d0d9e2;border-radius:6px;padding:2px 9px;color:var(--navy);font-weight:800;white-space:nowrap;box-shadow:0 1px 4px rgba(0,0,0,.18)}
 /* auto route street-name labels */
 .routelbl .ov-inner{background:#fff;border:2px solid var(--navy);border-radius:7px;padding:3px 11px;color:var(--navy);font-weight:800;font-size:15px;white-space:nowrap;box-shadow:0 2px 7px rgba(15,59,92,.4);letter-spacing:.2px}
+.routedot div{width:30px;height:30px;border-radius:50%;background:var(--red);color:#fff;font-weight:800;font-size:15px;display:flex;align-items:center;justify-content:center;border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.4)}
 /* permanent name callouts on origin/dest pins */
 .leaflet-tooltip.callout{background:#fff;border:0;border-radius:8px;font-family:'Vazirmatn',sans-serif;font-weight:800;font-size:13.5px;padding:5px 12px;box-shadow:0 3px 10px rgba(0,0,0,.32);color:var(--navy);max-width:190px;white-space:normal;text-align:center}
 .leaflet-tooltip.callout.red{border-bottom:4px solid var(--red)}
@@ -367,9 +368,10 @@ L.control.layers({
 },null,{position:'topright',collapsed:true}).addTo(map);
 
 /* layer groups */
-const routeCasing = L.polyline([],{color:'#fff',weight:18,opacity:1,lineJoin:'round',lineCap:'round'}).addTo(map);
-const routeMain   = L.polyline([],{color:RED,weight:11,opacity:1,lineJoin:'round',lineCap:'round'}).addTo(map);
+const routeCasing = L.polyline([],{color:'#fff',weight:16,opacity:1,lineJoin:'round',lineCap:'round'}).addTo(map);
+const routeMain   = L.polyline([],{color:RED,weight:9,opacity:1,lineJoin:'round',lineCap:'round',dashArray:'14 13'}).addTo(map);
 const routeLabels = L.layerGroup().addTo(map);   // auto street-name labels along the route
+const routeDots   = L.layerGroup().addTo(map);   // numbered step circles along the route
 routeMain.on('click',e=>{ L.DomEvent.stop(e); addWaypoint(e.latlng); });
 routeMain.bindTooltip('برای ویرایش مسیر، روی خط بزنید تا نقطهٔ میانی اضافه شود',{sticky:true});
 let shouldFit=false;   // set when the view should re-focus on the whole route
@@ -492,7 +494,7 @@ function rebuildWaypoints(){
 let routeTimer;
 function route(){ clearTimeout(routeTimer); routeTimer=setTimeout(_route,250); }
 async function _route(){
-  if(!state.origin||!state.dest){ routeCasing.setLatLngs([]); routeMain.setLatLngs([]); routeLabels.clearLayers(); lastRoute=null; return; }
+  if(!state.origin||!state.dest){ routeCasing.setLatLngs([]); routeMain.setLatLngs([]); routeLabels.clearLayers(); routeDots.clearLayers(); lastRoute=null; return; }
   const pts=[state.origin,...state.waypoints,state.dest].map(p=>`${p.lng},${p.lat}`).join(';');
   const url=`https://router.project-osrm.org/route/v1/driving/${pts}?overview=full&geometries=geojson&steps=true`;
   try{
@@ -544,32 +546,48 @@ function buildRouteLabels(rt){
 /* re-thin labels to match the current zoom so they never crowd */
 map.on('zoomend',()=>{ if(!lastRoute)return; clearTimeout(lblTimer); lblTimer=setTimeout(()=>buildRouteLabels(lastRoute),180); });
 
-/* Step cards = ordered list of the MAIN street names the route follows */
+/* Step cards + numbered map circles = the MAIN streets the route follows, in order */
 function buildAutoSteps(rt){
-  const names=[];
+  const entries=[];
   (rt.legs||[]).forEach(leg=>(leg.steps||[]).forEach(st=>{
     const nm=(st.name||'').trim();
     if(!nm) return;
-    if((st.distance||0)<90) return;                         // skip tiny connectors → main streets only
-    if(names.length && names[names.length-1]===nm) return;  // no consecutive repeats
-    names.push(nm);
+    if((st.distance||0)<90) return;                                   // skip tiny connectors → main streets only
+    if(entries.length && entries[entries.length-1].name===nm) return; // no consecutive repeats
+    const co=st.geometry&&st.geometry.coordinates;
+    const ll=(co&&co.length)?L.latLng(co[0][1],co[0][0]):null;        // where this street is entered
+    entries.push({name:nm, ll});
   }));
-  // drop a leading street that equals the origin's own name (avoid duplicate with «شروع»)
   const oName=(state.meta.originName||'').trim();
   const dName=(state.meta.destName||'').trim();
-  let mids=names.slice();
-  if(mids.length && oName && mids[0]===oName) mids.shift();
-  if(mids.length && dName && mids[mids.length-1]===dName) mids.pop();
-  // cap the number of middle streets so the row stays clean
+  let mids=entries.slice();
+  if(mids.length && oName && mids[0].name===oName) mids.shift();
+  if(mids.length && dName && mids[mids.length-1].name===dName) mids.pop();
   if(mids.length>9){
     const keep=[]; const stp=mids.length/9;
     for(let i=0;i<9;i++) keep.push(mids[Math.floor(i*stp)]);
-    mids=keep.filter((v,i,a)=>i===0||v!==a[i-1]);
+    mids=keep.filter((v,i,a)=>i===0||v.name!==a[i-1].name);
   }
-  const steps=[{h:'شروع', d: state.meta.originName||'مبدأ', start:true}];
-  mids.forEach(nm=> steps.push({h:nm, d:'خیابان'}));
-  steps.push({h:'مقصد', d: state.meta.destName||'مقصد', dest:true});
-  state.meta.steps=steps; renderPosterSteps(); save();
+  // step cards
+  const steps=[{h:'شروع', d: oName||'مبدأ', start:true}];
+  mids.forEach(m=> steps.push({h:m.name, d:'خیابان'}));
+  steps.push({h:'مقصد', d: dName||'مقصد', dest:true});
+  state.meta.steps=steps; renderPosterSteps();
+  // numbered circles on the map, matching the card numbers (1 = origin … N = destination)
+  const pts=[];
+  if(state.origin) pts.push(L.latLng(state.origin.lat,state.origin.lng));
+  mids.forEach(m=>{ if(m.ll) pts.push(m.ll); });
+  if(state.dest) pts.push(L.latLng(state.dest.lat,state.dest.lng));
+  renderRouteDots(pts);
+  save();
+}
+function renderRouteDots(pts){
+  routeDots.clearLayers();
+  if(state.meta.routeDots===false) return;
+  pts.forEach((ll,i)=>{
+    const icon=L.divIcon({className:'routedot',html:`<div>${fa(i+1)}</div>`,iconSize:[30,30],iconAnchor:[15,15]});
+    L.marker(ll,{icon,interactive:false,keyboard:false,zIndexOffset:1200}).addTo(routeDots);
+  });
 }
 
 /* ======================= geocoding (Nominatim autocomplete, Iran-biased) ======================= */
