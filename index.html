@@ -105,7 +105,9 @@
     <select id="sizing">
       <option value="fixed">ثابت (بدون مارتینگل)</option>
       <option value="mart">مارتینگلِ کامل (هر باخت دوبرابر) — ⚠️ پرریسک</option>
+      <option value="mart2">مارتینگلِ محدود — ۲ باختِ اول دوبرابر، بعد ثابت تا برد</option>
       <option value="mart3" selected>مارتینگلِ محدود — ۳ باختِ اول دوبرابر، بعد ثابت تا برد</option>
+      <option value="comp">ترکیبی — برد: دوبرابر · باخت: از همان اندازه مارتینگل (بدونِ ریست)</option>
     </select>
     <label>مبلغِ هر معامله ($)</label>
     <input id="amt" type="number" value="1" min="0">
@@ -134,7 +136,7 @@
 const HOSTS=['https://data-api.binance.vision','https://api.binance.com'];
 let pollTimer=null, cdTimer=null, busy=false;
 let lastClosedOpen=null, formingClose=0, curPrice=null, curColor='none';
-let bal=100, start=100, openBet=null, trades=[], wins=0, losses=0, step=0;
+let bal=100, start=100, openBet=null, trades=[], wins=0, losses=0, step=0, lastStake=null;
 let prevColor=null, streakLen=0;
 
 function fmt(n){return (n==null?0:n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});}
@@ -170,8 +172,15 @@ function stake(){
   const m=document.getElementById('sizing').value;
   let s;
   if(m==='fixed') s=base;
-  else if(m==='mart') s=base*Math.pow(2,step);           // full martingale
-  else s = (step<=3) ? base*Math.pow(2,step) : base;     // mart3: double for 3 losses, then flat until a win
+  else if(m==='mart') s=base*Math.pow(2,step);                  // full martingale
+  else if(m==='mart2') s=(step<=2)?base*Math.pow(2,step):base;  // double for 2 losses, then flat
+  else if(m==='mart3') s=(step<=3)?base*Math.pow(2,step):base;  // double for 3 losses, then flat
+  else if(m==='comp'){                                          // Method A: compound wins + martingale losses
+    if(lastStake==null) s=base;
+    else if(step===0) s=lastStake*2;   // last bet WON -> double up
+    else if(step===1) s=lastStake;     // first loss -> retry same size
+    else s=lastStake*2;                // consecutive losses -> martingale
+  } else s=base;
   return Math.min(s,bal);
 }
 
@@ -246,6 +255,7 @@ async function onClosedCandle(o,c,closeTime,place){
       } else {
         bal-=s;
         openBet={signal:sig,stake:s,entry:Math.round(c),time:clk(closeTime),won:null,pnl:0,m:1/odds,odds:odds,live:true};
+        lastStake=s;
         setMsg('وارد شد: '+(sig==='up'?'UP':'DOWN')+' با نرخِ واقعیِ '+odds+' (ضریب ×'+(1/odds).toFixed(2)+').');
       }
     }
@@ -382,6 +392,7 @@ function reset(){
   stop();
   lastClosedOpen=null; formingClose=0; curPrice=null; curColor='none';
   openBet=null; trades=[]; wins=0; losses=0; step=0; prevColor=null; streakLen=0;
+  lastStake=null;
   bal=parseFloat(document.getElementById('bal').value)||100; start=bal;
   setMsg(''); document.getElementById('cd').textContent='—';
   document.getElementById('lastc').textContent='آخرین کندلِ بسته‌شده: —';
@@ -426,7 +437,8 @@ async function runBacktest(){
     if(candles.length>3000){ candles=candles.slice(0,3000); note=' (بازه بزرگ بود؛ ۳۰۰۰ کندلِ اول)'; }
     // fresh trading state for the backtest
     bal=parseFloat(document.getElementById('bal').value)||100; start=bal;
-    openBet=null; trades=[]; wins=0; losses=0; step=0; prevColor=null; streakLen=0; lastClosedOpen=null;
+    openBet=null; trades=[]; wins=0; losses=0; step=0; prevColor=null; streakLen=0;
+  lastStake=null; lastClosedOpen=null;
     btCandles=candles; btIdx=0;
     const speed=Math.max(0.2,parseFloat(document.getElementById('btSpeed').value)||2)*1000;
     document.getElementById('btBtn').textContent='● در حال بک‌تست — توقف';
@@ -453,6 +465,7 @@ function btStep(o,c,ct){
       odds=Math.min(0.99,Math.max(0.01,odds));
       bal-=s;
       openBet={signal:sig,stake:s,entry:Math.round(c),time:clk(ct),won:null,pnl:0,m:1/odds,odds:odds,live:false};
+      lastStake=s;
     }
   }
 }
