@@ -52,6 +52,16 @@ function winLabel(min) {
   return Number.isInteger(h) ? `${h.toLocaleString('fa')} ساعت` : `${min} دقیقه`;
 }
 
+// How often a window's alternation reached the user's tolerance threshold or
+// above — computed straight from the window's value distribution (w.hist).
+// This is what actually matters: not the once-a-year peak, but how frequently
+// it crosses the line you can't tolerate.
+function exceedInfo(w, tol) {
+  let c = 0;
+  for (const [v, cnt] of (w.hist || [])) if (v >= tol) c += cnt;
+  return { c, pct: w.n ? Math.round((100 * c) / w.n) : 0 };
+}
+
 // The window-length options are static in the HTML; here we just disable the
 // ones this dataset doesn't have (e.g. 30m/1h on the 1-hour timeframe) and move
 // the selection to a valid one if needed.
@@ -83,10 +93,12 @@ function render() {
   const topn = Math.max(1, parseInt($('topn').value || '2', 10));
   const noOverlap = $('nooverlap').checked;
   const showHist = $('hist').checked;
-  // order = "<metric>_<dir>": metric avg|max, dir low|high.
+  // order = "<metric>_<dir>": metric avg|max|exceed, dir low|high.
   const order = $('order').value;
   const byMax = order.startsWith('max');
+  const byExceed = order.startsWith('exceed');
   const high = order.endsWith('high');
+  const tol = Math.max(1, parseInt($('tol').value || '6', 10));
 
   // Window length: options come from the dataset's available rolling lengths.
   syncWinlen(ds);
@@ -127,8 +139,10 @@ function render() {
     const rankAvg = new Map(full.slice()
       .sort((a, b) => a.avg - b.avg || a.mx - b.mx || a.start - b.start)
       .map((w, i) => [w.start, i + 1]));
-    const keyf = byMax ? (x) => x.mx : (x) => x.avg;      // primary metric
-    const tief = byMax ? (x) => x.avg : (x) => x.mx;      // tie-breaker
+    const keyf = byExceed ? (x) => exceedInfo(x, tol).pct
+      : byMax ? (x) => x.mx : (x) => x.avg;               // primary metric
+    const tief = byExceed ? (x) => x.avg
+      : byMax ? (x) => x.avg : (x) => x.mx;               // tie-breaker
     list.sort((a, b) =>
       (high ? keyf(b) - keyf(a) : keyf(a) - keyf(b)) ||
       (high ? tief(b) - tief(a) : tief(a) - tief(b)) ||
@@ -154,6 +168,7 @@ function render() {
         `<div class="row"><span>میانگین تناوب</span><b>${w.avg.toFixed(2)}</b></div>` +
         `<div class="row"><span>احتمال تناوب بالای میانگین</span><b>${w.ap}%</b></div>` +
         `<div class="row"><span>بیشینه</span><b>${w.mx} (${w.mxc} بار)</b></div>` +
+        `<div class="row"><span>احتمال عبور از آستانهٔ ${tol}</span><b>${exceedInfo(w, tol).pct}% (${exceedInfo(w, tol).c} بار)</b></div>` +
         `<div class="row"><span>رتبهٔ کم‌ترین بیشینه</span><b>${rankMx.get(w.start)} از ${total}</b></div>` +
         `<div class="row"><span>رتبهٔ کم‌ترین میانگین</span><b>${rankAvg.get(w.start)} از ${total}</b></div>` +
         recRow;
@@ -448,7 +463,7 @@ async function init() {
   }
   fillCoins();
   fillWeekdays();
-  ['coin', 'exchange', 'tf', 'window', 'winlen', 'order', 'weekday', 'topn', 'nooverlap', 'hist']
+  ['coin', 'exchange', 'tf', 'window', 'winlen', 'order', 'weekday', 'topn', 'tol', 'nooverlap', 'hist']
     .forEach((id) => $(id).addEventListener('input', render));
   $('gapN').addEventListener('input', renderGap);
   render();
