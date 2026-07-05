@@ -473,9 +473,18 @@ if ('serviceWorker' in navigator) {
     refreshing = true;
     location.reload();
   });
+  // updateViaCache:'none' so the SW script itself is never served stale, and
+  // check for a new version when the user returns to the app and every few
+  // minutes — so a new deploy applies to an OPEN app too, not just on reload.
   window.addEventListener('load', () =>
-    navigator.serviceWorker.register('./sw.js')
-      .then((reg) => reg.update())
+    navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' })
+      .then((reg) => {
+        reg.update();
+        document.addEventListener('visibilitychange', () => {
+          if (document.visibilityState === 'visible') reg.update();
+        });
+        setInterval(() => reg.update(), 5 * 60 * 1000);
+      })
       .catch(() => {}));
 }
 init();
