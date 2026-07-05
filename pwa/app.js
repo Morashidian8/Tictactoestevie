@@ -213,6 +213,9 @@ function distBars(hist, unit) {
   return wrap;
 }
 
+// User toggle for the records panel: collapse overlapping record-breakers.
+let recNoOverlap = false;
+
 // List every window (for the current coin/exchange/timeframe + this rolling
 // window length) whose all-time maximum was beaten recently — the silent upward
 // corrections, surfaced with full context so they are never missed and can be
@@ -245,16 +248,58 @@ function renderRecords(ds, winLen) {
     return (rankCache[wd] = { mx: mMx, avg: mAvg, total: list.length });
   }
 
+  // Optionally collapse overlapping record-breakers — adjacent 5-min-shifted
+  // windows that broke around the same event — down to one representative (the
+  // calmest) per weekday, using the same non-overlap rule as the day cards.
+  let items = recs.slice();
+  if (recNoOverlap) {
+    const byDay = {};
+    for (const r of items) (byDay[r.wd] = byDay[r.wd] || []).push(r);
+    const kept = [];
+    for (const wd in byDay) {
+      const dayRecs = byDay[wd].slice().sort((a, b) =>
+        a.w.mx - b.w.mx || a.w.avg - b.w.avg || a.w.start - b.w.start);
+      const chosen = [];
+      for (const r of dayRecs) {
+        let clash = false;
+        for (const c of chosen) {
+          let d = Math.abs(r.w.start - c.w.start);
+          d = Math.min(d, DAY_MINUTES - d);
+          if (d < winLen) { clash = true; break; }
+        }
+        if (!clash) chosen.push(r);
+      }
+      kept.push(...chosen);
+    }
+    items = kept;
+  }
+
   // Newest record-break first (date descending), then calmest as a tie-breaker
   // so same-day records read in a sensible order.
-  recs.sort((a, b) =>
+  items.sort((a, b) =>
     b.w.rec.w.localeCompare(a.w.rec.w) ||
     (a.w.mx - b.w.mx) ||
     (a.w.avg - b.w.avg));
 
   const head = document.createElement('h2');
-  head.textContent = `🔺 رکوردهای اخیر (${recs.length.toLocaleString('fa')} مورد)`;
+  head.textContent = `🔺 رکوردهای اخیر (${items.length.toLocaleString('fa')} مورد)`;
   box.appendChild(head);
+
+  // Option to switch between overlapping (all) and non-overlapping (distinct
+  // events) — each render rebuilds it, so it reflects the persisted state.
+  const tog = document.createElement('label');
+  tog.className = 'rectoggle';
+  const cb = document.createElement('input');
+  cb.type = 'checkbox';
+  cb.checked = recNoOverlap;
+  cb.addEventListener('change', () => {
+    recNoOverlap = cb.checked;
+    renderRecords(ds, winLen);
+  });
+  tog.appendChild(cb);
+  tog.appendChild(document.createTextNode(' بدون هم‌پوشانی (فقط رکوردهای متمایز)'));
+  box.appendChild(tog);
+
   const help = document.createElement('div');
   help.className = 'rhelp';
   help.textContent =
@@ -266,7 +311,7 @@ function renderRecords(ds, winLen) {
   // takes over the page no matter how many there are.
   const list = document.createElement('div');
   list.className = 'reclist';
-  recs.forEach(({ wd, w }) => {
+  items.forEach(({ wd, w }) => {
     const day = DATA.names[String(wd)];
     const R = ranksFor(wd);
     const rMx = R.mx.get(w.start);
