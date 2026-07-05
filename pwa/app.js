@@ -215,7 +215,8 @@ function distBars(hist, unit) {
 
 // List every window (for the current coin/exchange/timeframe + this rolling
 // window length) whose all-time maximum was beaten recently — the silent upward
-// corrections, surfaced so they are never missed.
+// corrections, surfaced with full context so they are never missed and can be
+// judged at a glance.
 function renderRecords(ds, winLen) {
   const box = $('records');
   box.innerHTML = '';
@@ -229,10 +230,27 @@ function renderRecords(ds, winLen) {
     }
   }
   if (!recs.length) return;
+
+  // Per-weekday rankings so we can tell WHERE this window sits among that day's
+  // windows: rank 1 by "lowest max" = the calmest by peak, rank 1 by "lowest
+  // average" = the calmest on average. Computed once per weekday, reused.
+  const rankCache = {};
+  function ranksFor(wd) {
+    if (rankCache[wd]) return rankCache[wd];
+    const list = (per[String(wd)] || []).slice();
+    const byMx = list.slice().sort((a, b) => a.mx - b.mx || a.avg - b.avg || a.start - b.start);
+    const byAvg = list.slice().sort((a, b) => a.avg - b.avg || a.mx - b.mx || a.start - b.start);
+    const mMx = new Map(byMx.map((w, i) => [w.start, i + 1]));
+    const mAvg = new Map(byAvg.map((w, i) => [w.start, i + 1]));
+    return (rankCache[wd] = { mx: mMx, avg: mAvg, total: list.length });
+  }
+
+  // Calmest record-breakers first (lowest max, then lowest average): a record
+  // in an already-calm window is what actually matters. Ties -> most recent.
   recs.sort((a, b) =>
-    b.w.rec.w.localeCompare(a.w.rec.w) ||
-    (b.w.rec.t - a.w.rec.t) ||
-    (a.w.start - b.w.start));
+    (a.w.mx - b.w.mx) ||
+    (a.w.avg - b.w.avg) ||
+    b.w.rec.w.localeCompare(a.w.rec.w));
 
   const head = document.createElement('h2');
   head.textContent = '🔺 رکوردهای اخیر';
@@ -240,22 +258,33 @@ function renderRecords(ds, winLen) {
   const help = document.createElement('div');
   help.className = 'rhelp';
   help.textContent =
-    `این بازه‌ها به‌تازگی رکوردِ بیشینه‌شان شکسته — عددی بالاتر از هرچه قبلاً دیده شده. طول بازه: ${winLabel(winLen)}.`;
+    `این بازه‌ها به‌تازگی رکوردِ بیشینه‌شان شکسته — عددی بالاتر از هرچه قبلاً دیده شده. ` +
+    `آرام‌ترین‌ها اول آمده‌اند. طول بازه: ${winLabel(winLen)}.`;
   box.appendChild(help);
 
   const cap = 15;
   recs.slice(0, cap).forEach(({ wd, w }) => {
-    const it = document.createElement('div');
-    it.className = 'item';
-    it.innerHTML =
-      `<span>${DATA.names[String(wd)]} ${w.label}</span>` +
-      `<b>از ${w.rec.f} به ${w.rec.t} • ${w.rec.w}</b>`;
-    box.appendChild(it);
+    const day = DATA.names[String(wd)];
+    const R = ranksFor(wd);
+    const rMx = R.mx.get(w.start);
+    const rAvg = R.avg.get(w.start);
+    const card = document.createElement('div');
+    card.className = 'reccard';
+    card.innerHTML =
+      `<div class="rt">🔺 ${day} ${w.label}</div>` +
+      `<div class="row"><span>رکورد</span><b class="hot">بیشینه از ${w.rec.f} به ${w.rec.t} • ${w.rec.w}</b></div>` +
+      `<div class="row"><span>میانگین تناوب</span><b>${w.avg.toFixed(2)}</b></div>` +
+      `<div class="row"><span>بیشینه</span><b>${w.mx} (${w.mxc} بار)</b></div>` +
+      `<div class="row"><span>احتمال بالای میانگین</span><b>${w.ap}%</b></div>` +
+      `<div class="row"><span>تعداد نمونه</span><b>${w.n} بار</b></div>` +
+      `<div class="row"><span>رتبهٔ کم‌ترین بیشینه (${day})</span><b>${rMx} از ${R.total}</b></div>` +
+      `<div class="row"><span>رتبهٔ کم‌ترین میانگین (${day})</span><b>${rAvg} از ${R.total}</b></div>`;
+    box.appendChild(card);
   });
   if (recs.length > cap) {
     const more = document.createElement('div');
     more.className = 'more';
-    more.textContent = `و ${recs.length - cap} موردِ دیگر…`;
+    more.textContent = `و ${recs.length - cap} موردِ دیگر (آرام‌ترین‌ها بالا آمده‌اند)…`;
     box.appendChild(more);
   }
   box.style.display = '';
