@@ -1,0 +1,56 @@
+name: Wallet Watch (Polymarket → Telegram)
+
+# Watches ONE Polymarket wallet and sends a Telegram message on every new trade.
+# A long-lived job self-exits before the timeout; the hourly cron queues a
+# successor (concurrency, cancel-in-progress:false) so coverage is near-
+# continuous — the same pattern as candle-alert.yml. Runs where Polymarket is
+# reachable (GitHub Actions), not the network-restricted dev sandbox.
+on:
+  schedule:
+    - cron: "0 * * * *"
+  workflow_dispatch:
+    inputs:
+      address:
+        description: "آدرس کیف پول (0x...)"
+        required: false
+        type: string
+      types:
+        description: "نوع رویدادها (TRADE یا ALL)"
+        required: false
+        default: "TRADE"
+        type: string
+
+# Keep exactly one watcher alive: a new run queues behind the current one and
+# starts the moment it finishes.
+concurrency:
+  group: wallet-watch
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  watch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install requests
+      - name: Restore watch state (last-seen timestamp)
+        uses: actions/cache@v4
+        with:
+          path: .wallet_cache
+          key: wallet-watch-${{ github.run_id }}
+          restore-keys: wallet-watch-
+      - name: Watch wallet
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          WATCH_ADDRESS: ${{ inputs.address || '0xb8ea51bd3b55e7105cd6ff351eeaf70d68f36240' }}
+          WATCH_TYPES: ${{ inputs.types || 'TRADE' }}
+          POLL_SECONDS: "30"
+          MAX_RUNTIME_SECONDS: "20400"
+        run: python watch_wallet.py
