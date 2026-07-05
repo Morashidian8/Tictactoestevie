@@ -66,6 +66,31 @@ CONFIGS = [
 # skipped on the 1-hour timeframe, 30m only applies to 5m/15m, etc.).
 WIN_LENGTHS = [30, 60, 90, 120, 180, 240, 300, 360, 480, 600]
 RECENT_K = 6  # how many most-recent occurrences of each window to keep
+RECORD_RECENT = 4  # flag a window if its all-time max was beaten within the
+#                    last this-many occurrences (~weeks) -> "record just broke"
+
+
+def recent_record(pairs, tz):
+    """
+    If the window's all-time maximum alternation was beaten *recently* (within
+    the last RECORD_RECENT occurrences), return {"w": date, "f": old_max,
+    "t": new_max}; otherwise None. `pairs` is the chronological (time, flips)
+    list. A "record break" is an occurrence strictly higher than every earlier
+    one — this is exactly the silent upward correction the user wants flagged.
+    """
+    best = None
+    brk = None          # (time, old_best, new_value)
+    brk_idx = None
+    for i, (t, f) in enumerate(pairs):
+        if best is not None and f > best:
+            brk = (t, best, f)
+            brk_idx = i
+        best = f if best is None else max(best, f)
+    if brk is None or brk_idx < len(pairs) - RECORD_RECENT:
+        return None  # never beaten, or the last break is too old to be "recent"
+    t, old, new = brk
+    return {"w": datetime.fromtimestamp(t, tz=tz).strftime("%Y-%m-%d"),
+            "f": old, "t": new}
 
 
 def pack(stats):
@@ -185,8 +210,12 @@ def build_dataset(tz, source, interval, granularity, product, ex_label, tf_label
                 recent = pairs[-RECENT_K:]              # oldest -> newest
                 rc = [f for _, f in recent][::-1]        # newest first
                 rd = datetime.fromtimestamp(recent[-1][0], tz=tz).strftime("%Y-%m-%d")
-                r.append({"start": h * 60 + m, "label": A.window_label(h, m, wm),
-                          **pack(A.summarize_hour(flips)), "rc": rc, "rd": rd})
+                entry = {"start": h * 60 + m, "label": A.window_label(h, m, wm),
+                         **pack(A.summarize_hour(flips)), "rc": rc, "rd": rd}
+                rec = recent_record(pairs, tz)
+                if rec:
+                    entry["rec"] = rec  # all-time max was beaten recently
+                r.append(entry)
             r.sort(key=lambda x: x["start"])
             per_wd[str(wd)] = r
         rolling_out[str(wm)] = per_wd

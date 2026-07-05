@@ -93,6 +93,8 @@ function render() {
   const winLen = mode === 'rolling' ? parseInt($('winlen').value, 10) : 60;
   $('winlen').disabled = mode !== 'rolling';
 
+  renderRecords(ds, winLen);
+
   const m = ds.meta;
   $('meta').innerHTML =
     `${m.exchange} • تایم‌فریم ${m.timeframe} • بازه ${winLabel(winLen)} • ` +
@@ -130,13 +132,18 @@ function render() {
       const div = document.createElement('div');
       div.className = 'win';
       const star = i === 0 ? ' <span class="star">★</span>' : '';
+      const recMark = w.rec ? ' <span class="recbadge">🔺</span>' : '';
+      const recRow = w.rec
+        ? `<div class="row"><span>🔺 رکورد اخیر</span><b>بیشینه از ${w.rec.f} به ${w.rec.t} (${w.rec.w})</b></div>`
+        : '';
       div.innerHTML =
         `<span class="badge">${i + 1}</span>` +
-        `<div class="t">${w.label}${star}</div>` +
+        `<div class="t">${w.label}${star}${recMark}</div>` +
         `<div class="row"><span>تعداد نمونه</span><b>${w.n} بار</b></div>` +
         `<div class="row"><span>میانگین تناوب</span><b>${w.avg.toFixed(2)}</b></div>` +
         `<div class="row"><span>احتمال تناوب بالای میانگین</span><b>${w.ap}%</b></div>` +
-        `<div class="row"><span>بیشینه</span><b>${w.mx} (${w.mxc} بار)</b></div>`;
+        `<div class="row"><span>بیشینه</span><b>${w.mx} (${w.mxc} بار)</b></div>` +
+        recRow;
       if (showHist) div.appendChild(histBars(w.hist));
       if (w.rc && w.rc.length) div.appendChild(recentToggle(w, wd));
       card.appendChild(div);
@@ -204,6 +211,54 @@ function distBars(hist, unit) {
     wrap.appendChild(bar);
   }
   return wrap;
+}
+
+// List every window (for the current coin/exchange/timeframe + this rolling
+// window length) whose all-time maximum was beaten recently — the silent upward
+// corrections, surfaced so they are never missed.
+function renderRecords(ds, winLen) {
+  const box = $('records');
+  box.innerHTML = '';
+  box.style.display = 'none';
+  const per = ds.rolling && ds.rolling[String(winLen)];
+  if (!per) return;
+  const recs = [];
+  for (const wd of DATA.order) {
+    for (const w of (per[String(wd)] || [])) {
+      if (w.rec) recs.push({ wd, w });
+    }
+  }
+  if (!recs.length) return;
+  recs.sort((a, b) =>
+    b.w.rec.w.localeCompare(a.w.rec.w) ||
+    (b.w.rec.t - a.w.rec.t) ||
+    (a.w.start - b.w.start));
+
+  const head = document.createElement('h2');
+  head.textContent = '🔺 رکوردهای اخیر';
+  box.appendChild(head);
+  const help = document.createElement('div');
+  help.className = 'rhelp';
+  help.textContent =
+    `این بازه‌ها به‌تازگی رکوردِ بیشینه‌شان شکسته — عددی بالاتر از هرچه قبلاً دیده شده. طول بازه: ${winLabel(winLen)}.`;
+  box.appendChild(help);
+
+  const cap = 15;
+  recs.slice(0, cap).forEach(({ wd, w }) => {
+    const it = document.createElement('div');
+    it.className = 'item';
+    it.innerHTML =
+      `<span>${DATA.names[String(wd)]} ${w.label}</span>` +
+      `<b>از ${w.rec.f} به ${w.rec.t} • ${w.rec.w}</b>`;
+    box.appendChild(it);
+  });
+  if (recs.length > cap) {
+    const more = document.createElement('div');
+    more.className = 'more';
+    more.textContent = `و ${recs.length - cap} موردِ دیگر…`;
+    box.appendChild(more);
+  }
+  box.style.display = '';
 }
 
 function renderGap() {
