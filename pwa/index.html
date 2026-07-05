@@ -59,6 +59,16 @@
     .recent .rhead b { color:var(--blue); }
     .hint { font-size:12px; color:#777; padding:0 14px 24px; line-height:1.8; }
     .star { color:#b8860b; }
+    .recbadge { color:#c0392b; }
+    .records { margin:10px 14px 4px; background:#fff5f4; border:1px solid #f3c9c4;
+               border-radius:12px; padding:12px 14px; }
+    .records h2 { margin:0 0 4px; font-size:15px; color:#c0392b; }
+    .records .rhelp { font-size:12px; color:#8a5a55; margin:0 0 8px; line-height:1.7; }
+    .records .item { display:flex; justify-content:space-between; gap:8px;
+                     font-size:13px; color:#333; padding:5px 0;
+                     border-top:1px solid #f3d9d5; }
+    .records .item b { color:#c0392b; }
+    .records .more { font-size:12px; color:#8a5a55; margin-top:6px; }
   </style>
 </head>
 <body>
@@ -131,6 +141,8 @@
       <label><input type="checkbox" id="hist" checked> نمایش نمودار توزیع</label>
     </div>
   </div>
+
+  <section class="records" id="records" style="display:none"></section>
 
   <main id="out"></main>
 
