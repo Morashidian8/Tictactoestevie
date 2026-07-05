@@ -359,10 +359,31 @@ function fillCoins() {
   }
 }
 
+let lastFetch = 0;
+
+// Re-pull data.json and re-render, preserving the user's current selections
+// (the controls are untouched). Throttled so returning to the app doesn't spam
+// the network; `cache: 'no-cache'` revalidates, so unchanged data is a cheap
+// 304. Called on focus/visibility and on a background interval.
+async function refreshData(force) {
+  const now = Date.now();
+  if (!force && now - lastFetch < 90 * 1000) return;
+  lastFetch = now;
+  try {
+    const res = await fetch('./data.json', { cache: 'no-cache' });
+    const fresh = await res.json();
+    if (fresh && fresh.datasets) {
+      DATA = fresh;
+      render();  // render() also refreshes the records panel and the gap section
+    }
+  } catch (e) { /* transient network error -> keep showing current data */ }
+}
+
 async function init() {
   try {
     const res = await fetch('./data.json', { cache: 'no-cache' });
     DATA = await res.json();
+    lastFetch = Date.now();
   } catch (e) {
     $('meta').textContent = 'خطا در بارگذاری داده.';
     return;
@@ -373,6 +394,16 @@ async function init() {
     .forEach((id) => $(id).addEventListener('input', render));
   $('gapN').addEventListener('input', renderGap);
   render();
+
+  // Keep an open app fresh: re-pull when the user comes back to it, and every
+  // few minutes in the background (the data itself is rebuilt hourly).
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') refreshData();
+  });
+  window.addEventListener('focus', () => refreshData());
+  setInterval(() => {
+    if (document.visibilityState === 'visible') refreshData();
+  }, 5 * 60 * 1000);
 }
 
 if ('serviceWorker' in navigator) {
