@@ -50,11 +50,39 @@ def is_btc(row):
     return "bitcoin" in t or "btc" in t
 
 
+def _resilient_http_get():
+    """HTTP getter that pages newest-first and stops gracefully instead of
+    crashing when the Data API rejects a deep offset (400) — very active wallets
+    exceed the /activity offset cap, so we take the most recent rows available.
+    Returns [] on any non-200 / error, which makes the client's loop stop."""
+    import requests
+    session = requests.Session()
+
+    def get(url, params):
+        p = dict(params)
+        if url.endswith("/activity"):
+            p["sortDirection"] = "DESC"  # newest first, so a cap keeps recent data
+        try:
+            r = session.get(
+                url, params=p, timeout=25,
+                headers={"User-Agent": "wallet-analysis/1.0"},
+            )
+            if r.status_code != 200:
+                print(f"  (API {r.status_code} at offset={p.get('offset')}; stopping pagination)")
+                return []
+            return r.json()
+        except requests.RequestException as exc:
+            print("  (fetch error, stopping pagination:", exc, ")")
+            return []
+
+    return get
+
+
 def main():
-    client = PolymarketClient()
+    client = PolymarketClient(http_get=_resilient_http_get())
     activity = client.activity(ADDRESS)
     print(f"آدرس: {ADDRESS}")
-    print(f"کل ردیف‌های فعالیت: {len(activity)}")
+    print(f"کل ردیف‌های فعالیت واکشی‌شده: {len(activity)}")
 
     # Realized PnL from the FIFO engine, keyed by the closing event's key —
     # which is the conditionId for REDEEM closes and the token asset for
