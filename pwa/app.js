@@ -253,7 +253,7 @@ function renderRecords(ds, winLen) {
     b.w.rec.w.localeCompare(a.w.rec.w));
 
   const head = document.createElement('h2');
-  head.textContent = '🔺 رکوردهای اخیر';
+  head.textContent = `🔺 رکوردهای اخیر (${recs.length.toLocaleString('fa')} مورد)`;
   box.appendChild(head);
   const help = document.createElement('div');
   help.className = 'rhelp';
@@ -262,8 +262,11 @@ function renderRecords(ds, winLen) {
     `آرام‌ترین‌ها اول آمده‌اند. طول بازه: ${winLabel(winLen)}.`;
   box.appendChild(help);
 
-  const cap = 15;
-  recs.slice(0, cap).forEach(({ wd, w }) => {
+  // All records live inside a bounded, scrollable list so the panel never
+  // takes over the page no matter how many there are.
+  const list = document.createElement('div');
+  list.className = 'reclist';
+  recs.forEach(({ wd, w }) => {
     const day = DATA.names[String(wd)];
     const R = ranksFor(wd);
     const rMx = R.mx.get(w.start);
@@ -279,14 +282,9 @@ function renderRecords(ds, winLen) {
       `<div class="row"><span>تعداد نمونه</span><b>${w.n} بار</b></div>` +
       `<div class="row"><span>رتبهٔ کم‌ترین بیشینه (${day})</span><b>${rMx} از ${R.total}</b></div>` +
       `<div class="row"><span>رتبهٔ کم‌ترین میانگین (${day})</span><b>${rAvg} از ${R.total}</b></div>`;
-    box.appendChild(card);
+    list.appendChild(card);
   });
-  if (recs.length > cap) {
-    const more = document.createElement('div');
-    more.className = 'more';
-    more.textContent = `و ${recs.length - cap} موردِ دیگر (آرام‌ترین‌ها بالا آمده‌اند)…`;
-    box.appendChild(more);
-  }
+  box.appendChild(list);
   box.style.display = '';
 }
 
