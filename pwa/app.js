@@ -114,8 +114,19 @@ function render() {
     const source = mode === 'rolling'
       ? (ds.rolling[String(winLen)] || {})[String(wd)]
       : ds.clock[String(wd)];
-    let list = (source || []).slice();
+    const full = source || [];
+    let list = full.slice();
     if (!list.length) continue;
+    // Rank of each window among ALL of this weekday's windows (independent of
+    // the no-overlap display filter) by lowest max and by lowest average, so a
+    // window shown in no-overlap mode still reveals its true "X of N" standing.
+    const total = full.length;
+    const rankMx = new Map(full.slice()
+      .sort((a, b) => a.mx - b.mx || a.avg - b.avg || a.start - b.start)
+      .map((w, i) => [w.start, i + 1]));
+    const rankAvg = new Map(full.slice()
+      .sort((a, b) => a.avg - b.avg || a.mx - b.mx || a.start - b.start)
+      .map((w, i) => [w.start, i + 1]));
     const keyf = byMax ? (x) => x.mx : (x) => x.avg;      // primary metric
     const tief = byMax ? (x) => x.avg : (x) => x.mx;      // tie-breaker
     list.sort((a, b) =>
@@ -143,6 +154,8 @@ function render() {
         `<div class="row"><span>میانگین تناوب</span><b>${w.avg.toFixed(2)}</b></div>` +
         `<div class="row"><span>احتمال تناوب بالای میانگین</span><b>${w.ap}%</b></div>` +
         `<div class="row"><span>بیشینه</span><b>${w.mx} (${w.mxc} بار)</b></div>` +
+        `<div class="row"><span>رتبهٔ کم‌ترین بیشینه</span><b>${rankMx.get(w.start)} از ${total}</b></div>` +
+        `<div class="row"><span>رتبهٔ کم‌ترین میانگین</span><b>${rankAvg.get(w.start)} از ${total}</b></div>` +
         recRow;
       if (showHist) div.appendChild(histBars(w.hist));
       if (w.rc && w.rc.length) div.appendChild(recentToggle(w, wd));
