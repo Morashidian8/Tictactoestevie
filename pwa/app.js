@@ -245,12 +245,12 @@ function renderRecords(ds, winLen) {
     return (rankCache[wd] = { mx: mMx, avg: mAvg, total: list.length });
   }
 
-  // Calmest record-breakers first (lowest max, then lowest average): a record
-  // in an already-calm window is what actually matters. Ties -> most recent.
+  // Newest record-break first (date descending), then calmest as a tie-breaker
+  // so same-day records read in a sensible order.
   recs.sort((a, b) =>
+    b.w.rec.w.localeCompare(a.w.rec.w) ||
     (a.w.mx - b.w.mx) ||
-    (a.w.avg - b.w.avg) ||
-    b.w.rec.w.localeCompare(a.w.rec.w));
+    (a.w.avg - b.w.avg));
 
   const head = document.createElement('h2');
   head.textContent = `🔺 رکوردهای اخیر (${recs.length.toLocaleString('fa')} مورد)`;
@@ -259,7 +259,7 @@ function renderRecords(ds, winLen) {
   help.className = 'rhelp';
   help.textContent =
     `این بازه‌ها به‌تازگی رکوردِ بیشینه‌شان شکسته — عددی بالاتر از هرچه قبلاً دیده شده. ` +
-    `آرام‌ترین‌ها اول آمده‌اند. طول بازه: ${winLabel(winLen)}.`;
+    `از جدیدترین (بالا) تا قدیمی‌ترین (پایین). طول بازه: ${winLabel(winLen)}.`;
   box.appendChild(help);
 
   // All records live inside a bounded, scrollable list so the panel never
