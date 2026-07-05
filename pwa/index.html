@@ -133,6 +133,7 @@
         <option value="avg_high">بیشترین میانگین</option>
         <option value="max_low">کم‌ترین بیشینه</option>
         <option value="max_high">بیشترین بیشینه</option>
+        <option value="exceed_low">کم‌ترین احتمالِ عبور از آستانه</option>
       </select>
     </div>
     <div class="ctrl">
@@ -142,6 +143,10 @@
     <div class="ctrl">
       <label>تعداد بازه در هر روز</label>
       <input type="number" id="topn" value="2" min="1" max="12">
+    </div>
+    <div class="ctrl">
+      <label>آستانهٔ تحمل (تناوب ≥)</label>
+      <input type="number" id="tol" value="6" min="1" max="25">
     </div>
     <div class="toggles">
       <label><input type="checkbox" id="nooverlap" checked> بدون هم‌پوشانی</label>
