@@ -5,6 +5,16 @@ let DATA = null;
 
 const $ = (id) => document.getElementById(id);
 
+const RECENT_DAYS = 30;  // a max change within this many days = "just broke"
+
+// Whole days between a "YYYY-MM-DD" date and today (>=0 for past dates).
+function daysSince(s) {
+  if (!s) return Infinity;
+  const [y, mo, da] = s.split('-').map(Number);
+  const then = Date.UTC(y, mo - 1, da);
+  return Math.floor((Date.now() - then) / 86400000);
+}
+
 function fmtTime(min) {
   const h = Math.floor(min / 60), m = min % 60;
   return String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0');
@@ -157,9 +167,12 @@ function render() {
       const div = document.createElement('div');
       div.className = 'win';
       const star = i === 0 ? ' <span class="star">★</span>' : '';
-      const recMark = w.rec ? ' <span class="recbadge">🔺</span>' : '';
-      const recRow = w.rec
-        ? `<div class="row"><span>🔺 رکورد اخیر</span><b>بیشینه از ${w.rec.f} به ${w.rec.t} (${w.rec.w})</b></div>`
+      const recentRec = w.rec && daysSince(w.rec.w) <= RECENT_DAYS;
+      const recMark = recentRec ? ' <span class="recbadge">🔺</span>' : '';
+      // Full-year instability: how many times this window's max crept up, and
+      // when it last did — a low-max window that keeps rising is fragile.
+      const recRow = w.recn
+        ? `<div class="row"><span>تغییرِ بیشینه (سال)</span><b${recentRec ? ' class="recbadge"' : ''}>${w.recn} بار • تا ${w.rec.t} • آخرین ${w.rec.w}</b></div>`
         : '';
       div.innerHTML =
         `<span class="badge">${i + 1}</span>` +
@@ -241,8 +254,31 @@ function distBars(hist, unit) {
   return wrap;
 }
 
-// User toggle for the records panel: collapse overlapping record-breakers.
+// A small labelled <select> built from [[value, label], ...] pairs.
+function buildSelect(opts, current, onChange) {
+  const sel = document.createElement('select');
+  for (const [v, label] of opts) {
+    const o = document.createElement('option');
+    o.value = String(v);
+    o.textContent = label;
+    if (String(v) === String(current)) o.selected = true;
+    sel.appendChild(o);
+  }
+  sel.addEventListener('change', () => onChange(sel.value));
+  return sel;
+}
+function labelWrap(text, el) {
+  const w = document.createElement('label');
+  w.className = 'recsel';
+  w.appendChild(document.createTextNode(text + ' '));
+  w.appendChild(el);
+  return w;
+}
+
+// Records panel state: overlap collapse, how far back to look, and sort order.
 let recNoOverlap = false;
+let recWindowDays = 30;   // default: last month; user can widen to a full year
+let recSort = 'new';      // 'new' = latest change first; 'unstable' = most changes
 
 // List every window (for the current coin/exchange/timeframe + this rolling
 // window length) whose all-time maximum was beaten recently — the silent upward
@@ -254,13 +290,15 @@ function renderRecords(ds, winLen) {
   box.style.display = 'none';
   const per = ds.rolling && ds.rolling[String(winLen)];
   if (!per) return;
-  const recs = [];
+  const all = [];
   for (const wd of DATA.order) {
     for (const w of (per[String(wd)] || [])) {
-      if (w.rec) recs.push({ wd, w });
+      if (w.rec) all.push({ wd, w });
     }
   }
-  if (!recs.length) return;
+  if (!all.length) return;
+  // Full-year history is kept; show only changes within the chosen look-back.
+  const recs = all.filter((r) => daysSince(r.w.rec.w) <= recWindowDays);
 
   // Per-weekday rankings so we can tell WHERE this window sits among that day's
   // windows: rank 1 by "lowest max" = the calmest by peak, rank 1 by "lowest
@@ -302,19 +340,31 @@ function renderRecords(ds, winLen) {
     items = kept;
   }
 
-  // Newest record-break first (date descending), then calmest as a tie-breaker
-  // so same-day records read in a sensible order.
-  items.sort((a, b) =>
-    b.w.rec.w.localeCompare(a.w.rec.w) ||
-    (a.w.mx - b.w.mx) ||
-    (a.w.avg - b.w.avg));
+  // Sort: newest change first, or most-changed (most unstable) first.
+  if (recSort === 'unstable') {
+    items.sort((a, b) =>
+      (b.w.recn || 0) - (a.w.recn || 0) ||
+      b.w.rec.w.localeCompare(a.w.rec.w) || (a.w.mx - b.w.mx));
+  } else {
+    items.sort((a, b) =>
+      b.w.rec.w.localeCompare(a.w.rec.w) || (a.w.mx - b.w.mx) || (a.w.avg - b.w.avg));
+  }
 
   const head = document.createElement('h2');
-  head.textContent = `🔺 رکوردهای اخیر (${items.length.toLocaleString('fa')} مورد)`;
+  head.textContent = `🔺 تغییراتِ بیشینه (${items.length.toLocaleString('fa')} مورد)`;
   box.appendChild(head);
 
-  // Option to switch between overlapping (all) and non-overlapping (distinct
-  // events) — each render rebuilds it, so it reflects the persisted state.
+  // Controls: how far back to look, sort order, and overlap collapse.
+  const ctrls = document.createElement('div');
+  ctrls.className = 'recctrls';
+  ctrls.appendChild(labelWrap('بازه:', buildSelect(
+    [[30, '۱ ماه'], [90, '۳ ماه'], [180, '۶ ماه'], [365, '۱ سال'], [100000, 'همه']],
+    recWindowDays, (v) => { recWindowDays = parseInt(v, 10); renderRecords(ds, winLen); })));
+  ctrls.appendChild(labelWrap('مرتب‌سازی:', buildSelect(
+    [['new', 'جدیدترین'], ['unstable', 'بی‌ثبات‌ترین']],
+    recSort, (v) => { recSort = v; renderRecords(ds, winLen); })));
+  box.appendChild(ctrls);
+
   const tog = document.createElement('label');
   tog.className = 'rectoggle';
   const cb = document.createElement('input');
@@ -331,9 +381,18 @@ function renderRecords(ds, winLen) {
   const help = document.createElement('div');
   help.className = 'rhelp';
   help.textContent =
-    `این بازه‌ها به‌تازگی رکوردِ بیشینه‌شان شکسته — عددی بالاتر از هرچه قبلاً دیده شده. ` +
-    `از جدیدترین (بالا) تا قدیمی‌ترین (پایین). طول بازه: ${winLabel(winLen)}.`;
+    `بازه‌هایی که بیشینه‌شان بالا رفته (عددی بالاتر از هرچه قبلاً). «تعداد تغییر» = چند بار در ` +
+    `طول سال بیشینه بالا رفته — عددِ بالا یعنی بی‌ثبات و مستعدِ جهش. طولِ بازه: ${winLabel(winLen)}.`;
   box.appendChild(help);
+
+  if (!items.length) {
+    const none = document.createElement('div');
+    none.className = 'rhelp';
+    none.textContent = 'در این بازهٔ زمانی تغییرِ بیشینه‌ای نبوده — بازه را بزرگ‌تر کن.';
+    box.appendChild(none);
+    box.style.display = '';
+    return;
+  }
 
   // All records live inside a bounded, scrollable list so the panel never
   // takes over the page no matter how many there are.
@@ -348,7 +407,8 @@ function renderRecords(ds, winLen) {
     card.className = 'reccard';
     card.innerHTML =
       `<div class="rt">🔺 ${day} ${w.label}</div>` +
-      `<div class="row"><span>رکورد</span><b class="hot">بیشینه از ${w.rec.f} به ${w.rec.t} • ${w.rec.w}</b></div>` +
+      `<div class="row"><span>آخرین تغییر</span><b class="hot">بیشینه از ${w.rec.f} به ${w.rec.t} • ${w.rec.w}</b></div>` +
+      `<div class="row"><span>تعداد تغییرِ بیشینه (سال)</span><b class="hot">${w.recn} بار</b></div>` +
       `<div class="row"><span>میانگین تناوب</span><b>${w.avg.toFixed(2)}</b></div>` +
       `<div class="row"><span>بیشینه</span><b>${w.mx} (${w.mxc} بار)</b></div>` +
       `<div class="row"><span>احتمال بالای میانگین</span><b>${w.ap}%</b></div>` +
