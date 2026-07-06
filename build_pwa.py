@@ -66,31 +66,33 @@ CONFIGS = [
 # skipped on the 1-hour timeframe, 30m only applies to 5m/15m, etc.).
 WIN_LENGTHS = [30, 60, 90, 120, 180, 240, 300, 360, 480, 600]
 RECENT_K = 6  # how many most-recent occurrences of each window to keep
-RECORD_RECENT = 4  # flag a window if its all-time max was beaten within the
-#                    last this-many occurrences (~weeks) -> "record just broke"
-
-
-def recent_record(pairs, tz):
+def record_history(pairs, tz):
     """
-    If the window's all-time maximum alternation was beaten *recently* (within
-    the last RECORD_RECENT occurrences), return {"w": date, "f": old_max,
-    "t": new_max}; otherwise None. `pairs` is the chronological (time, flips)
-    list. A "record break" is an occurrence strictly higher than every earlier
-    one — this is exactly the silent upward correction the user wants flagged.
+    Full-history record analysis for one window over the WHOLE analysed period.
+
+    Returns (recn, last) where:
+      * recn = how many times the window's running all-time maximum was beaten
+        (its "instability" — how often the calm-looking max crept up), and
+      * last = {"w": date, "f": old_max, "t": new_max} for the MOST RECENT such
+        break (i.e. when the current max was set), or None if it never rose.
+
+    A "record break" is an occurrence strictly higher than every earlier one.
+    The app decides what counts as "recent" from the date, so history is kept for
+    the full year, not just the last few weeks.
     """
     best = None
-    brk = None          # (time, old_best, new_value)
-    brk_idx = None
-    for i, (t, f) in enumerate(pairs):
+    last = None          # (time, old_best, new_value)
+    count = 0
+    for t, f in pairs:
         if best is not None and f > best:
-            brk = (t, best, f)
-            brk_idx = i
+            last = (t, best, f)
+            count += 1
         best = f if best is None else max(best, f)
-    if brk is None or brk_idx < len(pairs) - RECORD_RECENT:
-        return None  # never beaten, or the last break is too old to be "recent"
-    t, old, new = brk
-    return {"w": datetime.fromtimestamp(t, tz=tz).strftime("%Y-%m-%d"),
-            "f": old, "t": new}
+    if last is None:
+        return 0, None
+    t, old, new = last
+    return count, {"w": datetime.fromtimestamp(t, tz=tz).strftime("%Y-%m-%d"),
+                   "f": old, "t": new}
 
 
 def pack(stats):
@@ -212,9 +214,10 @@ def build_dataset(tz, source, interval, granularity, product, ex_label, tf_label
                 rd = datetime.fromtimestamp(recent[-1][0], tz=tz).strftime("%Y-%m-%d")
                 entry = {"start": h * 60 + m, "label": A.window_label(h, m, wm),
                          **pack(A.summarize_hour(flips)), "rc": rc, "rd": rd}
-                rec = recent_record(pairs, tz)
+                recn, rec = record_history(pairs, tz)
                 if rec:
-                    entry["rec"] = rec  # all-time max was beaten recently
+                    entry["rec"] = rec    # most recent time the max was beaten
+                    entry["recn"] = recn  # how many times it rose over the year
                 r.append(entry)
             r.sort(key=lambda x: x["start"])
             per_wd[str(wd)] = r
