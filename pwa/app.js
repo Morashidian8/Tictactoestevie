@@ -116,6 +116,7 @@ function render() {
   $('winlen').disabled = mode !== 'rolling';
 
   renderRecords(ds, winLen);
+  renderPriorityRisk(ds, winLen);
 
   const m = ds.meta;
   $('meta').innerHTML =
@@ -418,6 +419,78 @@ function renderRecords(ds, winLen) {
     list.appendChild(card);
   });
   box.appendChild(list);
+  box.style.display = '';
+}
+
+// For each PRIORITY (rank by lowest max; 1 = calmest), how often did the window
+// sitting in that slot have its ceiling (max) raised over the year — averaged
+// across the 7 weekdays. A low average means that priority is historically
+// stable, so you can pick a calm window without getting trapped by a jump.
+function renderPriorityRisk(ds, winLen) {
+  const box = $('prisk');
+  box.innerHTML = '';
+  box.style.display = 'none';
+  const per = ds.rolling && ds.rolling[String(winLen)];
+  if (!per) return;
+  const agg = [];  // agg[k] = { n, recn, rises, recent }
+  for (const wd of DATA.order) {
+    const list = (per[String(wd)] || []).slice()
+      .sort((a, b) => a.mx - b.mx || a.avg - b.avg || a.start - b.start);
+    list.forEach((w, k) => {
+      const a = agg[k] || (agg[k] = { n: 0, recn: 0, rises: 0, recent: 0 });
+      a.n++;
+      a.recn += (w.recn || 0);
+      if (w.recn) a.rises++;
+      if (w.rec && daysSince(w.rec.w) <= RECENT_DAYS) a.recent++;
+    });
+  }
+  if (!agg.length) return;
+  const rows = agg.map((a, k) => ({
+    rank: k + 1,
+    avg: a.recn / a.n,
+    risePct: Math.round((100 * a.rises) / a.n),
+    recentPct: Math.round((100 * a.recent) / a.n),
+  }));
+  const pool = rows.slice(0, Math.min(60, rows.length));
+  const safest = pool.slice().sort((x, y) => x.avg - y.avg).slice(0, 3);
+  const riskiest = pool.slice().sort((x, y) => y.avg - x.avg).slice(0, 3);
+
+  const head = document.createElement('h2');
+  head.textContent = '🎲 ریسکِ اولویت‌ها (تغییرِ بیشینه)';
+  box.appendChild(head);
+  const help = document.createElement('div');
+  help.className = 'rhelp';
+  help.textContent =
+    'برای هر اولویت (رتبهٔ کم‌ترین بیشینه؛ ۱ = آرام‌ترین)، میانگینِ دفعاتی که سقفش در طول سال ' +
+    'بالا رفته و درصدِ روزهایی که تغییر کرده. عددِ کوچک‌تر = اولویتِ باثبات‌تر و کم‌ریسک‌تر.';
+  box.appendChild(help);
+  const co = document.createElement('div');
+  co.className = 'rhelp';
+  co.innerHTML =
+    'کم‌ریسک‌ترین (بین اولویت ۱ تا ۶۰): <b>' +
+    safest.map((r) => `#${r.rank} (${r.avg.toFixed(1)})`).join('، ') +
+    '</b> · پرریسک‌ترین: <b>' +
+    riskiest.map((r) => `#${r.rank} (${r.avg.toFixed(1)})`).join('، ') + '</b>';
+  box.appendChild(co);
+
+  const wrap = document.createElement('div');
+  wrap.className = 'reclist';
+  const tbl = document.createElement('table');
+  tbl.className = 'pritbl';
+  tbl.innerHTML =
+    '<thead><tr><th>اولویت</th><th>میانگین تغییرِ بیشینه</th>' +
+    '<th>٪ روزها تغییر کرده</th><th>٪ تغییرِ اخیر</th></tr></thead>';
+  const tb = document.createElement('tbody');
+  for (const r of rows) {
+    const tr = document.createElement('tr');
+    tr.innerHTML =
+      `<td>${r.rank}</td><td>${r.avg.toFixed(2)}</td>` +
+      `<td>${r.risePct}%</td><td>${r.recentPct}%</td>`;
+    tb.appendChild(tr);
+  }
+  tbl.appendChild(tb);
+  wrap.appendChild(tbl);
+  box.appendChild(wrap);
   box.style.display = '';
 }
 

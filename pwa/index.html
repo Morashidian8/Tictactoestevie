@@ -81,6 +81,15 @@
     .records .reccard .row b { color:#0b3d66; }
     .records .reccard .row b.hot { color:#c0392b; }
     .records .more { font-size:12px; color:#8a5a55; margin-top:8px; }
+    .prisk { background:#f2f7fb; border-color:#cdddea; }
+    .prisk h2 { color:#0b3d66; }
+    .prisk .rhelp { color:#5b6d80; }
+    .prisk .pritbl { width:100%; border-collapse:collapse; font-size:13px;
+                     font-variant-numeric:tabular-nums; }
+    .prisk .pritbl th { position:sticky; top:0; background:#e8eff6; color:#3a5169;
+                        font-weight:700; padding:8px 6px; text-align:center;
+                        border-bottom:1px solid #cdddea; font-size:12px; }
+    .prisk .pritbl td { padding:6px; text-align:center; border-bottom:1px solid #e3ecf3; }
   </style>
 </head>
 <body>
@@ -160,6 +169,7 @@
   </div>
 
   <section class="records" id="records" style="display:none"></section>
+  <section class="records prisk" id="prisk" style="display:none"></section>
 
   <main id="out"></main>
 
