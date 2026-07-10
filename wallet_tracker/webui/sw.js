@@ -1,5 +1,7 @@
-// Minimal service worker: cache the app shell, never cache live API responses.
-const CACHE = "polywallet-v5";
+// Service worker: NETWORK-FIRST for the app shell so code updates reach the
+// user on the very next load (cache-first kept serving stale engine code and
+// produced wrong PnL after fixes shipped). Cache is only an offline fallback.
+const CACHE = "polywallet-v6";
 const SHELL = [
   "./",
   "index.html",
@@ -24,9 +26,18 @@ self.addEventListener("activate", (e) => {
 
 self.addEventListener("fetch", (e) => {
   const url = new URL(e.request.url);
-  // Report data must always be fresh — go straight to the network.
-  if (url.pathname.includes("/api/")) return;
+  // Only same-origin GETs (the shell). Polymarket/RPC calls pass through
+  // untouched so live data is never cached.
+  if (e.request.method !== "GET" || url.origin !== self.location.origin) return;
   e.respondWith(
-    caches.match(e.request).then((hit) => hit || fetch(e.request))
+    fetch(e.request)
+      .then((res) => {
+        if (res.ok) {
+          const copy = res.clone();
+          caches.open(CACHE).then((c) => c.put(e.request, copy)).catch(() => {});
+        }
+        return res;
+      })
+      .catch(() => caches.match(e.request))
   );
 });
