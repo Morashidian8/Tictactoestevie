@@ -84,6 +84,53 @@ function syncWinlen(ds) {
   }
 }
 
+// Weekdays currently in scope: all, or just the one picked in the day selector.
+function selectedDays() {
+  const v = $('weekday').value;
+  return v === 'all' ? DATA.order : [parseInt(v, 10)];
+}
+
+// Historical rate at which a window set a NEW all-time high = an estimate of the
+// chance the next occurrence beats its current max. recn/n over the year.
+function newHighPct(w) {
+  return (w.recn && w.n) ? Math.round((100 * w.recn) / w.n) : 0;
+}
+
+// One window's full stat card — shared by the day cards and the custom-hour
+// lookup so both show exactly the same information. `full` is the window's
+// sibling list (that weekday's windows) used to compute its rank.
+function buildWinCard(w, wd, full, tol, index, showHist) {
+  const total = full.length;
+  const rankMx = full.slice().sort((a, b) => a.mx - b.mx || a.avg - b.avg || a.start - b.start)
+    .findIndex((x) => x.start === w.start) + 1;
+  const rankAvg = full.slice().sort((a, b) => a.avg - b.avg || a.mx - b.mx || a.start - b.start)
+    .findIndex((x) => x.start === w.start) + 1;
+  const div = document.createElement('div');
+  div.className = 'win';
+  const badge = index != null ? `<span class="badge">${index + 1}</span>` : '';
+  const star = index === 0 ? ' <span class="star">★</span>' : '';
+  const recentRec = w.rec && daysSince(w.rec.w) <= RECENT_DAYS;
+  const recMark = recentRec ? ' <span class="recbadge">🔺</span>' : '';
+  const recRow = w.recn
+    ? `<div class="row"><span>تغییرِ بیشینه (سال)</span><b${recentRec ? ' class="recbadge"' : ''}>${w.recn} بار • تا ${w.rec.t} • آخرین ${w.rec.w}</b></div>`
+    : '';
+  const ex = exceedInfo(w, tol);
+  div.innerHTML = badge +
+    `<div class="t">${w.label}${star}${recMark}</div>` +
+    `<div class="row"><span>تعداد نمونه</span><b>${w.n} بار</b></div>` +
+    `<div class="row"><span>میانگین تناوب</span><b>${w.avg.toFixed(2)}</b></div>` +
+    `<div class="row"><span>احتمال تناوب بالای میانگین</span><b>${w.ap}%</b></div>` +
+    `<div class="row"><span>بیشینه</span><b>${w.mx} (${w.mxc} بار)</b></div>` +
+    `<div class="row"><span>احتمال عبور از آستانهٔ ${tol}</span><b>${ex.pct}% (${ex.c} بار)</b></div>` +
+    `<div class="row"><span>احتمالِ بیشینهٔ جدید</span><b>${newHighPct(w)}%</b></div>` +
+    `<div class="row"><span>رتبهٔ کم‌ترین بیشینه</span><b>${rankMx || '—'} از ${total}</b></div>` +
+    `<div class="row"><span>رتبهٔ کم‌ترین میانگین</span><b>${rankAvg || '—'} از ${total}</b></div>` +
+    recRow;
+  if (showHist && w.hist) div.appendChild(histBars(w.hist));
+  if (w.rc && w.rc.length) div.appendChild(recentToggle(w, wd));
+  return div;
+}
+
 function render() {
   if (!DATA) return;
   const coin = $('coin').value || 'btc';
@@ -117,6 +164,7 @@ function render() {
 
   renderRecords(ds, winLen);
   renderPriorityRisk(ds, winLen);
+  renderCustom(ds, winLen, tol);
 
   const m = ds.meta;
   $('meta').innerHTML =
@@ -140,16 +188,6 @@ function render() {
     const full = source || [];
     let list = full.slice();
     if (!list.length) continue;
-    // Rank of each window among ALL of this weekday's windows (independent of
-    // the no-overlap display filter) by lowest max and by lowest average, so a
-    // window shown in no-overlap mode still reveals its true "X of N" standing.
-    const total = full.length;
-    const rankMx = new Map(full.slice()
-      .sort((a, b) => a.mx - b.mx || a.avg - b.avg || a.start - b.start)
-      .map((w, i) => [w.start, i + 1]));
-    const rankAvg = new Map(full.slice()
-      .sort((a, b) => a.avg - b.avg || a.mx - b.mx || a.start - b.start)
-      .map((w, i) => [w.start, i + 1]));
     const keyf = byExceed ? (x) => exceedInfo(x, tol).pct
       : byMax ? (x) => x.mx : (x) => x.avg;               // primary metric
     const tief = byExceed ? (x) => x.avg
@@ -163,33 +201,7 @@ function render() {
     const card = document.createElement('div');
     card.className = 'day';
     card.innerHTML = `<h2>${DATA.names[String(wd)]}</h2>`;
-
-    chosen.forEach((w, i) => {
-      const div = document.createElement('div');
-      div.className = 'win';
-      const star = i === 0 ? ' <span class="star">★</span>' : '';
-      const recentRec = w.rec && daysSince(w.rec.w) <= RECENT_DAYS;
-      const recMark = recentRec ? ' <span class="recbadge">🔺</span>' : '';
-      // Full-year instability: how many times this window's max crept up, and
-      // when it last did — a low-max window that keeps rising is fragile.
-      const recRow = w.recn
-        ? `<div class="row"><span>تغییرِ بیشینه (سال)</span><b${recentRec ? ' class="recbadge"' : ''}>${w.recn} بار • تا ${w.rec.t} • آخرین ${w.rec.w}</b></div>`
-        : '';
-      div.innerHTML =
-        `<span class="badge">${i + 1}</span>` +
-        `<div class="t">${w.label}${star}${recMark}</div>` +
-        `<div class="row"><span>تعداد نمونه</span><b>${w.n} بار</b></div>` +
-        `<div class="row"><span>میانگین تناوب</span><b>${w.avg.toFixed(2)}</b></div>` +
-        `<div class="row"><span>احتمال تناوب بالای میانگین</span><b>${w.ap}%</b></div>` +
-        `<div class="row"><span>بیشینه</span><b>${w.mx} (${w.mxc} بار)</b></div>` +
-        `<div class="row"><span>احتمال عبور از آستانهٔ ${tol}</span><b>${exceedInfo(w, tol).pct}% (${exceedInfo(w, tol).c} بار)</b></div>` +
-        `<div class="row"><span>رتبهٔ کم‌ترین بیشینه</span><b>${rankMx.get(w.start)} از ${total}</b></div>` +
-        `<div class="row"><span>رتبهٔ کم‌ترین میانگین</span><b>${rankAvg.get(w.start)} از ${total}</b></div>` +
-        recRow;
-      if (showHist) div.appendChild(histBars(w.hist));
-      if (w.rc && w.rc.length) div.appendChild(recentToggle(w, wd));
-      card.appendChild(div);
-    });
+    chosen.forEach((w, i) => card.appendChild(buildWinCard(w, wd, full, tol, i, showHist)));
     out.appendChild(card);
   }
   renderGap();
@@ -292,12 +304,12 @@ function renderRecords(ds, winLen) {
   const per = ds.rolling && ds.rolling[String(winLen)];
   if (!per) return;
   const all = [];
-  for (const wd of DATA.order) {
+  for (const wd of selectedDays()) {
     for (const w of (per[String(wd)] || [])) {
       if (w.rec) all.push({ wd, w });
     }
   }
-  if (!all.length) return;
+  if (!all.length) { box.style.display = 'none'; return; }
   // Full-year history is kept; show only changes within the chosen look-back.
   const recs = all.filter((r) => daysSince(r.w.rec.w) <= recWindowDays);
 
@@ -351,8 +363,9 @@ function renderRecords(ds, winLen) {
       b.w.rec.w.localeCompare(a.w.rec.w) || (a.w.mx - b.w.mx) || (a.w.avg - b.w.avg));
   }
 
+  const scope = $('weekday').value === 'all' ? '' : ' — ' + DATA.names[$('weekday').value];
   const head = document.createElement('h2');
-  head.textContent = `🔺 تغییراتِ بیشینه (${items.length.toLocaleString('fa')} مورد)`;
+  head.textContent = `🔺 تغییراتِ بیشینه${scope} (${items.length.toLocaleString('fa')} مورد)`;
   box.appendChild(head);
 
   // Controls: how far back to look, sort order, and overlap collapse.
@@ -433,7 +446,7 @@ function renderPriorityRisk(ds, winLen) {
   const per = ds.rolling && ds.rolling[String(winLen)];
   if (!per) return;
   const agg = [];  // agg[k] = { n, recn, rises, recent }
-  for (const wd of DATA.order) {
+  for (const wd of selectedDays()) {
     const list = (per[String(wd)] || []).slice()
       .sort((a, b) => a.mx - b.mx || a.avg - b.avg || a.start - b.start);
     list.forEach((w, k) => {
@@ -455,8 +468,9 @@ function renderPriorityRisk(ds, winLen) {
   const safest = pool.slice().sort((x, y) => x.avg - y.avg).slice(0, 3);
   const riskiest = pool.slice().sort((x, y) => y.avg - x.avg).slice(0, 3);
 
+  const scope = $('weekday').value === 'all' ? ' (میانگینِ هفته)' : ' — ' + DATA.names[$('weekday').value];
   const head = document.createElement('h2');
-  head.textContent = '🎲 ریسکِ اولویت‌ها (تغییرِ بیشینه)';
+  head.textContent = '🎲 ریسکِ اولویت‌ها' + scope;
   box.appendChild(head);
   const help = document.createElement('div');
   help.className = 'rhelp';
@@ -492,6 +506,59 @@ function renderPriorityRisk(ds, winLen) {
   wrap.appendChild(tbl);
   box.appendChild(wrap);
   box.style.display = '';
+}
+
+function showCustomMsg(box, msg) {
+  box.innerHTML = `<div class="rhelp">${msg}</div>`;
+  box.style.display = '';
+}
+
+// Look up a user-typed start time and show that window's full stat card for the
+// selected weekday(s) — the same information the day cards give, on demand.
+function renderCustom(ds, winLen, tol) {
+  const box = $('custom');
+  box.innerHTML = '';
+  box.style.display = 'none';
+  const raw = ($('customhour').value || '').trim();
+  if (!raw) return;
+  const m = raw.match(/^(\d{1,2})(?:[:.،]?(\d{2}))?$/);
+  if (!m) { showCustomMsg(box, 'ساعت را مثل 14:30 وارد کن.'); return; }
+  const hh = parseInt(m[1], 10);
+  const mm = m[2] ? parseInt(m[2], 10) : 0;
+  if (hh > 23 || mm > 59) { showCustomMsg(box, 'ساعتِ نامعتبر.'); return; }
+  const target = hh * 60 + mm;
+  const per = ds.rolling && ds.rolling[String(winLen)];
+  if (!per) { showCustomMsg(box, 'برای این تایم‌فریم بازهٔ لغزان موجود نیست.'); return; }
+  const showHist = $('hist').checked;
+
+  const head = document.createElement('h2');
+  head.textContent = `🔎 بازهٔ دلخواه — شروع ${fmtTime(target)}`;
+  box.appendChild(head);
+  const help = document.createElement('div');
+  help.className = 'rhelp';
+  help.textContent = `آمارِ کاملِ بازه‌ای که در این ساعت شروع می‌شود (طول: ${winLabel(winLen)}).`;
+  box.appendChild(help);
+
+  let any = false;
+  for (const wd of selectedDays()) {
+    const listw = per[String(wd)] || [];
+    if (!listw.length) continue;
+    let best = null, bd = Infinity;
+    for (const w of listw) {
+      let d = Math.abs(w.start - target);
+      d = Math.min(d, DAY_MINUTES - d);
+      if (d < bd) { bd = d; best = w; }
+    }
+    if (!best) continue;
+    any = true;
+    const card = document.createElement('div');
+    card.className = 'day';
+    const near = bd > 0 ? ' <span style="font-size:12px;color:#8a5a55">(نزدیک‌ترین)</span>' : '';
+    card.innerHTML = `<h2>${DATA.names[String(wd)]}${near}</h2>`;
+    card.appendChild(buildWinCard(best, wd, listw, tol, null, showHist));
+    box.appendChild(card);
+  }
+  if (any) box.style.display = '';
 }
 
 function renderGap() {
@@ -596,7 +663,7 @@ async function init() {
   }
   fillCoins();
   fillWeekdays();
-  ['coin', 'exchange', 'tf', 'window', 'winlen', 'order', 'weekday', 'topn', 'tol', 'nooverlap', 'hist']
+  ['coin', 'exchange', 'tf', 'window', 'winlen', 'order', 'weekday', 'topn', 'tol', 'customhour', 'nooverlap', 'hist']
     .forEach((id) => $(id).addEventListener('input', render));
   $('gapN').addEventListener('input', renderGap);
   render();
