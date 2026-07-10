@@ -81,6 +81,9 @@
     .records .reccard .row b { color:#0b3d66; }
     .records .reccard .row b.hot { color:#c0392b; }
     .records .more { font-size:12px; color:#8a5a55; margin-top:8px; }
+    .custom { background:#f1faf5; border-color:#c6e6d5; }
+    .custom h2 { color:#0e7a4f; }
+    .custom .day { margin:10px 0 0; }
     .prisk { background:#f2f7fb; border-color:#cdddea; }
     .prisk h2 { color:#0b3d66; }
     .prisk .rhelp { color:#5b6d80; }
@@ -162,12 +165,17 @@
       <label>آستانهٔ تحمل (تناوب ≥)</label>
       <input type="number" id="tol" value="6" min="1" max="25">
     </div>
+    <div class="ctrl">
+      <label>ساعتِ دلخواه (HH:MM)</label>
+      <input type="text" id="customhour" placeholder="مثلاً ۱۴:۳۰" inputmode="numeric">
+    </div>
     <div class="toggles">
       <label><input type="checkbox" id="nooverlap" checked> بدون هم‌پوشانی</label>
       <label><input type="checkbox" id="hist" checked> نمایش نمودار توزیع</label>
     </div>
   </div>
 
+  <section class="records custom" id="custom" style="display:none"></section>
   <section class="records" id="records" style="display:none"></section>
   <section class="records prisk" id="prisk" style="display:none"></section>
 
