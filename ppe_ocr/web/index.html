@@ -110,56 +110,60 @@ const HEADERS = ["نام","نام خانوادگی","کد پرسنلی","کد م
 
 const PROMPT_V = `این تصویر یک «حواله صدور کالا / MATERIAL ISSUE VOUCHER» شرکت گاز است. تمام اطلاعات را دقیق استخراج کن:
 - شماره حواله: عدد چاپی کنار «جمع مقادیر/TOTAL QTY» یا بالای برگه.
-- اقلام: هر قلم یک MESC NO، یک شرح (DESCRIPTION مثل کلاه ایمنی)، واحد (NO/PR) و REQ.QTY دارد.
+- اقلام: هر قلم یک MESC NO، یک شرح (DESCRIPTION مثل کلاه ایمنی)، واحد (NO/PR) و REQ.QTY (مقدار کل) دارد. اگر یک کالا با چند سایز آمده (مثل شلوار کار)، آن را یک قلمِ واحد بده که item_name فقط نام پایه است و ریزِ سایز/تعدادِ هر سایز را در sizes بگذار؛ آن را به چند قلمِ جدا نشکن.
 - افراد: در قسمت DESCRIPTION دست‌نویس، هر نفر با یک شماره ردیف (۱- ۲- ۳- …) مشخص است و نام، نام خانوادگی و یک کد دارد. نام و نام خانوادگی ممکن است به خط بعد بشکند؛ حتماً نام خانوادگیِ کاملِ هر نفر را بیاور و آن را با کد و شماره ردیفِ درست همان نفر تطبیق بده. هیچ نفری را جا نینداز. تقریباً هر نفر یک کد جلوی نامش دارد؛ کد را با دقت بخوان و تا جای ممکن خالی نگذار. کد ۵ تا ۷ رقمی=کد پرسنلی؛ ۱۰ رقمی=کد ملی. اگر جلوی اسم شغل نوشته شده (امداد/تعمیرات/تکنسین) در job_title بگذار.
 - req_qty همان REQ.QTY است و «مقدار کل برای همه‌ی نفرات» است (نه سهم هر نفر). همان عدد کل را بده.
 - واحد متقاضی/شرح کار = منطقه (requesting_unit).
 - اگر جمله «پرسنل رسمی» یا «پیمانکاری» دیدی، personnel_type را تعیین کن.
-- تاریخ تحویل (delivery_date): پایینِ برگه، در ردیفِ امضاها، چند کادرِ «تاریخ:» هست. تاریخِ دست‌نویسی که پُر شده را بردار (مثل ۱۴۰۴/۶/۱ یا ۱۴۰۴/۰۶). فقط «ماه و سال» را بده؛ مثلاً «شهریور ۱۴۰۴» یا «۱۴۰۴/۰۶». اگر چند تاریخ بود، تاریخِ تحویل‌گیرنده/تهیه‌کننده را انتخاب کن. اعداد را خیلی دقیق نگاه کن حتی اگر کم‌رنگ باشند.
+- تاریخ تحویل: فقط تاریخِ دست‌نویس (با خودکار) را بردار؛ تاریخ‌های چاپی/تایپ‌شده را کاملاً نادیده بگیر. ماه و سال کافی است (مثل ۱۴۰۳/۰۲).
 ارقام را دقیق بخوان؛ ناخوانا=null (حدس نزن).`;
 const PROMPT_N = `این تصویر یک لیست اسامی پرسنل است. فقط افراد را استخراج کن: نام، نام خانوادگی، کد پرسنلی(۵-۷ رقم) یا کد ملی(۱۰ رقم)، و شغل اگر نوشته شده. اگر منطقه یا تاریخ روی برگه بود پر کن. items را خالی بگذار. ناخوانا=null.`;
 const JSON_TMPL = `\nخروجی را فقط یک شیء JSON با این ساختار بده (بدون توضیح):
-{"voucher_number":"یا null","requesting_unit":"یا null","delivery_date":"یا null","personnel_type":"official/contractor/null","company":"یا null","contract_number":"یا null","items":[{"mesc_code":"یا null","item_name":"یا null","unit":"یا null","req_qty":عدد یا null}],"personnel":[{"first_name":"یا null","last_name":"یا null","code":"یا null","job_title":"یا null","size":"یا null"}]}`;
+{"voucher_number":"یا null","requesting_unit":"یا null","delivery_date":"یا null","personnel_type":"official/contractor/null","company":"یا null","contract_number":"یا null","items":[{"mesc_code":"یا null","item_name":"نام پایه بدون سایز","unit":"یا null","req_qty":مقدار کل یا null,"sizes":[{"size":"یا null","count":عدد یا null}]}],"personnel":[{"first_name":"یا null","last_name":"یا null","code":"یا null","job_title":"یا null","size":"یا null"}]}`;
 
 // ---------------- منطق ----------------
 function toLatin(s){return (s==null?"":String(s)).replace(/[۰-۹٠-٩]/g,d=>"0123456789".charAt("۰۱۲۳۴۵۶۷۸۹".indexOf(d)>=0?"۰۱۲۳۴۵۶۷۸۹".indexOf(d):"٠١٢٣٤٥٦٧٨٩".indexOf(d)));}
 function digits(s){return toLatin(s).replace(/\D/g,"");}
 function inferGender(fn){const f=(fn||"").trim().split(/\s+/)[0]||"";if(FEMALE.has(f))return "زن";if(AMBIG.has(f))return "نامشخص(بررسی شود)";return "مرد";}
-function classifyCode(code){const d=digits(code);if(d.length===10)return[null,d,"پیمانکاری"];if(d.length>=5&&d.length<=7)return[d,null,"رسمی"];return[d||null,null,"رسمی"];}
+function classifyCode(code){const d=digits(code);if(d.length===10)return[null,d,"پیمانکاری"];if(d)return[d,null,"رسمی"];return[null,null,"رسمی"];}
 function mescLookup(c){return MESC[digits(c)]||{};}
 function itemName(it){const n=(it.item_name||"").trim();return n||(mescLookup(it.mesc_code).item||"");}
 function poolFor(name){for(const k in SIZE_POOLS){if(name.indexOf(k)>=0)return SIZE_POOLS[k];}return null;}
 function isSized(name,it){const info=it?mescLookup(it.mesc_code):{};if(info.sized)return true;return poolFor(name)!==null;}
 
+function sizeSequence(it){const seq=[];(it.sizes||[]).forEach(s=>{const sz=String(s.size||"").trim();let cnt=parseInt(s.count||0,10);if(!Number.isFinite(cnt))cnt=0;if(sz&&cnt>0)for(let i=0;i<cnt;i++)seq.push(sz);});return seq;}
+function personRow(p,nm,size,region,delivery,sherkat,peyman,vno){
+  let [C,D,contract]=classifyCode(p.code);
+  let job=(p.job_title||"").trim(); if(!job)job=(contract==="رسمی")?CONST.job:"";
+  return {"نام":(p.first_name||"").trim()||null,"نام خانوادگی":(p.last_name||"").trim()||null,
+    "کد پرسنلی":C,"کد ملی":D,"جنسیت":inferGender(p.first_name),"مدیریت":null,
+    "شهرستان/منطقه":region,"نوع قرارداد":contract,"شماره پیمان":peyman,"نام شرکت":sherkat,
+    "عنوان شغل":job||null,"شماره سند":null,"عنوان لوازم":nm||null,"سایز":size,"تعداد":1,
+    "تاریخ تحویل":delivery,"شماره حواله":vno};
+}
 function buildRows(v){
   const region=(v.requesting_unit||"").trim()||null;
   const delivery=(v.delivery_date||"").trim()||null;
-  const ptype=v.personnel_type;
   const vno=digits(v.voucher_number)||null;
   const sherkat=(v.company||CONST.sherkat).trim();
   const peyman=(v.contract_number||CONST.peyman).trim();
   const people=v.personnel||[], items=v.items||[];
+  const n=people.length||1;
   const rows=[];
   items.forEach(it=>{
-    const nm=itemName(it), sized=isSized(nm,it);
-    // REQ.QTY روی حواله «مقدار کل» برای همه‌ی نفرات است؛ سهم هر نفر = کل ÷ تعداد نفرات
-    const n=people.length||1;
-    const qty=(it.req_qty!=null)?Math.max(1,Math.round(it.req_qty/n)):1;
-    const pool=poolFor(nm);
-    people.forEach((p,pIdx)=>{
-      let [C,D,contract]=classifyCode(p.code);
-      if(D===null&&ptype==="contractor")contract="پیمانکاری";
-      let job=(p.job_title||"").trim();
-      if(!job)job=(contract==="رسمی")?CONST.job:"";
+    const nm=itemName(it), sized=isSized(nm,it), pool=poolFor(nm);
+    const seq=sizeSequence(it);
+    let raw=parseInt(it.req_qty||0,10); if(!Number.isFinite(raw))raw=0;
+    // هر واحدِ کالا به یک نفر پخش می‌شود (نه هر قلم به همه)
+    let units=raw>0?raw:(seq.length||n); units=Math.max(units,seq.length);
+    for(let u=0;u<units;u++){
+      if(!people.length)break;
+      const pIdx=u%n, p=people[pIdx];
       let size=(p.size||"").trim()||null;
-      // سایزِ هر نفر ثابت است (بر اساس جایگاهِ همان نفر) تا همه‌ی البسه‌اش یک سایز شود
-      if(size===null&&sized&&pool){size=pool[pIdx%pool.length];}
-      rows.push({"نام":(p.first_name||"").trim()||null,"نام خانوادگی":(p.last_name||"").trim()||null,
-        "کد پرسنلی":C,"کد ملی":D,"جنسیت":inferGender(p.first_name),"مدیریت":null,
-        "شهرستان/منطقه":region,"نوع قرارداد":contract,"شماره پیمان":peyman,"نام شرکت":sherkat,
-        "عنوان شغل":job||null,"شماره سند":null,"عنوان لوازم":nm||null,"سایز":size,"تعداد":qty,
-        "تاریخ تحویل":delivery,"شماره حواله":vno});
-    });
+      if(size===null&&u<seq.length)size=seq[u];
+      if(size===null&&sized&&pool)size=pool[pIdx%pool.length];
+      rows.push(personRow(p,nm,size,region,delivery,sherkat,peyman,vno));
+    }
   });
   return rows;
 }

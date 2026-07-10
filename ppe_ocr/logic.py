@@ -45,11 +45,10 @@ def classify_code(code: str) -> tuple[str | None, str | None, str]:
     """
     d = _digits(code)
     if len(d) == 10:
-        return None, d, "پیمانکاری"
-    if 5 <= len(d) <= 7:
-        return d, None, "رسمی"
-    # نامشخص: در کد پرسنلی می‌گذاریم و رسمی فرض می‌کنیم
-    return d or None, None, "رسمی"
+        return None, d, "پیمانکاری"          # کد ملی ۱۰ رقمی
+    if d:
+        return d, None, "رسمی"               # هر کدِ کمتر از ۱۰ رقم = کد پرسنلی = رسمی
+    return None, None, "رسمی"
 
 
 def _mesc_lookup(mesc_code: str) -> dict:
@@ -83,63 +82,78 @@ def _pool_for(item_name: str):
 
 # ---------- ساخت ردیف‌ها ----------
 
+def _size_sequence(item: dict) -> list[str]:
+    """از ریزِ سایز/تعدادِ یک قلم (sizes) یک دنباله‌ی سایز می‌سازد؛ مثلا 6تا۳۶ + 3تا۴۰ → [۳۶×۶, ۴۰×۳]."""
+    seq: list[str] = []
+    for s in item.get("sizes") or []:
+        sz = str(s.get("size") or "").strip()
+        try:
+            cnt = int(s.get("count") or 0)
+        except (TypeError, ValueError):
+            cnt = 0
+        if sz and cnt > 0:
+            seq.extend([sz] * cnt)
+    return seq
+
+
+def _person_row(person, item_name, size, region, delivery, sherkat, peyman, voucher_no, c):
+    C, D, contract = classify_code(person.get("code"))
+    job = (person.get("job_title") or "").strip()
+    if not job:
+        job = c["shoghl_official_default"] if contract == "رسمی" else ""
+    return {
+        "نام": (person.get("first_name") or "").strip() or None,
+        "نام خانوادگی": (person.get("last_name") or "").strip() or None,
+        "کد پرسنلی": C, "کد ملی": D,
+        "جنسیت": infer_gender(person.get("first_name", "")),
+        "مدیریت": None, "شهرستان/منطقه": region,
+        "نوع قرارداد": contract, "شماره پیمان": peyman, "نام شرکت": sherkat,
+        "عنوان شغل": job or None, "شماره سند": None,
+        "عنوان لوازم": item_name or None, "سایز": size,
+        "تعداد": 1, "تاریخ تحویل": delivery, "شماره حواله": voucher_no,
+    }
+
+
 def build_rows(voucher: dict) -> list[dict]:
-    """یک حواله را به ردیف‌های اکسل تبدیل می‌کند (هر نفر × هر قلم = یک ردیف)."""
+    """هر قلم را بین نفرات پخش می‌کند: هر واحدِ کالا به یک نفر (نه هر قلم به همه)."""
     c = config.constants()
     region = (voucher.get("requesting_unit") or "").strip() or None
     delivery = (voucher.get("delivery_date") or "").strip() or None
-    ptype = voucher.get("personnel_type")  # official | contractor | None
     voucher_no = _digits(voucher.get("voucher_number", "")) or None
     sherkat = (voucher.get("company") or c["sherkat_default"]).strip()
     peyman = (voucher.get("contract_number") or c["peyman_default"]).strip()
 
     people = voucher.get("personnel", []) or []
     items = voucher.get("items", []) or []
+    n = len(people) or 1
 
     rows: list[dict] = []
-    n_people = len(people) or 1
     for item in items:
         item_name = resolve_item_name(item)
-        # REQ.QTY روی حواله «مقدار کل» برای همه‌ی نفرات است؛ سهم هر نفر = کل ÷ تعداد نفرات
-        raw_qty = item.get("req_qty")
-        qty = max(1, round(raw_qty / n_people)) if raw_qty else 1
+        size_seq = _size_sequence(item)
+        try:
+            raw_qty = int(item.get("req_qty") or 0)
+        except (TypeError, ValueError):
+            raw_qty = 0
+        # تعداد واحدهایی که باید پخش شوند
+        units = raw_qty if raw_qty > 0 else (len(size_seq) if size_seq else n)
+        units = max(units, len(size_seq))
         sized = is_sized(item_name, item)
         pool = _pool_for(item_name)
-        for idx, person in enumerate(people):
-            code_field = person.get("code", "")
-            C, D, contract = classify_code(code_field)
-            # جمله‌ی «پرسنل رسمی/پیمانکاری» روی حواله می‌تواند نوع قرارداد را تأیید کند
-            if D is None and ptype == "contractor":
-                contract = "پیمانکاری"
-            # عنوان شغل: اگر جلوی اسم نوشته شده از آن، وگرنه از نوع پرسنل
-            job = (person.get("job_title") or "").strip()
-            if not job:
-                job = c["shoghl_official_default"] if contract == "رسمی" else ""
 
-            # سایزِ هر نفر ثابت است (بر اساس جایگاهِ همان نفر) تا همه‌ی البسه‌اش یک سایز شود
+        for u in range(units):
+            if not people:
+                break
+            pidx = u % n
+            person = people[pidx]
+            # سایز: اول از ریزِ سایزِ قلم، بعد سایزِ خودِ نفر، بعد رندومِ ثابتِ نفر
             size = (person.get("size") or "").strip() or None
+            if size is None and u < len(size_seq):
+                size = size_seq[u]
             if size is None and sized and pool:
-                size = pool[idx % len(pool)]
-
-            rows.append({
-                "نام": (person.get("first_name") or "").strip() or None,
-                "نام خانوادگی": (person.get("last_name") or "").strip() or None,
-                "کد پرسنلی": C,
-                "کد ملی": D,
-                "جنسیت": infer_gender(person.get("first_name", "")),
-                "مدیریت": None,
-                "شهرستان/منطقه": region,
-                "نوع قرارداد": contract,
-                "شماره پیمان": peyman,
-                "نام شرکت": sherkat,
-                "عنوان شغل": job or None,
-                "شماره سند": None,
-                "عنوان لوازم": item_name or None,
-                "سایز": size,
-                "تعداد": qty,
-                "تاریخ تحویل": delivery,
-                "شماره حواله": voucher_no,
-            })
+                size = pool[pidx % len(pool)]
+            rows.append(_person_row(person, item_name, size, region, delivery,
+                                    sherkat, peyman, voucher_no, c))
     return rows
 
 

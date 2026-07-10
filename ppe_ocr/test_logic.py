@@ -18,7 +18,7 @@ def _voucher_14040524():
         "voucher_number": "14040524", "requesting_unit": "اجرای طرح‌ها",
         "delivery_date": "شهریور ۱۴۰۴", "personnel_type": "official",
         "company": None, "contract_number": None,
-        "items": [{"mesc_code": "9643302722", "item_name": "کلاه ایمنی", "unit": "NO", "req_qty": 1}],
+        "items": [{"mesc_code": "9643302722", "item_name": "کلاه ایمنی", "unit": "NO", "req_qty": 8}],
         "personnel": [{"first_name": n, "last_name": f, "code": c, "job_title": None, "size": None}
                       for n, f, c in people],
     }
@@ -99,7 +99,7 @@ def _run():
     garment = {
         "voucher_number": "2", "requesting_unit": "منطقه ۲", "delivery_date": "آبان ۱۴۰۴",
         "personnel_type": "official", "company": None, "contract_number": None,
-        "items": [{"mesc_code": None, "item_name": "لباس کار", "unit": "NO", "req_qty": 1}],
+        "items": [{"mesc_code": None, "item_name": "لباس کار", "unit": "NO", "req_qty": 3}],
         "personnel": [{"first_name": "علی", "last_name": "الف", "code": "123456", "job_title": None, "size": None},
                       {"first_name": "رضا", "last_name": "ب", "code": "123457", "job_title": None, "size": None},
                       {"first_name": "حسن", "last_name": "ج", "code": "123458", "job_title": None, "size": None}],
@@ -136,16 +136,46 @@ def _run():
 
     # تست: ردیف‌های یک نفر (که در دو حواله آمده) باید پشت هم باشند
     g1 = {"voucher_number": "G1", "requesting_unit": None, "delivery_date": None, "personnel_type": "official",
-          "company": None, "contract_number": None, "items": [{"mesc_code": None, "item_name": "کلاه ایمنی", "unit": "NO", "req_qty": 1}],
+          "company": None, "contract_number": None, "items": [{"mesc_code": None, "item_name": "کلاه ایمنی", "unit": "NO", "req_qty": 2}],
           "personnel": [{"first_name": "علی", "last_name": "الف", "code": "100001", "job_title": None, "size": None},
                         {"first_name": "رضا", "last_name": "ب", "code": "100002", "job_title": None, "size": None}]}
     g2 = {"voucher_number": "G2", "requesting_unit": None, "delivery_date": None, "personnel_type": "official",
-          "company": None, "contract_number": None, "items": [{"mesc_code": None, "item_name": "عینک ایمنی", "unit": "NO", "req_qty": 1}],
+          "company": None, "contract_number": None, "items": [{"mesc_code": None, "item_name": "عینک ایمنی", "unit": "NO", "req_qty": 2}],
           "personnel": [{"first_name": "علی", "last_name": "الف", "code": "100001", "job_title": None, "size": None},
                         {"first_name": "رضا", "last_name": "ب", "code": "100002", "job_title": None, "size": None}]}
     allrows = logic.build_all([g1, g2])
     codes_order = [r["کد پرسنلی"] for r in allrows]
     check(codes_order == ["100001", "100001", "100002", "100002"], f"ردیف‌های هر نفر باید پشت هم باشند، شد {codes_order}")
+
+    # تست: یک قلم با ریزِ سایز → هر واحد به یک نفر، هیچ‌کس دو شلوار نگیرد
+    pants = {
+        "voucher_number": "P", "requesting_unit": "م", "delivery_date": None, "personnel_type": "official",
+        "company": None, "contract_number": None,
+        "items": [{"mesc_code": None, "item_name": "شلوار کار", "unit": "NO", "req_qty": 3,
+                   "sizes": [{"size": "36", "count": 2}, {"size": "40", "count": 1}]}],
+        "personnel": [{"first_name": "علی", "last_name": "الف", "code": "111", "job_title": None, "size": None},
+                      {"first_name": "رضا", "last_name": "ب", "code": "222", "job_title": None, "size": None},
+                      {"first_name": "حسن", "last_name": "ج", "code": "333", "job_title": None, "size": None}],
+    }
+    pr = logic.build_rows(pants)
+    check(len(pr) == 3, f"شلوار: باید ۳ ردیف (۳ نفر) باشد، شد {len(pr)}")
+    check([r["سایز"] for r in pr] == ["36", "36", "40"], "سایزها باید طبق ریزِ سایز پخش شوند")
+    per_person = {}
+    for r in pr:
+        per_person[r["نام خانوادگی"]] = per_person.get(r["نام خانوادگی"], 0) + 1
+    check(all(v == 1 for v in per_person.values()), "هیچ‌کس نباید دو شلوار بگیرد")
+
+    # تست: کدِ غیرِ۱۰رقمی همیشه رسمی است، حتی اگر حواله بگوید پیمانکاری
+    mixed = {
+        "voucher_number": "M2", "requesting_unit": None, "delivery_date": None, "personnel_type": "contractor",
+        "company": None, "contract_number": None,
+        "items": [{"mesc_code": None, "item_name": "کلاه ایمنی", "unit": "NO", "req_qty": 2}],
+        "personnel": [{"first_name": "علی", "last_name": "الف", "code": "00208033", "job_title": None, "size": None},
+                      {"first_name": "رضا", "last_name": "ب", "code": "0017362199", "job_title": None, "size": None}],
+    }
+    mr = logic.build_rows(mixed)
+    check(mr[0]["نوع قرارداد"] == "رسمی" and mr[0]["کد پرسنلی"] == "00208033", "کد ۸ رقمی باید رسمی/کد پرسنلی باشد")
+    check(mr[1]["نوع قرارداد"] == "پیمانکاری" and mr[1]["کد ملی"] == "0017362199", "کد ۱۰ رقمی باید پیمانکاری/کد ملی باشد")
 
     if failures:
         print("❌ تست‌های ناموفق:")

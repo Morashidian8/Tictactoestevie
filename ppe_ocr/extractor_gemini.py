@@ -27,7 +27,7 @@ _JSON_TEMPLATE = """
   "company": "رشته یا null",
   "contract_number": "رشته یا null",
   "items": [
-    {"mesc_code": "رشته یا null", "item_name": "رشته یا null", "unit": "رشته یا null", "req_qty": عدد یا null}
+    {"mesc_code": "رشته یا null", "item_name": "نام پایه بدون سایز", "unit": "رشته یا null", "req_qty": مقدار کل یا null, "sizes": [{"size": "رشته یا null", "count": عدد یا null}]}
   ],
   "personnel": [
     {"first_name": "رشته یا null", "last_name": "رشته یا null", "code": "رشته یا null", "job_title": "رشته یا null", "size": "رشته یا null"}
