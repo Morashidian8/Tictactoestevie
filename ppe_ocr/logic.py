@@ -96,11 +96,18 @@ def _size_sequence(item: dict) -> list[str]:
     return seq
 
 
-def _person_row(person, item_name, size, region, delivery, sherkat, peyman, voucher_no, c):
+def _person_row(person, item_name, size, region, delivery, v_company, v_peyman, voucher_no, c):
     C, D, contract = classify_code(person.get("code"))
-    job = (person.get("job_title") or "").strip()
-    if not job:
-        job = c["shoghl_official_default"] if contract == "رسمی" else ""
+    if contract == "پیمانکاری":
+        # پیمانکار: نام شرکت و شماره پیمان از روی عکس (نفر یا کلِ حواله)، نه پیش‌فرضِ شرکت گاز
+        sherkat = (person.get("company") or v_company or "").strip() or None
+        peyman = (person.get("contract_number") or v_peyman or "").strip() or None
+        job = (person.get("job_title") or "").strip() or c.get("shoghl_contractor_default", "پیمانکار")
+    else:
+        # رسمی: نام شرکت و پیمانِ پیش‌فرضِ شرکت گاز
+        sherkat = c["sherkat_default"]
+        peyman = c["peyman_default"]
+        job = (person.get("job_title") or "").strip() or c["shoghl_official_default"]
     return {
         "نام": (person.get("first_name") or "").strip() or None,
         "نام خانوادگی": (person.get("last_name") or "").strip() or None,
@@ -120,8 +127,8 @@ def build_rows(voucher: dict) -> list[dict]:
     region = (voucher.get("requesting_unit") or "").strip() or None
     delivery = (voucher.get("delivery_date") or "").strip() or None
     voucher_no = _digits(voucher.get("voucher_number", "")) or None
-    sherkat = (voucher.get("company") or c["sherkat_default"]).strip()
-    peyman = (voucher.get("contract_number") or c["peyman_default"]).strip()
+    v_company = voucher.get("company")       # نام شرکت در سطحِ کلِ حواله (اگر باشد)
+    v_peyman = voucher.get("contract_number")
 
     people = voucher.get("personnel", []) or []
     items = voucher.get("items", []) or []
@@ -153,7 +160,7 @@ def build_rows(voucher: dict) -> list[dict]:
             if size is None and sized and pool:
                 size = pool[pidx % len(pool)]
             rows.append(_person_row(person, item_name, size, region, delivery,
-                                    sherkat, peyman, voucher_no, c))
+                                    v_company, v_peyman, voucher_no, c))
     return rows
 
 

@@ -105,7 +105,7 @@ const SIZE_POOLS = {
 };
 const FEMALE = new Set(["فاطمه","زهرا","مریم","معصومه","سمیه","زینب","نرگس","الهام","مرضیه","سارا","نسرین","شیما","لیلا","ناهید","اکرم","فرشته","مینا","رویا","سمانه","طاهره","منیره","پروین","ملیحه","مهسا","سحر","نگار","هانیه","راضیه","صدیقه","فرزانه","شهناز","آزاده","بهاره","مهناز","نازنین","الناز","نیلوفر","یاسمن","ندا","سمیرا","فریبا","افسانه","زهره","طیبه","کبری","رقیه","خدیجه","سکینه","الهه","مبینا","ستاره","پریسا","شبنم","آتنا","آیدا","غزل","کیمیا","ریحانه"]);
 const AMBIG = new Set(["شادی","پروانه","پرستو","فرح","هما","نسیم"]);
-const CONST = {sherkat:"شرکت گاز استان تهران",peyman:"035982",job:"کارمند رسمی"};
+const CONST = {sherkat:"شرکت گاز استان تهران",peyman:"035982",job:"کارمند رسمی",jobContractor:"پیمانکار"};
 const HEADERS = ["نام","نام خانوادگی","کد پرسنلی","کد ملی","جنسیت","مدیریت","شهرستان/منطقه","نوع قرارداد","شماره پیمان","نام شرکت","عنوان شغل","شماره سند","عنوان لوازم","سایز","تعداد","تاریخ تحویل","شماره حواله"];
 
 const PROMPT_V = `این تصویر یک «حواله صدور کالا / MATERIAL ISSUE VOUCHER» شرکت گاز است. تمام اطلاعات را دقیق استخراج کن:
@@ -113,13 +113,14 @@ const PROMPT_V = `این تصویر یک «حواله صدور کالا / MATERI
 - اقلام: هر قلم یک MESC NO، یک شرح (DESCRIPTION مثل کلاه ایمنی)، واحد (NO/PR) و REQ.QTY (مقدار کل) دارد. اگر یک کالا با چند سایز آمده (مثل شلوار کار)، آن را یک قلمِ واحد بده که item_name فقط نام پایه است و ریزِ سایز/تعدادِ هر سایز را در sizes بگذار؛ آن را به چند قلمِ جدا نشکن.
 - افراد: در قسمت DESCRIPTION دست‌نویس، هر نفر با یک شماره ردیف (۱- ۲- ۳- …) مشخص است و نام، نام خانوادگی و یک کد دارد. نام و نام خانوادگی ممکن است به خط بعد بشکند؛ حتماً نام خانوادگیِ کاملِ هر نفر را بیاور و آن را با کد و شماره ردیفِ درست همان نفر تطبیق بده. هیچ نفری را جا نینداز. تقریباً هر نفر یک کد جلوی نامش دارد؛ کد را با دقت بخوان و تا جای ممکن خالی نگذار. کد ۵ تا ۷ رقمی=کد پرسنلی؛ ۱۰ رقمی=کد ملی. اگر جلوی اسم شغل نوشته شده (امداد/تعمیرات/تکنسین) در job_title بگذار.
 - req_qty همان REQ.QTY است و «مقدار کل برای همه‌ی نفرات» است (نه سهم هر نفر). همان عدد کل را بده.
+- اگر فردی پیمانکار است (کد ملیِ ۱۰ رقمی) و نام شرکتِ پیمانکار یا شماره پیمانِ او روی حواله نوشته شده، آن‌ها را در company و contract_number همان نفر بگذار.
 - واحد متقاضی/شرح کار = منطقه (requesting_unit).
 - اگر جمله «پرسنل رسمی» یا «پیمانکاری» دیدی، personnel_type را تعیین کن.
 - تاریخ تحویل: فقط تاریخِ دست‌نویس (با خودکار) را بردار؛ تاریخ‌های چاپی/تایپ‌شده را کاملاً نادیده بگیر. ماه و سال کافی است (مثل ۱۴۰۳/۰۲).
 ارقام را دقیق بخوان؛ ناخوانا=null (حدس نزن).`;
 const PROMPT_N = `این تصویر یک لیست اسامی پرسنل است. فقط افراد را استخراج کن: نام، نام خانوادگی، کد پرسنلی(۵-۷ رقم) یا کد ملی(۱۰ رقم)، و شغل اگر نوشته شده. اگر منطقه یا تاریخ روی برگه بود پر کن. items را خالی بگذار. ناخوانا=null.`;
 const JSON_TMPL = `\nخروجی را فقط یک شیء JSON با این ساختار بده (بدون توضیح):
-{"voucher_number":"یا null","requesting_unit":"یا null","delivery_date":"یا null","personnel_type":"official/contractor/null","company":"یا null","contract_number":"یا null","items":[{"mesc_code":"یا null","item_name":"نام پایه بدون سایز","unit":"یا null","req_qty":مقدار کل یا null,"sizes":[{"size":"یا null","count":عدد یا null}]}],"personnel":[{"first_name":"یا null","last_name":"یا null","code":"یا null","job_title":"یا null","size":"یا null"}]}`;
+{"voucher_number":"یا null","requesting_unit":"یا null","delivery_date":"یا null","personnel_type":"official/contractor/null","company":"یا null","contract_number":"یا null","items":[{"mesc_code":"یا null","item_name":"نام پایه بدون سایز","unit":"یا null","req_qty":مقدار کل یا null,"sizes":[{"size":"یا null","count":عدد یا null}]}],"personnel":[{"first_name":"یا null","last_name":"یا null","code":"یا null","job_title":"یا null","size":"یا null","company":"شرکت پیمانکار یا null","contract_number":"شماره پیمان یا null"}]}`;
 
 // ---------------- منطق ----------------
 function toLatin(s){return (s==null?"":String(s)).replace(/[۰-۹٠-٩]/g,d=>"0123456789".charAt("۰۱۲۳۴۵۶۷۸۹".indexOf(d)>=0?"۰۱۲۳۴۵۶۷۸۹".indexOf(d):"٠١٢٣٤٥٦٧٨٩".indexOf(d)));}
@@ -132,9 +133,18 @@ function poolFor(name){for(const k in SIZE_POOLS){if(name.indexOf(k)>=0)return S
 function isSized(name,it){const info=it?mescLookup(it.mesc_code):{};if(info.sized)return true;return poolFor(name)!==null;}
 
 function sizeSequence(it){const seq=[];(it.sizes||[]).forEach(s=>{const sz=String(s.size||"").trim();let cnt=parseInt(s.count||0,10);if(!Number.isFinite(cnt))cnt=0;if(sz&&cnt>0)for(let i=0;i<cnt;i++)seq.push(sz);});return seq;}
-function personRow(p,nm,size,region,delivery,sherkat,peyman,vno){
+function personRow(p,nm,size,region,delivery,vCompany,vPeyman,vno){
   let [C,D,contract]=classifyCode(p.code);
-  let job=(p.job_title||"").trim(); if(!job)job=(contract==="رسمی")?CONST.job:"";
+  let sherkat,peyman,job;
+  if(contract==="پیمانکاری"){
+    sherkat=((p.company||vCompany||"").trim())||null;
+    peyman=((p.contract_number||vPeyman||"").trim())||null;
+    job=(p.job_title||"").trim()||CONST.jobContractor;
+  }else{
+    sherkat=CONST.sherkat;
+    peyman=CONST.peyman;
+    job=(p.job_title||"").trim()||CONST.job;
+  }
   return {"نام":(p.first_name||"").trim()||null,"نام خانوادگی":(p.last_name||"").trim()||null,
     "کد پرسنلی":C,"کد ملی":D,"جنسیت":inferGender(p.first_name),"مدیریت":null,
     "شهرستان/منطقه":region,"نوع قرارداد":contract,"شماره پیمان":peyman,"نام شرکت":sherkat,
@@ -145,8 +155,7 @@ function buildRows(v){
   const region=(v.requesting_unit||"").trim()||null;
   const delivery=(v.delivery_date||"").trim()||null;
   const vno=digits(v.voucher_number)||null;
-  const sherkat=(v.company||CONST.sherkat).trim();
-  const peyman=(v.contract_number||CONST.peyman).trim();
+  const vCompany=v.company||null, vPeyman=v.contract_number||null;
   const people=v.personnel||[], items=v.items||[];
   const n=people.length||1;
   const rows=[];
@@ -162,7 +171,7 @@ function buildRows(v){
       let size=(p.size||"").trim()||null;
       if(size===null&&u<seq.length)size=seq[u];
       if(size===null&&sized&&pool)size=pool[pIdx%pool.length];
-      rows.push(personRow(p,nm,size,region,delivery,sherkat,peyman,vno));
+      rows.push(personRow(p,nm,size,region,delivery,vCompany,vPeyman,vno));
     }
   });
   return rows;

@@ -168,7 +168,7 @@ def _run():
     # تست: کدِ غیرِ۱۰رقمی همیشه رسمی است، حتی اگر حواله بگوید پیمانکاری
     mixed = {
         "voucher_number": "M2", "requesting_unit": None, "delivery_date": None, "personnel_type": "contractor",
-        "company": None, "contract_number": None,
+        "company": "شرکت آلفا", "contract_number": "9999",
         "items": [{"mesc_code": None, "item_name": "کلاه ایمنی", "unit": "NO", "req_qty": 2}],
         "personnel": [{"first_name": "علی", "last_name": "الف", "code": "00208033", "job_title": None, "size": None},
                       {"first_name": "رضا", "last_name": "ب", "code": "0017362199", "job_title": None, "size": None}],
@@ -176,6 +176,23 @@ def _run():
     mr = logic.build_rows(mixed)
     check(mr[0]["نوع قرارداد"] == "رسمی" and mr[0]["کد پرسنلی"] == "00208033", "کد ۸ رقمی باید رسمی/کد پرسنلی باشد")
     check(mr[1]["نوع قرارداد"] == "پیمانکاری" and mr[1]["کد ملی"] == "0017362199", "کد ۱۰ رقمی باید پیمانکاری/کد ملی باشد")
+    # رسمی: شرکت گاز پیش‌فرض و شغل کارمند رسمی
+    check(mr[0]["نام شرکت"] == "شرکت گاز استان تهران", "رسمی باید نام شرکت پیش‌فرض بگیرد")
+    check(mr[0]["عنوان شغل"] == "کارمند رسمی", "رسمی باید عنوان شغل کارمند رسمی بگیرد")
+    # پیمانکار: نام شرکت و پیمان از حواله و شغل «پیمانکار»
+    check(mr[1]["نام شرکت"] == "شرکت آلفا", "پیمانکار باید نام شرکت از حواله بگیرد")
+    check(mr[1]["شماره پیمان"] == "9999", "پیمانکار باید شماره پیمان از حواله بگیرد")
+    check(mr[1]["عنوان شغل"] == "پیمانکار", "پیمانکارِ بدون شغلِ دست‌نویس باید «پیمانکار» بگیرد")
+
+    # پیمانکار با نام شرکتِ خودِ نفر (per-person) اولویت دارد
+    per = {"voucher_number": "M3", "requesting_unit": None, "delivery_date": None, "personnel_type": None,
+           "company": None, "contract_number": None,
+           "items": [{"mesc_code": None, "item_name": "کلاه ایمنی", "unit": "NO", "req_qty": 1}],
+           "personnel": [{"first_name": "حسن", "last_name": "ج", "code": "0075135043", "job_title": "امداد",
+                          "size": None, "company": "شرکت بتا", "contract_number": "8888"}]}
+    pr2 = logic.build_rows(per)[0]
+    check(pr2["نام شرکت"] == "شرکت بتا" and pr2["شماره پیمان"] == "8888", "نام شرکت/پیمانِ خودِ نفر باید استفاده شود")
+    check(pr2["عنوان شغل"] == "امداد", "شغلِ دست‌نویسِ پیمانکار باید حفظ شود")
 
     if failures:
         print("❌ تست‌های ناموفق:")
