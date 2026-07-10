@@ -46,6 +46,11 @@ def main() -> None:
         print("\n--- one raw REDEEM row (all fields) ---")
         print(json.dumps(redeems[-1])[:900])
 
+    buys = [a for a in acts if str(a.get("type", "")).upper() == "TRADE" and str(a.get("side", "")).upper() == "BUY"]
+    if buys:
+        print("\n--- one raw BUY row (all fields) ---")
+        print(json.dumps(buys[-1])[:900])
+
     try:
         pos = c.positions(addr)
     except Exception as e:  # noqa: BLE001
@@ -110,6 +115,23 @@ def main() -> None:
     remaining = [p for p in pos if str(p.get("asset", "") or "") not in lost_set]
     print("\nopen positions after excluding LOST:", len(remaining), " (raw:", len(pos), ")")
     print("ENGINE_TOTAL_FOR_COMPARE:", round(eng.realized_total, 2))
+
+    # Per-kind proceeds/cost, to locate where cost goes missing vs Σbuys.
+    by_kind = collections.defaultdict(lambda: [0.0, 0.0, 0])
+    for e in eng.closing_events:
+        b = by_kind[e.kind]
+        b[0] += e.proceeds
+        b[1] += e.cost_basis
+        b[2] += 1
+    print("\n=== closing events by kind (proceeds / cost / n) ===")
+    tot_cost = 0.0
+    for k, b in sorted(by_kind.items()):
+        print(f"  {k:8} proceeds={b[0]:10.2f}  cost={b[1]:10.2f}  n={b[2]}")
+        tot_cost += b[1]
+    buys_total = cash["TRADE/BUY"] + cash["SPLIT"]
+    print(f"  Σ cost attributed in closes = {tot_cost:.2f}")
+    print(f"  Σ buys+splits               = {buys_total:.2f}")
+    print(f"  MISSING cost (buys - closes)= {buys_total - tot_cost:+.2f}  (should be ~0 when book closed)")
 
     # Official Polymarket PnL series (what the profile chart shows) — ground truth.
     print("\n=== official user-pnl API ===")
