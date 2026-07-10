@@ -405,10 +405,14 @@ def _parse_end_ts(value: Any) -> Optional[int]:
 
 
 def _buy_price(price: Optional[float], usdc: float, size: float) -> float:
+    # Cost basis must be the CASH actually paid per share (usdcSize / size), not
+    # the quoted `price`. On Polymarket the fill price differs from the quoted
+    # price, and summing size*price instead of the real cash understates cost,
+    # inflating realized profit. Prefer real cash; fall back to price.
+    if size > 0 and usdc > 0:
+        return usdc / size
     if price is not None and price > 0:
         return price
-    if size > 0:
-        return usdc / size
     return 0.0
 
 

@@ -75,6 +75,14 @@ r = Poly.fifoPnl(
 eq(r.lostAssets.length, 0, "live-priced position not treated as lost");
 eq(r.realizedTotal, 0, "no realized pnl for open position");
 
+// cost basis uses actual cash paid, not quoted price
+r = Poly.fifoPnl([
+  { type: "TRADE", side: "BUY", asset: "A", size: 20, price: 0.5, usdcSize: 11, timestamp: 1000, title: "m" },
+  { type: "TRADE", side: "SELL", asset: "A", size: 20, price: 0.6, usdcSize: 12, timestamp: 2000, title: "m" },
+]);
+eq(r.events[0].cost_basis, 11, "cost basis = cash paid (11), not 10");
+eq(r.events[0].realized, 1, "realized = 12 - 11 = 1");
+
 // taker rebate counts as income
 r = Poly.fifoPnl([{ type: "TAKER_REBATE", asset: "A", size: 0, usdcSize: 1.5, timestamp: 1000, title: "m" }]);
 eq(r.realizedTotal, 1.5, "taker rebate income = 1.5");

@@ -116,8 +116,10 @@
     const lostAssets = [];
     let realizedTotal = 0;
 
+    // Cost basis = cash actually paid per share (usdcSize/size), not the quoted
+    // price. Using size*price understates cost and inflates realized profit.
     const buyPrice = (price, usdc, size) =>
-      price != null && price > 0 ? price : size > 0 ? usdc / size : 0;
+      size > 0 && usdc > 0 ? usdc / size : price != null && price > 0 ? price : 0;
 
     const open = (asset, size, price) => {
       if (size <= 0) return;

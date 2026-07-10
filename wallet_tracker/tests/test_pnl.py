@@ -139,6 +139,20 @@ def test_worthless_uses_slug_time_over_date_only_end_date():
     assert eng.closing_events[-1].timestamp == 1783090500  # start + 5m
 
 
+def test_cost_basis_uses_actual_cash_not_quoted_price():
+    # Real fill costs more than the quoted price implies: paid 11 for 20 shares
+    # (0.55/share) though price=0.50. Cost basis must be the cash paid (11).
+    eng = PnLEngine().load([
+        {"type": "TRADE", "side": "BUY", "asset": "A", "size": 20, "price": 0.50,
+         "usdcSize": 11.0, "timestamp": 1000, "title": "m"},
+        {"type": "TRADE", "side": "SELL", "asset": "A", "size": 20, "price": 0.60,
+         "usdcSize": 12.0, "timestamp": 2000, "title": "m"},
+    ])
+    ev = eng.closing_events[0]
+    assert round(ev.cost_basis, 6) == 11.0     # cash paid, not 20*0.50 = 10
+    assert round(ev.realized, 6) == 1.0        # 12 - 11, not 12 - 10
+
+
 def test_taker_rebate_counts_as_income():
     eng = PnLEngine().load([
         {"type": "TAKER_REBATE", "asset": "A", "size": 0, "usdcSize": 1.5,
