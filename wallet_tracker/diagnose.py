@@ -55,8 +55,42 @@ def main() -> None:
         print("\n--- one raw positions row (all fields) ---")
         print(json.dumps(pos[0])[:900])
 
+    # -- cash decomposition (ground for reconciliation) -------------------- #
+    print(f"\n=== positions: {len(pos)} rows ===")
+    red = sum(1 for p in pos if p.get("redeemable"))
+    zero = sum(1 for p in pos if not p.get("curPrice"))
+    print(f"  redeemable={red}  curPrice==0(worthless)={zero}")
+
+    cash = collections.Counter()
+    for a in acts:
+        t = str(a.get("type", "")).upper()
+        s = str(a.get("side", "")).upper()
+        u = abs(float(a.get("usdcSize") or 0))
+        key = f"{t}/{s}".rstrip("/")
+        cash[key] += u
+    print("\n=== cash by type (Σ usdcSize) ===")
+    for k, v in sorted(cash.items()):
+        print(f"  {k:14} {v:10.2f}")
+    inflow = cash["TRADE/SELL"] + cash["REDEEM"] + cash["MERGE"] + cash["REWARD"]
+    outflow = cash["TRADE/BUY"] + cash["SPLIT"]
+    print(f"  -> net cash flow (all-time) = {inflow - outflow:+.2f}")
+
     now = int(time.time())
     eng = PnLEngine().load(acts)
+    # Cost basis still sitting in un-closed lots BEFORE worthless handling.
+    open_cost_before = sum(l.size * l.price for q in eng._lots.values() for l in q)
+    open_lot_assets = {a for a, q in eng._lots.items() if sum(l.size for l in q) > 1e-6}
+    pos_assets = {str(p.get("asset", "") or "") for p in pos}
+    orphan_lots = open_lot_assets - pos_assets  # bought, never closed, NOT in positions API
+    orphan_cost = sum(
+        sum(l.size * l.price for l in eng._lots[a]) for a in orphan_lots
+    )
+    print("\n=== open-lot reconciliation (BEFORE worthless handling) ===")
+    print(f"  open-lot cost total          = {open_cost_before:.2f}")
+    print(f"  open-lot assets              = {len(open_lot_assets)}")
+    print(f"  of which NOT in positions API= {len(orphan_lots)}  (cost {orphan_cost:.2f})")
+    print("  -> 'realized minus cashflow' should equal open-lot cost")
+
     lost = eng.close_worthless(pos, now)
     print("\n=== FIFO engine (condition-matched redeems + worthless losses) ===")
     print("realized_total (all time):", round(eng.realized_total, 2))
