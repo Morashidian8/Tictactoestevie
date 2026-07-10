@@ -114,6 +114,7 @@ def main() -> None:
     # Official Polymarket PnL series (what the profile chart shows) — ground truth.
     print("\n=== official user-pnl API ===")
     import requests
+    official_all = None
     for interval, fidelity in (("1d", "1h"), ("1w", "1d"), ("1m", "1d"), ("all", "1d")):
         try:
             r = requests.get(
@@ -123,12 +124,24 @@ def main() -> None:
             )
             d = r.json()
             if isinstance(d, list) and d:
-                delta = (d[-1].get("p", 0) or 0) - (d[0].get("p", 0) or 0)
-                print(f"  {interval:>3}: points={len(d)}  first={d[0]}  last={d[-1]}  delta={delta:+.2f}")
+                last = d[-1].get("p", 0) or 0
+                if interval in ("1m", "all"):
+                    official_all = last
+                print(f"  {interval:>3}: points={len(d)}  first={d[0]}  last={d[-1]}")
             else:
                 print(f"  {interval:>3}: {str(d)[:200]}")
         except Exception as e:  # noqa: BLE001
             print(f"  {interval:>3}: ERROR {e}")
+
+    # -- SUMMARY (printed last so it survives log tailing) ----------------- #
+    open_cost_after = sum(l.size * l.price for q in eng._lots.values() for l in q)
+    print("\n==================== SUMMARY ====================")
+    print(f"  our all-time realized   = {eng.realized_total:+.2f}")
+    print(f"  net cash flow (all-time)= {inflow - outflow:+.2f}")
+    print(f"  official Polymarket PnL = {official_all if official_all is not None else 'n/a'}")
+    print(f"  open-lot cost remaining = {open_cost_after:.2f}   (should be ~0 if book closed)")
+    print(f"  realized - cashflow     = {eng.realized_total - (inflow - outflow):+.2f}   (should be ~0)")
+    print("================================================")
 
 
 if __name__ == "__main__":

@@ -75,5 +75,31 @@ r = Poly.fifoPnl(
 eq(r.lostAssets.length, 0, "live-priced position not treated as lost");
 eq(r.realizedTotal, 0, "no realized pnl for open position");
 
+// taker rebate counts as income
+r = Poly.fifoPnl([{ type: "TAKER_REBATE", asset: "A", size: 0, usdcSize: 1.5, timestamp: 1000, title: "m" }]);
+eq(r.realizedTotal, 1.5, "taker rebate income = 1.5");
+
+// orphan losing lot not in positions API is realized as a loss
+r = Poly.fifoPnl(
+  [{ type: "TRADE", side: "BUY", asset: "TOK", conditionId: "C1", size: 20, price: 0.5, usdcSize: 10, timestamp: 1783090000, slug: "btc-updown-5m-1783090000", title: "m", outcome: "Up" }],
+  [], // positions API returns nothing
+  1783099999
+);
+eq(r.realizedTotal, -10, "orphan lost lot realized = -10");
+{
+  const ev = r.events.find((e) => e.kind === "LOST");
+  eq(ev.timestamp, 1783090300, "orphan LOST ts = slug + 5m");
+  eq(r.lostAssets.length, 1, "orphan added to lostAssets");
+}
+
+// orphan on an unresolved (future) market stays open
+r = Poly.fifoPnl(
+  [{ type: "TRADE", side: "BUY", asset: "TOK", conditionId: "C1", size: 20, price: 0.5, usdcSize: 10, timestamp: 1000, slug: "btc-updown-5m-3999999999", title: "m" }],
+  [],
+  1783099999
+);
+eq(r.realizedTotal, 0, "unresolved orphan not booked");
+eq(r.lostAssets.length, 0, "unresolved orphan not in lostAssets");
+
 if (failed) { console.error(`\n${failed} test(s) failed`); process.exit(1); }
 console.log("\nall browser-engine tests passed");

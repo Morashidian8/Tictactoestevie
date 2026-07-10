@@ -97,6 +97,7 @@ class PnLEngine:
         # also be reachable by condition (and, as a fallback, by title).
         self._cond_assets: Dict[str, List[str]] = {}
         self._asset_last_ts: Dict[str, int] = {}
+        self._asset_slug: Dict[str, str] = {}
 
     # -- ingestion --------------------------------------------------------- #
 
@@ -117,15 +118,21 @@ class PnLEngine:
         title = str(row.get("title", "") or "")
         outcome = str(row.get("outcome", "") or "")
         cond = str(row.get("conditionId", "") or "")
+        slug = str(row.get("slug", "") or row.get("eventSlug", "") or "")
         if asset:
             self._meta[asset] = (title, outcome)
             self._asset_last_ts[asset] = max(ts, self._asset_last_ts.get(asset, 0))
+            if slug:
+                self._asset_slug[asset] = slug
             if cond:
                 bucket = self._cond_assets.setdefault(cond, [])
                 if asset not in bucket:
                     bucket.append(asset)
 
-        if atype == "REWARD":
+        # Cash income the wallet receives that isn't a position close: liquidity
+        # rewards and maker/taker rebates. Polymarket counts these in PnL, so we
+        # book them as income (proceeds with zero cost).
+        if atype == "REWARD" or "REBATE" in atype:
             self.closing_events.append(
                 ClosingEvent(ts, "REWARD", asset, title, outcome, 0.0, usdc, 0.0, usdc)
             )
@@ -270,6 +277,40 @@ class PnLEngine:
                 ClosingEvent(end_ts, "LOST", asset, title, outcome, size, 0.0, cost, realized)
             )
             lost.append(asset)
+
+        # Orphan losers: lots still open in inventory whose asset the positions
+        # API does NOT report as currently valuable. A winning position would
+        # have produced a REDEEM (cash) row that drained its lots, or would still
+        # be listed with curPrice>0; so a leftover lot on a market that has
+        # already resolved is a loss the feed simply never emitted. Without this,
+        # those un-booked losses inflate realized profit (realized > cash flow).
+        still_valued = {
+            str(p.get("asset", "") or "")
+            for p in positions
+            if (_float(p.get("curPrice")) or 0.0) > 1e-9
+        }
+        for asset in list(self._lots.keys()):
+            if asset in still_valued:
+                continue
+            remaining = sum(l.size for l in self._lots[asset])
+            if remaining <= 1e-6:
+                continue
+            end_ts = _slug_end_ts(self._asset_slug.get(asset)) or self._asset_last_ts.get(asset)
+            # Only book as a loss once the market has actually resolved; a lot on
+            # a not-yet-resolved market is a genuine open position we simply lack
+            # a positions row for, so leave it.
+            if end_ts is None or end_ts > now_ts:
+                continue
+            cost = self._drain_all(asset)
+            if cost <= 1e-9:
+                continue
+            title, outcome = self._meta.get(asset, ("", ""))
+            self.realized_total += -cost
+            self.closing_events.append(
+                ClosingEvent(end_ts, "LOST", asset, title, outcome, remaining, 0.0, cost, -cost)
+            )
+            lost.append(asset)
+
         self.closing_events.sort(key=lambda e: e.timestamp)
         return lost
 

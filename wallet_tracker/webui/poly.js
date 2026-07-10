@@ -110,6 +110,7 @@
     const meta = new Map();       // asset -> {title, outcome}
     const condAssets = new Map(); // conditionId -> [asset]
     const lastTs = new Map();     // asset -> last activity ts
+    const assetSlug = new Map();  // asset -> market slug (for resolution time)
     const events = [];
     const warnings = [];
     const lostAssets = [];
@@ -182,9 +183,11 @@
       const title = String(r.title || "");
       const outcome = String(r.outcome || "");
       const cond = String(r.conditionId || "");
+      const slug = String(r.slug || r.eventSlug || "");
       if (asset) {
         meta.set(asset, { title, outcome });
         lastTs.set(asset, Math.max(ts, lastTs.get(asset) || 0));
+        if (slug) assetSlug.set(asset, slug);
         if (cond) {
           if (!condAssets.has(cond)) condAssets.set(cond, []);
           const bucket = condAssets.get(cond);
@@ -192,7 +195,8 @@
         }
       }
 
-      if (type === "REWARD") {
+      // Rewards and maker/taker rebates are cash income Polymarket counts in PnL.
+      if (type === "REWARD" || type.includes("REBATE")) {
         events.push({ timestamp: ts, kind: "REWARD", asset, title, outcome, size: 0, proceeds: usdc, cost_basis: 0, realized: usdc });
         realizedTotal += usdc;
       } else if (type === "CONVERSION") {
@@ -254,6 +258,29 @@
       });
       lostAssets.push(asset);
     }
+
+    // Orphan losers: lots still open whose asset the positions API does NOT
+    // report as valuable. A winner would have a REDEEM (cash) row draining its
+    // lots or still show curPrice>0; so a leftover lot on an already-resolved
+    // market is a loss the feed never emitted. Booking it stops realized profit
+    // from being overstated (realized > cash flow).
+    const stillValued = new Set(
+      (positions || []).filter((p) => (num(p.curPrice) || 0) > 1e-9).map((p) => String(p.asset || ""))
+    );
+    for (const [asset, q] of lots.entries()) {
+      if (stillValued.has(asset)) continue;
+      const remaining = q.reduce((s, l) => s + l.size, 0);
+      if (remaining <= 1e-6) continue;
+      const endTs = slugEndTs(assetSlug.get(asset)) || lastTs.get(asset) || null;
+      if (endTs == null || endTs > now) continue; // only once the market resolved
+      const cost = drainAll(asset);
+      if (cost <= 1e-9) continue;
+      const m = meta.get(asset) || { title: "", outcome: "" };
+      realizedTotal += -cost;
+      events.push({ timestamp: endTs, kind: "LOST", asset, title: m.title, outcome: m.outcome, size: remaining, proceeds: 0, cost_basis: cost, realized: -cost });
+      lostAssets.push(asset);
+    }
+
     events.sort((a, b) => a.timestamp - b.timestamp);
 
     return { events, realizedTotal, warnings, lostAssets };
