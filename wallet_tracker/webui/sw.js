@@ -1,7 +1,7 @@
 // Service worker: NETWORK-FIRST for the app shell so code updates reach the
 // user on the very next load (cache-first kept serving stale engine code and
 // produced wrong PnL after fixes shipped). Cache is only an offline fallback.
-const CACHE = "polywallet-v6";
+const CACHE = "polywallet-v7";
 const SHELL = [
   "./",
   "index.html",

@@ -139,6 +139,48 @@ def test_worthless_uses_slug_time_over_date_only_end_date():
     assert eng.closing_events[-1].timestamp == 1783090500  # start + 5m
 
 
+def test_taker_rebate_counts_as_income():
+    eng = PnLEngine().load([
+        {"type": "TAKER_REBATE", "asset": "A", "size": 0, "usdcSize": 1.5,
+         "timestamp": 1000, "title": "m"},
+    ])
+    assert round(eng.realized_total, 6) == 1.5
+    assert eng.closing_events[0].kind == "REWARD"
+
+
+def test_orphan_lot_not_in_positions_is_realized_as_loss():
+    # Bought, market resolved, lost, never redeemed AND the positions API does
+    # not return it at all (Polymarket drops old worthless positions).
+    eng = PnLEngine().load([
+        {"type": "TRADE", "side": "BUY", "asset": "TOK", "conditionId": "C1",
+         "size": 20, "price": 0.5, "usdcSize": 10.0, "timestamp": 1783090000,
+         "slug": "btc-updown-5m-1783090000", "title": "m", "outcome": "Up"},
+    ])
+    # positions API returns nothing for this asset.
+    lost = eng.close_worthless([], now_ts=1783099999)
+    assert "TOK" in lost
+    ev = eng.closing_events[-1]
+    assert ev.kind == "LOST"
+    assert ev.timestamp == 1783090300  # slug start + 5m
+    assert round(eng.realized_total, 6) == -10.0
+    # realized must now equal negative cost (book fully closed)
+    assert not eng._lots.get("TOK")
+
+
+def test_orphan_on_unresolved_market_is_left_open():
+    # A lot whose market has NOT resolved yet must stay open, not booked as loss.
+    future_slug_ts = 4000000000  # far future, below the 4e9 sanity ceiling
+    eng = PnLEngine().load([
+        {"type": "TRADE", "side": "BUY", "asset": "TOK", "conditionId": "C1",
+         "size": 20, "price": 0.5, "usdcSize": 10.0, "timestamp": 1000,
+         "slug": f"btc-updown-5m-{future_slug_ts}", "title": "m"},
+    ])
+    lost = eng.close_worthless([], now_ts=1783099999)
+    assert lost == []
+    assert eng.realized_total == 0.0
+    assert eng._lots.get("TOK")  # still open
+
+
 def test_open_position_with_price_is_not_worthless():
     eng = PnLEngine().load([
         {"type": "TRADE", "side": "BUY", "asset": "TOK", "conditionId": "C1",

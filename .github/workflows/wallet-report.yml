@@ -30,7 +30,7 @@ jobs:
         with:
           python-version: "3.11"
       - run: pip install requests
-      - name: Full diagnostic (raw shapes + engine vs official pnl)
-        run: python -m wallet_tracker.diagnose "${{ inputs.address }}"
       - name: Windowed report (JSON)
         run: python -m wallet_tracker.cli "${{ inputs.address }}" --minutes "${{ inputs.minutes }}" --json
+      - name: Full diagnostic (SUMMARY is printed last)
+        run: python -m wallet_tracker.diagnose "${{ inputs.address }}"
