@@ -20,6 +20,7 @@ _BINANCE_HOSTS = (
 
 # Candle intervals we support, mapped to Binance's interval strings.
 SUPPORTED_INTERVALS = ("5m", "15m", "1h", "1d")
+INTERVAL_SECONDS = {"5m": 300, "15m": 900, "1h": 3600, "1d": 86_400}
 
 
 class Color(enum.Enum):
@@ -96,6 +97,46 @@ def fetch_binance_candles(
         raise RuntimeError(f"could not fetch candles from Binance: {last_err}")
 
     return _rows_to_candles(rows, only_closed=only_closed)
+
+
+class BinanceLiveFeed:
+    """Live feed of *closed* Binance candles, matching the real BTC chart.
+
+    `next()` returns the newest closed candle the first time it is seen and
+    None until a new one closes — the runner just skips None ticks. Missed
+    candles during downtime are NOT replayed (live-consecutive-only, same rule
+    as the phone app); check `gap_detected` after each candle and reset the
+    strategy state when it is True.
+    """
+
+    def __init__(self, symbol: str = "BTCUSDT", interval: str = "5m", *, _requests=None) -> None:
+        if interval not in SUPPORTED_INTERVALS:
+            raise ValueError(f"unsupported interval {interval!r}; use one of {SUPPORTED_INTERVALS}")
+        self.symbol = symbol
+        self.interval = interval
+        self._requests = _requests
+        self._last_open: Optional[int] = None
+        self.gap_detected = False   # newest candle didn't directly follow the previous one
+
+    def next(self) -> Optional[Candle]:
+        candles = fetch_binance_candles(
+            symbol=self.symbol, interval=self.interval, limit=3,
+            only_closed=True, _requests=self._requests,
+        )
+        if not candles:
+            return None
+        newest = candles[-1]
+        if self._last_open is not None and newest.open_time == self._last_open:
+            return None   # nothing new yet
+        # Binance close times end at open + interval - 1ms, so derive the spacing
+        # from the configured interval, not from close_time - open_time.
+        interval_s = INTERVAL_SECONDS[self.interval]
+        self.gap_detected = (
+            self._last_open is not None
+            and newest.open_time != self._last_open + interval_s
+        )
+        self._last_open = newest.open_time
+        return newest
 
 
 class SyntheticFeed:

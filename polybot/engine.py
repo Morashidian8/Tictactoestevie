@@ -88,6 +88,10 @@ class TradingEngine:
                 self.risk.post_settlement(candle.open_time, trade.pnl)
             if self.wallet is not None:
                 self.wallet.record(candle.open_time, trade.pnl)
+            # Stateful strategies (AlternationMartingale) track their own step.
+            on_result = getattr(self.strategy, "on_result", None)
+            if on_result is not None:
+                on_result(won)
 
         # 2. Record history and ask the strategy what to do next.
         self._history.append(candle)
@@ -109,13 +113,25 @@ class TradingEngine:
             decision = self.risk.pre_trade(next_open_time, self.portfolio.balance, stake)
             if not decision.allowed:
                 self.last_halt_reason = decision.reason
+                self._notify_rejected()
                 return  # risk layer blocked this bet
             stake = decision.stake
 
         if stake < self.min_stake:
+            self._notify_rejected()
             return  # not enough balance to keep going
 
-        payout = getattr(self.executor, "payout_multiple", 1.95)
+        # 4. Get the payout quote. Executors with a `quote()` (real live odds)
+        #    may return None — no real price, no bet. Never a fake default.
+        quote = getattr(self.executor, "quote", None)
+        if quote is not None:
+            payout = quote(signal)
+            if payout is None:
+                self.last_halt_reason = "no_quote"
+                self._notify_rejected()
+                return
+        else:
+            payout = getattr(self.executor, "payout_multiple", 1.95)
         trade = Trade(
             candle_open_time=next_open_time,
             signal=signal,
@@ -128,6 +144,22 @@ class TradingEngine:
         if self.risk is not None:
             self.risk.register_trade(next_open_time)
         self._pending = _PendingBet(trade=trade, signal=signal)
+
+    def void_pending(self) -> None:
+        """Refund the open bet after a feed gap (its outcome candle was never seen)
+        and clear stateful strategy state — the same rule as the phone app."""
+        if self._pending is not None:
+            self.portfolio.void_trade(self._pending.trade)
+            self._pending = None
+        reset = getattr(self.strategy, "reset", None)
+        if reset is not None:
+            reset()
+
+    def _notify_rejected(self) -> None:
+        """Tell a stateful strategy its signal did not become a bet."""
+        hook = getattr(self.strategy, "on_bet_rejected", None)
+        if hook is not None:
+            hook()
 
     def run(self, candles: Sequence[Candle]) -> Portfolio:
         """Feed a batch of candles in order; returns the portfolio."""

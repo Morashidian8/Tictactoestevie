@@ -17,7 +17,8 @@ for the full architecture, decisions, and risks.
 | 3 | Android app (Kotlin/Compose) — strategy builder + dashboard (in-app paper engine) | ✅ done |
 | 3.5 | Wire the Android app to the control API (Local/Server mode toggle) | ✅ done |
 | 3.6 | Read-only Polymarket data (discover markets, real odds) + real-price feed | ✅ done |
-| 3.7 | Cloud deploy (Render blueprint / Dockerfile) — see `DEPLOY.md` | ✅ done |
+| 3.7 | Cloud deploy (Render blueprint / Dockerfile) — see root `DEPLOY.md` | ✅ done |
+| 3.8 | **Server phase 1**: v13 alternation-martingale port, real-odds shadow executor, live Binance feed, trading-window scheduler, token-auth API + phone control panel — see [polybot/DEPLOY.md](./DEPLOY.md) | ✅ done |
 | 4 | Live Polymarket **execution** (py-clob-client, wallet/secrets on server) — real money, **gated** | ⏳ planned |
 
 ## Quick start

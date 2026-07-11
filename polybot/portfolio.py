@@ -43,6 +43,14 @@ class Portfolio:
         self.balance -= trade.stake
         self.trades.append(trade)
 
+    def void_trade(self, trade: Trade) -> None:
+        """Cancel an unresolved trade and refund its stake (e.g. after a feed gap:
+        the candle the bet was riding on was never observed, so the bet is void)."""
+        if trade.resolved:
+            raise ValueError("cannot void a settled trade")
+        self.balance += trade.stake
+        self.trades.remove(trade)
+
     def settle(self, trade: Trade, won: bool) -> None:
         """Resolve a trade, crediting winnings or booking the loss."""
         if trade.resolved:

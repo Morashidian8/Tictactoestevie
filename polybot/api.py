@@ -13,25 +13,59 @@ PAPER MODE only — no real funds. Live execution stays Phase 4.
 from __future__ import annotations
 
 import asyncio
+import datetime as _dt
+import logging
+import os
 import pathlib
 import time
 from typing import Any, Callable, Dict, List, Optional, Set
+from zoneinfo import ZoneInfo
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import Depends, FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field
 
 _WEBUI = pathlib.Path(__file__).parent / "webui" / "index.html"
+_log = logging.getLogger("polybot")
 
-from .candles import Candle, SyntheticFeed
+from .candles import BinanceLiveFeed, Candle, SyntheticFeed
 from .engine import TradingEngine
-from .execution import PaperExecutor
+from .execution import PaperExecutor, ShadowPolymarketExecutor
 from .portfolio import Portfolio
 from .risk import RiskLimits, RiskManager
-from .sizing import FixedSizer, MartingaleSizer
-from .strategy import RuleStrategy, SameColorStrategy
+from .sizing import FixedSizer, MartingaleSizer, SteppedMartingaleSizer
+from .strategy import AlternationMartingale, RuleStrategy, SameColorStrategy
 from .wallet import WalletManager
+
+
+# --------------------------------------------------------------------------- #
+# Trading-window schedule
+# --------------------------------------------------------------------------- #
+
+def _parse_hhmm(value: str) -> int:
+    """'HH:MM' -> minutes since midnight. Raises ValueError on bad input."""
+    parts = value.strip().split(":")
+    h, m = int(parts[0]), int(parts[1])
+    if not (0 <= h < 24 and 0 <= m < 60):
+        raise ValueError(f"invalid time {value!r}")
+    return h * 60 + m
+
+
+def in_trading_window(now_minutes: int, start: Optional[str], end: Optional[str]) -> bool:
+    """Is `now_minutes` (minutes since local midnight) inside [start, end)?
+
+    No schedule (either bound missing) means always-on. An end before the start
+    is an overnight window (e.g. 23:00 -> 01:30) and wraps midnight.
+    """
+    if not start or not end:
+        return True
+    s, e = _parse_hhmm(start), _parse_hhmm(end)
+    if s == e:
+        return True   # degenerate window = 24h
+    if s < e:
+        return s <= now_minutes < e
+    return now_minutes >= s or now_minutes < e   # overnight wrap
 
 
 # --------------------------------------------------------------------------- #
@@ -54,25 +88,42 @@ class RiskModel(BaseModel):
 
 class BotConfig(BaseModel):
     # strategy
-    strategy: str = Field("same_color", description="'same_color' or 'rule'")
+    strategy: str = Field(
+        "same_color", description="'alt_martingale', 'same_color' or 'rule'"
+    )
     min_streak: int = 1
     invert: bool = False
     rules: Optional[List[Dict[str, Any]]] = None
-    # sizing
+    # alt_martingale (the phone app's v13 strategy)
+    alt_n: int = Field(5, description="alternations (colour flips) required to arm")
+    # sizing — for 'alt_martingale' the stepped martingale is forced (it IS the strategy)
     sizing: str = Field("martingale", description="'martingale' or 'fixed'")
     base_stake: float = 1.0
     max_steps: int = 6
     # account / execution
     starting_balance: float = 100.0
     payout_multiple: float = 1.95
+    # odds: 'fixed' simulates with payout_multiple; 'real' quotes each bet from the
+    # live Polymarket market and SKIPS the bet if no real price is available.
+    odds: str = "fixed"
+    max_entry_price: Optional[float] = Field(
+        None, description="limit mode: skip bets whose real price is above this"
+    )
     # safety / privacy
     risk: RiskModel = RiskModel()
     rotate_wallet: bool = True
     stake_jitter: float = 0.0
     # session: auto-stop after this many minutes of wall-clock time (None = until stopped)
     run_minutes: Optional[float] = None
-    # data source: "synthetic" (offline demo) or "polymarket" (real, needs network)
+    # daily trading window (server-side scheduler); both set = only trade inside it
+    schedule_start: Optional[str] = Field(None, description="'HH:MM' local to timezone")
+    schedule_end: Optional[str] = Field(None, description="'HH:MM' local to timezone")
+    timezone: str = "Asia/Tehran"
+    # data source: "synthetic" (offline demo), "binance" (real closed candles),
+    # or "polymarket" (sampled token price feed; needs market_token_id)
     source: str = "synthetic"
+    symbol: str = "BTCUSDT"
+    binance_interval: str = "5m"
     market_token_id: Optional[str] = None
     # loop
     tick_seconds: float = 1.0
@@ -95,14 +146,18 @@ def make_engine(config: BotConfig):
         if not config.rules:
             raise ValueError("strategy 'rule' requires a non-empty 'rules' list")
         strategy = RuleStrategy(rules=config.rules)
+    elif config.strategy == "alt_martingale":
+        strategy = AlternationMartingale(alt_n=config.alt_n, max_steps=config.max_steps)
     else:
         strategy = SameColorStrategy(min_streak=config.min_streak, invert=config.invert)
 
-    sizer = (
-        MartingaleSizer(base_stake=config.base_stake, max_steps=config.max_steps)
-        if config.sizing == "martingale"
-        else FixedSizer(config.base_stake)
-    )
+    if config.strategy == "alt_martingale":
+        # The stepped martingale IS the strategy; the sizing menu doesn't apply.
+        sizer = SteppedMartingaleSizer(base_stake=config.base_stake, stepped=strategy)
+    elif config.sizing == "martingale":
+        sizer = MartingaleSizer(base_stake=config.base_stake, max_steps=config.max_steps)
+    else:
+        sizer = FixedSizer(config.base_stake)
     risk = RiskManager(config.risk.to_limits())
     wallet = (
         WalletManager(
@@ -112,11 +167,18 @@ def make_engine(config: BotConfig):
         if config.rotate_wallet
         else None
     )
+    if config.odds == "real":
+        executor = ShadowPolymarketExecutor(
+            interval_seconds=config.candle_interval_seconds,
+            max_entry_price=config.max_entry_price,
+        )
+    else:
+        executor = PaperExecutor(payout_multiple=config.payout_multiple)
     engine = TradingEngine(
         strategy=strategy,
         sizer=sizer,
         portfolio=Portfolio(config.starting_balance),
-        executor=PaperExecutor(payout_multiple=config.payout_multiple),
+        executor=executor,
         risk=risk,
         wallet=wallet,
         stake_jitter=config.stake_jitter,
@@ -131,26 +193,36 @@ def make_engine(config: BotConfig):
 class BotRunner:
     """Owns the engine and the (optional) async tick loop, and broadcasts state."""
 
-    def __init__(self, clock: Callable[[], float] = time.monotonic) -> None:
+    def __init__(
+        self,
+        clock: Callable[[], float] = time.monotonic,
+        local_now: Optional[Callable[[str], _dt.datetime]] = None,
+    ) -> None:
         self.config = BotConfig()
         self.running = False
         self.engine: Optional[TradingEngine] = None
         self.risk: Optional[RiskManager] = None
         self.wallet: Optional[WalletManager] = None
-        self.feed: Optional[SyntheticFeed] = None
+        self.feed: Optional[Any] = None
         self.last_candle: Optional[Candle] = None
         self._task: Optional[asyncio.Task] = None
         self._clients: Set[Any] = set()
         self._clock = clock
+        # injectable wall clock for the scheduler (tests pass a fake)
+        self._local_now = local_now or (lambda tz: _dt.datetime.now(ZoneInfo(tz)))
         self._deadline: Optional[float] = None   # wall-clock auto-stop, if run_minutes set
         self.stop_reason: Optional[str] = None
+        self.in_window = True                    # scheduler state, shown in snapshot
+        self._was_in_window = True
 
     # -- lifecycle --------------------------------------------------------- #
 
     def build(self, config: BotConfig) -> None:
         self.config = config
         self.engine, self.risk, self.wallet = make_engine(config)
-        if config.source == "polymarket":
+        if config.source == "binance":
+            self.feed = BinanceLiveFeed(symbol=config.symbol, interval=config.binance_interval)
+        elif config.source == "polymarket":
             if not config.market_token_id:
                 raise ValueError("source 'polymarket' requires 'market_token_id'")
             from .polymarket import PolymarketData, PolymarketSampledFeed
@@ -160,6 +232,25 @@ class BotRunner:
         else:
             self.feed = SyntheticFeed(interval_seconds=config.candle_interval_seconds)
         self.last_candle = None
+        self.in_window = True
+        self._was_in_window = True
+
+    def _check_window(self) -> bool:
+        """Scheduler gate. Refreshes `in_window`; resets strategy state on re-entry."""
+        cfg = self.config
+        if not cfg.schedule_start or not cfg.schedule_end:
+            self.in_window = True
+        else:
+            now = self._local_now(cfg.timezone)
+            self.in_window = in_trading_window(
+                now.hour * 60 + now.minute, cfg.schedule_start, cfg.schedule_end
+            )
+        if self.in_window and not self._was_in_window and self.engine is not None:
+            # Window just opened after a pause: void any stale bet and clear
+            # strategy state — the candles in between were never traded.
+            self.engine.void_pending()
+        self._was_in_window = self.in_window
+        return self.in_window
 
     def tick(self) -> None:
         """Advance one candle. Synchronous core so it is unit-testable."""
@@ -170,7 +261,14 @@ class BotRunner:
             self.running = False
             self.stop_reason = "duration_reached"
             return
+        if not self._check_window():
+            return   # outside the trading window: stay alive, don't trade
         candle = self.feed.next()
+        if candle is None:
+            return   # live feed: no newly-closed candle yet
+        # A gap in a live feed (downtime) voids the bet whose outcome we missed.
+        if getattr(self.feed, "gap_detected", False):
+            self.engine.void_pending()
         self.engine.on_candle(candle)
         self.last_candle = candle
         if self.engine.portfolio.equity <= 0.01:
@@ -210,12 +308,26 @@ class BotRunner:
         remaining = None
         if self.running and self._deadline is not None:
             remaining = max(0.0, round(self._deadline - self._clock(), 1))
+        strat = self.engine.strategy
+        strat_state = (
+            {"step": strat.step, "armed": strat.armed}
+            if isinstance(strat, AlternationMartingale) else None
+        )
+        last_price = getattr(self.engine.executor, "last_quote_price", None)
         return {
             "running": self.running,
             "configured": True,
             "run_minutes": self.config.run_minutes,
             "remaining_seconds": remaining,
             "stop_reason": self.stop_reason,
+            "in_window": self.in_window,
+            "schedule": (
+                {"start": self.config.schedule_start, "end": self.config.schedule_end,
+                 "timezone": self.config.timezone}
+                if self.config.schedule_start and self.config.schedule_end else None
+            ),
+            "strategy_state": strat_state,
+            "last_quote_price": last_price,
             "portfolio": p.summary(),
             "risk": self.risk.status() if self.risk else None,
             "halt_reason": self.engine.last_halt_reason,
@@ -278,9 +390,20 @@ class BotRunner:
 # App
 # --------------------------------------------------------------------------- #
 
-def create_app(runner: Optional[BotRunner] = None):
-    app = FastAPI(title="PolyBot Control API", version="0.1.0")
+def create_app(runner: Optional[BotRunner] = None, token: Optional[str] = None):
+    """Build the app. `token` (or the POLYBOT_TOKEN env var) protects every API
+    endpoint: requests must send `Authorization: Bearer <token>` (or an
+    `X-Auth-Token` header / `?token=` query). Without a token configured the API
+    is OPEN — fine on localhost, never in deployment (the deploy guide and the
+    systemd unit both set POLYBOT_TOKEN)."""
+    app = FastAPI(title="PolyBot Control API", version="0.2.0")
     app.state.runner = runner or BotRunner()
+    auth_token = token if token is not None else os.environ.get("POLYBOT_TOKEN", "")
+    if not auth_token:
+        _log.warning(
+            "POLYBOT_TOKEN is not set — the control API is UNPROTECTED. "
+            "Set it before exposing this server to the network."
+        )
     # Personal paper tool: allow the web UI to talk to the API from any origin.
     app.add_middleware(
         CORSMiddleware,
@@ -288,6 +411,18 @@ def create_app(runner: Optional[BotRunner] = None):
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
+    def _extract_token(request: Request) -> str:
+        header = request.headers.get("authorization", "")
+        if header.lower().startswith("bearer "):
+            return header[7:].strip()
+        return request.headers.get("x-auth-token") or request.query_params.get("token", "")
+
+    def require_auth(request: Request) -> None:
+        if auth_token and _extract_token(request) != auth_token:
+            raise HTTPException(status_code=401, detail="invalid or missing token")
+
+    guarded = [Depends(require_auth)]
 
     def r() -> BotRunner:
         return app.state.runner
@@ -299,20 +434,20 @@ def create_app(runner: Optional[BotRunner] = None):
             return _WEBUI.read_text(encoding="utf-8")
         return "<h1>PolyBot</h1><p>Web UI not found. API docs at <a href='/docs'>/docs</a>.</p>"
 
-    @app.get("/status")
+    @app.get("/status", dependencies=guarded)
     def status():
         return r().snapshot()
 
-    @app.get("/config")
+    @app.get("/config", dependencies=guarded)
     def get_config():
         return r().config.model_dump()
 
-    @app.post("/config")
+    @app.post("/config", dependencies=guarded)
     def set_config(config: BotConfig):
         r().build(config)
         return r().snapshot()
 
-    @app.post("/start")
+    @app.post("/start", dependencies=guarded)
     async def start(config: Optional[BotConfig] = None):
         # async so ensure_loop() can schedule the tick task on the running loop.
         run = r()
@@ -320,17 +455,17 @@ def create_app(runner: Optional[BotRunner] = None):
         run.ensure_loop()
         return run.snapshot()
 
-    @app.post("/stop")
+    @app.post("/stop", dependencies=guarded)
     def stop():
         r().stop()
         return r().snapshot()
 
-    @app.post("/reset")
+    @app.post("/reset", dependencies=guarded)
     def reset():
         r().reset()
         return r().snapshot()
 
-    @app.post("/kill")
+    @app.post("/kill", dependencies=guarded)
     def kill():
         r().kill()
         return r().snapshot()
@@ -343,7 +478,7 @@ def create_app(runner: Optional[BotRunner] = None):
             app.state.polymarket = PolymarketData()
         return app.state.polymarket
 
-    @app.get("/polymarket/markets")
+    @app.get("/polymarket/markets", dependencies=guarded)
     def polymarket_markets():
         try:
             from dataclasses import asdict
@@ -352,7 +487,7 @@ def create_app(runner: Optional[BotRunner] = None):
         except Exception as exc:  # noqa: BLE001 - surface network/host issues to the client
             return {"error": str(exc), "markets": []}
 
-    @app.post("/backtest")
+    @app.post("/backtest", dependencies=guarded)
     def backtest(req: BacktestRequest):
         """Run the strategy over real Polymarket price history and return the result."""
         try:
@@ -377,7 +512,7 @@ def create_app(runner: Optional[BotRunner] = None):
         except Exception as exc:  # noqa: BLE001
             return {"error": str(exc), "candles": 0}
 
-    @app.get("/polymarket/prices/{token_id}")
+    @app.get("/polymarket/prices/{token_id}", dependencies=guarded)
     def polymarket_prices(token_id: str):
         try:
             api = poly()
@@ -392,6 +527,9 @@ def create_app(runner: Optional[BotRunner] = None):
 
     @app.websocket("/ws")
     async def ws_endpoint(websocket: WebSocket):
+        if auth_token and websocket.query_params.get("token", "") != auth_token:
+            await websocket.close(code=4401)
+            return
         await websocket.accept()
         run = r()
         run.add_client(websocket)

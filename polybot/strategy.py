@@ -78,6 +78,94 @@ class SameColorStrategy(Strategy):
         return signal.opposite if self.invert else signal
 
 
+class AlternationMartingale(Strategy):
+    """The phone app's (v13) alternation-triggered martingale, ported 1:1.
+
+    Watch for colours alternating (R,G,R,G,…) at least `alt_n` flips; the moment
+    the alternation breaks (2 same-colour candles in a row) the strategy ARMS and
+    bets FOLLOW (same as the previous candle) every candle. The stake step is
+    tracked here (see `step`): each lost bet raises it, so the paired sizer
+    doubles the stake. Hitting `max_steps` losses disarms — no bet is larger than
+    base * 2^(max_steps-1) — and the strategy waits for the next qualifying
+    alternation, restarting from the base step. A win also resets and disarms.
+
+    The engine reports outcomes via `on_result` / `on_bet_rejected`, so a bet the
+    risk layer blocks never advances the step.
+    """
+
+    name = "alt_martingale"
+
+    def __init__(self, alt_n: int = 5, max_steps: int = 3) -> None:
+        if alt_n < 1:
+            raise ValueError("alt_n must be >= 1")
+        if max_steps < 1:
+            raise ValueError("max_steps must be >= 1")
+        self.alt_n = alt_n
+        self.max_steps = max_steps
+        self.reset()
+
+    def reset(self) -> None:
+        """Clear all runtime state (called on start and on schedule-window entry)."""
+        self._prev: Optional[Color] = None
+        self._alt_len = 0
+        self._armed = False
+        self._step = 0
+
+    @property
+    def step(self) -> int:
+        """Consecutive losses in the current trade window (drives the sizer)."""
+        return self._step
+
+    @property
+    def armed(self) -> bool:
+        return self._armed
+
+    # -- engine feedback ---------------------------------------------------- #
+
+    def on_result(self, won: bool) -> None:
+        """Called by the engine when a bet this strategy signalled settles."""
+        if won:
+            self._step = 0
+            self._armed = False   # stand down until the next qualifying alternation
+        else:
+            self._step += 1
+
+    def on_bet_rejected(self) -> None:
+        """Called when a signal did NOT become a bet (risk block / no quote).
+
+        No bet happened, so the step must not advance; stay armed and retry on
+        the next candle.
+        """
+
+    # -- decision ------------------------------------------------------------ #
+
+    def decide(self, candles: Sequence[Candle]) -> Signal:
+        if not candles:
+            return Signal.NONE
+        color = candles[-1].color
+        prev = self._prev
+        # Mirrors the JS exactly: a colour after a doji counts as a flip; two
+        # same-colour candles in a row is the alternation "break".
+        is_flip = prev is not None and color is not Color.NONE and color is not prev
+        same = prev is not None and color is not Color.NONE and color is prev
+        if same and not self._armed and self._alt_len >= self.alt_n:
+            self._armed = True
+            self._step = 0
+        if color is Color.NONE:
+            self._alt_len = 0
+        elif is_flip:
+            self._alt_len += 1
+        else:
+            self._alt_len = 0
+        self._prev = color
+        if self._armed and color is not Color.NONE:
+            if self._step >= self.max_steps:
+                self._armed = False   # cap hit -> wait for the next trigger
+                return Signal.NONE
+            return Signal.from_color(color)   # FOLLOW the previous candle
+        return Signal.NONE
+
+
 # --------------------------------------------------------------------------- #
 # Rule DSL
 # --------------------------------------------------------------------------- #

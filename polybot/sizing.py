@@ -46,6 +46,31 @@ class PercentSizer(Sizer):
         return balance * self.fraction
 
 
+class SteppedMartingaleSizer(Sizer):
+    """Martingale whose step lives in the strategy, not here.
+
+    Built for `AlternationMartingale`: the strategy already tracks consecutive
+    losses (and only for bets that were actually placed), so the sizer just
+    reads `stepped.step` — one source of truth, no way to drift apart when the
+    risk layer blocks a bet.
+    """
+
+    def __init__(self, base_stake: float, stepped, *, multiplier: float = 2.0) -> None:
+        if base_stake <= 0:
+            raise ValueError("base_stake must be positive")
+        if multiplier <= 1:
+            raise ValueError("multiplier must be > 1")
+        if not hasattr(stepped, "step"):
+            raise TypeError("stepped must expose a .step property")
+        self.base_stake = base_stake
+        self.stepped = stepped
+        self.multiplier = multiplier
+
+    def next_stake(self, balance: float, last_won):  # noqa: ARG002 - step comes from the strategy
+        stake = self.base_stake * (self.multiplier ** self.stepped.step)
+        return min(stake, balance)
+
+
 class MartingaleSizer(Sizer):
     """Double the stake after every loss; reset to base after a win.
 
