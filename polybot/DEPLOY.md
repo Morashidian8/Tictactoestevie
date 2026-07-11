@@ -112,6 +112,34 @@ sudo systemctl reload caddy
 - **سقف‌های ایمنی:** حداکثر مبلغِ هر معامله و حداکثر ضررِ روزانه را حتماً ست کن —
   زیرِ استراتژی اجرا می‌شوند و جلوی باگ/رفتارِ دیوانه را می‌گیرند.
 
+## ۵.۵) اپِ تحلیلِ تناوبِ کندل — روی همین سرور
+
+با خصوصی‌شدنِ ریپو، GitHub Pages (میزبانِ قبلیِ اپِ تحلیل) از کار افتاد. همان اپ از
+همین سرور سرو می‌شود و داده‌اش هم **تازه‌تر از قبل** می‌ماند (بازسازیِ دوره‌ای روی
+خودِ سرور، بدونِ تأخیرهای cron گیت‌هاب). اپ عمومی است و توکن نمی‌خواهد — هیچ
+کدِ استراتژی داخلش نیست.
+
+```bash
+# ساختِ اولیهٔ داده (چند دقیقه طول می‌کشد — یک سال کندل می‌گیرد):
+cd /home/bot/polybot-app
+git checkout main -- pwa build_pwa.py analyze_history.py bot.py
+PWA_OUT=/var/www/analysis .venv/bin/python build_pwa.py
+
+# بازسازیِ خودکار هر ۳۰ دقیقه:
+( crontab -l 2>/dev/null; echo "*/30 * * * * cd /home/bot/polybot-app && PWA_OUT=/var/www/analysis .venv/bin/python build_pwa.py >> /var/log/analysis-build.log 2>&1" ) | crontab -
+```
+
+و در `/etc/caddy/Caddyfile`، داخلِ همان بلاکِ دامنه، قبل از `reverse_proxy`:
+
+```
+    handle_path /analysis/* {
+        root * /var/www/analysis
+        file_server
+    }
+```
+
+آدرسِ اپ: `https://bot.example.com/analysis/` — مثلِ قبل قابلِ Add to Home Screen.
+
 ## ۶) چک‌لیستِ امنیتیِ نهایی
 
 - [ ] ریپو خصوصی است؛ لینکِ عمومیِ نسخهٔ آزمایشیِ HTML را دیگر به‌روز/پخش نکن.
