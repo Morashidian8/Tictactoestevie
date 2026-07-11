@@ -1,0 +1,23 @@
+[Unit]
+Description=PolyBot trading server
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=bot
+WorkingDirectory=/home/bot/polybot-app
+Environment="POLYBOT_TOKEN=${POLYBOT_TOKEN}"
+ExecStart=/home/bot/polybot-app/.venv/bin/uvicorn polybot.api:app --host 127.0.0.1 --port 8700
+Restart=always
+RestartSec=5
+
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=read-only
+PrivateTmp=yes
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
