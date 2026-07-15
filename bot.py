@@ -282,6 +282,64 @@ def handle_callback(monitor, cq):
 
 
 # ---------------------------------------------------------------------------
+# Persistent Telegram menu (a reply keyboard that stays under the text box)
+# ---------------------------------------------------------------------------
+MENU_STATUS = "📊 وضعیت"
+MENU_REFRESH = "🔄 منو"
+
+
+def _menu_keyboard():
+    """Always-visible quick keyboard: one آستانه button per timeframe + status."""
+    rows = [[f"🎚 آستانه {interval_label(iv)}"] for iv in THRESHOLD_INTERVALS]
+    rows.append([MENU_STATUS, MENU_REFRESH])
+    return {
+        "keyboard": [[{"text": t} for t in row] for row in rows],
+        "resize_keyboard": True,
+        "is_persistent": True,
+    }
+
+
+def send_menu(chat_id, text):
+    return _tg("sendMessage", {
+        "chat_id": chat_id, "text": text, "parse_mode": "HTML",
+        "reply_markup": _menu_keyboard(),
+    })
+
+
+def set_bot_commands():
+    """Register slash commands so they show in Telegram's "/" and Menu button."""
+    _tg("setMyCommands", {"commands": [
+        {"command": "threshold", "description": "تغییر آستانهٔ هشدار (۲ تا ۷ تناوب)"},
+        {"command": "status", "description": "وضعیت و آستانهٔ فعلی"},
+        {"command": "menu", "description": "نمایش منوی سریع"},
+        {"command": "start", "description": "شروع / راهنما"},
+    ]})
+
+
+def start_text():
+    return (
+        "✅ ربات فعال شد.\n"
+        "کندل‌های بیت‌کوین را ۲۴ ساعته بررسی می‌کنم و هنگام تناوبِ جهتِ کندل‌ها "
+        "به شما خبر می‌دهم.\n\n"
+        f"آستانهٔ فعلی — {_threshold_summary()}\n\n"
+        "🎚 برای تغییرِ سریعِ آستانه از دکمه‌های پایین استفاده کن "
+        "(یا دستورِ /threshold)."
+    )
+
+
+def interval_from_menu_text(text):
+    """Match a '🎚 آستانه <label>' menu button back to its interval key.
+
+    Uses exact equality (not substring) because one label can contain another —
+    e.g. '۵ دقیقه‌ای' is a substring of '۱۵ دقیقه‌ای'.
+    """
+    for i in THRESHOLD_INTERVALS:
+        if text == f"🎚 آستانه {interval_label(i)}":
+            return i
+    return None
+
+
+# ---------------------------------------------------------------------------
 # Candle fetching (Binance spot candles or Polymarket Up/Down series)
 # ---------------------------------------------------------------------------
 def fetch_candles():
@@ -608,6 +666,19 @@ class Monitor:
 # ---------------------------------------------------------------------------
 def command_listener(monitor: Monitor):
     """Long-poll getUpdates so users can /start the bot and grab chat_id."""
+    # Register the slash-command list (shows in Telegram's "/" and Menu button)
+    # and attach the always-visible quick keyboard so the threshold is one tap
+    # away without typing.
+    try:
+        set_bot_commands()
+        if monitor.chat_id:
+            send_menu(
+                monitor.chat_id,
+                "🎚 منوی سریع آماده شد — برای عوض‌کردنِ آستانه، دکمهٔ آستانهٔ "
+                "تایم‌فریمِ دلخواه را از پایین بزن.",
+            )
+    except Exception as exc:
+        log.warning("menu/setup init failed: %s", exc)
     offset = None
     while True:
         try:
@@ -641,14 +712,21 @@ def command_listener(monitor: Monitor):
                     log.info("Captured chat_id: %s", chat_id)
 
                 if text.startswith("/start"):
-                    send_message(
-                        chat_id,
-                        "✅ ربات فعال شد.\n"
-                        "کندل‌های بیت‌کوین را ۲۴ ساعته بررسی می‌کنم و هنگام تناوبِ "
-                        "جهتِ کندل‌ها به شما خبر می‌دهم.\n\n"
-                        f"آستانهٔ فعلی — {_threshold_summary()}\n"
-                        "برای تغییرِ آستانه (۲ تا ۷ تناوب): /threshold",
-                    )
+                    send_menu(chat_id, start_text())
+                elif text.startswith("/menu") or text == MENU_REFRESH:
+                    send_menu(chat_id, "منوی سریع آماده است — از دکمه‌های پایین استفاده کن.")
+                elif text.startswith("🎚 آستانه"):
+                    # Quick-menu tap: jump straight to that timeframe's numbers.
+                    iv = interval_from_menu_text(text)
+                    if iv:
+                        send_keyboard(
+                            chat_id,
+                            f"🎚 آستانهٔ {interval_label(iv)} — تعداد تناوب (۲ تا ۷):",
+                            _number_keyboard(iv),
+                        )
+                    else:
+                        prompt, kb = _threshold_prompt()
+                        send_keyboard(chat_id, prompt, kb)
                 elif text.startswith("/threshold") or text.startswith("/astane"):
                     parts = text.split()
                     # Shortcuts: "/threshold 5m 3" or (single-tf) "/threshold 3".
@@ -661,7 +739,7 @@ def command_listener(monitor: Monitor):
                     else:
                         prompt, kb = _threshold_prompt()
                         send_keyboard(chat_id, prompt, kb)
-                elif text.startswith("/status"):
+                elif text.startswith("/status") or text == MENU_STATUS:
                     streak = monitor._alternation_streak()
                     last = (
                         dir_label(monitor.directions[-1])
