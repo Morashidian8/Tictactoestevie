@@ -14,6 +14,11 @@ concurrency:
   group: candle-monitor
   cancel-in-progress: false
 
+# The Telegram-set alternation threshold is persisted to a dedicated branch via
+# the GitHub API, so it survives the ~5.5h job restarts.
+permissions:
+  contents: write
+
 jobs:
   monitor:
     runs-on: ubuntu-latest
@@ -31,7 +36,10 @@ jobs:
             threshold: "5"
             tf_label: "۵ دقیقه‌ای — Polymarket"
             poly_prefix: "btc-updown-5m"
+            command_listener: "0"
           # 15-minute monitor — Binance BTCUSDT klines, threshold 4.
+          # This one also runs the Telegram command listener (/threshold) for
+          # BOTH timeframes; only one process may poll getUpdates.
           - name: "15m-binance"
             source: "binance"
             granularity: "900"
@@ -39,6 +47,7 @@ jobs:
             threshold: "4"
             tf_label: "۱۵ دقیقه‌ای — Binance"
             poly_prefix: "btc-updown-5m"
+            command_listener: "1"
     name: monitor-${{ matrix.name }}
     steps:
       - name: Checkout
@@ -62,6 +71,14 @@ jobs:
           ALTERNATION_THRESHOLD: ${{ matrix.threshold }}
           TF_LABEL: ${{ matrix.tf_label }}
           POLY_SLUG_PREFIX: ${{ matrix.poly_prefix }}
+          # Telegram /threshold control: which process listens, the timeframes it
+          # offers, and their default flip (تناوب) thresholds = candles - 1.
+          COMMAND_LISTENER: ${{ matrix.command_listener }}
+          THRESHOLD_INTERVALS: "5m,15m"
+          THRESHOLD_DEFAULTS: "5m:4,15m:3"
+          # Persist the chosen threshold across restarts via the GitHub API.
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
           # Poll interval in seconds.
           POLL_SECONDS: "30"
           # Exit a bit before the 350-minute job timeout.

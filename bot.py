@@ -17,6 +17,8 @@ from datetime import datetime, timezone
 
 import requests
 
+import threshold_store
+
 try:
     from dotenv import load_dotenv
     load_dotenv()
@@ -41,6 +43,57 @@ TF_LABEL = os.environ.get("TF_LABEL", "").strip()
 # Number of alternating candles required to fire the alert.
 ALTERNATION_THRESHOLD = int(os.environ.get("ALTERNATION_THRESHOLD", "5"))
 POLL_SECONDS = int(os.environ.get("POLL_SECONDS", "20"))
+
+# --- User-adjustable alternation threshold (from Telegram) ---------------------
+# The user-facing unit is "تناوب" (a color flip). A run of `streak` candles has
+# `streak - 1` flips, so a flip-threshold of F fires when `streak >= F + 1`.
+# Allowed range the user can pick from Telegram: 2..7 flips.
+THRESHOLD_MIN = 2
+THRESHOLD_MAX = 7
+
+
+def _parse_int_map(s):
+    out = {}
+    for part in (s or "").split(","):
+        part = part.strip()
+        if ":" in part:
+            k, v = part.split(":", 1)
+            try:
+                out[k.strip()] = int(v.strip())
+            except ValueError:
+                pass
+    return out
+
+
+# Timeframes the /threshold picker offers, and their default flip-thresholds
+# (used for display until the store has an override). Flips = candles - 1.
+THRESHOLD_INTERVALS = [
+    x.strip()
+    for x in os.environ.get("THRESHOLD_INTERVALS", "5m,15m").split(",")
+    if x.strip()
+]
+THRESHOLD_DEFAULTS = _parse_int_map(os.environ.get("THRESHOLD_DEFAULTS", "5m:4,15m:3"))
+INTERVAL_LABELS = {
+    "1m": "۱ دقیقه‌ای",
+    "5m": "۵ دقیقه‌ای",
+    "15m": "۱۵ دقیقه‌ای",
+    "1h": "۱ ساعته",
+}
+
+
+def interval_label(iv):
+    return INTERVAL_LABELS.get(iv, iv)
+
+
+def default_flips(iv):
+    """The fallback flip-threshold for an interval when the store has none."""
+    return THRESHOLD_DEFAULTS.get(iv, max(1, ALTERNATION_THRESHOLD - 1))
+
+
+def current_flips(iv):
+    """The active flip-threshold for an interval: store override or default."""
+    v = threshold_store.get(iv)
+    return v if v is not None else default_flips(iv)
 
 # --- Polymarket (BTC Up/Down 5-minute recurring market) config ---
 # Each 5-minute window is a separate market whose slug ends with the window's
@@ -95,6 +148,137 @@ def send_message(chat_id: str, text: str) -> bool:
     except requests.RequestException as exc:
         log.error("Telegram send error: %s", exc)
         return False
+
+
+def _tg(method: str, payload: dict) -> bool:
+    """POST a Telegram API method, logging failures. Returns True on 200."""
+    try:
+        resp = requests.post(f"{TELEGRAM_API}/{method}", json=payload, timeout=15)
+        if resp.status_code != 200:
+            log.error("Telegram %s failed: %s", method, resp.text[:200])
+            return False
+        return True
+    except requests.RequestException as exc:
+        log.error("Telegram %s error: %s", method, exc)
+        return False
+
+
+def send_keyboard(chat_id, text, keyboard):
+    return _tg("sendMessage", {
+        "chat_id": chat_id, "text": text, "parse_mode": "HTML",
+        "reply_markup": {"inline_keyboard": keyboard},
+    })
+
+
+def edit_keyboard(chat_id, message_id, text, keyboard):
+    return _tg("editMessageText", {
+        "chat_id": chat_id, "message_id": message_id, "text": text,
+        "parse_mode": "HTML", "reply_markup": {"inline_keyboard": keyboard},
+    })
+
+
+def answer_callback(cq_id, text=None):
+    payload = {"callback_query_id": cq_id}
+    if text:
+        payload["text"] = text
+    return _tg("answerCallbackQuery", payload)
+
+
+# ---------------------------------------------------------------------------
+# /threshold Telegram control (pick 2..7 تناوب per timeframe)
+# ---------------------------------------------------------------------------
+def _interval_keyboard():
+    return [
+        [{"text": f"{interval_label(iv)} — فعلی: {current_flips(iv)} تناوب",
+          "callback_data": f"thrpick:{iv}"}]
+        for iv in THRESHOLD_INTERVALS
+    ]
+
+
+def _number_keyboard(iv):
+    cur = current_flips(iv)
+    row = [
+        {"text": (f"✅ {n}" if n == cur else str(n)), "callback_data": f"thrset:{iv}:{n}"}
+        for n in range(THRESHOLD_MIN, THRESHOLD_MAX + 1)
+    ]
+    rows = [row]
+    if len(THRESHOLD_INTERVALS) > 1:
+        rows.append([{"text": "◀️ بازگشت", "callback_data": "thrback"}])
+    return rows
+
+
+def _threshold_prompt():
+    if len(THRESHOLD_INTERVALS) == 1:
+        iv = THRESHOLD_INTERVALS[0]
+        return (f"🎚 آستانهٔ هشدارِ {interval_label(iv)} را انتخاب کن "
+                f"(تعداد تناوب، ۲ تا ۷):"), _number_keyboard(iv)
+    return "🎚 کدام تایم‌فریم؟ آستانهٔ هشدار (تعداد تناوب) را عوض کن:", _interval_keyboard()
+
+
+def _threshold_summary():
+    return " ؛ ".join(
+        f"{interval_label(iv)}: {current_flips(iv)} تناوب" for iv in THRESHOLD_INTERVALS
+    )
+
+
+def apply_threshold(chat_id, monitor, iv, n):
+    """Validate, persist, confirm, and apply a picked threshold immediately."""
+    if iv not in THRESHOLD_INTERVALS:
+        send_message(chat_id, f"تایم‌فریمِ نامعتبر: {iv}")
+        return
+    if not (THRESHOLD_MIN <= n <= THRESHOLD_MAX):
+        send_message(chat_id, f"آستانه باید بین {THRESHOLD_MIN} تا {THRESHOLD_MAX} تناوب باشد.")
+        return
+    ok = threshold_store.set(iv, n)
+    if monitor is not None and monitor.interval == iv:
+        monitor.flip_threshold = n
+    note = "" if ok else "\n⚠️ ذخیرهٔ ماندگار ناموفق بود؛ فقط تا ری‌استارتِ بعدی می‌ماند."
+    send_message(
+        chat_id,
+        f"✅ آستانهٔ هشدارِ <b>{interval_label(iv)}</b> روی <b>{n}</b> تناوب تنظیم شد.\n"
+        f"یعنی وقتی <b>{n}</b> بار پشت‌سرهم رنگ عوض شد ({n + 1} کندلِ متوالی) هشدار می‌دهد.{note}",
+    )
+
+
+def handle_callback(monitor, cq):
+    """Handle an inline-keyboard tap from the /threshold menu."""
+    data = cq.get("data", "")
+    cq_id = cq.get("id")
+    m = cq.get("message") or {}
+    chat = str(m.get("chat", {}).get("id", ""))
+    mid = m.get("message_id")
+    if data.startswith("thrpick:"):
+        iv = data.split(":", 1)[1]
+        edit_keyboard(chat, mid,
+                      f"🎚 آستانهٔ {interval_label(iv)} — تعداد تناوب (۲ تا ۷):",
+                      _number_keyboard(iv))
+        answer_callback(cq_id)
+    elif data == "thrback":
+        edit_keyboard(chat, mid, "🎚 کدام تایم‌فریم؟", _interval_keyboard())
+        answer_callback(cq_id)
+    elif data.startswith("thrset:"):
+        try:
+            _, iv, n = data.split(":")
+            n = int(n)
+        except ValueError:
+            answer_callback(cq_id, "خطا")
+            return
+        if iv not in THRESHOLD_INTERVALS or not (THRESHOLD_MIN <= n <= THRESHOLD_MAX):
+            answer_callback(cq_id, "خارج از بازهٔ ۲ تا ۷")
+            return
+        ok = threshold_store.set(iv, n)
+        if monitor is not None and monitor.interval == iv:
+            monitor.flip_threshold = n
+        answer_callback(cq_id, f"{interval_label(iv)} = {n} تناوب ✅")
+        note = "" if ok else "\n⚠️ ذخیرهٔ ماندگار ناموفق بود؛ فقط تا ری‌استارتِ بعدی می‌ماند."
+        edit_keyboard(
+            chat, mid,
+            f"✅ آستانهٔ هشدارِ <b>{interval_label(iv)}</b> روی <b>{n}</b> تناوب تنظیم شد.\n"
+            f"یعنی وقتی <b>{n}</b> بار پشت‌سرهم رنگ عوض شد ({n + 1} کندلِ متوالی) هشدار می‌دهد.{note}",
+            [],
+        )
+    else:
+        answer_callback(cq_id)
 
 
 # ---------------------------------------------------------------------------
@@ -280,6 +464,28 @@ class Monitor:
         self.chat_id = chat_id
         self.last_candle_time = 0
         self.directions = []  # directions of recent candles (oldest->newest)
+        self.interval = INTERVAL
+        # Threshold in تناوب (flips). Env ALTERNATION_THRESHOLD is in candles, so
+        # the equivalent flip count is candles - 1. A Telegram override replaces
+        # this at runtime (and is loaded from the store on startup / refresh).
+        self.flip_threshold = max(1, ALTERNATION_THRESHOLD - 1)
+        self._last_thr_refresh = 0.0
+        self.refresh_threshold(0.0, force=True)
+
+    def refresh_threshold(self, now, force=False):
+        """Pull the latest Telegram-set threshold from the store (throttled)."""
+        if not force and now - self._last_thr_refresh < 60:
+            return
+        self._last_thr_refresh = now
+        try:
+            v = threshold_store.get(self.interval)
+        except Exception as exc:  # never let the store break the monitor
+            log.warning("threshold refresh failed: %s", exc)
+            return
+        if v is not None and THRESHOLD_MIN <= v <= THRESHOLD_MAX and v != self.flip_threshold:
+            log.info("Threshold(%s): %d -> %d تناوب (from store).",
+                     self.interval, self.flip_threshold, v)
+            self.flip_threshold = v
 
     def _alternation_streak(self) -> int:
         """Length of the trailing run of strictly alternating directions."""
@@ -318,7 +524,9 @@ class Monitor:
         # Alert on EVERY new candle while the alternating run meets the
         # threshold, so a sustained back-and-forth keeps notifying instead of
         # firing only once. (process_new_candle runs once per closed candle.)
-        if streak >= ALTERNATION_THRESHOLD:
+        # Threshold is in تناوب (flips) = streak - 1, adjustable from Telegram.
+        flips = streak - 1
+        if flips >= self.flip_threshold:
             self._send_alert(candle, streak)
 
     def _send_alert(self, candle, streak: int):
@@ -382,6 +590,7 @@ class Monitor:
                 log.info("Max runtime (%ss) reached; exiting cleanly.", max_runtime)
                 return
             try:
+                self.refresh_threshold(time.time())
                 candles = fetch_candles()
                 new = [c for c in candles if c["time"] > self.last_candle_time]
                 for candle in new:
@@ -410,6 +619,17 @@ def command_listener(monitor: Monitor):
             data = resp.json()
             for update in data.get("result", []):
                 offset = update["update_id"] + 1
+
+                # Inline-keyboard taps from the /threshold menu.
+                cq = update.get("callback_query")
+                if cq:
+                    if not monitor.chat_id:
+                        monitor.chat_id = str(
+                            (cq.get("message") or {}).get("chat", {}).get("id", "")
+                        )
+                    handle_callback(monitor, cq)
+                    continue
+
                 msg = update.get("message") or update.get("channel_post")
                 if not msg:
                     continue
@@ -424,10 +644,23 @@ def command_listener(monitor: Monitor):
                     send_message(
                         chat_id,
                         "✅ ربات فعال شد.\n"
-                        "کندل‌های ۵ دقیقه‌ای بیت‌کوین (Binance) را ۲۴ ساعته "
-                        "بررسی می‌کنم و هنگام تناوب جهت کندل‌ها به شما خبر می‌دهم.\n"
-                        f"آستانه هشدار: {ALTERNATION_THRESHOLD} کندل متناوب.",
+                        "کندل‌های بیت‌کوین را ۲۴ ساعته بررسی می‌کنم و هنگام تناوبِ "
+                        "جهتِ کندل‌ها به شما خبر می‌دهم.\n\n"
+                        f"آستانهٔ فعلی — {_threshold_summary()}\n"
+                        "برای تغییرِ آستانه (۲ تا ۷ تناوب): /threshold",
                     )
+                elif text.startswith("/threshold") or text.startswith("/astane"):
+                    parts = text.split()
+                    # Shortcuts: "/threshold 5m 3" or (single-tf) "/threshold 3".
+                    if (len(parts) == 3 and parts[2].lstrip("-").isdigit()):
+                        apply_threshold(chat_id, monitor, parts[1], int(parts[2]))
+                    elif (len(parts) == 2 and parts[1].isdigit()
+                          and len(THRESHOLD_INTERVALS) == 1):
+                        apply_threshold(chat_id, monitor,
+                                        THRESHOLD_INTERVALS[0], int(parts[1]))
+                    else:
+                        prompt, kb = _threshold_prompt()
+                        send_keyboard(chat_id, prompt, kb)
                 elif text.startswith("/status"):
                     streak = monitor._alternation_streak()
                     last = (
@@ -437,9 +670,12 @@ def command_listener(monitor: Monitor):
                     )
                     send_message(
                         chat_id,
-                        f"📊 وضعیت:\nآخرین کندل: {last}\n"
-                        f"طول تناوب فعلی: {streak}\n"
-                        f"آستانه هشدار: {ALTERNATION_THRESHOLD}",
+                        f"📊 وضعیت ({interval_label(monitor.interval)}):\n"
+                        f"آخرین کندل: {last}\n"
+                        f"طول تناوب فعلی: {max(0, streak - 1)}\n"
+                        f"آستانهٔ این مانیتور: {monitor.flip_threshold} تناوب\n\n"
+                        f"همهٔ آستانه‌ها — {_threshold_summary()}\n"
+                        "تغییر: /threshold",
                     )
         except requests.RequestException as exc:
             log.error("getUpdates error: %s", exc)
