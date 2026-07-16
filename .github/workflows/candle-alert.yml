@@ -52,17 +52,19 @@ jobs:
             tf_label: "۱۵ دقیقه‌ای — Binance"
             poly_prefix: "btc-updown-5m"
             command_listener: "1"
-          # 5-minute monitor — Binance SOLUSDT klines. Default threshold 3
-          # candles = 2 تناوب (alerts from 2 alternations up), adjustable 2..7.
+          # 5-minute monitor — Polymarket SOL Up/Down series (sol-updown-5m),
+          # so the alternation matches the real tradeable market. Default
+          # threshold 3 candles = 2 تناوب (alerts from 2 alternations up),
+          # adjustable 2..7.
           - name: "5m-solana"
-            source: "binance"
+            source: "polymarket"
             product: "SOLUSDT"
             granularity: "300"
             interval: "5m"
             monitor_key: "sol5m"
             threshold: "3"
-            tf_label: "سولانا ۵ دقیقه‌ای — Binance"
-            poly_prefix: "btc-updown-5m"
+            tf_label: "سولانا ۵ دقیقه‌ای — Polymarket"
+            poly_prefix: "sol-updown-5m"
             command_listener: "0"
     name: monitor-${{ matrix.name }}
     steps:
@@ -95,7 +97,7 @@ jobs:
           COMMAND_LISTENER: ${{ matrix.command_listener }}
           THRESHOLD_INTERVALS: "5m,15m,sol5m"
           THRESHOLD_DEFAULTS: "5m:4,15m:3,sol5m:2"
-          THRESHOLD_LABELS: "5m:بیت‌کوین ۵د (پلی‌مارکت),15m:بیت‌کوین ۱۵د,sol5m:سولانا ۵د"
+          THRESHOLD_LABELS: "5m:بیت‌کوین ۵د (پلی‌مارکت),15m:بیت‌کوین ۱۵د,sol5m:سولانا ۵د (پلی‌مارکت)"
           # Persist the chosen threshold across restarts via the GitHub API.
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
