@@ -73,16 +73,38 @@ THRESHOLD_INTERVALS = [
     if x.strip()
 ]
 THRESHOLD_DEFAULTS = _parse_int_map(os.environ.get("THRESHOLD_DEFAULTS", "5m:4,15m:3"))
+
+
+def _parse_str_map(s):
+    out = {}
+    for part in (s or "").split(","):
+        if ":" in part:
+            k, v = part.split(":", 1)
+            k, v = k.strip(), v.strip()
+            if k:
+                out[k] = v
+    return out
+
+
+# Human labels for each monitor key (shown on the menu buttons). THRESHOLD_LABELS
+# lets the workflow name each monitor (e.g. distinguish coins that share a
+# timeframe); it overrides these built-in fallbacks.
 INTERVAL_LABELS = {
     "1m": "۱ دقیقه‌ای",
     "5m": "۵ دقیقه‌ای",
     "15m": "۱۵ دقیقه‌ای",
     "1h": "۱ ساعته",
 }
+THRESHOLD_LABELS = _parse_str_map(os.environ.get("THRESHOLD_LABELS", ""))
+
+# The key identifying THIS monitor for the threshold store and the menu. It is
+# decoupled from INTERVAL (the Binance kline interval) so two monitors can share
+# a timeframe (e.g. BTC 5m and SOL 5m) without colliding on one threshold.
+MONITOR_KEY = os.environ.get("MONITOR_KEY", "").strip() or INTERVAL
 
 
 def interval_label(iv):
-    return INTERVAL_LABELS.get(iv, iv)
+    return THRESHOLD_LABELS.get(iv) or INTERVAL_LABELS.get(iv, iv)
 
 
 def default_flips(iv):
@@ -230,7 +252,7 @@ def apply_threshold(chat_id, monitor, iv, n):
         send_message(chat_id, f"آستانه باید بین {THRESHOLD_MIN} تا {THRESHOLD_MAX} تناوب باشد.")
         return
     ok = threshold_store.set(iv, n)
-    if monitor is not None and monitor.interval == iv:
+    if monitor is not None and monitor.key == iv:
         monitor.flip_threshold = n
     note = "" if ok else "\n⚠️ ذخیرهٔ ماندگار ناموفق بود؛ فقط تا ری‌استارتِ بعدی می‌ماند."
     send_message(
@@ -267,7 +289,7 @@ def handle_callback(monitor, cq):
             answer_callback(cq_id, "خارج از بازهٔ ۲ تا ۷")
             return
         ok = threshold_store.set(iv, n)
-        if monitor is not None and monitor.interval == iv:
+        if monitor is not None and monitor.key == iv:
             monitor.flip_threshold = n
         answer_callback(cq_id, f"{interval_label(iv)} = {n} تناوب ✅")
         note = "" if ok else "\n⚠️ ذخیرهٔ ماندگار ناموفق بود؛ فقط تا ری‌استارتِ بعدی می‌ماند."
@@ -522,7 +544,7 @@ class Monitor:
         self.chat_id = chat_id
         self.last_candle_time = 0
         self.directions = []  # directions of recent candles (oldest->newest)
-        self.interval = INTERVAL
+        self.key = MONITOR_KEY  # store/menu identity (may differ from INTERVAL)
         # Threshold in تناوب (flips). Env ALTERNATION_THRESHOLD is in candles, so
         # the equivalent flip count is candles - 1. A Telegram override replaces
         # this at runtime (and is loaded from the store on startup / refresh).
@@ -536,13 +558,13 @@ class Monitor:
             return
         self._last_thr_refresh = now
         try:
-            v = threshold_store.get(self.interval)
+            v = threshold_store.get(self.key)
         except Exception as exc:  # never let the store break the monitor
             log.warning("threshold refresh failed: %s", exc)
             return
         if v is not None and THRESHOLD_MIN <= v <= THRESHOLD_MAX and v != self.flip_threshold:
             log.info("Threshold(%s): %d -> %d تناوب (from store).",
-                     self.interval, self.flip_threshold, v)
+                     self.key, self.flip_threshold, v)
             self.flip_threshold = v
 
     def _alternation_streak(self) -> int:
@@ -748,7 +770,7 @@ def command_listener(monitor: Monitor):
                     )
                     send_message(
                         chat_id,
-                        f"📊 وضعیت ({interval_label(monitor.interval)}):\n"
+                        f"📊 وضعیت ({interval_label(monitor.key)}):\n"
                         f"آخرین کندل: {last}\n"
                         f"طول تناوب فعلی: {max(0, streak - 1)}\n"
                         f"آستانهٔ این مانیتور: {monitor.flip_threshold} تناوب\n\n"
