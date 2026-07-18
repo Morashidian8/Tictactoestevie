@@ -127,11 +127,20 @@
     <input id="btStart" type="datetime-local">
     <label>تا تاریخ/ساعت</label>
     <input id="btEnd" type="datetime-local">
-    <div style="display:flex;gap:8px">
+    <label>انتخابِ روز</label>
+    <select id="btDayMode" onchange="onDayMode()">
+      <option value="range" selected>بازهٔ روزها (از … تا …)</option>
+      <option value="single">فقط یک روزِ مشخص</option>
+    </select>
+    <div id="btDayRange" style="display:flex;gap:8px">
       <div style="flex:1"><label>از روزِ هفته</label>
         <select id="btFromDay"></select></div>
       <div style="flex:1"><label>تا روزِ هفته</label>
         <select id="btToDay"></select></div>
+    </div>
+    <div id="btDaySingle" style="display:none">
+      <label>فقط این روزِ هفته</label>
+      <select id="btOneDay"></select>
     </div>
     <div style="display:flex;gap:8px">
       <div style="flex:1"><label>از ساعت (۰ تا ۲۴)</label>
@@ -272,6 +281,11 @@ function onStrat(){
   document.getElementById('stratAlt').style.display = f ? 'none' : 'block';
   document.getElementById('stratFollow1').style.display = f ? 'block' : 'none';
 }
+function onDayMode(){
+  const single = document.getElementById('btDayMode').value==='single';
+  document.getElementById('btDayRange').style.display = single ? 'none' : 'flex';
+  document.getElementById('btDaySingle').style.display = single ? 'block' : 'none';
+}
 async function testPoly(){
   const out=document.getElementById('polyMsg');
   out.textContent='در حال تست…'; out.style.color='var(--muted)';
@@ -380,7 +394,8 @@ function saveState(){
     running: !!pollTimer, bal, start, openBet, trades, wins, losses, step, prevColor, streakLen, lastClosedOpen, altLen, abArmed, abCommitted, abReentry, fActive, fRun, fPrev,
     cfg:{tf:val('tf'),amt:val('amt'),bal:val('bal'),mode:val('mode'),
       maxEntry:val('maxEntry'),altN:val('altN'),maxStep:val('maxStep'),strat:val('strat'),
-      btFromDay:val('btFromDay'),btToDay:val('btToDay'),btFromHour:val('btFromHour'),btToHour:val('btToHour')}
+      btFromDay:val('btFromDay'),btToDay:val('btToDay'),btFromHour:val('btFromHour'),btToHour:val('btToHour'),
+      btDayMode:val('btDayMode'),btOneDay:val('btOneDay')}
   })); }catch(e){}
 }
 function loadState(){            // returns running flag, or null if nothing saved
@@ -393,7 +408,8 @@ function loadState(){            // returns running flag, or null if nothing sav
   lastClosedOpen=(s.lastClosedOpen!=null)?s.lastClosedOpen:null;
   if(s.cfg){const c=s.cfg; setVal('tf',c.tf); setVal('amt',c.amt);setVal('bal',c.bal);
     setVal('mode',c.mode); setVal('maxEntry',c.maxEntry); setVal('altN',c.altN); setVal('maxStep',c.maxStep); setVal('strat',c.strat);
-    setVal('btFromDay',c.btFromDay); setVal('btToDay',c.btToDay); setVal('btFromHour',c.btFromHour); setVal('btToHour',c.btToHour); onMode(); onStrat();}
+    setVal('btFromDay',c.btFromDay); setVal('btToDay',c.btToDay); setVal('btFromHour',c.btFromHour); setVal('btToHour',c.btToHour);
+    setVal('btDayMode',c.btDayMode); setVal('btOneDay',c.btOneDay); onMode(); onStrat(); onDayMode();}
   return !!s.running;
 }
 
@@ -480,9 +496,15 @@ const JS_TO_IR={6:0,0:1,1:2,2:3,3:4,4:5,5:6};   // JS getDay() -> Iranian order 
 function inTradeWindow(ct){
   const d=new Date(ct);
   const di=JS_TO_IR[d.getDay()];
-  let df=parseInt(document.getElementById('btFromDay').value); if(isNaN(df)) df=0;
-  let dt=parseInt(document.getElementById('btToDay').value); if(isNaN(dt)) dt=6;
-  const dayOk = df<=dt ? (di>=df && di<=dt) : (di>=df || di<=dt);   // wrap-around supported
+  let dayOk;
+  if(document.getElementById('btDayMode').value==='single'){
+    let od=parseInt(document.getElementById('btOneDay').value); if(isNaN(od)) od=1;
+    dayOk = (di===od);                                             // only that one weekday
+  } else {
+    let df=parseInt(document.getElementById('btFromDay').value); if(isNaN(df)) df=0;
+    let dt=parseInt(document.getElementById('btToDay').value); if(isNaN(dt)) dt=6;
+    dayOk = df<=dt ? (di>=df && di<=dt) : (di>=df || di<=dt);      // wrap-around supported
+  }
   const h=d.getHours();
   let hf=parseInt(document.getElementById('btFromHour').value); if(isNaN(hf)) hf=0;
   let ht=parseInt(document.getElementById('btToHour').value); if(isNaN(ht)) ht=24;
@@ -606,10 +628,10 @@ function stopBacktest(){
 
 // populate the weekday selects (Iranian week order) — default شنبه..جمعه = all days
 (function(){
-  const fd=document.getElementById('btFromDay'), td=document.getElementById('btToDay');
+  const fd=document.getElementById('btFromDay'), td=document.getElementById('btToDay'), od=document.getElementById('btOneDay');
   if(fd&&td&&!fd.options.length){
-    IR_DAYS.forEach((d,i)=>{ fd.add(new Option(d.n,i)); td.add(new Option(d.n,i)); });
-    fd.value='0'; td.value='6';
+    IR_DAYS.forEach((d,i)=>{ fd.add(new Option(d.n,i)); td.add(new Option(d.n,i)); od.add(new Option(d.n,i)); });
+    fd.value='0'; td.value='6'; od.value='1';   // range = شنبه..جمعه; single default = یک‌شنبه
   }
 })();
 // default the backtest range to the last 24 hours
@@ -621,7 +643,7 @@ function stopBacktest(){
 })();
 
 // Version badge — lets you confirm the browser isn't showing a cached old copy.
-const APP_VERSION = "v16";
+const APP_VERSION = "v17";
 try{ document.getElementById('ver').textContent = APP_VERSION; }catch(e){}
 
 // On open: restore the saved session and resume (catching up while you were away).
@@ -632,7 +654,8 @@ else {
   render();
   if(_wasRunning){ run(); }
 }
-onStrat();   // sync the strategy panel (show/hide alt-only inputs) with the selected strategy
+onStrat();    // sync the strategy panel (show/hide alt-only inputs) with the selected strategy
+onDayMode();  // sync the day-selection panel (range vs single day)
 </script>
 </body>
 </html>
