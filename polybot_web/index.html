@@ -1,0 +1,570 @@
+<!doctype html>
+<html lang="fa">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>PolyBot — کندلِ واقعی</title>
+<link rel="manifest" href="manifest.webmanifest" />
+<meta name="theme-color" content="#0E1117" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-title" content="PolyBot" />
+<link rel="apple-touch-icon" href="icon.svg" />
+<link rel="icon" href="icon.svg" />
+<style>
+  :root{--bg:#0E1117;--surface:#161A23;--surfaceVar:#1E2430;--line:#2a3142;
+    --green:#16C784;--red:#EA3943;--indigo:#818CF8;--muted:#8b93a7;--text:#E6E9EF;}
+  *{box-sizing:border-box;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+  body{margin:0;background:var(--bg);color:var(--text);padding:14px;max-width:560px;margin:0 auto;direction:rtl}
+  h2{margin:18px 4px 8px;font-size:15px;color:var(--muted)}
+  .card{background:var(--surface);border-radius:14px;padding:16px;margin-bottom:12px}
+  .banner{background:rgba(22,199,132,.15);border-radius:12px;padding:10px 12px;font-weight:700;font-size:13px;margin-bottom:12px}
+  .equity{font-size:32px;font-weight:800;margin:2px 0}
+  .muted{color:var(--muted);font-size:13px}
+  .big{font-size:15px}
+  .stats{display:flex;gap:8px;margin:12px 0}
+  .stat{flex:1;background:var(--surfaceVar);border-radius:10px;padding:10px;text-align:center}
+  .stat .v{font-size:18px;font-weight:800;margin-top:2px}
+  .btns{display:flex;gap:8px;margin-top:6px}
+  button{flex:1;border:0;border-radius:22px;padding:13px;font-size:15px;font-weight:800;color:#0b0d12;background:var(--green)}
+  button.ghost{background:transparent;color:var(--text);border:1px solid var(--line)}
+  label{display:block;font-size:13px;color:var(--muted);margin:12px 0 5px}
+  input,select{width:100%;background:#0f131b;border:1px solid var(--line);color:var(--text);border-radius:10px;padding:11px;font-size:15px}
+  .sw{display:flex;align-items:center;gap:8px;margin-top:12px}.sw input{width:auto}
+  .pos{font-size:17px;font-weight:800}
+  .chip{font-size:11px;font-weight:900;padding:3px 8px;border-radius:6px}
+  .up{color:var(--green);background:rgba(22,199,132,.18)}.down{color:var(--red);background:rgba(234,57,67,.18)}
+  .trade{display:flex;align-items:center;gap:8px;border-top:1px solid var(--line);padding:9px 0;font-size:13px}
+  .sp{flex:1}.dot{display:inline-block;width:11px;height:11px;border-radius:50%;vertical-align:middle}
+</style>
+</head>
+<body>
+
+  <h2 style="font-size:22px;color:var(--text)">PolyBot — کندلِ واقعیِ ۵ دقیقه‌ای
+    <span id="ver" style="font-size:12px;color:var(--indigo);font-weight:700"></span></h2>
+  <div class="banner">پولِ فرضی · کندلِ واقعیِ بیت‌کوین · سینک با ساعتِ واقعی. هر کندل که بسته شه، یک تصمیم.</div>
+
+  <div class="card">
+    <div class="muted">موجودی (Equity)</div>
+    <div class="equity" id="equity">$100.00</div>
+    <div class="muted">سود/زیان: <b id="pnl" style="color:var(--green)">+$0.00</b></div>
+    <div class="big" style="margin-top:10px">قیمتِ لحظه‌ای BTC: <b id="price">—</b></div>
+    <div class="muted" style="margin-top:4px">کندلِ فعلی <span id="cdot" class="dot" style="background:var(--muted)"></span>
+      · بسته شدن تا: <b id="cd">—</b></div>
+    <div class="muted" id="lastc" style="margin-top:4px">آخرین کندلِ بسته‌شده: —</div>
+    <div class="stats">
+      <div class="stat"><div class="muted">نرخِ برد</div><div class="v" id="wr">—</div></div>
+      <div class="stat"><div class="muted">برد/باخت</div><div class="v" id="wl">0/0</div></div>
+      <div class="stat"><div class="muted">مرحله</div><div class="v" id="step">x0</div></div>
+    </div>
+    <div class="btns">
+      <button id="startBtn" onclick="toggle()">▶ شروع</button>
+      <button class="ghost" onclick="reset()">ریست</button>
+    </div>
+    <div id="msg" class="muted" style="margin-top:8px;text-align:center"></div>
+  </div>
+
+  <h2>پوزیشنِ فعلی</h2>
+  <div class="card">
+    <div id="pos" class="muted">هنوز شروع نشده.</div>
+    <div id="trades" style="margin-top:10px"></div>
+  </div>
+
+  <h2>نرخِ ورود (Polymarket)</h2>
+  <div class="card">
+    <div class="muted" style="margin-bottom:8px">نرخ همیشه <b>واقعی و لحظه‌ای</b> از Polymarket گرفته می‌شود. اگر در دسترس نبود، پوزیشن گرفته نمی‌شود (هیچ نرخِ فیکی).</div>
+    <label>حالت</label>
+    <select id="mode" onchange="onMode()">
+      <option value="market">نرخِ بازار — هر چه بود (واقعیِ زنده)</option>
+      <option value="limit">لیمیت — فقط اگر نرخِ واقعی ≤ حدِ من بود</option>
+    </select>
+    <div id="limitBox" style="display:none">
+      <label>حداکثر نرخِ ورود (بین ۰ تا ۱)</label>
+      <input id="maxEntry" type="number" value="0.50" min="0.01" max="0.99" step="0.01">
+      <div class="muted" style="margin-top:6px">اگر نرخِ واقعیِ لحظه‌ای بالاتر از این بود، آن کندل را رد می‌کند.</div>
+    </div>
+    <div class="btns" style="margin-top:12px"><button class="ghost" onclick="testPoly()">تستِ نرخِ زنده‌ی این بازار</button></div>
+    <div id="polyMsg" class="muted" style="margin-top:8px">«تست» را بزن تا نرخِ زنده‌ی Up/Down همین بازارِ ۵ دقیقه‌ای را ببینی.</div>
+  </div>
+
+  <h2>تنظیمات</h2>
+  <div class="card">
+    <label>تایم‌فریمِ کندل</label>
+    <select id="tf">
+      <option value="5m" selected>۵ دقیقه (واقعی)</option>
+      <option value="1m">۱ دقیقه (واقعی)</option>
+      <option value="15m">۱۵ دقیقه (واقعی)</option>
+    </select>
+    <label>استراتژی</label>
+    <select id="strat" onchange="onStrat()">
+      <option value="alt" selected>مارتینگلِ تناوبی</option>
+      <option value="follow1">همرنگ + مارتینگلِ یک‌پله (با ورودِ مجدد)</option>
+    </select>
+    <div id="stratAlt" style="font-size:13px;color:var(--text);background:var(--surfaceVar);border-radius:10px;padding:10px;margin-top:6px">
+      <b>مارتینگلِ تناوبی</b><br>
+      <span style="color:var(--muted);font-size:12px">وقتی رنگ‌ها به تعدادِ «شروع» یکی‌درمیان شدند و بعد ۲ کندلِ هم‌رنگ دیده شد، هم‌جهتِ کندلِ قبلی وارد می‌شود و مارتینگل می‌کند (هر باخت دوبرابر). تا سقفِ پله‌ها ادامه؛ اگر برد نشد دیگر بالاتر نمی‌رود، منتظرِ تناوبِ بعدی می‌ماند و از پلهٔ اول شروع می‌کند. با هر برد هم به پلهٔ اول برمی‌گردد.</span>
+    </div>
+    <div id="stratFollow1" style="display:none;font-size:13px;color:var(--text);background:var(--surfaceVar);border-radius:10px;padding:10px;margin-top:6px">
+      <b>همرنگ + مارتینگلِ یک‌پله</b><br>
+      <span style="color:var(--muted);font-size:12px">از همان لحظهٔ «شروع»، هم‌جهتِ کندلِ قبلی با حجمِ ثابت وارد می‌شود و تا وقتی هم‌جهت است با همان حجم ادامه می‌دهد. اولین باری که جهت عوض شد (باخت)، فقط <b>یک پله</b> مارتینگل می‌کند (حجم دوبرابر). اگر بعدِ آن دوباره همرنگ/برنده شد، به حجمِ پایه برمی‌گردد و ادامه می‌دهد؛ ولی اگر <b>بلافاصله بعدِ مارتینگل دوباره جهت عوض شد</b> (۲ باختِ پشتِ‌هم) دست نگه می‌دارد و بیرون می‌ایستد تا <b>۲ کندلِ هم‌رنگِ پشتِ‌هم</b> ببیند، آنگاه دوباره از حجمِ پایه وارد می‌شود و ادامه می‌دهد.</span>
+    </div>
+    <div id="altCfg">
+      <label>از چند تناوب به بعد شروع کند (تعدادِ یکی‌درمیانِ رنگ‌ها)</label>
+      <input id="altN" type="number" value="5" min="1">
+      <label>حداکثر پله‌های مارتینگل (بیشتر از این نرود؛ بعد از تناوبِ بعدی از اول)</label>
+      <input id="maxStep" type="number" value="3" min="1">
+    </div>
+    <label>مبلغِ پایه ($)</label>
+    <input id="amt" type="number" value="1" min="0">
+    <label>موجودیِ شروع ($)</label>
+    <input id="bal" type="number" value="100" min="1">
+  </div>
+
+  <h2>بک‌تست (روی کندل‌های واقعیِ گذشته)</h2>
+  <div class="card">
+    <div class="muted" style="margin-bottom:8px">هر بازه‌ای از یک سالِ گذشته را انتخاب کن؛ روی کندل‌های <b>واقعیِ</b> بیت‌کوین (Binance) سریع پخش می‌شود. نرخِ ورود چون تاریخی است، فرضی است.</div>
+    <label>از تاریخ/ساعت</label>
+    <input id="btStart" type="datetime-local">
+    <label>تا تاریخ/ساعت</label>
+    <input id="btEnd" type="datetime-local">
+    <label>نرخِ فرضیِ ورود (odds) — بین ۰ تا ۱</label>
+    <input id="btOdds" type="number" value="0.5" min="0.01" max="0.99" step="0.01">
+    <label>سرعت — هر کندل چند ثانیه</label>
+    <input id="btSpeed" type="number" value="2" min="0.2" step="0.1">
+    <div class="btns" style="margin-top:12px"><button id="btBtn" onclick="toggleBacktest()">▶ شروعِ بک‌تست</button></div>
+    <div id="btMsg" class="muted" style="margin-top:8px">تایم‌فریم از بخشِ «تنظیمات» گرفته می‌شود (پیش‌فرض ۵ دقیقه).</div>
+  </div>
+
+  <p class="muted" style="text-align:center;margin:18px 0">دادهٔ کندل از Binance (همان قیمتی که بازارهای up/down روی آن resolve می‌شوند). مشاورهٔ مالی نیست.</p>
+
+<script>
+const HOSTS=['https://data-api.binance.vision','https://api.binance.com'];
+let pollTimer=null, cdTimer=null, busy=false;
+let lastClosedOpen=null, formingClose=0, curPrice=null, curColor='none';
+let bal=100, start=100, openBet=null, trades=[], wins=0, losses=0, step=0, lastStake=null;
+let prevColor=null, streakLen=0;
+let altLen=0, abArmed=false, abCommitted=false, abReentry=false;   // altbreak/altrestart state
+let fActive=true, fRun=0, fPrev=null;   // follow1: active/standing-down + consecutive same-colour run
+
+function fmt(n){return (n==null?0:n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});}
+function clk(ms){try{return new Date(ms).toLocaleTimeString('fa-IR');}catch(e){return '—';}}
+function colorOf(o,c){return c>o?'green':c<o?'red':'none';}
+
+async function getKlines(){
+  const tf=document.getElementById('tf').value;
+  let err;
+  for(const h of HOSTS){
+    try{
+      const r=await fetch(h+'/api/v3/klines?symbol=BTCUSDT&interval='+tf+'&limit=100');
+      if(!r.ok){err='HTTP '+r.status;continue;}
+      return await r.json();
+    }catch(e){err=e;}
+  }
+  throw err||new Error('fetch');
+}
+
+// The only strategy: alternation-triggered martingale.
+// Wait for colours to alternate (R,G,R,G,…) at least `altN` times; the moment the
+// alternation breaks (2 same-colour candles in a row) enter FOLLOW and martingale.
+// Cap at `maxStep` steps — if none of them win, stand down and wait for the NEXT
+// alternation trigger, restarting from the base step. Any win also resets to base.
+function maxStepVal(){ return Math.max(1,parseInt(document.getElementById('maxStep').value)||3); }
+function stratVal(){ const e=document.getElementById('strat'); return e?e.value:'alt'; }
+
+// Strategy "follow1": from the moment you press Start, FOLLOW the previous candle
+// with a fixed base stake and keep riding while the trend continues. The first
+// loss (colour/direction flip) doubles the stake ONE step. If that martingale
+// then wins, drop back to base and keep going. But a SECOND loss right after the
+// martingale (two losses in a row) stands the strategy down: it stays out until
+// it sees 2 same-colour candles in a row, then re-enters from the base stake.
+function decideFollow1(color){
+  if(color==='none'){ fRun=0; fPrev='none'; return null; }
+  if(color===fPrev) fRun++; else fRun=1;
+  fPrev=color;
+  if(!fActive){
+    if(fRun>=2){ fActive=true; step=0; }   // 2 same-colour candles -> re-enter from base
+    else return null;                       // still standing down
+  }
+  return color==='green'?'up':'down';       // FOLLOW the just-closed candle
+}
+
+// Strategy-specific reaction to a resolved bet, adjusting the martingale step/state.
+function applyResult(won){
+  if(stratVal()==='follow1'){
+    if(won) step=0;                          // keep riding at the base stake
+    else if(step===0) step=1;                // first loss -> one martingale step (double)
+    else { step=0; fActive=false; }          // 2nd loss in a row -> stand down, await re-entry
+    return;
+  }
+  // 'alt' (alternation-triggered martingale)
+  if(won){ step=0; abArmed=false; abCommitted=false; abReentry=false; }
+  else step=Math.min(step+1,30);
+}
+function decide(color){
+  if(stratVal()==='follow1') return decideFollow1(color);
+  const need=Math.max(1,parseInt(document.getElementById('altN').value)||5);
+  const isFlip = (prevColor && color!=='none' && color!==prevColor);
+  const same = (prevColor && color!=='none' && color===prevColor);
+  // a same-colour candle breaks the alternation; if the run was long enough, arm now (from base)
+  if(same && !abArmed && altLen>=need){ abArmed=true; step=0; }
+  // update the alternation counter
+  if(color==='none') altLen=0;
+  else if(isFlip) altLen++;
+  else altLen=0;              // 2 same-colour candles reset the alternating run
+  prevColor=color;
+  if(abArmed && color!=='none'){
+    if(step>=maxStepVal()){ abArmed=false; return null; }  // hit the cap -> wait for next trigger, restart from base
+    return color==='green'?'up':'down';                    // FOLLOW the previous candle
+  }
+  return null;
+}
+function stake(){
+  const base=parseFloat(document.getElementById('amt').value)||1;
+  const s=base*Math.pow(2,step);   // martingale: each loss doubles, capped by maxStep in decide()
+  return Math.min(s,bal);
+}
+
+// --- live Polymarket odds (browser-direct; CORS is allowed) ---
+function windowStart(){ return Math.floor(Date.now()/1000/300)*300; }  // current 5-min window
+async function currentMarket(){
+  const r=await fetch('https://gamma-api.polymarket.com/markets?slug=btc-updown-5m-'+windowStart());
+  const arr=await r.json();
+  if(!Array.isArray(arr)||!arr.length) return null;
+  const m=arr[0];
+  return {q:m.question, toks:JSON.parse(m.clobTokenIds), outs:JSON.parse(m.outcomes)};
+}
+async function buyPrice(token){
+  const d=await (await fetch('https://clob.polymarket.com/price?token_id='+token+'&side=buy')).json();
+  const p=parseFloat(d.price); return isNaN(p)?null:p;
+}
+async function entryOdds(side){           // price you'd pay to buy that side now (0-1)
+  const m=await currentMarket(); if(!m) return null;
+  let i=m.outs.findIndex(o=>o.toLowerCase().includes(side==='up'?'up':'down'));
+  if(i<0) i = side==='up'?0:1;
+  return await buyPrice(m.toks[i]);
+}
+// Retry a few times: right at a candle close the new 5-min market can take a few seconds to list.
+async function entryOddsRetry(side){
+  for(let k=0;k<4;k++){
+    try{ const p=await entryOdds(side); if(p&&p>0&&p<1) return p; }catch(e){}
+    await new Promise(r=>setTimeout(r,1500));
+  }
+  return null;
+}
+function onMode(){ document.getElementById('limitBox').style.display =
+  document.getElementById('mode').value==='limit' ? 'block' : 'none'; }
+function onStrat(){
+  const f = stratVal()==='follow1';
+  document.getElementById('altCfg').style.display = f ? 'none' : 'block';
+  document.getElementById('stratAlt').style.display = f ? 'none' : 'block';
+  document.getElementById('stratFollow1').style.display = f ? 'block' : 'none';
+}
+async function testPoly(){
+  const out=document.getElementById('polyMsg');
+  out.textContent='در حال تست…'; out.style.color='var(--muted)';
+  try{
+    const m=await currentMarket();
+    if(!m){ out.textContent='بازارِ این پنجره هنوز لیست نشده — چند ثانیه بعد دوباره «تست» بزن.'; return; }
+    const prices=await Promise.all(m.toks.map(buyPrice));
+    out.innerHTML='✅ '+m.q+'<br>'+m.outs.map((o,i)=>'<b>'+o+'</b>: '+prices[i]).join(' &nbsp;|&nbsp; ');
+    out.style.color='var(--text)';
+  }catch(e){
+    out.innerHTML='<span style="color:var(--red)">❌ اتصالِ مستقیم نشد (CORS/شبکه). یعنی برای نرخِ زنده یک سرورِ کوچک لازمه.</span>';
+  }
+}
+
+// Called once per *closed* 5-min candle. `place` = may open a new bet (only the latest live close).
+async function onClosedCandle(o,c,closeTime,place){
+  const color=colorOf(o,c);
+  // 1) resolve the bet that was riding on this candle (win/loss is always real)
+  if(openBet){
+    const won=(openBet.signal==='up'&&color==='green')||(openBet.signal==='down'&&color==='red');
+    openBet.won=won;
+    if(won){openBet.pnl=openBet.stake*(openBet.m-1); bal+=openBet.stake*openBet.m; wins++;}
+    else {openBet.pnl=-openBet.stake; losses++;}
+    applyResult(won);
+    trades.unshift(openBet); trades=trades.slice(0,12); openBet=null;
+  }
+  // 2) update the streak, and (only on the live candle) maybe open a new bet
+  const sig=decide(color);
+  if(place && sig){
+    const s=stake();
+    if(s>=0.01 && bal>=s){
+      // ALWAYS use the real live Polymarket price. No fake fallback.
+      setMsg('سیگنال '+(sig==='up'?'UP':'DOWN')+' — در حال گرفتنِ نرخِ واقعیِ لحظه‌ای…');
+      const odds=await entryOddsRetry(sig);
+      if(odds==null){
+        setMsg('نرخِ واقعیِ Polymarket این لحظه در دسترس نبود — وارد نشد (هیچ نرخِ فیکی نگرفت).');
+      } else if(document.getElementById('mode').value==='limit'
+                && (parseFloat(document.getElementById('maxEntry').value)||0)>0
+                && odds>(parseFloat(document.getElementById('maxEntry').value)||0)){
+        setMsg('نرخِ واقعی '+odds+' بالاتر از حدِ لیمیتِ '+document.getElementById('maxEntry').value+' بود — وارد نشد.');
+      } else {
+        bal-=s;
+        openBet={signal:sig,stake:s,entry:Math.round(c),time:clk(closeTime),won:null,pnl:0,m:1/odds,odds:odds,live:true};
+        lastStake=s;
+        setMsg('وارد شد: '+(sig==='up'?'UP':'DOWN')+' با نرخِ واقعیِ '+odds+' (ضریب ×'+(1/odds).toFixed(2)+').');
+      }
+    }
+  }
+  if(bal+(openBet?openBet.stake:0)<=0.01){ stop(); setMsg('موجودی تمام شد — متوقف شد.'); }
+}
+
+function tfSeconds(){ return ({'1m':60,'5m':300,'15m':900})[document.getElementById('tf').value]||300; }
+
+async function poll(){
+  if(busy) return; busy=true;
+  try{
+    const rows=await getKlines();
+    const forming=rows[rows.length-1];
+    curPrice=Math.round(parseFloat(forming[4]));
+    curColor=colorOf(parseFloat(forming[1]),parseFloat(forming[4]));
+    formingClose=parseInt(forming[6]);
+    const last=rows[rows.length-2];
+    const lastOid=parseInt(last[0]);
+    const iv=tfSeconds()*1000;
+    const o=parseFloat(last[1]), c=parseFloat(last[4]), ct=parseInt(last[6]);
+
+    if(lastClosedOpen!==null && lastOid===lastClosedOpen){
+      // no new candle yet — just refresh the display
+    } else if(lastClosedOpen!==null && lastOid===lastClosedOpen+iv){
+      // the exact next candle while running: a real, live, consecutive step
+      lastClosedOpen=lastOid;
+      await onClosedCandle(o,c,ct,true);
+      setMsg('کندلِ '+document.getElementById('tf').value+' بسته شد ('+clk(ct)+').');
+    } else if(lastClosedOpen===null){
+      // fresh start
+      lastClosedOpen=lastOid;
+      await onClosedCandle(o,c,ct,true);
+      setMsg('وصل شد ✅ — معامله از کندلِ فعلی شروع شد.');
+    } else {
+      // a gap: the app was closed/asleep (browsers can't trade in the background).
+      // Don't fabricate the missed candles — refund any dangling bet, reset the
+      // streak + martingale, and continue cleanly from the current candle.
+      if(openBet){ bal+=openBet.stake; openBet=null; }
+      step=0; streakLen=0; prevColor=null; altLen=0; abArmed=false; abCommitted=false; abReentry=false;
+      fActive=true; fRun=0; fPrev=null;
+      lastClosedOpen=lastOid;
+      await onClosedCandle(o,c,ct,true);
+      setMsg('از کندلِ فعلی ادامه داد. بازه‌ی نبودنت معامله نشد و مارتینگل ریست شد (مرورگر در پس‌زمینه معامله نمی‌کند).');
+    }
+    const lc=colorOf(o,c);
+    document.getElementById('lastc').innerHTML='آخرین کندلِ بسته‌شده: '+
+      '<span class="dot" style="background:'+(lc==='green'?'var(--green)':'var(--red)')+'"></span> '+
+      (lc==='green'?'سبز (بالا)':'قرمز (پایین)')+' @ $'+Math.round(c).toLocaleString('en-US')+' · '+clk(ct);
+    render(); saveState();
+  }catch(e){
+    setMsg('❌ گرفتنِ کندلِ واقعی نشد (CORS/شبکه).');
+  }
+  busy=false;
+}
+
+// --- persistence: survive leaving/reopening the app ---
+function val(id){return document.getElementById(id).value;}
+function setVal(id,v){ if(v!=null && document.getElementById(id)) document.getElementById(id).value=v; }
+function saveState(){
+  try{ localStorage.setItem('polybot', JSON.stringify({
+    running: !!pollTimer, bal, start, openBet, trades, wins, losses, step, prevColor, streakLen, lastClosedOpen, altLen, abArmed, abCommitted, abReentry, fActive, fRun, fPrev,
+    cfg:{tf:val('tf'),amt:val('amt'),bal:val('bal'),mode:val('mode'),
+      maxEntry:val('maxEntry'),altN:val('altN'),maxStep:val('maxStep'),strat:val('strat')}
+  })); }catch(e){}
+}
+function loadState(){            // returns running flag, or null if nothing saved
+  let s; try{ s=JSON.parse(localStorage.getItem('polybot')); }catch(e){}
+  if(!s) return null;
+  bal=s.bal; start=s.start; openBet=s.openBet||null; trades=s.trades||[]; wins=s.wins||0; losses=s.losses||0;
+  step=s.step||0; prevColor=s.prevColor||null; streakLen=s.streakLen||0;
+  altLen=s.altLen||0; abArmed=!!s.abArmed; abCommitted=!!s.abCommitted; abReentry=!!s.abReentry;
+  fActive=(s.fActive!==undefined)?!!s.fActive:true; fRun=s.fRun||0; fPrev=s.fPrev||null;
+  lastClosedOpen=(s.lastClosedOpen!=null)?s.lastClosedOpen:null;
+  if(s.cfg){const c=s.cfg; setVal('tf',c.tf); setVal('amt',c.amt);setVal('bal',c.bal);
+    setVal('mode',c.mode); setVal('maxEntry',c.maxEntry); setVal('altN',c.altN); setVal('maxStep',c.maxStep); setVal('strat',c.strat); onMode(); onStrat();}
+  return !!s.running;
+}
+
+function setMsg(t){document.getElementById('msg').textContent=t||'';}
+
+function render(){
+  const eq=bal+(openBet?openBet.stake:0);
+  document.getElementById('equity').textContent='$'+fmt(eq);
+  const pnl=eq-start; const pe=document.getElementById('pnl');
+  pe.textContent=(pnl>=0?'+':'')+'$'+fmt(pnl); pe.style.color=pnl>=0?'var(--green)':'var(--red)';
+  const tot=wins+losses;
+  document.getElementById('wr').textContent= tot?Math.round(wins/tot*100)+'%':'—';
+  document.getElementById('wl').textContent=wins+'/'+losses;
+  document.getElementById('step').textContent='x'+step;
+  document.getElementById('price').textContent= curPrice!=null?('$'+curPrice.toLocaleString('en-US')):'—';
+  document.getElementById('cdot').style.background= curColor==='green'?'var(--green)':curColor==='red'?'var(--red)':'var(--muted)';
+  const op=openBet, pe2=document.getElementById('pos');
+  if(op){
+    const up=op.signal==='up';
+    pe2.innerHTML='<span class="pos" style="color:'+(up?'var(--green)':'var(--red)')+'">● داخلِ پوزیشن — '+(up?'UP (بالا)':'DOWN (پایین)')+'</span>'+
+      '<div class="muted" style="margin-top:6px">مبلغ: $'+fmt(op.stake)+' · قیمتِ ورود: <b>$'+op.entry.toLocaleString('en-US')+'</b> · ساعتِ ورود: <b>'+op.time+'</b></div>'+
+      '<div class="muted" style="margin-top:4px">نرخِ ورود: <b>'+(op.odds!=null?op.odds:'—')+'</b> '+(op.live?'(واقعیِ Polymarket ✅)':'(پیش‌فرض)')+' · ضریبِ سود: ×'+op.m.toFixed(2)+'</div>'+
+      '<div class="muted" style="margin-top:4px">منتظرِ بسته شدنِ کندلِ فعلی برای نتیجه…</div>';
+  } else if(stratVal()==='follow1' && !fActive){
+    pe2.innerHTML='<span class="muted">⏸ ایستاده — بعد از ۲ باختِ پشتِ‌هم. منتظرِ ۲ کندلِ هم‌رنگِ پشتِ‌هم برای ورودِ مجدد.</span>';
+  } else { pe2.innerHTML='<span class="muted">الان داخلِ پوزیشن نیست — منتظرِ سیگنالِ کندلِ بعدی.</span>'; }
+  const box=document.getElementById('trades');
+  box.innerHTML= trades.length? ('<div class="muted" style="margin-bottom:4px">معاملاتِ اخیر</div>'+trades.map(t=>{
+    const up=t.signal==='up';
+    const res= t.won? '<span style="color:var(--green)">برد +$'+fmt(t.pnl)+'</span>':'<span style="color:var(--red)">باخت $'+fmt(t.pnl)+'</span>';
+    return '<div class="trade"><span class="chip '+(up?'up':'down')+'">'+(up?'UP':'DOWN')+'</span><span>$'+fmt(t.stake)+'</span><span class="muted">@$'+t.entry.toLocaleString('en-US')+'</span><span class="muted">'+t.time+'</span><span class="sp"></span>'+res+'</div>';
+  }).join('')) : '<span class="muted">هنوز معامله‌ای نشده.</span>';
+}
+
+function countdown(){
+  if(!formingClose){document.getElementById('cd').textContent='—';return;}
+  let s=Math.max(0,Math.floor((formingClose-Date.now())/1000));
+  const m=Math.floor(s/60); s=s%60;
+  document.getElementById('cd').textContent=m+':'+(s<10?'0':'')+s;
+}
+
+function toggle(){ pollTimer? stop() : run(); }
+function run(){
+  if(pollTimer) return;
+  stopBacktest();
+  if(!trades.length && !openBet){ bal=parseFloat(document.getElementById('bal').value)||100; start=bal; }
+  setMsg('در حال اتصال به دادهٔ واقعی…');
+  poll();
+  pollTimer=setInterval(poll, 15000);   // check every 15s; acts only when a candle closes
+  cdTimer=setInterval(countdown, 1000);
+  document.getElementById('startBtn').textContent='● در حال اجرا — توقف';
+  document.getElementById('startBtn').classList.add('ghost');
+  saveState();
+}
+function stop(){
+  clearInterval(pollTimer); pollTimer=null; clearInterval(cdTimer); cdTimer=null;
+  document.getElementById('startBtn').textContent='▶ شروع';
+  document.getElementById('startBtn').classList.remove('ghost');
+  saveState();
+}
+function reset(){
+  stop();
+  lastClosedOpen=null; formingClose=0; curPrice=null; curColor='none';
+  openBet=null; trades=[]; wins=0; losses=0; step=0; prevColor=null; streakLen=0; altLen=0; abArmed=false; abCommitted=false; abReentry=false;
+  fActive=true; fRun=0; fPrev=null;
+  lastStake=null;
+  bal=parseFloat(document.getElementById('bal').value)||100; start=bal;
+  setMsg(''); document.getElementById('cd').textContent='—';
+  document.getElementById('lastc').textContent='آخرین کندلِ بسته‌شده: —';
+  try{ localStorage.removeItem('polybot'); }catch(e){}
+  render();
+}
+
+// ---------------- BACKTEST (real past candles, fast replay) ----------------
+let btTimer=null, btCandles=[], btIdx=0;
+function toggleBacktest(){ btTimer? stopBacktest() : runBacktest(); }
+
+async function fetchHistory(sMs,eMs){
+  const tf=document.getElementById('tf').value;
+  let all=[], cursor=sMs, guard=0;
+  while(cursor<eMs && guard<6){          // up to ~6000 candles
+    guard++;
+    let rows=null;
+    for(const h of HOSTS){
+      try{ const r=await fetch(h+'/api/v3/klines?symbol=BTCUSDT&interval='+tf+'&startTime='+cursor+'&endTime='+eMs+'&limit=1000');
+        if(r.ok){ rows=await r.json(); break; } }catch(e){}
+    }
+    if(!rows||!rows.length) break;
+    all=all.concat(rows);
+    cursor=parseInt(rows[rows.length-1][6])+1;
+    if(rows.length<1000) break;
+  }
+  return all;
+}
+
+async function runBacktest(){
+  stop();                                 // stop live if running
+  const bm=document.getElementById('btMsg');
+  const sMs=new Date(document.getElementById('btStart').value).getTime();
+  const eMs=new Date(document.getElementById('btEnd').value).getTime();
+  if(!sMs||!eMs||sMs>=eMs){ bm.textContent='بازه‌ی تاریخ نامعتبر است.'; return; }
+  if(sMs < Date.now()-366*864e5){ bm.textContent='فقط تا یک سالِ گذشته پشتیبانی می‌شود.'; return; }
+  bm.textContent='در حال گرفتنِ کندل‌های واقعی…';
+  try{
+    let candles=await fetchHistory(sMs,eMs);
+    if(!candles.length){ bm.textContent='کندلی در این بازه پیدا نشد.'; return; }
+    let note='';
+    if(candles.length>3000){ candles=candles.slice(0,3000); note=' (بازه بزرگ بود؛ ۳۰۰۰ کندلِ اول)'; }
+    // fresh trading state for the backtest
+    bal=parseFloat(document.getElementById('bal').value)||100; start=bal;
+    openBet=null; trades=[]; wins=0; losses=0; step=0; prevColor=null; streakLen=0; altLen=0; abArmed=false; abCommitted=false; abReentry=false;
+    fActive=true; fRun=0; fPrev=null;
+  lastStake=null; lastClosedOpen=null;
+    btCandles=candles; btIdx=0;
+    const speed=Math.max(0.2,parseFloat(document.getElementById('btSpeed').value)||2)*1000;
+    document.getElementById('btBtn').textContent='● در حال بک‌تست — توقف';
+    document.getElementById('btBtn').classList.add('ghost');
+    bm.textContent='شروع شد: '+candles.length+' کندل'+note;
+    btTimer=setInterval(btTick, speed);
+  }catch(e){ bm.textContent='❌ گرفتنِ کندل‌ها نشد (CORS/شبکه).'; }
+}
+
+function btStep(o,c,ct){
+  const color=colorOf(o,c);
+  if(openBet){
+    const won=(openBet.signal==='up'&&color==='green')||(openBet.signal==='down'&&color==='red');
+    openBet.won=won;
+    if(won){openBet.pnl=openBet.stake*(openBet.m-1); bal+=openBet.stake*openBet.m; wins++;}
+    else {openBet.pnl=-openBet.stake; losses++;}
+    applyResult(won);
+    trades.unshift(openBet); trades=trades.slice(0,12); openBet=null;
+  }
+  const sig=decide(color);
+  if(sig){
+    const s=stake();
+    if(s>=0.01 && bal>=s){
+      let odds=parseFloat(document.getElementById('btOdds').value)||0.5;
+      odds=Math.min(0.99,Math.max(0.01,odds));
+      bal-=s;
+      openBet={signal:sig,stake:s,entry:Math.round(c),time:clk(ct),won:null,pnl:0,m:1/odds,odds:odds,live:false};
+      lastStake=s;
+    }
+  }
+}
+
+function btTick(){
+  if(btIdx>=btCandles.length){ stopBacktest();
+    document.getElementById('btMsg').textContent='بک‌تست تمام شد ✅ — '+btCandles.length+' کندل. نتیجه بالا.'; return; }
+  const row=btCandles[btIdx++];
+  const o=parseFloat(row[1]), c=parseFloat(row[4]), ct=parseInt(row[6]);
+  curPrice=Math.round(c); curColor=colorOf(o,c); formingClose=0;
+  btStep(o,c,ct);
+  document.getElementById('lastc').innerHTML='کندلِ بک‌تست: <span class="dot" style="background:'+(curColor==='green'?'var(--green)':'var(--red)')+'"></span> '+
+    (curColor==='green'?'سبز':'قرمز')+' @ $'+curPrice.toLocaleString('en-US')+' · '+new Date(ct).toLocaleString('fa-IR');
+  document.getElementById('btMsg').textContent='کندل '+btIdx+' از '+btCandles.length+' — '+new Date(ct).toLocaleString('fa-IR');
+  render();
+  if(bal+(openBet?openBet.stake:0)<=0.01){ stopBacktest(); document.getElementById('btMsg').textContent='موجودی تمام شد — بک‌تست متوقف شد ('+btIdx+' کندل).'; }
+}
+
+function stopBacktest(){
+  clearInterval(btTimer); btTimer=null;
+  document.getElementById('btBtn').textContent='▶ شروعِ بک‌تست';
+  document.getElementById('btBtn').classList.remove('ghost');
+}
+
+// default the backtest range to the last 24 hours
+(function(){ const p=n=>String(n).padStart(2,'0');
+  const f=d=>d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+'T'+p(d.getHours())+':'+p(d.getMinutes());
+  const s=document.getElementById('btStart'), e=document.getElementById('btEnd');
+  if(e&&!e.value) e.value=f(new Date());
+  if(s&&!s.value) s.value=f(new Date(Date.now()-24*3600*1000));
+})();
+
+// Version badge — lets you confirm the browser isn't showing a cached old copy.
+const APP_VERSION = "v14";
+try{ document.getElementById('ver').textContent = APP_VERSION; }catch(e){}
+
+// On open: restore the saved session and resume (catching up while you were away).
+const _wasRunning = loadState();
+if(_wasRunning===null){ reset(); }
+else {
+  document.getElementById('startBtn').textContent= _wasRunning ? '● در حال اجرا — توقف' : '▶ شروع';
+  render();
+  if(_wasRunning){ run(); }
+}
+onStrat();   // sync the strategy panel (show/hide alt-only inputs) with the selected strategy
+</script>
+</body>
+</html>

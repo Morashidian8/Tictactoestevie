@@ -9,6 +9,7 @@ on:
       - "hse_pwa/**"
       - "manhole_pwa/**"
       - "pwa/**"
+      - "polybot_web/**"
       - "wallet_tracker/webui/**"
       - "build_pwa.py"
       - ".github/workflows/pwa.yml"
@@ -78,6 +79,8 @@ jobs:
           cp -r manhole_pwa site/manhole
           # ردیاب کیف پول پلی‌مارکت (کاملاً مرورگری، بدون سرور) را زیر /wallet/ منتشر کن.
           cp -r wallet_tracker/webui site/wallet
+          # شبیه‌ساز استراتژی PolyBot (کندلِ واقعی، کاملاً مرورگری) را زیر /polybot/ منتشر کن.
+          cp -r polybot_web site/polybot
           # اگر داده‌ی بیت‌کوین در این اجرا ساخته نشد (مثلاً push اپ HSE)، پوسته‌ی
           # ثابت اپ بیت‌کوین را در ریشه قرار بده و آخرین data.json منتشرشده را از
           # سایت زنده بگیر تا اپ ریشه سالم بماند بدون نیاز به بیلد مجدد.
