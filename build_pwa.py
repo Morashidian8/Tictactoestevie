@@ -156,9 +156,12 @@ def burns_for_day(windows, tz, runs_for_day, wm):
     [run]}) with the rank its starting window held then, under run["pr"][wm].
 
     windows: [(start_minutes, [(ts, flips), ...])], chronological pairs.
-    Returns events: {"d": date, "s": start_minutes, "f": old_max, "n": new,
-    "rmx"/"ravg": ranks at that moment, "wks": consecutive weeks in the
-    top-10 up to and including the break week}.
+    Returns (events, tenure) where events are {"d": date, "s": start_minutes,
+    "f": old_max, "n": new, "rmx"/"ravg": ranks at that moment, "wks":
+    consecutive weeks in the top-10 up to and including the break week}, and
+    tenure maps start_minutes -> the window's CURRENT consecutive weeks in the
+    top-10 (only windows with a streak > 0) — shown on the window cards so a
+    freshly-entered (fragile) top pick is visible before trading it.
     """
     off = int(datetime.now(tz).utcoffset().total_seconds())
     series = []
@@ -214,7 +217,8 @@ def burns_for_day(windows, tz, runs_for_day, wm):
                 st[0] = occ[1] if st[0] is None else max(st[0], occ[1])
                 st[1] += occ[1]
                 st[2] += 1
-    return events
+    tenure = {s: st[3] for s, st in state.items() if st[3] > 0}
+    return events, tenure
 
 
 def pack(stats):
@@ -355,8 +359,15 @@ def build_dataset(tz, source, interval, granularity, product, ex_label, tf_label
             per_wd[str(wd)] = r
             wins_pairs = [(h * 60 + m, pairs)
                           for (h, m), pairs in samples[wd].items()]
-            burns_wd[str(wd)] = burns_for_day(
+            events, tenure = burns_for_day(
                 wins_pairs, tz, runs_by_wd.get(wd, {}), wm)
+            burns_wd[str(wd)] = events
+            # Stamp each window's current top-10 tenure onto its entry so the
+            # cards can show it at pick time.
+            for entry_ in r:
+                t_ = tenure.get(entry_["start"])
+                if t_:
+                    entry_["tw"] = t_
         rolling_out[str(wm)] = per_wd
         burns_out[str(wm)] = burns_wd
 
