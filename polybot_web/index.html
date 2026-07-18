@@ -99,6 +99,7 @@
     <select id="strat" onchange="onStrat()">
       <option value="alt" selected>مارتینگلِ تناوبی</option>
       <option value="follow1">همرنگ + مارتینگلِ یک‌پله (با ورودِ مجدد)</option>
+      <option value="follow2">همرنگ + مارتینگلِ ادامه‌دار (پله حفظ می‌شود)</option>
     </select>
     <div id="stratAlt" style="font-size:13px;color:var(--text);background:var(--surfaceVar);border-radius:10px;padding:10px;margin-top:6px">
       <b>مارتینگلِ تناوبی</b><br>
@@ -107,6 +108,10 @@
     <div id="stratFollow1" style="display:none;font-size:13px;color:var(--text);background:var(--surfaceVar);border-radius:10px;padding:10px;margin-top:6px">
       <b>همرنگ + مارتینگلِ یک‌پله</b><br>
       <span style="color:var(--muted);font-size:12px">از همان لحظهٔ «شروع»، هم‌جهتِ کندلِ قبلی با حجمِ ثابت وارد می‌شود و تا وقتی هم‌جهت است با همان حجم ادامه می‌دهد. اولین باری که جهت عوض شد (باخت)، فقط <b>یک پله</b> مارتینگل می‌کند (حجم دوبرابر). اگر بعدِ آن دوباره همرنگ/برنده شد، به حجمِ پایه برمی‌گردد و ادامه می‌دهد؛ ولی اگر <b>بلافاصله بعدِ مارتینگل دوباره جهت عوض شد</b> (۲ باختِ پشتِ‌هم) دست نگه می‌دارد و بیرون می‌ایستد تا <b>۲ کندلِ هم‌رنگِ پشتِ‌هم</b> ببیند، آنگاه دوباره از حجمِ پایه وارد می‌شود و ادامه می‌دهد.</span>
+    </div>
+    <div id="stratFollow2" style="display:none;font-size:13px;color:var(--text);background:var(--surfaceVar);border-radius:10px;padding:10px;margin-top:6px">
+      <b>همرنگ + مارتینگلِ ادامه‌دار</b><br>
+      <span style="color:var(--muted);font-size:12px">مثلِ حالتِ یک‌پله، ولی وقتی بعد از یک پله مارتینگل باز هم باخت و دست نگه داشت، <b>پلهٔ مارتینگل را فراموش نمی‌کند</b>: بعد از تریگرِ ورودِ مجدد (۲ کندلِ هم‌رنگ) <b>از همان پلهٔ قبلی ادامه می‌دهد</b> و اگر باز باخت باز هم یک پله بالاتر می‌رود. فقط وقتی یک معامله <b>برنده شد، حجم به مقدارِ اولیه برمی‌گردد</b>. (ریسکِ بیشتر، چون پله‌ها می‌توانند بالا بروند.)</span>
     </div>
     <div id="altCfg">
       <label>از چند تناوب به بعد شروع کند (تعدادِ یکی‌درمیانِ رنگ‌ها)</label>
@@ -217,13 +222,33 @@ function decideFollow1(color){
   }
   return color==='green'?'up':'down';       // FOLLOW the just-closed candle
 }
+// "follow2": same as follow1 but the martingale step is KEPT across a stand-down.
+// After the re-trigger it resumes the previous martingale level (does not reset to
+// base); only a WIN returns the stake to base.
+function decideFollow2(color){
+  if(color==='none'){ fRun=0; fPrev='none'; return null; }
+  if(color===fPrev) fRun++; else fRun=1;
+  fPrev=color;
+  if(!fActive){
+    if(fRun>=2){ fActive=true; }           // re-enter, but KEEP the current step
+    else return null;
+  }
+  return color==='green'?'up':'down';
+}
 
 // Strategy-specific reaction to a resolved bet, adjusting the martingale step/state.
 function applyResult(won){
-  if(stratVal()==='follow1'){
+  const s=stratVal();
+  if(s==='follow1'){
     if(won) step=0;                          // keep riding at the base stake
     else if(step===0) step=1;                // first loss -> one martingale step (double)
-    else { step=0; fActive=false; }          // 2nd loss in a row -> stand down, await re-entry
+    else { step=0; fActive=false; }          // 2nd loss in a row -> stand down, reset to base
+    return;
+  }
+  if(s==='follow2'){
+    if(won) step=0;                          // a win returns the stake to base
+    else if(step===0) step=1;                // first loss -> one martingale step, stay active
+    else { step=Math.min(step+1,30); fActive=false; }  // further loss -> climb & stand down (resume later)
     return;
   }
   // 'alt' (alternation-triggered martingale)
@@ -232,6 +257,7 @@ function applyResult(won){
 }
 function decide(color){
   if(stratVal()==='follow1') return decideFollow1(color);
+  if(stratVal()==='follow2') return decideFollow2(color);
   const need=Math.max(1,parseInt(document.getElementById('altN').value)||5);
   const isFlip = (prevColor && color!=='none' && color!==prevColor);
   const same = (prevColor && color!=='none' && color===prevColor);
@@ -284,10 +310,12 @@ async function entryOddsRetry(side){
 function onMode(){ document.getElementById('limitBox').style.display =
   document.getElementById('mode').value==='limit' ? 'block' : 'none'; }
 function onStrat(){
-  const f = stratVal()==='follow1';
-  document.getElementById('altCfg').style.display = f ? 'none' : 'block';
-  document.getElementById('stratAlt').style.display = f ? 'none' : 'block';
-  document.getElementById('stratFollow1').style.display = f ? 'block' : 'none';
+  const s = stratVal();
+  const isFollow = (s==='follow1' || s==='follow2');
+  document.getElementById('altCfg').style.display = isFollow ? 'none' : 'block';
+  document.getElementById('stratAlt').style.display = (s==='alt') ? 'block' : 'none';
+  document.getElementById('stratFollow1').style.display = (s==='follow1') ? 'block' : 'none';
+  document.getElementById('stratFollow2').style.display = (s==='follow2') ? 'block' : 'none';
 }
 function onDayMode(){
   const single = document.getElementById('btDayMode').value==='single';
@@ -441,8 +469,8 @@ function render(){
       '<div class="muted" style="margin-top:6px">مبلغ: $'+fmt(op.stake)+' · قیمتِ ورود: <b>$'+op.entry.toLocaleString('en-US')+'</b> · ساعتِ ورود: <b>'+op.time+'</b></div>'+
       '<div class="muted" style="margin-top:4px">نرخِ ورود: <b>'+(op.odds!=null?op.odds:'—')+'</b> '+(op.live?'(واقعیِ Polymarket ✅)':'(پیش‌فرض)')+' · ضریبِ سود: ×'+op.m.toFixed(2)+'</div>'+
       '<div class="muted" style="margin-top:4px">منتظرِ بسته شدنِ کندلِ فعلی برای نتیجه…</div>';
-  } else if(stratVal()==='follow1' && !fActive){
-    pe2.innerHTML='<span class="muted">⏸ ایستاده — بعد از ۲ باختِ پشتِ‌هم. منتظرِ ۲ کندلِ هم‌رنگِ پشتِ‌هم برای ورودِ مجدد.</span>';
+  } else if((stratVal()==='follow1'||stratVal()==='follow2') && !fActive){
+    pe2.innerHTML='<span class="muted">⏸ ایستاده — بعد از ۲ باختِ پشتِ‌هم. منتظرِ ۲ کندلِ هم‌رنگِ پشتِ‌هم برای ورودِ مجدد'+(stratVal()==='follow2'?' (ادامه از پلهٔ x'+step+')':'')+'.</span>';
   } else { pe2.innerHTML='<span class="muted">الان داخلِ پوزیشن نیست — منتظرِ سیگنالِ کندلِ بعدی.</span>'; }
   const box=document.getElementById('trades');
   box.innerHTML= trades.length? ('<div class="muted" style="margin-bottom:4px">معاملاتِ اخیر</div>'+trades.map(t=>{
@@ -523,7 +551,7 @@ function inTradeWindow(ct){
   return dayOk && hourOk;
 }
 
-async function fetchHistory(sMs,eMs){
+async function fetchHistory(sMs,eMs,onProg){
   const tf=document.getElementById('tf').value;
   let all=[], cursor=sMs, guard=0;
   while(cursor<eMs && guard<130){        // up to ~130k candles (covers a full year of 5m)
@@ -535,6 +563,7 @@ async function fetchHistory(sMs,eMs){
     }
     if(!rows||!rows.length) break;
     all=all.concat(rows);
+    if(onProg) onProg(all.length);
     cursor=parseInt(rows[rows.length-1][6])+1;
     if(rows.length<1000) break;
   }
@@ -653,6 +682,13 @@ function decideCellFollow1(st,color){
   if(!st.fActive){ if(st.fRun>=2){ st.fActive=true; st.step=0; } else return null; }
   return color==='green'?'up':'down';
 }
+function decideCellFollow2(st,color){
+  if(color==='none'){ st.fRun=0; st.fPrev='none'; return null; }
+  if(color===st.fPrev) st.fRun++; else st.fRun=1;
+  st.fPrev=color;
+  if(!st.fActive){ if(st.fRun>=2){ st.fActive=true; } else return null; }   // keep step on re-entry
+  return color==='green'?'up':'down';
+}
 function decideCellAlt(st,color,need,maxStep){
   const isFlip=(st.prevColor && color!=='none' && color!==st.prevColor);
   const same=(st.prevColor && color!=='none' && color===st.prevColor);
@@ -667,8 +703,15 @@ function decideCellAlt(st,color,need,maxStep){
 }
 function applyCell(st,won,strat){
   if(strat==='follow1'){ if(won) st.step=0; else if(st.step===0) st.step=1; else { st.step=0; st.fActive=false; } return; }
+  if(strat==='follow2'){ if(won) st.step=0; else if(st.step===0) st.step=1; else { st.step=Math.min(st.step+1,30); st.fActive=false; } return; }
   if(won){ st.step=0; st.abArmed=false; } else st.step=Math.min(st.step+1,30);
 }
+function decideCell(st,color,strat,need,maxStep){
+  if(strat==='follow1') return decideCellFollow1(st,color);
+  if(strat==='follow2') return decideCellFollow2(st,color);
+  return decideCellAlt(st,color,need,maxStep);
+}
+function stratName(s){ return s==='follow1'?'همرنگ+یک‌پله':s==='follow2'?'همرنگ+ادامه‌دار':'مارتینگلِ تناوبی'; }
 
 async function dayHourScan(){
   const sm=document.getElementById('scanMsg'), out=document.getElementById('scanOut');
@@ -685,7 +728,7 @@ async function dayHourScan(){
   out.innerHTML=''; sm.textContent='در حال گرفتنِ کندل‌های واقعی…';
   document.getElementById('scanBtn').disabled=true;
   try{
-    const candles=await fetchHistory(sMs,eMs);
+    const candles=await fetchHistory(sMs,eMs,(n)=>{ sm.textContent='در حال گرفتنِ کندل‌های واقعی… '+n.toLocaleString('en-US'); });
     if(candles.length<20){ sm.textContent='کندلِ کافی در این بازه نبود.'; document.getElementById('scanBtn').disabled=false; return; }
     sm.textContent='در حال تحلیلِ '+candles.length.toLocaleString('en-US')+' کندل…';
     // precompute per-candle color, weekday(IR idx), hour, local day-key
@@ -703,7 +746,7 @@ async function dayHourScan(){
       const k=wd[i]*24+hr[i];
       let st=cells[k]; if(!st){ st=cells[k]=freshCell(startBal); }
       if(st.lastKey!==dk[i]){ resetSession(st); st.lastKey=dk[i]; }
-      const sig = strat==='follow1' ? decideCellFollow1(st,color) : decideCellAlt(st,color,need,maxStep);
+      const sig = decideCell(st,color,strat,need,maxStep);
       if(sig){
         const stk=Math.min(base*Math.pow(2,st.step), st.bal);
         if(stk>=0.01 && st.bal>=stk){
@@ -720,6 +763,11 @@ async function dayHourScan(){
     const rows=[];
     for(const k in cells){ const st=cells[k]; const t=st.wins+st.losses;
       if(t>0) rows.push({w:Math.floor(k/24), h:k%24, pnl:st.bal-startBal, t, wr:t?st.wins/t:0, dd:st.maxDD, bal:st.bal}); }
+    if(!rows.length){
+      out.innerHTML='<div class="muted">در این بازه هیچ معامله‌ای فعال نشد. بازهٔ تاریخِ بالا را <b>بلندتر</b> کن (مثلاً چند ماه تا یک سال) تا هر روز×ساعت چند هفته تکرار شود، یا استراتژی/تنظیمات را عوض کن. (استراتژیِ «تناوبی» در بازهٔ کوتاه کم تریگر می‌شود.)</div>';
+      sm.textContent='اسکن تمام شد — هیچ خانه‌ای معامله نداشت (از '+N.toLocaleString('en-US')+' کندل). بازه را بلندتر کن.';
+      document.getElementById('scanBtn').disabled=false; return;
+    }
     const minT=Math.max(4, Math.round(rows.reduce((a,r)=>a+r.t,0)/Math.max(1,rows.length)/4));
     const ok=rows.filter(r=>r.t>=minT);
     const pool = ok.length>=6 ? ok : rows;   // fall back to all if the range is short
@@ -734,7 +782,7 @@ async function dayHourScan(){
       '<span class="sp"></span><b style="color:'+(r.pnl>=0?'var(--green)':'var(--red)')+'">'+money(r.pnl)+'</b>'+
       '<span class="muted"> · '+r.t+' مع · برد '+Math.round(r.wr*100)+'% · افت $'+fmt(r.dd)+'</span></div>';
     let html='';
-    html+='<div class="muted" style="margin:2px 0 6px">استراتژی: <b>'+(strat==='follow1'?'همرنگ+یک‌پله':'مارتینگلِ تناوبی')+'</b> · سرمایهٔ هر خانه: $'+fmt(startBal)+' · نرخِ فرضی: '+odds+' · حداقل '+minT+' معامله برای رتبه‌بندی</div>';
+    html+='<div class="muted" style="margin:2px 0 6px">استراتژی: <b>'+stratName(strat)+'</b> · سرمایهٔ هر خانه: $'+fmt(startBal)+' · نرخِ فرضی: '+odds+' · حداقل '+minT+' معامله برای رتبه‌بندی</div>';
     if(safest.length){ html+='<div style="font-weight:800;color:var(--green);margin:8px 0 2px">🛡 امن‌ترین (سود با کمترین افتِ سرمایه)</div>'+safest.map(r=>line(r)).join(''); }
     html+='<div style="font-weight:800;color:var(--green);margin:10px 0 2px">🟢 پرسودترین روز×ساعت</div>'+best.map(r=>line(r)).join('');
     html+='<div style="font-weight:800;color:var(--red);margin:10px 0 2px">🔴 پرضررترین روز×ساعت</div>'+worst.map(r=>line(r)).join('');
@@ -761,7 +809,7 @@ async function dayHourScan(){
 })();
 
 // Version badge — lets you confirm the browser isn't showing a cached old copy.
-const APP_VERSION = "v18";
+const APP_VERSION = "v19";
 try{ document.getElementById('ver').textContent = APP_VERSION; }catch(e){}
 
 // On open: restore the saved session and resume (catching up while you were away).
