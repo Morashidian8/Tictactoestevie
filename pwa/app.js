@@ -163,7 +163,8 @@ function render() {
   $('winlen').disabled = mode !== 'rolling';
 
   renderRecords(ds, winLen);
-  renderPriorityRisk(ds, winLen);
+  renderBurns(ds, winLen);
+  renderExtreme(ds, winLen);
   renderCustom(ds, winLen, tol);
 
   const m = ds.meta;
@@ -435,76 +436,146 @@ function renderRecords(ds, winLen) {
   box.style.display = '';
 }
 
-// For each PRIORITY (rank by lowest max; 1 = calmest), how often did the window
-// sitting in that slot have its ceiling (max) raised over the year — averaged
-// across the 7 weekdays. A low average means that priority is historically
-// stable, so you can pick a calm window without getting trapped by a jump.
-function renderPriorityRisk(ds, winLen) {
+// Burn log: every time in the past year a window that ranked in the TOP-10
+// priorities AT THAT MOMENT (lowest max or lowest average, reconstructed
+// historically — not today's ranks) had its ceiling broken. Overlapping
+// neighbours breaking on the same event are collapsed to one row.
+function renderBurns(ds, winLen) {
   const box = $('prisk');
   box.innerHTML = '';
   box.style.display = 'none';
-  const per = ds.rolling && ds.rolling[String(winLen)];
+  const per = ds.burns && ds.burns[String(winLen)];
   if (!per) return;
-  const agg = [];  // agg[k] = { n, recn, rises, recent }
+  const raw = [];
   for (const wd of selectedDays()) {
-    const list = (per[String(wd)] || []).slice()
-      .sort((a, b) => a.mx - b.mx || a.avg - b.avg || a.start - b.start);
-    list.forEach((w, k) => {
-      const a = agg[k] || (agg[k] = { n: 0, recn: 0, rises: 0, recent: 0 });
-      a.n++;
-      a.recn += (w.recn || 0);
-      if (w.recn) a.rises++;
-      if (w.rec && daysSince(w.rec.w) <= RECENT_DAYS) a.recent++;
-    });
+    for (const e of (per[String(wd)] || [])) raw.push({ wd, e });
   }
-  if (!agg.length) return;
-  const rows = agg.map((a, k) => ({
-    rank: k + 1,
-    avg: a.recn / a.n,
-    risePct: Math.round((100 * a.rises) / a.n),
-    recentPct: Math.round((100 * a.recent) / a.n),
-  }));
-  const pool = rows.slice(0, Math.min(60, rows.length));
-  const safest = pool.slice().sort((x, y) => x.avg - y.avg).slice(0, 3);
-  const riskiest = pool.slice().sort((x, y) => y.avg - x.avg).slice(0, 3);
+  // Collapse same-day overlapping windows (adjacent 5-min-shifted starts that
+  // broke on the same underlying event) to the best-ranked representative.
+  raw.sort((a, b) =>
+    a.e.d.localeCompare(b.e.d) || a.wd - b.wd || a.e.s - b.e.s);
+  const items = [];
+  for (const r of raw) {
+    const last = items[items.length - 1];
+    if (last && last.e.d === r.e.d && last.wd === r.wd
+        && r.e.s - last.hi < winLen) {
+      last.hi = Math.max(last.hi, r.e.s);
+      last.merged++;
+      if (Math.min(r.e.rmx, r.e.ravg) < Math.min(last.e.rmx, last.e.ravg)) {
+        last.e = r.e;
+      }
+    } else {
+      items.push({ wd: r.wd, e: r.e, hi: r.e.s, merged: 1 });
+    }
+  }
+  items.sort((a, b) => b.e.d.localeCompare(a.e.d) || a.e.s - b.e.s);
 
-  const scope = $('weekday').value === 'all' ? ' (میانگینِ هفته)' : ' — ' + DATA.names[$('weekday').value];
+  const scope = $('weekday').value === 'all' ? '' : ' — ' + DATA.names[$('weekday').value];
   const head = document.createElement('h2');
-  head.textContent = '🎲 ریسکِ اولویت‌ها' + scope;
+  head.textContent =
+    `📌 سابقهٔ سوختنِ اولویت‌های ۱–۱۰${scope} (${items.length.toLocaleString('fa')} رخداد)`;
   box.appendChild(head);
   const help = document.createElement('div');
   help.className = 'rhelp';
   help.textContent =
-    'برای هر اولویت (رتبهٔ کم‌ترین بیشینه؛ ۱ = آرام‌ترین)، میانگینِ دفعاتی که سقفش در طول سال ' +
-    'بالا رفته و درصدِ روزهایی که تغییر کرده. عددِ کوچک‌تر = اولویتِ باثبات‌تر و کم‌ریسک‌تر.';
+    'هر بار که سقفِ بازه‌ای شکست که «در همان لحظه» جزو ۱۰ اولویتِ اولِ کم‌ترین بیشینه یا ' +
+    'کم‌ترین میانگین بود — رتبه‌ها مالِ همان لحظه‌اند، نه امروز. رخدادهای بازه‌های هم‌پوشان ' +
+    `ادغام شده‌اند. ۸ هفتهٔ اولِ داده حذف شده (رتبه هنوز معنی ندارد). طول بازه: ${winLabel(winLen)}.`;
   box.appendChild(help);
+  if (!items.length) {
+    const none = document.createElement('div');
+    none.className = 'rhelp';
+    none.textContent = 'در این محدوده هیچ اولویتِ تاپ-۱۰ی نسوخته — 👍';
+    box.appendChild(none);
+    box.style.display = '';
+    return;
+  }
+
+  const list = document.createElement('div');
+  list.className = 'reclist';
+  for (const { wd, e, merged } of items) {
+    const wlist = (ds.rolling[String(winLen)] || {})[String(wd)] || [];
+    const w = wlist.find((x) => x.start === e.s);
+    const label = w ? w.label : fmtTime(e.s);
+    const card = document.createElement('div');
+    card.className = 'reccard';
+    const mergeNote = merged > 1 ? ` <span style="font-weight:normal;font-size:12px">(+${merged - 1} بازهٔ هم‌پوشان)</span>` : '';
+    card.innerHTML =
+      `<div class="rt">📌 ${DATA.names[String(wd)]} ${label} • ${e.d}${mergeNote}</div>` +
+      `<div class="row"><span>بیشینه</span><b class="hot">از ${e.f} به ${e.n}</b></div>` +
+      `<div class="row"><span>اولویت در آن لحظه</span><b>کم‌ترین بیشینه #${e.rmx} • کم‌ترین میانگین #${e.ravg}</b></div>` +
+      `<div class="row"><span>سابقهٔ حضور در تاپ-۱۰</span><b>${e.wks} هفته</b></div>`;
+    list.appendChild(card);
+  }
+  box.appendChild(list);
+  box.style.display = '';
+}
+
+// Extreme-alternation event log: every genuine uninterrupted run of >= the
+// selected threshold (default 7 تناوب) across the whole analysed span, with
+// exact local start/end times and the priority the starting window held then.
+let extremeMin = 7;
+
+function renderExtreme(ds, winLen) {
+  const box = $('extreme');
+  box.innerHTML = '';
+  box.style.display = 'none';
+  const all = ds.extreme || [];
+  if (!all.length) return;
+  const days = selectedDays();
+  const inScope = all.filter((r) => days.includes(r.wd));
+  const shown = inScope.filter((r) => r.f >= extremeMin)
+    .sort((a, b) => b.d.localeCompare(a.d) || b.f - a.f);
+
+  const scope = $('weekday').value === 'all' ? '' : ' — ' + DATA.names[$('weekday').value];
+  const head = document.createElement('h2');
+  head.textContent =
+    `⚡️ تناوب‌های شدید (≥ ${extremeMin})${scope} (${shown.length.toLocaleString('fa')} رخداد)`;
+  box.appendChild(head);
+
+  const ctrls = document.createElement('div');
+  ctrls.className = 'recctrls';
+  ctrls.appendChild(labelWrap('آستانه:', buildSelect(
+    [[7, '۷ تناوب'], [8, '۸ تناوب'], [9, '۹ تناوب'], [10, '۱۰ تناوب']],
+    extremeMin, (v) => { extremeMin = parseInt(v, 10); renderExtreme(ds, winLen); })));
+  box.appendChild(ctrls);
+
+  // Distribution of ALL extreme runs in scope, independent of the filter.
+  const dist = { 7: 0, 8: 0, 9: 0, '10+': 0 };
+  for (const r of inScope) {
+    if (r.f >= 10) dist['10+']++;
+    else dist[r.f] = (dist[r.f] || 0) + 1;
+  }
   const co = document.createElement('div');
   co.className = 'rhelp';
   co.innerHTML =
-    'کم‌ریسک‌ترین (بین اولویت ۱ تا ۶۰): <b>' +
-    safest.map((r) => `#${r.rank} (${r.avg.toFixed(1)})`).join('، ') +
-    '</b> · پرریسک‌ترین: <b>' +
-    riskiest.map((r) => `#${r.rank} (${r.avg.toFixed(1)})`).join('، ') + '</b>';
+    `در کلِ داده: <b>۷:</b> ${dist[7]} بار • <b>۸:</b> ${dist[8]} بار • ` +
+    `<b>۹:</b> ${dist[9]} بار • <b>۱۰+:</b> ${dist['10+']} بار`;
   box.appendChild(co);
 
-  const wrap = document.createElement('div');
-  wrap.className = 'reclist';
-  const tbl = document.createElement('table');
-  tbl.className = 'pritbl';
-  tbl.innerHTML =
-    '<thead><tr><th>اولویت</th><th>میانگین تغییرِ بیشینه</th>' +
-    '<th>٪ روزها تغییر کرده</th><th>٪ تغییرِ اخیر</th></tr></thead>';
-  const tb = document.createElement('tbody');
-  for (const r of rows) {
-    const tr = document.createElement('tr');
-    tr.innerHTML =
-      `<td>${r.rank}</td><td>${r.avg.toFixed(2)}</td>` +
-      `<td>${r.risePct}%</td><td>${r.recentPct}%</td>`;
-    tb.appendChild(tr);
+  const help = document.createElement('div');
+  help.className = 'rhelp';
+  help.textContent =
+    'هر رشتهٔ تناوبِ واقعی و بی‌وقفه، با ساعتِ دقیقِ شروع و پایان، و اولویتی که بازهٔ ' +
+    'شروعش «در همان لحظه» داشت (برای طولِ بازهٔ انتخابی).';
+  box.appendChild(help);
+
+  const list = document.createElement('div');
+  list.className = 'reclist';
+  for (const r of shown) {
+    const pr = r.pr && r.pr[String(winLen)];
+    const prTxt = pr
+      ? `کم‌ترین بیشینه #${pr[0]} • کم‌ترین میانگین #${pr[1]}`
+      : '— (اوایلِ داده)';
+    const card = document.createElement('div');
+    card.className = 'reccard';
+    card.innerHTML =
+      `<div class="rt">⚡️ ${DATA.names[String(r.wd)]} ${r.d} • ${r.st} تا ${r.en}</div>` +
+      `<div class="row"><span>طول رشته</span><b class="hot">${r.f} تناوب</b></div>` +
+      `<div class="row"><span>اولویتِ بازهٔ شروع در آن لحظه</span><b>${prTxt}</b></div>`;
+    list.appendChild(card);
   }
-  tbl.appendChild(tb);
-  wrap.appendChild(tbl);
-  box.appendChild(wrap);
+  box.appendChild(list);
   box.style.display = '';
 }
 
