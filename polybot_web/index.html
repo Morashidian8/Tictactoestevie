@@ -401,7 +401,7 @@ async function onClosedCandle(o,c,closeTime,place){
     if(won){openBet.pnl=openBet.stake*(openBet.m-1); bal+=openBet.stake*openBet.m; wins++;}
     else {openBet.pnl=-openBet.stake; losses++;}
     applyResult(won);
-    trades.unshift(openBet); trades=trades.slice(0,12); openBet=null;
+    trades.unshift(openBet); trades=trades.slice(0,500); openBet=null;
   }
   // 2) update the streak, and (only on the live candle) maybe open a new bet
   const sig=decide(color);
@@ -528,11 +528,12 @@ function render(){
     pe2.innerHTML='<span class="muted">⏸ ایستاده — بعد از ۲ باختِ پشتِ‌هم. منتظرِ '+(stratVal()==='follow4'?'۳':'۲')+' کندلِ هم‌رنگِ پشتِ‌هم برای ورودِ مجدد'+(stratVal()==='follow2'?' (ادامه از پلهٔ x'+step+')':stratVal()==='follow3'?' (با ۱ پله مارتینگل)':'')+'.</span>';
   } else { pe2.innerHTML='<span class="muted">الان داخلِ پوزیشن نیست — منتظرِ سیگنالِ کندلِ بعدی.</span>'; }
   const box=document.getElementById('trades');
-  box.innerHTML= trades.length? ('<div class="muted" style="margin-bottom:4px">معاملاتِ اخیر</div>'+trades.map(t=>{
+  box.innerHTML= trades.length? ('<div class="muted" style="margin-bottom:4px">معاملاتِ اخیر ('+trades.length+') — جدیدترین بالا، برای دیدنِ اولین‌ها به پایین اسکرول کن</div>'+
+    '<div style="max-height:48vh;overflow-y:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--line);border-radius:10px;padding:0 8px">'+trades.map((t,i)=>{
     const up=t.signal==='up';
     const res= t.won? '<span style="color:var(--green)">برد +$'+fmt(t.pnl)+'</span>':'<span style="color:var(--red)">باخت $'+fmt(t.pnl)+'</span>';
-    return '<div class="trade"><span class="chip '+(up?'up':'down')+'">'+(up?'UP':'DOWN')+'</span><span>$'+fmt(t.stake)+'</span><span class="muted">@$'+t.entry.toLocaleString('en-US')+'</span><span class="muted">'+t.time+'</span><span class="sp"></span>'+res+'</div>';
-  }).join('')) : '<span class="muted">هنوز معامله‌ای نشده.</span>';
+    return '<div class="trade"><span class="muted" style="min-width:26px">#'+(trades.length-i)+'</span><span class="chip '+(up?'up':'down')+'">'+(up?'UP':'DOWN')+'</span><span>$'+fmt(t.stake)+'</span><span class="muted">@$'+t.entry.toLocaleString('en-US')+'</span><span class="muted">'+t.time+'</span><span class="sp"></span>'+res+'</div>';
+  }).join('')+'</div>') : '<span class="muted">هنوز معامله‌ای نشده.</span>';
 }
 
 function countdown(){
@@ -660,7 +661,7 @@ function btStep(o,c,ct){
     if(won){openBet.pnl=openBet.stake*(openBet.m-1); bal+=openBet.stake*openBet.m; wins++;}
     else {openBet.pnl=-openBet.stake; losses++;}
     applyResult(won);
-    trades.unshift(openBet); trades=trades.slice(0,12); openBet=null;
+    trades.unshift(openBet); trades=trades.slice(0,500); openBet=null;
   }
   // Outside the chosen day/hour window: don't open new bets, and reset the
   // strategy state so the next in-window session starts fresh (like the live
@@ -882,7 +883,7 @@ async function dayHourScan(){
 })();
 
 // Version badge — lets you confirm the browser isn't showing a cached old copy.
-const APP_VERSION = "v21";
+const APP_VERSION = "v22";
 try{ document.getElementById('ver').textContent = APP_VERSION; }catch(e){}
 
 // On open: restore the saved session and resume (catching up while you were away).
