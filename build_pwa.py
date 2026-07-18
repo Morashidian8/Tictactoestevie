@@ -14,6 +14,7 @@ Run (where the exchanges are reachable, e.g. in CI):
 
 import os
 import csv
+import heapq
 import json
 import time
 import shutil
@@ -93,6 +94,127 @@ def record_history(pairs, tz):
     t, old, new = last
     return count, {"w": datetime.fromtimestamp(t, tz=tz).strftime("%Y-%m-%d"),
                    "f": old, "t": new}
+
+
+BURN_TOP_N = 10        # "top priority" cutoff for the burn log
+BURN_MIN_HIST = 8      # weeks of history required before ranks mean anything
+EXTREME_MIN_FLIPS = 7  # store every alternation run at least this long
+
+
+def extreme_run_events(candles, tz):
+    """
+    Every maximal alternating run of >= EXTREME_MIN_FLIPS flips in the series.
+
+    Runs are broken at data gaps, so each event is a genuine uninterrupted
+    alternation. Each event carries its local date/times plus lookup keys
+    ("dk" local day number, "sm" start minutes) that burns_for_day uses to
+    stamp the priority its starting window held AT THAT MOMENT; the keys are
+    stripped before the events are written to data.json.
+    """
+    times = [c["time"] for c in candles]
+    dirs = A.directions_of(candles)
+    n = len(dirs)
+    diffs = [times[i + 1] - times[i] for i in range(min(n - 1, 1000))]
+    step = min((d for d in diffs if d > 0), default=300)
+    off = int(datetime.now(tz).utcoffset().total_seconds())
+    out = []
+    i = 1
+    while i < n:
+        if (times[i] - times[i - 1] == step and dirs[i] != 0
+                and dirs[i - 1] != 0 and dirs[i] == -dirs[i - 1]):
+            j = i
+            while (j + 1 < n and times[j + 1] - times[j] == step
+                   and dirs[j + 1] != 0 and dirs[j + 1] == -dirs[j]):
+                j += 1
+            flips = j - i + 1
+            if flips >= EXTREME_MIN_FLIPS:
+                start_ts = times[i - 1]  # first candle of the run
+                sdt = datetime.fromtimestamp(start_ts, tz=tz)
+                edt = datetime.fromtimestamp(times[j], tz=tz)
+                out.append({
+                    "d": sdt.strftime("%Y-%m-%d"), "st": sdt.strftime("%H:%M"),
+                    "en": edt.strftime("%H:%M"), "wd": sdt.weekday(),
+                    "f": flips, "pr": {},
+                    "dk": (start_ts + off) // 86400,
+                    "sm": sdt.hour * 60 + sdt.minute,
+                })
+            i = j + 1
+        else:
+            i += 1
+    return out
+
+
+def burns_for_day(windows, tz, runs_for_day, wm):
+    """
+    Replay one weekday's history week by week and log every record break that
+    hit a window while it ranked in the top BURN_TOP_N by lowest running max
+    OR lowest running average AT THAT MOMENT (not today's ranks) — exactly the
+    "my safe pick burned" events. Ranks use only strictly-earlier weeks; the
+    first BURN_MIN_HIST weeks are skipped (too little history to rank).
+
+    Also stamps each extreme run of this weekday (runs_for_day: {day_number:
+    [run]}) with the rank its starting window held then, under run["pr"][wm].
+
+    windows: [(start_minutes, [(ts, flips), ...])], chronological pairs.
+    Returns events: {"d": date, "s": start_minutes, "f": old_max, "n": new,
+    "rmx"/"ravg": ranks at that moment, "wks": consecutive weeks in the
+    top-10 up to and including the break week}.
+    """
+    off = int(datetime.now(tz).utcoffset().total_seconds())
+    series = []
+    day_keys = set()
+    for s, pairs in windows:
+        m = {}
+        for ts, f in pairs:
+            dk = (ts + off) // 86400
+            m[dk] = (ts, f)
+            day_keys.add(dk)
+        series.append((s, m))
+    # state per window: [running_max, sum, count, weeks-in-top-10 streak]
+    state = {s: [None, 0.0, 0, 0] for s, _ in series}
+    events = []
+    for i, dk in enumerate(sorted(day_keys)):
+        ranked = i >= BURN_MIN_HIST
+        top = ()
+        if ranked:
+            items = [(st[0], st[1] / st[2], s)
+                     for s, _ in series if (st := state[s])[2] > 0]
+            histd = {s: (mx, av) for mx, av, s in items}
+            top_mx = {s for _, _, s in heapq.nsmallest(BURN_TOP_N, items)}
+            top_avg = {s for _, _, s in heapq.nsmallest(
+                BURN_TOP_N, items, key=lambda h: (h[1], h[0], h[2]))}
+            top = top_mx | top_avg
+
+            def rank(s, by_avg):
+                mx, av = histd[s]
+                if by_avg:
+                    return 1 + sum(1 for m2, a2, s2 in items
+                                   if (a2, m2, s2) < (av, mx, s))
+                return 1 + sum(1 for m2, a2, s2 in items
+                               if (m2, a2, s2) < (mx, av, s))
+
+            for run in runs_for_day.get(dk, []):
+                if run["sm"] in histd:
+                    run["pr"][str(wm)] = [rank(run["sm"], False),
+                                          rank(run["sm"], True)]
+        for s, m in series:
+            occ = m.get(dk)
+            st = state[s]
+            if (occ is not None and ranked and st[0] is not None
+                    and occ[1] > st[0] and s in top):
+                events.append({
+                    "d": datetime.fromtimestamp(occ[0], tz=tz).strftime("%Y-%m-%d"),
+                    "s": s, "f": st[0], "n": occ[1],
+                    "rmx": rank(s, False), "ravg": rank(s, True),
+                    "wks": st[3] + 1,
+                })
+            if occ is not None:
+                if ranked:
+                    st[3] = st[3] + 1 if s in top else 0
+                st[0] = occ[1] if st[0] is None else max(st[0], occ[1])
+                st[1] += occ[1]
+                st[2] += 1
+    return events
 
 
 def pack(stats):
@@ -193,10 +315,19 @@ def build_dataset(tz, source, interval, granularity, product, ex_label, tf_label
             c.sort(key=lambda x: x["start"])
             clock_out[str(wd)] = c
 
+    # Extreme alternation runs (>= EXTREME_MIN_FLIPS flips) across the whole
+    # series, grouped by weekday+local-day so the burn pass can stamp each one
+    # with the priority its starting window held at that moment.
+    extreme = extreme_run_events(candles, tz)
+    runs_by_wd = {}
+    for r_ in extreme:
+        runs_by_wd.setdefault(r_["wd"], {}).setdefault(r_["dk"], []).append(r_)
+
     # Rolling windows for each length that is a whole number (>=2) of candles
     # on this timeframe (e.g. 90m is valid on 5m/15m but not on 1h).
     tf_min = granularity // 60
     rolling_out = {}
+    burns_out = {}
     for wm in WIN_LENGTHS:
         if wm % tf_min != 0:
             continue  # not an exact number of candles on this timeframe
@@ -205,6 +336,7 @@ def build_dataset(tz, source, interval, granularity, product, ex_label, tf_label
             continue  # window too short for this timeframe (e.g. 1h on 1h)
         samples = A.build_rolling_samples(candles, tz, win=win, with_times=True)
         per_wd = {}
+        burns_wd = {}
         for wd in range(7):
             r = []
             for (h, m), pairs in samples[wd].items():
@@ -221,7 +353,17 @@ def build_dataset(tz, source, interval, granularity, product, ex_label, tf_label
                 r.append(entry)
             r.sort(key=lambda x: x["start"])
             per_wd[str(wd)] = r
+            wins_pairs = [(h * 60 + m, pairs)
+                          for (h, m), pairs in samples[wd].items()]
+            burns_wd[str(wd)] = burns_for_day(
+                wins_pairs, tz, runs_by_wd.get(wd, {}), wm)
         rolling_out[str(wm)] = per_wd
+        burns_out[str(wm)] = burns_wd
+
+    # The lookup keys were only needed while stamping priorities.
+    for r_ in extreme:
+        r_.pop("dk", None)
+        r_.pop("sm", None)
 
     oldest = datetime.fromtimestamp(candles[0]["time"], tz=tz)
     newest = datetime.fromtimestamp(candles[-1]["time"], tz=tz)
@@ -248,6 +390,8 @@ def build_dataset(tz, source, interval, granularity, product, ex_label, tf_label
         },
         "clock": clock_out,
         "rolling": rolling_out,
+        "burns": burns_out,
+        "extreme": extreme,
         "gaps": gaps_out,
     }
 
