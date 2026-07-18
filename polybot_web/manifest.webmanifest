@@ -1,0 +1,13 @@
+{
+  "name": "PolyBot — تستِ استراتژی",
+  "short_name": "PolyBot",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0E1117",
+  "theme_color": "#0E1117",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
