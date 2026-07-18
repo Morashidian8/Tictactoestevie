@@ -127,6 +127,19 @@
     <input id="btStart" type="datetime-local">
     <label>تا تاریخ/ساعت</label>
     <input id="btEnd" type="datetime-local">
+    <div style="display:flex;gap:8px">
+      <div style="flex:1"><label>از روزِ هفته</label>
+        <select id="btFromDay"></select></div>
+      <div style="flex:1"><label>تا روزِ هفته</label>
+        <select id="btToDay"></select></div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <div style="flex:1"><label>از ساعت (۰ تا ۲۴)</label>
+        <input id="btFromHour" type="number" value="0" min="0" max="24" step="1"></div>
+      <div style="flex:1"><label>تا ساعت (۰ تا ۲۴)</label>
+        <input id="btToHour" type="number" value="24" min="0" max="24" step="1"></div>
+    </div>
+    <div class="muted" style="margin-top:6px">فقط داخلِ این روزها و بازهٔ ساعت وارد معامله می‌شود؛ بیرونِ آن رد می‌شود و حالتِ استراتژی برای شروعِ بازهٔ بعدی صفر می‌شود. روز و ساعت بر اساسِ <b>ساعتِ محلیِ همین دستگاه</b> است — همان ساعتی که این اپ روی کندل‌ها نشان می‌دهد، تا با چارت مطابقت داشته باشد. برای «همهٔ روز» ساعت را ۰ تا ۲۴ و روز را شنبه تا جمعه بگذار. ساعتِ شب‌گرد هم پشتیبانی می‌شود (مثلاً ۲۲ تا ۴).</div>
     <label>نرخِ فرضیِ ورود (odds) — بین ۰ تا ۱</label>
     <input id="btOdds" type="number" value="0.5" min="0.01" max="0.99" step="0.01">
     <label>سرعت — هر کندل چند ثانیه</label>
@@ -366,7 +379,8 @@ function saveState(){
   try{ localStorage.setItem('polybot', JSON.stringify({
     running: !!pollTimer, bal, start, openBet, trades, wins, losses, step, prevColor, streakLen, lastClosedOpen, altLen, abArmed, abCommitted, abReentry, fActive, fRun, fPrev,
     cfg:{tf:val('tf'),amt:val('amt'),bal:val('bal'),mode:val('mode'),
-      maxEntry:val('maxEntry'),altN:val('altN'),maxStep:val('maxStep'),strat:val('strat')}
+      maxEntry:val('maxEntry'),altN:val('altN'),maxStep:val('maxStep'),strat:val('strat'),
+      btFromDay:val('btFromDay'),btToDay:val('btToDay'),btFromHour:val('btFromHour'),btToHour:val('btToHour')}
   })); }catch(e){}
 }
 function loadState(){            // returns running flag, or null if nothing saved
@@ -378,7 +392,8 @@ function loadState(){            // returns running flag, or null if nothing sav
   fActive=(s.fActive!==undefined)?!!s.fActive:true; fRun=s.fRun||0; fPrev=s.fPrev||null;
   lastClosedOpen=(s.lastClosedOpen!=null)?s.lastClosedOpen:null;
   if(s.cfg){const c=s.cfg; setVal('tf',c.tf); setVal('amt',c.amt);setVal('bal',c.bal);
-    setVal('mode',c.mode); setVal('maxEntry',c.maxEntry); setVal('altN',c.altN); setVal('maxStep',c.maxStep); setVal('strat',c.strat); onMode(); onStrat();}
+    setVal('mode',c.mode); setVal('maxEntry',c.maxEntry); setVal('altN',c.altN); setVal('maxStep',c.maxStep); setVal('strat',c.strat);
+    setVal('btFromDay',c.btFromDay); setVal('btToDay',c.btToDay); setVal('btFromHour',c.btFromHour); setVal('btToHour',c.btToHour); onMode(); onStrat();}
   return !!s.running;
 }
 
@@ -453,8 +468,30 @@ function reset(){
 }
 
 // ---------------- BACKTEST (real past candles, fast replay) ----------------
-let btTimer=null, btCandles=[], btIdx=0;
+let btTimer=null, btCandles=[], btIdx=0, btIn=0;
 function toggleBacktest(){ btTimer? stopBacktest() : runBacktest(); }
+
+// Day/hour trading window (backtest only). Weekday + hour are read from the
+// candle's LOCAL time (same clock the app shows on each candle), so it matches
+// what you see on the chart. Iranian week order: شنبه..جمعه mapped to JS getDay().
+const IR_DAYS=[{n:'شنبه',js:6},{n:'یک‌شنبه',js:0},{n:'دوشنبه',js:1},
+  {n:'سه‌شنبه',js:2},{n:'چهارشنبه',js:3},{n:'پنج‌شنبه',js:4},{n:'جمعه',js:5}];
+const JS_TO_IR={6:0,0:1,1:2,2:3,3:4,4:5,5:6};   // JS getDay() -> Iranian order index
+function inTradeWindow(ct){
+  const d=new Date(ct);
+  const di=JS_TO_IR[d.getDay()];
+  let df=parseInt(document.getElementById('btFromDay').value); if(isNaN(df)) df=0;
+  let dt=parseInt(document.getElementById('btToDay').value); if(isNaN(dt)) dt=6;
+  const dayOk = df<=dt ? (di>=df && di<=dt) : (di>=df || di<=dt);   // wrap-around supported
+  const h=d.getHours();
+  let hf=parseInt(document.getElementById('btFromHour').value); if(isNaN(hf)) hf=0;
+  let ht=parseInt(document.getElementById('btToHour').value); if(isNaN(ht)) ht=24;
+  let hourOk;
+  if(hf===ht) hourOk=true;                       // equal endpoints = all day
+  else if(hf<ht) hourOk=(h>=hf && h<ht);
+  else hourOk=(h>=hf || h<ht);                   // overnight window (e.g. 22 -> 4)
+  return dayOk && hourOk;
+}
 
 async function fetchHistory(sMs,eMs){
   const tf=document.getElementById('tf').value;
@@ -492,7 +529,7 @@ async function runBacktest(){
     openBet=null; trades=[]; wins=0; losses=0; step=0; prevColor=null; streakLen=0; altLen=0; abArmed=false; abCommitted=false; abReentry=false;
     fActive=true; fRun=0; fPrev=null;
   lastStake=null; lastClosedOpen=null;
-    btCandles=candles; btIdx=0;
+    btCandles=candles; btIdx=0; btIn=0;
     const speed=Math.max(0.2,parseFloat(document.getElementById('btSpeed').value)||2)*1000;
     document.getElementById('btBtn').textContent='● در حال بک‌تست — توقف';
     document.getElementById('btBtn').classList.add('ghost');
@@ -511,6 +548,15 @@ function btStep(o,c,ct){
     applyResult(won);
     trades.unshift(openBet); trades=trades.slice(0,12); openBet=null;
   }
+  // Outside the chosen day/hour window: don't open new bets, and reset the
+  // strategy state so the next in-window session starts fresh (like the live
+  // app after a gap). Bets opened in-window still resolved above.
+  if(!inTradeWindow(ct)){
+    step=0; prevColor=null; streakLen=0; altLen=0; abArmed=false; abCommitted=false; abReentry=false;
+    fActive=true; fRun=0; fPrev=null;
+    return;
+  }
+  btIn++;
   const sig=decide(color);
   if(sig){
     const s=stake();
@@ -526,7 +572,7 @@ function btStep(o,c,ct){
 
 function btTick(){
   if(btIdx>=btCandles.length){ stopBacktest();
-    document.getElementById('btMsg').textContent='بک‌تست تمام شد ✅ — '+btCandles.length+' کندل. نتیجه بالا.'; return; }
+    document.getElementById('btMsg').textContent='بک‌تست تمام شد ✅ — '+btCandles.length+' کندل ('+btIn+' کندل داخلِ بازهٔ روز/ساعتِ انتخابی). نتیجه بالا.'; return; }
   const row=btCandles[btIdx++];
   const o=parseFloat(row[1]), c=parseFloat(row[4]), ct=parseInt(row[6]);
   curPrice=Math.round(c); curColor=colorOf(o,c); formingClose=0;
@@ -544,6 +590,14 @@ function stopBacktest(){
   document.getElementById('btBtn').classList.remove('ghost');
 }
 
+// populate the weekday selects (Iranian week order) — default شنبه..جمعه = all days
+(function(){
+  const fd=document.getElementById('btFromDay'), td=document.getElementById('btToDay');
+  if(fd&&td&&!fd.options.length){
+    IR_DAYS.forEach((d,i)=>{ fd.add(new Option(d.n,i)); td.add(new Option(d.n,i)); });
+    fd.value='0'; td.value='6';
+  }
+})();
 // default the backtest range to the last 24 hours
 (function(){ const p=n=>String(n).padStart(2,'0');
   const f=d=>d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+'T'+p(d.getHours())+':'+p(d.getMinutes());
@@ -553,7 +607,7 @@ function stopBacktest(){
 })();
 
 // Version badge — lets you confirm the browser isn't showing a cached old copy.
-const APP_VERSION = "v14";
+const APP_VERSION = "v15";
 try{ document.getElementById('ver').textContent = APP_VERSION; }catch(e){}
 
 // On open: restore the saved session and resume (catching up while you were away).
