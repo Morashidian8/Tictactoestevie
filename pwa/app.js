@@ -115,6 +115,13 @@ function buildWinCard(w, wd, full, tol, index, showHist) {
     ? `<div class="row"><span>تغییرِ بیشینه (سال)</span><b${recentRec ? ' class="recbadge"' : ''}>${w.recn} بار • تا ${w.rec.t} • آخرین ${w.rec.w}</b></div>`
     : '';
   const ex = exceedInfo(w, tol);
+  // Current consecutive weeks this window has held a top-10 priority (by
+  // lowest running max or average). A short streak = a fresh, still-unproven
+  // entrant — exactly the "lucky calm" trap; a long streak = evidence the
+  // calm is real. Only present for windows currently in the top 10.
+  const twRow = w.tw
+    ? `<div class="row"><span>سابقهٔ حضور در تاپ-۱۰</span><b${w.tw <= 4 ? ' class="recbadge"' : ''}>${w.tw} هفتهٔ پیاپی${w.tw <= 4 ? ' ⚠️ تازه‌وارد' : (w.tw >= 13 ? ' ✅ باسابقه' : '')}</b></div>`
+    : '';
   div.innerHTML = badge +
     `<div class="t">${w.label}${star}${recMark}</div>` +
     `<div class="row"><span>تعداد نمونه</span><b>${w.n} بار</b></div>` +
@@ -125,6 +132,7 @@ function buildWinCard(w, wd, full, tol, index, showHist) {
     `<div class="row"><span>احتمالِ بیشینهٔ جدید</span><b>${newHighPct(w)}%</b></div>` +
     `<div class="row"><span>رتبهٔ کم‌ترین بیشینه</span><b>${rankMx || '—'} از ${total}</b></div>` +
     `<div class="row"><span>رتبهٔ کم‌ترین میانگین</span><b>${rankAvg || '—'} از ${total}</b></div>` +
+    twRow +
     recRow;
   if (showHist && w.hist) div.appendChild(histBars(w.hist));
   if (w.rc && w.rc.length) div.appendChild(recentToggle(w, wd));
