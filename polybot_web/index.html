@@ -571,17 +571,31 @@ function btStep(o,c,ct){
 }
 
 function btTick(){
-  if(btIdx>=btCandles.length){ stopBacktest();
-    document.getElementById('btMsg').textContent='بک‌تست تمام شد ✅ — '+btCandles.length+' کندل ('+btIn+' کندل داخلِ بازهٔ روز/ساعتِ انتخابی). نتیجه بالا.'; return; }
-  const row=btCandles[btIdx++];
-  const o=parseFloat(row[1]), c=parseFloat(row[4]), ct=parseInt(row[6]);
-  curPrice=Math.round(c); curColor=colorOf(o,c); formingClose=0;
-  btStep(o,c,ct);
-  document.getElementById('lastc').innerHTML='کندلِ بک‌تست: <span class="dot" style="background:'+(curColor==='green'?'var(--green)':'var(--red)')+'"></span> '+
-    (curColor==='green'?'سبز':'قرمز')+' @ $'+curPrice.toLocaleString('en-US')+' · '+new Date(ct).toLocaleString('fa-IR');
-  document.getElementById('btMsg').textContent='کندل '+btIdx+' از '+btCandles.length+' — '+new Date(ct).toLocaleString('fa-IR');
-  render();
-  if(bal+(openBet?openBet.stake:0)<=0.01){ stopBacktest(); document.getElementById('btMsg').textContent='موجودی تمام شد — بک‌تست متوقف شد ('+btIdx+' کندل).'; }
+  // Spend the per-candle delay ONLY on candles inside the chosen day/hour window.
+  // Candles outside the window are fast-forwarded within this same tick (no wait),
+  // so replay jumps straight to the next in-window session (next day's window, …).
+  while(btIdx<btCandles.length){
+    const row=btCandles[btIdx++];
+    const o=parseFloat(row[1]), c=parseFloat(row[4]), ct=parseInt(row[6]);
+    const wasIn=inTradeWindow(ct);
+    curPrice=Math.round(c); curColor=colorOf(o,c); formingClose=0;
+    btStep(o,c,ct);
+    if(bal+(openBet?openBet.stake:0)<=0.01){
+      stopBacktest(); render();
+      document.getElementById('btMsg').textContent='موجودی تمام شد — بک‌تست متوقف شد ('+btIdx+' کندل).';
+      return;
+    }
+    if(wasIn){
+      document.getElementById('lastc').innerHTML='کندلِ بک‌تست: <span class="dot" style="background:'+(curColor==='green'?'var(--green)':'var(--red)')+'"></span> '+
+        (curColor==='green'?'سبز':'قرمز')+' @ $'+curPrice.toLocaleString('en-US')+' · '+new Date(ct).toLocaleString('fa-IR');
+      document.getElementById('btMsg').textContent='کندل '+btIdx+' از '+btCandles.length+' — '+new Date(ct).toLocaleString('fa-IR');
+      render();
+      return;                    // pause here; next tick handles the next candle
+    }
+    // outside the window: keep looping in this same tick (instant skip)
+  }
+  stopBacktest(); render();
+  document.getElementById('btMsg').textContent='بک‌تست تمام شد ✅ — '+btCandles.length+' کندل ('+btIn+' کندل داخلِ بازهٔ روز/ساعتِ انتخابی). نتیجه بالا.';
 }
 
 function stopBacktest(){
@@ -607,7 +621,7 @@ function stopBacktest(){
 })();
 
 // Version badge — lets you confirm the browser isn't showing a cached old copy.
-const APP_VERSION = "v15";
+const APP_VERSION = "v16";
 try{ document.getElementById('ver').textContent = APP_VERSION; }catch(e){}
 
 // On open: restore the saved session and resume (catching up while you were away).
