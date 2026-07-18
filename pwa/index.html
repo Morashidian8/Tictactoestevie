@@ -94,6 +94,19 @@
     .extreme .reccard .rt { color:#a05a00; }
     .extreme .recsel { color:#8a6d4a; }
     .extreme .recsel select { border-color:#f0d9b8; }
+    .extreme .rectoggle { color:#8a6d4a; }
+    .hourmap { background:#f6f6fb; border-color:#d8d8ea; }
+    .hourmap h2 { color:#3b3b78; }
+    .hourmap .rhelp { color:#6b6b8a; }
+    .hgrid { display:grid; grid-template-columns:repeat(6,1fr); gap:6px;
+             direction:ltr; }
+    .hcell { border-radius:8px; padding:6px 2px; text-align:center;
+             font-size:11px; color:#333; background:#ececf2; line-height:1.5;
+             font-variant-numeric:tabular-nums; }
+    .hcell .hh { display:block; font-weight:700; color:#555; font-size:11px; }
+    .hcell b { display:block; font-size:14px; color:#1a1a1a; }
+    .hcell .hx { display:block; font-size:10px; color:#555; }
+    .hcell .hm { white-space:nowrap; }
   </style>
 </head>
 <body>
@@ -180,6 +193,7 @@
   <section class="records" id="records" style="display:none"></section>
   <section class="records prisk" id="prisk" style="display:none"></section>
   <section class="records extreme" id="extreme" style="display:none"></section>
+  <section class="records hourmap" id="hourmap" style="display:none"></section>
 
   <main id="out"></main>
 

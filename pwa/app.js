@@ -165,6 +165,7 @@ function render() {
   renderRecords(ds, winLen);
   renderBurns(ds, winLen);
   renderExtreme(ds, winLen);
+  renderHours(ds, winLen);
   renderCustom(ds, winLen, tol);
 
   const m = ds.meta;
@@ -436,6 +437,53 @@ function renderRecords(ds, winLen) {
   box.style.display = '';
 }
 
+// --- Night filter (01:00–06:00 local) + per-panel day filter -----------------
+const NIGHT_START = 60, NIGHT_END = 360;  // minutes: 01:00 .. 06:00
+
+// Does [startMin, endMin) on the 1440-minute ring touch the night interval?
+function spanTouchesNight(startMin, endMin) {
+  const segs = endMin <= 1440 ? [[startMin, endMin]]
+    : [[startMin, 1440], [0, endMin - 1440]];
+  return segs.some(([a, b]) => a < NIGHT_END && b > NIGHT_START);
+}
+
+function runTouchesNight(r) {
+  const toMin = (t) => parseInt(t.slice(0, 2), 10) * 60 + parseInt(t.slice(3), 10);
+  const s = toMin(r.st);
+  let e = toMin(r.en) + 1;
+  if (e <= s) e += 1440;  // the run crossed midnight
+  return spanTouchesNight(s, e);
+}
+
+let hideNight = true;   // drop events touching 01:00–06:00 (both event panels)
+let burnDay = 'all';    // in-panel weekday filter of the burn log
+let extDay = 'all';     // in-panel weekday filter of the extreme-run log
+
+function checkboxWrap(text, checked, onChange) {
+  const lab = document.createElement('label');
+  lab.className = 'rectoggle';
+  const cb = document.createElement('input');
+  cb.type = 'checkbox';
+  cb.checked = checked;
+  cb.addEventListener('change', () => onChange(cb.checked));
+  lab.appendChild(cb);
+  lab.appendChild(document.createTextNode(' ' + text));
+  return lab;
+}
+
+function dayOptions() {
+  return [['all', 'همهٔ روزها']].concat(
+    DATA.order.map((wd) => [String(wd), DATA.names[String(wd)]]));
+}
+
+// The weekdays a panel shows: the page-level weekday scope, narrowed by the
+// panel's own day filter.
+function panelDays(panelDay) {
+  const base = selectedDays();
+  return panelDay === 'all' ? base
+    : base.filter((wd) => String(wd) === panelDay);
+}
+
 // Burn log: every time in the past year a window that ranked in the TOP-10
 // priorities AT THAT MOMENT (lowest max or lowest average, reconstructed
 // historically — not today's ranks) had its ceiling broken. Overlapping
@@ -447,8 +495,11 @@ function renderBurns(ds, winLen) {
   const per = ds.burns && ds.burns[String(winLen)];
   if (!per) return;
   const raw = [];
-  for (const wd of selectedDays()) {
-    for (const e of (per[String(wd)] || [])) raw.push({ wd, e });
+  for (const wd of panelDays(burnDay)) {
+    for (const e of (per[String(wd)] || [])) {
+      if (hideNight && spanTouchesNight(e.s, e.s + winLen)) continue;
+      raw.push({ wd, e });
+    }
   }
   // Collapse same-day overlapping windows (adjacent 5-min-shifted starts that
   // broke on the same underlying event) to the best-ranked representative.
@@ -470,11 +521,39 @@ function renderBurns(ds, winLen) {
   }
   items.sort((a, b) => b.e.d.localeCompare(a.e.d) || a.e.s - b.e.s);
 
-  const scope = $('weekday').value === 'all' ? '' : ' — ' + DATA.names[$('weekday').value];
+  const dayName = burnDay === 'all'
+    ? ($('weekday').value === 'all' ? '' : ' — ' + DATA.names[$('weekday').value])
+    : ' — ' + DATA.names[burnDay];
   const head = document.createElement('h2');
   head.textContent =
-    `📌 سابقهٔ سوختنِ اولویت‌های ۱–۱۰${scope} (${items.length.toLocaleString('fa')} رخداد)`;
+    `📌 سابقهٔ سوختنِ اولویت‌های ۱–۱۰${dayName} (${items.length.toLocaleString('fa')} رخداد)`;
   box.appendChild(head);
+
+  const ctrls = document.createElement('div');
+  ctrls.className = 'recctrls';
+  ctrls.appendChild(labelWrap('روز:', buildSelect(
+    dayOptions(), burnDay,
+    (v) => { burnDay = v; renderBurns(ds, winLen); })));
+  ctrls.appendChild(checkboxWrap('حذف بازه‌های ۰۱:۰۰–۰۶:۰۰', hideNight, (v) => {
+    hideNight = v;
+    renderBurns(ds, winLen);
+    renderExtreme(ds, winLen);
+  }));
+  box.appendChild(ctrls);
+
+  // Per-weekday breakdown of the (filtered, collapsed) events.
+  if (burnDay === 'all' && items.length) {
+    const byDay = {};
+    for (const it of items) byDay[it.wd] = (byDay[it.wd] || 0) + 1;
+    const co = document.createElement('div');
+    co.className = 'rhelp';
+    co.innerHTML = 'به تفکیکِ روز: ' + DATA.order
+      .filter((wd) => byDay[wd])
+      .map((wd) => `<b>${DATA.names[String(wd)]}:</b> ${byDay[wd]}`)
+      .join(' • ');
+    box.appendChild(co);
+  }
+
   const help = document.createElement('div');
   help.className = 'rhelp';
   help.textContent =
@@ -522,15 +601,18 @@ function renderExtreme(ds, winLen) {
   box.style.display = 'none';
   const all = ds.extreme || [];
   if (!all.length) return;
-  const days = selectedDays();
-  const inScope = all.filter((r) => days.includes(r.wd));
+  const days = panelDays(extDay);
+  const inScope = all.filter((r) =>
+    days.includes(r.wd) && !(hideNight && runTouchesNight(r)));
   const shown = inScope.filter((r) => r.f >= extremeMin)
     .sort((a, b) => b.d.localeCompare(a.d) || b.f - a.f);
 
-  const scope = $('weekday').value === 'all' ? '' : ' — ' + DATA.names[$('weekday').value];
+  const dayName = extDay === 'all'
+    ? ($('weekday').value === 'all' ? '' : ' — ' + DATA.names[$('weekday').value])
+    : ' — ' + DATA.names[extDay];
   const head = document.createElement('h2');
   head.textContent =
-    `⚡️ تناوب‌های شدید (≥ ${extremeMin})${scope} (${shown.length.toLocaleString('fa')} رخداد)`;
+    `⚡️ تناوب‌های شدید (≥ ${extremeMin})${dayName} (${shown.length.toLocaleString('fa')} رخداد)`;
   box.appendChild(head);
 
   const ctrls = document.createElement('div');
@@ -538,7 +620,28 @@ function renderExtreme(ds, winLen) {
   ctrls.appendChild(labelWrap('آستانه:', buildSelect(
     [[7, '۷ تناوب'], [8, '۸ تناوب'], [9, '۹ تناوب'], [10, '۱۰ تناوب']],
     extremeMin, (v) => { extremeMin = parseInt(v, 10); renderExtreme(ds, winLen); })));
+  ctrls.appendChild(labelWrap('روز:', buildSelect(
+    dayOptions(), extDay,
+    (v) => { extDay = v; renderExtreme(ds, winLen); })));
+  ctrls.appendChild(checkboxWrap('حذف ۰۱:۰۰–۰۶:۰۰', hideNight, (v) => {
+    hideNight = v;
+    renderBurns(ds, winLen);
+    renderExtreme(ds, winLen);
+  }));
   box.appendChild(ctrls);
+
+  // Per-weekday breakdown of what's shown.
+  if (extDay === 'all' && shown.length) {
+    const byDay = {};
+    for (const r of shown) byDay[r.wd] = (byDay[r.wd] || 0) + 1;
+    const cd = document.createElement('div');
+    cd.className = 'rhelp';
+    cd.innerHTML = 'به تفکیکِ روز: ' + DATA.order
+      .filter((wd) => byDay[wd])
+      .map((wd) => `<b>${DATA.names[String(wd)]}:</b> ${byDay[wd]}`)
+      .join(' • ');
+    box.appendChild(cd);
+  }
 
   // Distribution of ALL extreme runs in scope, independent of the filter.
   const dist = { 7: 0, 8: 0, 9: 0, '10+': 0 };
@@ -576,6 +679,78 @@ function renderExtreme(ds, winLen) {
     list.appendChild(card);
   }
   box.appendChild(list);
+  box.style.display = '';
+}
+
+// 🕐 Hour heat-map: one glance at which hours of the (selected) day are
+// historically calm. For each start hour 00..23 it aggregates the windows
+// starting in that hour — mean alternation average, worst max ever — plus how
+// many extreme runs (>=7) started there and how many top-10 burns hit there.
+// Green = calmest hours, red = most alternating.
+function renderHours(ds, winLen) {
+  const box = $('hourmap');
+  box.innerHTML = '';
+  box.style.display = 'none';
+  const per = ds.rolling && ds.rolling[String(winLen)];
+  if (!per) return;
+  const days = selectedDays();
+  const agg = Array.from({ length: 24 }, () => ({ sum: 0, n: 0, mx: 0, runs: 0, burns: 0 }));
+  for (const wd of days) {
+    for (const w of (per[String(wd)] || [])) {
+      const a = agg[Math.floor(w.start / 60)];
+      a.sum += w.avg;
+      a.n++;
+      a.mx = Math.max(a.mx, w.mx);
+    }
+  }
+  for (const r of (ds.extreme || [])) {
+    if (days.includes(r.wd)) agg[parseInt(r.st.slice(0, 2), 10)].runs++;
+  }
+  const perB = ds.burns && ds.burns[String(winLen)];
+  if (perB) {
+    for (const wd of days) {
+      for (const e of (perB[String(wd)] || [])) agg[Math.floor(e.s / 60)].burns++;
+    }
+  }
+  const avgs = agg.filter((a) => a.n).map((a) => a.sum / a.n);
+  if (!avgs.length) return;
+  const lo = Math.min(...avgs), hi = Math.max(...avgs);
+
+  const scope = $('weekday').value === 'all' ? ' (کل هفته)' : ' — ' + DATA.names[$('weekday').value];
+  const head = document.createElement('h2');
+  head.textContent = '🕐 نقشهٔ ساعت‌ها' + scope;
+  box.appendChild(head);
+  const help = document.createElement('div');
+  help.className = 'rhelp';
+  help.textContent =
+    'برای هر ساعتِ شروع: میانگینِ تناوبِ بازه‌هایش (سبز = آرام‌تر، قرمز = پرتناوب‌تر)، ' +
+    'بدترین بیشینهٔ تاریخی، و تعدادِ رشته‌های شدید (⚡) و سوختنِ تاپ-۱۰ (📌) که آن‌جا شروع شده‌اند. ' +
+    `طول بازه: ${winLabel(winLen)}.`;
+  box.appendChild(help);
+
+  const grid = document.createElement('div');
+  grid.className = 'hgrid';
+  for (let h = 0; h < 24; h++) {
+    const a = agg[h];
+    const cell = document.createElement('div');
+    cell.className = 'hcell';
+    if (!a.n) {
+      cell.innerHTML = `<span class="hh">${String(h).padStart(2, '0')}</span>—`;
+    } else {
+      const avg = a.sum / a.n;
+      const t = hi > lo ? (avg - lo) / (hi - lo) : 0;
+      cell.style.background = `hsl(${Math.round(120 * (1 - t))},65%,86%)`;
+      const marks =
+        (a.runs ? ` <span class="hm">⚡${a.runs}</span>` : '') +
+        (a.burns ? ` <span class="hm">📌${a.burns}</span>` : '');
+      cell.innerHTML =
+        `<span class="hh">${String(h).padStart(2, '0')}</span>` +
+        `<b>${avg.toFixed(1)}</b>` +
+        `<span class="hx">تا ${a.mx}${marks}</span>`;
+    }
+    grid.appendChild(cell);
+  }
+  box.appendChild(grid);
   box.style.display = '';
 }
 
