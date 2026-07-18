@@ -1,5 +1,5 @@
 // Simple offline-first service worker for the BTC alternation PWA.
-const CACHE = 'btc-tanavob-v33';
+const CACHE = 'btc-tanavob-v34';
 const ASSETS = [
   './',
   './index.html',
