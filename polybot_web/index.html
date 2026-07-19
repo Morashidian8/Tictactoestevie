@@ -112,6 +112,7 @@
       <option value="follow4">همرنگ + یک‌پله با ورودِ مجدد پس از ۳ کندلِ هم‌رنگ</option>
       <option value="follow5">همرنگ + مارتینگلِ ۳ پله‌ای (۱۰→۲۰→۴۰، بعد ریست و ادامه)</option>
       <option value="follow6">همرنگ + هر باخت ایست تا ۲ کندلِ هم‌رنگ، بعد مارتینگل تا برد</option>
+      <option value="follow7">ورود با ۲ کندلِ هم‌رنگ، حجمِ ثابت (بدونِ مارتینگل)</option>
     </select>
     <div id="stratAlt" style="font-size:13px;color:var(--text);background:var(--surfaceVar);border-radius:10px;padding:10px;margin-top:6px">
       <b>مارتینگلِ تناوبی</b><br>
@@ -140,6 +141,10 @@
     <div id="stratFollow6" style="display:none;font-size:13px;color:var(--text);background:var(--surfaceVar);border-radius:10px;padding:10px;margin-top:6px">
       <b>همرنگ + ایست تا ۲ کندلِ هم‌رنگ، بعد مارتینگل تا برد</b><br>
       <span style="color:var(--muted);font-size:12px">با حجمِ پایه همرنگِ کندلِ قبلی سوار می‌ماند. <b>هر بار جهت عوض شد (باخت) فوراً دست نگه می‌دارد</b> و می‌ایستد تا <b>۲ کندلِ هم‌رنگِ پشتِ‌هم</b> ببیند؛ آنگاه دوباره همرنگ وارد می‌شود ولی <b>یک پله بالاتر مارتینگل</b> (سریِ دوم دوبرابر = ۲×). اگر برد، به حجمِ پایه برمی‌گردد و ادامه می‌دهد؛ اگر نبرد، باز می‌ایستد تا ۲ کندلِ هم‌رنگ و سریِ بعد یک پله بالاتر (۴×، ۸× …) <b>تا وقتی که ببرد</b>، بعد به پایه برمی‌گردد.</span>
+    </div>
+    <div id="stratFollow7" style="display:none;font-size:13px;color:var(--text);background:var(--surfaceVar);border-radius:10px;padding:10px;margin-top:6px">
+      <b>ورود با ۲ کندلِ هم‌رنگ، حجمِ ثابت</b><br>
+      <span style="color:var(--muted);font-size:12px">مثلِ حالتِ قبلی از نظرِ شرطِ ورود، ولی <b>هیچ‌وقت مارتینگل نمی‌کند و همیشه با حجمِ ثابت (مبلغِ پایه)</b> وارد می‌شود. فقط وقتی <b>۲ کندلِ هم‌رنگِ پشتِ‌هم</b> دید، هم‌جهتِ همان رنگ وارد می‌شود؛ تا وقتی رنگ ادامه دارد سوار می‌ماند (باز با همان حجمِ ثابت)، و به‌محضِ شکستنِ رنگ/باخت صبر می‌کند تا دوباره ۲ کندلِ هم‌رنگ ببیند. در بازارِ یک‌درمیان (بدونِ ۲ کندلِ هم‌رنگ) اصلاً وارد نمی‌شود.</span>
     </div>
     <div id="altCfg">
       <label>از چند تناوب به بعد شروع کند (تعدادِ یکی‌درمیانِ رنگ‌ها)</label>
@@ -319,6 +324,16 @@ function decideFollow6(color){
   if(!fActive){ if(fRun>=2){ fActive=true; } else return null; }
   return color==='green'?'up':'down';
 }
+// "follow7": fixed stake, NO martingale. Enter (following) only when 2+ same-colour
+// candles are in a row; rides sustained runs, sits out choppy markets, and after a
+// loss (which breaks the run) naturally waits for the next 2 same-colour candles.
+function decideFollow7(color){
+  if(color==='none'){ fRun=0; fPrev='none'; return null; }
+  if(color===fPrev) fRun++; else fRun=1;
+  fPrev=color;
+  if(fRun>=2) return color==='green'?'up':'down';
+  return null;
+}
 
 // Strategy-specific reaction to a resolved bet, adjusting the martingale step/state.
 function applyResult(won){
@@ -359,6 +374,7 @@ function applyResult(won){
     else { step=Math.min(step+1,30); fActive=false; }
     return;
   }
+  if(s==='follow7'){ step=0; return; }        // fixed stake, no martingale (entry gate is in decide)
   // 'alt' (alternation-triggered martingale)
   if(won){ step=0; abArmed=false; abCommitted=false; abReentry=false; }
   else step=Math.min(step+1,30);
@@ -370,6 +386,7 @@ function decide(color){
   if(stratVal()==='follow4') return decideFollow4(color);
   if(stratVal()==='follow5') return decideFollow5(color);
   if(stratVal()==='follow6') return decideFollow6(color);
+  if(stratVal()==='follow7') return decideFollow7(color);
   const need=Math.max(1,parseInt(document.getElementById('altN').value)||5);
   const isFlip = (prevColor && color!=='none' && color!==prevColor);
   const same = (prevColor && color!=='none' && color===prevColor);
@@ -466,7 +483,7 @@ async function testSource(){
 }
 function onStrat(){
   const s = stratVal();
-  const isFollow = (s==='follow1' || s==='follow2' || s==='follow3' || s==='follow4' || s==='follow5' || s==='follow6');
+  const isFollow = (s==='follow1' || s==='follow2' || s==='follow3' || s==='follow4' || s==='follow5' || s==='follow6' || s==='follow7');
   document.getElementById('altCfg').style.display = isFollow ? 'none' : 'block';
   document.getElementById('stratAlt').style.display = (s==='alt') ? 'block' : 'none';
   document.getElementById('stratFollow1').style.display = (s==='follow1') ? 'block' : 'none';
@@ -475,8 +492,9 @@ function onStrat(){
   document.getElementById('stratFollow4').style.display = (s==='follow4') ? 'block' : 'none';
   document.getElementById('stratFollow5').style.display = (s==='follow5') ? 'block' : 'none';
   document.getElementById('stratFollow6').style.display = (s==='follow6') ? 'block' : 'none';
+  document.getElementById('stratFollow7').style.display = (s==='follow7') ? 'block' : 'none';
 }
-function isFollowStrat(){ const s=stratVal(); return s==='follow1'||s==='follow2'||s==='follow3'||s==='follow4'||s==='follow5'||s==='follow6'; }
+function isFollowStrat(){ const s=stratVal(); return s==='follow1'||s==='follow2'||s==='follow3'||s==='follow4'||s==='follow5'||s==='follow6'||s==='follow7'; }
 function onDayMode(){
   const single = document.getElementById('btDayMode').value==='single';
   document.getElementById('btDayRange').style.display = single ? 'none' : 'flex';
@@ -1002,6 +1020,12 @@ function decideCellFollow6(st,color){
   if(!st.fActive){ if(st.fRun>=2){ st.fActive=true; } else return null; }  // keep climbed step
   return color==='green'?'up':'down';
 }
+function decideCellFollow7(st,color){
+  if(color==='none'){ st.fRun=0; st.fPrev='none'; return null; }
+  if(color===st.fPrev) st.fRun++; else st.fRun=1;
+  st.fPrev=color;
+  return st.fRun>=2 ? (color==='green'?'up':'down') : null;
+}
 function decideCellAlt(st,color,need,maxStep){
   const isFlip=(st.prevColor && color!=='none' && color!==st.prevColor);
   const same=(st.prevColor && color!=='none' && color===st.prevColor);
@@ -1021,6 +1045,7 @@ function applyCell(st,won,strat){
   if(strat==='follow4'){ if(won) st.step=0; else if(st.step===0) st.step=1; else { st.step=0; st.fActive=false; } return; }
   if(strat==='follow5'){ if(won) st.step=0; else st.step=(st.step>=2)?0:st.step+1; return; }
   if(strat==='follow6'){ if(won) st.step=0; else { st.step=Math.min(st.step+1,30); st.fActive=false; } return; }
+  if(strat==='follow7'){ st.step=0; return; }
   if(won){ st.step=0; st.abArmed=false; } else st.step=Math.min(st.step+1,30);
 }
 function decideCell(st,color,strat,need,maxStep){
@@ -1030,9 +1055,10 @@ function decideCell(st,color,strat,need,maxStep){
   if(strat==='follow4') return decideCellFollow4(st,color);
   if(strat==='follow5') return decideCellFollow5(st,color);
   if(strat==='follow6') return decideCellFollow6(st,color);
+  if(strat==='follow7') return decideCellFollow7(st,color);
   return decideCellAlt(st,color,need,maxStep);
 }
-function stratName(s){ return s==='follow1'?'همرنگ+یک‌پله':s==='follow2'?'همرنگ+ادامه‌دار':s==='follow3'?'همرنگ+بعد از توقف':s==='follow4'?'همرنگ+۳کندلِ ورود':s==='follow5'?'همرنگ+۳پله':s==='follow6'?'همرنگ+ایست‌ومارتینگل':'مارتینگلِ تناوبی'; }
+function stratName(s){ return s==='follow1'?'همرنگ+یک‌پله':s==='follow2'?'همرنگ+ادامه‌دار':s==='follow3'?'همرنگ+بعد از توقف':s==='follow4'?'همرنگ+۳کندلِ ورود':s==='follow5'?'همرنگ+۳پله':s==='follow6'?'همرنگ+ایست‌ومارتینگل':s==='follow7'?'۲هم‌رنگ+حجمِ ثابت':'مارتینگلِ تناوبی'; }
 
 async function dayHourScan(){
   const sm=document.getElementById('scanMsg'), out=document.getElementById('scanOut');
@@ -1138,7 +1164,7 @@ async function dayHourScan(){
 })();
 
 // Version badge — lets you confirm the browser isn't showing a cached old copy.
-const APP_VERSION = "v26";
+const APP_VERSION = "v27";
 try{ document.getElementById('ver').textContent = APP_VERSION; }catch(e){}
 
 // On open: restore the saved session and resume (catching up while you were away).
