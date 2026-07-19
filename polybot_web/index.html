@@ -180,6 +180,19 @@
     <div id="btMsg" class="muted" style="margin-top:8px">تایم‌فریم از بخشِ «تنظیمات» گرفته می‌شود (پیش‌فرض ۵ دقیقه).</div>
   </div>
 
+  <h2>🕹 بک‌تستِ دستی (پله‌ای، با نمودار)</h2>
+  <div class="card">
+    <div class="muted" style="margin-bottom:8px">تاریخ/بازه و تنظیمات (استراتژی، منبع، آستانه) را از بخش‌های بالا بگذار، بعد «بارگذاری» را بزن. سپس با <b>«بعدی»</b> کندل‌ها را <b>یکی‌یکی و با فرمانِ خودت</b> جلو ببر و روی نمودار ببین؛ معامله‌ها و موجودی هم پله‌به‌پله به‌روز می‌شوند. (فلشِ سبز = ورودِ UP، قرمز = ورودِ DOWN.)</div>
+    <div class="btns"><button id="mLoadBtn" onclick="manualLoad()">📥 بارگذاری چارت</button></div>
+    <canvas id="mChart" style="width:100%;height:240px;margin-top:10px;background:#0f131b;border:1px solid var(--line);border-radius:10px;display:block"></canvas>
+    <div class="btns" style="margin-top:10px">
+      <button class="ghost" onclick="manualNext(1)">بعدی ▶</button>
+      <button class="ghost" onclick="manualNext(5)">۵ تا ▶▶</button>
+      <button class="ghost" onclick="manualNext(20)">۲۰ تا ⏩</button>
+    </div>
+    <div id="mInfo" class="muted" style="margin-top:8px">هنوز بارگذاری نشده.</div>
+  </div>
+
   <h2>📊 اسکنِ سود/زیانِ روز × ساعت</h2>
   <div class="card">
     <div class="muted" style="margin-bottom:8px">با همین استراتژی و بازهٔ تاریخِ بالا، <b>هر ساعتِ هر روزِ هفته</b> را جداگانه روی کندل‌های واقعی تست می‌کند و می‌گوید کدام روز/ساعت <b>پرسودتر و امن‌تر</b> بوده و کدام <b>پرضررتر</b>. هر خانه با سرمایهٔ اولیهٔ یکسان و مستقل حساب می‌شود (هفته‌به‌هفته، با ریستِ حالت در هر جلسه). «افتِ سرمایه» هرچه کمتر، امن‌تر.</div>
@@ -626,7 +639,7 @@ function reset(){
   lastClosedOpen=null; formingClose=0; curPrice=null; curColor='none';
   openBet=null; trades=[]; wins=0; losses=0; step=0; prevColor=null; streakLen=0; altLen=0; abArmed=false; abCommitted=false; abReentry=false;
   fActive=true; fRun=0; fPrev=null; fLoss=0;
-  lastStake=null;
+  lastStake=null; mIdx=0; mEntries={}; try{ drawChart(); }catch(e){}
   bal=parseFloat(document.getElementById('bal').value)||100; start=bal;
   setMsg(''); document.getElementById('cd').textContent='—';
   document.getElementById('lastc').textContent='آخرین کندلِ بسته‌شده: —';
@@ -812,6 +825,94 @@ function stopBacktest(){
   document.getElementById('btBtn').classList.remove('ghost');
 }
 
+// ---------------- MANUAL STEP-THROUGH (candlestick chart) ------------------
+let mIdx=0, mEntries={};
+async function manualLoad(){
+  stop(); stopBacktest();
+  const info=document.getElementById('mInfo');
+  const sMs=new Date(document.getElementById('btStart').value).getTime();
+  const eMs=new Date(document.getElementById('btEnd').value).getTime();
+  if(!sMs||!eMs||sMs>=eMs){ info.textContent='بازه‌ی تاریخ نامعتبر است.'; return; }
+  if(sMs < Date.now()-366*864e5){ info.textContent='فقط تا یک سالِ گذشته پشتیبانی می‌شود.'; return; }
+  info.textContent='در حال گرفتنِ کندل‌های واقعی…';
+  document.getElementById('mLoadBtn').disabled=true;
+  try{
+    let candles=await fetchHistory(sMs,eMs,(n)=>{ info.textContent='در حال گرفتنِ کندل… '+n.toLocaleString('en-US'); });
+    if(!candles.length){ info.textContent='کندلی در این بازه پیدا نشد.'; document.getElementById('mLoadBtn').disabled=false; return; }
+    if(candles.length>5000){ candles=candles.slice(0,5000); }
+    btPolyColors=new Array(candles.length).fill(null);
+    if(sourceVal()==='polymarket'){
+      if(document.getElementById('tf').value!=='5m'){ info.textContent='منبعِ Polymarket فقط برای تایم‌فریمِ ۵ دقیقه است.'; document.getElementById('mLoadBtn').disabled=false; return; }
+      info.textContent='در حال گرفتنِ نتیجهٔ پنجره‌ها از Polymarket…';
+      const pr=await prefetchPolyColors(candles,(d,t)=>{ info.textContent='Polymarket: '+d+' از '+t+' پنجره…'; });
+      btPolyColors=pr.colors;
+    }
+    // fresh trading state
+    bal=parseFloat(document.getElementById('bal').value)||100; start=bal;
+    openBet=null; trades=[]; wins=0; losses=0; step=0; prevColor=null; streakLen=0; altLen=0; abArmed=false; abCommitted=false; abReentry=false;
+    fActive=true; fRun=0; fPrev=null; fLoss=0; lastStake=null;
+    btCandles=candles; mIdx=0; mEntries={};
+    drawChart(); render();
+    info.textContent='بارگذاری شد: '+candles.length+' کندل ('+sourceVal()+'). «بعدی» را بزن تا کندل‌ها یکی‌یکی جلو بروند.';
+  }catch(e){ info.textContent='❌ گرفتنِ کندل‌ها نشد (CORS/شبکه).'; }
+  document.getElementById('mLoadBtn').disabled=false;
+}
+function manualColor(i){ return (sourceVal()==='polymarket' && btPolyColors[i]) ? btPolyColors[i] : colorOf(parseFloat(btCandles[i][1]),parseFloat(btCandles[i][4])); }
+function manualNext(n){
+  if(!btCandles.length){ document.getElementById('mInfo').textContent='اول «بارگذاری چارت» را بزن.'; return; }
+  let ct=0,col='none';
+  for(let k=0;k<n && mIdx<btCandles.length;k++){
+    const i=mIdx;
+    const row=btCandles[i];
+    const o=parseFloat(row[1]), c=parseFloat(row[4]); ct=parseInt(row[6]);
+    col=manualColor(i);
+    curPrice=Math.round(c); curColor=col; formingClose=0;
+    btStep(o,c,ct,col);
+    if(openBet) mEntries[i]=openBet.signal;   // a bet was just opened on this candle
+    mIdx++;
+    if(bal+(openBet?openBet.stake:0)<=0.01) break;
+  }
+  drawChart(); render();
+  const last=mIdx-1;
+  let msg='کندل '+mIdx+' از '+btCandles.length+' — '+(col==='green'?'سبز':col==='red'?'قرمز':'خنثی')+' @ $'+curPrice.toLocaleString('en-US')+' · '+new Date(ct).toLocaleString('fa-IR');
+  if(mIdx>=btCandles.length) msg+=' — به آخرِ بازه رسیدی.';
+  if(bal+(openBet?openBet.stake:0)<=0.01) msg+=' — موجودی تمام شد.';
+  document.getElementById('mInfo').textContent=msg;
+}
+function drawChart(){
+  const cv=document.getElementById('mChart'); if(!cv) return;
+  const dpr=window.devicePixelRatio||1;
+  const W=cv.clientWidth||600, H=cv.clientHeight||240;
+  cv.width=W*dpr; cv.height=H*dpr;
+  const ctx=cv.getContext('2d'); ctx.setTransform(dpr,0,0,dpr,0,0);
+  ctx.clearRect(0,0,W,H);
+  const VIS=70, end=mIdx, startI=Math.max(0,end-VIS), n=end-startI;
+  if(n<=0){ ctx.fillStyle='#8b93a7'; ctx.font='12px sans-serif'; ctx.fillText('«بعدی» را بزن تا کندل‌ها ظاهر شوند', 12, H/2); return; }
+  let lo=Infinity,hi=-Infinity;
+  for(let i=startI;i<end;i++){ lo=Math.min(lo,parseFloat(btCandles[i][3])); hi=Math.max(hi,parseFloat(btCandles[i][2])); }
+  const padp=(hi-lo)*0.08||1; lo-=padp; hi+=padp;
+  const x0=8,x1=W-8,y0=8,y1=H-16, xw=(x1-x0)/n;
+  const yOf=p=> y1-((p-lo)/(hi-lo))*(y1-y0);
+  for(let i=startI;i<end;i++){
+    const o=parseFloat(btCandles[i][1]),h=parseFloat(btCandles[i][2]),l=parseFloat(btCandles[i][3]),c=parseFloat(btCandles[i][4]);
+    const col=manualColor(i);
+    const color=col==='green'?'#16C784':col==='red'?'#EA3943':'#8b93a7';
+    const cx=x0+(i-startI)*xw+xw/2;
+    ctx.strokeStyle=color; ctx.fillStyle=color; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(cx,yOf(h)); ctx.lineTo(cx,yOf(l)); ctx.stroke();
+    const bw=Math.max(1.5,xw*0.62), yo=yOf(o), yc=yOf(c), top=Math.min(yo,yc), bh=Math.max(1,Math.abs(yc-yo));
+    ctx.fillRect(cx-bw/2, top, bw, bh);
+    if(mEntries[i]){
+      ctx.fillStyle = mEntries[i]==='up'?'#16C784':'#EA3943';
+      if(mEntries[i]==='up'){ const my=yOf(l)+9; ctx.beginPath(); ctx.moveTo(cx,my-6); ctx.lineTo(cx-4,my); ctx.lineTo(cx+4,my); ctx.closePath(); ctx.fill(); }
+      else { const my=yOf(h)-9; ctx.beginPath(); ctx.moveTo(cx,my+6); ctx.lineTo(cx-4,my); ctx.lineTo(cx+4,my); ctx.closePath(); ctx.fill(); }
+    }
+  }
+  ctx.fillStyle='#8b93a7'; ctx.font='10px sans-serif';
+  ctx.fillText('$'+Math.round(hi).toLocaleString('en-US'), x0, y0+9);
+  ctx.fillText('$'+Math.round(lo).toLocaleString('en-US'), x0, y1-3);
+}
+
 // ---------------- DAY × HOUR SCANNER --------------------------------------
 // Runs the selected strategy separately on each (weekday, hour) cell over the
 // chosen date range, on real candles, and ranks which day/hour was most
@@ -984,7 +1085,7 @@ async function dayHourScan(){
 })();
 
 // Version badge — lets you confirm the browser isn't showing a cached old copy.
-const APP_VERSION = "v23";
+const APP_VERSION = "v24";
 try{ document.getElementById('ver').textContent = APP_VERSION; }catch(e){}
 
 // On open: restore the saved session and resume (catching up while you were away).
