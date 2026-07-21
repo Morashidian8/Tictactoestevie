@@ -113,6 +113,7 @@
       <option value="follow5">همرنگ + مارتینگلِ ۳ پله‌ای (۱۰→۲۰→۴۰، بعد ریست و ادامه)</option>
       <option value="follow6">همرنگ + هر باخت ایست تا ۲ کندلِ هم‌رنگ، بعد مارتینگل تا برد</option>
       <option value="follow7">ورود با ۲ کندلِ هم‌رنگ، حجمِ ثابت (بدونِ مارتینگل)</option>
+      <option value="follow8">ورود با ۲ کندلِ هم‌رنگ + مارتینگلِ ۳ پله‌ای، بعد از ۴۰ توقف تا تریگر</option>
     </select>
     <div id="stratAlt" style="font-size:13px;color:var(--text);background:var(--surfaceVar);border-radius:10px;padding:10px;margin-top:6px">
       <b>مارتینگلِ تناوبی</b><br>
@@ -145,6 +146,10 @@
     <div id="stratFollow7" style="display:none;font-size:13px;color:var(--text);background:var(--surfaceVar);border-radius:10px;padding:10px;margin-top:6px">
       <b>ورود با ۲ کندلِ هم‌رنگ، حجمِ ثابت</b><br>
       <span style="color:var(--muted);font-size:12px">مثلِ حالتِ قبلی از نظرِ شرطِ ورود، ولی <b>هیچ‌وقت مارتینگل نمی‌کند و همیشه با حجمِ ثابت (مبلغِ پایه)</b> وارد می‌شود. فقط وقتی <b>۲ کندلِ هم‌رنگِ پشتِ‌هم</b> دید، هم‌جهتِ همان رنگ وارد می‌شود؛ تا وقتی رنگ ادامه دارد سوار می‌ماند (باز با همان حجمِ ثابت)، و به‌محضِ شکستنِ رنگ/باخت صبر می‌کند تا دوباره ۲ کندلِ هم‌رنگ ببیند. در بازارِ یک‌درمیان (بدونِ ۲ کندلِ هم‌رنگ) اصلاً وارد نمی‌شود.</span>
+    </div>
+    <div id="stratFollow8" style="display:none;font-size:13px;color:var(--text);background:var(--surfaceVar);border-radius:10px;padding:10px;margin-top:6px">
+      <b>ورود با ۲ کندلِ هم‌رنگ + مارتینگلِ ۳ پله‌ای، بعد توقف</b><br>
+      <span style="color:var(--muted);font-size:12px">فقط با <b>۲ کندلِ هم‌رنگِ پشتِ‌هم</b> وارد می‌شود و با حجمِ ثابت (مثلاً ۱۰) روی روند می‌ماند. هر بار جهت عوض شد (باخت) یک پله مارتینگل می‌کند تا سقفِ <b>۳ پله</b>: <b>۱۰ → ۲۰ → ۴۰</b>. اگر پلهٔ سوم (۴۰) هم باخت، <b>توقف می‌کند</b> و صبر می‌کند تا <b>تریگرِ بعدی (۲ کندلِ هم‌رنگ)</b>، سپس دوباره از حجمِ اولیه (۱۰) شروع می‌کند. با هر برد هم به حجمِ پایه برمی‌گردد. حجمِ پایه را از «مبلغِ پایه» بگذار.</span>
     </div>
     <div id="altCfg">
       <label>از چند تناوب به بعد شروع کند (تعدادِ یکی‌درمیانِ رنگ‌ها)</label>
@@ -251,6 +256,9 @@ async function getKlines(){
 // alternation trigger, restarting from the base step. Any win also resets to base.
 function maxStepVal(){ return Math.max(1,parseInt(document.getElementById('maxStep').value)||3); }
 function stratVal(){ const e=document.getElementById('strat'); return e?e.value:'alt'; }
+// Strategies that must WAIT for an entry trigger before their first bet start
+// with fActive=false; the rest are active from the first candle.
+function freshActive(){ return stratVal()==='follow8' ? false : true; }
 
 // Strategy "follow1": from the moment you press Start, FOLLOW the previous candle
 // with a fixed base stake and keep riding while the trend continues. The first
@@ -334,6 +342,16 @@ function decideFollow7(color){
   if(fRun>=2) return color==='green'?'up':'down';
   return null;
 }
+// "follow8": enter only on 2 same-colour candles, ride at base; martingale up to 3
+// levels (10/20/40) on losses; if the 3rd level loses, STOP and wait for the next
+// 2-same-colour trigger, restarting from base. Any win resets to base.
+function decideFollow8(color){
+  if(color==='none'){ fRun=0; fPrev='none'; return null; }
+  if(color===fPrev) fRun++; else fRun=1;
+  fPrev=color;
+  if(!fActive){ if(fRun>=2){ fActive=true; step=0; } else return null; }
+  return color==='green'?'up':'down';
+}
 
 // Strategy-specific reaction to a resolved bet, adjusting the martingale step/state.
 function applyResult(won){
@@ -375,6 +393,12 @@ function applyResult(won){
     return;
   }
   if(s==='follow7'){ step=0; return; }        // fixed stake, no martingale (entry gate is in decide)
+  if(s==='follow8'){                          // 3-level cap (10/20/40); lose at 40 -> stop for the next trigger
+    if(won) step=0;
+    else if(step>=2){ step=0; fActive=false; }
+    else step++;
+    return;
+  }
   // 'alt' (alternation-triggered martingale)
   if(won){ step=0; abArmed=false; abCommitted=false; abReentry=false; }
   else step=Math.min(step+1,30);
@@ -387,6 +411,7 @@ function decide(color){
   if(stratVal()==='follow5') return decideFollow5(color);
   if(stratVal()==='follow6') return decideFollow6(color);
   if(stratVal()==='follow7') return decideFollow7(color);
+  if(stratVal()==='follow8') return decideFollow8(color);
   const need=Math.max(1,parseInt(document.getElementById('altN').value)||5);
   const isFlip = (prevColor && color!=='none' && color!==prevColor);
   const same = (prevColor && color!=='none' && color===prevColor);
@@ -483,7 +508,7 @@ async function testSource(){
 }
 function onStrat(){
   const s = stratVal();
-  const isFollow = (s==='follow1' || s==='follow2' || s==='follow3' || s==='follow4' || s==='follow5' || s==='follow6' || s==='follow7');
+  const isFollow = (s==='follow1' || s==='follow2' || s==='follow3' || s==='follow4' || s==='follow5' || s==='follow6' || s==='follow7' || s==='follow8');
   document.getElementById('altCfg').style.display = isFollow ? 'none' : 'block';
   document.getElementById('stratAlt').style.display = (s==='alt') ? 'block' : 'none';
   document.getElementById('stratFollow1').style.display = (s==='follow1') ? 'block' : 'none';
@@ -493,8 +518,9 @@ function onStrat(){
   document.getElementById('stratFollow5').style.display = (s==='follow5') ? 'block' : 'none';
   document.getElementById('stratFollow6').style.display = (s==='follow6') ? 'block' : 'none';
   document.getElementById('stratFollow7').style.display = (s==='follow7') ? 'block' : 'none';
+  document.getElementById('stratFollow8').style.display = (s==='follow8') ? 'block' : 'none';
 }
-function isFollowStrat(){ const s=stratVal(); return s==='follow1'||s==='follow2'||s==='follow3'||s==='follow4'||s==='follow5'||s==='follow6'||s==='follow7'; }
+function isFollowStrat(){ const s=stratVal(); return s.indexOf('follow')===0; }
 function onDayMode(){
   const single = document.getElementById('btDayMode').value==='single';
   document.getElementById('btDayRange').style.display = single ? 'none' : 'flex';
@@ -591,7 +617,7 @@ async function poll(){
       // streak + martingale, and continue cleanly from the current candle.
       if(openBet){ bal+=openBet.stake; openBet=null; }
       step=0; streakLen=0; prevColor=null; altLen=0; abArmed=false; abCommitted=false; abReentry=false;
-      fActive=true; fRun=0; fPrev=null; fLoss=0;
+      fActive=freshActive(); fRun=0; fPrev=null; fLoss=0;
       lastClosedOpen=lastOid;
       await onClosedCandle(o,c,ct,true,lastOid);
       setMsg('از کندلِ فعلی ادامه داد. بازه‌ی نبودنت معامله نشد و مارتینگل ریست شد (مرورگر در پس‌زمینه معامله نمی‌کند).');
@@ -697,7 +723,7 @@ function reset(){
   stop();
   lastClosedOpen=null; formingClose=0; curPrice=null; curColor='none';
   openBet=null; trades=[]; wins=0; losses=0; step=0; prevColor=null; streakLen=0; altLen=0; abArmed=false; abCommitted=false; abReentry=false;
-  fActive=true; fRun=0; fPrev=null; fLoss=0;
+  fActive=freshActive(); fRun=0; fPrev=null; fLoss=0;
   lastStake=null; mIdx=0; mEntries={}; try{ drawChart(); }catch(e){}
   bal=parseFloat(document.getElementById('bal').value)||100; start=bal;
   setMsg(''); document.getElementById('cd').textContent='—';
@@ -805,7 +831,7 @@ async function runBacktest(){
     // fresh trading state for the backtest
     bal=parseFloat(document.getElementById('bal').value)||100; start=bal;
     openBet=null; trades=[]; wins=0; losses=0; step=0; prevColor=null; streakLen=0; altLen=0; abArmed=false; abCommitted=false; abReentry=false;
-    fActive=true; fRun=0; fPrev=null; fLoss=0;
+    fActive=freshActive(); fRun=0; fPrev=null; fLoss=0;
   lastStake=null; lastClosedOpen=null;
     btCandles=candles; btIdx=0; btIn=0;
     const speed=Math.max(0.2,parseFloat(document.getElementById('btSpeed').value)||2)*1000;
@@ -831,7 +857,7 @@ function btStep(o,c,ct,colorOverride){
   // app after a gap). Bets opened in-window still resolved above.
   if(!inTradeWindow(ct)){
     step=0; prevColor=null; streakLen=0; altLen=0; abArmed=false; abCommitted=false; abReentry=false;
-    fActive=true; fRun=0; fPrev=null; fLoss=0;
+    fActive=freshActive(); fRun=0; fPrev=null; fLoss=0;
     return;
   }
   btIn++;
@@ -909,7 +935,7 @@ async function manualLoad(){
     // fresh trading state
     bal=parseFloat(document.getElementById('bal').value)||100; start=bal;
     openBet=null; trades=[]; wins=0; losses=0; step=0; prevColor=null; streakLen=0; altLen=0; abArmed=false; abCommitted=false; abReentry=false;
-    fActive=true; fRun=0; fPrev=null; fLoss=0; lastStake=null;
+    fActive=freshActive(); fRun=0; fPrev=null; fLoss=0; lastStake=null;
     btCandles=candles; mIdx=0; mEntries={};
     drawChart(); render();
     info.textContent='بارگذاری شد: '+candles.length+' کندل ('+sourceVal()+'). «بعدی» را بزن تا کندل‌ها یکی‌یکی جلو بروند.';
@@ -977,12 +1003,12 @@ function drawChart(){
 // chosen date range, on real candles, and ranks which day/hour was most
 // profitable/safest and which lost the most. Pure per-cell state mirrors the
 // live decide()/applyResult() exactly (validated against the main backtest).
-function freshCell(startBal){
-  return {bal:startBal, wins:0, losses:0, step:0, fActive:true, fRun:0, fPrev:null, fLoss:0,
+function freshCell(startBal,strat){
+  return {bal:startBal, wins:0, losses:0, step:0, fActive:(strat==='follow8'?false:true), fRun:0, fPrev:null, fLoss:0,
     prevColor:null, altLen:0, abArmed:false, peak:startBal, maxDD:0, lastKey:null};
 }
-function resetSession(st){
-  st.step=0; st.fActive=true; st.fRun=0; st.fPrev=null; st.fLoss=0; st.prevColor=null; st.altLen=0; st.abArmed=false;
+function resetSession(st,strat){
+  st.step=0; st.fActive=(strat==='follow8'?false:true); st.fRun=0; st.fPrev=null; st.fLoss=0; st.prevColor=null; st.altLen=0; st.abArmed=false;
 }
 function decideCellFollow1(st,color){
   if(color==='none'){ st.fRun=0; st.fPrev='none'; return null; }
@@ -1026,6 +1052,13 @@ function decideCellFollow7(st,color){
   st.fPrev=color;
   return st.fRun>=2 ? (color==='green'?'up':'down') : null;
 }
+function decideCellFollow8(st,color){
+  if(color==='none'){ st.fRun=0; st.fPrev='none'; return null; }
+  if(color===st.fPrev) st.fRun++; else st.fRun=1;
+  st.fPrev=color;
+  if(!st.fActive){ if(st.fRun>=2){ st.fActive=true; st.step=0; } else return null; }
+  return color==='green'?'up':'down';
+}
 function decideCellAlt(st,color,need,maxStep){
   const isFlip=(st.prevColor && color!=='none' && color!==st.prevColor);
   const same=(st.prevColor && color!=='none' && color===st.prevColor);
@@ -1046,6 +1079,7 @@ function applyCell(st,won,strat){
   if(strat==='follow5'){ if(won) st.step=0; else st.step=(st.step>=2)?0:st.step+1; return; }
   if(strat==='follow6'){ if(won) st.step=0; else { st.step=Math.min(st.step+1,30); st.fActive=false; } return; }
   if(strat==='follow7'){ st.step=0; return; }
+  if(strat==='follow8'){ if(won) st.step=0; else if(st.step>=2){ st.step=0; st.fActive=false; } else st.step++; return; }
   if(won){ st.step=0; st.abArmed=false; } else st.step=Math.min(st.step+1,30);
 }
 function decideCell(st,color,strat,need,maxStep){
@@ -1056,9 +1090,10 @@ function decideCell(st,color,strat,need,maxStep){
   if(strat==='follow5') return decideCellFollow5(st,color);
   if(strat==='follow6') return decideCellFollow6(st,color);
   if(strat==='follow7') return decideCellFollow7(st,color);
+  if(strat==='follow8') return decideCellFollow8(st,color);
   return decideCellAlt(st,color,need,maxStep);
 }
-function stratName(s){ return s==='follow1'?'همرنگ+یک‌پله':s==='follow2'?'همرنگ+ادامه‌دار':s==='follow3'?'همرنگ+بعد از توقف':s==='follow4'?'همرنگ+۳کندلِ ورود':s==='follow5'?'همرنگ+۳پله':s==='follow6'?'همرنگ+ایست‌ومارتینگل':s==='follow7'?'۲هم‌رنگ+حجمِ ثابت':'مارتینگلِ تناوبی'; }
+function stratName(s){ return s==='follow1'?'همرنگ+یک‌پله':s==='follow2'?'همرنگ+ادامه‌دار':s==='follow3'?'همرنگ+بعد از توقف':s==='follow4'?'همرنگ+۳کندلِ ورود':s==='follow5'?'همرنگ+۳پله':s==='follow6'?'همرنگ+ایست‌ومارتینگل':s==='follow7'?'۲هم‌رنگ+حجمِ ثابت':s==='follow8'?'۲هم‌رنگ+۳پله+توقف':'مارتینگلِ تناوبی'; }
 
 async function dayHourScan(){
   const sm=document.getElementById('scanMsg'), out=document.getElementById('scanOut');
@@ -1099,8 +1134,8 @@ async function dayHourScan(){
     for(let i=0;i<N-1;i++){                 // need i+1 to resolve
       const color=col[i], nextC=col[i+1];
       const k=wd[i]*24+hr[i];
-      let st=cells[k]; if(!st){ st=cells[k]=freshCell(startBal); }
-      if(st.lastKey!==dk[i]){ resetSession(st); st.lastKey=dk[i]; }
+      let st=cells[k]; if(!st){ st=cells[k]=freshCell(startBal,strat); }
+      if(st.lastKey!==dk[i]){ resetSession(st,strat); st.lastKey=dk[i]; }
       const sig = decideCell(st,color,strat,need,maxStep);
       if(sig){
         const stk=Math.min(base*Math.pow(2,st.step), st.bal);
@@ -1164,7 +1199,7 @@ async function dayHourScan(){
 })();
 
 // Version badge — lets you confirm the browser isn't showing a cached old copy.
-const APP_VERSION = "v27";
+const APP_VERSION = "v28";
 try{ document.getElementById('ver').textContent = APP_VERSION; }catch(e){}
 
 // On open: restore the saved session and resume (catching up while you were away).
