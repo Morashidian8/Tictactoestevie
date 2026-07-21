@@ -183,6 +183,38 @@
     <input id="bal" type="number" value="100" min="1">
   </div>
 
+  <details class="card" style="margin-top:0">
+    <summary style="cursor:pointer;font-weight:800;color:var(--indigo)">📋 جدولِ مقایسهٔ همهٔ استراتژی‌ها (برای انتخاب)</summary>
+    <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;margin-top:10px">
+      <table style="width:100%;border-collapse:collapse;font-size:12px;min-width:560px">
+        <thead>
+          <tr style="color:var(--indigo);text-align:right">
+            <th style="padding:6px;border-bottom:1px solid var(--line)">استراتژی</th>
+            <th style="padding:6px;border-bottom:1px solid var(--line)">شرطِ ورود</th>
+            <th style="padding:6px;border-bottom:1px solid var(--line)">رفتارِ باخت</th>
+            <th style="padding:6px;border-bottom:1px solid var(--line)">ریست / توقف</th>
+          </tr>
+        </thead>
+        <tbody style="color:#cfd6e4">
+          <tr><td style="padding:6px;border-bottom:1px solid #222a38"><b>مارتینگلِ تناوبی</b></td><td style="padding:6px;border-bottom:1px solid #222a38">بعد از N تناوب + ۲ کندلِ هم‌رنگ</td><td style="padding:6px;border-bottom:1px solid #222a38">هر باخت دوبرابر تا سقفِ پله</td><td style="padding:6px;border-bottom:1px solid #222a38">برد→پایه؛ سقف→منتظرِ تناوبِ بعدی</td></tr>
+          <tr><td style="padding:6px;border-bottom:1px solid #222a38"><b>۱) همرنگ + یک‌پله</b></td><td style="padding:6px;border-bottom:1px solid #222a38">از شروع، همرنگِ کندلِ قبلی</td><td style="padding:6px;border-bottom:1px solid #222a38">باختِ اول ۱ پله؛ باختِ دوم توقف</td><td style="padding:6px;border-bottom:1px solid #222a38">ورودِ مجدد با ۲ هم‌رنگ، از پایه</td></tr>
+          <tr><td style="padding:6px;border-bottom:1px solid #222a38"><b>۲) همرنگ + ادامه‌دار</b></td><td style="padding:6px;border-bottom:1px solid #222a38">از شروع</td><td style="padding:6px;border-bottom:1px solid #222a38">مثلِ ۱ ولی پله حفظ/بالاتر می‌رود</td><td style="padding:6px;border-bottom:1px solid #222a38">فقط برد→پایه</td></tr>
+          <tr><td style="padding:6px;border-bottom:1px solid #222a38"><b>۳) همرنگ + بعد از توقف</b></td><td style="padding:6px;border-bottom:1px solid #222a38">از شروع</td><td style="padding:6px;border-bottom:1px solid #222a38">باختِ اول بدونِ مارتینگل؛ ۲ باخت→توقف</td><td style="padding:6px;border-bottom:1px solid #222a38">ورودِ مجدد فقط ۱ دوبرابر، بعد پایه</td></tr>
+          <tr><td style="padding:6px;border-bottom:1px solid #222a38"><b>۴) همرنگ + ۳کندلِ ورود</b></td><td style="padding:6px;border-bottom:1px solid #222a38">از شروع</td><td style="padding:6px;border-bottom:1px solid #222a38">مثلِ ۱ (۱ پله، باختِ دوم توقف)</td><td style="padding:6px;border-bottom:1px solid #222a38">ورودِ مجدد با ۳ کندلِ هم‌رنگ</td></tr>
+          <tr><td style="padding:6px;border-bottom:1px solid #222a38"><b>۵) همرنگ + ۳پله</b></td><td style="padding:6px;border-bottom:1px solid #222a38">از شروع (بدونِ گِیت)</td><td style="padding:6px;border-bottom:1px solid #222a38">۱۰→۲۰→۴۰ (سقفِ ۳ پله)</td><td style="padding:6px;border-bottom:1px solid #222a38">بعدِ ۴۰ ریست و ادامه؛ برد→پایه</td></tr>
+          <tr><td style="padding:6px;border-bottom:1px solid #222a38"><b>۶) همرنگ + ایست‌ومارتینگل</b></td><td style="padding:6px;border-bottom:1px solid #222a38">از شروع</td><td style="padding:6px;border-bottom:1px solid #222a38">هر باخت ایست + یک پله بالاتر</td><td style="padding:6px;border-bottom:1px solid #222a38">ورودِ ۲ هم‌رنگ؛ برد→پایه</td></tr>
+          <tr><td style="padding:6px;border-bottom:1px solid #222a38"><b>۷) ۲هم‌رنگ + حجمِ ثابت</b></td><td style="padding:6px;border-bottom:1px solid #222a38">۲ کندلِ هم‌رنگ</td><td style="padding:6px;border-bottom:1px solid #222a38">هیچ مارتینگل — همیشه ثابت</td><td style="padding:6px;border-bottom:1px solid #222a38">در بازارِ یک‌درمیان وارد نمی‌شود</td></tr>
+          <tr><td style="padding:6px;border-bottom:1px solid #222a38"><b>۸) ۲هم‌رنگ + ۳پله + توقف</b></td><td style="padding:6px;border-bottom:1px solid #222a38">۲ کندلِ هم‌رنگ</td><td style="padding:6px;border-bottom:1px solid #222a38">۱۰→۲۰→۴۰</td><td style="padding:6px;border-bottom:1px solid #222a38">بعدِ ۴۰ توقف تا تریگر؛ برد→پایه</td></tr>
+          <tr><td style="padding:6px;border-bottom:1px solid #222a38"><b>۹) ۲هم‌رنگ + یک‌پله (پایه)</b></td><td style="padding:6px;border-bottom:1px solid #222a38">۲ کندلِ هم‌رنگ</td><td style="padding:6px;border-bottom:1px solid #222a38">۱ پله؛ باختِ دوم توقف</td><td style="padding:6px;border-bottom:1px solid #222a38">ورودِ مجدد از پایه</td></tr>
+          <tr><td style="padding:6px;border-bottom:1px solid #222a38"><b>۱۰) ۲هم‌رنگ + یک‌پله (ادامه)</b></td><td style="padding:6px;border-bottom:1px solid #222a38">۲ کندلِ هم‌رنگ</td><td style="padding:6px;border-bottom:1px solid #222a38">۱ پله؛ باختِ دوم توقف</td><td style="padding:6px;border-bottom:1px solid #222a38">ورودِ مجدد با ادامهٔ مارتینگل</td></tr>
+          <tr><td style="padding:6px;border-bottom:1px solid #222a38"><b>۱۱) ۲هم‌رنگ + دوبرابرِ ۳کندل</b></td><td style="padding:6px;border-bottom:1px solid #222a38">۲ کندلِ هم‌رنگ</td><td style="padding:6px;border-bottom:1px solid #222a38">باختِ اول توقف؛ دوبرابر با ۳ کندلِ هم‌رنگ</td><td style="padding:6px;border-bottom:1px solid #222a38">باختِ دوبرابر→ریست پایه</td></tr>
+          <tr><td style="padding:6px"><b>۱۲) مارتینگلِ جبرانی</b></td><td style="padding:6px">۲ کندلِ هم‌رنگ</td><td style="padding:6px">هر باخت = کلِ ضرر + پایه (۱۰،۲۰،۵۰،۱۱۰،۲۳۰…)</td><td style="padding:6px">۲ باخت توقف تا تریگر؛ برد→کلِ ضرر جبران، ریست</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="muted" style="margin-top:8px;font-size:11px">«از شروع» یعنی از همان کندلِ اول وارد می‌شود؛ «۲/۳ کندلِ هم‌رنگ» یعنی ورود فقط بعد از آن تعداد کندلِ هم‌رنگِ پشتِ‌هم. حجمِ پایه از «مبلغِ پایه». نرخِ فرضی/ضریب از بخشِ بک‌تست.</div>
+  </details>
+
   <h2>بک‌تست (روی کندل‌های واقعیِ گذشته)</h2>
   <div class="card">
     <div class="muted" style="margin-bottom:8px">هر بازه‌ای از یک سالِ گذشته را انتخاب کن؛ روی کندل‌های <b>واقعیِ</b> بیت‌کوین (Binance) سریع پخش می‌شود. نرخِ ورود چون تاریخی است، فرضی است.</div>
@@ -1304,7 +1336,7 @@ async function dayHourScan(){
 })();
 
 // Version badge — lets you confirm the browser isn't showing a cached old copy.
-const APP_VERSION = "v32";
+const APP_VERSION = "v33";
 try{ document.getElementById('ver').textContent = APP_VERSION; }catch(e){}
 
 // On open: restore the saved session and resume (catching up while you were away).
