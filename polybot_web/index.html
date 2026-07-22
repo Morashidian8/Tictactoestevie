@@ -169,7 +169,7 @@
     </div>
     <div id="stratFollow12" style="display:none;font-size:13px;color:var(--text);background:var(--surfaceVar);border-radius:10px;padding:10px;margin-top:6px">
       <b>مارتینگلِ جبرانی (کلِ ضرر + سودِ پایه)</b><br>
-      <span style="color:var(--muted);font-size:12px">ورود با <b>۲ کندلِ هم‌رنگ</b>، حجمِ پایه؛ با برد ادامه با پایه. با هر باخت، شرطِ بعدی = <b>کلِ ضررِ انباشته + یک سودِ پایه</b> (شرطِ جبرانی). اگر شرطِ جبرانی هم باخت (۲ باختِ پشتِ‌هم) <b>توقف</b> می‌کند تا تریگرِ بعدی؛ ضرر پاک نمی‌شود و در جبرانیِ بعدی حساب می‌شود (بزرگ‌تر می‌شود). <b>فقط بردِ خودِ شرطِ جبرانی</b> کلِ ضرر را پاک می‌کند و به پایه ریست می‌کند؛ بردِ کندلِ پایه فقط یک سودِ پایه می‌دهد و <b>ضرر سرِ جایش می‌ماند</b>. مثال با پایهٔ ۱۰: <b>۱۰ → ۲۰ → ۱۰ → ۵۰ → ۱۰ → ۱۱۰ → ۱۰ → ۲۳۰ …</b></span>
+      <span style="color:var(--muted);font-size:12px">ورود با <b>۲ کندلِ هم‌رنگ</b>؛ <b>تا وقتی همرنگ است با پایه سوار می‌ماند</b> (رید). اولین تناوب/باخت → <b>جبرانی = کلِ ضررِ انباشته + یک سودِ پایه</b>. اگر جبرانی هم باخت (۲ باختِ پشتِ‌هم) <b>توقف</b> می‌کند تا تریگرِ بعدی؛ ضرر منتقل می‌شود و در جبرانیِ بعدی بزرگ‌تر می‌شود. <b>هر برد</b> ضرر را صفر می‌کند و از کندلِ بعد باز با پایه ادامه می‌دهد. یعنی جبرانی فقط وقتی بزرگ می‌شود که باخت‌ها <b>پشتِ‌هم و بدونِ برد</b> باشند. نمونهٔ رشتهٔ باختِ متوالی با پایهٔ ۱۰: <b>۱۰ → ۲۰ → ۱۰ → ۵۰ → ۱۰ → ۱۱۰ → ۱۰ → ۲۳۰ …</b></span>
     </div>
     <div id="altCfg">
       <label>از چند تناوب به بعد شروع کند (تعدادِ یکی‌درمیانِ رنگ‌ها)</label>
@@ -492,9 +492,11 @@ function applyResult(won){
     else { step=0; fActive=false; }
     return;
   }
-  if(s==='follow12'){                         // recovery martingale: deficit += lost stake
-    if(won){ if(fRecovery) fDeficit=0; fRecovery=false; }   // ONLY a recovery win clears the deficit; a base win keeps it
-    else { fDeficit += (openBet?openBet.stake:0); if(fRecovery){ fActive=false; fRecovery=false; } else fRecovery=true; }
+  if(s==='follow12'){                         // ride at base; a loss -> recovery(deficit+base); 2nd loss -> stand down
+    if(won){ fDeficit=0; fRecovery=false; }                            // ANY win -> deficit cleared, keep riding at base
+    else { fDeficit += (openBet?openBet.stake:0);
+           if(fRecovery){ fActive=false; fRecovery=false; fRun=0; fPrev=null; }  // recovery also lost (2nd alternation) -> stand down; need a fresh 2-same trigger
+           else fRecovery=true; }                                      // first loss -> recovery on the very next candle
     return;
   }
   // 'alt' (alternation-triggered martingale)
@@ -1199,7 +1201,7 @@ function decideCellAlt(st,color,need,maxStep){
   return null;
 }
 function applyCell(st,won,strat,stk){
-  if(strat==='follow12'){ if(won){ if(st.fRecovery) st.fDeficit=0; st.fRecovery=false; } else { st.fDeficit += (stk||0); if(st.fRecovery){ st.fActive=false; st.fRecovery=false; } else st.fRecovery=true; } return; }
+  if(strat==='follow12'){ if(won){ st.fDeficit=0; st.fRecovery=false; } else { st.fDeficit += (stk||0); if(st.fRecovery){ st.fActive=false; st.fRecovery=false; st.fRun=0; st.fPrev=null; } else st.fRecovery=true; } return; }
   if(strat==='follow1'){ if(won) st.step=0; else if(st.step===0) st.step=1; else { st.step=0; st.fActive=false; } return; }
   if(strat==='follow2'){ if(won) st.step=0; else if(st.step===0) st.step=1; else { st.step=Math.min(st.step+1,30); st.fActive=false; } return; }
   if(strat==='follow3'){ if(won){ st.step=0; st.fLoss=0; } else { st.step=0; st.fLoss++; if(st.fLoss>=2) st.fActive=false; } return; }
@@ -1336,7 +1338,7 @@ async function dayHourScan(){
 })();
 
 // Version badge — lets you confirm the browser isn't showing a cached old copy.
-const APP_VERSION = "v34";
+const APP_VERSION = "v36";
 try{ document.getElementById('ver').textContent = APP_VERSION; }catch(e){}
 
 // On open: restore the saved session and resume (catching up while you were away).
