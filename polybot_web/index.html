@@ -169,7 +169,7 @@
     </div>
     <div id="stratFollow12" style="display:none;font-size:13px;color:var(--text);background:var(--surfaceVar);border-radius:10px;padding:10px;margin-top:6px">
       <b>مارتینگلِ جبرانی (کلِ ضرر + سودِ پایه)</b><br>
-      <span style="color:var(--muted);font-size:12px">ورود با <b>۲ کندلِ هم‌رنگ</b>؛ <b>تا وقتی همرنگ است با پایه سوار می‌ماند</b> (رید). اولین تناوب/باخت → <b>جبرانی = کلِ ضررِ انباشته + یک سودِ پایه</b>. اگر جبرانی هم باخت (۲ باختِ پشتِ‌هم) <b>توقف</b> می‌کند تا تریگرِ بعدی؛ ضرر منتقل می‌شود و در جبرانیِ بعدی بزرگ‌تر می‌شود. <b>فقط بردِ خودِ کندلِ جبرانی</b> ضرر را صفر می‌کند (چون تمامِ ضرر را پس می‌گیرد)؛ <b>بردِ کندلِ پایه ضرر را نگه می‌دارد</b> (یک بردِ ۱۰ نمی‌تواند ضررِ بزرگ را جبران کند)، پس نردبانِ جبران تا وقتی خودِ جبرانی نبرد بزرگ‌تر می‌شود. نمونهٔ رشتهٔ باختِ متوالی با پایهٔ ۱۰: <b>۱۰ → ۲۰ → ۱۰ → ۵۰ → ۱۰ → ۱۱۰ → ۱۰ → ۲۳۰ …</b></span>
+      <span style="color:var(--muted);font-size:12px">ورود با <b>۲ کندلِ هم‌رنگ</b>؛ <b>تا وقتی همرنگ است با پایه سوار می‌ماند</b> (رید). اولین تناوب/باخت → <b>جبرانی = کلِ ضررِ انباشته + یک سودِ پایه</b>. اگر جبرانی هم باخت (۲ باختِ پشتِ‌هم) <b>توقف</b> می‌کند تا تریگرِ بعدی؛ ضرر منتقل می‌شود و در جبرانیِ بعدی بزرگ‌تر می‌شود. تا وقتی ضرر صفر است با پایه رید می‌کند؛ ولی <b>وقتی ضررِ انباشته داری، بعد از کندلِ پایه (چه برد چه باخت) کندلِ بعد جبرانی است</b> = کلِ ضرر + پایه (مثلاً با ضررِ ۳۰: پایهٔ ۱۰ برد → جبرانیِ ۴۰). <b>فقط بردِ خودِ کندلِ جبرانی</b> ضرر را صفر می‌کند؛ بردِ پایه ضرر را نگه می‌دارد. اگر جبرانی هم باخت، توقف تا ۲ کندلِ هم‌رنگِ تازه. نمونهٔ رشتهٔ باختِ متوالی با پایهٔ ۱۰: <b>۱۰ → ۲۰ → ۱۰ → ۵۰ → ۱۰ → ۱۱۰ → ۱۰ → ۲۳۰ …</b></span>
     </div>
     <div id="altCfg">
       <label>از چند تناوب به بعد شروع کند (تعدادِ یکی‌درمیانِ رنگ‌ها)</label>
@@ -492,11 +492,12 @@ function applyResult(won){
     else { step=0; fActive=false; }
     return;
   }
-  if(s==='follow12'){                         // ride at base; a loss -> recovery(deficit+base); 2nd loss -> stand down
-    if(won){ if(fRecovery) fDeficit=0; fRecovery=false; }              // ONLY a recovery win clears the deficit; a base win keeps it (a $10 win can't recover a big deficit)
+  if(s==='follow12'){                         // ride at base while deficit==0; a loss/probe with a pending deficit -> recovery(deficit+base)
+    if(won){ if(fRecovery){ fDeficit=0; fRecovery=false; }             // ONLY a recovery win clears the deficit
+             else fRecovery=(fDeficit>0); }                            // base win: if a deficit is pending -> next is recovery; else keep riding at base
     else { fDeficit += (openBet?openBet.stake:0);
-           if(fRecovery){ fActive=false; fRecovery=false; fRun=0; fPrev=null; }  // recovery also lost (2nd alternation) -> stand down; need a fresh 2-same trigger
-           else fRecovery=true; }                                      // first loss -> recovery on the very next candle
+           if(fRecovery){ fActive=false; fRecovery=false; fRun=0; fPrev=null; }  // recovery also lost -> stand down; need a fresh 2-same trigger
+           else fRecovery=true; }                                      // base loss -> recovery on the very next candle
     return;
   }
   // 'alt' (alternation-triggered martingale)
@@ -1201,7 +1202,7 @@ function decideCellAlt(st,color,need,maxStep){
   return null;
 }
 function applyCell(st,won,strat,stk){
-  if(strat==='follow12'){ if(won){ if(st.fRecovery) st.fDeficit=0; st.fRecovery=false; } else { st.fDeficit += (stk||0); if(st.fRecovery){ st.fActive=false; st.fRecovery=false; st.fRun=0; st.fPrev=null; } else st.fRecovery=true; } return; }
+  if(strat==='follow12'){ if(won){ if(st.fRecovery){ st.fDeficit=0; st.fRecovery=false; } else st.fRecovery=(st.fDeficit>0); } else { st.fDeficit += (stk||0); if(st.fRecovery){ st.fActive=false; st.fRecovery=false; st.fRun=0; st.fPrev=null; } else st.fRecovery=true; } return; }
   if(strat==='follow1'){ if(won) st.step=0; else if(st.step===0) st.step=1; else { st.step=0; st.fActive=false; } return; }
   if(strat==='follow2'){ if(won) st.step=0; else if(st.step===0) st.step=1; else { st.step=Math.min(st.step+1,30); st.fActive=false; } return; }
   if(strat==='follow3'){ if(won){ st.step=0; st.fLoss=0; } else { st.step=0; st.fLoss++; if(st.fLoss>=2) st.fActive=false; } return; }
@@ -1338,7 +1339,7 @@ async function dayHourScan(){
 })();
 
 // Version badge — lets you confirm the browser isn't showing a cached old copy.
-const APP_VERSION = "v37";
+const APP_VERSION = "v38";
 try{ document.getElementById('ver').textContent = APP_VERSION; }catch(e){}
 
 // On open: restore the saved session and resume (catching up while you were away).
