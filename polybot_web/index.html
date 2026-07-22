@@ -726,14 +726,17 @@ async function poll(){
       setMsg('وصل شد ✅ — معامله از کندلِ فعلی شروع شد.');
     } else {
       // a gap: the app was closed/asleep (browsers can't trade in the background).
-      // Don't fabricate the missed candles — refund any dangling bet, reset the
-      // streak + martingale, and continue cleanly from the current candle.
-      if(openBet){ bal+=openBet.stake; openBet=null; }
+      // Don't fabricate the missed candles, and — importantly — do NOT refund the
+      // dangling bet (that would silently recharge the balance mid-session). The
+      // stake was already deducted, so count it as a loss and move on. Reset the
+      // streak + martingale and continue cleanly from the current candle.
+      if(openBet){ openBet.won=false; openBet.pnl=-openBet.stake; losses++; trades.unshift(openBet); trades=trades.slice(0,500); openBet=null; }
       step=0; streakLen=0; prevColor=null; altLen=0; abArmed=false; abCommitted=false; abReentry=false;
       fActive=freshActive(); fRun=0; fPrev=null; fLoss=0; fDeficit=0; fRecovery=false;
       lastClosedOpen=lastOid;
+      if(bal<=0.01){ stop(); setMsg('موجودی تمام شد — متوقف شد (بازپرداختِ خودکار انجام نشد).'); render(); saveState(); busy=false; return; }
       await onClosedCandle(o,c,ct,true,lastOid);
-      setMsg('از کندلِ فعلی ادامه داد. بازه‌ی نبودنت معامله نشد و مارتینگل ریست شد (مرورگر در پس‌زمینه معامله نمی‌کند).');
+      setMsg('از کندلِ فعلی ادامه داد. شرطِ بازِ نیمه‌کاره باخت حساب شد (موجودی خودبه‌خود شارژ نشد) و مارتینگل ریست شد.');
     }
     const lc=shownColor;
     const srcTag = sourceVal()==='polymarket' ? ' (منبع: Polymarket)' : '';
@@ -819,6 +822,7 @@ function run(){
   if(pollTimer) return;
   stopBacktest();
   if(!trades.length && !openBet){ bal=parseFloat(document.getElementById('bal').value)||100; start=bal; }
+  else if(bal<=0.01){ setMsg('موجودی تمام شده — برای شروعِ دوباره «ریست» را بزن (موجودی خودبه‌خود شارژ نمی‌شود).'); return; }
   setMsg('در حال اتصال به دادهٔ واقعی…');
   poll();
   pollTimer=setInterval(poll, 15000);   // check every 15s; acts only when a candle closes
@@ -1339,7 +1343,7 @@ async function dayHourScan(){
 })();
 
 // Version badge — lets you confirm the browser isn't showing a cached old copy.
-const APP_VERSION = "v38";
+const APP_VERSION = "v39";
 try{ document.getElementById('ver').textContent = APP_VERSION; }catch(e){}
 
 // On open: restore the saved session and resume (catching up while you were away).
