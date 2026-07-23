@@ -307,6 +307,13 @@ function labelWrap(text, el) {
 let lrTenure = 10;        // minimum consecutive weeks in the top-10 (w.tw)
 let lrTop = 10;           // "top-N" required in BOTH lowest-max and lowest-avg
 let lrExcludeBurned = true;
+// The "wait then martingale" safety model the user asked for: enter only AFTER
+// lrWait consecutive alternations have already elapsed, then run a martingale
+// that can survive lrCapacity more. Total tolerated run = lrWait + lrCapacity;
+// a window is "safe for me" when its all-time max alternation stays within that.
+let lrCapacity = 6;       // martingale steps the user can afford
+let lrWait = 2;           // alternations to let pass before entering
+let lrOnlySafe = false;   // show only windows where mx <= lrWait + lrCapacity
 
 function renderLowRisk(ds, winLen) {
   const box = $('lowrisk');
@@ -333,7 +340,8 @@ function renderLowRisk(ds, winLen) {
       rMx.get(w.start) <= lrTop &&
       rAvg.get(w.start) <= lrTop &&
       (w.tw || 0) >= lrTenure &&
-      (!lrExcludeBurned || !burnedStarts.has(w.start)));
+      (!lrExcludeBurned || !burnedStarts.has(w.start)) &&
+      (!lrOnlySafe || w.mx <= lrWait + lrCapacity));
     // Best first: lowest worst-rank, then longest tenure, then calmest average.
     q.sort((a, b) =>
       Math.max(rMx.get(a.start), rAvg.get(a.start)) - Math.max(rMx.get(b.start), rAvg.get(b.start)) ||
@@ -369,6 +377,15 @@ function renderLowRisk(ds, winLen) {
     (v) => { lrTop = parseInt(v, 10); renderLowRisk(ds, winLen); })));
   ctrls.appendChild(checkboxWrap('فقط بازه‌های نسوخته', lrExcludeBurned,
     (v) => { lrExcludeBurned = v; renderLowRisk(ds, winLen); }));
+  ctrls.appendChild(labelWrap('پله‌های من:', buildSelect(
+    [[3, '۳ پله'], [4, '۴ پله'], [5, '۵ پله'], [6, '۶ پله'], [7, '۷ پله'],
+      [8, '۸ پله'], [9, '۹ پله'], [10, '۱۰ پله']],
+    lrCapacity, (v) => { lrCapacity = parseInt(v, 10); renderLowRisk(ds, winLen); })));
+  ctrls.appendChild(labelWrap('صبر قبل از ورود:', buildSelect(
+    [[0, '۰ تناوب'], [1, '۱ تناوب'], [2, '۲ تناوب'], [3, '۳ تناوب'], [4, '۴ تناوب']],
+    lrWait, (v) => { lrWait = parseInt(v, 10); renderLowRisk(ds, winLen); })));
+  ctrls.appendChild(checkboxWrap('فقط بازه‌های امنِ من', lrOnlySafe,
+    (v) => { lrOnlySafe = v; renderLowRisk(ds, winLen); }));
   box.appendChild(ctrls);
 
   const help = document.createElement('div');
@@ -379,6 +396,15 @@ function renderLowRisk(ds, winLen) {
     (lrExcludeBurned ? '، و هرگز موقعِ تاپ-۱۰ بودن نسوخته‌اند' : '') +
     `. طول بازه: ${winLabel(winLen)} (فقط بازهٔ لغزان). این «هستهٔ معاملاتی» است.`;
   box.appendChild(help);
+
+  const help2 = document.createElement('div');
+  help2.className = 'rhelp';
+  help2.innerHTML =
+    `🛡️ <b>پوششِ من = صبر (${lrWait}) + پله (${lrCapacity}) = ${lrWait + lrCapacity} تناوب.</b> ` +
+    `اگر بگذاری ${lrWait} تناوب بگذرد و بعد وارد شوی، ${lrWait} پله از بدترین رشته قبلِ پولت مصرف شده؛ ` +
+    `پس تا وقتی بیشینهٔ بازه از ${lrWait + lrCapacity} بالاتر نرود صفر نمی‌شوی. «حاشیهٔ امنیت» = ` +
+    `پوششِ من منهای بیشینه (هرچه بیشتر، امن‌تر). ⚠️ بیشینه سقفِ قطعی نیست — به «احتمالِ بیشینهٔ جدید» هم نگاه کن.`;
+  box.appendChild(help2);
 
   if (!totalQ) {
     const none = document.createElement('div');
@@ -404,6 +430,12 @@ function renderLowRisk(ds, winLen) {
     for (const w of q) {
       const nh = (w.recn && w.n) ? Math.round((100 * w.recn) / w.n) : 0;
       const burned = burnedStarts.has(w.start);
+      const cover = lrWait + lrCapacity;
+      const margin = cover - w.mx;
+      const verdict = margin >= 2 ? `✅ امن (حاشیه ${margin})`
+        : margin >= 0 ? `⚠️ مرزی (حاشیه ${margin})`
+          : `❌ ناکافی (${-margin} پله کم می‌آری)`;
+      const mCls = margin >= 2 ? 'ok' : margin >= 0 ? '' : 'hot';
       const card = document.createElement('div');
       card.className = 'reccard';
       card.innerHTML =
@@ -411,6 +443,8 @@ function renderLowRisk(ds, winLen) {
         `<div class="row"><span>رتبه (بیشینه / میانگین)</span><b>#${rMx.get(w.start)} / #${rAvg.get(w.start)} از ${total}</b></div>` +
         `<div class="row"><span>ثبات در تاپ-۱۰</span><b class="ok">${w.tw} هفتهٔ پیاپی${w.tw >= 13 ? ' ✅ باسابقه' : ''}</b></div>` +
         `<div class="row"><span>میانگین / بیشینه</span><b>${w.avg.toFixed(2)} / ${w.mx} (${w.mxc} بار)</b></div>` +
+        `<div class="row"><span>پوششِ من (صبر ${lrWait} + پله ${lrCapacity})</span><b>${cover} تناوب</b></div>` +
+        `<div class="row"><span>حاشیهٔ امنیت تا بیشینه</span><b class="${mCls}">${verdict}</b></div>` +
         `<div class="row"><span>احتمالِ بیشینهٔ جدید</span><b${nh >= 5 ? ' class="hot"' : ''}>${nh}%</b></div>` +
         `<div class="row"><span>تعداد نمونه</span><b>${w.n} بار</b></div>` +
         `<div class="row"><span>سابقهٔ سوختن</span><b class="${burned ? 'hot' : 'ok'}">${burned ? '⚠️ سوخته' : '✅ نسوخته'}</b></div>`;
