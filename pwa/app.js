@@ -314,6 +314,7 @@ let lrExcludeBurned = true;
 let lrCapacity = 6;       // martingale steps the user can afford
 let lrWait = 2;           // alternations to let pass before entering
 let lrOnlySafe = false;   // show only windows where mx <= lrWait + lrCapacity
+let lrPerDay = 4;         // how many safest windows to keep per weekday
 
 function renderLowRisk(ds, winLen) {
   const box = $('lowrisk');
@@ -342,8 +343,10 @@ function renderLowRisk(ds, winLen) {
       (w.tw || 0) >= lrTenure &&
       (!lrExcludeBurned || !burnedStarts.has(w.start)) &&
       (!lrOnlySafe || w.mx <= lrWait + lrCapacity));
-    // Best first: lowest worst-rank, then longest tenure, then calmest average.
+    // Safest first: lowest all-time max (the real wipe risk), then calmest rank,
+    // then longest tenure, then lowest average.
     q.sort((a, b) =>
+      a.mx - b.mx ||
       Math.max(rMx.get(a.start), rAvg.get(a.start)) - Math.max(rMx.get(b.start), rAvg.get(b.start)) ||
       (b.tw || 0) - (a.tw || 0) || a.avg - b.avg);
     if (noOverlap) {
@@ -359,7 +362,11 @@ function renderLowRisk(ds, winLen) {
       }
       q = chosen;
     }
-    if (q.length) { perDay.push({ wd, q, rMx, rAvg, burnedStarts, total: list.length }); totalQ += q.length; }
+    // Keep only the N safest, non-overlapping windows this weekday (the user
+    // trades a fixed number of windows per day).
+    const short = q.length < lrPerDay;
+    q = q.slice(0, lrPerDay);
+    if (q.length) { perDay.push({ wd, q, rMx, rAvg, burnedStarts, total: list.length, short }); totalQ += q.length; }
   }
 
   const scope = $('weekday').value === 'all' ? '' : ' — ' + DATA.names[$('weekday').value];
@@ -386,6 +393,9 @@ function renderLowRisk(ds, winLen) {
     lrWait, (v) => { lrWait = parseInt(v, 10); renderLowRisk(ds, winLen); })));
   ctrls.appendChild(checkboxWrap('فقط بازه‌های امنِ من', lrOnlySafe,
     (v) => { lrOnlySafe = v; renderLowRisk(ds, winLen); }));
+  ctrls.appendChild(labelWrap('بازه در هر روز:', buildSelect(
+    [[2, '۲ بازه'], [3, '۳ بازه'], [4, '۴ بازه'], [5, '۵ بازه'], [6, '۶ بازه']],
+    lrPerDay, (v) => { lrPerDay = parseInt(v, 10); renderLowRisk(ds, winLen); })));
   box.appendChild(ctrls);
 
   const help = document.createElement('div');
@@ -419,10 +429,18 @@ function renderLowRisk(ds, winLen) {
   // Per-weekday breakdown of the shortlist size.
   const co = document.createElement('div');
   co.className = 'rhelp';
-  co.innerHTML = 'به تفکیکِ روز: ' + perDay
-    .map(({ wd, q }) => `<b>${DATA.names[String(wd)]}:</b> ${q.length}`)
+  co.innerHTML = `۴ بازهٔ امن‌ترینِ هر روز (اینجا ${lrPerDay} تنظیم شده) — به تفکیکِ روز: ` + perDay
+    .map(({ wd, q, short }) => `<b>${DATA.names[String(wd)]}:</b> ${q.length}${short ? ' ⚠️' : ''}`)
     .join(' • ');
   box.appendChild(co);
+  if (perDay.some((p) => p.short)) {
+    const warn = document.createElement('div');
+    warn.className = 'rhelp';
+    warn.textContent =
+      `⚠️ روزهای علامت‌دار کمتر از ${lrPerDay} بازهٔ واجدِ شرایط دارند — برای رسیدن به ${lrPerDay} تا، ` +
+      '«حداقل ثبات» یا «تاپ» را کمی شل کن، یا تیکِ «فقط نسوخته / فقط امنِ من» را بردار.';
+    box.appendChild(warn);
+  }
 
   const list = document.createElement('div');
   list.className = 'reclist';
