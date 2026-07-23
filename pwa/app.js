@@ -170,6 +170,7 @@ function render() {
   const winLen = mode === 'rolling' ? parseInt($('winlen').value, 10) : 60;
   $('winlen').disabled = mode !== 'rolling';
 
+  renderLowRisk(ds, winLen);
   renderRecords(ds, winLen);
   renderBurns(ds, winLen);
   renderExtreme(ds, winLen);
@@ -296,6 +297,128 @@ function labelWrap(text, el) {
   w.appendChild(document.createTextNode(text + ' '));
   w.appendChild(el);
   return w;
+}
+
+// --- 🎯 هستهٔ کم‌ریسک ---------------------------------------------------------
+// Low-risk core: for each weekday, the rolling windows that are SIMULTANEOUSLY
+// in the top-N by lowest max AND lowest average, have held a top-10 priority for
+// at least `lrTenure` consecutive weeks (w.tw), and — optionally — never burned
+// while ranked top-10. This is the "trade these" shortlist the user asked for.
+let lrTenure = 10;        // minimum consecutive weeks in the top-10 (w.tw)
+let lrTop = 10;           // "top-N" required in BOTH lowest-max and lowest-avg
+let lrExcludeBurned = true;
+
+function renderLowRisk(ds, winLen) {
+  const box = $('lowrisk');
+  box.innerHTML = '';
+  box.style.display = 'none';
+  const per = ds.rolling && ds.rolling[String(winLen)];
+  if (!per) return;
+  const burnsPer = (ds.burns && ds.burns[String(winLen)]) || {};
+  const noOverlap = $('nooverlap').checked;
+
+  const perDay = [];
+  let totalQ = 0;
+  for (const wd of selectedDays()) {
+    const list = (per[String(wd)] || []).slice();
+    if (!list.length) continue;
+    // Same rank definitions the day cards / records panel use.
+    const byMx = list.slice().sort((a, b) => a.mx - b.mx || a.avg - b.avg || a.start - b.start);
+    const byAvg = list.slice().sort((a, b) => a.avg - b.avg || a.mx - b.mx || a.start - b.start);
+    const rMx = new Map(byMx.map((w, i) => [w.start, i + 1]));
+    const rAvg = new Map(byAvg.map((w, i) => [w.start, i + 1]));
+    // Any start-minute that has ever burned while ranked top-10 on this weekday.
+    const burnedStarts = new Set((burnsPer[String(wd)] || []).map((e) => e.s));
+    let q = list.filter((w) =>
+      rMx.get(w.start) <= lrTop &&
+      rAvg.get(w.start) <= lrTop &&
+      (w.tw || 0) >= lrTenure &&
+      (!lrExcludeBurned || !burnedStarts.has(w.start)));
+    // Best first: lowest worst-rank, then longest tenure, then calmest average.
+    q.sort((a, b) =>
+      Math.max(rMx.get(a.start), rAvg.get(a.start)) - Math.max(rMx.get(b.start), rAvg.get(b.start)) ||
+      (b.tw || 0) - (a.tw || 0) || a.avg - b.avg);
+    if (noOverlap) {
+      const chosen = [];
+      for (const w of q) {
+        let clash = false;
+        for (const c of chosen) {
+          let d = Math.abs(w.start - c.start);
+          d = Math.min(d, DAY_MINUTES - d);
+          if (d < winLen) { clash = true; break; }
+        }
+        if (!clash) chosen.push(w);
+      }
+      q = chosen;
+    }
+    if (q.length) { perDay.push({ wd, q, rMx, rAvg, burnedStarts, total: list.length }); totalQ += q.length; }
+  }
+
+  const scope = $('weekday').value === 'all' ? '' : ' — ' + DATA.names[$('weekday').value];
+  const head = document.createElement('h2');
+  head.textContent = `🎯 هستهٔ کم‌ریسک${scope} (${totalQ.toLocaleString('fa')} بازه)`;
+  box.appendChild(head);
+
+  const ctrls = document.createElement('div');
+  ctrls.className = 'recctrls';
+  ctrls.appendChild(labelWrap('حداقل ثبات:', buildSelect(
+    [[5, '۵ هفته'], [8, '۸ هفته'], [10, '۱۰ هفته'], [13, '۱۳ هفته'], [15, '۱۵ هفته']],
+    lrTenure, (v) => { lrTenure = parseInt(v, 10); renderLowRisk(ds, winLen); })));
+  ctrls.appendChild(labelWrap('تاپ در هر دو:', buildSelect(
+    [[5, 'تاپ ۵'], [10, 'تاپ ۱۰']], lrTop,
+    (v) => { lrTop = parseInt(v, 10); renderLowRisk(ds, winLen); })));
+  ctrls.appendChild(checkboxWrap('فقط بازه‌های نسوخته', lrExcludeBurned,
+    (v) => { lrExcludeBurned = v; renderLowRisk(ds, winLen); }));
+  box.appendChild(ctrls);
+
+  const help = document.createElement('div');
+  help.className = 'rhelp';
+  help.textContent =
+    `بازه‌هایی که هم‌زمان جزو تاپ-${lrTop} کم‌ترین بیشینه و کم‌ترین میانگینِ همان روزند، ` +
+    `دستِ‌کم ${lrTenure} هفتهٔ پیاپی در تاپ-۱۰ مانده‌اند` +
+    (lrExcludeBurned ? '، و هرگز موقعِ تاپ-۱۰ بودن نسوخته‌اند' : '') +
+    `. طول بازه: ${winLabel(winLen)} (فقط بازهٔ لغزان). این «هستهٔ معاملاتی» است.`;
+  box.appendChild(help);
+
+  if (!totalQ) {
+    const none = document.createElement('div');
+    none.className = 'rhelp';
+    none.textContent =
+      'با این سخت‌گیری هیچ بازه‌ای واجدِ شرایط نشد — «حداقل ثبات» را کم کن، «تاپ ۱۰» را انتخاب کن، یا تیکِ «فقط نسوخته» را بردار.';
+    box.appendChild(none);
+    box.style.display = '';
+    return;
+  }
+
+  // Per-weekday breakdown of the shortlist size.
+  const co = document.createElement('div');
+  co.className = 'rhelp';
+  co.innerHTML = 'به تفکیکِ روز: ' + perDay
+    .map(({ wd, q }) => `<b>${DATA.names[String(wd)]}:</b> ${q.length}`)
+    .join(' • ');
+  box.appendChild(co);
+
+  const list = document.createElement('div');
+  list.className = 'reclist';
+  for (const { wd, q, rMx, rAvg, burnedStarts, total } of perDay) {
+    for (const w of q) {
+      const nh = (w.recn && w.n) ? Math.round((100 * w.recn) / w.n) : 0;
+      const burned = burnedStarts.has(w.start);
+      const card = document.createElement('div');
+      card.className = 'reccard';
+      card.innerHTML =
+        `<div class="rt">🎯 ${DATA.names[String(wd)]} ${w.label}</div>` +
+        `<div class="row"><span>رتبه (بیشینه / میانگین)</span><b>#${rMx.get(w.start)} / #${rAvg.get(w.start)} از ${total}</b></div>` +
+        `<div class="row"><span>ثبات در تاپ-۱۰</span><b class="ok">${w.tw} هفتهٔ پیاپی${w.tw >= 13 ? ' ✅ باسابقه' : ''}</b></div>` +
+        `<div class="row"><span>میانگین / بیشینه</span><b>${w.avg.toFixed(2)} / ${w.mx} (${w.mxc} بار)</b></div>` +
+        `<div class="row"><span>احتمالِ بیشینهٔ جدید</span><b${nh >= 5 ? ' class="hot"' : ''}>${nh}%</b></div>` +
+        `<div class="row"><span>تعداد نمونه</span><b>${w.n} بار</b></div>` +
+        `<div class="row"><span>سابقهٔ سوختن</span><b class="${burned ? 'hot' : 'ok'}">${burned ? '⚠️ سوخته' : '✅ نسوخته'}</b></div>`;
+      list.appendChild(card);
+    }
+  }
+  box.appendChild(list);
+  box.style.display = '';
 }
 
 // Records panel state: overlap collapse, how far back to look, and sort order.
