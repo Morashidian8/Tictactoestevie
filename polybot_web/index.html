@@ -183,10 +183,11 @@
     </div>
     <div id="stratFollow15" style="display:none;font-size:13px;color:var(--text);background:var(--surfaceVar);border-radius:10px;padding:10px;margin-top:6px">
       <b>الگوی AABA (۲همرنگ → یک تناوب → برگشت)</b><br>
-      <span style="color:var(--muted);font-size:12px">منتظرِ یک الگوی دقیقِ ۴ کندلی می‌ماند: <b>۲ کندلِ هم‌رنگ (A A)</b> → <b>یک کندلِ مخالف (B)</b> → <b>یک کندلِ هم‌رنگِ همان A</b> (در مجموع ۲ تناوب). بعد روی کندلِ بعدی <b>هم‌جهتِ کندلِ قبل (ادامهٔ A)</b> وارد می‌شود. اگر برد → حجمِ پایه و ریست. اگر <b>باخت</b>، منتظر می‌ماند تا همین الگو دوباره رخ دهد و این بار با <b>حجمِ دوبرابر (مارتینگل)</b> وارد می‌شود؛ باز باخت → دوبرابرِ بعدی، تا یک برد. مارتینگل روی <b>تکرارهای الگو</b>ست، نه کندل‌های پشتِ‌هم.</span>
-      <label>تعدادِ پله‌های مارتینگل (چند بار دوبرابر شود؛ بعد از سقف به پایه)</label>
+      <span style="color:var(--muted);font-size:12px">منتظرِ الگوی دقیقِ ۴ کندلی: <b>۲ کندلِ هم‌رنگ (A A)</b> → <b>یک کندلِ مخالف (B)</b> → <b>برگشت به همان A</b> (۲ تناوب). بعد روی کندلِ بعدی <b>هم‌جهتِ A</b> با <b>حجمِ پایه</b> وارد می‌شود. اگر باخت، فقط <b>یک پلهٔ مارتینگل</b> روی کندلِ بعد <b>هم‌جهتِ کندلِ جدید</b> با <b>۲×</b> می‌زند. هر <b>برد</b> → ریست به پایه و منتظرِ الگوی بعدی. اگر آن یک پله هم باخت → <b>پیش‌فرض ریست به پایه</b> و منتظرِ الگوی بعدی (هر تریگر حداکثر ۲ شرط).</span>
+      <label class="sw" style="margin-top:8px"><input type="checkbox" id="f15Carry"> ادامهٔ مارتینگل بین تریگرها — اگر ورود+فالو باختند، به‌جای ریست، تریگرِ بعدی از سطحِ بالاتر ادامه دهد (تا سقف)</label>
+      <label>سقفِ پله‌های مارتینگل (تا این حد بالا برود، بعد به پایه)</label>
       <input id="f15N" type="number" value="5" min="1" max="20">
-      <div class="muted" style="font-size:11px;margin-top:4px">مثلاً ۵ با پایهٔ ۱۰: در تکرارهای بعدیِ الگو ۱۰ → ۲۰ → ۴۰ → ۸۰ → ۱۶۰ → ۳۲۰؛ اگر تا سقف هم نبرد، به پایه برمی‌گردد.</div>
+      <div class="muted" style="font-size:11px;margin-top:4px">با تیکِ «ادامه» + پایهٔ ۱۰ + سقفِ ۵: در تریگرهای پیاپیِ بازنده ۱۰ → ۲۰ → ۴۰ → ۸۰ → ۱۶۰ → ۳۲۰؛ اگر تا سقف هم نبرد، به پایه. بدونِ تیک: هر تریگر فقط ۱۰ و ۲۰، بعد ریست.</div>
     </div>
     <div id="stratFollow12" style="display:none;font-size:13px;color:var(--text);background:var(--surfaceVar);border-radius:10px;padding:10px;margin-top:6px">
       <b>مارتینگلِ جبرانی (کلِ ضرر + سودِ پایه)</b><br>
@@ -232,7 +233,7 @@
           <tr><td style="padding:6px;border-bottom:1px solid #222a38"><b>۱۲) مارتینگلِ جبرانی</b></td><td style="padding:6px;border-bottom:1px solid #222a38">۲ کندلِ هم‌رنگ</td><td style="padding:6px;border-bottom:1px solid #222a38">هر باخت = کلِ ضرر + پایه (۱۰،۲۰،۵۰،۱۱۰،۲۳۰…)</td><td style="padding:6px;border-bottom:1px solid #222a38">۲ باخت توقف تا تریگر؛ برد→کلِ ضرر جبران، ریست</td></tr>
           <tr><td style="padding:6px;border-bottom:1px solid #222a38"><b>۱۳) مارتینگلِ ساده (Nپله)</b></td><td style="padding:6px;border-bottom:1px solid #222a38">۲ کندلِ هم‌رنگ</td><td style="padding:6px;border-bottom:1px solid #222a38">هر باخت دوبرابر تا Nپله (قابلِ تنظیم)</td><td style="padding:6px;border-bottom:1px solid #222a38">باختِ سقف→توقف تا تریگر؛ برد→پایه</td></tr>
           <tr><td style="padding:6px;border-bottom:1px solid #222a38"><b>۱۴) پایه — تا ۲ تناوب</b></td><td style="padding:6px;border-bottom:1px solid #222a38">۲ کندلِ هم‌رنگ</td><td style="padding:6px;border-bottom:1px solid #222a38">هیچ مارتینگل — همیشه حجمِ پایه</td><td style="padding:6px;border-bottom:1px solid #222a38">سقفِ ۲ باخت در هر ورود→توقف تا تریگر (حداکثر ریسک ۲ بازیِ پایه)</td></tr>
-          <tr><td style="padding:6px"><b>۱۵) الگوی AABA</b></td><td style="padding:6px">A A B A (۲همرنگ→تناوب→برگشت)، ادامهٔ A</td><td style="padding:6px">مارتینگل بین تکرارهای الگو تا Nپله</td><td style="padding:6px">برد→پایه؛ سقف→پایه؛ همیشه منتظرِ الگو</td></tr>
+          <tr><td style="padding:6px"><b>۱۵) الگوی AABA</b></td><td style="padding:6px">A A B A (۲همرنگ→تناوب→برگشت)، ادامهٔ A</td><td style="padding:6px">ورود + ۱ پلهٔ فالو (هم‌جهتِ کندلِ جدید، ۲×)</td><td style="padding:6px">برد یا ۲باخت→پایه؛ با تیکِ «ادامه»→انتقالِ مارتینگل بین تریگرها تا Nپله</td></tr>
         </tbody>
       </table>
     </div>
@@ -335,11 +336,12 @@ async function getKlines(){
 // alternation trigger, restarting from the base step. Any win also resets to base.
 function maxStepVal(){ return Math.max(1,parseInt(document.getElementById('maxStep').value)||3); }
 function f13Steps(){ const e=document.getElementById('f13N'); return Math.max(1,parseInt(e&&e.value)||3); }   // follow13: max martingale doublings
-function f15Steps(){ const e=document.getElementById('f15N'); return Math.max(1,parseInt(e&&e.value)||5); }   // follow15: max martingale doublings across pattern repeats
+function f15Steps(){ const e=document.getElementById('f15N'); return Math.max(1,parseInt(e&&e.value)||5); }   // follow15: max martingale doublings (cap)
+function f15Carry(){ const e=document.getElementById('f15Carry'); return e?e.checked:false; }               // follow15: carry the martingale ladder across triggers
 function stratVal(){ const e=document.getElementById('strat'); return e?e.value:'alt'; }
 // Strategies that must WAIT for an entry trigger (2 same-colour candles) before
 // their first bet start with fActive=false; the rest are active from candle 1.
-function waitsToStart(s){ return s==='follow8'||s==='follow9'||s==='follow10'||s==='follow11'||s==='follow12'||s==='follow13'||s==='follow14'; }
+function waitsToStart(s){ return s==='follow8'||s==='follow9'||s==='follow10'||s==='follow11'||s==='follow12'||s==='follow13'||s==='follow14'||s==='follow15'; }
 function freshActive(){ return waitsToStart(stratVal()) ? false : true; }
 
 // Strategy "follow1": from the moment you press Start, FOLLOW the previous candle
@@ -476,21 +478,26 @@ function decideFollow14(color){
   return color==='green'?'up':'down';
 }
 // "follow15": wait for the exact 4-candle pattern A A B A (two same, one opposite,
-// then back to A = two alternations total). On completion, bet the NEXT candle in
-// the direction of the last candle (continuation of A). A loss doesn't ride the
-// next candles — it waits for the pattern to recur and re-enters at DOUBLE (a
-// martingale ACROSS pattern occurrences), up to f15N steps, then resets to base.
-// fHist holds the 3 candle colours preceding the current one ('g'/'r').
+// then back to A = two alternations). On completion ENTER: bet the next candle
+// following A (continuation) at the current stake. If the entry loses, place ONE
+// follow-up bet on the very next candle, following THAT candle (the new colour),
+// at DOUBLE. The trigger is then done:
+//   * any win -> reset to base, hunt the pattern again;
+//   * entry+follow both lost -> if "carry" (f15Carry) is OFF reset to base; if ON
+//     keep the climbed martingale level (up to f15N) for the NEXT trigger.
+// fActive = a follow-up bet is pending; fHist = last 3 candle colours ('g'/'r').
 function decideFollow15(color){
-  if(color==='none'){ fHist=''; return null; }
+  if(color==='none'){ fHist=''; fActive=false; return null; }
   const c = color==='green' ? 'g' : 'r';
-  let bet=null;
+  if(fActive){ fHist=(fHist+c).slice(-3); return color==='green'?'up':'down'; }  // follow-up: follow the just-closed candle
+  let trigger=false;
   if(fHist.length>=3){
     const h1=fHist[fHist.length-3], h2=fHist[fHist.length-2], h3=fHist[fHist.length-1];
-    if(h1===h2 && h3!==h2 && c===h2) bet = color==='green'?'up':'down';   // A A B A -> follow A
+    if(h1===h2 && h3!==h2 && c===h2) trigger=true;
   }
   fHist=(fHist+c).slice(-3);
-  return bet;
+  if(trigger) return color==='green'?'up':'down';   // entry: follow A at the current (possibly carried) stake
+  return null;
 }
 
 // Strategy-specific reaction to a resolved bet, adjusting the martingale step/state.
@@ -577,10 +584,17 @@ function applyResult(won){
     if(!won){ fLoss++; if(fLoss>=2){ fActive=false; fRun=0; fPrev=null; } }  // 2nd loss -> stand down for a fresh 2-same trigger
     return;                                    // wins keep riding; they do NOT refund the budget
   }
-  if(s==='follow15'){                         // martingale across pattern repeats, cap at N then back to base
+  if(s==='follow15'){                         // AABA entry + 1 follow-up; optional carry across triggers up to N
     const N=f15Steps();
-    if(won) step=0;
-    else step=(step<N)?step+1:0;               // each losing entry doubles the next qualifying entry
+    if(!fActive){                              // resolved the ENTRY bet
+      if(won) step=0;                          // win -> base, keep hunting
+      else { step=(step<N)?step+1:0; fActive=(step!==0); }  // entry lost -> double & queue the follow-up (unless cap reset)
+    } else {                                   // resolved the FOLLOW-UP bet -> trigger sequence done
+      fActive=false;
+      if(won) step=0;
+      else if(f15Carry()) step=(step<N)?step+1:0;  // carry the ladder to the next trigger (cap N -> reset)
+      else step=0;                             // no carry -> reset to base
+    }
     return;
   }
   // 'alt' (alternation-triggered martingale)
@@ -848,7 +862,7 @@ function saveState(){
     cfg:{tf:val('tf'),amt:val('amt'),bal:val('bal'),mode:val('mode'),
       maxEntry:val('maxEntry'),altN:val('altN'),maxStep:val('maxStep'),strat:val('strat'),
       btFromDay:val('btFromDay'),btToDay:val('btToDay'),btFromHour:val('btFromHour'),btToHour:val('btToHour'),
-      btDayMode:val('btDayMode'),btOneDay:val('btOneDay'),src:val('src'),unlimited:document.getElementById('unlimited').checked,f13N:val('f13N'),f15N:val('f15N')}
+      btDayMode:val('btDayMode'),btOneDay:val('btOneDay'),src:val('src'),unlimited:document.getElementById('unlimited').checked,f13N:val('f13N'),f15N:val('f15N'),f15Carry:document.getElementById('f15Carry').checked}
   })); }catch(e){}
 }
 function loadState(){            // returns running flag, or null if nothing saved
@@ -863,7 +877,8 @@ function loadState(){            // returns running flag, or null if nothing sav
     setVal('mode',c.mode); setVal('maxEntry',c.maxEntry); setVal('altN',c.altN); setVal('maxStep',c.maxStep); setVal('strat',c.strat);
     setVal('btFromDay',c.btFromDay); setVal('btToDay',c.btToDay); setVal('btFromHour',c.btFromHour); setVal('btToHour',c.btToHour);
     setVal('btDayMode',c.btDayMode); setVal('btOneDay',c.btOneDay); setVal('src',c.src); setVal('f13N',c.f13N); setVal('f15N',c.f15N);
-    if(c.unlimited!==undefined) document.getElementById('unlimited').checked=c.unlimited; onMode(); onStrat(); onDayMode();}
+    if(c.unlimited!==undefined) document.getElementById('unlimited').checked=c.unlimited;
+    if(c.f15Carry!==undefined) document.getElementById('f15Carry').checked=c.f15Carry; onMode(); onStrat(); onDayMode();}
   return !!s.running;
 }
 
@@ -1297,16 +1312,17 @@ function decideCellFollow14(st,color){
   return color==='green'?'up':'down';
 }
 function decideCellFollow15(st,color){
-  if(color==='none'){ st.fHist=''; return null; }
+  if(color==='none'){ st.fHist=''; st.fActive=false; return null; }
   const c = color==='green' ? 'g' : 'r';
-  let bet=null;
-  const h=st.fHist||'';
+  if(st.fActive){ st.fHist=((st.fHist||'')+c).slice(-3); return color==='green'?'up':'down'; }
+  let trigger=false; const h=st.fHist||'';
   if(h.length>=3){
     const h1=h[h.length-3], h2=h[h.length-2], h3=h[h.length-1];
-    if(h1===h2 && h3!==h2 && c===h2) bet = color==='green'?'up':'down';
+    if(h1===h2 && h3!==h2 && c===h2) trigger=true;
   }
   st.fHist=(h+c).slice(-3);
-  return bet;
+  if(trigger) return color==='green'?'up':'down';
+  return null;
 }
 function decideCellAlt(st,color,need,maxStep){
   const isFlip=(st.prevColor && color!=='none' && color!==st.prevColor);
@@ -1324,7 +1340,10 @@ function applyCell(st,won,strat,stk){
   if(strat==='follow12'){ if(won){ if(st.fRecovery){ st.fDeficit=0; st.fRecovery=false; } else st.fRecovery=(st.fDeficit>0); } else { st.fDeficit += (stk||0); if(st.fRecovery){ st.fActive=false; st.fRecovery=false; st.fRun=0; st.fPrev=null; } else st.fRecovery=true; } return; }
   if(strat==='follow13'){ const N=f13Steps(); if(won) st.step=0; else if(st.step<N) st.step++; else { st.step=0; st.fActive=false; st.fRun=0; st.fPrev=null; } return; }
   if(strat==='follow14'){ st.step=0; if(!won){ st.fLoss++; if(st.fLoss>=2){ st.fActive=false; st.fRun=0; st.fPrev=null; } } return; }
-  if(strat==='follow15'){ const N=f15Steps(); if(won) st.step=0; else st.step=(st.step<N)?st.step+1:0; return; }
+  if(strat==='follow15'){ const N=f15Steps();
+    if(!st.fActive){ if(won) st.step=0; else { st.step=(st.step<N)?st.step+1:0; st.fActive=(st.step!==0); } }
+    else { st.fActive=false; if(won) st.step=0; else if(f15Carry()) st.step=(st.step<N)?st.step+1:0; else st.step=0; }
+    return; }
   if(strat==='follow1'){ if(won) st.step=0; else if(st.step===0) st.step=1; else { st.step=0; st.fActive=false; } return; }
   if(strat==='follow2'){ if(won) st.step=0; else if(st.step===0) st.step=1; else { st.step=Math.min(st.step+1,30); st.fActive=false; } return; }
   if(strat==='follow3'){ if(won){ st.step=0; st.fLoss=0; } else { st.step=0; st.fLoss++; if(st.fLoss>=2) st.fActive=false; } return; }
@@ -1464,7 +1483,7 @@ async function dayHourScan(){
 })();
 
 // Version badge — lets you confirm the browser isn't showing a cached old copy.
-const APP_VERSION = "v42";
+const APP_VERSION = "v43";
 try{ document.getElementById('ver').textContent = APP_VERSION; }catch(e){}
 
 // On open: restore the saved session and resume (catching up while you were away).
