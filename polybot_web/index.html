@@ -120,6 +120,7 @@
       <option value="follow12">۲ کندلِ هم‌رنگ + مارتینگلِ جبرانی (کلِ ضرر + پایه) با توقف تا تریگر</option>
       <option value="follow13">۲ کندلِ هم‌رنگ + مارتینگلِ ساده تا برد (تعدادِ پله‌ها قابلِ تنظیم)</option>
       <option value="follow14">۲ کندلِ هم‌رنگ + فقط حجمِ پایه، تا ۲ تناوب دنبال می‌کند بعد توقف</option>
+      <option value="follow15">الگوی «۲همرنگ→تناوب→برگشت» (AABA)، ورودِ ادامه + مارتینگل بین تکرارها</option>
     </select>
     <div id="stratAlt" style="font-size:13px;color:var(--text);background:var(--surfaceVar);border-radius:10px;padding:10px;margin-top:6px">
       <b>مارتینگلِ تناوبی</b><br>
@@ -180,6 +181,13 @@
       <b>فقط حجمِ پایه — دنبال‌کردن تا ۲ تناوب</b><br>
       <span style="color:var(--muted);font-size:12px">ورود با <b>۲ کندلِ هم‌رنگ</b>؛ <b>فقط با حجمِ پایه</b> معامله می‌کند و <b>هیچ‌وقت مارتینگل نمی‌کند</b>. هم‌جهتِ کندلِ قبلی می‌ماند و تا وقتی می‌برد با پایه ادامه می‌دهد. هر ورود یک <b>سقفِ ۲ تناوب (۲ باخت)</b> دارد؛ باخت‌ها لازم نیست پشتِ‌هم باشند و بُردها این سقف را پس نمی‌دهند. با <b>باختِ دوم دست نگه می‌دارد</b> تا تریگرِ تازهٔ ۲ کندلِ هم‌رنگ. پس <b>بیشترین ضررِ هر ورود = ۲ بازیِ پایه</b>، بی‌کم‌وزیاد.</span>
     </div>
+    <div id="stratFollow15" style="display:none;font-size:13px;color:var(--text);background:var(--surfaceVar);border-radius:10px;padding:10px;margin-top:6px">
+      <b>الگوی AABA (۲همرنگ → یک تناوب → برگشت)</b><br>
+      <span style="color:var(--muted);font-size:12px">منتظرِ یک الگوی دقیقِ ۴ کندلی می‌ماند: <b>۲ کندلِ هم‌رنگ (A A)</b> → <b>یک کندلِ مخالف (B)</b> → <b>یک کندلِ هم‌رنگِ همان A</b> (در مجموع ۲ تناوب). بعد روی کندلِ بعدی <b>هم‌جهتِ کندلِ قبل (ادامهٔ A)</b> وارد می‌شود. اگر برد → حجمِ پایه و ریست. اگر <b>باخت</b>، منتظر می‌ماند تا همین الگو دوباره رخ دهد و این بار با <b>حجمِ دوبرابر (مارتینگل)</b> وارد می‌شود؛ باز باخت → دوبرابرِ بعدی، تا یک برد. مارتینگل روی <b>تکرارهای الگو</b>ست، نه کندل‌های پشتِ‌هم.</span>
+      <label>تعدادِ پله‌های مارتینگل (چند بار دوبرابر شود؛ بعد از سقف به پایه)</label>
+      <input id="f15N" type="number" value="5" min="1" max="20">
+      <div class="muted" style="font-size:11px;margin-top:4px">مثلاً ۵ با پایهٔ ۱۰: در تکرارهای بعدیِ الگو ۱۰ → ۲۰ → ۴۰ → ۸۰ → ۱۶۰ → ۳۲۰؛ اگر تا سقف هم نبرد، به پایه برمی‌گردد.</div>
+    </div>
     <div id="stratFollow12" style="display:none;font-size:13px;color:var(--text);background:var(--surfaceVar);border-radius:10px;padding:10px;margin-top:6px">
       <b>مارتینگلِ جبرانی (کلِ ضرر + سودِ پایه)</b><br>
       <span style="color:var(--muted);font-size:12px">ورود با <b>۲ کندلِ هم‌رنگ</b>؛ <b>تا وقتی همرنگ است با پایه سوار می‌ماند</b> (رید). اولین تناوب/باخت → <b>جبرانی = کلِ ضررِ انباشته + یک سودِ پایه</b>. اگر جبرانی هم باخت (۲ باختِ پشتِ‌هم) <b>توقف</b> می‌کند تا تریگرِ بعدی؛ ضرر منتقل می‌شود و در جبرانیِ بعدی بزرگ‌تر می‌شود. تا وقتی ضرر صفر است با پایه رید می‌کند؛ ولی <b>وقتی ضررِ انباشته داری، بعد از کندلِ پایه (چه برد چه باخت) کندلِ بعد جبرانی است</b> = کلِ ضرر + پایه (مثلاً با ضررِ ۳۰: پایهٔ ۱۰ برد → جبرانیِ ۴۰). <b>فقط بردِ خودِ کندلِ جبرانی</b> ضرر را صفر می‌کند؛ بردِ پایه ضرر را نگه می‌دارد. اگر جبرانی هم باخت، توقف تا ۲ کندلِ هم‌رنگِ تازه. نمونهٔ رشتهٔ باختِ متوالی با پایهٔ ۱۰: <b>۱۰ → ۲۰ → ۱۰ → ۵۰ → ۱۰ → ۱۱۰ → ۱۰ → ۲۳۰ …</b></span>
@@ -223,7 +231,8 @@
           <tr><td style="padding:6px;border-bottom:1px solid #222a38"><b>۱۱) ۲هم‌رنگ + دوبرابرِ ۳کندل</b></td><td style="padding:6px;border-bottom:1px solid #222a38">۲ کندلِ هم‌رنگ</td><td style="padding:6px;border-bottom:1px solid #222a38">باختِ اول توقف؛ دوبرابر با ۳ کندلِ هم‌رنگ</td><td style="padding:6px;border-bottom:1px solid #222a38">باختِ دوبرابر→ریست پایه</td></tr>
           <tr><td style="padding:6px;border-bottom:1px solid #222a38"><b>۱۲) مارتینگلِ جبرانی</b></td><td style="padding:6px;border-bottom:1px solid #222a38">۲ کندلِ هم‌رنگ</td><td style="padding:6px;border-bottom:1px solid #222a38">هر باخت = کلِ ضرر + پایه (۱۰،۲۰،۵۰،۱۱۰،۲۳۰…)</td><td style="padding:6px;border-bottom:1px solid #222a38">۲ باخت توقف تا تریگر؛ برد→کلِ ضرر جبران، ریست</td></tr>
           <tr><td style="padding:6px;border-bottom:1px solid #222a38"><b>۱۳) مارتینگلِ ساده (Nپله)</b></td><td style="padding:6px;border-bottom:1px solid #222a38">۲ کندلِ هم‌رنگ</td><td style="padding:6px;border-bottom:1px solid #222a38">هر باخت دوبرابر تا Nپله (قابلِ تنظیم)</td><td style="padding:6px;border-bottom:1px solid #222a38">باختِ سقف→توقف تا تریگر؛ برد→پایه</td></tr>
-          <tr><td style="padding:6px"><b>۱۴) پایه — تا ۲ تناوب</b></td><td style="padding:6px">۲ کندلِ هم‌رنگ</td><td style="padding:6px">هیچ مارتینگل — همیشه حجمِ پایه</td><td style="padding:6px">سقفِ ۲ باخت در هر ورود→توقف تا تریگر (حداکثر ریسک ۲ بازیِ پایه)</td></tr>
+          <tr><td style="padding:6px;border-bottom:1px solid #222a38"><b>۱۴) پایه — تا ۲ تناوب</b></td><td style="padding:6px;border-bottom:1px solid #222a38">۲ کندلِ هم‌رنگ</td><td style="padding:6px;border-bottom:1px solid #222a38">هیچ مارتینگل — همیشه حجمِ پایه</td><td style="padding:6px;border-bottom:1px solid #222a38">سقفِ ۲ باخت در هر ورود→توقف تا تریگر (حداکثر ریسک ۲ بازیِ پایه)</td></tr>
+          <tr><td style="padding:6px"><b>۱۵) الگوی AABA</b></td><td style="padding:6px">A A B A (۲همرنگ→تناوب→برگشت)، ادامهٔ A</td><td style="padding:6px">مارتینگل بین تکرارهای الگو تا Nپله</td><td style="padding:6px">برد→پایه؛ سقف→پایه؛ همیشه منتظرِ الگو</td></tr>
         </tbody>
       </table>
     </div>
@@ -300,6 +309,7 @@ let prevColor=null, streakLen=0;
 let altLen=0, abArmed=false, abCommitted=false, abReentry=false;   // altbreak/altrestart state
 let fActive=true, fRun=0, fPrev=null, fLoss=0;   // follow*: active/standing-down, same-colour run, consecutive-loss counter
 let fDeficit=0, fRecovery=false;                 // follow12: accumulated loss to recover, and whether the next bet is the recovery bet
+let fHist='';                                    // follow15: last up to 3 candle colours ('g'/'r') to detect the A A B A pattern
 
 function fmt(n){return (n==null?0:n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});}
 function clk(ms){try{return new Date(ms).toLocaleTimeString('fa-IR');}catch(e){return '—';}}
@@ -325,6 +335,7 @@ async function getKlines(){
 // alternation trigger, restarting from the base step. Any win also resets to base.
 function maxStepVal(){ return Math.max(1,parseInt(document.getElementById('maxStep').value)||3); }
 function f13Steps(){ const e=document.getElementById('f13N'); return Math.max(1,parseInt(e&&e.value)||3); }   // follow13: max martingale doublings
+function f15Steps(){ const e=document.getElementById('f15N'); return Math.max(1,parseInt(e&&e.value)||5); }   // follow15: max martingale doublings across pattern repeats
 function stratVal(){ const e=document.getElementById('strat'); return e?e.value:'alt'; }
 // Strategies that must WAIT for an entry trigger (2 same-colour candles) before
 // their first bet start with fActive=false; the rest are active from candle 1.
@@ -464,6 +475,23 @@ function decideFollow14(color){
   if(!fActive){ if(fRun>=2){ fActive=true; step=0; fLoss=0; } else return null; }
   return color==='green'?'up':'down';
 }
+// "follow15": wait for the exact 4-candle pattern A A B A (two same, one opposite,
+// then back to A = two alternations total). On completion, bet the NEXT candle in
+// the direction of the last candle (continuation of A). A loss doesn't ride the
+// next candles — it waits for the pattern to recur and re-enters at DOUBLE (a
+// martingale ACROSS pattern occurrences), up to f15N steps, then resets to base.
+// fHist holds the 3 candle colours preceding the current one ('g'/'r').
+function decideFollow15(color){
+  if(color==='none'){ fHist=''; return null; }
+  const c = color==='green' ? 'g' : 'r';
+  let bet=null;
+  if(fHist.length>=3){
+    const h1=fHist[fHist.length-3], h2=fHist[fHist.length-2], h3=fHist[fHist.length-1];
+    if(h1===h2 && h3!==h2 && c===h2) bet = color==='green'?'up':'down';   // A A B A -> follow A
+  }
+  fHist=(fHist+c).slice(-3);
+  return bet;
+}
 
 // Strategy-specific reaction to a resolved bet, adjusting the martingale step/state.
 function applyResult(won){
@@ -549,6 +577,12 @@ function applyResult(won){
     if(!won){ fLoss++; if(fLoss>=2){ fActive=false; fRun=0; fPrev=null; } }  // 2nd loss -> stand down for a fresh 2-same trigger
     return;                                    // wins keep riding; they do NOT refund the budget
   }
+  if(s==='follow15'){                         // martingale across pattern repeats, cap at N then back to base
+    const N=f15Steps();
+    if(won) step=0;
+    else step=(step<N)?step+1:0;               // each losing entry doubles the next qualifying entry
+    return;
+  }
   // 'alt' (alternation-triggered martingale)
   if(won){ step=0; abArmed=false; abCommitted=false; abReentry=false; }
   else step=Math.min(step+1,30);
@@ -568,6 +602,7 @@ function decide(color){
   if(stratVal()==='follow12') return decideFollow12(color);
   if(stratVal()==='follow13') return decideFollow13(color);
   if(stratVal()==='follow14') return decideFollow14(color);
+  if(stratVal()==='follow15') return decideFollow15(color);
   const need=Math.max(1,parseInt(document.getElementById('altN').value)||5);
   const isFlip = (prevColor && color!=='none' && color!==prevColor);
   const same = (prevColor && color!=='none' && color===prevColor);
@@ -685,6 +720,7 @@ function onStrat(){
   document.getElementById('stratFollow12').style.display = (s==='follow12') ? 'block' : 'none';
   document.getElementById('stratFollow13').style.display = (s==='follow13') ? 'block' : 'none';
   document.getElementById('stratFollow14').style.display = (s==='follow14') ? 'block' : 'none';
+  document.getElementById('stratFollow15').style.display = (s==='follow15') ? 'block' : 'none';
 }
 function isFollowStrat(){ const s=stratVal(); return s.indexOf('follow')===0; }
 function onDayMode(){
@@ -785,7 +821,7 @@ async function poll(){
       // streak + martingale and continue cleanly from the current candle.
       if(openBet){ openBet.won=false; openBet.pnl=-openBet.stake; losses++; trades.unshift(openBet); trades=trades.slice(0,500); openBet=null; }
       step=0; streakLen=0; prevColor=null; altLen=0; abArmed=false; abCommitted=false; abReentry=false;
-      fActive=freshActive(); fRun=0; fPrev=null; fLoss=0; fDeficit=0; fRecovery=false;
+      fActive=freshActive(); fRun=0; fPrev=null; fLoss=0; fDeficit=0; fRecovery=false; fHist='';
       lastClosedOpen=lastOid;
       if(bal<=0.01){ stop(); setMsg('موجودی تمام شد — متوقف شد (بازپرداختِ خودکار انجام نشد).'); render(); saveState(); busy=false; return; }
       await onClosedCandle(o,c,ct,true,lastOid);
@@ -808,11 +844,11 @@ function val(id){return document.getElementById(id).value;}
 function setVal(id,v){ if(v!=null && document.getElementById(id)) document.getElementById(id).value=v; }
 function saveState(){
   try{ localStorage.setItem('polybot', JSON.stringify({
-    running: !!pollTimer, bal, start, openBet, trades, wins, losses, step, prevColor, streakLen, lastClosedOpen, altLen, abArmed, abCommitted, abReentry, fActive, fRun, fPrev, fLoss, fDeficit, fRecovery,
+    running: !!pollTimer, bal, start, openBet, trades, wins, losses, step, prevColor, streakLen, lastClosedOpen, altLen, abArmed, abCommitted, abReentry, fActive, fRun, fPrev, fLoss, fDeficit, fRecovery, fHist,
     cfg:{tf:val('tf'),amt:val('amt'),bal:val('bal'),mode:val('mode'),
       maxEntry:val('maxEntry'),altN:val('altN'),maxStep:val('maxStep'),strat:val('strat'),
       btFromDay:val('btFromDay'),btToDay:val('btToDay'),btFromHour:val('btFromHour'),btToHour:val('btToHour'),
-      btDayMode:val('btDayMode'),btOneDay:val('btOneDay'),src:val('src'),unlimited:document.getElementById('unlimited').checked,f13N:val('f13N')}
+      btDayMode:val('btDayMode'),btOneDay:val('btOneDay'),src:val('src'),unlimited:document.getElementById('unlimited').checked,f13N:val('f13N'),f15N:val('f15N')}
   })); }catch(e){}
 }
 function loadState(){            // returns running flag, or null if nothing saved
@@ -821,12 +857,12 @@ function loadState(){            // returns running flag, or null if nothing sav
   bal=s.bal; start=s.start; openBet=s.openBet||null; trades=s.trades||[]; wins=s.wins||0; losses=s.losses||0;
   step=s.step||0; prevColor=s.prevColor||null; streakLen=s.streakLen||0;
   altLen=s.altLen||0; abArmed=!!s.abArmed; abCommitted=!!s.abCommitted; abReentry=!!s.abReentry;
-  fActive=(s.fActive!==undefined)?!!s.fActive:true; fRun=s.fRun||0; fPrev=s.fPrev||null; fLoss=s.fLoss||0; fDeficit=s.fDeficit||0; fRecovery=!!s.fRecovery;
+  fActive=(s.fActive!==undefined)?!!s.fActive:true; fRun=s.fRun||0; fPrev=s.fPrev||null; fLoss=s.fLoss||0; fDeficit=s.fDeficit||0; fRecovery=!!s.fRecovery; fHist=s.fHist||'';
   lastClosedOpen=(s.lastClosedOpen!=null)?s.lastClosedOpen:null;
   if(s.cfg){const c=s.cfg; setVal('tf',c.tf); setVal('amt',c.amt);setVal('bal',c.bal);
     setVal('mode',c.mode); setVal('maxEntry',c.maxEntry); setVal('altN',c.altN); setVal('maxStep',c.maxStep); setVal('strat',c.strat);
     setVal('btFromDay',c.btFromDay); setVal('btToDay',c.btToDay); setVal('btFromHour',c.btFromHour); setVal('btToHour',c.btToHour);
-    setVal('btDayMode',c.btDayMode); setVal('btOneDay',c.btOneDay); setVal('src',c.src); setVal('f13N',c.f13N);
+    setVal('btDayMode',c.btDayMode); setVal('btOneDay',c.btOneDay); setVal('src',c.src); setVal('f13N',c.f13N); setVal('f15N',c.f15N);
     if(c.unlimited!==undefined) document.getElementById('unlimited').checked=c.unlimited; onMode(); onStrat(); onDayMode();}
   return !!s.running;
 }
@@ -894,7 +930,7 @@ function reset(){
   stop();
   lastClosedOpen=null; formingClose=0; curPrice=null; curColor='none';
   openBet=null; trades=[]; wins=0; losses=0; step=0; prevColor=null; streakLen=0; altLen=0; abArmed=false; abCommitted=false; abReentry=false;
-  fActive=freshActive(); fRun=0; fPrev=null; fLoss=0; fDeficit=0; fRecovery=false;
+  fActive=freshActive(); fRun=0; fPrev=null; fLoss=0; fDeficit=0; fRecovery=false; fHist='';
   lastStake=null; mIdx=0; mEntries={}; try{ drawChart(); }catch(e){}
   bal=parseFloat(document.getElementById('bal').value)||100; start=bal;
   setMsg(''); document.getElementById('cd').textContent='—';
@@ -1002,7 +1038,7 @@ async function runBacktest(){
     // fresh trading state for the backtest
     bal=parseFloat(document.getElementById('bal').value)||100; start=bal;
     openBet=null; trades=[]; wins=0; losses=0; step=0; prevColor=null; streakLen=0; altLen=0; abArmed=false; abCommitted=false; abReentry=false;
-    fActive=freshActive(); fRun=0; fPrev=null; fLoss=0; fDeficit=0; fRecovery=false;
+    fActive=freshActive(); fRun=0; fPrev=null; fLoss=0; fDeficit=0; fRecovery=false; fHist='';
   lastStake=null; lastClosedOpen=null;
     btCandles=candles; btIdx=0; btIn=0;
     const speed=Math.max(0.2,parseFloat(document.getElementById('btSpeed').value)||2)*1000;
@@ -1028,7 +1064,7 @@ function btStep(o,c,ct,colorOverride){
   // app after a gap). Bets opened in-window still resolved above.
   if(!inTradeWindow(ct)){
     step=0; prevColor=null; streakLen=0; altLen=0; abArmed=false; abCommitted=false; abReentry=false;
-    fActive=freshActive(); fRun=0; fPrev=null; fLoss=0; fDeficit=0; fRecovery=false;
+    fActive=freshActive(); fRun=0; fPrev=null; fLoss=0; fDeficit=0; fRecovery=false; fHist='';
     return;
   }
   btIn++;
@@ -1108,7 +1144,7 @@ async function manualLoad(){
     // fresh trading state
     bal=parseFloat(document.getElementById('bal').value)||100; start=bal;
     openBet=null; trades=[]; wins=0; losses=0; step=0; prevColor=null; streakLen=0; altLen=0; abArmed=false; abCommitted=false; abReentry=false;
-    fActive=freshActive(); fRun=0; fPrev=null; fLoss=0; fDeficit=0; fRecovery=false; lastStake=null;
+    fActive=freshActive(); fRun=0; fPrev=null; fLoss=0; fDeficit=0; fRecovery=false; fHist=''; lastStake=null;
     btCandles=candles; mIdx=0; mEntries={};
     drawChart(); render();
     info.textContent='بارگذاری شد: '+candles.length+' کندل ('+sourceVal()+'). «بعدی» را بزن تا کندل‌ها یکی‌یکی جلو بروند.';
@@ -1177,11 +1213,11 @@ function drawChart(){
 // profitable/safest and which lost the most. Pure per-cell state mirrors the
 // live decide()/applyResult() exactly (validated against the main backtest).
 function freshCell(startBal,strat){
-  return {bal:startBal, wins:0, losses:0, step:0, fActive:(waitsToStart(strat)?false:true), fRun:0, fPrev:null, fLoss:0, fDeficit:0, fRecovery:false,
+  return {bal:startBal, wins:0, losses:0, step:0, fActive:(waitsToStart(strat)?false:true), fRun:0, fPrev:null, fLoss:0, fDeficit:0, fRecovery:false, fHist:'',
     prevColor:null, altLen:0, abArmed:false, peak:startBal, maxDD:0, lastKey:null};
 }
 function resetSession(st,strat){
-  st.step=0; st.fActive=(waitsToStart(strat)?false:true); st.fRun=0; st.fPrev=null; st.fLoss=0; st.fDeficit=0; st.fRecovery=false; st.prevColor=null; st.altLen=0; st.abArmed=false;
+  st.step=0; st.fActive=(waitsToStart(strat)?false:true); st.fRun=0; st.fPrev=null; st.fLoss=0; st.fDeficit=0; st.fRecovery=false; st.fHist=''; st.prevColor=null; st.altLen=0; st.abArmed=false;
 }
 function decideCellFollow1(st,color){
   if(color==='none'){ st.fRun=0; st.fPrev='none'; return null; }
@@ -1260,6 +1296,18 @@ function decideCellFollow14(st,color){
   if(!st.fActive){ if(st.fRun>=2){ st.fActive=true; st.step=0; st.fLoss=0; } else return null; }
   return color==='green'?'up':'down';
 }
+function decideCellFollow15(st,color){
+  if(color==='none'){ st.fHist=''; return null; }
+  const c = color==='green' ? 'g' : 'r';
+  let bet=null;
+  const h=st.fHist||'';
+  if(h.length>=3){
+    const h1=h[h.length-3], h2=h[h.length-2], h3=h[h.length-1];
+    if(h1===h2 && h3!==h2 && c===h2) bet = color==='green'?'up':'down';
+  }
+  st.fHist=(h+c).slice(-3);
+  return bet;
+}
 function decideCellAlt(st,color,need,maxStep){
   const isFlip=(st.prevColor && color!=='none' && color!==st.prevColor);
   const same=(st.prevColor && color!=='none' && color===st.prevColor);
@@ -1276,6 +1324,7 @@ function applyCell(st,won,strat,stk){
   if(strat==='follow12'){ if(won){ if(st.fRecovery){ st.fDeficit=0; st.fRecovery=false; } else st.fRecovery=(st.fDeficit>0); } else { st.fDeficit += (stk||0); if(st.fRecovery){ st.fActive=false; st.fRecovery=false; st.fRun=0; st.fPrev=null; } else st.fRecovery=true; } return; }
   if(strat==='follow13'){ const N=f13Steps(); if(won) st.step=0; else if(st.step<N) st.step++; else { st.step=0; st.fActive=false; st.fRun=0; st.fPrev=null; } return; }
   if(strat==='follow14'){ st.step=0; if(!won){ st.fLoss++; if(st.fLoss>=2){ st.fActive=false; st.fRun=0; st.fPrev=null; } } return; }
+  if(strat==='follow15'){ const N=f15Steps(); if(won) st.step=0; else st.step=(st.step<N)?st.step+1:0; return; }
   if(strat==='follow1'){ if(won) st.step=0; else if(st.step===0) st.step=1; else { st.step=0; st.fActive=false; } return; }
   if(strat==='follow2'){ if(won) st.step=0; else if(st.step===0) st.step=1; else { st.step=Math.min(st.step+1,30); st.fActive=false; } return; }
   if(strat==='follow3'){ if(won){ st.step=0; st.fLoss=0; } else { st.step=0; st.fLoss++; if(st.fLoss>=2) st.fActive=false; } return; }
@@ -1304,9 +1353,10 @@ function decideCell(st,color,strat,need,maxStep){
   if(strat==='follow12') return decideCellFollow12(st,color);
   if(strat==='follow13') return decideCellFollow13(st,color);
   if(strat==='follow14') return decideCellFollow14(st,color);
+  if(strat==='follow15') return decideCellFollow15(st,color);
   return decideCellAlt(st,color,need,maxStep);
 }
-function stratName(s){ return s==='follow1'?'همرنگ+یک‌پله':s==='follow2'?'همرنگ+ادامه‌دار':s==='follow3'?'همرنگ+بعد از توقف':s==='follow4'?'همرنگ+۳کندلِ ورود':s==='follow5'?'همرنگ+۳پله':s==='follow6'?'همرنگ+ایست‌ومارتینگل':s==='follow7'?'۲هم‌رنگ+حجمِ ثابت':s==='follow8'?'۲هم‌رنگ+۳پله+توقف':s==='follow9'?'۲هم‌رنگ+یک‌پله(پایه)':s==='follow10'?'۲هم‌رنگ+یک‌پله(ادامه)':s==='follow11'?'۲هم‌رنگ+دوبرابرِ۳کندل':s==='follow12'?'مارتینگلِ جبرانی':s==='follow13'?'مارتینگلِ ساده(Nپله)':s==='follow14'?'۲هم‌رنگ+پایه(۲تناوب)':'مارتینگلِ تناوبی'; }
+function stratName(s){ return s==='follow1'?'همرنگ+یک‌پله':s==='follow2'?'همرنگ+ادامه‌دار':s==='follow3'?'همرنگ+بعد از توقف':s==='follow4'?'همرنگ+۳کندلِ ورود':s==='follow5'?'همرنگ+۳پله':s==='follow6'?'همرنگ+ایست‌ومارتینگل':s==='follow7'?'۲هم‌رنگ+حجمِ ثابت':s==='follow8'?'۲هم‌رنگ+۳پله+توقف':s==='follow9'?'۲هم‌رنگ+یک‌پله(پایه)':s==='follow10'?'۲هم‌رنگ+یک‌پله(ادامه)':s==='follow11'?'۲هم‌رنگ+دوبرابرِ۳کندل':s==='follow12'?'مارتینگلِ جبرانی':s==='follow13'?'مارتینگلِ ساده(Nپله)':s==='follow14'?'۲هم‌رنگ+پایه(۲تناوب)':s==='follow15'?'الگوی AABA+مارتینگل':'مارتینگلِ تناوبی'; }
 
 async function dayHourScan(){
   const sm=document.getElementById('scanMsg'), out=document.getElementById('scanOut');
@@ -1414,7 +1464,7 @@ async function dayHourScan(){
 })();
 
 // Version badge — lets you confirm the browser isn't showing a cached old copy.
-const APP_VERSION = "v41";
+const APP_VERSION = "v42";
 try{ document.getElementById('ver').textContent = APP_VERSION; }catch(e){}
 
 // On open: restore the saved session and resume (catching up while you were away).
