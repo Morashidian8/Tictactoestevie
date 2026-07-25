@@ -44,6 +44,38 @@ TF_LABEL = os.environ.get("TF_LABEL", "").strip()
 ALTERNATION_THRESHOLD = int(os.environ.get("ALTERNATION_THRESHOLD", "5"))
 POLL_SECONDS = int(os.environ.get("POLL_SECONDS", "20"))
 
+# --- Breakout-fade alerts (docs/research/btc-5m-patterns.md, "RULE 1") --------
+# When a 5-minute CLOSE breaks beyond the highest/lowest close of the previous
+# BREAKOUT_LOOKBACK candles while volatility is expanding, bet that the NEXT
+# window closes the other way. Measured out-of-sample on 162k real 5m candles
+# with a chronological holdout:
+#     close-only levels, close-to-close target, vol filter -> 56.0%  (z=+8.5)
+#     close-only levels, no vol filter                     -> 54.2%  (z=+8.5)
+# The close-only form is used because it needs nothing but a series of closing
+# prices, which is all any Polymarket-compatible feed can give us.
+#
+# STRATEGY selects which alerts run: "alternation" (legacy), "breakout", or
+# "both" (default). Set STRATEGY=alternation to restore the old behaviour.
+STRATEGY = os.environ.get("STRATEGY", "both").strip().lower()
+BREAKOUT_LOOKBACK = int(os.environ.get("BREAKOUT_LOOKBACK", "20"))
+BREAKOUT_VOL_FILTER = os.environ.get("BREAKOUT_VOL_FILTER", "1").strip() not in ("0", "false", "no")
+BREAKOUT_VOL_TH = float(os.environ.get("BREAKOUT_VOL_TH", "0.8884"))
+# Candles of history the rule needs: 100 for the slow volatility window, plus
+# the lookback, plus slack.
+BREAKOUT_HISTORY = 100 + BREAKOUT_LOOKBACK + 10
+# Minimum seconds between breakout alerts (0 = alert on every signal, which is
+# what the research measures — consecutive signals are genuinely separate bets).
+BREAKOUT_COOLDOWN = int(os.environ.get("BREAKOUT_COOLDOWN", "0"))
+# Price feed for the breakout rule:
+#   "chainlink" - Chainlink BTC/USD via a public Polygon RPC (what Polymarket
+#                 settles on; matches the market exactly)
+#   "binance"   - spot closes; a DIFFERENT feed, so levels drift from settlement
+BREAKOUT_FEED = os.environ.get("BREAKOUT_FEED", "chainlink").strip().lower()
+POLYGON_RPC = os.environ.get("POLYGON_RPC", "https://polygon-rpc.com").strip()
+# Chainlink BTC/USD aggregator proxy on Polygon PoS.
+CHAINLINK_BTC_USD = os.environ.get(
+    "CHAINLINK_BTC_USD", "0xc907E116054Ad103354f2D350FD2514433D57F6f").strip()
+
 # --- User-adjustable alternation threshold (from Telegram) ---------------------
 # The user-facing unit is "تناوب" (a color flip). A run of `streak` candles has
 # `streak - 1` flips, so a flip-threshold of F fires when `streak >= F + 1`.
@@ -537,6 +569,115 @@ def dir_label(d: int) -> str:
 
 
 # ---------------------------------------------------------------------------
+# Breakout-fade strategy (RULE 1 of docs/research/btc-5m-patterns.md)
+# ---------------------------------------------------------------------------
+# Price feed. Polymarket's BTC Up/Down markets settle on Chainlink BTC/USD, so
+# the levels must come from that same feed — Binance is a different feed and its
+# levels drift from settlement. Chainlink is read with a single eth_call
+# (latestRoundData(), selector 0xfeaf968c) against a public Polygon RPC, which
+# needs no API key and no web3 dependency.
+CHAINLINK_DECIMALS = 8
+_LATEST_ROUND_DATA = "0xfeaf968c"
+
+
+def fetch_chainlink_btc():
+    """Return (price_usd, updated_at_unix) from Chainlink BTC/USD on Polygon."""
+    payload = {
+        "jsonrpc": "2.0", "id": 1, "method": "eth_call",
+        "params": [{"to": CHAINLINK_BTC_USD, "data": _LATEST_ROUND_DATA}, "latest"],
+    }
+    resp = requests.post(POLYGON_RPC, json=payload, timeout=15,
+                         headers={"User-Agent": "btc-candle-alert-bot/1.0"})
+    resp.raise_for_status()
+    body = resp.json()
+    if "error" in body:
+        raise RuntimeError(f"RPC error: {body['error']}")
+    raw = body.get("result", "")
+    if not raw.startswith("0x") or len(raw) < 2 + 64 * 5:
+        raise RuntimeError(f"unexpected latestRoundData result: {raw[:80]}")
+    words = [raw[2 + 64 * i: 2 + 64 * (i + 1)] for i in range(5)]
+    answer = int(words[1], 16)
+    if answer >= 1 << 255:  # int256 two's complement
+        answer -= 1 << 256
+    updated_at = int(words[3], 16)
+    return answer / (10 ** CHAINLINK_DECIMALS), updated_at
+
+
+def fetch_binance_btc():
+    """Fallback feed: last traded price from Binance spot."""
+    last_err = None
+    for host in BINANCE_HOSTS:
+        try:
+            r = requests.get(f"{host}/api/v3/ticker/price",
+                             params={"symbol": "BTCUSDT"}, timeout=15,
+                             headers={"User-Agent": "btc-candle-alert-bot/1.0"})
+            r.raise_for_status()
+            return float(r.json()["price"]), int(time.time())
+        except Exception as exc:  # noqa: BLE001 - try the next host
+            last_err = exc
+    raise last_err if last_err else RuntimeError("all Binance hosts failed")
+
+
+def fetch_spot_price():
+    if BREAKOUT_FEED == "binance":
+        return fetch_binance_btc()
+    return fetch_chainlink_btc()
+
+
+def _stdev(values):
+    n = len(values)
+    if n < 2:
+        return 0.0
+    mean = sum(values) / n
+    return (sum((v - mean) ** 2 for v in values) / (n - 1)) ** 0.5
+
+
+def breakout_signal(closes, lookback=None, vol_filter=None, vol_th=None):
+    """
+    Evaluate RULE 1 on a series of 5-minute closing prices (oldest -> newest).
+
+    Returns None when no signal, otherwise a dict describing the bet:
+      bet    "up" | "down"   — the direction to back for the NEXT window
+      level  the 20-close high/low that was broken
+      ratio  vol20/vol100 (None when the filter is off or history is short)
+
+    The last element of `closes` must be the just-closed window. Levels use the
+    `lookback` closes BEFORE it — including the current close would make a break
+    arithmetically impossible.
+    """
+    lookback = BREAKOUT_LOOKBACK if lookback is None else lookback
+    vol_filter = BREAKOUT_VOL_FILTER if vol_filter is None else vol_filter
+    vol_th = BREAKOUT_VOL_TH if vol_th is None else vol_th
+
+    if len(closes) < lookback + 2:
+        return None
+    cur = closes[-1]
+    window = closes[-(lookback + 1):-1]
+    hi, lo = max(window), min(window)
+    if cur > hi:
+        bet, level, kind = "down", hi, "up"
+    elif cur < lo:
+        bet, level, kind = "up", lo, "down"
+    else:
+        return None
+
+    ratio = None
+    if vol_filter:
+        # Needs 101 closes for 100 returns; skip the filter until history fills.
+        if len(closes) >= 101:
+            tail = closes[-101:]  # only the slow window matters — keep this O(1)
+            rets = [(tail[i] - tail[i - 1]) / tail[i - 1]
+                    for i in range(1, len(tail)) if tail[i - 1]]
+            slow = _stdev(rets)
+            if slow <= 0:
+                return None
+            ratio = _stdev(rets[-20:]) / slow
+            if ratio < vol_th:
+                return None
+    return {"bet": bet, "level": level, "kind": kind, "close": cur, "ratio": ratio}
+
+
+# ---------------------------------------------------------------------------
 # Monitoring loop
 # ---------------------------------------------------------------------------
 class Monitor:
@@ -683,6 +824,160 @@ class Monitor:
             time.sleep(backoff)
 
 
+class BreakoutMonitor:
+    """
+    Sample the settlement feed once per 5-minute boundary, keep a rolling series
+    of closes, and alert when RULE 1 fires.
+
+    The close of window [T, T+300) is the feed's price at T+300, so the sample
+    taken just after a boundary IS that window's close — and the bet it implies
+    is on the window that has only just opened, which is exactly the market the
+    user can still buy into.
+    """
+
+    STATE_FILE = os.environ.get("BREAKOUT_STATE", "breakout_closes.json")
+
+    def __init__(self, chat_id: str):
+        self.chat_id = chat_id
+        self.closes = []          # 5-minute closing prices, oldest -> newest
+        self.last_window = 0      # start of the most recent window we closed
+        self.last_alert = 0.0
+        self.seeded_from = None   # feed used to backfill history, if any
+        self._load()
+
+    # -- persistence: survive a Termux restart without losing 11h of history --
+    def _load(self):
+        try:
+            with open(self.STATE_FILE) as f:
+                s = json.load(f)
+            self.closes = [float(x) for x in s.get("closes", [])][-BREAKOUT_HISTORY:]
+            self.last_window = int(s.get("last_window", 0))
+            if self.closes:
+                log.info("Breakout: restored %d closes from %s",
+                         len(self.closes), self.STATE_FILE)
+        except FileNotFoundError:
+            pass
+        except Exception as exc:  # noqa: BLE001 - corrupt state must not be fatal
+            log.warning("Breakout: could not read %s: %s", self.STATE_FILE, exc)
+
+    def _save(self):
+        try:
+            with open(self.STATE_FILE, "w") as f:
+                json.dump({"closes": self.closes[-BREAKOUT_HISTORY:],
+                           "last_window": self.last_window}, f)
+        except Exception as exc:  # noqa: BLE001 - disk issues must not be fatal
+            log.warning("Breakout: could not write %s: %s", self.STATE_FILE, exc)
+
+    def _seed(self):
+        """
+        Backfill history so the rule is usable immediately.
+
+        The Chainlink feed cannot be queried for 5-minute history without
+        walking hundreds of on-chain rounds, so Binance 5m closes are used to
+        prime the series. They are a *different* feed, but only the SHAPE of the
+        recent series matters (rolling extremes and a volatility ratio), and the
+        seeded values age out of the window within ~11 hours of live sampling.
+        """
+        if len(self.closes) >= BREAKOUT_LOOKBACK + 2:
+            return
+        try:
+            rows = None
+            for host in BINANCE_HOSTS:
+                try:
+                    r = requests.get(f"{host}/api/v3/klines",
+                                     params={"symbol": "BTCUSDT", "interval": "5m",
+                                             "limit": BREAKOUT_HISTORY},
+                                     timeout=20,
+                                     headers={"User-Agent": "btc-candle-alert-bot/1.0"})
+                    r.raise_for_status()
+                    rows = r.json()
+                    break
+                except requests.RequestException as exc:
+                    log.warning("Breakout seed: %s failed: %s", host, exc)
+            if not rows:
+                return
+            now = time.time()
+            closed = [row for row in rows if int(row[6]) / 1000.0 <= now]
+            self.closes = [float(row[4]) for row in closed][-BREAKOUT_HISTORY:]
+            if closed:
+                self.last_window = int(closed[-1][0]) // 1000 // GRANULARITY * GRANULARITY
+            self.seeded_from = "binance"
+            log.info("Breakout: seeded %d closes from Binance (levels refine as "
+                     "live %s samples replace them).", len(self.closes), BREAKOUT_FEED)
+            self._save()
+        except Exception as exc:  # noqa: BLE001 - seeding is best-effort
+            log.warning("Breakout: seeding failed: %s", exc)
+
+    def _alert(self, sig, window_start):
+        if BREAKOUT_COOLDOWN and time.time() - self.last_alert < BREAKOUT_COOLDOWN:
+            log.info("Breakout: signal suppressed by cooldown.")
+            return
+        self.last_alert = time.time()
+        bet_fa = "🟢 بالا (Up)" if sig["bet"] == "up" else "🔴 پایین (Down)"
+        broke = "بالاتر از سقف" if sig["kind"] == "up" else "پایین‌تر از کف"
+        opens = datetime.fromtimestamp(window_start, tz=timezone.utc)
+        ends = datetime.fromtimestamp(window_start + GRANULARITY, tz=timezone.utc)
+        ratio = (f"{sig['ratio']:.2f}" if sig["ratio"] is not None
+                 else "—  (هنوز تاریخچهٔ کافی نیست؛ فیلترِ نوسان غیرفعال)")
+        seed_note = ("\n⚠️ بخشی از تاریخچه از Binance پر شده — تا چند ساعت آینده "
+                     "با دادهٔ زندهٔ فید جایگزین می‌شود."
+                     if self.seeded_from and len(self.closes) < BREAKOUT_HISTORY else "")
+        text = (
+            "🎯 <b>سیگنالِ شکست — روی کندلِ بعدی شرط ببند</b>\n\n"
+            f"جهتِ پیشنهادی: <b>{bet_fa}</b>\n\n"
+            f"قیمت <b>${sig['close']:,.2f}</b> بست، یعنی {broke} "
+            f"{BREAKOUT_LOOKBACK} کندلِ اخیر (<b>${sig['level']:,.2f}</b>).\n"
+            f"نسبتِ نوسان: {ratio}\n"
+            f"فید: <b>{BREAKOUT_FEED}</b>\n\n"
+            f"پنجرهٔ شرط: {opens:%H:%M} تا {ends:%H:%M} UTC\n\n"
+            "دقتِ تاریخی این قانون <b>۵۶٪</b> است (نه بیشتر). "
+            "اگر پلی‌مارکت این سمت را بالای <b>۵۵ سنت</b> می‌فروشد، وارد نشو."
+        )
+        log.info("Breakout ALERT: bet=%s close=%.2f level=%.2f",
+                 sig["bet"], sig["close"], sig["level"])
+        send_message(self.chat_id, text)
+
+    def _on_window_close(self, window_start, price):
+        self.closes.append(price)
+        if len(self.closes) > BREAKOUT_HISTORY:
+            self.closes = self.closes[-BREAKOUT_HISTORY:]
+        self.last_window = window_start
+        self._save()
+        sig = breakout_signal(self.closes)
+        log.info("Breakout: window %s closed at %.2f (%d closes) -> %s",
+                 datetime.fromtimestamp(window_start, tz=timezone.utc).strftime("%H:%M"),
+                 price, len(self.closes), sig["bet"] if sig else "no signal")
+        if sig:
+            self._alert(sig, window_start + GRANULARITY)
+
+    def run(self, max_runtime=None):
+        started = time.time()
+        self._seed()
+        backoff = POLL_SECONDS
+        while True:
+            if max_runtime is not None and time.time() - started >= max_runtime:
+                log.info("Breakout: max runtime reached; exiting.")
+                return
+            try:
+                now = time.time()
+                # The window that has most recently ENDED.
+                ended = (int(now) // GRANULARITY - 1) * GRANULARITY
+                if ended > self.last_window:
+                    price, updated = fetch_spot_price()
+                    # A stale oracle answer would misprice the close; skip it and
+                    # retry on the next poll rather than record a bad candle.
+                    if updated and now - updated > 2 * GRANULARITY:
+                        log.warning("Breakout: %s price is %ds stale; skipping.",
+                                    BREAKOUT_FEED, int(now - updated))
+                    else:
+                        self._on_window_close(ended, price)
+                backoff = POLL_SECONDS
+            except Exception as exc:  # noqa: BLE001 - keep the 24/7 loop alive
+                log.error("Breakout poll error: %s", exc)
+                backoff = min(backoff * 2, 300)
+            time.sleep(backoff)
+
+
 # ---------------------------------------------------------------------------
 # Telegram command listener (auto-captures chat_id, /start, /status)
 # ---------------------------------------------------------------------------
@@ -798,6 +1093,20 @@ def main():
         target=command_listener, args=(monitor,), daemon=True
     )
     listener.start()
+
+    if STRATEGY in ("breakout", "both"):
+        breakout = BreakoutMonitor(TELEGRAM_CHAT_ID)
+        log.info(
+            "Breakout-fade alerts ON | feed=%s lookback=%d vol_filter=%s",
+            BREAKOUT_FEED, BREAKOUT_LOOKBACK, BREAKOUT_VOL_FILTER,
+        )
+        threading.Thread(target=breakout.run, daemon=True).start()
+
+    if STRATEGY == "breakout":
+        # Only the breakout alerts were requested; park the main thread on it
+        # instead of also running the alternation monitor.
+        while True:
+            time.sleep(3600)
 
     log.info(
         "Starting BTC candle alternation bot | product=%s granularity=%ds "
