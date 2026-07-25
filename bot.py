@@ -30,6 +30,32 @@ except Exception:
 # ---------------------------------------------------------------------------
 TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN", "").strip()
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "").strip()
+# Where a chat id discovered from /start is remembered. Without this the id is
+# lost on every restart, and because Telegram only replays *unread* updates the
+# bot then stays mute until the user happens to message it again — which is
+# exactly when an alert would be missed.
+CHAT_ID_FILE = os.environ.get("CHAT_ID_FILE", ".chat_id")
+
+
+def load_chat_id():
+    """Chat id from the environment, else the one remembered from /start."""
+    if TELEGRAM_CHAT_ID:
+        return TELEGRAM_CHAT_ID
+    try:
+        with open(CHAT_ID_FILE) as f:
+            return f.read().strip()
+    except OSError:
+        return ""
+
+
+def save_chat_id(chat_id):
+    if not chat_id or TELEGRAM_CHAT_ID:
+        return
+    try:
+        with open(CHAT_ID_FILE, "w") as f:
+            f.write(str(chat_id))
+    except OSError as exc:
+        log.warning("Could not persist chat_id: %s", exc)
 
 # Data source: "binance" (spot candles) or "polymarket" (BTC Up/Down 5m series).
 SOURCE = os.environ.get("SOURCE", "binance").strip().lower()
@@ -1090,6 +1116,7 @@ def command_listener(monitor: Monitor):
                         monitor.chat_id = str(
                             (cq.get("message") or {}).get("chat", {}).get("id", "")
                         )
+                        save_chat_id(monitor.chat_id)
                     handle_callback(monitor, cq)
                     continue
 
@@ -1101,7 +1128,8 @@ def command_listener(monitor: Monitor):
 
                 if not monitor.chat_id:
                     monitor.chat_id = chat_id
-                    log.info("Captured chat_id: %s", chat_id)
+                    save_chat_id(chat_id)
+                    log.info("Captured chat_id: %s (remembered for restarts)", chat_id)
 
                 if text.startswith("/start"):
                     send_menu(chat_id, start_text())
@@ -1162,7 +1190,10 @@ def main():
             "in your environment or .env file."
         )
 
-    monitor = Monitor(TELEGRAM_CHAT_ID)
+    chat_id = load_chat_id()
+    if chat_id and not TELEGRAM_CHAT_ID:
+        log.info("Using chat_id %s remembered from a previous /start.", chat_id)
+    monitor = Monitor(chat_id)
 
     listener = threading.Thread(
         target=command_listener, args=(monitor,), daemon=True
@@ -1170,7 +1201,7 @@ def main():
     listener.start()
 
     if STRATEGY in ("breakout", "both"):
-        breakout = BreakoutMonitor(TELEGRAM_CHAT_ID, chat_source=monitor)
+        breakout = BreakoutMonitor(chat_id, chat_source=monitor)
         log.info(
             "Breakout-fade alerts ON | feed=%s lookback=%d vol_filter=%s",
             BREAKOUT_FEED, BREAKOUT_LOOKBACK, BREAKOUT_VOL_FILTER,
