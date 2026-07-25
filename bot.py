@@ -71,10 +71,25 @@ BREAKOUT_COOLDOWN = int(os.environ.get("BREAKOUT_COOLDOWN", "0"))
 #                 settles on; matches the market exactly)
 #   "binance"   - spot closes; a DIFFERENT feed, so levels drift from settlement
 BREAKOUT_FEED = os.environ.get("BREAKOUT_FEED", "chainlink").strip().lower()
-POLYGON_RPC = os.environ.get("POLYGON_RPC", "https://polygon-rpc.com").strip()
+# Public Polygon RPCs, tried in order. Endpoints come and go — polygon-rpc.com
+# started returning 401 — so several are listed and the first that answers is
+# remembered for subsequent polls. Override with a comma-separated POLYGON_RPC.
+POLYGON_RPCS = [u.strip() for u in os.environ.get(
+    "POLYGON_RPC",
+    "https://polygon-bor-rpc.publicnode.com,"
+    "https://polygon.llamarpc.com,"
+    "https://polygon.drpc.org,"
+    "https://1rpc.io/matic,"
+    "https://polygon-mainnet.public.blastapi.io,"
+    "https://polygon.blockpi.network/v1/rpc/public,"
+    "https://polygon-rpc.com",
+).split(",") if u.strip()]
 # Chainlink BTC/USD aggregator proxy on Polygon PoS.
 CHAINLINK_BTC_USD = os.environ.get(
     "CHAINLINK_BTC_USD", "0xc907E116054Ad103354f2D350FD2514433D57F6f").strip()
+# If every Polygon RPC is unreachable, use Binance rather than stop sampling.
+# The alert says which feed produced the signal so the mismatch is never hidden.
+BREAKOUT_FALLBACK = os.environ.get("BREAKOUT_FALLBACK", "1").strip() not in ("0", "false", "no")
 
 # --- User-adjustable alternation threshold (from Telegram) ---------------------
 # The user-facing unit is "تناوب" (a color flip). A run of `streak` candles has
@@ -580,14 +595,17 @@ CHAINLINK_DECIMALS = 8
 _LATEST_ROUND_DATA = "0xfeaf968c"
 
 
-def fetch_chainlink_btc():
-    """Return (price_usd, updated_at_unix) from Chainlink BTC/USD on Polygon."""
+_rpc_idx = 0  # index of the last RPC that answered, tried first next time
+
+
+def _chainlink_call(url):
     payload = {
         "jsonrpc": "2.0", "id": 1, "method": "eth_call",
         "params": [{"to": CHAINLINK_BTC_USD, "data": _LATEST_ROUND_DATA}, "latest"],
     }
-    resp = requests.post(POLYGON_RPC, json=payload, timeout=15,
-                         headers={"User-Agent": "btc-candle-alert-bot/1.0"})
+    resp = requests.post(url, json=payload, timeout=15,
+                         headers={"User-Agent": "btc-candle-alert-bot/1.0",
+                                  "Content-Type": "application/json"})
     resp.raise_for_status()
     body = resp.json()
     if "error" in body:
@@ -599,8 +617,35 @@ def fetch_chainlink_btc():
     answer = int(words[1], 16)
     if answer >= 1 << 255:  # int256 two's complement
         answer -= 1 << 256
-    updated_at = int(words[3], 16)
-    return answer / (10 ** CHAINLINK_DECIMALS), updated_at
+    price = answer / (10 ** CHAINLINK_DECIMALS)
+    if price <= 0:
+        raise RuntimeError(f"non-positive Chainlink answer: {price}")
+    return price, int(words[3], 16)
+
+
+def fetch_chainlink_btc():
+    """
+    Return (price_usd, updated_at_unix) from Chainlink BTC/USD on Polygon.
+
+    Public RPCs rate-limit, disappear, or start demanding an API key (401), so
+    every configured endpoint is tried before giving up, starting with whichever
+    one answered last.
+    """
+    global _rpc_idx
+    errors = []
+    n = len(POLYGON_RPCS)
+    for k in range(n):
+        i = (_rpc_idx + k) % n
+        url = POLYGON_RPCS[i]
+        try:
+            result = _chainlink_call(url)
+            if k:
+                log.info("Chainlink: switched to RPC %s", url)
+            _rpc_idx = i
+            return result
+        except Exception as exc:  # noqa: BLE001 - try the next endpoint
+            errors.append(f"{url}: {str(exc)[:80]}")
+    raise RuntimeError("all Polygon RPCs failed -> " + " | ".join(errors))
 
 
 def fetch_binance_btc():
@@ -619,9 +664,23 @@ def fetch_binance_btc():
 
 
 def fetch_spot_price():
+    """
+    Return (price, updated_at, feed_used).
+
+    Chainlink is preferred because Polymarket settles on it. If every RPC is
+    down, fall back to Binance rather than losing the candle entirely — but say
+    which feed was used, since Binance levels drift from settlement.
+    """
     if BREAKOUT_FEED == "binance":
-        return fetch_binance_btc()
-    return fetch_chainlink_btc()
+        return (*fetch_binance_btc(), "binance")
+    try:
+        return (*fetch_chainlink_btc(), "chainlink")
+    except Exception as exc:  # noqa: BLE001 - degrade instead of going silent
+        if not BREAKOUT_FALLBACK:
+            raise
+        log.warning("Chainlink unavailable (%s); falling back to Binance.",
+                    str(exc)[:160])
+        return (*fetch_binance_btc(), "binance-fallback")
 
 
 def _stdev(values):
@@ -848,6 +907,7 @@ class BreakoutMonitor:
         self.last_window = 0      # start of the most recent window we closed
         self.last_alert = 0.0
         self.seeded_from = None   # feed used to backfill history, if any
+        self.feed_used = BREAKOUT_FEED  # feed that produced the latest sample
         self._load()
 
     @property
@@ -940,7 +1000,9 @@ class BreakoutMonitor:
             f"قیمت <b>${sig['close']:,.2f}</b> بست، یعنی {broke} "
             f"{BREAKOUT_LOOKBACK} کندلِ اخیر (<b>${sig['level']:,.2f}</b>).\n"
             f"نسبتِ نوسان: {ratio}\n"
-            f"فید: <b>{BREAKOUT_FEED}</b>\n\n"
+            f"فید: <b>{self.feed_used}</b>"
+            + ("  ⚠️ (Chainlink در دسترس نبود — سطوح با تسویهٔ پلی‌مارکت کمی فرق دارد)"
+               if self.feed_used == "binance-fallback" else "") + "\n\n"
             f"پنجرهٔ شرط: {opens:%H:%M} تا {ends:%H:%M} UTC\n\n"
             "دقتِ تاریخی این قانون <b>۵۶٪</b> است (نه بیشتر). "
             "اگر پلی‌مارکت این سمت را بالای <b>۵۵ سنت</b> می‌فروشد، وارد نشو."
@@ -975,7 +1037,8 @@ class BreakoutMonitor:
                 # The window that has most recently ENDED.
                 ended = (int(now) // GRANULARITY - 1) * GRANULARITY
                 if ended > self.last_window:
-                    price, updated = fetch_spot_price()
+                    price, updated, feed = fetch_spot_price()
+                    self.feed_used = feed
                     # A stale oracle answer would misprice the close; skip it and
                     # retry on the next poll rather than record a bad candle.
                     if updated and now - updated > 2 * GRANULARITY:
