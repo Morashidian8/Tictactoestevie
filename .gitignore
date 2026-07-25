@@ -11,3 +11,9 @@ outputs/
 __pycache__/
 *.pyc
 .pytest_cache/
+.chat_id
+bot.log
+breakout_closes.json
+.bot.pid
+.bot.loop.pid
+.bot.stop
