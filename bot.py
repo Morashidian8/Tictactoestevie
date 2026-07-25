@@ -837,13 +837,25 @@ class BreakoutMonitor:
 
     STATE_FILE = os.environ.get("BREAKOUT_STATE", "breakout_closes.json")
 
-    def __init__(self, chat_id: str):
-        self.chat_id = chat_id
+    def __init__(self, chat_id: str, chat_source=None):
+        # TELEGRAM_CHAT_ID is often unset — the command listener discovers it
+        # when the user sends /start, and stores it on the alternation Monitor.
+        # Hold a reference to that object (not a copy of the string) so alerts
+        # are not silently dropped for a session that started without an id.
+        self._chat_id = chat_id
+        self._chat_source = chat_source
         self.closes = []          # 5-minute closing prices, oldest -> newest
         self.last_window = 0      # start of the most recent window we closed
         self.last_alert = 0.0
         self.seeded_from = None   # feed used to backfill history, if any
         self._load()
+
+    @property
+    def chat_id(self):
+        """The live chat id — picked up from /start if it was not configured."""
+        if self._chat_source is not None and getattr(self._chat_source, "chat_id", ""):
+            return self._chat_source.chat_id
+        return self._chat_id
 
     # -- persistence: survive a Termux restart without losing 11h of history --
     def _load(self):
@@ -1095,7 +1107,7 @@ def main():
     listener.start()
 
     if STRATEGY in ("breakout", "both"):
-        breakout = BreakoutMonitor(TELEGRAM_CHAT_ID)
+        breakout = BreakoutMonitor(TELEGRAM_CHAT_ID, chat_source=monitor)
         log.info(
             "Breakout-fade alerts ON | feed=%s lookback=%d vol_filter=%s",
             BREAKOUT_FEED, BREAKOUT_LOOKBACK, BREAKOUT_VOL_FILTER,
