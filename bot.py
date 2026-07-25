@@ -92,6 +92,21 @@ BREAKOUT_HISTORY = 100 + BREAKOUT_LOOKBACK + 10
 # Minimum seconds between breakout alerts (0 = alert on every signal, which is
 # what the research measures — consecutive signals are genuinely separate bets).
 BREAKOUT_COOLDOWN = int(os.environ.get("BREAKOUT_COOLDOWN", "0"))
+
+# --- RULES 2 and 3: the other two mean-reversion edges -----------------------
+# Both are stated in terms of close-to-close moves, because that is all the
+# settlement feed gives us — and it is also exactly what Polymarket settles on.
+# Re-measured in that form on the same 162k candles (test split, close-to-close):
+#   RULE 2  3 same-direction moves + an oversized move:
+#           2.0x -> 55.7% (15/day)   2.5x -> 56.7% (10/day)   3.0x -> 56.8% (8/day)
+#   RULE 3  a run of N same-direction moves:
+#           N=3 -> 53.0% (68/day)    N=6 -> 54.1% (7/day)     N=7 -> 54.2% (3/day)
+# RULE 3 at N=3 is barely above the ~52% break-even once a spread is paid, so the
+# default is the longer, stronger run.
+RULE2_ENABLED = os.environ.get("RULE2", "1").strip() not in ("0", "false", "no")
+RULE2_MULT = float(os.environ.get("RULE2_MULT", "2.0"))
+RULE3_ENABLED = os.environ.get("RULE3", "1").strip() not in ("0", "false", "no")
+RULE3_RUN = int(os.environ.get("RULE3_RUN", "6"))
 # Price feed for the breakout rule:
 #   "chainlink" - Chainlink BTC/USD via a public Polygon RPC (what Polymarket
 #                 settles on; matches the market exactly)
@@ -762,6 +777,55 @@ def breakout_signal(closes, lookback=None, vol_filter=None, vol_th=None):
     return {"bet": bet, "level": level, "kind": kind, "close": cur, "ratio": ratio}
 
 
+def _moves(closes):
+    """Close-to-close moves; their sign is the candle colour Polymarket settles."""
+    return [closes[i] - closes[i - 1] for i in range(1, len(closes))]
+
+
+def rule2_signal(closes, mult=None):
+    """
+    RULE 2 — three same-direction moves ending in an oversized one -> fade.
+
+    "Oversized" is relative to the current regime: the move must exceed `mult`
+    times the median absolute move of the last 100 candles. Direction-symmetric
+    by construction; forcing a fixed side destroys the edge entirely.
+    """
+    mult = RULE2_MULT if mult is None else mult
+    if len(closes) < 104:
+        return None
+    mv = _moves(closes[-104:])
+    last3 = mv[-3:]
+    if any(m == 0 for m in last3):
+        return None
+    if not (last3[0] > 0) == (last3[1] > 0) == (last3[2] > 0):
+        return None
+    ref = sorted(abs(m) for m in mv[-101:-1])
+    med = ref[len(ref) // 2]
+    if med <= 0 or abs(last3[-1]) <= mult * med:
+        return None
+    return {"bet": "down" if last3[-1] > 0 else "up",
+            "move": last3[-1], "median": med, "times": abs(last3[-1]) / med}
+
+
+def rule3_signal(closes, run_len=None):
+    """RULE 3 — a run of `run_len` same-direction moves -> fade the run."""
+    run_len = RULE3_RUN if run_len is None else run_len
+    if len(closes) < run_len + 2:
+        return None
+    mv = _moves(closes)
+    tail = mv[-run_len:]
+    if any(m == 0 for m in tail):
+        return None
+    up = tail[0] > 0
+    if not all((m > 0) == up for m in tail):
+        return None
+    # Report the full run, which may be longer than the threshold.
+    n = run_len
+    while n < len(mv) and mv[-(n + 1)] != 0 and (mv[-(n + 1)] > 0) == up:
+        n += 1
+    return {"bet": "down" if up else "up", "run": n}
+
+
 # ---------------------------------------------------------------------------
 # Monitoring loop
 # ---------------------------------------------------------------------------
@@ -1006,35 +1070,50 @@ class BreakoutMonitor:
         except Exception as exc:  # noqa: BLE001 - seeding is best-effort
             log.warning("Breakout: seeding failed: %s", exc)
 
-    def _alert(self, sig, window_start):
+    def _alert(self, hits, price, window_start):
+        """
+        hits: list of (rule_name, accuracy_label, bet, detail_line).
+
+        All firing rules go in ONE message: they read the same series, so
+        separate messages would just be noise — and when they agree, that
+        agreement is itself the useful signal.
+        """
         if BREAKOUT_COOLDOWN and time.time() - self.last_alert < BREAKOUT_COOLDOWN:
-            log.info("Breakout: signal suppressed by cooldown.")
+            log.info("Signal suppressed by cooldown.")
             return
         self.last_alert = time.time()
-        bet_fa = "🟢 بالا (Up)" if sig["bet"] == "up" else "🔴 پایین (Down)"
-        broke = "بالاتر از سقف" if sig["kind"] == "up" else "پایین‌تر از کف"
         opens = datetime.fromtimestamp(window_start, tz=timezone.utc)
         ends = datetime.fromtimestamp(window_start + GRANULARITY, tz=timezone.utc)
-        ratio = (f"{sig['ratio']:.2f}" if sig["ratio"] is not None
-                 else "—  (هنوز تاریخچهٔ کافی نیست؛ فیلترِ نوسان غیرفعال)")
-        seed_note = ("\n⚠️ بخشی از تاریخچه از Binance پر شده — تا چند ساعت آینده "
-                     "با دادهٔ زندهٔ فید جایگزین می‌شود."
+        bets = {h[2] for h in hits}
+        if len(bets) == 1:
+            bet = bets.pop()
+            head = ("🟢 <b>بالا (Up)</b>" if bet == "up" else "🔴 <b>پایین (Down)</b>")
+            agree = (f"\n✅ <b>هر {len(hits)} استراتژی هم‌نظرند</b> — سیگنالِ قوی‌تر."
+                     if len(hits) > 1 else "")
+        else:
+            head = "⚠️ <b>استراتژی‌ها اختلافِ نظر دارند</b>"
+            agree = "\n⚠️ جهت‌ها یکی نیست — بهتر است این نوبت را رد کنی."
+        lines = "\n".join(
+            f"• <b>{name}</b> ({acc}) → "
+            f"{'🟢 بالا' if b == 'up' else '🔴 پایین'}\n   <i>{detail}</i>"
+            for name, acc, b, detail in hits)
+        seed_note = ("\n\n⚠️ بخشی از تاریخچه هنوز از Binance است و به‌تدریج با دادهٔ "
+                     "زندهٔ فید جایگزین می‌شود."
                      if self.seeded_from and len(self.closes) < BREAKOUT_HISTORY else "")
+        feed_note = ("  ⚠️ (Chainlink در دسترس نبود — با تسویهٔ پلی‌مارکت کمی فرق دارد)"
+                     if self.feed_used == "binance-fallback" else "")
         text = (
-            "🎯 <b>سیگنالِ شکست — روی کندلِ بعدی شرط ببند</b>\n\n"
-            f"جهتِ پیشنهادی: <b>{bet_fa}</b>\n\n"
-            f"قیمت <b>${sig['close']:,.2f}</b> بست، یعنی {broke} "
-            f"{BREAKOUT_LOOKBACK} کندلِ اخیر (<b>${sig['level']:,.2f}</b>).\n"
-            f"نسبتِ نوسان: {ratio}\n"
-            f"فید: <b>{self.feed_used}</b>"
-            + ("  ⚠️ (Chainlink در دسترس نبود — سطوح با تسویهٔ پلی‌مارکت کمی فرق دارد)"
-               if self.feed_used == "binance-fallback" else "") + "\n\n"
+            f"🎯 <b>سیگنال — روی کندلِ بعدی شرط ببند</b>\n\n"
+            f"جهتِ پیشنهادی: {head}{agree}\n\n"
+            f"{lines}\n\n"
+            f"قیمتِ بسته‌شدن: <b>${price:,.2f}</b>\n"
+            f"فید: <b>{self.feed_used}</b>{feed_note}\n"
             f"پنجرهٔ شرط: {opens:%H:%M} تا {ends:%H:%M} UTC\n\n"
-            "دقتِ تاریخی این قانون <b>۵۶٪</b> است (نه بیشتر). "
+            "دقتِ تاریخیِ این قانون‌ها <b>۵۳–۵۷٪</b> است (نه بیشتر). "
             "اگر پلی‌مارکت این سمت را بالای <b>۵۵ سنت</b> می‌فروشد، وارد نشو."
+            f"{seed_note}"
         )
-        log.info("Breakout ALERT: bet=%s close=%.2f level=%.2f",
-                 sig["bet"], sig["close"], sig["level"])
+        log.info("ALERT: %s", " | ".join(f"{n}->{b}" for n, _, b, _ in hits))
         send_message(self.chat_id, text)
 
     def _on_window_close(self, window_start, price):
@@ -1043,12 +1122,33 @@ class BreakoutMonitor:
             self.closes = self.closes[-BREAKOUT_HISTORY:]
         self.last_window = window_start
         self._save()
+
+        hits = []
         sig = breakout_signal(self.closes)
-        log.info("Breakout: window %s closed at %.2f (%d closes) -> %s",
-                 datetime.fromtimestamp(window_start, tz=timezone.utc).strftime("%H:%M"),
-                 price, len(self.closes), sig["bet"] if sig else "no signal")
         if sig:
-            self._alert(sig, window_start + GRANULARITY)
+            broke = "بالاتر از سقف" if sig["kind"] == "up" else "پایین‌تر از کف"
+            ratio = f" · نسبتِ نوسان {sig['ratio']:.2f}" if sig["ratio"] is not None else ""
+            hits.append(("۱) شکستِ ۲۰ کندلی", "۵۶٪", sig["bet"],
+                         f"{broke} {BREAKOUT_LOOKBACK} کندلِ اخیر "
+                         f"(${sig['level']:,.2f}){ratio}"))
+        if RULE2_ENABLED:
+            s2 = rule2_signal(self.closes)
+            if s2:
+                hits.append(("۲) ۳ حرکتِ هم‌جهت + حرکتِ بزرگ", "۵۶٪", s2["bet"],
+                             f"حرکتِ آخر ${abs(s2['move']):,.0f} = "
+                             f"{s2['times']:.1f}× حرکتِ معمولِ اخیر (${s2['median']:,.0f})"))
+        if RULE3_ENABLED:
+            s3 = rule3_signal(self.closes)
+            if s3:
+                hits.append(("۳) رشتهٔ هم‌جهت", "۵۴٪", s3["bet"],
+                             f"{s3['run']} حرکتِ هم‌جهتِ پیاپی"))
+
+        log.info("window %s closed at %.2f (%d closes) -> %s",
+                 datetime.fromtimestamp(window_start, tz=timezone.utc).strftime("%H:%M"),
+                 price, len(self.closes),
+                 ", ".join(f"{n}:{b}" for n, _, b, _ in hits) if hits else "no signal")
+        if hits:
+            self._alert(hits, price, window_start + GRANULARITY)
 
     def run(self, max_runtime=None):
         started = time.time()
