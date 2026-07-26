@@ -13,7 +13,7 @@ import json
 import time
 import threading
 import logging
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 import requests
 
@@ -777,6 +777,39 @@ def breakout_signal(closes, lookback=None, vol_filter=None, vol_th=None):
     return {"bet": bet, "level": level, "kind": kind, "close": cur, "ratio": ratio}
 
 
+# --- Clock helpers ----------------------------------------------------------
+# Polymarket labels its BTC Up/Down windows in US Eastern time, and the user
+# reads them on a phone set to Tehran, so an alert that only says UTC cannot be
+# matched against the market you are about to buy. Both are shown instead.
+try:
+    from zoneinfo import ZoneInfo
+    _ET = ZoneInfo("America/New_York")
+except Exception:  # noqa: BLE001 - Termux may ship without the tz database
+    _ET = None
+
+TEHRAN = timezone(timedelta(hours=3, minutes=30))  # Iran dropped DST in 2022
+
+
+def _nth_weekday_utc(year, month, weekday, nth, utc_hour):
+    """UTC timestamp of the nth `weekday` (0=Mon) of a month, at utc_hour."""
+    d = datetime(year, month, 1, utc_hour, tzinfo=timezone.utc)
+    d += timedelta(days=(weekday - d.weekday()) % 7 + 7 * (nth - 1))
+    return d.timestamp()
+
+
+def et_time(ts):
+    """Datetime in US Eastern — via zoneinfo, else the DST rules by hand."""
+    if _ET is not None:
+        return datetime.fromtimestamp(ts, _ET)
+    year = datetime.fromtimestamp(ts, tz=timezone.utc).year
+    # DST: 2nd Sunday of March 02:00 EST (07:00 UTC) .. 1st Sunday of November
+    # 02:00 EDT (06:00 UTC).
+    start = _nth_weekday_utc(year, 3, 6, 2, 7)
+    end = _nth_weekday_utc(year, 11, 6, 1, 6)
+    offset = -4 if start <= ts < end else -5
+    return datetime.fromtimestamp(ts, timezone(timedelta(hours=offset)))
+
+
 def _moves(closes):
     """Close-to-close moves; their sign is the candle colour Polymarket settles."""
     return [closes[i] - closes[i - 1] for i in range(1, len(closes))]
@@ -1082,8 +1115,9 @@ class BreakoutMonitor:
             log.info("Signal suppressed by cooldown.")
             return
         self.last_alert = time.time()
-        opens = datetime.fromtimestamp(window_start, tz=timezone.utc)
-        ends = datetime.fromtimestamp(window_start + GRANULARITY, tz=timezone.utc)
+        o_et, e_et = et_time(window_start), et_time(window_start + GRANULARITY)
+        o_ir = datetime.fromtimestamp(window_start, TEHRAN)
+        e_ir = datetime.fromtimestamp(window_start + GRANULARITY, TEHRAN)
         bets = {h[2] for h in hits}
         if len(bets) == 1:
             bet = bets.pop()
@@ -1108,7 +1142,9 @@ class BreakoutMonitor:
             f"{lines}\n\n"
             f"قیمتِ بسته‌شدن: <b>${price:,.2f}</b>\n"
             f"فید: <b>{self.feed_used}</b>{feed_note}\n"
-            f"پنجرهٔ شرط: {opens:%H:%M} تا {ends:%H:%M} UTC\n\n"
+            f"⏱ پنجرهٔ شرط — همانی که در پلی‌مارکت می‌بینی:\n"
+            f"   <b>{o_et:%I:%M}-{e_et:%I:%M%p} ET</b>   ({o_et:%b %d})\n"
+            f"   به وقتِ تهران: <b>{o_ir:%H:%M} تا {e_ir:%H:%M}</b>\n\n"
             "دقتِ تاریخیِ این قانون‌ها <b>۵۳–۵۷٪</b> است (نه بیشتر). "
             "اگر پلی‌مارکت این سمت را بالای <b>۵۵ سنت</b> می‌فروشد، وارد نشو."
             f"{seed_note}"
