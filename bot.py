@@ -92,6 +92,10 @@ BREAKOUT_HISTORY = 100 + BREAKOUT_LOOKBACK + 10
 # Minimum seconds between breakout alerts (0 = alert on every signal, which is
 # what the research measures — consecutive signals are genuinely separate bets).
 BREAKOUT_COOLDOWN = int(os.environ.get("BREAKOUT_COOLDOWN", "0"))
+# Seconds to wait past a window boundary before sampling, so the oracle has
+# published the closing price. Small, because every second of delay is a second
+# the market spends pricing in the move we are trying to fade.
+BOUNDARY_LAG = float(os.environ.get("BOUNDARY_LAG", "2"))
 
 # --- RULES 2 and 3: the other two mean-reversion edges -----------------------
 # Both are stated in terms of close-to-close moves, because that is all the
@@ -1103,7 +1107,7 @@ class BreakoutMonitor:
         except Exception as exc:  # noqa: BLE001 - seeding is best-effort
             log.warning("Breakout: seeding failed: %s", exc)
 
-    def _alert(self, hits, price, window_start):
+    def _alert(self, hits, price, window_start, lag=0.0):
         """
         hits: list of (rule_name, accuracy_label, bet, detail_line).
 
@@ -1144,7 +1148,11 @@ class BreakoutMonitor:
             f"فید: <b>{self.feed_used}</b>{feed_note}\n"
             f"⏱ پنجرهٔ شرط — همانی که در پلی‌مارکت می‌بینی:\n"
             f"   <b>{o_et:%I:%M}-{e_et:%I:%M%p} ET</b>   ({o_et:%b %d})\n"
-            f"   به وقتِ تهران: <b>{o_ir:%H:%M} تا {e_ir:%H:%M}</b>\n\n"
+            f"   به وقتِ تهران: <b>{o_ir:%H:%M} تا {e_ir:%H:%M}</b>\n"
+            f"   این پنجره <b>همین الان</b> باز شد (تأخیرِ سیگنال: {lag:.0f} ثانیه)\n\n"
+            "⚡️ <b>سریع وارد شو.</b> هرچه از پنجره بگذرد قیمت حرکت را در خود "
+            "می‌خورد و لبه از بین می‌رود — قیمتِ ۵۰ سنتیِ ثانیه‌های اول تا دقیقهٔ "
+            "چهارم می‌تواند ۸۰ سنت شود.\n\n"
             "دقتِ تاریخیِ این قانون‌ها <b>۵۳–۵۷٪</b> است (نه بیشتر). "
             "اگر پلی‌مارکت این سمت را بالای <b>۵۵ سنت</b> می‌فروشد، وارد نشو."
             f"{seed_note}"
@@ -1152,7 +1160,7 @@ class BreakoutMonitor:
         log.info("ALERT: %s", " | ".join(f"{n}->{b}" for n, _, b, _ in hits))
         send_message(self.chat_id, text)
 
-    def _on_window_close(self, window_start, price):
+    def _on_window_close(self, window_start, price, lag=0.0):
         self.closes.append(price)
         if len(self.closes) > BREAKOUT_HISTORY:
             self.closes = self.closes[-BREAKOUT_HISTORY:]
@@ -1184,35 +1192,50 @@ class BreakoutMonitor:
                  price, len(self.closes),
                  ", ".join(f"{n}:{b}" for n, _, b, _ in hits) if hits else "no signal")
         if hits:
-            self._alert(hits, price, window_start + GRANULARITY)
+            self._alert(hits, price, window_start + GRANULARITY, lag)
 
     def run(self, max_runtime=None):
+        """
+        Sample right at each window boundary, not on a fixed interval.
+
+        Latency is the whole game here: the bet has to be placed in the opening
+        seconds of the 5-minute window, before the market has priced the move.
+        A plain 20-second poll would deliver the alert up to 20s late — by which
+        time the quote has already moved against you. So the loop sleeps until
+        just after the boundary and samples immediately.
+        """
         started = time.time()
         self._seed()
-        backoff = POLL_SECONDS
+        fail = 0
         while True:
             if max_runtime is not None and time.time() - started >= max_runtime:
                 log.info("Breakout: max runtime reached; exiting.")
                 return
+            now = time.time()
+            ended = (int(now) // GRANULARITY - 1) * GRANULARITY
+            if ended <= self.last_window:
+                # Wait for the next boundary (+ a small margin so the oracle has
+                # published the closing price), rather than busy-polling.
+                nxt = (int(now) // GRANULARITY + 1) * GRANULARITY + BOUNDARY_LAG
+                time.sleep(max(1.0, min(nxt - now, GRANULARITY)))
+                continue
             try:
-                now = time.time()
-                # The window that has most recently ENDED.
-                ended = (int(now) // GRANULARITY - 1) * GRANULARITY
-                if ended > self.last_window:
-                    price, updated, feed = fetch_spot_price()
-                    self.feed_used = feed
-                    # A stale oracle answer would misprice the close; skip it and
-                    # retry on the next poll rather than record a bad candle.
-                    if updated and now - updated > 2 * GRANULARITY:
-                        log.warning("Breakout: %s price is %ds stale; skipping.",
-                                    BREAKOUT_FEED, int(now - updated))
-                    else:
-                        self._on_window_close(ended, price)
-                backoff = POLL_SECONDS
+                price, updated, feed = fetch_spot_price()
+                self.feed_used = feed
+                # A stale oracle answer would misprice the close; retry shortly
+                # rather than record a bad candle.
+                if updated and time.time() - updated > 2 * GRANULARITY:
+                    log.warning("Breakout: %s price is %ds stale; retrying.",
+                                BREAKOUT_FEED, int(time.time() - updated))
+                    time.sleep(5)
+                    continue
+                lag = time.time() - (ended + GRANULARITY)
+                self._on_window_close(ended, price, lag)
+                fail = 0
             except Exception as exc:  # noqa: BLE001 - keep the 24/7 loop alive
+                fail += 1
                 log.error("Breakout poll error: %s", exc)
-                backoff = min(backoff * 2, 300)
-            time.sleep(backoff)
+                time.sleep(min(2 ** fail, 60))
 
 
 # ---------------------------------------------------------------------------
