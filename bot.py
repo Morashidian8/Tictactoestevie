@@ -400,12 +400,14 @@ def handle_callback(monitor, cq):
 # ---------------------------------------------------------------------------
 MENU_STATUS = "📊 وضعیت"
 MENU_REFRESH = "🔄 منو"
+MENU_SCORE = "🎯 کارنامه"
 
 
 def _menu_keyboard():
     """Always-visible quick keyboard: one آستانه button per timeframe + status."""
     rows = [[f"🎚 آستانه {interval_label(iv)}"] for iv in THRESHOLD_INTERVALS]
-    rows.append([MENU_STATUS, MENU_REFRESH])
+    rows.append([MENU_SCORE, MENU_STATUS])
+    rows.append([MENU_REFRESH])
     return {
         "keyboard": [[{"text": t} for t in row] for row in rows],
         "resize_keyboard": True,
@@ -424,6 +426,7 @@ def set_bot_commands():
     """Register slash commands so they show in Telegram's "/" and Menu button."""
     _tg("setMyCommands", {"commands": [
         {"command": "threshold", "description": "تغییر آستانهٔ هشدار (۲ تا ۷ تناوب)"},
+        {"command": "score", "description": "کارنامهٔ سیگنال‌ها (برد/باخت واقعی)"},
         {"command": "status", "description": "وضعیت و آستانهٔ فعلی"},
         {"command": "menu", "description": "نمایش منوی سریع"},
         {"command": "start", "description": "شروع / راهنما"},
@@ -1035,6 +1038,12 @@ class BreakoutMonitor:
         self.last_alert = 0.0
         self.seeded_from = None   # feed used to backfill history, if any
         self.feed_used = BREAKOUT_FEED  # feed that produced the latest sample
+        # Self-scoring: the bet just placed, and the running tally. A signal on
+        # the window closing at price P is settled by the NEXT close, exactly the
+        # way Polymarket settles it — so the bot can grade itself with no manual
+        # bookkeeping and no guessing about what "would have" happened.
+        self.pending = None       # {"bet","ref","window","rules"}
+        self.score = {"n": 0, "wins": 0, "void": 0, "rules": {}, "since": None}
         self._load()
 
     @property
@@ -1051,6 +1060,9 @@ class BreakoutMonitor:
                 s = json.load(f)
             self.closes = [float(x) for x in s.get("closes", [])][-BREAKOUT_HISTORY:]
             self.last_window = int(s.get("last_window", 0))
+            self.pending = s.get("pending")
+            if isinstance(s.get("score"), dict):
+                self.score.update(s["score"])
             if self.closes:
                 log.info("Breakout: restored %d closes from %s",
                          len(self.closes), self.STATE_FILE)
@@ -1063,7 +1075,9 @@ class BreakoutMonitor:
         try:
             with open(self.STATE_FILE, "w") as f:
                 json.dump({"closes": self.closes[-BREAKOUT_HISTORY:],
-                           "last_window": self.last_window}, f)
+                           "last_window": self.last_window,
+                           "pending": self.pending,
+                           "score": self.score}, f)
         except Exception as exc:  # noqa: BLE001 - disk issues must not be fatal
             log.warning("Breakout: could not write %s: %s", self.STATE_FILE, exc)
 
@@ -1107,7 +1121,7 @@ class BreakoutMonitor:
         except Exception as exc:  # noqa: BLE001 - seeding is best-effort
             log.warning("Breakout: seeding failed: %s", exc)
 
-    def _alert(self, hits, price, window_start, lag=0.0):
+    def _alert(self, hits, price, window_start, lag=0.0, settled=None):
         """
         hits: list of (rule_name, accuracy_label, bet, detail_line).
 
@@ -1140,6 +1154,13 @@ class BreakoutMonitor:
                      if self.seeded_from and len(self.closes) < BREAKOUT_HISTORY else "")
         feed_note = ("  ⚠️ (Chainlink در دسترس نبود — با تسویهٔ پلی‌مارکت کمی فرق دارد)"
                      if self.feed_used == "binance-fallback" else "")
+        s = self.score
+        prev_line = ""
+        if settled is not None:
+            tally = (f"  ·  کارنامه: {s['wins']}/{s['n']} ({s['wins']/s['n']*100:.0f}%)"
+                     if s["n"] else "")
+            prev_line = (f"\n\n📋 سیگنالِ قبلی: <b>{'✅ برد' if settled else '❌ باخت'}</b>"
+                         f"{tally}")
         text = (
             f"🎯 <b>سیگنال — روی کندلِ بعدی شرط ببند</b>\n\n"
             f"جهتِ پیشنهادی: {head}{agree}\n\n"
@@ -1155,17 +1176,92 @@ class BreakoutMonitor:
             "چهارم می‌تواند ۸۰ سنت شود.\n\n"
             "دقتِ تاریخیِ این قانون‌ها <b>۵۳–۵۷٪</b> است (نه بیشتر). "
             "اگر پلی‌مارکت این سمت را بالای <b>۵۵ سنت</b> می‌فروشد، وارد نشو."
-            f"{seed_note}"
+            f"{prev_line}{seed_note}"
         )
         log.info("ALERT: %s", " | ".join(f"{n}->{b}" for n, _, b, _ in hits))
         send_message(self.chat_id, text)
 
+    def _settle(self, price):
+        """
+        Grade the previous signal against the close that just arrived.
+
+        Polymarket settles a window by comparing its final price to the price at
+        its start, so the bet recorded at the last close is settled by this one.
+        An exactly unchanged price is a push and is counted separately rather
+        than silently scored as a loss.
+        """
+        p = self.pending
+        self.pending = None
+        if not p:
+            return None
+        ref = p["ref"]
+        if price == ref:
+            self.score["void"] += 1
+            log.info("Settled: VOID (price unchanged at %.2f)", price)
+            return None
+        won = (p["bet"] == "up") == (price > ref)
+        self.score["n"] += 1
+        self.score["wins"] += 1 if won else 0
+        for name in p.get("rules", []):
+            r = self.score["rules"].setdefault(name, {"n": 0, "wins": 0})
+            r["n"] += 1
+            r["wins"] += 1 if won else 0
+        if self.score["since"] is None:
+            self.score["since"] = p["window"]
+        log.info("Settled: %s bet %s | %.2f -> %.2f | overall %d/%d (%.1f%%)",
+                 "WIN " if won else "LOSS", p["bet"], ref, price,
+                 self.score["wins"], self.score["n"],
+                 self.score["wins"] / self.score["n"] * 100)
+        return won
+
+    def score_report(self):
+        """Human-readable cumulative scorecard for the /score command."""
+        s = self.score
+        n, w = s["n"], s["wins"]
+        if not n:
+            pend = ("\n\nیک سیگنالِ باز هست که با کندلِ بعدی نتیجه‌اش مشخص می‌شود."
+                    if self.pending else "")
+            return ("🎯 <b>کارنامه</b>\n\nهنوز هیچ سیگنالی نتیجه نگرفته." + pend)
+        acc = w / n * 100
+        # 95% confidence interval on the win rate (normal approximation) — with
+        # a handful of signals this band is huge, which is the point: it stops
+        # an early streak from being read as a verdict.
+        se = (acc * (100 - acc) / n) ** 0.5
+        lo, hi = max(0.0, acc - 1.96 * se), min(100.0, acc + 1.96 * se)
+        lines = [f"🎯 <b>کارنامهٔ واقعیِ سیگنال‌ها</b>\n",
+                 f"مجموع: <b>{n}</b> سیگنال",
+                 f"برد: <b>{w}</b>  |  باخت: <b>{n - w}</b>",
+                 f"دقت: <b>{acc:.1f}%</b>",
+                 f"بازهٔ اطمینان ۹۵٪: <b>{lo:.0f}% تا {hi:.0f}%</b>"]
+        if s["void"]:
+            lines.append(f"بی‌نتیجه (قیمت تغییر نکرد): {s['void']}")
+        if s["rules"]:
+            lines.append("\n<b>به تفکیکِ استراتژی:</b>")
+            for name, r in sorted(s["rules"].items()):
+                if r["n"]:
+                    lines.append(f"• {name}: {r['wins']}/{r['n']} "
+                                 f"({r['wins'] / r['n'] * 100:.0f}%)")
+        if s["since"]:
+            lines.append(f"\nاز {datetime.fromtimestamp(s['since'], TEHRAN):%Y-%m-%d %H:%M} "
+                         "به وقتِ تهران")
+        # The honest read: how many samples before the number means anything.
+        if n < 100:
+            lines.append(f"\n⚠️ با {n} نمونه هنوز نمی‌شود قضاوت کرد — برای تشخیصِ "
+                         "لبهٔ ۵۶٪ از شانسِ ۵۰٪ حدود <b>۳۰۰</b> سیگنال لازم است.")
+        elif lo > 52:
+            lines.append("\n✅ حتی کفِ بازهٔ اطمینان بالای سربه‌سر است.")
+        else:
+            lines.append("\n⚠️ کفِ بازهٔ اطمینان هنوز زیرِ نقطهٔ سربه‌سر (~۵۲٪) است.")
+        return "\n".join(lines)
+
     def _on_window_close(self, window_start, price, lag=0.0):
+        # Settle the previous signal BEFORE appending, so `ref` is compared with
+        # the close that actually decided it.
+        settled = self._settle(price)
         self.closes.append(price)
         if len(self.closes) > BREAKOUT_HISTORY:
             self.closes = self.closes[-BREAKOUT_HISTORY:]
         self.last_window = window_start
-        self._save()
 
         hits = []
         sig = breakout_signal(self.closes)
@@ -1192,7 +1288,13 @@ class BreakoutMonitor:
                  price, len(self.closes),
                  ", ".join(f"{n}:{b}" for n, _, b, _ in hits) if hits else "no signal")
         if hits:
-            self._alert(hits, price, window_start + GRANULARITY, lag)
+            bets = {h[2] for h in hits}
+            if len(bets) == 1:
+                self.pending = {"bet": bets.pop(), "ref": price,
+                                "window": window_start + GRANULARITY,
+                                "rules": [h[0] for h in hits]}
+            self._alert(hits, price, window_start + GRANULARITY, lag, settled)
+        self._save()
 
     def run(self, max_runtime=None):
         """
@@ -1318,6 +1420,11 @@ def command_listener(monitor: Monitor):
                     else:
                         prompt, kb = _threshold_prompt()
                         send_keyboard(chat_id, prompt, kb)
+                elif text.startswith("/score") or text == MENU_SCORE:
+                    bm = globals().get("BREAKOUT_MONITOR")
+                    send_message(chat_id, bm.score_report() if bm else
+                                 "🎯 کارنامه در دسترس نیست — هشدارهای شکست خاموش‌اند "
+                                 "(STRATEGY را روی breakout یا both بگذار).")
                 elif text.startswith("/status") or text == MENU_STATUS:
                     streak = monitor._alternation_streak()
                     last = (
@@ -1361,6 +1468,9 @@ def main():
 
     if STRATEGY in ("breakout", "both"):
         breakout = BreakoutMonitor(chat_id, chat_source=monitor)
+        # The command listener runs in its own thread and needs to reach the
+        # monitor to answer /score.
+        globals()["BREAKOUT_MONITOR"] = breakout
         log.info(
             "Breakout-fade alerts ON | feed=%s lookback=%d vol_filter=%s",
             BREAKOUT_FEED, BREAKOUT_LOOKBACK, BREAKOUT_VOL_FILTER,
