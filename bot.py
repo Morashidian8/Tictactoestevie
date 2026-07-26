@@ -1044,6 +1044,14 @@ class BreakoutMonitor:
         # bookkeeping and no guessing about what "would have" happened.
         self.pending = None       # {"bet","ref","window","rules"}
         self.score = {"n": 0, "wins": 0, "void": 0, "rules": {}, "since": None}
+        # Liveness bookkeeping so "it has been quiet for hours" can be answered
+        # from Telegram — a silent market and a dead loop look identical
+        # otherwise.
+        self.last_sample = 0.0
+        self.last_signal = 0.0
+        self.last_error = ""
+        self.err_count = 0
+        self.windows_seen = 0
         self._load()
 
     @property
@@ -1214,6 +1222,40 @@ class BreakoutMonitor:
                  self.score["wins"] / self.score["n"] * 100)
         return won
 
+    def health_report(self):
+        """Is the loop alive, or is the market simply quiet? Answer both."""
+        now = time.time()
+        if not self.last_sample:
+            return ("🩺 <b>سلامتِ موتورِ سیگنال</b>\n\n"
+                    "⏳ هنوز هیچ کندلی نمونه‌برداری نشده — تازه بالا آمده. "
+                    "تا حداکثر ۵ دقیقهٔ دیگر اولین نمونه باید ثبت شود.")
+        age = now - self.last_sample
+        # Samples land once per window; more than ~2 windows of silence means
+        # the loop is stuck, not that the market is calm.
+        ok = age < 2 * GRANULARITY
+        head = ("✅ <b>سالم</b>" if ok else "❌ <b>گیر کرده</b>")
+        lines = [f"🩺 <b>سلامتِ موتورِ سیگنال</b>\n", f"وضعیت: {head}",
+                 f"آخرین کندلِ نمونه‌برداری‌شده: <b>{age/60:.1f}</b> دقیقه پیش "
+                 f"(باید زیر ۵ باشد)",
+                 f"کندل‌های در حافظه: <b>{len(self.closes)}</b> از {BREAKOUT_HISTORY}",
+                 f"کلِ پنجره‌های پردازش‌شده: <b>{self.windows_seen}</b>",
+                 f"فید: <b>{self.feed_used}</b>"]
+        if self.last_signal:
+            lines.append(f"آخرین سیگنال: <b>{(now - self.last_signal)/60:.0f}</b> دقیقه پیش")
+        else:
+            lines.append("آخرین سیگنال: هنوز هیچ")
+        if self.err_count:
+            lines.append(f"\n⚠️ خطاهای پیاپی: {self.err_count}\n<i>{self.last_error[:180]}</i>")
+        if ok:
+            lines.append("\nموتور زنده است. سکوتِ طولانی طبیعی است — طبق دادهٔ "
+                         "تاریخی، ۵٪ مواقع بیش از ۲ ساعت و گاهی تا ۸ ساعت "
+                         "فاصله می‌افتد، چون هر سه قانون فقط روی حرکت‌های "
+                         "غیرعادی فعال می‌شوند.")
+        else:
+            lines.append("\nبیش از دو پنجره است که نمونه‌ای ثبت نشده. در ترموکس "
+                         "بزن:\n<code>bash run_bot.sh stop &amp;&amp; bash run_bot.sh start</code>")
+        return "\n".join(lines)
+
     def score_report(self):
         """Human-readable cumulative scorecard for the /score command."""
         s = self.score
@@ -1262,6 +1304,8 @@ class BreakoutMonitor:
         if len(self.closes) > BREAKOUT_HISTORY:
             self.closes = self.closes[-BREAKOUT_HISTORY:]
         self.last_window = window_start
+        self.last_sample = time.time()
+        self.windows_seen += 1
 
         hits = []
         sig = breakout_signal(self.closes)
@@ -1288,6 +1332,7 @@ class BreakoutMonitor:
                  price, len(self.closes),
                  ", ".join(f"{n}:{b}" for n, _, b, _ in hits) if hits else "no signal")
         if hits:
+            self.last_signal = time.time()
             bets = {h[2] for h in hits}
             if len(bets) == 1:
                 self.pending = {"bet": bets.pop(), "ref": price,
@@ -1333,9 +1378,12 @@ class BreakoutMonitor:
                     continue
                 lag = time.time() - (ended + GRANULARITY)
                 self._on_window_close(ended, price, lag)
-                fail = 0
+                fail = self.err_count = 0
+                self.last_error = ""
             except Exception as exc:  # noqa: BLE001 - keep the 24/7 loop alive
                 fail += 1
+                self.err_count += 1
+                self.last_error = f"{type(exc).__name__}: {exc}"
                 log.error("Breakout poll error: %s", exc)
                 time.sleep(min(2 ** fail, 60))
 
@@ -1441,6 +1489,9 @@ def command_listener(monitor: Monitor):
                         f"همهٔ آستانه‌ها — {_threshold_summary()}\n"
                         "تغییر: /threshold",
                     )
+                    bm = globals().get("BREAKOUT_MONITOR")
+                    if bm:
+                        send_message(chat_id, bm.health_report())
         except requests.RequestException as exc:
             log.error("getUpdates error: %s", exc)
             time.sleep(5)
