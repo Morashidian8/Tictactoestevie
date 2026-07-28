@@ -111,6 +111,20 @@ RULE2_ENABLED = os.environ.get("RULE2", "1").strip() not in ("0", "false", "no")
 RULE2_MULT = float(os.environ.get("RULE2_MULT", "2.0"))
 RULE3_ENABLED = os.environ.get("RULE3", "1").strip() not in ("0", "false", "no")
 RULE3_RUN = int(os.environ.get("RULE3_RUN", "6"))
+# RULE 4 — the user's own AABA pattern: two same-direction moves, one opposite,
+# then back to the original direction; bet the next move continues it.
+# MEASURED AND IT DOES NOT WORK: 50.7% on train but 48.8% out-of-sample
+# (n=6,000, z=-1.83) — below a coin flip, and no better than the 50.6% you get
+# after any single candle with no pattern at all. It is alerted on request and
+# labelled honestly so it is never mistaken for the validated rules.
+RULE4_ENABLED = os.environ.get("RULE4", "1").strip() not in ("0", "false", "no")
+
+# Seconds before a window closes to send a provisional heads-up, so there is
+# time to be ready when the window opens. Measured on 1-minute data: a signal
+# computed a full minute early matches the final one 67.9% of the time and the
+# DIRECTION essentially never flips (3 cases in 28,090); the rest are signals
+# that appear or vanish in the final seconds. 0 disables the pre-alert.
+PREALERT_SECONDS = int(os.environ.get("PREALERT_SECONDS", "30"))
 # Price feed for the breakout rule:
 #   "chainlink" - Chainlink BTC/USD via a public Polygon RPC (what Polymarket
 #                 settles on; matches the market exactly)
@@ -847,6 +861,24 @@ def rule2_signal(closes, mult=None):
             "move": last3[-1], "median": med, "times": abs(last3[-1]) / med}
 
 
+def rule4_signal(closes):
+    """
+    RULE 4 — the AABA pattern: moves A A B A, bet the next move continues A.
+
+    Kept because the user asked for it; see RULE4_ENABLED for the measurement
+    showing it has no edge out-of-sample.
+    """
+    if len(closes) < 6:
+        return None
+    m = _moves(closes)[-4:]
+    if any(x == 0 for x in m):
+        return None
+    a = m[0] > 0
+    if not ((m[1] > 0) == a and (m[2] > 0) != a and (m[3] > 0) == a):
+        return None
+    return {"bet": "up" if a else "down"}
+
+
 def rule3_signal(closes, run_len=None):
     """RULE 3 — a run of `run_len` same-direction moves -> fade the run."""
     run_len = RULE3_RUN if run_len is None else run_len
@@ -1052,6 +1084,7 @@ class BreakoutMonitor:
         self.last_error = ""
         self.err_count = 0
         self.windows_seen = 0
+        self.pre_for = 0          # boundary a pre-alert has already been sent for
         self._load()
 
     @property
@@ -1296,6 +1329,73 @@ class BreakoutMonitor:
             lines.append("\n⚠️ کفِ بازهٔ اطمینان هنوز زیرِ نقطهٔ سربه‌سر (~۵۲٪) است.")
         return "\n".join(lines)
 
+    @staticmethod
+    def evaluate(closes):
+        """
+        Run every enabled rule over a close series.
+
+        Returns [(name, accuracy_label, bet, detail)]. Shared by the final alert
+        and the pre-alert so the two can never drift apart.
+        """
+        hits = []
+        sig = breakout_signal(closes)
+        if sig:
+            broke = "بالاتر از سقف" if sig["kind"] == "up" else "پایین‌تر از کف"
+            ratio = f" · نسبتِ نوسان {sig['ratio']:.2f}" if sig["ratio"] is not None else ""
+            hits.append(("۱) شکستِ ۲۰ کندلی", "۵۶٪", sig["bet"],
+                         f"{broke} {BREAKOUT_LOOKBACK} کندلِ اخیر "
+                         f"(${sig['level']:,.2f}){ratio}"))
+        if RULE2_ENABLED:
+            s2 = rule2_signal(closes)
+            if s2:
+                hits.append(("۲) ۳ حرکتِ هم‌جهت + حرکتِ بزرگ", "۵۶٪", s2["bet"],
+                             f"حرکتِ آخر ${abs(s2['move']):,.0f} = "
+                             f"{s2['times']:.1f}× حرکتِ معمولِ اخیر (${s2['median']:,.0f})"))
+        if RULE3_ENABLED:
+            s3 = rule3_signal(closes)
+            if s3:
+                hits.append(("۳) رشتهٔ هم‌جهت", "۵۴٪", s3["bet"],
+                             f"{s3['run']} حرکتِ هم‌جهتِ پیاپی"))
+        if RULE4_ENABLED:
+            s4 = rule4_signal(closes)
+            if s4:
+                hits.append(("۴) الگوی AABA", "⚠️ ۴۹٪ — تست‌شده، لبه ندارد",
+                             s4["bet"], "دو حرکتِ هم‌جهت، یکی مخالف، بازگشت به جهتِ اول"))
+        return hits
+
+    def _prealert(self, boundary, price):
+        """
+        Provisional heads-up shortly before the window closes.
+
+        Direction is trustworthy — over 28,090 comparisons on 1-minute data a
+        signal computed a minute early flipped direction 3 times — but ~13% of
+        early signals disappear by the close, so this is explicitly labelled as
+        not yet final.
+        """
+        hits = self.evaluate(self.closes + [price])
+        if not hits:
+            return
+        bets = {h[2] for h in hits}
+        if len(bets) != 1:
+            return
+        bet = bets.pop()
+        o_et = et_time(boundary)
+        o_ir = datetime.fromtimestamp(boundary, TEHRAN)
+        names = "\n".join(f"• {n} ({acc})" for n, acc, _, _ in hits)
+        left = max(0, int(boundary - time.time()))
+        log.info("PRE-ALERT (%ds early): %s", left, bet)
+        send_message(self.chat_id,
+                     f"⏱ <b>پیش‌هشدار — تا {left} ثانیهٔ دیگر پنجره باز می‌شود</b>\n\n"
+                     f"جهتِ احتمالی: "
+                     f"{'🟢 <b>بالا (Up)</b>' if bet == 'up' else '🔴 <b>پایین (Down)</b>'}\n\n"
+                     f"{names}\n\n"
+                     f"پنجره: <b>{o_et:%I:%M%p ET}</b>  ·  تهران {o_ir:%H:%M}\n"
+                     f"قیمتِ فعلی: ${price:,.2f}\n\n"
+                     "🟡 <b>هنوز قطعی نیست</b> — قیمت تا لحظهٔ بسته‌شدن حرکت می‌کند. "
+                     "حدود ۱۳٪ پیش‌هشدارها در ثانیه‌های آخر محو می‌شوند، ولی جهت "
+                     "تقریباً هیچ‌وقت برعکس نمی‌شود. آماده باش؛ تأییدِ نهایی تا چند "
+                     "ثانیهٔ دیگر می‌آید.")
+
     def _on_window_close(self, window_start, price, lag=0.0):
         # Settle the previous signal BEFORE appending, so `ref` is compared with
         # the close that actually decided it.
@@ -1307,25 +1407,7 @@ class BreakoutMonitor:
         self.last_sample = time.time()
         self.windows_seen += 1
 
-        hits = []
-        sig = breakout_signal(self.closes)
-        if sig:
-            broke = "بالاتر از سقف" if sig["kind"] == "up" else "پایین‌تر از کف"
-            ratio = f" · نسبتِ نوسان {sig['ratio']:.2f}" if sig["ratio"] is not None else ""
-            hits.append(("۱) شکستِ ۲۰ کندلی", "۵۶٪", sig["bet"],
-                         f"{broke} {BREAKOUT_LOOKBACK} کندلِ اخیر "
-                         f"(${sig['level']:,.2f}){ratio}"))
-        if RULE2_ENABLED:
-            s2 = rule2_signal(self.closes)
-            if s2:
-                hits.append(("۲) ۳ حرکتِ هم‌جهت + حرکتِ بزرگ", "۵۶٪", s2["bet"],
-                             f"حرکتِ آخر ${abs(s2['move']):,.0f} = "
-                             f"{s2['times']:.1f}× حرکتِ معمولِ اخیر (${s2['median']:,.0f})"))
-        if RULE3_ENABLED:
-            s3 = rule3_signal(self.closes)
-            if s3:
-                hits.append(("۳) رشتهٔ هم‌جهت", "۵۴٪", s3["bet"],
-                             f"{s3['run']} حرکتِ هم‌جهتِ پیاپی"))
+        hits = self.evaluate(self.closes)
 
         log.info("window %s closed at %.2f (%d closes) -> %s",
                  datetime.fromtimestamp(window_start, tz=timezone.utc).strftime("%H:%M"),
@@ -1362,9 +1444,20 @@ class BreakoutMonitor:
             ended = (int(now) // GRANULARITY - 1) * GRANULARITY
             if ended <= self.last_window:
                 # Wait for the next boundary (+ a small margin so the oracle has
-                # published the closing price), rather than busy-polling.
-                nxt = (int(now) // GRANULARITY + 1) * GRANULARITY + BOUNDARY_LAG
-                time.sleep(max(1.0, min(nxt - now, GRANULARITY)))
+                # published the closing price), rather than busy-polling. When a
+                # pre-alert is due first, stop there on the way.
+                nxt = (int(now) // GRANULARITY + 1) * GRANULARITY
+                if PREALERT_SECONDS and self.pre_for != nxt and now < nxt - PREALERT_SECONDS:
+                    time.sleep(max(1.0, nxt - PREALERT_SECONDS - now))
+                    self.pre_for = nxt
+                    try:
+                        p, _, feed = fetch_spot_price()
+                        self.feed_used = feed
+                        self._prealert(nxt, p)
+                    except Exception as exc:  # noqa: BLE001 - never block the close
+                        log.warning("Pre-alert skipped: %s", exc)
+                    continue
+                time.sleep(max(1.0, min(nxt + BOUNDARY_LAG - now, GRANULARITY)))
                 continue
             try:
                 price, updated, feed = fetch_spot_price()
