@@ -125,6 +125,9 @@ RULE4_ENABLED = os.environ.get("RULE4", "1").strip() not in ("0", "false", "no")
 # DIRECTION essentially never flips (3 cases in 28,090); the rest are signals
 # that appear or vanish in the final seconds. 0 disables the pre-alert.
 PREALERT_SECONDS = int(os.environ.get("PREALERT_SECONDS", "30"))
+# How many past signal outcomes to keep, and how many to show in each alert.
+HISTORY_KEEP = 40
+HISTORY_SHOW = int(os.environ.get("HISTORY_SHOW", "10"))
 # Price feed for the breakout rule:
 #   "chainlink" - Chainlink BTC/USD via a public Polygon RPC (what Polymarket
 #                 settles on; matches the market exactly)
@@ -1076,6 +1079,10 @@ class BreakoutMonitor:
         # bookkeeping and no guessing about what "would have" happened.
         self.pending = None       # {"bet","ref","window","rules"}
         self.score = {"n": 0, "wins": 0, "void": 0, "rules": {}, "since": None}
+        # Outcomes of recent signals in the order they were sent — not grouped by
+        # strategy. The run of losses at the tail is what decides which
+        # martingale rung you are on, so it is surfaced explicitly.
+        self.history = []         # [{"won": bool, "bet": str}], oldest first
         # Liveness bookkeeping so "it has been quiet for hours" can be answered
         # from Telegram — a silent market and a dead loop look identical
         # otherwise.
@@ -1104,6 +1111,8 @@ class BreakoutMonitor:
             self.pending = s.get("pending")
             if isinstance(s.get("score"), dict):
                 self.score.update(s["score"])
+            if isinstance(s.get("history"), list):
+                self.history = s["history"][-HISTORY_KEEP:]
             if self.closes:
                 log.info("Breakout: restored %d closes from %s",
                          len(self.closes), self.STATE_FILE)
@@ -1118,7 +1127,8 @@ class BreakoutMonitor:
                 json.dump({"closes": self.closes[-BREAKOUT_HISTORY:],
                            "last_window": self.last_window,
                            "pending": self.pending,
-                           "score": self.score}, f)
+                           "score": self.score,
+                           "history": self.history[-HISTORY_KEEP:]}, f)
         except Exception as exc:  # noqa: BLE001 - disk issues must not be fatal
             log.warning("Breakout: could not write %s: %s", self.STATE_FILE, exc)
 
@@ -1195,13 +1205,7 @@ class BreakoutMonitor:
                      if self.seeded_from and len(self.closes) < BREAKOUT_HISTORY else "")
         feed_note = ("  ⚠️ (Chainlink در دسترس نبود — با تسویهٔ پلی‌مارکت کمی فرق دارد)"
                      if self.feed_used == "binance-fallback" else "")
-        s = self.score
-        prev_line = ""
-        if settled is not None:
-            tally = (f"  ·  کارنامه: {s['wins']}/{s['n']} ({s['wins']/s['n']*100:.0f}%)"
-                     if s["n"] else "")
-            prev_line = (f"\n\n📋 سیگنالِ قبلی: <b>{'✅ برد' if settled else '❌ باخت'}</b>"
-                         f"{tally}")
+        prev_line = self.history_line()
         text = (
             f"🎯 <b>سیگنال — روی کندلِ بعدی شرط ببند</b>\n\n"
             f"جهتِ پیشنهادی: {head}{agree}\n\n"
@@ -1243,6 +1247,8 @@ class BreakoutMonitor:
         won = (p["bet"] == "up") == (price > ref)
         self.score["n"] += 1
         self.score["wins"] += 1 if won else 0
+        self.history.append({"won": won, "bet": p["bet"]})
+        self.history = self.history[-HISTORY_KEEP:]
         for name in p.get("rules", []):
             r = self.score["rules"].setdefault(name, {"n": 0, "wins": 0})
             r["n"] += 1
@@ -1254,6 +1260,42 @@ class BreakoutMonitor:
                  self.score["wins"], self.score["n"],
                  self.score["wins"] / self.score["n"] * 100)
         return won
+
+    def loss_streak(self):
+        """Losses at the tail of the history — i.e. the martingale rung you are on."""
+        k = 0
+        for h in reversed(self.history):
+            if h["won"]:
+                break
+            k += 1
+        return k
+
+    def history_line(self):
+        """
+        Recent outcomes in the order the signals were SENT, not grouped by rule.
+
+        The tail streak is spelled out because that, not the overall hit rate, is
+        what determines the next stake under any martingale.
+        """
+        if not self.history:
+            return ""
+        recent = self.history[-HISTORY_SHOW:]
+        seq = "".join("✅" if h["won"] else "❌" for h in recent)
+        w = sum(1 for h in recent if h["won"])
+        s = self.score
+        overall = (f"  ·  کل: {s['wins']}/{s['n']} ({s['wins'] / s['n'] * 100:.0f}%)"
+                   if s["n"] else "")
+        out = (f"\n\n📋 <b>{len(recent)} سیگنالِ اخیر</b> (قدیمی → جدید):\n"
+               f"{seq}\n<b>{w}</b> برد از {len(recent)}{overall}")
+        k = self.loss_streak()
+        if k >= 2:
+            out += (f"\n🔴 <b>{k} باختِ پیاپی</b> — اگر مارتینگل می‌زنی، "
+                    f"این ورود پلهٔ <b>{k + 1}</b> است.")
+        elif k == 1:
+            out += "\n🟡 سیگنالِ قبلی باخت — این ورود پلهٔ ۲ است."
+        else:
+            out += "\n🟢 سیگنالِ قبلی برد — از پلهٔ ۱ شروع کن."
+        return out
 
     def health_report(self):
         """Is the loop alive, or is the market simply quiet? Answer both."""
@@ -1316,6 +1358,13 @@ class BreakoutMonitor:
                 if r["n"]:
                     lines.append(f"• {name}: {r['wins']}/{r['n']} "
                                  f"({r['wins'] / r['n'] * 100:.0f}%)")
+        if self.history:
+            recent = self.history[-HISTORY_SHOW:]
+            lines.append(f"\n<b>{len(recent)} سیگنالِ اخیر</b> (قدیمی → جدید):\n"
+                         + "".join("✅" if h["won"] else "❌" for h in recent))
+            k = self.loss_streak()
+            if k:
+                lines.append(f"🔴 رشتهٔ باختِ فعلی: <b>{k}</b>")
         if s["since"]:
             lines.append(f"\nاز {datetime.fromtimestamp(s['since'], TEHRAN):%Y-%m-%d %H:%M} "
                          "به وقتِ تهران")
