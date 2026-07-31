@@ -96,6 +96,10 @@ BREAKOUT_COOLDOWN = int(os.environ.get("BREAKOUT_COOLDOWN", "0"))
 # published the closing price. Small, because every second of delay is a second
 # the market spends pricing in the move we are trying to fade.
 BOUNDARY_LAG = float(os.environ.get("BOUNDARY_LAG", "2"))
+# Missed windows tolerated before the stored close series is treated as broken
+# and rebuilt. One or two is a hiccup; more leaves a hole that would be read as
+# a single enormous candle.
+GAP_TOLERANCE = int(os.environ.get("GAP_TOLERANCE", "2"))
 
 # --- RULES 2 and 3: the other two mean-reversion edges -----------------------
 # Both are stated in terms of close-to-close moves, because that is all the
@@ -1092,6 +1096,7 @@ class BreakoutMonitor:
         self.err_count = 0
         self.windows_seen = 0
         self.pre_for = 0          # boundary a pre-alert has already been sent for
+        self.gap_note = None      # (windows missed, when) after an outage
         self._load()
 
     @property
@@ -1116,10 +1121,41 @@ class BreakoutMonitor:
             if self.closes:
                 log.info("Breakout: restored %d closes from %s",
                          len(self.closes), self.STATE_FILE)
+            self._drop_if_stale()
         except FileNotFoundError:
             pass
         except Exception as exc:  # noqa: BLE001 - corrupt state must not be fatal
             log.warning("Breakout: could not read %s: %s", self.STATE_FILE, exc)
+
+    def _drop_if_stale(self, now=None):
+        """
+        Throw away the close series if it has a hole in it.
+
+        Android kills Termux, the phone loses its connection, the process is
+        restarted hours later — and the stored closes are then from before the
+        gap. Appending today's price onto them turns the missing hours into one
+        giant fake 5-minute move, which fires bogus signals immediately (a real
+        occurrence: a $981 jump was read as one candle and alerted on the spot).
+        Levels and volatility are only meaningful on a contiguous series, so a
+        gap means the series must be rebuilt, not continued.
+
+        The scorecard and signal history are NOT cleared — those are genuine past
+        results and stay valid across an outage. Any bet still open IS dropped,
+        because the candle that would have settled it never arrived.
+        """
+        if not self.closes or not self.last_window:
+            return False
+        now = time.time() if now is None else now
+        missed = int((now - self.last_window) // GRANULARITY) - 1
+        if missed <= GAP_TOLERANCE:
+            return False
+        log.warning("Breakout: %d windows missing (%.1f hours offline) — "
+                    "discarding stale history and re-seeding.",
+                    missed, missed * GRANULARITY / 3600)
+        self.closes = []
+        self.pending = None
+        self.gap_note = (missed, now)
+        return True
 
     def _save(self):
         try:
@@ -1319,6 +1355,12 @@ class BreakoutMonitor:
             lines.append(f"آخرین سیگنال: <b>{(now - self.last_signal)/60:.0f}</b> دقیقه پیش")
         else:
             lines.append("آخرین سیگنال: هنوز هیچ")
+        if self.gap_note:
+            missed, when = self.gap_note
+            lines.append(f"\n⚠️ آخرین قطعی: <b>{missed * GRANULARITY / 3600:.1f} ساعت</b> "
+                         f"({missed} پنجره از دست رفت، "
+                         f"{datetime.fromtimestamp(when, TEHRAN):%m-%d %H:%M})\n"
+                         "تاریخچه دور ریخته و از نو ساخته شد — کارنامه دست‌نخورده ماند.")
         if self.err_count:
             lines.append(f"\n⚠️ خطاهای پیاپی: {self.err_count}\n<i>{self.last_error[:180]}</i>")
         if ok:
@@ -1517,6 +1559,13 @@ class BreakoutMonitor:
                     log.warning("Breakout: %s price is %ds stale; retrying.",
                                 BREAKOUT_FEED, int(time.time() - updated))
                     time.sleep(5)
+                    continue
+                # A gap can also open while running — the phone sleeps, the
+                # network drops — so check here too, not only at startup.
+                if self._drop_if_stale():
+                    self._seed()
+                    self.last_window = ended
+                    self._save()
                     continue
                 lag = time.time() - (ended + GRANULARITY)
                 self._on_window_close(ended, price, lag)
