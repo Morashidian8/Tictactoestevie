@@ -1641,6 +1641,42 @@ class BreakoutMonitor:
 # ---------------------------------------------------------------------------
 # Telegram command listener (auto-captures chat_id, /start, /status)
 # ---------------------------------------------------------------------------
+class _OutageLog:
+    """
+    Collapse a burst of identical network failures into a readable summary.
+
+    An unreachable network produced one ERROR line every 5 seconds, so a short
+    outage filled the screen and hid the candle lines the user actually reads.
+    """
+
+    def __init__(self, every=300):
+        self.n = 0
+        self.first = 0.0
+        self.last_report = 0.0
+        self.every = every
+
+    def fail(self, what):
+        now = time.time()
+        self.n += 1
+        if self.n == 1:
+            self.first = self.last_report = now
+            log.error("%s — retrying quietly; further identical errors are "
+                      "summarised, not repeated.", what)
+        elif now - self.last_report >= self.every:
+            self.last_report = now
+            log.error("%s — still down after %.0f min (%d attempts).",
+                      what, (now - self.first) / 60, self.n)
+
+    def ok(self):
+        if self.n:
+            log.info("Telegram reachable again after %.0f min (%d failed attempts).",
+                     (time.time() - self.first) / 60, self.n)
+            self.n = 0
+
+
+_net = _OutageLog()
+
+
 def command_listener(monitor: Monitor):
     """Long-poll getUpdates so users can /start the bot and grab chat_id."""
     # Register the slash-command list (shows in Telegram's "/" and Menu button)
@@ -1743,11 +1779,17 @@ def command_listener(monitor: Monitor):
                     if bm:
                         send_message(chat_id, bm.health_report())
         except requests.RequestException as exc:
-            log.error("getUpdates error: %s", exc)
+            # While the phone has no connection this fires every few seconds and
+            # buries the signal-engine lines that actually matter. Collapse a run
+            # of failures into one line, then a periodic count, and one line when
+            # it recovers.
+            _net.fail(f"Telegram unreachable ({type(exc).__name__})")
             time.sleep(5)
         except Exception as exc:
             log.error("Listener error: %s", exc)
             time.sleep(5)
+        else:
+            _net.ok()
 
 
 def main():
