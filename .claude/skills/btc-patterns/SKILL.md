@@ -34,7 +34,12 @@ guardrails. Reproduce any number with `python3 research/btc5m/rules.py`.
 | - | ---- | -------- | ------ |
 | 1 | close breaks the 20-bar high/low **and** vol20/vol100 ≥ 0.8884 → bet the opposite | **57.4%** | 2,847 |
 | 2 | 3 same-colour candles **and** body > 1× median100(range) → bet opposite | 55.4% | 2,648 |
+| 5 | \|close − close[−4]\| ≥ 5.7 × median100(\|move\|) → fade the stretch | **55.6%** | 5,831 |
 | 3 | run of ≥3 same-colour candles → bet opposite | 52.8% | 11,296 |
+
+Rule 5 is worth its slot because 44% of its signals are ones rules 1–3 never see,
+and those alone hold 54.3% (n=2,748, z=+4.46); it contradicts the others in 8
+cases out of 6,542, and where they agree accuracy reaches 56.7%.
 
 Rule 1 detail: ~19 signals/day; 17/19 months above 50%; bootstrap CI [56.2%, 59.8%];
 dies under shuffled labels (50.4%); **longest observed losing streak = 11**, with
@@ -43,6 +48,26 @@ is discussed.
 
 Rule 2 only works evaluated **symmetrically**; forced to one fixed direction it is
 49.85%, i.e. nothing.
+
+## The user's own AABA pattern — measured and rejected (do not re-litigate)
+
+"Two same-direction moves, one opposite, back to the first direction; bet the
+next move continues it." Tested twice with 9 agents over both continuations:
+
+| | train | test |
+| --- | --- | --- |
+| candle 5 (AABAA) | 50.5% | **48.8%** |
+| candle 6 after a loss (AABABB) | 52.9% | **50.5%** |
+
+AABA is not a special state at all — continuation after any ordinary candle is
+49.7%, after AABA 49.9%. Geometry, time-of-day, direction, volatility regime and
+a ~2,900-rule machine search all failed to find a condition that survives
+out-of-sample; on the candle-6 search the best result had a 31.5% chance of
+arising from shuffled labels. The two-rung martingale on it needs 55.2% on rung 2
+to break even at 52c and has 50.5%, giving −4.65% EV per cycle.
+
+Rule 5 came out of this analysis — but the control showed the edge belongs to the
+stretch, not the pattern (same filter on non-AABA windows: 55.5%, 7× the sample).
 
 ## Dead — tested and rejected, do not propose these
 
