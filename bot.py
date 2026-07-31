@@ -1097,6 +1097,7 @@ class BreakoutMonitor:
         self.windows_seen = 0
         self.pre_for = 0          # boundary a pre-alert has already been sent for
         self.gap_note = None      # (windows missed, when) after an outage
+        self.backfilled = 0       # windows scored from replay, not from live alerts
         self._load()
 
     @property
@@ -1118,6 +1119,7 @@ class BreakoutMonitor:
                 self.score.update(s["score"])
             if isinstance(s.get("history"), list):
                 self.history = s["history"][-HISTORY_KEEP:]
+            self.backfilled = int(s.get("backfilled", 0))
             if self.closes:
                 log.info("Breakout: restored %d closes from %s",
                          len(self.closes), self.STATE_FILE)
@@ -1126,6 +1128,52 @@ class BreakoutMonitor:
             pass
         except Exception as exc:  # noqa: BLE001 - corrupt state must not be fatal
             log.warning("Breakout: could not read %s: %s", self.STATE_FILE, exc)
+
+    def _fetch_klines(self, limit):
+        """Recent closed 5-minute candles as [(window_start, close)], oldest first."""
+        for host in BINANCE_HOSTS:
+            try:
+                r = requests.get(f"{host}/api/v3/klines",
+                                 params={"symbol": "BTCUSDT", "interval": "5m",
+                                         "limit": min(limit, 1000)},
+                                 timeout=25,
+                                 headers={"User-Agent": "btc-candle-alert-bot/1.0"})
+                r.raise_for_status()
+                now = time.time()
+                return [(int(x[0]) // 1000 // GRANULARITY * GRANULARITY, float(x[4]))
+                        for x in r.json() if int(x[6]) / 1000.0 <= now]
+            except requests.RequestException as exc:
+                log.warning("klines: %s failed: %s", host, exc)
+        return []
+
+    def _backfill(self, missed):
+        """
+        Replay the windows lost to an outage from real candles.
+
+        Losing connectivity for an hour would otherwise punch a hole in the
+        scorecard, and the whole point of the scorecard is a continuous record.
+        The candles themselves still exist, so the missed windows are replayed
+        here: signals are recomputed and settled exactly as they would have been
+        live. No Telegram message is sent for them — a five-minute signal is
+        worthless once it is minutes old — they only feed the statistics, and
+        are counted separately so the record stays honest about which results
+        came from alerts you actually received.
+        """
+        kl = self._fetch_klines(missed + BREAKOUT_HISTORY + 5)
+        if not kl:
+            return False
+        start = next((i for i, (t, _) in enumerate(kl) if t > self.last_window), None)
+        if start is None or start == 0:
+            return False          # our last window is not inside this range
+        self.closes = [c for _, c in kl[:start]][-BREAKOUT_HISTORY:]
+        n = 0
+        for t, c in kl[start:]:
+            self._on_window_close(t, c, replay=True)
+            n += 1
+        self.backfilled += n
+        log.info("Breakout: backfilled %d missed windows from real candles "
+                 "(scorecard stays continuous).", n)
+        return True
 
     def _drop_if_stale(self, now=None):
         """
@@ -1149,12 +1197,13 @@ class BreakoutMonitor:
         missed = int((now - self.last_window) // GRANULARITY) - 1
         if missed <= GAP_TOLERANCE:
             return False
-        log.warning("Breakout: %d windows missing (%.1f hours offline) — "
-                    "discarding stale history and re-seeding.",
+        log.warning("Breakout: %d windows missing (%.1f hours offline).",
                     missed, missed * GRANULARITY / 3600)
-        self.closes = []
-        self.pending = None
+        self.pending = None       # the candle that would have settled it never came
         self.gap_note = (missed, now)
+        if self._backfill(missed):
+            return False          # history rebuilt AND scored; nothing else to do
+        self.closes = []          # could not recover the candles — start clean
         return True
 
     def _save(self):
@@ -1164,7 +1213,8 @@ class BreakoutMonitor:
                            "last_window": self.last_window,
                            "pending": self.pending,
                            "score": self.score,
-                           "history": self.history[-HISTORY_KEEP:]}, f)
+                           "history": self.history[-HISTORY_KEEP:],
+                           "backfilled": self.backfilled}, f)
         except Exception as exc:  # noqa: BLE001 - disk issues must not be fatal
             log.warning("Breakout: could not write %s: %s", self.STATE_FILE, exc)
 
@@ -1394,6 +1444,9 @@ class BreakoutMonitor:
                  f"بازهٔ اطمینان ۹۵٪: <b>{lo:.0f}% تا {hi:.0f}%</b>"]
         if s["void"]:
             lines.append(f"بی‌نتیجه (قیمت تغییر نکرد): {s['void']}")
+        if self.backfilled:
+            lines.append(f"از این تعداد، <b>{self.backfilled}</b> مورد بازپخشِ "
+                         "پنجره‌های قطعی است (نتیجه واقعی، ولی پیامش را نگرفتی)")
         if s["rules"]:
             lines.append("\n<b>به تفکیکِ استراتژی:</b>")
             for name, r in sorted(s["rules"].items()):
@@ -1487,7 +1540,7 @@ class BreakoutMonitor:
                      "تقریباً هیچ‌وقت برعکس نمی‌شود. آماده باش؛ تأییدِ نهایی تا چند "
                      "ثانیهٔ دیگر می‌آید.")
 
-    def _on_window_close(self, window_start, price, lag=0.0):
+    def _on_window_close(self, window_start, price, lag=0.0, replay=False):
         # Settle the previous signal BEFORE appending, so `ref` is compared with
         # the close that actually decided it.
         settled = self._settle(price)
@@ -1495,23 +1548,29 @@ class BreakoutMonitor:
         if len(self.closes) > BREAKOUT_HISTORY:
             self.closes = self.closes[-BREAKOUT_HISTORY:]
         self.last_window = window_start
-        self.last_sample = time.time()
         self.windows_seen += 1
+        if not replay:
+            # During a replay these would claim the engine is live and that a
+            # signal just fired, hiding a real stall behind backfilled data.
+            self.last_sample = time.time()
 
         hits = self.evaluate(self.closes)
 
-        log.info("window %s closed at %.2f (%d closes) -> %s",
+        log.info("%swindow %s closed at %.2f (%d closes) -> %s",
+                 "[replay] " if replay else "",
                  datetime.fromtimestamp(window_start, tz=timezone.utc).strftime("%H:%M"),
                  price, len(self.closes),
                  ", ".join(f"{n}:{b}" for n, _, b, _ in hits) if hits else "no signal")
         if hits:
-            self.last_signal = time.time()
+            if not replay:
+                self.last_signal = time.time()
             bets = {h[2] for h in hits}
             if len(bets) == 1:
                 self.pending = {"bet": bets.pop(), "ref": price,
                                 "window": window_start + GRANULARITY,
                                 "rules": [h[0] for h in hits]}
-            self._alert(hits, price, window_start + GRANULARITY, lag, settled)
+            if not replay:
+                self._alert(hits, price, window_start + GRANULARITY, lag, settled)
         self._save()
 
     def run(self, max_runtime=None):
