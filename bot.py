@@ -172,6 +172,7 @@ LADDER_RUNGS = int(os.environ.get("LADDER_RUNGS", "3"))
 # the close to wait for the market to publish its resolution.
 ODDS_LEAD = int(os.environ.get("ODDS_LEAD", "15"))
 ODDS_SETTLE = int(os.environ.get("ODDS_SETTLE_WAIT", "45"))
+ODDS_SHOW = int(os.environ.get("ODDS_SHOW", "18"))   # windows listed per report
 # Stake shown with each signal. STAKE_MODE=flat keeps every bet the same size;
 # "martingale" doubles after a loss up to LADDER_RUNGS. Flat is the default
 # because on the low-frequency streams it returned more profit per dollar of
@@ -507,6 +508,19 @@ def handle_callback(monitor, cq):
     m = cq.get("message") or {}
     chat = str(m.get("chat", {}).get("id", ""))
     mid = m.get("message_id")
+    if data.startswith("odds:"):
+        w = globals().get("ODDS_WATCHER")
+        what = data.split(":", 1)[1]
+        if not w:
+            answer_callback(cq_id, "در دسترس نیست")
+        elif what == "all":
+            import polymarket_collector as pmc
+            edit_keyboard(chat, mid, pmc.report_text(html=True), _odds_keyboard())
+            answer_callback(cq_id)
+        else:
+            edit_keyboard(chat, mid, w.window_report(int(what)), _odds_keyboard())
+            answer_callback(cq_id)
+        return
     if data.startswith("thrpick:"):
         iv = data.split(":", 1)[1]
         edit_keyboard(chat, mid,
@@ -553,6 +567,17 @@ MENU_LAST = "🔍 ۶ ساعت اخیر"
 MENU_ODDS = "📈 بالا/پایین"
 
 
+def _odds_keyboard():
+    """Ranges, so a different window is one tap away instead of a typed number."""
+    return {"inline_keyboard": [
+        [{"text": "۳ ساعت", "callback_data": "odds:3"},
+         {"text": "۶ ساعت", "callback_data": "odds:6"},
+         {"text": "۱۲ ساعت", "callback_data": "odds:12"}],
+        [{"text": "۲۴ ساعت", "callback_data": "odds:24"},
+         {"text": "📊 کلِ آمار", "callback_data": "odds:all"}],
+    ]}
+
+
 def _menu_keyboard():
     """Always-visible quick keyboard: one آستانه button per timeframe + status."""
     rows = [[f"🎚 آستانه {interval_label(iv)}"] for iv in THRESHOLD_INTERVALS]
@@ -582,7 +607,8 @@ def set_bot_commands():
         {"command": "missed", "description": "سابقهٔ سیگنال‌ها با ساعت و نتیجه"},
         {"command": "last", "description": "سیگنال‌های N ساعتِ گذشته (پیش‌فرض ۶)"},
         {"command": "check", "description": "قیمت‌های تسویه برای مقایسه با پلی‌مارکت"},
-        {"command": "odds", "description": "روشن/خاموش کردنِ گزارشِ بالا/پایینِ پلی‌مارکت"},
+        {"command": "odds", "description": "گزارشِ بالا/پایینِ N ساعتِ گذشته (پیش‌فرض ۳)"},
+        {"command": "oddscollect", "description": "روشن/خاموش کردنِ جمع‌آوریِ بی‌صدا"},
         {"command": "oddsreport", "description": "جمع‌بندیِ بالا/پایین به تفکیکِ ساعت"},
         {"command": "menu", "description": "نمایش منوی سریع"},
         {"command": "update", "description": "دریافت آخرین نسخه و ری‌استارت"},
@@ -2298,30 +2324,45 @@ class OddsWatcher:
             log.warning("odds toggle not persisted: %s", exc)
         log.info("Odds watcher %s", "ON" if self.on else "OFF")
         if self.on:
-            return ("📈 <b>پایشِ بالا/پایین روشن شد</b>\n"
-                    "قبل از هر پنجره، درصدی که پلی‌مارکت می‌دهد را می‌فرستم و "
-                    "نتیجه‌اش را هم بعداً می‌گویم.\n\n"
-                    "<i>این سیگنالِ من نیست — فقط قیمتِ بازار است. "
-                    "جمع‌بندی: /oddsreport</i>")
-        return "📉 <b>پایشِ بالا/پایین خاموش شد.</b>"
+            return ("📈 <b>جمع‌آوریِ بالا/پایین روشن شد</b>\n"
+                    "بی‌صدا ثبت می‌کنم — هیچ پیامی نمی‌فرستم.\n\n"
+                    "هر وقت خواستی: دکمهٔ <b>📈 بالا/پایین</b> یا "
+                    "<code>/odds 6</code> برای ۶ ساعتِ گذشته.")
+        return ("📉 <b>جمع‌آوری خاموش شد</b> — دادهٔ ثبت‌شده سرِ جایش می‌ماند.")
 
-    def _send(self, up, down, fav, boundary, src):
-        prev = ""
-        if self.last and self.last.get("winner"):
-            r = self.last
-            hit = "✅" if r["winner"] == r["favourite"] else "❌"
-            prev = (f"{hit} پنجرهٔ قبل ({et_time(r['t']):%I:%M%p}): "
-                    f"گران‌تر {_fa_side(r['favourite'])} بود، "
-                    f"برنده {_fa_side(r['winner'])}\n\n")
-        bar_up = "█" * round(up * 20)
-        send_message(self.chat_id,
-                     prev +
-                     f"📈 <b>{et_time(boundary):%I:%M}-"
-                     f"{et_time(boundary + GRANULARITY):%I:%M%p ET}</b>\n"
-                     f"🟢 بالا  <b>{up*100:.0f}¢</b>\n"
-                     f"🔴 پایین <b>{down*100:.0f}¢</b>\n"
-                     f"<code>{bar_up:<20}</code>\n"
-                     f"گران‌تر: <b>{_fa_side(fav)}</b>")
+    def window_report(self, hours=3):
+        """
+        The windows of the last `hours`, newest last — only when asked for.
+
+        Sending one message per window around the clock was noise; the data is
+        worth having continuously, the notifications are not. So collection runs
+        silently and this is the only thing that ever speaks.
+        """
+        import polymarket_collector as pmc
+        cutoff = time.time() - hours * 3600
+        rows = [r for r in pmc.load() if r["t"] >= cutoff]
+        if not rows:
+            return (f"📈 <b>{hours} ساعتِ گذشته</b>\n\nهنوز پنجره‌ای ثبت نشده."
+                    + ("" if self.on else
+                       "\n\n⚠️ جمع‌آوری خاموش است — /oddscollect روشنش می‌کند."))
+        rows.sort(key=lambda r: r["t"])
+        n = len(rows)
+        hit = sum(1 for r in rows if r["winner"] == r["favourite"])
+        paid = sum(max(r["up"], r["down"]) for r in rows) / n
+        lines = []
+        for r in rows[-ODDS_SHOW:]:
+            mark = "✅" if r["winner"] == r["favourite"] else "❌"
+            lines.append(f"{mark} <b>{et_time(r['t']):%I:%M%p}</b>  "
+                         f"🟢{r['up']*100:.0f} 🔴{r['down']*100:.0f}  →  "
+                         f"برنده {_fa_side(r['winner'])}")
+        more = (f"\n<i>… و {n - ODDS_SHOW} پنجرهٔ دیگر در همین بازه</i>"
+                if n > ODDS_SHOW else "")
+        edge = hit / n / paid - 1 if paid else 0
+        return (f"📈 <b>بالا/پایینِ {hours} ساعتِ گذشته</b>\n"
+                f"{n} پنجره  ·  سمتِ گران‌تر <b>{hit}/{n} = {hit/n*100:.0f}%</b> برد  ·  "
+                f"میانگینِ قیمتش <b>{paid*100:.0f}¢</b>\n"
+                f"اگر همیشه سمتِ گران را می‌گرفتی: <b>{edge*100:+.1f}%</b> در هر معامله\n\n"
+                + "\n".join(lines) + more)
 
     def run(self):
         """One pass per window, quietly doing nothing while switched off."""
@@ -2345,8 +2386,10 @@ class OddsWatcher:
                     time.sleep(ODDS_LEAD + 1)
                     continue
                 fav = "up" if up > down else ("down" if down < up else "tie")
-                self._send(up, down, fav, nxt, src)
-                # Settle the one just quoted, then keep it for the next message.
+                log.info("Odds %s: up %.0f down %.0f -> %s",
+                         et_time(nxt).strftime("%H:%M"), up * 100, down * 100, fav)
+                # Settle the one just quoted, then store it. No message: the
+                # report is pulled, never pushed.
                 time.sleep(max(0, nxt + GRANULARITY + ODDS_SETTLE - time.time()))
                 winner, beat, final = pmc.resolution(m.get("id"))
                 if winner is None and beat and final:
@@ -2526,12 +2569,23 @@ def command_listener(monitor: Monitor):
                         send_message(chat_id, pmc.report_text(html=True))
                     except Exception as exc:  # noqa: BLE001
                         send_message(chat_id, f"گزارش در دسترس نیست: {exc}")
+                elif text.startswith("/oddscollect"):
+                    w = globals().get("ODDS_WATCHER")
+                    send_message(chat_id, w.toggle() if w else "در دسترس نیست.")
                 elif text.startswith("/odds") or text == MENU_ODDS:
                     w = globals().get("ODDS_WATCHER")
                     if not w:
                         send_message(chat_id, "پایشِ بالا/پایین در دسترس نیست.")
                     else:
-                        send_message(chat_id, w.toggle())
+                        parts = text.split()
+                        hrs = 3
+                        if len(parts) > 1:
+                            try:
+                                hrs = max(1, min(48, int(float(parts[1]))))
+                            except ValueError:
+                                pass
+                        send_keyboard(chat_id, w.window_report(hrs),
+                                      _odds_keyboard())
                 elif text.startswith("/check"):
                     bm = globals().get("BREAKOUT_MONITOR")
                     send_message(chat_id, bm.check_report() if bm else
