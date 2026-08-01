@@ -154,6 +154,11 @@ GOLDEN_MULT = float(os.environ.get("GOLDEN_MULT", "9"))
 # computed a full minute early matches the final one 67.9% of the time and the
 # DIRECTION essentially never flips (3 cases in 28,090); the rest are signals
 # that appear or vanish in the final seconds. 0 disables the pre-alert.
+# A settled move smaller than this fraction of the recent median move is called
+# a push instead of a win or a loss — see BreakoutMonitor._settle. 0.02 catches
+# about 1.5% of windows; those are ties in all but name, and grading them was
+# putting fictitious wins on the scorecard.
+SETTLE_DEADBAND = float(os.environ.get("SETTLE_DEADBAND", "0.02"))
 PREALERT_SECONDS = int(os.environ.get("PREALERT_SECONDS", "30"))
 # Seconds before the close at which to look, largest first. 60 gives time to
 # open the app; 30 says whether it survived; the close is the real signal.
@@ -1464,6 +1469,20 @@ class BreakoutMonitor:
     def _side_label(side):
         return "🟢 بالا" if side == "up" else "🔴 پایین"
 
+    def _deadband(self):
+        """
+        Smallest move worth calling a result, in dollars.
+
+        Scaled to the current regime rather than fixed: $2 is nothing in a busy
+        hour and is most of a candle at 4am. Falls back to a small absolute
+        floor until there is enough history to measure the regime.
+        """
+        mv = [abs(m) for m in _moves(self.closes[-101:])] if len(self.closes) > 20 else []
+        if not mv:
+            return 0.0
+        med = sorted(mv)[len(mv) // 2]
+        return med * SETTLE_DEADBAND
+
     def _prev_result_line(self, this_window):
         """
         How the last resolved signal went, with its time.
@@ -1475,13 +1494,25 @@ class BreakoutMonitor:
         stamp makes clear it is the past, not the bet being offered now.
         """
         for row in reversed(self.signals):
-            if row["t"] == this_window or row.get("void"):
+            if row["t"] == this_window:
                 continue
-            if row["won"] is None:
+            if row["won"] is None and not row.get("void"):
                 continue
+            if row.get("void"):
+                # Say it rather than skip it: silence here reads as "the last
+                # signal never resolved", which is a different and worse story.
+                d = row.get("delta")
+                near = f"  <i>({d:+,.2f}$ — زیرِ آستانه)</i>" if d is not None else ""
+                return (f"<b>سیگنالِ قبلی</b> ({et_time(row['t']):%I:%M%p}): "
+                        f"⚪️ خیلی نزدیک — بی‌نتیجه{near}\n")
             mark = "✅ برد" if row["won"] else "❌ باخت"
+            # The numbers go in the message: a result you cannot check is a
+            # result you cannot trust, and one four-cent "win" cost more
+            # confidence than every correct call had built.
+            d = row.get("delta")
+            amount = f"  <i>({d:+,.2f}$)</i>" if d is not None else ""
             return (f"<b>سیگنالِ قبلی</b> ({et_time(row['t']):%I:%M%p}): "
-                    f"{mark}\n")
+                    f"{mark}{amount}\n")
         return ""
 
     def _settle(self, price):
@@ -1490,21 +1521,31 @@ class BreakoutMonitor:
 
         Polymarket settles a window by comparing its final price to the price at
         its start, so the bet recorded at the last close is settled by this one.
-        An exactly unchanged price is a push and is counted separately rather
-        than silently scored as a loss.
+
+        Moves too small to be real are NOT graded. A window once closed four
+        cents above its reference and was recorded as a win — on a typical
+        5-minute move of about $52, four cents is 0.08% of a normal candle, far
+        inside the slack between when this bot samples the oracle (boundary + a
+        couple of seconds) and whichever round the market settles against. The
+        arithmetic was right and the answer was meaningless. Anything under
+        SETTLE_DEADBAND of the recent median move is now a push, which costs
+        about 1.5% of windows and buys a scorecard that can be trusted.
         """
         p = self.pending
         self.pending = None
         if not p:
             return None
         ref = p["ref"]
-        if price == ref:
+        delta = price - ref
+        if abs(delta) <= self._deadband():
             self.score["void"] += 1
             for row in reversed(self.signals):
                 if row["t"] == p["window"]:
                     row["void"] = True
+                    row["delta"] = delta
                     break
-            log.info("Settled: VOID (price unchanged at %.2f)", price)
+            log.info("Settled: VOID (%.2f -> %.2f, delta %+.2f is inside the "
+                     "dead band)", ref, price, delta)
             return None
         won = (p["bet"] == "up") == (price > ref)
         self.score["n"] += 1
@@ -1517,6 +1558,7 @@ class BreakoutMonitor:
         for row in reversed(self.signals):   # the row opened for this very bet
             if row["t"] == p["window"]:
                 row["won"] = won
+                row["delta"] = delta
                 break
         self.history.append({"won": won, "bet": p["bet"], "mine": mine})
         self.history = self.history[-HISTORY_KEEP:]
