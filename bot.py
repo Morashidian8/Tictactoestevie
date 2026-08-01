@@ -155,6 +155,18 @@ GOLDEN_MULT = float(os.environ.get("GOLDEN_MULT", "9"))
 # DIRECTION essentially never flips (3 cases in 28,090); the rest are signals
 # that appear or vanish in the final seconds. 0 disables the pre-alert.
 PREALERT_SECONDS = int(os.environ.get("PREALERT_SECONDS", "30"))
+# Seconds before the close at which to look, largest first. 60 gives time to
+# open the app; 30 says whether it survived; the close is the real signal.
+# One stage is not enough — 30 seconds is not long enough to reach the account,
+# and a single early warning cannot be trusted on its own because ~13% of early
+# signals are gone by the close.
+PREALERT_STAGES = sorted(
+    {int(x) for x in os.environ.get("PREALERT_STAGES", "60,30").split(",")
+     if x.strip().isdigit() and int(x) > 0}, reverse=True)
+# PREALERT_SECONDS=0 still means "no pre-alerts at all" — it was the old switch
+# and someone's .env may well still hold it.
+if PREALERT_SECONDS == 0:
+    PREALERT_STAGES = []
 # How many past signal outcomes to keep, and how many to show in each alert.
 HISTORY_KEEP = 40
 HISTORY_SHOW = int(os.environ.get("HISTORY_SHOW", "20"))
@@ -1213,7 +1225,8 @@ class BreakoutMonitor:
         self.last_error = ""
         self.err_count = 0
         self.windows_seen = 0
-        self.pre_for = 0          # boundary a pre-alert has already been sent for
+        self.pre_done = set()     # (boundary, stage) pre-alerts already sent
+        self.pre_bet = {}         # boundary -> side promised by the last stage
         self.gap_note = None      # (windows missed, when) after an outage
         self.backfilled = 0       # windows scored from replay, not from live alerts
         self._load()
@@ -1446,6 +1459,10 @@ class BreakoutMonitor:
             self.signals[-1]["told"] = ok
         if not ok:
             log.warning("Alert not delivered; queued for the catch-up report.")
+
+    @staticmethod
+    def _side_label(side):
+        return "🟢 بالا" if side == "up" else "🔴 پایین"
 
     def _prev_result_line(self, this_window):
         """
@@ -1930,32 +1947,57 @@ class BreakoutMonitor:
                              s4["bet"], "دو حرکتِ هم‌جهت، یکی مخالف، بازگشت به جهتِ اول"))
         return hits
 
-    def _prealert(self, boundary, price):
+    def _prealert(self, boundary, price, stage):
         """
-        Provisional heads-up shortly before the window closes.
+        Staged heads-up before the window closes: warn, then confirm.
 
-        Direction is trustworthy — over 28,090 comparisons on 1-minute data a
-        signal computed a minute early flipped direction 3 times — but ~13% of
-        early signals disappear by the close, so this is explicitly labelled as
-        not yet final.
+        One 30-second warning was not usable — half a minute is not enough to
+        open the app and find the market. So the first look comes a minute out
+        and the second confirms it, which also fixes the other half of the
+        problem: an early signal is not final. Over 28,090 comparisons on
+        1-minute data the DIRECTION of an early signal flipped 3 times, but ~13%
+        of them vanish before the close, so the first message can only ever mean
+        "get ready", never "enter".
         """
         hits = self.evaluate(self.closes + [price])
-        if not hits:
-            return
-        bets = {h[2] for h in hits}
-        if len(bets) != 1:
-            return
-        bet = bets.pop()
-        o_et = et_time(boundary)
-        names = " · ".join(n.split(")")[0] + ")" for n, _, _, _ in hits)
+        bets = {h[2] for h in hits} if hits else set()
+        bet = bets.pop() if len(bets) == 1 else None
         left = max(0, int(boundary - time.time()))
-        log.info("PRE-ALERT (%ds early): %s", left, bet)
+        prev = self.pre_bet.get(boundary)
+        first = stage == PREALERT_STAGES[0]
+
+        if bet is None:
+            # Nothing now. Only worth a message if something was promised.
+            if prev:
+                self.pre_bet[boundary] = None
+                log.info("PRE-ALERT cancelled at %ds", left)
+                send_message(self.chat_id,
+                             f"❌ <b>لغو شد</b> — پیش‌هشدارِ {self._side_label(prev)} دیگر "
+                             f"برقرار نیست ({left} ثانیه مانده).\n"
+                             "<i>وارد نشو. حدود ۱۳٪ سیگنال‌های زودهنگام تا "
+                             "بسته‌شدنِ کندل از بین می‌روند.</i>")
+            return
+
+        self.pre_bet[boundary] = bet
+        o_et = et_time(boundary)
+        arrow = "🟢 <b>بالا</b>" if bet == "up" else "🔴 <b>پایین</b>"
+        names = "\n".join(f"• {n} <i>({acc})</i>" for n, acc, _, _ in hits)
+        log.info("PRE-ALERT stage %ds: %s", left, bet)
+        if first or prev is None:
+            head = (f"⏰ <b>{left} ثانیه تا باز شدنِ پنجره</b>\n"
+                    "🟡 <b>آماده باش</b> — هنوز قطعی نیست، وارد نشو.\n")
+            foot = f"\n\n<i>{PREALERT_STAGES[-1]} ثانیهٔ دیگر تایید یا لغو می‌کنم.</i>"
+        elif prev == bet:
+            head = (f"✅ <b>تایید شد</b> — {left} ثانیه تا باز شدن.\n"
+                    "الان برو داخلِ حساب و آماده شو.\n")
+            foot = "\n\n<i>سیگنالِ نهایی سرِ باز شدنِ پنجره می‌آید.</i>"
+        else:
+            head = (f"🔄 <b>جهت عوض شد</b> — {left} ثانیه تا باز شدن.\n"
+                    f"قبلاً {self._side_label(prev)} بود، حالا:\n")
+            foot = "\n\n<i>سیگنالِ نهایی سرِ باز شدنِ پنجره می‌آید.</i>"
         send_message(self.chat_id,
-                     f"⏱ <b>پیش‌هشدار — {left} ثانیه تا باز شدن</b>\n"
-                     f"{'🟢 <b>بالا</b>' if bet == 'up' else '🔴 <b>پایین</b>'}  ·  "
-                     f"{names}\n"
-                     f"پنجره: <b>{o_et:%I:%M%p ET}</b>  ·  ${price:,.2f}\n"
-                     "🟡 قطعی نیست — آماده باش.")
+                     head + f"\n{arrow}\n{names}\n\n"
+                     f"پنجره: <b>{o_et:%I:%M%p ET}</b>  ·  ${price:,.2f}" + foot)
 
     def _on_window_close(self, window_start, price, lag=0.0, replay=False):
         # Settle the previous signal BEFORE appending, so `ref` is compared with
@@ -2028,13 +2070,22 @@ class BreakoutMonitor:
                 # published the closing price), rather than busy-polling. When a
                 # pre-alert is due first, stop there on the way.
                 nxt = (int(now) // GRANULARITY + 1) * GRANULARITY
-                if PREALERT_SECONDS and self.pre_for != nxt and now < nxt - PREALERT_SECONDS:
-                    time.sleep(max(1.0, nxt - PREALERT_SECONDS - now))
-                    self.pre_for = nxt
+                # Stop at each pre-alert stage on the way to the boundary. Stages
+                # run largest-first, so the "get ready" message lands before the
+                # "confirmed" one and there is time to reach the account.
+                due = next((s for s in PREALERT_STAGES
+                            if (nxt, s) not in self.pre_done and now < nxt - s), None)
+                if due is not None:
+                    time.sleep(max(0.5, nxt - due - now))
+                    self.pre_done.add((nxt, due))
+                    # Keep the set from growing forever; only the current
+                    # boundary's entries can still matter.
+                    self.pre_done = {(b, s) for b, s in self.pre_done if b >= nxt}
+                    self.pre_bet = {b: v for b, v in self.pre_bet.items() if b >= nxt}
                     try:
                         p, _, feed = fetch_spot_price()
                         self.feed_used = feed
-                        self._prealert(nxt, p)
+                        self._prealert(nxt, p, due)
                     except Exception as exc:  # noqa: BLE001 - never block the close
                         log.warning("Pre-alert skipped: %s", exc)
                     continue
