@@ -187,12 +187,19 @@ def evaluate(closes, streams=("rule6", "golden")):
     """
     Signals for the just-closed candle, as bets on the window now opening.
 
-    `streams` selects which betting streams are live. They are kept SEPARATE on
-    purpose — measured over 12 months, one shared martingale ladder returned
-    $14,650 while two independent ladders over the identical signals returned
-    $18,150, because a ladder pays the same +base per cycle no matter which rule
-    closed it, so a 60% signal is worth no more than a 53% one once they share
-    a ladder. Ranked: rule 6 first, since it is the more accurate stream.
+    `streams` selects which betting streams are live.
+
+    `rule6` earns its own ladder: it is genuinely disjoint (186 of its 489 yearly
+    signals fire when no other rule does) and much more accurate, and splitting
+    it out was worth $3,500 a year over sharing one ladder with `golden`.
+
+    `golden` and `statistical` are NOT like that — golden is a strict subset of
+    the statistical pool, so pick ONE of them. Measured over 12 months at a $20
+    base: pooled they return $56,060 with a $2,040 drawdown; golden split into
+    its own ladder returns the same $56,060 with a WORSE $2,200 drawdown.
+    Splitting a subset out of its own parent buys nothing. Golden's value is as
+    a REPLACEMENT — 3.7 signals a day instead of 56.6, 55.7% instead of 53.7%,
+    and a $960 drawdown instead of $2,040.
     """
     out = []
     stat = [(1, "شکستِ ۲۰ کندلی", rule1(closes)),
@@ -218,7 +225,14 @@ def evaluate(closes, streams=("rule6", "golden")):
                 0, "ورودِ طلایی", g["side"],
                 f"{g['agree']} قانونِ هم‌نظر + کشیدگیِ {g['times']:.1f}×",
                 "golden", 55.7, False))
-    if "statistical" in streams and fired:
+    # ONE BET PER WINDOW, in priority order rule6 > golden > statistical.
+    #
+    # The streams overlap: every one of golden's 1,358 yearly windows is also a
+    # statistical window, and rule 6 shares 303 more. Letting two ladders bet the
+    # same five-minute market in the same direction is leverage by accident, not
+    # diversification — the stake doubles while the outcome stays perfectly
+    # correlated. The most accurate stream that fired takes the window.
+    if "statistical" in streams and fired and not out:
         # ONE signal for the window, not one per rule: several rules reading the
         # same series is a single bet on a single market. Emitting one each
         # would place duplicate orders and settle the ladder once, so the
