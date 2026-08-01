@@ -1424,8 +1424,10 @@ class BreakoutMonitor:
         # the martingale on the wrong rung.
         mine = all(h[0][0] in MINE_RULES for h in hits)
         golden = any(h[0].startswith("🏆") for h in hits)
+        prev = self._prev_result_line(window_start)
         text = (
-            ("🏆 <b>ورودِ طلایی (۵۸٪)</b>\n" if golden else "")
+            prev
+            + ("🏆 <b>ورودِ طلایی (۵۸٪)</b>\n" if golden else "")
             + f"🎯 {head}{agree}\n\n"
             f"{lines}\n\n"
             f"⏱ <b>{o_et:%I:%M}-{e_et:%I:%M%p} ET</b>  ({o_et:%b %d})  ·  "
@@ -1444,6 +1446,26 @@ class BreakoutMonitor:
             self.signals[-1]["told"] = ok
         if not ok:
             log.warning("Alert not delivered; queued for the catch-up report.")
+
+    def _prev_result_line(self, this_window):
+        """
+        How the last resolved signal went, with its time.
+
+        Read from the signal log rather than from the bet that just settled: a
+        signal fires at T and settles at T+1, and if T+1 is quiet there is no
+        alert to carry the result, so it would never be seen. Walking the log
+        back means the answer is always the genuinely last one — and the time
+        stamp makes clear it is the past, not the bet being offered now.
+        """
+        for row in reversed(self.signals):
+            if row["t"] == this_window or row.get("void"):
+                continue
+            if row["won"] is None:
+                continue
+            mark = "✅ برد" if row["won"] else "❌ باخت"
+            return (f"<b>سیگنالِ قبلی</b> ({et_time(row['t']):%I:%M%p}): "
+                    f"{mark}\n")
+        return ""
 
     def _settle(self, price):
         """
@@ -1726,8 +1748,13 @@ class BreakoutMonitor:
         tot = len(pool)
         won = sum(1 for r in pool if r["won"])
         label = ("AABA" if mine else "آماری") if mine is not None else "همه"
+        # Both ends are labelled: a bare run of 20 ticks gives no clue which end
+        # is the oldest, and reading it backwards inverts the streak that decides
+        # the next stake. Chunked in fives so the eye can count them.
+        seq = " ".join(seq[i:i + 5] for i in range(0, len(seq), 5))
         out = (f"\n\n📋 <b>{label}</b> — {len(recent)} سیگنالِ اخیر:\n"
-               f"{seq}\n<b>{w}</b>/{len(recent)}  ·  کل: {won}/{tot} "
+               f"قدیمی‌ترین ⬅️ {seq} ➡️ آخرین\n"
+               f"<b>{w}</b>/{len(recent)}  ·  کل: {won}/{tot} "
                f"({won / tot * 100:.0f}%)")
         k = self.loss_streak(mine)
         out += f"\n{'🔴' if k >= 2 else '🟡' if k == 1 else '🟢'} پلهٔ <b>{k + 1}</b>"
