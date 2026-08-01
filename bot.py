@@ -168,6 +168,10 @@ SETTLE_FLOOR = float(os.environ.get("SETTLE_FLOOR", "3"))
 # the message reports a raw losing streak — "پلهٔ ۵" on a three-rung ladder,
 # which is not a rung at all, it is two busts and a fresh start.
 LADDER_RUNGS = int(os.environ.get("LADDER_RUNGS", "3"))
+# Polymarket up/down watcher: how early to read the quote, and how long after
+# the close to wait for the market to publish its resolution.
+ODDS_LEAD = int(os.environ.get("ODDS_LEAD", "15"))
+ODDS_SETTLE = int(os.environ.get("ODDS_SETTLE_WAIT", "45"))
 # Stake shown with each signal. STAKE_MODE=flat keeps every bet the same size;
 # "martingale" doubles after a loss up to LADDER_RUNGS. Flat is the default
 # because on the low-frequency streams it returned more profit per dollar of
@@ -546,13 +550,14 @@ MENU_SCORE = "🎯 کارنامه"
 MENU_UPDATE = "⬆️ به‌روزرسانی"
 MENU_MISSED = "📋 سابقه"
 MENU_LAST = "🔍 ۶ ساعت اخیر"
+MENU_ODDS = "📈 بالا/پایین"
 
 
 def _menu_keyboard():
     """Always-visible quick keyboard: one آستانه button per timeframe + status."""
     rows = [[f"🎚 آستانه {interval_label(iv)}"] for iv in THRESHOLD_INTERVALS]
     rows.append([MENU_SCORE, MENU_MISSED])
-    rows.append([MENU_LAST])
+    rows.append([MENU_LAST, MENU_ODDS])
     rows.append([MENU_STATUS, MENU_REFRESH, MENU_UPDATE])
     return {
         "keyboard": [[{"text": t} for t in row] for row in rows],
@@ -577,6 +582,8 @@ def set_bot_commands():
         {"command": "missed", "description": "سابقهٔ سیگنال‌ها با ساعت و نتیجه"},
         {"command": "last", "description": "سیگنال‌های N ساعتِ گذشته (پیش‌فرض ۶)"},
         {"command": "check", "description": "قیمت‌های تسویه برای مقایسه با پلی‌مارکت"},
+        {"command": "odds", "description": "روشن/خاموش کردنِ گزارشِ بالا/پایینِ پلی‌مارکت"},
+        {"command": "oddsreport", "description": "جمع‌بندیِ بالا/پایین به تفکیکِ ساعت"},
         {"command": "menu", "description": "نمایش منوی سریع"},
         {"command": "update", "description": "دریافت آخرین نسخه و ری‌استارت"},
         {"command": "start", "description": "شروع / راهنما"},
@@ -2250,6 +2257,121 @@ class BreakoutMonitor:
                 time.sleep(min(2 ** fail, 60))
 
 
+
+# ---------------------------------------------------------------------------
+# Polymarket up/down watcher — a separate stream, on its own switch
+# ---------------------------------------------------------------------------
+class OddsWatcher:
+    """
+    Report what Polymarket itself is charging for each 5-minute window.
+
+    Kept deliberately apart from the strategy alerts: it is not a signal and
+    acting on it is a different bet entirely, so it has its own switch, its own
+    message shape and its own record. Off by default; the button turns it on and
+    it stays on across restarts.
+
+    While it is on it also stores every window to the same file the standalone
+    collector writes, so the summary covers both. Run one or the other, not
+    both, or each window lands twice.
+    """
+
+    STATE_FILE = os.environ.get("ODDS_ON_FILE", ".odds_on")
+
+    def __init__(self, chat_source):
+        self._chat_source = chat_source
+        self.on = os.path.exists(self.STATE_FILE)
+        self.last = None          # the row awaiting its result
+        self.errors = 0
+
+    @property
+    def chat_id(self):
+        return getattr(self._chat_source, "chat_id", "") or TELEGRAM_CHAT_ID
+
+    def toggle(self):
+        self.on = not self.on
+        try:
+            if self.on:
+                open(self.STATE_FILE, "w").close()
+            elif os.path.exists(self.STATE_FILE):
+                os.remove(self.STATE_FILE)
+        except OSError as exc:
+            log.warning("odds toggle not persisted: %s", exc)
+        log.info("Odds watcher %s", "ON" if self.on else "OFF")
+        if self.on:
+            return ("📈 <b>پایشِ بالا/پایین روشن شد</b>\n"
+                    "قبل از هر پنجره، درصدی که پلی‌مارکت می‌دهد را می‌فرستم و "
+                    "نتیجه‌اش را هم بعداً می‌گویم.\n\n"
+                    "<i>این سیگنالِ من نیست — فقط قیمتِ بازار است. "
+                    "جمع‌بندی: /oddsreport</i>")
+        return "📉 <b>پایشِ بالا/پایین خاموش شد.</b>"
+
+    def _send(self, up, down, fav, boundary, src):
+        prev = ""
+        if self.last and self.last.get("winner"):
+            r = self.last
+            hit = "✅" if r["winner"] == r["favourite"] else "❌"
+            prev = (f"{hit} پنجرهٔ قبل ({et_time(r['t']):%I:%M%p}): "
+                    f"گران‌تر {_fa_side(r['favourite'])} بود، "
+                    f"برنده {_fa_side(r['winner'])}\n\n")
+        bar_up = "█" * round(up * 20)
+        send_message(self.chat_id,
+                     prev +
+                     f"📈 <b>{et_time(boundary):%I:%M}-"
+                     f"{et_time(boundary + GRANULARITY):%I:%M%p ET}</b>\n"
+                     f"🟢 بالا  <b>{up*100:.0f}¢</b>\n"
+                     f"🔴 پایین <b>{down*100:.0f}¢</b>\n"
+                     f"<code>{bar_up:<20}</code>\n"
+                     f"گران‌تر: <b>{_fa_side(fav)}</b>")
+
+    def run(self):
+        """One pass per window, quietly doing nothing while switched off."""
+        import polymarket_collector as pmc
+        while True:
+            now = time.time()
+            nxt = (int(now) // GRANULARITY + 1) * GRANULARITY
+            time.sleep(max(1.0, nxt - ODDS_LEAD - now))
+            if not self.on:
+                time.sleep(ODDS_LEAD + 1)
+                continue
+            try:
+                m = pmc.market_for(nxt)
+                if not m:
+                    log.warning("Odds: no market found for %s", nxt)
+                    time.sleep(ODDS_LEAD + 1)
+                    continue
+                up, down, src = pmc.quote(m)
+                if up is None:
+                    log.warning("Odds: no price (%s)", src)
+                    time.sleep(ODDS_LEAD + 1)
+                    continue
+                fav = "up" if up > down else ("down" if down < up else "tie")
+                self._send(up, down, fav, nxt, src)
+                # Settle the one just quoted, then keep it for the next message.
+                time.sleep(max(0, nxt + GRANULARITY + ODDS_SETTLE - time.time()))
+                winner, beat, final = pmc.resolution(m.get("id"))
+                if winner is None and beat and final:
+                    winner = "up" if float(final) > float(beat) else "down"
+                row = {"t": nxt, "et": et_time(nxt).isoformat(),
+                       "hour_et": et_time(nxt).hour, "up": up, "down": down,
+                       "favourite": fav, "winner": winner, "beat": beat,
+                       "final": final, "source": src, "market_id": m.get("id")}
+                pmc.append(row)
+                self.last = row
+                self.errors = 0
+            except Exception as exc:  # noqa: BLE001 - one bad window is not fatal
+                self.errors += 1
+                log.warning("Odds watcher error: %s: %s",
+                            type(exc).__name__, str(exc)[:160])
+                if self.errors == 3 and self.chat_id:
+                    send_message(self.chat_id,
+                                 "⚠️ پایشِ بالا/پایین به پلی‌مارکت وصل نمی‌شود "
+                                 f"({type(exc).__name__}). با VPN امتحان کن.")
+                time.sleep(10)
+
+
+def _fa_side(side):
+    return "🟢 بالا" if side == "up" else ("🔴 پایین" if side == "down" else "برابر")
+
 # ---------------------------------------------------------------------------
 # Telegram command listener (auto-captures chat_id, /start, /status)
 # ---------------------------------------------------------------------------
@@ -2398,6 +2520,18 @@ def command_listener(monitor: Monitor):
                         bm.flush_untold()   # mark anything queued as seen
                     else:
                         send_message(chat_id, "سابقه‌ای در دسترس نیست.")
+                elif text.startswith("/oddsreport"):
+                    try:
+                        import polymarket_collector as pmc
+                        send_message(chat_id, pmc.report_text(html=True))
+                    except Exception as exc:  # noqa: BLE001
+                        send_message(chat_id, f"گزارش در دسترس نیست: {exc}")
+                elif text.startswith("/odds") or text == MENU_ODDS:
+                    w = globals().get("ODDS_WATCHER")
+                    if not w:
+                        send_message(chat_id, "پایشِ بالا/پایین در دسترس نیست.")
+                    else:
+                        send_message(chat_id, w.toggle())
                 elif text.startswith("/check"):
                     bm = globals().get("BREAKOUT_MONITOR")
                     send_message(chat_id, bm.check_report() if bm else
@@ -2480,6 +2614,10 @@ def main():
         # The command listener runs in its own thread and needs to reach the
         # monitor to answer /score.
         globals()["BREAKOUT_MONITOR"] = breakout
+        odds = OddsWatcher(monitor)
+        globals()["ODDS_WATCHER"] = odds
+        threading.Thread(target=odds.run, daemon=True).start()
+        log.info("Odds watcher ready (%s).", "ON" if odds.on else "OFF — /odds")
         log.info(
             "Breakout-fade alerts ON | feed=%s lookback=%d vol_filter=%s | "
             "history=%d rules=1,2,3%s%s",

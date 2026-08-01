@@ -216,47 +216,57 @@ def load():
     return [r for r in rows if r.get("winner") and r.get("favourite") != "tie"]
 
 
-def report():
+def report_text(html=False):
+    """The summary as text. `html` wraps the headline numbers for Telegram."""
+    b = (lambda x: f"<b>{x}</b>") if html else (lambda x: str(x))
+    out = []
+
+    def p(line=""):
+        out.append(line)
+
     rows = load()
     if not rows:
-        print(f"هنوز داده‌ای در {STORE} نیست.")
-        return
+        return f"هنوز داده‌ای در {STORE} نیست."
     n = len(rows)
     hit = sum(1 for r in rows if r["winner"] == r["favourite"])
     paid = sum(max(r["up"], r["down"]) for r in rows) / n
-    print(f"\n{'='*58}\nقیمتِ پلی‌مارکت، {LEAD} ثانیه قبل از باز شدنِ پنجره")
-    print(f"{'='*58}")
-    print(f"پنجره‌های ثبت‌شده : {n}")
-    print(f"سمتِ گران‌تر برد   : {hit}/{n} = {hit/n*100:.1f}%")
-    print(f"میانگینِ قیمتِ سمتِ گران‌تر : {paid*100:.1f}¢  ← برای سود باید دقت از این بیشتر باشد")
     edge = hit / n / paid - 1
-    print(f"سود/زیانِ هر معامله : {edge*100:+.1f}%")
+    p(f"📈 قیمتِ پلی‌مارکت، {LEAD} ثانیه قبل از باز شدنِ پنجره")
+    p()
+    p(f"پنجره‌های ثبت‌شده: {b(n)}")
+    p(f"سمتِ گران‌تر برد: {b(f'{hit}/{n} = {hit/n*100:.1f}%')}")
+    p(f"میانگینِ قیمتش: {b(f'{paid*100:.1f}¢')} — برای سود باید دقت از این بیشتر باشد")
+    p(f"سود/زیانِ هر معامله: {b(f'{edge*100:+.1f}%')}")
 
     by_hour = defaultdict(lambda: [0, 0])
     for r in rows:
-        b = by_hour[r["hour_et"]]
-        b[0] += 1
-        b[1] += r["winner"] == r["favourite"]
-    print(f"\nبه تفکیکِ ساعتِ ET:")
-    print(f"  {'ساعت':>6} {'تعداد':>7} {'بردِ سمتِ گران':>16}")
+        h = by_hour[r["hour_et"]]
+        h[0] += 1
+        h[1] += r["winner"] == r["favourite"]
+    p()
+    p("⏰ به تفکیکِ ساعتِ ET:")
     for h in sorted(by_hour):
         c, w = by_hour[h]
-        bar = "█" * round(w / c * 20) if c else ""
-        print(f"  {h:>4}:00 {c:>7} {w/c*100:>13.1f}%  {bar}")
+        p(f"  {h:>2}:00  {c:>4} پنجره  {w/c*100:>5.1f}%  "
+          + "█" * round(w / c * 12))
 
     buckets = defaultdict(lambda: [0, 0])
     for r in rows:
-        p = max(r["up"], r["down"])
-        key = min(int(p * 100) // 5 * 5, 95)
-        b = buckets[key]
-        b[0] += 1
-        b[1] += r["winner"] == r["favourite"]
-    print(f"\nبه تفکیکِ قیمت (آیا بازار درست قیمت‌گذاری می‌کند؟):")
-    print(f"  {'قیمت':>8} {'تعداد':>7} {'واقعاً برد':>12}")
+        key = min(int(max(r["up"], r["down"]) * 100) // 5 * 5, 95)
+        k = buckets[key]
+        k[0] += 1
+        k[1] += r["winner"] == r["favourite"]
+    p()
+    p("💵 به تفکیکِ قیمت — آیا بازار درست قیمت می‌زند؟")
     for k in sorted(buckets):
         c, w = buckets[k]
-        print(f"  {k:>3}-{k+5:<3}¢ {c:>7} {w/c*100:>11.1f}%")
-    print()
+        flag = "✅" if w / c * 100 > k + 2.5 else "❌"
+        p(f"  {k}-{k+5}¢  {c:>4} پنجره  واقعاً برد {w/c*100:>5.1f}%  {flag}")
+    return "\n".join(out)
+
+
+def report():
+    print(report_text())
 
 
 if __name__ == "__main__":
