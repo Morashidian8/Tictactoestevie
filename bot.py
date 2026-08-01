@@ -626,6 +626,7 @@ def set_bot_commands():
         {"command": "check", "description": "قیمت‌های تسویه برای مقایسه با پلی‌مارکت"},
         {"command": "odds", "description": "گزارشِ بالا/پایینِ N ساعتِ گذشته (پیش‌فرض ۳)"},
         {"command": "oddscollect", "description": "روشن/خاموش کردنِ جمع‌آوریِ بی‌صدا"},
+        {"command": "oddsdebug", "description": "چرا بالا/پایین چیزی جمع نمی‌کند؟"},
         {"command": "oddsreport", "description": "جمع‌بندیِ بالا/پایین به تفکیکِ ساعت"},
         {"command": "menu", "description": "نمایش منوی سریع"},
         {"command": "update", "description": "دریافت آخرین نسخه و ری‌استارت"},
@@ -2325,6 +2326,7 @@ class OddsWatcher:
         self.on = os.path.exists(self.STATE_FILE)
         self.last = None          # the row awaiting its result
         self.errors = 0
+        self.why = ""             # why the last attempt collected nothing
 
     @property
     def chat_id(self):
@@ -2359,9 +2361,14 @@ class OddsWatcher:
         cutoff = time.time() - hours * 3600
         rows = [r for r in pmc.load() if r["t"] >= cutoff]
         if not rows:
-            return (f"📈 <b>{hours} ساعتِ گذشته</b>\n\nهنوز پنجره‌ای ثبت نشده."
-                    + ("" if self.on else
-                       "\n\n⚠️ جمع‌آوری خاموش است — /oddscollect روشنش می‌کند."))
+            msg = f"📈 <b>{hours} ساعتِ گذشته</b>\n\nهنوز پنجره‌ای ثبت نشده."
+            if not self.on:
+                msg += "\n\n⚠️ جمع‌آوری خاموش است — /oddscollect روشنش می‌کند."
+            elif self.why:
+                # Say WHY rather than leaving an empty report to be interpreted.
+                msg += (f"\n\n⚠️ آخرین تلاش: {self.why}\n"
+                        "برای دیدنِ جزئیات: /oddsdebug")
+            return msg
         rows.sort(key=lambda r: r["t"])
         n = len(rows)
         hit = sum(1 for r in rows if r["winner"] == r["favourite"])
@@ -2394,14 +2401,17 @@ class OddsWatcher:
             try:
                 m = pmc.market_for(nxt)
                 if not m:
+                    self.why = "بازارِ این پنجره در پلی‌مارکت پیدا نشد"
                     log.warning("Odds: no market found for %s", nxt)
                     time.sleep(ODDS_LEAD + 1)
                     continue
                 up, down, src = pmc.quote(m)
                 if up is None:
+                    self.why = f"قیمت خوانده نشد ({src})"
                     log.warning("Odds: no price (%s)", src)
                     time.sleep(ODDS_LEAD + 1)
                     continue
+                self.why = ""
                 fav = "up" if up > down else ("down" if down < up else "tie")
                 log.info("Odds %s: up %.0f down %.0f -> %s",
                          et_time(nxt).strftime("%H:%M"), up * 100, down * 100, fav)
@@ -2580,6 +2590,17 @@ def command_listener(monitor: Monitor):
                         bm.flush_untold()   # mark anything queued as seen
                     else:
                         send_message(chat_id, "سابقه‌ای در دسترس نیست.")
+                elif text.startswith("/oddsdebug"):
+                    send_message(chat_id, "🔧 در حال بررسی…")
+
+                    def _dbg(cid=chat_id):
+                        try:
+                            import polymarket_collector as pmc
+                            send_message(cid, pmc.diagnose())
+                        except Exception as exc:  # noqa: BLE001
+                            send_message(cid, f"عیب‌یابی خطا داد: "
+                                              f"{type(exc).__name__}: {exc}")
+                    threading.Thread(target=_dbg, daemon=True).start()
                 elif text.startswith("/oddsreport"):
                     try:
                         import polymarket_collector as pmc
