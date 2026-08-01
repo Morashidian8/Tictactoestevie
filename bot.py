@@ -504,12 +504,14 @@ MENU_REFRESH = "🔄 منو"
 MENU_SCORE = "🎯 کارنامه"
 MENU_UPDATE = "⬆️ به‌روزرسانی"
 MENU_MISSED = "📋 سابقه"
+MENU_LAST = "🔍 ۶ ساعت اخیر"
 
 
 def _menu_keyboard():
     """Always-visible quick keyboard: one آستانه button per timeframe + status."""
     rows = [[f"🎚 آستانه {interval_label(iv)}"] for iv in THRESHOLD_INTERVALS]
     rows.append([MENU_SCORE, MENU_MISSED])
+    rows.append([MENU_LAST])
     rows.append([MENU_STATUS, MENU_REFRESH, MENU_UPDATE])
     return {
         "keyboard": [[{"text": t} for t in row] for row in rows],
@@ -532,6 +534,7 @@ def set_bot_commands():
         {"command": "score", "description": "کارنامهٔ سیگنال‌ها (برد/باخت واقعی)"},
         {"command": "status", "description": "وضعیت و آستانهٔ فعلی"},
         {"command": "missed", "description": "سابقهٔ سیگنال‌ها با ساعت و نتیجه"},
+        {"command": "last", "description": "سیگنال‌های N ساعتِ گذشته (پیش‌فرض ۶)"},
         {"command": "menu", "description": "نمایش منوی سریع"},
         {"command": "update", "description": "دریافت آخرین نسخه و ری‌استارت"},
         {"command": "start", "description": "شروع / راهنما"},
@@ -1499,19 +1502,109 @@ class BreakoutMonitor:
     # -- the signal log: what fired, what it did, and whether you were told ----
     @staticmethod
     def _signal_lines(rows):
-        """One line per signal: outcome, ET time, side, rules."""
+        """
+        Two lines per signal: outcome/time/side, then the strategies by name.
+
+        Bare rule numbers were unreadable — "(۱,۲,۵)" says nothing about what
+        fired — so each row spells the strategies out the way the live alert
+        does. Rows written before this change only stored numbers, and those
+        still render, just without the name.
+        """
         out = []
         for r in rows:
             if r.get("void"):
-                mark = "⚪️"
+                mark = "⚪️ بی‌نتیجه"
             elif r["won"] is None:
-                mark = "⏳"
+                mark = "⏳ باز"
             else:
-                mark = "✅" if r["won"] else "❌"
-            out.append(f"{mark} {et_time(r['t']):%I:%M%p} "
-                       f"{'🟢' if r['bet'] == 'up' else '🔴'} "
-                       f"({','.join(r.get('rules') or [])})")
+                mark = "✅ برد" if r["won"] else "❌ باخت"
+            side = "🟢 بالا" if r["bet"] == "up" else "🔴 پایین"
+            names = r.get("rules") or []
+            out.append(f"{mark}  ·  <b>{et_time(r['t']):%I:%M%p}</b>  ·  {side}\n"
+                       f"   <i>{' · '.join(names)}</i>")
         return out
+
+    @classmethod
+    def _chunks(cls, head, rows, foot="", per=12):
+        """
+        Split a signal list into messages Telegram will accept.
+
+        Now that every row names its strategies, a long list runs past the
+        4096-character limit and the whole message is silently rejected — which
+        is exactly the "it said nothing" failure this feature exists to end.
+        """
+        out = []
+        for i in range(0, len(rows), per):
+            part = cls._signal_lines(rows[i:i + per])
+            more = (f"\n<i>(بخش {i // per + 1} از "
+                    f"{(len(rows) - 1) // per + 1})</i>" if len(rows) > per else "")
+            out.append((head if i == 0 else "") + "\n".join(part) + more
+                       + (foot if i + per >= len(rows) else ""))
+        return out
+
+    def _send_rows(self, head, rows, foot=""):
+        """Send a chunked report. True only if every part got through."""
+        ok = True
+        for part in self._chunks(head, rows, foot):
+            ok = send_message(self.chat_id, part) and ok
+        return ok
+
+    def scan_recent(self, hours=6):
+        """
+        Re-run the rules over the last `hours` of real candles, read-only.
+
+        Nothing is scored or stored: this answers "what would you have sent me
+        today?" without touching the scorecard, so it can be run as often as
+        wanted. Each signal is settled against the close that actually followed
+        it, exactly as Polymarket would.
+        """
+        want = max(1, int(hours * 3600 // GRANULARITY))
+        kl = self._fetch_klines(want + BREAKOUT_HISTORY + 5)
+        if len(kl) < BREAKOUT_HISTORY + 2:
+            return None, 0
+        rows = []
+        first = max(BREAKOUT_HISTORY, len(kl) - want)
+        for i in range(first, len(kl)):
+            hits = self.evaluate([c for _, c in kl[:i + 1]])
+            if not hits:
+                continue
+            bets = {h[2] for h in hits}
+            if len(bets) != 1:
+                continue          # rules disagreed; no bet was implied
+            bet, ref = bets.pop(), kl[i][1]
+            nxt = kl[i + 1][1] if i + 1 < len(kl) else None
+            row = {"t": kl[i][0] + GRANULARITY, "bet": bet,
+                   "rules": [h[0] for h in hits], "won": None, "told": True}
+            if nxt is not None:
+                if nxt == ref:
+                    row["void"] = True
+                else:
+                    row["won"] = (bet == "up") == (nxt > ref)
+            rows.append(row)
+        return rows, len(kl) - first
+
+    def scan_report(self, hours=6):
+        """/last — send the read-only scan of the recent past to Telegram."""
+        rows, windows = self.scan_recent(hours)
+        if rows is None:
+            return send_message(self.chat_id,
+                                "❌ کندل‌های گذشته را نتوانستم بگیرم — نت یا "
+                                "دسترسی به Binance مشکل دارد. بعداً دوباره امتحان کن.")
+        if not rows:
+            return send_message(
+                self.chat_id,
+                f"🔍 <b>{hours} ساعتِ گذشته</b> ({windows} پنجره)\n\n"
+                "هیچ سیگنالی در این بازه نبود — قانون‌ها فقط روی حرکت‌های "
+                "غیرعادی فعال می‌شوند و سکوت طبیعی است.")
+        n = sum(1 for r in rows if r["won"] is not None)
+        w = sum(1 for r in rows if r["won"])
+        head = (f"🔍 <b>سیگنال‌های {hours} ساعتِ گذشته</b> — تست\n"
+                f"{windows} پنجره بررسی شد  ·  <b>{len(rows)}</b> سیگنال"
+                + (f"  ·  {w}/{n} برد" if n else "") + "\n\n")
+        foot = ("\n\n<i>این‌ها گذشته‌اند و امتیازی هم ثبت نشد — فقط برای اینکه "
+                "ببینی موتور چه می‌دیده. قیمت‌ها از Binance است، پس ممکن است "
+                "یکی‌دو مورد با Chainlink فرق کند.</i>")
+        return self._send_rows(head, rows, foot)
 
     def untold(self):
         """
@@ -1536,15 +1629,14 @@ class BreakoutMonitor:
         shown = rows[-MISSED_SHOW:]
         w = sum(1 for r in rows if r["won"])
         n = sum(1 for r in rows if r["won"] is not None)
-        more = (f"\n<i>… و {len(rows) - len(shown)} سیگنالِ دیگر</i>"
-                if len(rows) > len(shown) else "")
-        text = ((head or "📡 <b>سیگنال‌های جاافتاده</b>\n")
+        head = ((head or "📡 <b>سیگنال‌های جاافتاده</b>\n")
                 + f"\n📋 <b>{len(rows)} سیگنال</b>"
-                + (f" — {w}/{n} برد" if n else "") + ":\n"
-                + "\n".join(self._signal_lines(shown)) + more
-                + "\n\n<i>ساعت‌ها ET است و همه مربوط به گذشته‌اند — "
+                + (f" — {w}/{n} برد" if n else "")
+                + (f"  (۱۵ موردِ آخر نشان داده می‌شود)"
+                   if len(rows) > len(shown) else "") + ":\n\n")
+        foot = ("\n\n<i>ساعت‌ها ET است و همه مربوط به گذشته‌اند — "
                 "برای ورود نیست، فقط برای آمار.</i>")
-        if not send_message(self.chat_id, text):
+        if not self._send_rows(head, shown, foot):
             log.warning("Catch-up report could not be delivered; will retry.")
             return False
         for r in rows:
@@ -1552,26 +1644,27 @@ class BreakoutMonitor:
         self._save()
         return True
 
-    def missed_report(self):
+    def missed_report(self, count=HISTORY_SHOW):
         """/missed — the last signals with times and outcomes, always available."""
-        rows = self.signals[-HISTORY_SHOW:]
+        rows = self.signals[-count:]
         if not rows:
-            return ("📋 <b>سابقهٔ سیگنال‌ها</b>\n\nهنوز سیگنالی ثبت نشده.")
+            return send_message(self.chat_id,
+                                "📋 <b>سابقهٔ سیگنال‌ها</b>\n\nهنوز سیگنالی ثبت نشده.")
         n = sum(1 for r in rows if r["won"] is not None)
         w = sum(1 for r in rows if r["won"])
         never = sum(1 for r in self.signals if not r.get("told"))
-        lines = self._signal_lines(rows)
+        head = (f"📋 <b>{len(rows)} سیگنالِ اخیر</b> (قدیمی → جدید)\n"
+                + (f"{w}/{n} برد\n" if n else "") + "\n")
+        foot = (("\n\n📡 در بالا یعنی پیامش به تلگرام نرسیده بود "
+                 f"({never} مورد)." if never else "")
+                + "\n<i>ساعت‌ها ET، شروعِ همان پنجره.</i>")
         # Mark the ones that never reached Telegram, so "did I miss anything?"
         # has a visible answer instead of needing to be asked again.
-        for i, r in enumerate(rows):
+        marked = [dict(r, bet=r["bet"]) for r in rows]
+        for r in marked:
             if not r.get("told"):
-                lines[i] += " 📡"
-        return ("📋 <b>{} سیگنالِ اخیر</b> (قدیمی → جدید)\n".format(len(rows))
-                + (f"{w}/{n} برد\n" if n else "")
-                + "\n" + "\n".join(lines)
-                + ("\n\n📡 = پیامش به تلگرام نرسیده بود "
-                   f"({never} مورد)" if never else "")
-                + "\n<i>ساعت‌ها ET، شروعِ همان پنجره.</i>")
+                r["rules"] = list(r.get("rules") or []) + ["📡 پیامش نرسیده بود"]
+        return self._send_rows(head, marked, foot)
 
     def _track(self, mine):
         """History for one track: the user's AABA rule, or the statistical ones."""
@@ -1853,7 +1946,7 @@ class BreakoutMonitor:
                 # reported, and nothing depends on Telegram having worked.
                 self.signals.append({
                     "t": window_start + GRANULARITY, "bet": bet,
-                    "rules": [r.split(")")[0] for r in rules],
+                    "rules": list(rules),
                     "won": None, "mine": self._is_mine(rules),
                     "told": False, "replay": bool(replay)})
                 self.signals = self.signals[-SIGNALS_KEEP:]
@@ -2078,10 +2171,27 @@ def command_listener(monitor: Monitor):
                 elif text.startswith("/missed") or text == MENU_MISSED:
                     bm = globals().get("BREAKOUT_MONITOR")
                     if bm:
-                        send_message(chat_id, bm.missed_report())
+                        bm.missed_report()
                         bm.flush_untold()   # mark anything queued as seen
                     else:
                         send_message(chat_id, "سابقه‌ای در دسترس نیست.")
+                elif text.startswith("/last") or text == MENU_LAST:
+                    # Read-only replay of the recent past: what WOULD have been
+                    # sent. Nothing is scored, so it is safe to run repeatedly.
+                    bm = globals().get("BREAKOUT_MONITOR")
+                    parts = text.split()
+                    hrs = 6
+                    if len(parts) > 1:
+                        try:
+                            hrs = max(1, min(48, int(float(parts[1]))))
+                        except ValueError:
+                            pass
+                    if bm:
+                        send_message(chat_id, f"🔍 در حال بررسیِ {hrs} ساعتِ گذشته…")
+                        threading.Thread(target=bm.scan_report, args=(hrs,),
+                                         daemon=True).start()
+                    else:
+                        send_message(chat_id, "موتورِ سیگنال روشن نیست.")
                 elif text.startswith("/score") or text == MENU_SCORE:
                     bm = globals().get("BREAKOUT_MONITOR")
                     send_message(chat_id, bm.score_report() if bm else
