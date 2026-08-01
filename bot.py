@@ -289,6 +289,25 @@ logging.basicConfig(
 log = logging.getLogger("btc-bot")
 
 
+def code_version():
+    """
+    Which commit this process is actually running.
+
+    Printed at startup and shown in /status: after a `git pull` it is otherwise
+    impossible to tell from the outside whether the running process picked the
+    new code up or an old one is still alive, which has caused real confusion.
+    """
+    try:
+        import subprocess
+        here = os.path.dirname(os.path.abspath(__file__))
+        out = subprocess.run(["git", "-C", here, "log", "-1", "--format=%h %cd",
+                              "--date=format:%m-%d %H:%M"],
+                             capture_output=True, text=True, timeout=5)
+        return out.stdout.strip() or "unknown"
+    except Exception:  # noqa: BLE001 - a missing git must never block startup
+        return "unknown"
+
+
 # ---------------------------------------------------------------------------
 # Telegram helpers
 # ---------------------------------------------------------------------------
@@ -1459,7 +1478,8 @@ class BreakoutMonitor:
                  f"(باید زیر ۵ باشد)",
                  f"کندل‌های در حافظه: <b>{len(self.closes)}</b> از {BREAKOUT_HISTORY}",
                  f"کلِ پنجره‌های پردازش‌شده: <b>{self.windows_seen}</b>",
-                 f"فید: <b>{self.feed_used}</b>"]
+                 f"فید: <b>{self.feed_used}</b>",
+                 f"نسخهٔ کد: <b>{code_version()}</b>  ·  سابقه: {HISTORY_SHOW}"]
         if self.last_signal:
             lines.append(f"آخرین سیگنال: <b>{(now - self.last_signal)/60:.0f}</b> دقیقه پیش")
         else:
@@ -1885,6 +1905,7 @@ def command_listener(monitor: Monitor):
 
 
 def main():
+    log.info("=== bot.py version %s ===", code_version())
     if not TELEGRAM_TOKEN:
         raise SystemExit(
             "TELEGRAM_TOKEN is not set. Create a bot via @BotFather and set it "
@@ -1907,8 +1928,10 @@ def main():
         # monitor to answer /score.
         globals()["BREAKOUT_MONITOR"] = breakout
         log.info(
-            "Breakout-fade alerts ON | feed=%s lookback=%d vol_filter=%s",
-            BREAKOUT_FEED, BREAKOUT_LOOKBACK, BREAKOUT_VOL_FILTER,
+            "Breakout-fade alerts ON | feed=%s lookback=%d vol_filter=%s | "
+            "history=%d rules=1,2,3%s%s",
+            BREAKOUT_FEED, BREAKOUT_LOOKBACK, BREAKOUT_VOL_FILTER, HISTORY_SHOW,
+            ",5" if RULE5_ENABLED else "", ",4" if RULE4_ENABLED else "",
         )
         threading.Thread(target=breakout.run, daemon=True).start()
 
