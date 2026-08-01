@@ -158,7 +158,12 @@ GOLDEN_MULT = float(os.environ.get("GOLDEN_MULT", "9"))
 # a push instead of a win or a loss — see BreakoutMonitor._settle. 0.02 catches
 # about 1.5% of windows; those are ties in all but name, and grading them was
 # putting fictitious wins on the scorecard.
-SETTLE_DEADBAND = float(os.environ.get("SETTLE_DEADBAND", "0.02"))
+SETTLE_DEADBAND = float(os.environ.get("SETTLE_DEADBAND", "0.05"))
+# Absolute floor for that band, in dollars. Measured against Polymarket's own
+# numbers the feed sits about $1 away at the same instant, so the move this bot
+# computes can be a couple of dollars off the one the market settles on. Below
+# that, a verdict here says nothing about the verdict there.
+SETTLE_FLOOR = float(os.environ.get("SETTLE_FLOOR", "3"))
 # Depth of the martingale ladder being followed, for display only. Without it
 # the message reports a raw losing streak — "پلهٔ ۵" on a three-rung ladder,
 # which is not a rung at all, it is two busts and a fresh start.
@@ -1517,10 +1522,14 @@ class BreakoutMonitor:
                "<i>با Price to beat و Final price در پلی‌مارکت مقایسه کن.</i>", ""]
         for r in rows:
             mark = ("⚪️" if r.get("void") else "✅" if r["won"] else "❌")
-            out.append(f"{mark} <b>{et_time(r['t']):%I:%M%p}</b> "
+            # The full range, labelled exactly the way Polymarket labels it —
+            # a bare "12:35" was read as the 12:30-12:35 market and the two
+            # screenshots compared different windows.
+            out.append(f"{mark} <b>{et_time(r['t']):%I:%M}-"
+                       f"{et_time(r['t'] + GRANULARITY):%I:%M%p ET}</b> "
                        f"{'🟢' if r['bet'] == 'up' else '🔴'}\n"
-                       f"   شروع <code>{r['ref']:,.2f}</code> → "
-                       f"پایان <code>{r['settle']:,.2f}</code>  "
+                       f"   Price to beat <code>{r['ref']:,.2f}</code>\n"
+                       f"   Final price   <code>{r['settle']:,.2f}</code>  "
                        f"({r['delta']:+,.2f})")
         out.append("\n<i>اگر این عددها با پلی‌مارکت فرق دارند، مشکل از فیدِ "
                    "قیمت است نه از قانون‌ها — همان را بگو تا عوضش کنم.</i>")
@@ -1538,7 +1547,7 @@ class BreakoutMonitor:
         if not mv:
             return 0.0
         med = sorted(mv)[len(mv) // 2]
-        return med * SETTLE_DEADBAND
+        return max(med * SETTLE_DEADBAND, SETTLE_FLOOR)
 
     def _prev_result_line(self, this_window):
         """
