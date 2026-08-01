@@ -1324,46 +1324,37 @@ class BreakoutMonitor:
             return
         self.last_alert = time.time()
         o_et, e_et = et_time(window_start), et_time(window_start + GRANULARITY)
-        o_ir = datetime.fromtimestamp(window_start, TEHRAN)
-        e_ir = datetime.fromtimestamp(window_start + GRANULARITY, TEHRAN)
         bets = {h[2] for h in hits}
         if len(bets) == 1:
             bet = bets.pop()
             head = ("🟢 <b>بالا (Up)</b>" if bet == "up" else "🔴 <b>پایین (Down)</b>")
-            agree = (f"\n✅ <b>هر {len(hits)} استراتژی هم‌نظرند</b> — سیگنالِ قوی‌تر."
-                     if len(hits) > 1 else "")
+            agree = (f"  ✅ {len(hits)} استراتژی هم‌نظر" if len(hits) > 1 else "")
         else:
-            head = "⚠️ <b>استراتژی‌ها اختلافِ نظر دارند</b>"
-            agree = "\n⚠️ جهت‌ها یکی نیست — بهتر است این نوبت را رد کنی."
+            head = "⚠️ <b>اختلافِ نظر — رد کن</b>"
+            agree = ""
         lines = "\n".join(
-            f"• <b>{name}</b> ({acc}) → "
-            f"{'🟢 بالا' if b == 'up' else '🔴 پایین'}\n   <i>{detail}</i>"
+            f"• <b>{name}</b> ({acc}) → {'🟢' if b == 'up' else '🔴'}\n  <i>{detail}</i>"
             for name, acc, b, detail in hits)
-        seed_note = ("\n\n⚠️ بخشی از تاریخچه هنوز از Binance است و به‌تدریج با دادهٔ "
-                     "زندهٔ فید جایگزین می‌شود."
-                     if self.seeded_from and len(self.closes) < BREAKOUT_HISTORY else "")
-        feed_note = ("  ⚠️ (Chainlink در دسترس نبود — با تسویهٔ پلی‌مارکت کمی فرق دارد)"
-                     if self.feed_used == "binance-fallback" else "")
-        prev_line = self.history_line()
+        warn = ""
+        if self.feed_used == "binance-fallback":
+            warn += "\n⚠️ فید: Binance (Chainlink در دسترس نبود)"
+        if self.seeded_from and len(self.closes) < BREAKOUT_HISTORY:
+            warn += "\n⚠️ تاریخچه هنوز کامل نیست"
+        # This alert belongs to one track: the user's AABA rule fires on its own
+        # cadence, so showing the statistical rules' streak next to it would put
+        # the martingale on the wrong rung.
+        mine = all(h[0][0] in MINE_RULES for h in hits)
         golden = any(h[0].startswith("🏆") for h in hits)
         text = (
-            ("🏆🏆 <b>ورودِ طلایی — بهترین سیگنالِ سیستم</b> 🏆🏆\n"
-             "<i>دقتِ تاریخی ۵۸٪ · فقط ~۳ بار در روز</i>\n\n" if golden else "")
-            + f"🎯 <b>سیگنال — روی کندلِ بعدی شرط ببند</b>\n\n"
-            f"جهتِ پیشنهادی: {head}{agree}\n\n"
+            ("🏆 <b>ورودِ طلایی (۵۸٪)</b>\n" if golden else "")
+            + f"🎯 {head}{agree}\n\n"
             f"{lines}\n\n"
-            f"قیمتِ بسته‌شدن: <b>${price:,.2f}</b>\n"
-            f"فید: <b>{self.feed_used}</b>{feed_note}\n"
-            f"⏱ پنجرهٔ شرط — همانی که در پلی‌مارکت می‌بینی:\n"
-            f"   <b>{o_et:%I:%M}-{e_et:%I:%M%p} ET</b>   ({o_et:%b %d})\n"
-            f"   به وقتِ تهران: <b>{o_ir:%H:%M} تا {e_ir:%H:%M}</b>\n"
-            f"   این پنجره <b>همین الان</b> باز شد (تأخیرِ سیگنال: {lag:.0f} ثانیه)\n\n"
-            "⚡️ <b>سریع وارد شو.</b> هرچه از پنجره بگذرد قیمت حرکت را در خود "
-            "می‌خورد و لبه از بین می‌رود — قیمتِ ۵۰ سنتیِ ثانیه‌های اول تا دقیقهٔ "
-            "چهارم می‌تواند ۸۰ سنت شود.\n\n"
-            "دقتِ تاریخیِ این قانون‌ها <b>۵۳–۵۷٪</b> است (نه بیشتر). "
-            "اگر پلی‌مارکت این سمت را بالای <b>۵۵ سنت</b> می‌فروشد، وارد نشو."
-            f"{prev_line}{seed_note}"
+            f"⏱ <b>{o_et:%I:%M}-{e_et:%I:%M%p} ET</b>  ({o_et:%b %d})  ·  "
+            f"+{lag:.0f}s\n"
+            f"💵 ${price:,.2f}\n"
+            f"⚡️ زیرِ ۵۵ سنت وارد شو، وگرنه رد کن."
+            f"{warn}"
+            + self.history_line(mine)
         )
         log.info("ALERT: %s", " | ".join(f"{n}->{b}" for n, _, b, _ in hits))
         send_message(self.chat_id, text)
@@ -1408,40 +1399,47 @@ class BreakoutMonitor:
                  self.score["wins"] / self.score["n"] * 100)
         return won
 
-    def loss_streak(self):
-        """Losses at the tail of the history — i.e. the martingale rung you are on."""
+    def _track(self, mine):
+        """History for one track: the user's AABA rule, or the statistical ones."""
+        return [h for h in self.history if h.get("mine", False) == mine]
+
+    def loss_streak(self, mine=None):
+        """
+        Losses at the tail — i.e. which martingale rung the next entry sits on.
+
+        Restricted to one track when `mine` is given: a losing run on the AABA
+        rule says nothing about the stake for a rule-1 signal, so mixing them
+        would put you on the wrong rung.
+        """
+        hist = self.history if mine is None else self._track(mine)
         k = 0
-        for h in reversed(self.history):
+        for h in reversed(hist):
             if h["won"]:
                 break
             k += 1
         return k
 
-    def history_line(self):
+    def history_line(self, mine=None):
         """
-        Recent outcomes in the order the signals were SENT, not grouped by rule.
+        Recent outcomes for the track this alert belongs to, oldest first.
 
-        The tail streak is spelled out because that, not the overall hit rate, is
-        what determines the next stake under any martingale.
+        The tail streak is spelled out because that — not the overall hit rate —
+        is what sets the next stake under any martingale.
         """
-        if not self.history:
+        hist = self.history if mine is None else self._track(mine)
+        if not hist:
             return ""
-        recent = self.history[-HISTORY_SHOW:]
+        recent = hist[-HISTORY_SHOW:]
         seq = "".join("✅" if h["won"] else "❌" for h in recent)
         w = sum(1 for h in recent if h["won"])
-        s = self.score
-        overall = (f"  ·  کل: {s['wins']}/{s['n']} ({s['wins'] / s['n'] * 100:.0f}%)"
-                   if s["n"] else "")
-        out = (f"\n\n📋 <b>{len(recent)} سیگنالِ اخیر</b> (قدیمی → جدید):\n"
-               f"{seq}\n<b>{w}</b> برد از {len(recent)}{overall}")
-        k = self.loss_streak()
-        if k >= 2:
-            out += (f"\n🔴 <b>{k} باختِ پیاپی</b> — اگر مارتینگل می‌زنی، "
-                    f"این ورود پلهٔ <b>{k + 1}</b> است.")
-        elif k == 1:
-            out += "\n🟡 سیگنالِ قبلی باخت — این ورود پلهٔ ۲ است."
-        else:
-            out += "\n🟢 سیگنالِ قبلی برد — از پلهٔ ۱ شروع کن."
+        tot = len(hist)
+        won = sum(1 for h in hist if h["won"])
+        label = ("AABA" if mine else "آماری") if mine is not None else "همه"
+        out = (f"\n\n📋 <b>{label}</b> — {len(recent)} سیگنالِ اخیر:\n"
+               f"{seq}\n<b>{w}</b>/{len(recent)}  ·  کل: {won}/{tot} "
+               f"({won / tot * 100:.0f}%)")
+        k = self.loss_streak(mine)
+        out += f"\n{'🔴' if k >= 2 else '🟡' if k == 1 else '🟢'} پلهٔ <b>{k + 1}</b>"
         return out
 
     def health_report(self):
@@ -1624,21 +1622,15 @@ class BreakoutMonitor:
             return
         bet = bets.pop()
         o_et = et_time(boundary)
-        o_ir = datetime.fromtimestamp(boundary, TEHRAN)
-        names = "\n".join(f"• {n} ({acc})" for n, acc, _, _ in hits)
+        names = " · ".join(n.split(")")[0] + ")" for n, _, _, _ in hits)
         left = max(0, int(boundary - time.time()))
         log.info("PRE-ALERT (%ds early): %s", left, bet)
         send_message(self.chat_id,
-                     f"⏱ <b>پیش‌هشدار — تا {left} ثانیهٔ دیگر پنجره باز می‌شود</b>\n\n"
-                     f"جهتِ احتمالی: "
-                     f"{'🟢 <b>بالا (Up)</b>' if bet == 'up' else '🔴 <b>پایین (Down)</b>'}\n\n"
-                     f"{names}\n\n"
-                     f"پنجره: <b>{o_et:%I:%M%p ET}</b>  ·  تهران {o_ir:%H:%M}\n"
-                     f"قیمتِ فعلی: ${price:,.2f}\n\n"
-                     "🟡 <b>هنوز قطعی نیست</b> — قیمت تا لحظهٔ بسته‌شدن حرکت می‌کند. "
-                     "حدود ۱۳٪ پیش‌هشدارها در ثانیه‌های آخر محو می‌شوند، ولی جهت "
-                     "تقریباً هیچ‌وقت برعکس نمی‌شود. آماده باش؛ تأییدِ نهایی تا چند "
-                     "ثانیهٔ دیگر می‌آید.")
+                     f"⏱ <b>پیش‌هشدار — {left} ثانیه تا باز شدن</b>\n"
+                     f"{'🟢 <b>بالا</b>' if bet == 'up' else '🔴 <b>پایین</b>'}  ·  "
+                     f"{names}\n"
+                     f"پنجره: <b>{o_et:%I:%M%p ET}</b>  ·  ${price:,.2f}\n"
+                     "🟡 قطعی نیست — آماده باش.")
 
     def _on_window_close(self, window_start, price, lag=0.0, replay=False):
         # Settle the previous signal BEFORE appending, so `ref` is compared with
