@@ -63,51 +63,77 @@ def _jload(v, default):
 
 
 # --- finding the market for one particular window ---------------------------
-def _candidates():
-    """Every open BTC up/down market Gamma will admit to, newest window first."""
-    out = []
-    for path, key in (("markets", "question"), ("events", "title")):
-        try:
-            data = get(f"{GAMMA}/{path}", closed="false", limit=500,
-                       order="endDate", ascending="true")
-        except Exception as exc:
-            log(f"gamma /{path} failed: {type(exc).__name__}: {str(exc)[:120]}")
-            continue
-        for item in data if isinstance(data, list) else []:
-            text = (item.get(key) or "").lower()
-            if "up or down" not in text:
-                continue
-            if "bitcoin" not in text and "btc" not in text:
-                continue
-            markets = item.get("markets") if path == "events" else [item]
-            for m in markets or []:
-                out.append(m)
-        if out:
-            break
-    return out
+LIMIT = 100          # Gamma caps a page at 100 no matter what you ask for
+
+
+def _iso(ts):
+    return datetime.fromtimestamp(ts, timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def _slug_for(boundary):
+    """
+    Polymarket's own slug for this window.
+
+    Titles look like "Bitcoin Up or Down - January 20, 7:45AM-7:50AM ET", and
+    the slug is that lower-cased with the punctuation dropped. Asking for it
+    directly is the cheapest possible lookup when the format holds.
+    """
+    o = datetime.fromtimestamp(boundary, ET)
+    e = datetime.fromtimestamp(boundary + GRAN, ET)
+
+    def hm(d):
+        return f"{d.strftime('%I').lstrip('0')}{d:%M}{d.strftime('%p').lower()}"
+
+    return (f"bitcoin-up-or-down-{o.strftime('%B').lower()}-{o.day}-"
+            f"{hm(o)}-{hm(e)}-et")
+
+
+def _by_date(boundary):
+    """
+    Markets ending within a minute of this window's close.
+
+    The first version asked for every open market ordered by end date and took
+    the nearest — which returned markets from January that had never resolved,
+    193 days away from the target. Bounding the end date is the fix: the query
+    itself now can only return the right window.
+    """
+    want = boundary + GRAN
+    return get(f"{GAMMA}/markets", closed="false", limit=LIMIT,
+               order="endDate", ascending="true",
+               end_date_min=_iso(want - 90), end_date_max=_iso(want + 90))
+
+
+def _matches(item):
+    text = (item.get("question") or item.get("title") or "").lower()
+    return "up or down" in text and ("bitcoin" in text or "btc" in text)
 
 
 def market_for(boundary):
-    """
-    The market whose window STARTS at `boundary`.
-
-    Gamma reports endDate; a five-minute market ending at boundary+300 is the
-    one about to open. Matching on the end lets this work no matter how the
-    title is worded.
-    """
+    """The market whose window STARTS at `boundary`, or None."""
     want_end = boundary + GRAN
-    best, best_gap = None, 1e9
-    for m in _candidates():
-        end = m.get("endDate") or m.get("end_date_iso") or ""
+    tries = (
+        ("end-date window", lambda: _by_date(boundary)),
+        ("slug", lambda: get(f"{GAMMA}/markets", slug=_slug_for(boundary))),
+        ("slug via events", lambda: [
+            m for e in get(f"{GAMMA}/events", slug=_slug_for(boundary))
+            for m in (e.get("markets") or [])]),
+    )
+    for _, fn in tries:
         try:
-            ts = datetime.fromisoformat(end.replace("Z", "+00:00")).timestamp()
-        except (ValueError, AttributeError):
+            data = fn()
+        except Exception:
             continue
-        gap = abs(ts - want_end)
-        if gap < best_gap:
-            best, best_gap = m, gap
-    # Anything more than half a window away is a different market.
-    return best if best and best_gap <= GRAN / 2 else None
+        for m in (data if isinstance(data, list) else []):
+            if not _matches(m):
+                continue
+            end = m.get("endDate") or m.get("end_date_iso") or ""
+            try:
+                ts = datetime.fromisoformat(end.replace("Z", "+00:00")).timestamp()
+            except (ValueError, AttributeError):
+                continue
+            if abs(ts - want_end) <= GRAN / 2:
+                return m
+    return None
 
 
 def quote(market):
@@ -273,104 +299,71 @@ def report():
 
 # --- why is nothing being collected? ----------------------------------------
 def diagnose(boundary=None):
-    """
-    Walk the whole path once and report where it stops.
-
-    Written because the collector logged "بازارش پیدا نشد" and that is not an
-    answer — it could be the network, the endpoint, the query parameters, the
-    title filter, or the time match, and each needs a different fix. This tries
-    every query variant, says how many rows came back, how many survived each
-    filter, and what the nearest market actually is.
-    """
+    """Walk the lookup once and report exactly where it stops."""
     if boundary is None:
         boundary = (int(time.time()) // GRAN + 1) * GRAN
-    out = [f"🔧 <b>عیب‌یابیِ بالا/پایین</b>",
-           f"پنجرهٔ هدف: {datetime.fromtimestamp(boundary, ET):%H:%M} ET", ""]
+    want_end = boundary + GRAN
+    out = ["🔧 <b>عیب‌یابیِ بالا/پایین</b>",
+           f"پنجرهٔ هدف: {datetime.fromtimestamp(boundary, ET):%H:%M} ET",
+           f"پایانِ موردِ انتظار: {_iso(want_end)}", ""]
 
-    # 1. can we reach it at all?
     try:
         get(f"{GAMMA}/markets", limit=1)
         out.append("۱) اتصال به گاما: ✅")
     except Exception as exc:
         out.append(f"۱) اتصال به گاما: ❌ {type(exc).__name__}")
-        out.append(f"   <code>{str(exc)[:180]}</code>")
-        out.append("\n<i>یعنی شبکه/فیلترینگ اجازه نمی‌دهد. با VPN امتحان کن.</i>")
+        out.append(f"   <code>{str(exc)[:160]}</code>")
+        out.append("\n<i>شبکه/فیلترینگ. با VPN امتحان کن.</i>")
         return "\n".join(out)
 
-    # 2. which query actually returns the 5-minute markets?
-    variants = [
-        ("markets closed=false order=endDate",
-         (f"{GAMMA}/markets", {"closed": "false", "limit": 500,
-                               "order": "endDate", "ascending": "true"})),
-        ("markets closed=false (بدون ترتیب)",
-         (f"{GAMMA}/markets", {"closed": "false", "limit": 500})),
-        ("events closed=false order=endDate",
-         (f"{GAMMA}/events", {"closed": "false", "limit": 500,
-                              "order": "endDate", "ascending": "true"})),
-        ("markets tag=crypto",
-         (f"{GAMMA}/markets", {"closed": "false", "limit": 500,
-                               "tag_slug": "crypto"})),
-    ]
-    best_sample = None
-    for label, (url, params) in variants:
+    slug = _slug_for(boundary)
+    out.append(f"۲) اسلاگِ ساخته‌شده: <code>{slug}</code>")
+
+    found = None
+    for label, fn in (("بازهٔ endDate", lambda: _by_date(boundary)),
+                      ("اسلاگ", lambda: get(f"{GAMMA}/markets", slug=slug)),
+                      ("اسلاگ از events", lambda: [
+                          m for e in get(f"{GAMMA}/events", slug=slug)
+                          for m in (e.get("markets") or [])])):
         try:
-            data = get(url, **params)
+            data = fn()
         except Exception as exc:
-            out.append(f"۲) {label}: ❌ {type(exc).__name__}")
+            out.append(f"۳) {label}: ❌ {type(exc).__name__} {str(exc)[:80]}")
             continue
         rows = data if isinstance(data, list) else []
-        titled = []
-        for it in rows:
-            t = (it.get("question") or it.get("title") or "").lower()
-            if "up or down" in t and ("btc" in t or "bitcoin" in t):
-                titled.append(it)
-        out.append(f"۲) {label}: {len(rows)} ردیف، {len(titled)} تای BTC up/down")
-        if titled and best_sample is None:
-            best_sample = (label, titled)
+        hits = [m for m in rows if _matches(m)]
+        out.append(f"۳) {label}: {len(rows)} ردیف، {len(hits)} تای BTC up/down")
+        for m in hits[:2]:
+            end = m.get("endDate") or ""
+            try:
+                ts = datetime.fromisoformat(end.replace("Z", "+00:00")).timestamp()
+                gap = f"{ts - want_end:+.0f} ثانیه"
+                ok = "✅" if abs(ts - want_end) <= GRAN / 2 else "❌ خارج از محدوده"
+            except (ValueError, AttributeError):
+                gap, ok = end or "—", "❌ endDate خوانده نشد"
+            out.append(f"   • {(m.get('question') or '')[:58]}")
+            out.append(f"     اختلاف: {gap}  {ok}")
+            if found is None and ok.startswith("✅"):
+                found = m
+        if found:
+            break
 
-    if not best_sample:
-        out.append("\n<b>هیچ بازارِ BTC up/down پیدا نشد.</b>")
-        try:
-            data = get(f"{GAMMA}/markets", closed="false", limit=20)
-            names = [(d.get("question") or "")[:60] for d in data[:8]]
-            out.append("نمونهٔ عنوان‌هایی که برگشت:")
-            out += [f"  • {n}" for n in names]
-        except Exception:
-            pass
-        out.append("\n<i>عنوان‌های بالا را بفرست تا فیلتر را با واقعیت جور کنم.</i>")
+    if not found:
+        out.append("\n<b>بازارِ این پنجره پیدا نشد.</b>")
+        out.append("<i>اگر ردیف‌ها صفرند یعنی کوئری چیزی برنمی‌گرداند؛ اگر "
+                   "هست ولی اختلاف بزرگ است یعنی زمان‌ها جور نیستند.</i>")
         return "\n".join(out)
 
-    label, hits = best_sample
-    out.append(f"\n۳) از «{label}» استفاده می‌کنم.")
-    want_end = boundary + GRAN
-    rows = []
-    for m in hits:
-        end = m.get("endDate") or m.get("end_date_iso") or ""
-        try:
-            ts = datetime.fromisoformat(end.replace("Z", "+00:00")).timestamp()
-        except (ValueError, AttributeError):
-            continue
-        rows.append((abs(ts - want_end), ts, m))
-    rows.sort()
-    if not rows:
-        out.append("۴) هیچ‌کدام endDate قابلِ خواندن نداشتند ❌")
-        out.append(f"   نمونه: <code>{str(hits[0])[:200]}</code>")
-        return "\n".join(out)
-    gap, ts, m = rows[0]
-    out.append(f"۴) نزدیک‌ترین بازار: پایانش "
-               f"{datetime.fromtimestamp(ts, ET):%H:%M:%S} ET، "
-               f"اختلاف با هدف {gap:.0f} ثانیه "
-               f"{'✅' if gap <= GRAN/2 else '❌ خارج از محدوده'}")
-    out.append(f"   عنوان: {(m.get('question') or m.get('title') or '')[:80]}")
-
-    up, down, src = quote(m)
+    up, down, src = quote(found)
     if up is None:
-        out.append(f"۵) خواندنِ قیمت: ❌ ({src})")
-        out.append(f"   outcomes=<code>{str(m.get('outcomes'))[:60]}</code>")
-        out.append(f"   tokens=<code>{str(m.get('clobTokenIds'))[:60]}</code>")
-        out.append(f"   prices=<code>{str(m.get('outcomePrices'))[:60]}</code>")
+        out.append(f"\n۴) خواندنِ قیمت: ❌ ({src})")
+        out.append(f"   outcomes=<code>{str(found.get('outcomes'))[:50]}</code>")
+        out.append(f"   tokens=<code>{str(found.get('clobTokenIds'))[:50]}</code>")
+        out.append(f"   prices=<code>{str(found.get('outcomePrices'))[:50]}</code>")
     else:
-        out.append(f"۵) قیمت: 🟢 بالا {up*100:.0f}¢ · 🔴 پایین {down*100:.0f}¢  [{src}] ✅")
+        out.append(f"\n۴) قیمت: 🟢 بالا {up*100:.0f}¢ · "
+                   f"🔴 پایین {down*100:.0f}¢  [{src}] ✅")
+        out.append("<i>یعنی همه‌چیز درست است — جمع‌آوری از همین حالا کار می‌کند.</i>")
     return "\n".join(out)
 
 
