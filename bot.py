@@ -425,10 +425,20 @@ def _tg(method: str, payload: dict) -> bool:
 
 
 def send_keyboard(chat_id, text, keyboard):
-    return _tg("sendMessage", {
-        "chat_id": chat_id, "text": text, "parse_mode": "HTML",
-        "reply_markup": {"inline_keyboard": keyboard},
-    })
+    """
+    Send text with an inline keyboard, falling back to plain text.
+
+    Telegram rejects the WHOLE request when the markup is malformed, so a bad
+    keyboard used to mean the user tapped a button and got nothing at all —
+    no text, no error, no clue. The content matters more than the buttons, so
+    if the markup is refused the message still goes out without it.
+    """
+    if _tg("sendMessage", {
+            "chat_id": chat_id, "text": text, "parse_mode": "HTML",
+            "reply_markup": {"inline_keyboard": keyboard}}):
+        return True
+    log.warning("Keyboard rejected; sending the text on its own.")
+    return send_message(chat_id, text)
 
 
 def edit_keyboard(chat_id, message_id, text, keyboard):
@@ -568,14 +578,21 @@ MENU_ODDS = "📈 بالا/پایین"
 
 
 def _odds_keyboard():
-    """Ranges, so a different window is one tap away instead of a typed number."""
-    return {"inline_keyboard": [
+    """
+    Ranges, so a different window is one tap away instead of a typed number.
+
+    Returns the bare row list, like every other keyboard here — send_keyboard
+    and edit_keyboard add the "inline_keyboard" wrapper themselves. Returning
+    the wrapper too nested it twice, Telegram rejected the whole request, and
+    the button answered with silence.
+    """
+    return [
         [{"text": "۳ ساعت", "callback_data": "odds:3"},
          {"text": "۶ ساعت", "callback_data": "odds:6"},
          {"text": "۱۲ ساعت", "callback_data": "odds:12"}],
         [{"text": "۲۴ ساعت", "callback_data": "odds:24"},
          {"text": "📊 کلِ آمار", "callback_data": "odds:all"}],
-    ]}
+    ]
 
 
 def _menu_keyboard():
