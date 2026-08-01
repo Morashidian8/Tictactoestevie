@@ -37,7 +37,8 @@ GOLDEN_MULT = 9.0      # ...on top of an extreme stretch
 RSI_PERIOD = 14
 RSI_OVERBOUGHT = 70.0  # rule 6
 
-Signal = namedtuple("Signal", "rule name side detail stream accuracy")
+# `alone` is informational: rule 6 firing with no statistical rule alongside it.
+Signal = namedtuple("Signal", "rule name side detail stream accuracy alone")
 
 
 # --- small helpers ----------------------------------------------------------
@@ -194,32 +195,41 @@ def evaluate(closes, streams=("rule6", "golden")):
     a ladder. Ranked: rule 6 first, since it is the more accurate stream.
     """
     out = []
+    stat = [(1, "شکستِ ۲۰ کندلی", rule1(closes)),
+            (2, "۳ حرکتِ هم‌جهت + حرکتِ بزرگ", rule2(closes)),
+            (3, "رشتهٔ هم‌جهت", rule3(closes)),
+            (5, "کشیدگیِ ۴ کندلی", rule5(closes))]
+    fired = [(n, lab, s) for n, lab, s in stat if s]
     if "rule6" in streams:
         s6 = rule6(closes)
         if s6:
-            alone = not (rule1(closes) or rule2(closes)
-                         or rule3(closes) or rule5(closes))
+            # `alone` is a LABEL, not a second stream. Splitting it into its own
+            # ladder would silently give rule 6 two independent martingales and
+            # halve the recovery each one sees.
+            alone = not fired
             out.append(Signal(
                 6, "AABA در اشباع خرید", s6["side"],
                 f"RSI={s6['rsi']:.0f}" + ("، تنها" if alone else "، همراهِ قانون‌های آماری"),
-                "rule6_alone" if alone else "rule6", 61.0 if alone else 56.0))
+                "rule6", 61.0 if alone else 56.0, alone))
     if "golden" in streams:
         g = golden(closes)
         if g:
             out.append(Signal(
                 0, "ورودِ طلایی", g["side"],
                 f"{g['agree']} قانونِ هم‌نظر + کشیدگیِ {g['times']:.1f}×",
-                "golden", 55.7))
-    if "statistical" in streams:
-        hits = [(1, "شکستِ ۲۰ کندلی", rule1(closes), 57.4),
-                (2, "۳ حرکتِ هم‌جهت + حرکتِ بزرگ", rule2(closes), 55.4),
-                (3, "رشتهٔ هم‌جهت", rule3(closes), 52.8),
-                (5, "کشیدگیِ ۴ کندلی", rule5(closes), 55.6)]
-        fired = [(n, lab, s, a) for n, lab, s, a in hits if s]
-        sides = {s["side"] for _, _, s, _ in fired}
+                "golden", 55.7, False))
+    if "statistical" in streams and fired:
+        # ONE signal for the window, not one per rule: several rules reading the
+        # same series is a single bet on a single market. Emitting one each
+        # would place duplicate orders and settle the ladder once, so the
+        # accounting would silently drift from reality.
+        sides = {s["side"] for _, _, s in fired}
         if len(sides) == 1:
-            for n, lab, s, a in fired:
-                out.append(Signal(n, lab, s["side"], "", "statistical", a))
+            out.append(Signal(
+                min(n for n, _, _ in fired),
+                "قانون‌های آماری: " + "، ".join(str(n) for n, _, _ in fired),
+                sides.pop(), "، ".join(lab for _, lab, _ in fired),
+                "statistical", 53.7, False))
     return out
 
 
@@ -299,8 +309,7 @@ class Book:
     """
 
     def __init__(self, state=None, bases=None):
-        bases = bases or {"rule6": 50.0, "rule6_alone": 50.0, "golden": 20.0,
-                          "statistical": 20.0}
+        bases = bases or {"rule6": 50.0, "golden": 20.0, "statistical": 20.0}
         self.bases = bases
         self.ladders = {}
         for name, base in bases.items():
