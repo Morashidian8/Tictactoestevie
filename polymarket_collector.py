@@ -75,7 +75,9 @@ def _candidates():
             continue
         for item in data if isinstance(data, list) else []:
             text = (item.get(key) or "").lower()
-            if "up or down" not in text or "bitcoin" not in text and "btc" not in text:
+            if "up or down" not in text:
+                continue
+            if "bitcoin" not in text and "btc" not in text:
                 continue
             markets = item.get("markets") if path == "events" else [item]
             for m in markets or []:
@@ -269,12 +271,119 @@ def report():
     print(report_text())
 
 
+# --- why is nothing being collected? ----------------------------------------
+def diagnose(boundary=None):
+    """
+    Walk the whole path once and report where it stops.
+
+    Written because the collector logged "بازارش پیدا نشد" and that is not an
+    answer — it could be the network, the endpoint, the query parameters, the
+    title filter, or the time match, and each needs a different fix. This tries
+    every query variant, says how many rows came back, how many survived each
+    filter, and what the nearest market actually is.
+    """
+    if boundary is None:
+        boundary = (int(time.time()) // GRAN + 1) * GRAN
+    out = [f"🔧 <b>عیب‌یابیِ بالا/پایین</b>",
+           f"پنجرهٔ هدف: {datetime.fromtimestamp(boundary, ET):%H:%M} ET", ""]
+
+    # 1. can we reach it at all?
+    try:
+        get(f"{GAMMA}/markets", limit=1)
+        out.append("۱) اتصال به گاما: ✅")
+    except Exception as exc:
+        out.append(f"۱) اتصال به گاما: ❌ {type(exc).__name__}")
+        out.append(f"   <code>{str(exc)[:180]}</code>")
+        out.append("\n<i>یعنی شبکه/فیلترینگ اجازه نمی‌دهد. با VPN امتحان کن.</i>")
+        return "\n".join(out)
+
+    # 2. which query actually returns the 5-minute markets?
+    variants = [
+        ("markets closed=false order=endDate",
+         (f"{GAMMA}/markets", {"closed": "false", "limit": 500,
+                               "order": "endDate", "ascending": "true"})),
+        ("markets closed=false (بدون ترتیب)",
+         (f"{GAMMA}/markets", {"closed": "false", "limit": 500})),
+        ("events closed=false order=endDate",
+         (f"{GAMMA}/events", {"closed": "false", "limit": 500,
+                              "order": "endDate", "ascending": "true"})),
+        ("markets tag=crypto",
+         (f"{GAMMA}/markets", {"closed": "false", "limit": 500,
+                               "tag_slug": "crypto"})),
+    ]
+    best_sample = None
+    for label, (url, params) in variants:
+        try:
+            data = get(url, **params)
+        except Exception as exc:
+            out.append(f"۲) {label}: ❌ {type(exc).__name__}")
+            continue
+        rows = data if isinstance(data, list) else []
+        titled = []
+        for it in rows:
+            t = (it.get("question") or it.get("title") or "").lower()
+            if "up or down" in t and ("btc" in t or "bitcoin" in t):
+                titled.append(it)
+        out.append(f"۲) {label}: {len(rows)} ردیف، {len(titled)} تای BTC up/down")
+        if titled and best_sample is None:
+            best_sample = (label, titled)
+
+    if not best_sample:
+        out.append("\n<b>هیچ بازارِ BTC up/down پیدا نشد.</b>")
+        try:
+            data = get(f"{GAMMA}/markets", closed="false", limit=20)
+            names = [(d.get("question") or "")[:60] for d in data[:8]]
+            out.append("نمونهٔ عنوان‌هایی که برگشت:")
+            out += [f"  • {n}" for n in names]
+        except Exception:
+            pass
+        out.append("\n<i>عنوان‌های بالا را بفرست تا فیلتر را با واقعیت جور کنم.</i>")
+        return "\n".join(out)
+
+    label, hits = best_sample
+    out.append(f"\n۳) از «{label}» استفاده می‌کنم.")
+    want_end = boundary + GRAN
+    rows = []
+    for m in hits:
+        end = m.get("endDate") or m.get("end_date_iso") or ""
+        try:
+            ts = datetime.fromisoformat(end.replace("Z", "+00:00")).timestamp()
+        except (ValueError, AttributeError):
+            continue
+        rows.append((abs(ts - want_end), ts, m))
+    rows.sort()
+    if not rows:
+        out.append("۴) هیچ‌کدام endDate قابلِ خواندن نداشتند ❌")
+        out.append(f"   نمونه: <code>{str(hits[0])[:200]}</code>")
+        return "\n".join(out)
+    gap, ts, m = rows[0]
+    out.append(f"۴) نزدیک‌ترین بازار: پایانش "
+               f"{datetime.fromtimestamp(ts, ET):%H:%M:%S} ET، "
+               f"اختلاف با هدف {gap:.0f} ثانیه "
+               f"{'✅' if gap <= GRAN/2 else '❌ خارج از محدوده'}")
+    out.append(f"   عنوان: {(m.get('question') or m.get('title') or '')[:80]}")
+
+    up, down, src = quote(m)
+    if up is None:
+        out.append(f"۵) خواندنِ قیمت: ❌ ({src})")
+        out.append(f"   outcomes=<code>{str(m.get('outcomes'))[:60]}</code>")
+        out.append(f"   tokens=<code>{str(m.get('clobTokenIds'))[:60]}</code>")
+        out.append(f"   prices=<code>{str(m.get('outcomePrices'))[:60]}</code>")
+    else:
+        out.append(f"۵) قیمت: 🟢 بالا {up*100:.0f}¢ · 🔴 پایین {down*100:.0f}¢  [{src}] ✅")
+    return "\n".join(out)
+
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--report", action="store_true")
     ap.add_argument("--once", action="store_true")
+    ap.add_argument("--diagnose", action="store_true")
     a = ap.parse_args()
-    if a.report:
+    if a.diagnose:
+        import re as _re
+        print(_re.sub(r"</?[a-z]+>", "", diagnose()))
+    elif a.report:
         report()
     else:
         run(once=a.once)
