@@ -163,6 +163,17 @@ SETTLE_DEADBAND = float(os.environ.get("SETTLE_DEADBAND", "0.02"))
 # the message reports a raw losing streak — "پلهٔ ۵" on a three-rung ladder,
 # which is not a rung at all, it is two busts and a fresh start.
 LADDER_RUNGS = int(os.environ.get("LADDER_RUNGS", "3"))
+# Stake shown with each signal. STAKE_MODE=flat keeps every bet the same size;
+# "martingale" doubles after a loss up to LADDER_RUNGS. Flat is the default
+# because on the low-frequency streams it returned more profit per dollar of
+# drawdown (rule 6: 10.6 against 8.1) and recovers from a bad run in half the
+# bets.
+STAKE_BASE = float(os.environ.get("STAKE_BASE", "20"))
+STAKE_MODE = os.environ.get("STAKE_MODE", "flat").strip().lower()
+# A Chainlink round older than this at sample time is not the close of the
+# window that just ended — it is an older price being re-served. Grading a
+# window on two such samples produces a verdict the market does not share.
+FEED_MAX_AGE = int(os.environ.get("FEED_MAX_AGE", "60"))
 PREALERT_SECONDS = int(os.environ.get("PREALERT_SECONDS", "30"))
 # Seconds before the close at which to look, largest first. 60 gives time to
 # open the app; 30 says whether it survived; the close is the real signal.
@@ -317,6 +328,10 @@ logging.basicConfig(
     format="%(asctime)s | %(levelname)s | %(message)s",
 )
 log = logging.getLogger("btc-bot")
+
+
+def _stake_label():
+    return "حجمِ ثابت" if STAKE_MODE != "martingale" else f"مارتینگل تا {LADDER_RUNGS} پله"
 
 
 def code_version():
@@ -556,6 +571,7 @@ def set_bot_commands():
         {"command": "status", "description": "وضعیت و آستانهٔ فعلی"},
         {"command": "missed", "description": "سابقهٔ سیگنال‌ها با ساعت و نتیجه"},
         {"command": "last", "description": "سیگنال‌های N ساعتِ گذشته (پیش‌فرض ۶)"},
+        {"command": "check", "description": "قیمت‌های تسویه برای مقایسه با پلی‌مارکت"},
         {"command": "menu", "description": "نمایش منوی سریع"},
         {"command": "update", "description": "دریافت آخرین نسخه و ری‌استارت"},
         {"command": "start", "description": "شروع / راهنما"},
@@ -1237,6 +1253,7 @@ class BreakoutMonitor:
         self.pre_done = set()     # (boundary, stage) pre-alerts already sent
         self.pre_bet = {}         # boundary -> side promised by the last stage
         self.gap_note = None      # (windows missed, when) after an outage
+        self.feed_age = None      # seconds since the sampled round was published
         self.backfilled = 0       # windows scored from replay, not from live alerts
         self._load()
 
@@ -1455,6 +1472,7 @@ class BreakoutMonitor:
             f"⏱ <b>{o_et:%I:%M}-{e_et:%I:%M%p} ET</b>  ({o_et:%b %d})  ·  "
             f"+{lag:.0f}s\n"
             f"💵 ${price:,.2f}\n"
+            f"💰 مبلغ: <b>${self.suggested_stake(mine):,.0f}</b> ({_stake_label()})\n"
             f"⚡️ زیرِ ۵۵ سنت وارد شو، وگرنه رد کن."
             f"{warn}"
             + self.history_line(mine)
@@ -1472,6 +1490,41 @@ class BreakoutMonitor:
     @staticmethod
     def _side_label(side):
         return "🟢 بالا" if side == "up" else "🔴 پایین"
+
+    def suggested_stake(self, mine=None):
+        """What to bet on this signal, given the staking mode in force."""
+        if STAKE_MODE != "martingale":
+            return STAKE_BASE
+        rung = self.loss_streak(mine) % LADDER_RUNGS if LADDER_RUNGS else 0
+        return STAKE_BASE * 2 ** rung
+
+    def check_report(self, count=10):
+        """
+        The last settled windows as reference -> settlement, for comparing with
+        Polymarket's own "Price to beat" and "Final price".
+
+        Built because a window this bot scored as a win settled DOWN on the
+        market. Arguing about which is right is pointless; putting the two pairs
+        of numbers side by side answers it in one glance, and if they disagree
+        the price feed is the thing to fix, not the rules.
+        """
+        rows = [r for r in self.signals
+                if r.get("ref") is not None][-count:]
+        if not rows:
+            return ("هنوز پنجرهٔ تسویه‌شده‌ای با قیمت ثبت نشده. "
+                    "بعد از چند سیگنالِ بعدی دوباره بزن.")
+        out = ["🔎 <b>قیمت‌هایی که من دیدم</b>",
+               "<i>با Price to beat و Final price در پلی‌مارکت مقایسه کن.</i>", ""]
+        for r in rows:
+            mark = ("⚪️" if r.get("void") else "✅" if r["won"] else "❌")
+            out.append(f"{mark} <b>{et_time(r['t']):%I:%M%p}</b> "
+                       f"{'🟢' if r['bet'] == 'up' else '🔴'}\n"
+                       f"   شروع <code>{r['ref']:,.2f}</code> → "
+                       f"پایان <code>{r['settle']:,.2f}</code>  "
+                       f"({r['delta']:+,.2f})")
+        out.append("\n<i>اگر این عددها با پلی‌مارکت فرق دارند، مشکل از فیدِ "
+                   "قیمت است نه از قانون‌ها — همان را بگو تا عوضش کنم.</i>")
+        return "\n".join(out)
 
     def _deadband(self):
         """
@@ -1515,8 +1568,13 @@ class BreakoutMonitor:
             # confidence than every correct call had built.
             d = row.get("delta")
             amount = f"  <i>({d:+,.2f}$)</i>" if d is not None else ""
+            # Both prices, so the line can be held against Polymarket's own
+            # "Price to beat" and "Final price" without trusting anything here.
+            pair = ""
+            if row.get("ref") is not None:
+                pair = (f"\n   <i>{row['ref']:,.2f} → {row['settle']:,.2f}</i>")
             return (f"<b>سیگنالِ قبلی</b> ({et_time(row['t']):%I:%M%p}): "
-                    f"{mark}{amount}\n")
+                    f"{mark}{amount}{pair}\n")
         return ""
 
     def _settle(self, price):
@@ -1547,6 +1605,7 @@ class BreakoutMonitor:
                 if row["t"] == p["window"]:
                     row["void"] = True
                     row["delta"] = delta
+                    row["ref"], row["settle"] = ref, price
                     break
             log.info("Settled: VOID (%.2f -> %.2f, delta %+.2f is inside the "
                      "dead band)", ref, price, delta)
@@ -1563,6 +1622,7 @@ class BreakoutMonitor:
             if row["t"] == p["window"]:
                 row["won"] = won
                 row["delta"] = delta
+                row["ref"], row["settle"] = ref, price
                 break
         self.history.append({"won": won, "bet": p["bet"], "mine": mine})
         self.history = self.history[-HISTORY_KEEP:]
@@ -2084,7 +2144,7 @@ class BreakoutMonitor:
                 bet = bets.pop()
                 self.pending = {"bet": bet, "ref": price,
                                 "window": window_start + GRANULARITY,
-                                "rules": rules}
+                                "rules": rules, "ref_age": self.feed_age}
                 # Log it before trying to send: if the send fails, or we are
                 # replaying an outage, the row is already there waiting to be
                 # reported, and nothing depends on Telegram having worked.
@@ -2164,6 +2224,7 @@ class BreakoutMonitor:
                     self._save()
                     continue
                 lag = time.time() - (ended + GRANULARITY)
+                self.feed_age = (time.time() - updated) if updated else None
                 self._on_window_close(ended, price, lag)
                 # Anything the user was never shown — a send that failed, a
                 # window replayed after an outage — goes out now that there is
@@ -2328,6 +2389,10 @@ def command_listener(monitor: Monitor):
                         bm.flush_untold()   # mark anything queued as seen
                     else:
                         send_message(chat_id, "سابقه‌ای در دسترس نیست.")
+                elif text.startswith("/check"):
+                    bm = globals().get("BREAKOUT_MONITOR")
+                    send_message(chat_id, bm.check_report() if bm else
+                                 "موتورِ سیگنال روشن نیست.")
                 elif text.startswith("/last") or text == MENU_LAST:
                     # Read-only replay of the recent past: what WOULD have been
                     # sent. Nothing is scored, so it is safe to run repeatedly.
