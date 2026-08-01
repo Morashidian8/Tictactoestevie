@@ -351,3 +351,51 @@ class Book:
                          f"P&L {l.pnl:+,.0f}  پله {l.rung + 1}  "
                          f"انفجار {l.busts}  بدترین افت {l.drawdown:,.0f}")
         return "\n".join(lines) or "هنوز معامله‌ای ثبت نشده."
+
+
+# --- why did nothing fire? --------------------------------------------------
+MIN_CLOSES = 106       # rule 5 needs 101 + span; rule 2 needs 104; RSI needs 15
+
+
+def diagnose(closes, streams=("rule6", "golden")):
+    """
+    Explain, in one line, why this window produced a signal or did not.
+
+    Built for the case that keeps coming up: the alert bot says something fired
+    and the trading bot placed nothing. Nine times in ten the answer is boring —
+    not enough history yet, or the stream that fired is not one of the streams
+    that bot has enabled — and both are invisible unless something says so.
+    Log this every window and the question answers itself.
+    """
+    n = len(closes)
+    if n < MIN_CLOSES:
+        need = MIN_CLOSES - n
+        return (f"⏳ تاریخچه کم است: {n} کندل از {MIN_CLOSES}. "
+                f"{need} کندلِ دیگر ({need * 5} دقیقه) لازم است — "
+                "یا تاریخچه را از صرافی backfill کن تا همین حالا شروع شود.")
+
+    parts = []
+    r = rsi(closes)
+    parts.append(f"RSI={r:.0f}" if r is not None else "RSI=—")
+    aaba = rule4(closes)
+    parts.append("AABA ✓" if aaba else "AABA ✗")
+    named = {1: "۱", 2: "۲", 3: "۳", 5: "۵"}
+    fired = [named[k] for k, s in ((1, rule1(closes)), (2, rule2(closes)),
+                                   (3, rule3(closes)), (5, rule5(closes))) if s]
+    parts.append("قانون‌های آماری: " + ("،".join(fired) if fired else "هیچ"))
+
+    sigs = evaluate(closes, streams=streams)
+    if sigs:
+        s = sigs[0]
+        return (f"✅ سیگنال: {s.name} → {s.side} | جریان={s.stream} | "
+                + "  ".join(parts))
+
+    # Nothing fired for THESE streams — but would it have, for another one?
+    other = [s.stream for s in evaluate(closes, ("rule6", "golden", "statistical"))
+             if s.stream not in streams]
+    if other:
+        return (f"⚠️ سیگنال بود ولی جریانش روشن نیست: {other[0]} | "
+                f"جریان‌های فعال={list(streams)} | " + "  ".join(parts))
+    if aaba and r is not None and r < RSI_OVERBOUGHT:
+        parts.append(f"(AABA بود ولی RSI باید ≥{RSI_OVERBOUGHT:.0f} باشد)")
+    return "— بدون سیگنال | " + "  ".join(parts)
