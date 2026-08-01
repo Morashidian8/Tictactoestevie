@@ -121,7 +121,11 @@ RULE3_RUN = int(os.environ.get("RULE3_RUN", "6"))
 # (n=6,000, z=-1.83) — below a coin flip, and no better than the 50.6% you get
 # after any single candle with no pattern at all. It is alerted on request and
 # labelled honestly so it is never mistaken for the validated rules.
-RULE4_ENABLED = os.environ.get("RULE4", "1").strip() not in ("0", "false", "no")
+# Turned OFF by default at the user's request: with it silent, the measured
+# rules can be judged on their own record instead of through an average a
+# 49% rule is dragging around. Nothing was removed — RULE4=1 in .env brings
+# it back, and its past results stay in the scorecard.
+RULE4_ENABLED = os.environ.get("RULE4", "0").strip() not in ("0", "false", "no")
 # RULE 5 — measure the stretch directly instead of inferring it from candle
 # shapes: if price has net-travelled more than RULE5_MULT times the recent
 # median move over the last 4 candles, fade that travel.
@@ -154,6 +158,9 @@ PREALERT_SECONDS = int(os.environ.get("PREALERT_SECONDS", "30"))
 # How many past signal outcomes to keep, and how many to show in each alert.
 HISTORY_KEEP = 40
 HISTORY_SHOW = int(os.environ.get("HISTORY_SHOW", "20"))
+# Full per-signal log (time, side, rules, outcome, whether you were told). Kept
+# much longer than the ✅❌ strip because it is what /missed and /log read.
+SIGNALS_KEEP = int(os.environ.get("SIGNALS_KEEP", "300"))
 # Most recent missed signals listed in the catch-up message after an outage.
 MISSED_SHOW = int(os.environ.get("MISSED_SHOW", "15"))
 # Rules 1,2,3,5 are the measured mean-reversion edges; rule 4 is the user's own
@@ -496,13 +503,14 @@ MENU_STATUS = "📊 وضعیت"
 MENU_REFRESH = "🔄 منو"
 MENU_SCORE = "🎯 کارنامه"
 MENU_UPDATE = "⬆️ به‌روزرسانی"
+MENU_MISSED = "📋 سابقه"
 
 
 def _menu_keyboard():
     """Always-visible quick keyboard: one آستانه button per timeframe + status."""
     rows = [[f"🎚 آستانه {interval_label(iv)}"] for iv in THRESHOLD_INTERVALS]
-    rows.append([MENU_SCORE, MENU_STATUS])
-    rows.append([MENU_REFRESH, MENU_UPDATE])
+    rows.append([MENU_SCORE, MENU_MISSED])
+    rows.append([MENU_STATUS, MENU_REFRESH, MENU_UPDATE])
     return {
         "keyboard": [[{"text": t} for t in row] for row in rows],
         "resize_keyboard": True,
@@ -523,6 +531,7 @@ def set_bot_commands():
         {"command": "threshold", "description": "تغییر آستانهٔ هشدار (۲ تا ۷ تناوب)"},
         {"command": "score", "description": "کارنامهٔ سیگنال‌ها (برد/باخت واقعی)"},
         {"command": "status", "description": "وضعیت و آستانهٔ فعلی"},
+        {"command": "missed", "description": "سابقهٔ سیگنال‌ها با ساعت و نتیجه"},
         {"command": "menu", "description": "نمایش منوی سریع"},
         {"command": "update", "description": "دریافت آخرین نسخه و ری‌استارت"},
         {"command": "start", "description": "شروع / راهنما"},
@@ -1188,6 +1197,11 @@ class BreakoutMonitor:
         # strategy. The run of losses at the tail is what decides which
         # martingale rung you are on, so it is surfaced explicitly.
         self.history = []         # [{"won": bool, "bet": str}], oldest first
+        # Every signal ever fired, with its time, side, rules, outcome — and
+        # whether the alert actually REACHED Telegram. That last flag is the
+        # point: a signal produced during an outage, or one whose send failed,
+        # is not lost, it is queued and reported as soon as there is a network.
+        self.signals = []         # [{"t","bet","rules","won","mine","told","replay"}]
         # Liveness bookkeeping so "it has been quiet for hours" can be answered
         # from Telegram — a silent market and a dead loop look identical
         # otherwise.
@@ -1220,6 +1234,8 @@ class BreakoutMonitor:
                 self.score.update(s["score"])
             if isinstance(s.get("history"), list):
                 self.history = s["history"][-HISTORY_KEEP:]
+            if isinstance(s.get("signals"), list):
+                self.signals = s["signals"][-SIGNALS_KEEP:]
             self.backfilled = int(s.get("backfilled", 0))
             if self.closes:
                 log.info("Breakout: restored %d closes from %s",
@@ -1270,50 +1286,22 @@ class BreakoutMonitor:
             return False          # our last window is not inside this range
         self.closes = [c for _, c in kl[:start]][-BREAKOUT_HISTORY:]
         n = 0
-        missed_log = []
-        pending_row = None
         for t, c in kl[start:]:
-            hits, settled = self._on_window_close(t, c, replay=True)
-            # `settled` resolves the signal from the PREVIOUS window, so attach
-            # it to the row recorded then, not to the one being opened now.
-            if pending_row is not None:
-                pending_row[3] = settled
-                missed_log.append(tuple(pending_row))
-                pending_row = None
-            if hits and len({h[2] for h in hits}) == 1:
-                pending_row = [t, hits[0][2], [h[0][0] for h in hits], None]
+            # Replayed windows log their signals into self.signals with
+            # told=False, so the catch-up below is just a flush of that queue.
+            self._on_window_close(t, c, replay=True)
             n += 1
-        if pending_row is not None:
-            missed_log.append(tuple(pending_row))   # still open at reconnect
         self.backfilled += n
         log.info("Breakout: backfilled %d missed windows from real candles "
                  "(scorecard stays continuous).", n)
-        self._outage_report(missed, n, missed_log)
-        return True
-
-    def _outage_report(self, missed, replayed, log_rows):
-        """One catch-up message covering the whole outage."""
         hours = missed * GRANULARITY / 3600
         head = (f"📡 <b>دوباره وصل شدم</b>\n"
                 f"{hours:.1f} ساعت قطع بودم ({missed} پنجره) — "
-                f"{replayed} پنجره بازپخش و امتیازدهی شد.\n")
-        if not log_rows:
-            send_message(self.chat_id, head + "\nدر این مدت هیچ سیگنالی نبود.")
-            return
-        w = sum(1 for r in log_rows if r[3])
-        n = sum(1 for r in log_rows if r[3] is not None)
-        lines = []
-        for t, bet, rules, won in log_rows[-MISSED_SHOW:]:
-            mark = "✅" if won else ("❌" if won is False else "⚪️")
-            lines.append(f"{mark} {et_time(t + GRANULARITY):%I:%M%p} "
-                         f"{'🟢' if bet == 'up' else '🔴'} ({','.join(rules)})")
-        more = (f"\n<i>… و {len(log_rows) - MISSED_SHOW} سیگنالِ دیگر</i>"
-                if len(log_rows) > MISSED_SHOW else "")
-        send_message(self.chat_id,
-                     head + f"\n📋 <b>{len(log_rows)} سیگنالِ ازدست‌رفته</b>"
-                     + (f" — {w}/{n} برد" if n else "") + ":\n"
-                     + "\n".join(lines) + more
-                     + "\n\n<i>این‌ها فقط برای آمار است — پنجره‌هایشان گذشته.</i>")
+                f"{n} پنجره بازپخش و امتیازدهی شد.\n")
+        if not self.flush_untold(head):
+            if not self.untold():
+                send_message(self.chat_id, head + "\nدر این مدت هیچ سیگنالی نبود.")
+        return True
 
     def _drop_if_stale(self, now=None):
         """
@@ -1354,6 +1342,7 @@ class BreakoutMonitor:
                            "pending": self.pending,
                            "score": self.score,
                            "history": self.history[-HISTORY_KEEP:],
+                           "signals": self.signals[-SIGNALS_KEEP:],
                            "backfilled": self.backfilled}, f)
         except Exception as exc:  # noqa: BLE001 - disk issues must not be fatal
             log.warning("Breakout: could not write %s: %s", self.STATE_FILE, exc)
@@ -1444,7 +1433,14 @@ class BreakoutMonitor:
             + self.history_line(mine)
         )
         log.info("ALERT: %s", " | ".join(f"{n}->{b}" for n, _, b, _ in hits))
-        send_message(self.chat_id, text)
+        ok = send_message(self.chat_id, text)
+        # Mark the just-logged signal as delivered — or leave it queued, so a
+        # send that failed (no network, Telegram down) is reported later rather
+        # than vanishing.
+        if self.signals and self.signals[-1]["t"] == window_start:
+            self.signals[-1]["told"] = ok
+        if not ok:
+            log.warning("Alert not delivered; queued for the catch-up report.")
 
     def _settle(self, price):
         """
@@ -1462,6 +1458,10 @@ class BreakoutMonitor:
         ref = p["ref"]
         if price == ref:
             self.score["void"] += 1
+            for row in reversed(self.signals):
+                if row["t"] == p["window"]:
+                    row["void"] = True
+                    break
             log.info("Settled: VOID (price unchanged at %.2f)", price)
             return None
         won = (p["bet"] == "up") == (price > ref)
@@ -1471,7 +1471,11 @@ class BreakoutMonitor:
         # "Whose" signal this was: the user's AABA rule fires alone often enough
         # that mixing it into one number would hide both its weakness and the
         # other rules' strength.
-        mine = all(any(r.startswith(m) for m in MINE_RULES) for r in rules) if rules else False
+        mine = self._is_mine(rules)
+        for row in reversed(self.signals):   # the row opened for this very bet
+            if row["t"] == p["window"]:
+                row["won"] = won
+                break
         self.history.append({"won": won, "bet": p["bet"], "mine": mine})
         self.history = self.history[-HISTORY_KEEP:]
         for name in p.get("rules", []):
@@ -1485,6 +1489,89 @@ class BreakoutMonitor:
                  self.score["wins"], self.score["n"],
                  self.score["wins"] / self.score["n"] * 100)
         return won
+
+    @staticmethod
+    def _is_mine(rules):
+        """True when every rule behind a signal is one of the user's own."""
+        return (all(any(r.startswith(m) for m in MINE_RULES) for r in rules)
+                if rules else False)
+
+    # -- the signal log: what fired, what it did, and whether you were told ----
+    @staticmethod
+    def _signal_lines(rows):
+        """One line per signal: outcome, ET time, side, rules."""
+        out = []
+        for r in rows:
+            if r.get("void"):
+                mark = "⚪️"
+            elif r["won"] is None:
+                mark = "⏳"
+            else:
+                mark = "✅" if r["won"] else "❌"
+            out.append(f"{mark} {et_time(r['t']):%I:%M%p} "
+                       f"{'🟢' if r['bet'] == 'up' else '🔴'} "
+                       f"({','.join(r.get('rules') or [])})")
+        return out
+
+    def untold(self):
+        """
+        Settled signals the user was never actually shown.
+
+        Two ways a signal ends up here: it fired while the phone was offline and
+        was recovered by the replay, or the Telegram send itself failed. Both are
+        "you did not see this", and both must eventually be reported — that was
+        the whole complaint that led to this queue existing.
+        """
+        return [r for r in self.signals
+                if not r.get("told") and (r["won"] is not None or r.get("void"))]
+
+    def flush_untold(self, head=None):
+        """
+        Report everything queued, then mark it reported — but only if the send
+        actually succeeded, so a failed catch-up is retried instead of lost.
+        """
+        rows = self.untold()
+        if not rows:
+            return False
+        shown = rows[-MISSED_SHOW:]
+        w = sum(1 for r in rows if r["won"])
+        n = sum(1 for r in rows if r["won"] is not None)
+        more = (f"\n<i>… و {len(rows) - len(shown)} سیگنالِ دیگر</i>"
+                if len(rows) > len(shown) else "")
+        text = ((head or "📡 <b>سیگنال‌های جاافتاده</b>\n")
+                + f"\n📋 <b>{len(rows)} سیگنال</b>"
+                + (f" — {w}/{n} برد" if n else "") + ":\n"
+                + "\n".join(self._signal_lines(shown)) + more
+                + "\n\n<i>ساعت‌ها ET است و همه مربوط به گذشته‌اند — "
+                "برای ورود نیست، فقط برای آمار.</i>")
+        if not send_message(self.chat_id, text):
+            log.warning("Catch-up report could not be delivered; will retry.")
+            return False
+        for r in rows:
+            r["told"] = True
+        self._save()
+        return True
+
+    def missed_report(self):
+        """/missed — the last signals with times and outcomes, always available."""
+        rows = self.signals[-HISTORY_SHOW:]
+        if not rows:
+            return ("📋 <b>سابقهٔ سیگنال‌ها</b>\n\nهنوز سیگنالی ثبت نشده.")
+        n = sum(1 for r in rows if r["won"] is not None)
+        w = sum(1 for r in rows if r["won"])
+        never = sum(1 for r in self.signals if not r.get("told"))
+        lines = self._signal_lines(rows)
+        # Mark the ones that never reached Telegram, so "did I miss anything?"
+        # has a visible answer instead of needing to be asked again.
+        for i, r in enumerate(rows):
+            if not r.get("told"):
+                lines[i] += " 📡"
+        return ("📋 <b>{} سیگنالِ اخیر</b> (قدیمی → جدید)\n".format(len(rows))
+                + (f"{w}/{n} برد\n" if n else "")
+                + "\n" + "\n".join(lines)
+                + ("\n\n📡 = پیامش به تلگرام نرسیده بود "
+                   f"({never} مورد)" if never else "")
+                + "\n<i>ساعت‌ها ET، شروعِ همان پنجره.</i>")
 
     def _track(self, mine):
         """History for one track: the user's AABA rule, or the statistical ones."""
@@ -1519,8 +1606,12 @@ class BreakoutMonitor:
         recent = hist[-HISTORY_SHOW:]
         seq = "".join("✅" if h["won"] else "❌" for h in recent)
         w = sum(1 for h in recent if h["won"])
-        tot = len(hist)
-        won = sum(1 for h in hist if h["won"])
+        # Totals come from the signal log, which keeps far more rows than the
+        # ✅❌ strip — the old "کل" was quietly capped at 40 and read as lifetime.
+        pool = [r for r in self.signals if r["won"] is not None
+                and (mine is None or r.get("mine", False) == mine)] or hist
+        tot = len(pool)
+        won = sum(1 for r in pool if r["won"])
         label = ("AABA" if mine else "آماری") if mine is not None else "همه"
         out = (f"\n\n📋 <b>{label}</b> — {len(recent)} سیگنالِ اخیر:\n"
                f"{seq}\n<b>{w}</b>/{len(recent)}  ·  کل: {won}/{tot} "
@@ -1558,6 +1649,12 @@ class BreakoutMonitor:
                          f"({missed} پنجره از دست رفت، "
                          f"{datetime.fromtimestamp(when, TEHRAN):%m-%d %H:%M})\n"
                          "تاریخچه دور ریخته و از نو ساخته شد — کارنامه دست‌نخورده ماند.")
+        active = ["۱", "۲" if RULE2_ENABLED else "", "۳" if RULE3_ENABLED else "",
+                  "۴" if RULE4_ENABLED else "", "۵" if RULE5_ENABLED else ""]
+        lines.append("قانون‌های فعال: <b>" + "، ".join(a for a in active if a) + "</b>"
+                     + ("" if RULE4_ENABLED else "  (۴ خاموش است)"))
+        if self.untold():
+            lines.append(f"📡 <b>{len(self.untold())}</b> سیگنالِ گزارش‌نشده در صف — /missed")
         if self.err_count:
             lines.append(f"\n⚠️ خطاهای پیاپی: {self.err_count}\n<i>{self.last_error[:180]}</i>")
         if ok:
@@ -1746,9 +1843,20 @@ class BreakoutMonitor:
                 self.last_signal = time.time()
             bets = {h[2] for h in hits}
             if len(bets) == 1:
-                self.pending = {"bet": bets.pop(), "ref": price,
+                rules = [h[0] for h in hits]
+                bet = bets.pop()
+                self.pending = {"bet": bet, "ref": price,
                                 "window": window_start + GRANULARITY,
-                                "rules": [h[0] for h in hits]}
+                                "rules": rules}
+                # Log it before trying to send: if the send fails, or we are
+                # replaying an outage, the row is already there waiting to be
+                # reported, and nothing depends on Telegram having worked.
+                self.signals.append({
+                    "t": window_start + GRANULARITY, "bet": bet,
+                    "rules": [r.split(")")[0] for r in rules],
+                    "won": None, "mine": self._is_mine(rules),
+                    "told": False, "replay": bool(replay)})
+                self.signals = self.signals[-SIGNALS_KEEP:]
             if not replay:
                 self._alert(hits, price, window_start + GRANULARITY, lag, settled)
         self._save()
@@ -1811,6 +1919,11 @@ class BreakoutMonitor:
                     continue
                 lag = time.time() - (ended + GRANULARITY)
                 self._on_window_close(ended, price, lag)
+                # Anything the user was never shown — a send that failed, a
+                # window replayed after an outage — goes out now that there is
+                # clearly a working connection.
+                if self.untold():
+                    self.flush_untold()
                 fail = self.err_count = 0
                 self.last_error = ""
             except Exception as exc:  # noqa: BLE001 - keep the 24/7 loop alive
@@ -1962,6 +2075,13 @@ def command_listener(monitor: Monitor):
                             os._exit(0)
                     except Exception as exc:  # noqa: BLE001 - report, never die
                         send_message(chat_id, f"❌ خطا در به‌روزرسانی: {exc}")
+                elif text.startswith("/missed") or text == MENU_MISSED:
+                    bm = globals().get("BREAKOUT_MONITOR")
+                    if bm:
+                        send_message(chat_id, bm.missed_report())
+                        bm.flush_untold()   # mark anything queued as seen
+                    else:
+                        send_message(chat_id, "سابقه‌ای در دسترس نیست.")
                 elif text.startswith("/score") or text == MENU_SCORE:
                     bm = globals().get("BREAKOUT_MONITOR")
                     send_message(chat_id, bm.score_report() if bm else
