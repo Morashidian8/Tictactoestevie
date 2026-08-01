@@ -154,6 +154,8 @@ PREALERT_SECONDS = int(os.environ.get("PREALERT_SECONDS", "30"))
 # How many past signal outcomes to keep, and how many to show in each alert.
 HISTORY_KEEP = 40
 HISTORY_SHOW = int(os.environ.get("HISTORY_SHOW", "20"))
+# Most recent missed signals listed in the catch-up message after an outage.
+MISSED_SHOW = int(os.environ.get("MISSED_SHOW", "15"))
 # Rules 1,2,3,5 are the measured mean-reversion edges; rule 4 is the user's own
 # AABA pattern, which tested at 48.8% out-of-sample. Their results are reported
 # in separate blocks so a 49% rule can never quietly drag down — or be flattered
@@ -306,6 +308,31 @@ def code_version():
         return out.stdout.strip() or "unknown"
     except Exception:  # noqa: BLE001 - a missing git must never block startup
         return "unknown"
+
+
+def _git(*args, timeout=30):
+    import subprocess
+    here = os.path.dirname(os.path.abspath(__file__))
+    return subprocess.run(["git", "-C", here, *args],
+                          capture_output=True, text=True, timeout=timeout)
+
+
+def git_pull():
+    """
+    Pull the branch this checkout is on. Returns (ok, output, moved).
+
+    `moved` is decided by comparing the commit sha before and after rather than
+    by grepping for "Already up to date" — that string is localised and has
+    caused a pointless restart before. A detached HEAD falls back to main.
+    """
+    before = _git("rev-parse", "HEAD").stdout.strip()
+    branch = _git("rev-parse", "--abbrev-ref", "HEAD").stdout.strip()
+    if not branch or branch == "HEAD":
+        branch = "main"
+    r = _git("pull", "origin", branch, timeout=120)
+    after = _git("rev-parse", "HEAD").stdout.strip()
+    out = (r.stdout + r.stderr).strip()[-600:] or "(no output)"
+    return r.returncode == 0, out, bool(before and after and before != after)
 
 
 # ---------------------------------------------------------------------------
@@ -468,13 +495,14 @@ def handle_callback(monitor, cq):
 MENU_STATUS = "📊 وضعیت"
 MENU_REFRESH = "🔄 منو"
 MENU_SCORE = "🎯 کارنامه"
+MENU_UPDATE = "⬆️ به‌روزرسانی"
 
 
 def _menu_keyboard():
     """Always-visible quick keyboard: one آستانه button per timeframe + status."""
     rows = [[f"🎚 آستانه {interval_label(iv)}"] for iv in THRESHOLD_INTERVALS]
     rows.append([MENU_SCORE, MENU_STATUS])
-    rows.append([MENU_REFRESH])
+    rows.append([MENU_REFRESH, MENU_UPDATE])
     return {
         "keyboard": [[{"text": t} for t in row] for row in rows],
         "resize_keyboard": True,
@@ -496,6 +524,7 @@ def set_bot_commands():
         {"command": "score", "description": "کارنامهٔ سیگنال‌ها (برد/باخت واقعی)"},
         {"command": "status", "description": "وضعیت و آستانهٔ فعلی"},
         {"command": "menu", "description": "نمایش منوی سریع"},
+        {"command": "update", "description": "دریافت آخرین نسخه و ری‌استارت"},
         {"command": "start", "description": "شروع / راهنما"},
     ]})
 
@@ -1226,10 +1255,12 @@ class BreakoutMonitor:
         scorecard, and the whole point of the scorecard is a continuous record.
         The candles themselves still exist, so the missed windows are replayed
         here: signals are recomputed and settled exactly as they would have been
-        live. No Telegram message is sent for them — a five-minute signal is
-        worthless once it is minutes old — they only feed the statistics, and
-        are counted separately so the record stays honest about which results
-        came from alerts you actually received.
+        live. Individual alerts are NOT re-sent — a five-minute signal is
+        worthless once it is minutes old and acting on one would be a mistake —
+        but a single summary of everything that happened during the outage IS
+        sent, so nothing silently disappears from view. Replayed results are
+        counted separately so the record stays honest about which outcomes came
+        from alerts actually received.
         """
         kl = self._fetch_klines(missed + BREAKOUT_HISTORY + 5)
         if not kl:
@@ -1239,13 +1270,50 @@ class BreakoutMonitor:
             return False          # our last window is not inside this range
         self.closes = [c for _, c in kl[:start]][-BREAKOUT_HISTORY:]
         n = 0
+        missed_log = []
+        pending_row = None
         for t, c in kl[start:]:
-            self._on_window_close(t, c, replay=True)
+            hits, settled = self._on_window_close(t, c, replay=True)
+            # `settled` resolves the signal from the PREVIOUS window, so attach
+            # it to the row recorded then, not to the one being opened now.
+            if pending_row is not None:
+                pending_row[3] = settled
+                missed_log.append(tuple(pending_row))
+                pending_row = None
+            if hits and len({h[2] for h in hits}) == 1:
+                pending_row = [t, hits[0][2], [h[0][0] for h in hits], None]
             n += 1
+        if pending_row is not None:
+            missed_log.append(tuple(pending_row))   # still open at reconnect
         self.backfilled += n
         log.info("Breakout: backfilled %d missed windows from real candles "
                  "(scorecard stays continuous).", n)
+        self._outage_report(missed, n, missed_log)
         return True
+
+    def _outage_report(self, missed, replayed, log_rows):
+        """One catch-up message covering the whole outage."""
+        hours = missed * GRANULARITY / 3600
+        head = (f"📡 <b>دوباره وصل شدم</b>\n"
+                f"{hours:.1f} ساعت قطع بودم ({missed} پنجره) — "
+                f"{replayed} پنجره بازپخش و امتیازدهی شد.\n")
+        if not log_rows:
+            send_message(self.chat_id, head + "\nدر این مدت هیچ سیگنالی نبود.")
+            return
+        w = sum(1 for r in log_rows if r[3])
+        n = sum(1 for r in log_rows if r[3] is not None)
+        lines = []
+        for t, bet, rules, won in log_rows[-MISSED_SHOW:]:
+            mark = "✅" if won else ("❌" if won is False else "⚪️")
+            lines.append(f"{mark} {et_time(t + GRANULARITY):%I:%M%p} "
+                         f"{'🟢' if bet == 'up' else '🔴'} ({','.join(rules)})")
+        more = (f"\n<i>… و {len(log_rows) - MISSED_SHOW} سیگنالِ دیگر</i>"
+                if len(log_rows) > MISSED_SHOW else "")
+        send_message(self.chat_id,
+                     head + f"\n📋 <b>{len(log_rows)} سیگنالِ ازدست‌رفته</b>"
+                     + (f" — {w}/{n} برد" if n else "") + ":\n"
+                     + "\n".join(lines) + more
+                     + "\n\n<i>این‌ها فقط برای آمار است — پنجره‌هایشان گذشته.</i>")
 
     def _drop_if_stale(self, now=None):
         """
@@ -1684,6 +1752,9 @@ class BreakoutMonitor:
             if not replay:
                 self._alert(hits, price, window_start + GRANULARITY, lag, settled)
         self._save()
+        # `settled` is the outcome of the PREVIOUS window's signal, which is what
+        # the caller needs when replaying a run of windows in order.
+        return hits, settled
 
     def run(self, max_runtime=None):
         """
@@ -1866,6 +1937,31 @@ def command_listener(monitor: Monitor):
                     else:
                         prompt, kb = _threshold_prompt()
                         send_keyboard(chat_id, prompt, kb)
+                elif text.startswith("/update") or text == MENU_UPDATE:
+                    # Pulling from the phone's terminal keeps going wrong —
+                    # commands get typed into the log viewer and silently do
+                    # nothing — so the update runs from here instead. Exiting
+                    # afterwards is deliberate: run_bot.sh's supervisor restarts
+                    # the process, and only a fresh process runs the new code.
+                    send_message(chat_id, "⏳ در حال به‌روزرسانی…")
+                    try:
+                        ok, out, moved = git_pull()
+                        if not ok:
+                            send_message(chat_id,
+                                         f"❌ به‌روزرسانی نشد:\n<code>{out}</code>")
+                        elif not moved:
+                            send_message(chat_id,
+                                         f"✅ همین الان جدیدترین نسخه است.\n"
+                                         f"نسخه: <b>{code_version()}</b>")
+                        else:
+                            send_message(chat_id,
+                                         f"✅ به‌روز شد به <b>{code_version()}</b>\n"
+                                         f"<code>{out}</code>\n\n"
+                                         "🔄 در حال ری‌استارت… تا ۱۰ ثانیهٔ دیگر برمی‌گردم.")
+                            log.info("Restarting after /update.")
+                            os._exit(0)
+                    except Exception as exc:  # noqa: BLE001 - report, never die
+                        send_message(chat_id, f"❌ خطا در به‌روزرسانی: {exc}")
                 elif text.startswith("/score") or text == MENU_SCORE:
                     bm = globals().get("BREAKOUT_MONITOR")
                     send_message(chat_id, bm.score_report() if bm else
