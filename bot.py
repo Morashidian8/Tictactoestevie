@@ -159,6 +159,10 @@ GOLDEN_MULT = float(os.environ.get("GOLDEN_MULT", "9"))
 # about 1.5% of windows; those are ties in all but name, and grading them was
 # putting fictitious wins on the scorecard.
 SETTLE_DEADBAND = float(os.environ.get("SETTLE_DEADBAND", "0.02"))
+# Depth of the martingale ladder being followed, for display only. Without it
+# the message reports a raw losing streak — "پلهٔ ۵" on a three-rung ladder,
+# which is not a rung at all, it is two busts and a fresh start.
+LADDER_RUNGS = int(os.environ.get("LADDER_RUNGS", "3"))
 PREALERT_SECONDS = int(os.environ.get("PREALERT_SECONDS", "30"))
 # Seconds before the close at which to look, largest first. 60 gives time to
 # open the app; 30 says whether it survived; the close is the real signal.
@@ -1816,7 +1820,16 @@ class BreakoutMonitor:
                f"<b>{w}</b>/{len(recent)}  ·  کل: {won}/{tot} "
                f"({won / tot * 100:.0f}%)")
         k = self.loss_streak(mine)
-        out += f"\n{'🔴' if k >= 2 else '🟡' if k == 1 else '🟢'} پلهٔ <b>{k + 1}</b>"
+        # Report the rung on the ladder actually being played, plus how many
+        # busts that streak already contains — a run of 7 losses is not "rung 8",
+        # it is two blown cycles and a rung 2.
+        rung = k % LADDER_RUNGS + 1 if LADDER_RUNGS else k + 1
+        busts = k // LADDER_RUNGS if LADDER_RUNGS else 0
+        dot = "🔴" if rung >= LADDER_RUNGS else "🟡" if rung > 1 else "🟢"
+        out += f"\n{dot} پلهٔ <b>{rung}</b> از {LADDER_RUNGS}"
+        if busts:
+            out += (f"  ·  ⚠️ {busts} بار سقفِ پله خورده "
+                    f"({k} باختِ پیاپی)")
         return out
 
     def health_report(self):
