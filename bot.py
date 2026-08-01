@@ -1561,11 +1561,21 @@ class BreakoutMonitor:
         want = max(1, int(hours * 3600 // GRANULARITY))
         kl = self._fetch_klines(want + BREAKOUT_HISTORY + 5)
         if len(kl) < BREAKOUT_HISTORY + 2:
-            return None, 0
+            return None, 0, {}
         rows = []
         first = max(BREAKOUT_HISTORY, len(kl) - want)
+        # "No rule-1 signal in six hours — how?" is a fair question, and the
+        # answer is almost always that the level WAS broken and the volatility
+        # filter threw the break away. Count both so the report can say so
+        # instead of looking broken.
+        stats = {"breaks": 0, "filtered": 0}
         for i in range(first, len(kl)):
-            hits = self.evaluate([c for _, c in kl[:i + 1]])
+            closes = [c for _, c in kl[:i + 1]]
+            if breakout_signal(closes, vol_filter=False):
+                stats["breaks"] += 1
+                if not breakout_signal(closes):
+                    stats["filtered"] += 1
+            hits = self.evaluate(closes)
             if not hits:
                 continue
             bets = {h[2] for h in hits}
@@ -1581,26 +1591,36 @@ class BreakoutMonitor:
                 else:
                     row["won"] = (bet == "up") == (nxt > ref)
             rows.append(row)
-        return rows, len(kl) - first
+        seen = [c for _, c in kl[first:]]
+        stats["hi"], stats["lo"] = max(seen), min(seen)
+        stats["range"] = (stats["hi"] - stats["lo"]) / stats["lo"] * 100
+        return rows, len(kl) - first, stats
 
     def scan_report(self, hours=6):
         """/last — send the read-only scan of the recent past to Telegram."""
-        rows, windows = self.scan_recent(hours)
+        rows, windows, stats = self.scan_recent(hours)
         if rows is None:
             return send_message(self.chat_id,
                                 "❌ کندل‌های گذشته را نتوانستم بگیرم — نت یا "
                                 "دسترسی به Binance مشکل دارد. بعداً دوباره امتحان کن.")
+        # Why the engine stayed quiet, in numbers — expected ~14 signals per 6h,
+        # so a much smaller count needs an explanation, not a shrug.
+        why = (f"📐 دامنهٔ قیمت: ${stats['lo']:,.0f} تا ${stats['hi']:,.0f} "
+               f"({stats['range']:.2f}%)\n"
+               f"🚧 سقف/کفِ ۲۰ کندلی <b>{stats['breaks']}</b> بار شکسته شد"
+               + (f" — ولی <b>{stats['filtered']}</b> تا را فیلترِ نوسان رد کرد "
+                  "(نوسان کم بود)" if stats["filtered"] else "") + "\n")
         if not rows:
             return send_message(
                 self.chat_id,
-                f"🔍 <b>{hours} ساعتِ گذشته</b> ({windows} پنجره)\n\n"
-                "هیچ سیگنالی در این بازه نبود — قانون‌ها فقط روی حرکت‌های "
+                f"🔍 <b>{hours} ساعتِ گذشته</b> ({windows} پنجره)\n\n" + why +
+                "\nهیچ سیگنالی در این بازه نبود — قانون‌ها فقط روی حرکت‌های "
                 "غیرعادی فعال می‌شوند و سکوت طبیعی است.")
         n = sum(1 for r in rows if r["won"] is not None)
         w = sum(1 for r in rows if r["won"])
         head = (f"🔍 <b>سیگنال‌های {hours} ساعتِ گذشته</b> — تست\n"
                 f"{windows} پنجره بررسی شد  ·  <b>{len(rows)}</b> سیگنال"
-                + (f"  ·  {w}/{n} برد" if n else "") + "\n\n")
+                + (f"  ·  {w}/{n} برد" if n else "") + "\n" + why + "\n")
         foot = ("\n\n<i>این‌ها گذشته‌اند و امتیازی هم ثبت نشد — فقط برای اینکه "
                 "ببینی موتور چه می‌دیده. قیمت‌ها از Binance است، پس ممکن است "
                 "یکی‌دو مورد با Chainlink فرق کند.</i>")
