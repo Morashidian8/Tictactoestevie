@@ -37,6 +37,7 @@ guardrails. Reproduce any number with `python3 research/btc5m/rules.py`.
 | 5 | \|close − close[−4]\| ≥ 5.7 × median100(\|move\|) → fade the stretch | **55.6%** | 5,831 |
 | 3 | run of ≥3 same-colour candles → bet opposite | 52.8% | 11,296 |
 | 7 | close outside Bollinger(20, 2σ) **and** RSI(7) ≥80 / ≤20 → fade | **57.6%** | 1,957 |
+| 6 | AABA completes **and** RSI(7) ≥ 70 → bet DOWN | **57.2%** | 1,396/yr |
 
 Rule 7 came out of a 1,083-condition indicator sweep and was then rewritten from
 scratch and re-measured before being believed: 56.15% over 6,522 signals, all six
@@ -58,6 +59,24 @@ is discussed.
 
 Rule 2 only works evaluated **symmetrically**; forced to one fixed direction it is
 49.85%, i.e. nothing.
+
+Rule 6 is the AABA pattern **inverted**: its owner expected continuation, and
+continuation is 48.8%, but completion while RSI(7) is already overbought marks
+exhaustion and fading it returns 57.2%. Half its signals (706 of 1,396 a year)
+fire when nothing else does, and those score 57.9%. One-sided by measurement —
+the mirror (RSI ≤ 30, bet up) is 50.07%, i.e. nothing.
+
+Both rule 6 and rule 7 belong **inside** the statistical vote, not in ladders of
+their own. Merged, the year returns $64,480 at a $20 base against $59,660
+without them, and the worst drawdown falls. Two separate books return less
+($62,080) with a bigger drawdown. The general lesson, now confirmed three times
+(golden, rule 7, rule 6): never split a stream out of the pool it overlaps.
+
+The AABA ladder its owner proposed — bet with the last candle, three rungs at
+20/40/80, direction flipping to follow whichever candle just beat you — wins
+**87.3% of its cycles and still loses $4,800 a year**, because a win pays $20
+and a bust costs $140, so the 12.7% bust rate sits just past the 12.5%
+break-even. No rung beats a coin: 48.82 / 50.95 / 49.27.
 
 ## The user's own AABA pattern — measured and rejected (do not re-litigate)
 
