@@ -135,6 +135,24 @@ RULE4_ENABLED = os.environ.get("RULE4", "0").strip() not in ("0", "false", "no")
 # (n=2,748, z=+4.46). It contradicts the other rules in 8 cases out of 6,542 —
 # it widens coverage rather than fighting them, and when they agree the combined
 # accuracy is the highest in the system at 56.7%.
+# RULE 7 — close outside a Bollinger band with RSI already at an extreme, fade
+# it. Came out of a 1,083-condition sweep as the only survivor; independently
+# rewritten and re-measured before being trusted: 56.15% over 6,522 signals,
+# 57.64% on the held-out half, positive in all six chronological blocks
+# (53.1-59.2), 986 signals no other rule sees at 55.68%, and 0 of 300
+# shuffled-label runs came near it (best 51.9%).
+#
+# It votes with rules 1/2/3/5 rather than standing apart, because it agreed with
+# them on every one of the 3,684 windows where both fired — zero vetoes in a
+# year — so a separate ladder would only split the same bet in two. Merged, the
+# year returns $59,460 instead of $56,060 at a $20 base AND drops the worst
+# drawdown from $2,040 to $1,720.
+RULE7_ENABLED = os.environ.get("RULE7", "1").strip() not in ("0", "false", "no")
+RULE7_BB_N = int(os.environ.get("RULE7_BB_N", "20"))
+RULE7_BB_SD = float(os.environ.get("RULE7_BB_SD", "2.0"))
+RULE7_RSI_N = int(os.environ.get("RULE7_RSI_N", "7"))
+RULE7_RSI_HI = float(os.environ.get("RULE7_RSI_HI", "80"))
+RULE7_RSI_LO = float(os.environ.get("RULE7_RSI_LO", "20"))
 RULE5_ENABLED = os.environ.get("RULE5", "1").strip() not in ("0", "false", "no")
 RULE5_MULT = float(os.environ.get("RULE5_MULT", "5.7"))
 RULE5_SPAN = int(os.environ.get("RULE5_SPAN", "4"))
@@ -938,6 +956,60 @@ def _stdev(values):
         return 0.0
     mean = sum(values) / n
     return (sum((v - mean) ** 2 for v in values) / (n - 1)) ** 0.5
+
+
+def _pstdev(values):
+    """Population standard deviation — what Bollinger bands are defined on."""
+    n = len(values)
+    if n < 2:
+        return 0.0
+    mean = sum(values) / n
+    return (sum((v - mean) ** 2 for v in values) / n) ** 0.5
+
+
+def rsi(closes, period=RULE7_RSI_N):
+    """Wilder's RSI of the last close. None until there is enough history."""
+    if len(closes) < period + 1:
+        return None
+    gains = losses = 0.0
+    for i in range(1, period + 1):
+        d = closes[i] - closes[i - 1]
+        gains += max(d, 0.0)
+        losses += max(-d, 0.0)
+    ag, al = gains / period, losses / period
+    for i in range(period + 1, len(closes)):
+        d = closes[i] - closes[i - 1]
+        ag = (ag * (period - 1) + max(d, 0.0)) / period
+        al = (al * (period - 1) + max(-d, 0.0)) / period
+    if al == 0:
+        return 100.0
+    return 100.0 - 100.0 / (1.0 + ag / al)
+
+
+def rule7_signal(closes):
+    """
+    RULE 7 — closed outside the Bollinger band with RSI already extreme -> fade.
+
+    Both halves are needed: piercing the band alone is ordinary, and RSI alone
+    is ordinary. Together they mark a move that is stretched on two independent
+    measures at once, and that is what reverts.
+    """
+    if len(closes) < max(RULE7_BB_N, RULE7_RSI_N + 1) + 1:
+        return None
+    r = rsi(closes)
+    if r is None:
+        return None
+    window = closes[-RULE7_BB_N:]
+    mid = sum(window) / RULE7_BB_N
+    sd = _pstdev(window)
+    if sd <= 0:
+        return None
+    cur = closes[-1]
+    if cur > mid + RULE7_BB_SD * sd and r >= RULE7_RSI_HI:
+        return {"bet": "down", "rsi": r, "band": mid + RULE7_BB_SD * sd}
+    if cur < mid - RULE7_BB_SD * sd and r <= RULE7_RSI_LO:
+        return {"bet": "up", "rsi": r, "band": mid - RULE7_BB_SD * sd}
+    return None
 
 
 def breakout_signal(closes, lookback=None, vol_filter=None, vol_th=None):
@@ -1982,7 +2054,8 @@ class BreakoutMonitor:
                          f"{datetime.fromtimestamp(when, TEHRAN):%m-%d %H:%M})\n"
                          "تاریخچه دور ریخته و از نو ساخته شد — کارنامه دست‌نخورده ماند.")
         active = ["۱", "۲" if RULE2_ENABLED else "", "۳" if RULE3_ENABLED else "",
-                  "۴" if RULE4_ENABLED else "", "۵" if RULE5_ENABLED else ""]
+                  "۴" if RULE4_ENABLED else "", "۵" if RULE5_ENABLED else "",
+                  "۷" if RULE7_ENABLED else ""]
         lines.append("قانون‌های فعال: <b>" + "، ".join(a for a in active if a) + "</b>"
                      + ("" if RULE4_ENABLED else "  (۴ خاموش است)"))
         if self.untold():
@@ -2047,7 +2120,7 @@ class BreakoutMonitor:
         if s["rules"]:
             others = tuple(k[0] for k in s["rules"] if not any(
                 k.startswith(m) for m in MINE_RULES))
-            lines += block("📈 استراتژی‌های آماری (۱، ۲، ۳، ۵)",
+            lines += block("📈 استراتژی‌های آماری (۱، ۲، ۳، ۵، ۷)",
                            tuple(set(others)) or ("۱", "۲", "۳", "۵"), None)
             lines += block("🧪 استراتژیِ خودت (AABA)", MINE_RULES,
                            "  <i>روی ۱۹٬۶۵۶ موقعیتِ تاریخی ۴۸٫۸٪ اندازه‌گیری شد</i>")
@@ -2105,6 +2178,12 @@ class BreakoutMonitor:
                 hits.append(("۵) کشیدگیِ ۴ کندلی", "۵۶٪", s5["bet"],
                              f"قیمت ${abs(s5['net']):,.0f} جابه‌جا شده = "
                              f"{s5['times']:.1f}× حرکتِ معمولِ اخیر (${s5['median']:,.0f})"))
+        if RULE7_ENABLED:
+            s7 = rule7_signal(closes)
+            if s7:
+                hits.append(("۷) باندِ بولینگر + RSI", "۵۶٪", s7["bet"],
+                             f"بسته‌شدن بیرونِ باند (${s7['band']:,.0f}) "
+                             f"با RSI={s7['rsi']:.0f}"))
         # Quality tier: enough statistical rules pointing the same way, on a
         # genuinely over-extended move. Rule 4 is excluded — it has no edge, so
         # letting it vote would dilute the very thing this tier measures.
@@ -2712,9 +2791,10 @@ def main():
         log.info("Odds watcher ready (%s).", "ON" if odds.on else "OFF — /odds")
         log.info(
             "Breakout-fade alerts ON | feed=%s lookback=%d vol_filter=%s | "
-            "history=%d rules=1,2,3%s%s",
+            "history=%d rules=1,2,3%s%s%s",
             BREAKOUT_FEED, BREAKOUT_LOOKBACK, BREAKOUT_VOL_FILTER, HISTORY_SHOW,
-            ",5" if RULE5_ENABLED else "", ",4" if RULE4_ENABLED else "",
+            ",5" if RULE5_ENABLED else "", ",7" if RULE7_ENABLED else "",
+            ",4" if RULE4_ENABLED else "",
         )
         threading.Thread(target=breakout.run, daemon=True).start()
 

@@ -36,6 +36,16 @@ guardrails. Reproduce any number with `python3 research/btc5m/rules.py`.
 | 2 | 3 same-colour candles **and** body > 1× median100(range) → bet opposite | 55.4% | 2,648 |
 | 5 | \|close − close[−4]\| ≥ 5.7 × median100(\|move\|) → fade the stretch | **55.6%** | 5,831 |
 | 3 | run of ≥3 same-colour candles → bet opposite | 52.8% | 11,296 |
+| 7 | close outside Bollinger(20, 2σ) **and** RSI(7) ≥80 / ≤20 → fade | **57.6%** | 1,957 |
+
+Rule 7 came out of a 1,083-condition indicator sweep and was then rewritten from
+scratch and re-measured before being believed: 56.15% over 6,522 signals, all six
+chronological blocks positive (53.1–59.2%), 986 signals no other rule sees at
+55.68%, and 0 of 300 shuffled-label runs came near it (best 51.9%). It votes with
+rules 1/2/3/5 rather than standing apart — in a full year it agreed with them on
+every one of the 3,684 windows where both fired, **zero vetoes** — so merging
+returns $59,460 against $56,060 at a $20 base while cutting the worst drawdown
+from $2,040 to $1,720.
 
 Rule 5 is worth its slot because 44% of its signals are ones rules 1–3 never see,
 and those alone hold 54.3% (n=2,748, z=+4.46); it contradicts the others in 8
@@ -68,6 +78,33 @@ to break even at 52c and has 50.5%, giving −4.65% EV per cycle.
 
 Rule 5 came out of this analysis — but the control showed the edge belongs to the
 stretch, not the pattern (same filter on non-AABA windows: 55.5%, 7× the sample).
+
+## Volume, S/R, microstructure and regime — all dead, with controls
+
+Five specialist sweeps, ~39,000 conditions, one survivor (rule 7 above).
+
+- **Volume** (K=193): VWAP ≈ SMA, volume-profile POC ≈ dumb midpoint. Volume on
+  top of a stretch filter buys ~1pp and halves the sample — strictly worse.
+  Climax, absorption, low-volume reversion, VWAP crosses: nothing. Second
+  independent failure; treat as settled.
+- **Support/resistance** (K=262): a **placebo grid** (same geometry, shifted
+  $137 so the levels are not round) scored *better* than real round numbers.
+  Levels are a proxy for "a big bar just happened" — `fade a 3-bar stretch when
+  the last body ≥2× median` scores the same 53.4% with no level involved.
+- **Microstructure** (K=36,626): 0 of 209 intrabar modifiers add anything on top
+  of where price sits in its recent range; a close-only version does as well as
+  the high/low one. Wicks carry nothing.
+- **Regime** (K=1,187): ADX, efficiency ratio, Hurst, volatility percentile,
+  time-of-day and **day-of-week** all fail once calendar drift is removed by
+  block-stratified contrasts. Only run-length ≥4 survives, at 52.5% — too thin.
+
+Two facts worth keeping from that work:
+
+1. **The test half is globally more mean-reverting** (unconditional fade 49.46%
+   → 50.84%). Any rule split that correlates with the calendar inherits this and
+   looks predictive. Always contrast within blocks.
+2. **A fade signal does not decay**: accuracy at k=1..5 candles ahead is flat
+   (rule 1: 56.1 / 55.5 / 55.5 / 54.2). Entries can carry a 3–5 candle horizon.
 
 ## Dead — tested and rejected, do not propose these
 
