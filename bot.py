@@ -147,6 +147,15 @@ RULE4_ENABLED = os.environ.get("RULE4", "0").strip() not in ("0", "false", "no")
 # year — so a separate ladder would only split the same bet in two. Merged, the
 # year returns $59,460 instead of $56,060 at a $20 base AND drops the worst
 # drawdown from $2,040 to $1,720.
+# RULE 6 — the user's own AABA pattern, but INVERTED and gated on RSI. The
+# pattern alone is 48.8% (see RULE4_ENABLED); completed while RSI(7) is already
+# overbought it becomes 57.2% betting DOWN, because at that point the pattern
+# marks exhaustion rather than continuation. Verified over a year: 1,396
+# signals, all six chronological blocks positive, and — the reason it earns a
+# slot — 706 of those fire when no other rule sees anything, scoring 57.9%.
+# One direction only: the mirror condition (RSI <= 30, bet up) is 50.07%.
+RULE6_ENABLED = os.environ.get("RULE6", "1").strip() not in ("0", "false", "no")
+RULE6_RSI_HI = float(os.environ.get("RULE6_RSI_HI", "70"))
 RULE7_ENABLED = os.environ.get("RULE7", "1").strip() not in ("0", "false", "no")
 RULE7_BB_N = int(os.environ.get("RULE7_BB_N", "20"))
 RULE7_BB_SD = float(os.environ.get("RULE7_BB_SD", "2.0"))
@@ -984,6 +993,21 @@ def rsi(closes, period=RULE7_RSI_N):
     if al == 0:
         return 100.0
     return 100.0 - 100.0 / (1.0 + ag / al)
+
+
+def rule6_signal(closes):
+    """
+    RULE 6 — AABA completed while RSI(7) is overbought -> fade it.
+
+    Deliberately one-sided. The pattern's owner expected continuation; the data
+    says the opposite, and only on the overbought side.
+    """
+    if rule4_signal(closes) is None:
+        return None
+    r = rsi(closes)
+    if r is None or r < RULE6_RSI_HI:
+        return None
+    return {"bet": "down", "rsi": r}
 
 
 def rule7_signal(closes):
@@ -2055,7 +2079,7 @@ class BreakoutMonitor:
                          "تاریخچه دور ریخته و از نو ساخته شد — کارنامه دست‌نخورده ماند.")
         active = ["۱", "۲" if RULE2_ENABLED else "", "۳" if RULE3_ENABLED else "",
                   "۴" if RULE4_ENABLED else "", "۵" if RULE5_ENABLED else "",
-                  "۷" if RULE7_ENABLED else ""]
+                  "۶" if RULE6_ENABLED else "", "۷" if RULE7_ENABLED else ""]
         lines.append("قانون‌های فعال: <b>" + "، ".join(a for a in active if a) + "</b>"
                      + ("" if RULE4_ENABLED else "  (۴ خاموش است)"))
         if self.untold():
@@ -2120,7 +2144,7 @@ class BreakoutMonitor:
         if s["rules"]:
             others = tuple(k[0] for k in s["rules"] if not any(
                 k.startswith(m) for m in MINE_RULES))
-            lines += block("📈 استراتژی‌های آماری (۱، ۲، ۳، ۵، ۷)",
+            lines += block("📈 استراتژی‌های آماری (۱، ۲، ۳، ۵، ۶، ۷)",
                            tuple(set(others)) or ("۱", "۲", "۳", "۵"), None)
             lines += block("🧪 استراتژیِ خودت (AABA)", MINE_RULES,
                            "  <i>روی ۱۹٬۶۵۶ موقعیتِ تاریخی ۴۸٫۸٪ اندازه‌گیری شد</i>")
@@ -2178,6 +2202,12 @@ class BreakoutMonitor:
                 hits.append(("۵) کشیدگیِ ۴ کندلی", "۵۶٪", s5["bet"],
                              f"قیمت ${abs(s5['net']):,.0f} جابه‌جا شده = "
                              f"{s5['times']:.1f}× حرکتِ معمولِ اخیر (${s5['median']:,.0f})"))
+        if RULE6_ENABLED:
+            s6 = rule6_signal(closes)
+            if s6:
+                hits.append(("۶) AABA در اشباعِ خرید", "۵۷٪", s6["bet"],
+                             f"الگوی AABA کامل شد و RSI={s6['rsi']:.0f} — "
+                             "نشانهٔ خستگی، نه ادامه"))
         if RULE7_ENABLED:
             s7 = rule7_signal(closes)
             if s7:
@@ -2791,10 +2821,10 @@ def main():
         log.info("Odds watcher ready (%s).", "ON" if odds.on else "OFF — /odds")
         log.info(
             "Breakout-fade alerts ON | feed=%s lookback=%d vol_filter=%s | "
-            "history=%d rules=1,2,3%s%s%s",
+            "history=%d rules=1,2,3%s%s%s%s",
             BREAKOUT_FEED, BREAKOUT_LOOKBACK, BREAKOUT_VOL_FILTER, HISTORY_SHOW,
-            ",5" if RULE5_ENABLED else "", ",7" if RULE7_ENABLED else "",
-            ",4" if RULE4_ENABLED else "",
+            ",5" if RULE5_ENABLED else "", ",6" if RULE6_ENABLED else "",
+            ",7" if RULE7_ENABLED else "", ",4" if RULE4_ENABLED else "",
         )
         threading.Thread(target=breakout.run, daemon=True).start()
 
