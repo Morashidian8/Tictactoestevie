@@ -560,6 +560,61 @@ def main():
         print(f"  fade mom3 & |c-c[-1]| >= {thr_}*scale (NO LEVEL)  train {atr_*100:.2f}% "
               f"n={ntr}  test {ate_*100:.2f}% n={nte}  z_diff_train={zz:.2f}")
 
+    # ---------------- STRATIFIED CONTROL ------------------------------------
+    # Crossing a level requires a big bar, and big bars fade better on their own.
+    # Stratify the mom3 universe by |c-c[-1]|/scale decile and ask whether, INSIDE
+    # a stratum, the level-crossing bars beat the non-crossing ones.
+    print("\n=== STRATIFIED CONTROL: level effect at matched bar size ===")
+    bs = body / scale
+    ok_u = ucond & np.isfinite(bs) & (y != 0)
+    qs = np.quantile(bs[ok_u & (np.arange(n) < split)], np.linspace(0, 1, 11))
+    qs[0], qs[-1] = -1, 1e9
+    strat = np.digitize(bs, qs[1:-1])
+
+    def stratified(mask, lo, hi):
+        num = den = 0.0
+        for s_ in range(10):
+            base = ok_u & (strat == s_)
+            base[:lo] = False; base[hi:] = False
+            a = base & mask
+            b = base & ~mask
+            n1, n2 = int(a.sum()), int(b.sum())
+            if n1 < 30 or n2 < 30:
+                continue
+            p1 = float((upred[a] == y[a]).mean())
+            p2 = float((upred[b] == y[b]).mean())
+            p = (p1 * n1 + p2 * n2) / (n1 + n2)
+            var = p * (1 - p) * (1 / n1 + 1 / n2)
+            if var <= 0:
+                continue
+            num += (p1 - p2) / var
+            den += 1.0 / var
+        return (num / math.sqrt(den)) if den > 0 else float("nan")
+
+    for r in survivors:
+        if " mom3 " not in r["name"]:
+            continue
+        m = r["mask"] & ucond & (r["pred"] == upred)
+        z_tr = stratified(m, 0, split)
+        z_te = stratified(m, split, end)
+        print(f"  {r['name'][:44]:<46} z_strat_train={z_tr:>6.2f}   z_strat_test={z_te:>6.2f}")
+
+    # head-to-head: does adding a level to the pure size rule help at all?
+    print("\n=== HEAD-TO-HEAD vs. the size-only rule ===")
+    size_rule = ucond & (body >= 2.0 * scale)
+    for sname in ("round1000", "round500", "pivot20", "pivot10", "flip"):
+        dr2, ds2 = src[sname][0], src[sname][1]
+        drp = np.concatenate([[BIG], dr2[:-1]])
+        dsp = np.concatenate([[BIG], ds2[:-1]])
+        bu = (drp < BIG / 2) & ((c - cprev) > drp)
+        bd = (dsp < BIG / 2) & ((cprev - c) > dsp)
+        crossed = (bu & up3) | (bd & dn3)
+        for lbl, m in (("size2 AND crossed " + sname, size_rule & crossed),
+                       ("size2 NOT crossed " + sname, size_rule & ~crossed)):
+            ntr, a1 = leg(m, upred, 0, split)
+            nte, a2 = leg(m, upred, split, end)
+            print(f"  {lbl:<34} train {a1*100:6.2f}% n={ntr:<7} test {a2*100:6.2f}% n={nte}")
+
     print("\ndone.")
 
 
