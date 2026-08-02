@@ -422,7 +422,7 @@ for q in (0.80, 0.90, 0.95):
     stat(B, "B: c_vs_prevmid (uses prev bar H/L)")
     stat(B & ~A, "B AND NOT A  (mid-only signals)")
     stat(A & ~B, "A AND NOT B  (close-only signals)")
-    ov = (A & B & valid).sum() / max((A | B) & valid, np.array(1)).sum()
+    ov = (A & B & valid).sum() / max(int(((A | B) & valid).sum()), 1)
     print(f"  Jaccard overlap A vs B = {100*ov:.1f}%")
 
 # overlap of the best pure-intrabar rule with the known dead rules
@@ -439,3 +439,48 @@ for r in s2[:3]:
           f"{100*(cond & (np.nan_to_num(f['clspos24'],nan=-1) > float(np.quantile(f['clspos24'][tr_mask][np.isfinite(f['clspos24'][tr_mask])],0.80)))).sum()/max(n_all,1):5.1f}%"
           "   <-- overlap with the stage-1 range-position edge")
 
+
+# ================================================================ STAGE 5
+# (a) TIE HANDLING. y counts exact ties (c[i+1]==c[i]) as "not up", which credits
+#     every DOWN bet. Re-check the headline rules with ties EXCLUDED.
+# (b) Does the H/L-based N-bar range position beat a CLOSE-ONLY analogue?
+print("\n" + "=" * 118)
+print("STAGE 5 -- ROBUSTNESS: exact ties, and H/L range position vs a close-only analogue")
+print("=" * 118)
+
+ties = np.zeros(N, dtype=bool)
+ties[:-1] = C[1:] == C[:-1]
+print(f"exact next-candle ties: {int((ties & valid).sum())} "
+      f"({100*(ties & valid).sum()/valid.sum():.2f}% of valid bars) -- counted as DOWN wins above")
+
+nt = valid & ~ties                      # no-tie universe
+def notie(cond, side, label):
+    for nm, um in (("train", tr_mask), ("test", te_mask)):
+        m = cond & um & nt
+        n = int(m.sum())
+        if n == 0:
+            continue
+        p = float(y[m].mean())
+        acc = p if side == 1 else 1 - p
+        print(f"  {label:<58} {nm:<5} {100*acc:5.2f}% n={n:>6} z={(acc-0.5)/math.sqrt(0.25/n):+6.2f}")
+
+print("\nheadline rules with TIES EXCLUDED (direction still the one fixed on train):")
+for r in ([kept[0]] + ([s2[0]] if s2 else []) +
+          [x for x in s2 if x["rule"].startswith("c_vs_prevmid>1.094")][:1]):
+    notie(r["cond"], r["side"], r["rule"][:58])
+
+# close-only analogue of clspos24: where C sits in the range of the last 24 CLOSES
+for w in (24, 48):
+    hi_c = roll(C, w, np.max); lo_c = roll(C, w, np.min)
+    cponly = safe(C - lo_c, hi_c - lo_c)
+    hl = f[f"clspos{w}"]
+    tv_h = hl[tr_mask]; tv_h = tv_h[np.isfinite(tv_h)]
+    tv_c = cponly[tr_mask]; tv_c = tv_c[np.isfinite(tv_c)]
+    HLc = np.nan_to_num(hl, nan=-np.inf) > float(np.quantile(tv_h, 0.80))
+    COc = np.nan_to_num(cponly, nan=-np.inf) > float(np.quantile(tv_c, 0.80))
+    print(f"\nw={w}: close position in last {w} bars, fade the top quintile")
+    stat(HLc, f"uses HIGHS/LOWS  (clspos{w})")
+    stat(COc, f"uses CLOSES ONLY (clspos{w}_closeonly)")
+    stat(HLc & ~COc, "H/L-only signals (fires where close-only does not)")
+    stat(COc & ~HLc, "close-only signals (fires where H/L does not)")
+    print(f"  Jaccard overlap = {100*(HLc & COc & valid).sum()/max(int(((HLc|COc)&valid).sum()),1):.1f}%")
