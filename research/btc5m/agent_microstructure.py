@@ -396,3 +396,46 @@ for az, nm, p, n, pte, nte, zi in inc[:12]:
 n_inc = sum(1 for az, *_ in inc if az >= B3)
 print(f"\nIntrabar modifiers with genuine incremental value over the control: {n_inc}")
 
+# ================================================================ STAGE 4
+# Head-to-head: does using the PREVIOUS BAR'S HIGH/LOW (c_vs_prevmid) beat pure
+# close-to-close momentum (c_vs_prevc)? This is the "do highs/lows add info"
+# question, since settlement never uses them.
+print("\n" + "=" * 118)
+print("STAGE 4 -- HEAD-TO-HEAD: prev-bar MIDPOINT (uses H/L) vs prev-bar CLOSE (settlement-only)")
+print("=" * 118)
+
+def stat(cond, label):
+    mtr, mte = cond & tr_mask, cond & te_mask
+    ntr, nte = int(mtr.sum()), int(mte.sum())
+    ptr, pte = float(y[mtr].mean()), float(y[mte].mean())
+    print(f"  {label:<46} train fade {100*(1-ptr):5.2f}% n={ntr:>6} z={z_of(ptr,ntr):+6.2f} | "
+          f"test fade {100*(1-pte):5.2f}% n={nte:>5} z={z_of(pte,nte):+6.2f}")
+    return ptr, pte
+
+for q in (0.80, 0.90, 0.95):
+    tm = f["c_vs_prevmid"][tr_mask]; tm = tm[np.isfinite(tm)]
+    tc = f["c_vs_prevc"][tr_mask];   tc = tc[np.isfinite(tc)]
+    A = np.nan_to_num(f["c_vs_prevc"], nan=-np.inf) > float(np.quantile(tc, q))
+    B = np.nan_to_num(f["c_vs_prevmid"], nan=-np.inf) > float(np.quantile(tm, q))
+    print(f"\nq={q}")
+    stat(A, "A: c_vs_prevc  (close-to-close only)")
+    stat(B, "B: c_vs_prevmid (uses prev bar H/L)")
+    stat(B & ~A, "B AND NOT A  (mid-only signals)")
+    stat(A & ~B, "A AND NOT B  (close-only signals)")
+    ov = (A & B & valid).sum() / max((A | B) & valid, np.array(1)).sum()
+    print(f"  Jaccard overlap A vs B = {100*ov:.1f}%")
+
+# overlap of the best pure-intrabar rule with the known dead rules
+if s2:
+    r = s2[0] if abs(s2[0]["z"]) else None
+print("\nOverlap of best PURE-INTRABAR survivors with known/dead rules:")
+for r in s2[:3]:
+    cond = r["cond"] & valid
+    n_all = int(cond.sum())
+    print(f"\n  {r['rule']}   ({n_all/(N/BARS_PER_DAY):.1f} signals/day)")
+    for kn, kc in known.items():
+        print(f"      {kn:<16} {100*(cond & kc).sum()/max(n_all,1):5.1f}%")
+    print(f"      {'clspos24>q80':<16} "
+          f"{100*(cond & (np.nan_to_num(f['clspos24'],nan=-1) > float(np.quantile(f['clspos24'][tr_mask][np.isfinite(f['clspos24'][tr_mask])],0.80)))).sum()/max(n_all,1):5.1f}%"
+          "   <-- overlap with the stage-1 range-position edge")
+
