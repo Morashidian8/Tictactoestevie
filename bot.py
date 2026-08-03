@@ -200,6 +200,9 @@ LADDER_RUNGS = int(os.environ.get("LADDER_RUNGS", "3"))
 ODDS_LEAD = int(os.environ.get("ODDS_LEAD", "15"))
 ODDS_SETTLE = int(os.environ.get("ODDS_SETTLE_WAIT", "45"))
 ODDS_SHOW = int(os.environ.get("ODDS_SHOW", "18"))   # windows listed per report
+# How far past the window's open to keep retrying. The connection to Polymarket
+# drops in and out on this network, so one attempt decides nothing.
+ODDS_GRACE = int(os.environ.get("ODDS_GRACE", "40"))
 # Stake shown with each signal. STAKE_MODE=flat keeps every bet the same size;
 # "martingale" doubles after a loss up to LADDER_RUNGS. Flat is the default
 # because on the low-frequency streams it returned more profit per dollar of
@@ -2532,14 +2535,26 @@ class OddsWatcher:
             if not self.on:
                 continue
             try:
-                m = pmc.market_for(nxt)
+                # The link to Polymarket resolves only intermittently here, so a
+                # single failed attempt is not evidence of anything. Keep trying
+                # into the first seconds of the window: a quote taken at T+20 is
+                # still worth far more than a missing row.
+                m = up = None
+                deadline = nxt + ODDS_GRACE
+                while time.time() < deadline:
+                    m = pmc.market_for(nxt)
+                    if m:
+                        up, down, src = pmc.quote(m)
+                        if up is not None:
+                            break
+                    time.sleep(4)
                 if not m:
-                    log.warning("Odds: no market for %s", et_time(nxt).strftime("%H:%M"))
+                    log.warning("Odds: no market for %s after %ds",
+                                et_time(nxt).strftime("%H:%M"), ODDS_GRACE)
                     self._explain(pmc, nxt, "بازارِ این پنجره پیدا نشد")
                     continue
-                up, down, src = pmc.quote(m)
                 if up is None:
-                    self._explain(pmc, nxt, f"قیمت خوانده نشد ({src})")
+                    self._explain(pmc, nxt, "قیمت خوانده نشد")
                     continue
                 self.why = ""
                 fav = "up" if up > down else ("down" if down < up else "tie")
@@ -2551,7 +2566,8 @@ class OddsWatcher:
                        "hour_et": et_time(nxt).hour, "up": up, "down": down,
                        "favourite": fav, "winner": None, "beat": None,
                        "final": None, "source": src, "market_id": m.get("id"),
-                       "title": (m.get("question") or "")[:70], "minutes": mins}
+                       "title": (m.get("question") or "")[:70], "minutes": mins,
+                       "lag": round(time.time() - nxt)}
                 pmc.append(row)
                 self.last = row
                 self.errors = 0
