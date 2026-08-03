@@ -108,15 +108,52 @@ def _matches(item):
     return "up or down" in text and ("bitcoin" in text or "btc" in text)
 
 
+def _duration(m):
+    """Window length in seconds, or None when the dates are unreadable."""
+    def parse(v):
+        try:
+            return datetime.fromisoformat(str(v).replace("Z", "+00:00")).timestamp()
+        except (ValueError, AttributeError, TypeError):
+            return None
+    a = parse(m.get("startDate") or m.get("start_date_iso") or m.get("gameStartTime"))
+    b = parse(m.get("endDate") or m.get("end_date_iso"))
+    return (b - a) if (a is not None and b is not None) else None
+
+
+def _is_five_minute(m, boundary):
+    """
+    Is this the 5-minute market, and the one opening at `boundary`?
+
+    Polymarket runs a 15-minute market alongside the 5-minute one and they can
+    END at the same instant — "3:00PM-3:15PM" and "3:10PM-3:15PM" both finish at
+    3:15. Matching on the end alone took whichever came first in the list, and
+    when that was the 15-minute market it had already been running for ten
+    minutes and quoted 99c. Every row collected that way was worthless.
+
+    Two independent checks, so a missing startDate does not defeat it: the
+    declared duration, and the opening time spelled out in the title.
+    """
+    d = _duration(m)
+    if d is not None:
+        return abs(d - GRAN) <= 60
+    o = datetime.fromtimestamp(boundary, ET)
+    want = f"{o.strftime('%I').lstrip('0')}:{o:%M}{o.strftime('%p').upper()}"
+    return want.lower() in (m.get("question") or m.get("title") or "").lower()
+
+
 def market_for(boundary):
-    """The market whose window STARTS at `boundary`, or None."""
+    """The 5-minute market whose window STARTS at `boundary`, or None."""
     want_end = boundary + GRAN
+    slug = _slug_for(boundary)
+    # Slug first: it names both ends of the window, so it cannot return the
+    # 15-minute market. The date range is the fallback for when the slug format
+    # changes, and it needs the duration guard.
     tries = (
-        ("end-date window", lambda: _by_date(boundary)),
-        ("slug", lambda: get(f"{GAMMA}/markets", slug=_slug_for(boundary))),
+        ("slug", lambda: get(f"{GAMMA}/markets", slug=slug)),
         ("slug via events", lambda: [
-            m for e in get(f"{GAMMA}/events", slug=_slug_for(boundary))
+            m for e in get(f"{GAMMA}/events", slug=slug)
             for m in (e.get("markets") or [])]),
+        ("end-date window", lambda: _by_date(boundary)),
     )
     for _, fn in tries:
         try:
@@ -131,8 +168,14 @@ def market_for(boundary):
                 ts = datetime.fromisoformat(end.replace("Z", "+00:00")).timestamp()
             except (ValueError, AttributeError):
                 continue
-            if abs(ts - want_end) <= GRAN / 2:
-                return m
+            if abs(ts - want_end) > GRAN / 2:
+                continue
+            if not _is_five_minute(m, boundary):
+                d = _duration(m)
+                log(f"   رد شد: بازارِ {int(d/60)} دقیقه‌ای" if d
+                    else "   رد شد: بازارِ ۵ دقیقه‌ای نیست")
+                continue
+            return m
     return None
 
 
@@ -206,11 +249,52 @@ def collect_one(boundary):
            "hour_et": datetime.fromtimestamp(boundary, ET).hour,
            "up": up, "down": down, "favourite": fav,
            "winner": winner, "beat": beat, "final": final,
-           "source": src, "market_id": m.get("id")}
+           "source": src, "market_id": m.get("id"),
+           "title": (m.get("question") or m.get("title") or "")[:70],
+           "minutes": int((_duration(m) or GRAN) / 60)}
     append(row)
     hit = "—" if winner is None else ("✅" if winner == fav else "❌")
     log(f"   نتیجه: {winner or 'نامشخص'}  {hit}   (ثبت شد)")
     return row
+
+
+# --- filling in results that were not published in time ---------------------
+def resolve_pending(max_age_h=24):
+    """
+    Go back over rows stored without a winner and fill them in.
+
+    Polymarket does not always publish the outcome within the seconds the
+    collector waits, and a row written with winner=None was previously dead —
+    the report drops it, so the window was collected and then thrown away. This
+    rewrites the file with whatever has resolved since.
+    """
+    if not os.path.exists(STORE):
+        return 0
+    rows, changed = [], 0
+    now = time.time()
+    with open(STORE) as f:
+        for line in f:
+            try:
+                r = json.loads(line)
+            except ValueError:
+                continue
+            if (not r.get("winner") and r.get("market_id")
+                    and now - r["t"] < max_age_h * 3600):
+                w, beat, final = resolution(r["market_id"])
+                if w is None and beat and final:
+                    w = "up" if float(final) > float(beat) else "down"
+                if w:
+                    r["winner"], r["beat"], r["final"] = w, beat, final
+                    changed += 1
+            rows.append(r)
+    if changed:
+        tmp = STORE + ".tmp"
+        with open(tmp, "w") as f:
+            for r in rows:
+                f.write(json.dumps(r, ensure_ascii=False) + "\n")
+        os.replace(tmp, STORE)          # atomic: a crash cannot truncate the data
+        log(f"نتیجهٔ {changed} پنجرهٔ معلق الحاق شد.")
+    return changed
 
 
 def run(once=False):
@@ -223,6 +307,9 @@ def run(once=False):
             time.sleep(wait)
         try:
             collect_one(nxt)
+            # Every hour, sweep up anything the market had not resolved yet.
+            if int(nxt) % 3600 < GRAN:
+                resolve_pending()
         except Exception as exc:                      # never die on one window
             log(f"خطا: {type(exc).__name__}: {str(exc)[:160]}")
             time.sleep(5)
@@ -372,8 +459,12 @@ if __name__ == "__main__":
     ap.add_argument("--report", action="store_true")
     ap.add_argument("--once", action="store_true")
     ap.add_argument("--diagnose", action="store_true")
+    ap.add_argument("--resolve", action="store_true",
+                    help="نتیجهٔ پنجره‌های معلق را الحاق کن و خارج شو")
     a = ap.parse_args()
-    if a.diagnose:
+    if a.resolve:
+        print(f"{resolve_pending()} ردیف تکمیل شد.")
+    elif a.diagnose:
         import re as _re
         print(_re.sub(r"</?[a-z]+>", "", diagnose()))
     elif a.report:
