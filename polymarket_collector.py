@@ -18,6 +18,7 @@ are recorded so the two can be checked against each other later.
 
 import argparse
 import json
+import re
 import os
 import sys
 import time
@@ -120,25 +121,30 @@ def _duration(m):
     return (b - a) if (a is not None and b is not None) else None
 
 
+_RANGE = re.compile(r"(\d{1,2}):(\d{2})\s*([AP]M)\s*[-–—]\s*(\d{1,2}):(\d{2})\s*([AP]M)",
+                    re.IGNORECASE)
+
+
 def _is_five_minute(m, boundary):
     """
-    Is this the 5-minute market, and the one opening at `boundary`?
+    Is this the 5-minute market opening at `boundary`?
 
-    Polymarket runs a 15-minute market alongside the 5-minute one and they can
-    END at the same instant — "3:00PM-3:15PM" and "3:10PM-3:15PM" both finish at
-    3:15. Matching on the end alone took whichever came first in the list, and
-    when that was the 15-minute market it had already been running for ten
-    minutes and quoted 99c. Every row collected that way was worthless.
-
-    Two independent checks, so a missing startDate does not defeat it: the
-    declared duration, and the opening time spelled out in the title.
+    The TITLE decides, because it names both ends of the window
+    ("4:15PM-4:20PM ET") and cannot be confused with the 15-minute market that
+    finishes at the same instant. Duration is only a fallback: Gamma's
+    startDate is when the market opened for TRADING, which for these can be an
+    hour or a day before the window it settles — trusting it rejected the
+    correct market and cost a night of data.
     """
+    title = m.get("question") or m.get("title") or ""
+    hit = _RANGE.search(title)
+    if hit:
+        o = datetime.fromtimestamp(boundary, ET)
+        want = (int(o.strftime("%I")), int(o.strftime("%M")), o.strftime("%p").upper())
+        got = (int(hit.group(1)), int(hit.group(2)), hit.group(3).upper())
+        return want == got
     d = _duration(m)
-    if d is not None:
-        return abs(d - GRAN) <= 60
-    o = datetime.fromtimestamp(boundary, ET)
-    want = f"{o.strftime('%I').lstrip('0')}:{o:%M}{o.strftime('%p').upper()}"
-    return want.lower() in (m.get("question") or m.get("title") or "").lower()
+    return d is not None and abs(d - GRAN) <= 60
 
 
 def market_for(boundary):
@@ -425,7 +431,14 @@ def diagnose(boundary=None):
             try:
                 ts = datetime.fromisoformat(end.replace("Z", "+00:00")).timestamp()
                 gap = f"{ts - want_end:+.0f} ثانیه"
-                ok = "✅" if abs(ts - want_end) <= GRAN / 2 else "❌ خارج از محدوده"
+                if abs(ts - want_end) > GRAN / 2:
+                    ok = "❌ خارج از محدوده"
+                elif not _is_five_minute(m, boundary):
+                    d = _duration(m)
+                    ok = (f"❌ ۵ دقیقه‌ای نیست"
+                          + (f" (طول {int(d/60)} دقیقه)" if d else ""))
+                else:
+                    ok = "✅"
             except (ValueError, AttributeError):
                 gap, ok = end or "—", "❌ endDate خوانده نشد"
             out.append(f"   • {(m.get('question') or '')[:58]}")
