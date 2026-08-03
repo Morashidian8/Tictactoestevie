@@ -614,11 +614,12 @@ def _odds_keyboard():
     the button answered with silence.
     """
     return [
-        [{"text": "۳ ساعت", "callback_data": "odds:3"},
-         {"text": "۶ ساعت", "callback_data": "odds:6"},
-         {"text": "۱۲ ساعت", "callback_data": "odds:12"}],
-        [{"text": "۲۴ ساعت", "callback_data": "odds:24"},
-         {"text": "📊 کلِ آمار", "callback_data": "odds:all"}],
+        [{"text": "۱ ساعت", "callback_data": "odds:1"},
+         {"text": "۳ ساعت", "callback_data": "odds:3"},
+         {"text": "۶ ساعت", "callback_data": "odds:6"}],
+        [{"text": "۱۲ ساعت", "callback_data": "odds:12"},
+         {"text": "۲۴ ساعت", "callback_data": "odds:24"},
+         {"text": "📊 همه", "callback_data": "odds:all"}],
     ]
 
 
@@ -651,7 +652,7 @@ def set_bot_commands():
         {"command": "missed", "description": "سابقهٔ سیگنال‌ها با ساعت و نتیجه"},
         {"command": "last", "description": "سیگنال‌های N ساعتِ گذشته (پیش‌فرض ۶)"},
         {"command": "check", "description": "قیمت‌های تسویه برای مقایسه با پلی‌مارکت"},
-        {"command": "odds", "description": "گزارشِ بالا/پایینِ N ساعتِ گذشته (پیش‌فرض ۳)"},
+        {"command": "odds", "description": "گزارشِ بالا/پایین — بعدش عدد بزن: /odds 1"},
         {"command": "oddscollect", "description": "روشن/خاموش کردنِ جمع‌آوریِ بی‌صدا"},
         {"command": "oddsdebug", "description": "چرا بالا/پایین چیزی جمع نمی‌کند؟"},
         {"command": "oddsreport", "description": "جمع‌بندیِ بالا/پایین به تفکیکِ ساعت"},
@@ -2735,7 +2736,10 @@ def command_listener(monitor: Monitor):
                         send_message(chat_id, "پایشِ بالا/پایین در دسترس نیست.")
                     else:
                         parts = text.split()
-                        hrs = 3
+                        # The button starts at one hour: for the first day the
+                        # store is nearly empty and a three-hour view looks
+                        # broken when it is merely early.
+                        hrs = 3 if text.startswith("/odds") else 1
                         if len(parts) > 1:
                             try:
                                 hrs = max(1, min(48, int(float(parts[1]))))
