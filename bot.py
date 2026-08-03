@@ -2533,8 +2533,18 @@ class OddsWatcher:
                 row = {"t": nxt, "et": et_time(nxt).isoformat(),
                        "hour_et": et_time(nxt).hour, "up": up, "down": down,
                        "favourite": fav, "winner": winner, "beat": beat,
-                       "final": final, "source": src, "market_id": m.get("id")}
+                       "final": final, "source": src, "market_id": m.get("id"),
+                       "title": (m.get("question") or "")[:70],
+                       "minutes": int((pmc._duration(m) or GRANULARITY) / 60)}
                 pmc.append(row)
+                # Polymarket does not always publish the outcome in the seconds
+                # we wait, and a row with no winner is dropped by the report.
+                # Sweep them up once an hour rather than losing the window.
+                if int(nxt) % 3600 < GRANULARITY:
+                    try:
+                        pmc.resolve_pending()
+                    except Exception as exc:  # noqa: BLE001
+                        log.warning("resolve_pending: %s", exc)
                 self.last = row
                 self.errors = 0
             except Exception as exc:  # noqa: BLE001 - one bad window is not fatal
