@@ -37,6 +37,7 @@ STORE = os.environ.get("ODDS_STORE", "polymarket_odds.jsonl")
 GAMMA = "https://gamma-api.polymarket.com"
 CLOB = "https://clob.polymarket.com"
 TIMEOUT = 20
+RETRIES = int(os.environ.get("ODDS_RETRIES", "3"))   # per request, on DNS/connect
 UA = {"User-Agent": "Mozilla/5.0 (Android) btc-odds/1.0"}
 ET = timezone(timedelta(hours=-4))          # Polymarket labels windows in ET
 
@@ -45,8 +46,25 @@ def log(msg):
     print(f"{datetime.now():%m-%d %H:%M:%S} | {msg}", flush=True)
 
 
+# One session for the whole run: it keeps the TLS connection alive, so a name
+# that resolved once can serve many requests without asking DNS again. On a link
+# where the resolver only answers intermittently that is the difference between
+# collecting a window and losing it.
+_SESSION = requests.Session()
+_SESSION.headers.update(UA)
+try:
+    from requests.adapters import HTTPAdapter
+    from urllib3.util.retry import Retry
+    _SESSION.mount("https://", HTTPAdapter(max_retries=Retry(
+        total=RETRIES, connect=RETRIES, read=2, backoff_factor=0.6,
+        status_forcelist=(429, 500, 502, 503, 504),
+        allowed_methods=frozenset(["GET"]))))
+except Exception:                       # noqa: BLE001 - retries are a bonus
+    pass
+
+
 def get(url, **params):
-    r = requests.get(url, params=params or None, timeout=TIMEOUT, headers=UA)
+    r = _SESSION.get(url, params=params or None, timeout=TIMEOUT)
     r.raise_for_status()
     return r.json()
 
