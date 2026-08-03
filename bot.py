@@ -2437,6 +2437,8 @@ class OddsWatcher:
         self.last = None          # the row awaiting its result
         self.errors = 0
         self.why = ""             # why the last attempt collected nothing
+        self.why_detail = ""      # the full diagnosis from that moment
+        self.done_for = 0         # boundary already handled this pass
 
     @property
     def chat_id(self):
@@ -2475,9 +2477,13 @@ class OddsWatcher:
             if not self.on:
                 msg += "\n\n⚠️ جمع‌آوری خاموش است — /oddscollect روشنش می‌کند."
             elif self.why:
-                # Say WHY rather than leaving an empty report to be interpreted.
-                msg += (f"\n\n⚠️ آخرین تلاش: {self.why}\n"
-                        "برای دیدنِ جزئیات: /oddsdebug")
+                # Show the diagnosis captured at the moment it failed. Running
+                # /oddsdebug now probes a DIFFERENT window and can come back
+                # green while the collector is still failing — which is exactly
+                # what happened and sent the search in the wrong direction.
+                msg += f"\n\n⚠️ آخرین تلاش: {self.why}"
+                if self.why_detail:
+                    msg += "\n\n" + self.why_detail
             return msg
         rows.sort(key=lambda r: r["t"])
         n = len(rows)
@@ -2499,55 +2505,63 @@ class OddsWatcher:
                 + "\n".join(lines) + more)
 
     def run(self):
-        """One pass per window, quietly doing nothing while switched off."""
+        """
+        One pass per window: wake at T-15s, read the quote, store, sleep again.
+
+        The first version waited nearly six minutes after each quote to see who
+        won, which meant it was asleep through the NEXT window and could only
+        ever catch every other one — and it woke up at the wrong offset, asking
+        for markets several minutes before Polymarket lists them. The outcome
+        does not need to be fetched here at all: the row is written immediately
+        with no winner and `resolve_pending` fills it in later. Collecting and
+        settling are separate jobs and blocking one on the other cost most of
+        the data.
+        """
         import polymarket_collector as pmc
         while True:
             now = time.time()
             nxt = (int(now) // GRANULARITY + 1) * GRANULARITY
+            # Already handled this boundary, or already inside its lead window:
+            # move to the next one. Without this the loop wakes, collects, and
+            # comes straight back round while still 14 seconds from the same
+            # boundary — asking Polymarket for the same window twice.
+            while nxt <= self.done_for or nxt - ODDS_LEAD - now < 0:
+                nxt += GRANULARITY
             time.sleep(max(1.0, nxt - ODDS_LEAD - now))
+            self.done_for = nxt
             if not self.on:
-                time.sleep(ODDS_LEAD + 1)
                 continue
             try:
                 m = pmc.market_for(nxt)
                 if not m:
-                    self.why = "بازارِ این پنجره در پلی‌مارکت پیدا نشد"
-                    log.warning("Odds: no market found for %s", nxt)
-                    time.sleep(ODDS_LEAD + 1)
+                    log.warning("Odds: no market for %s", et_time(nxt).strftime("%H:%M"))
+                    self._explain(pmc, nxt, "بازارِ این پنجره پیدا نشد")
                     continue
                 up, down, src = pmc.quote(m)
                 if up is None:
-                    self.why = f"قیمت خوانده نشد ({src})"
-                    log.warning("Odds: no price (%s)", src)
-                    time.sleep(ODDS_LEAD + 1)
+                    self._explain(pmc, nxt, f"قیمت خوانده نشد ({src})")
                     continue
                 self.why = ""
                 fav = "up" if up > down else ("down" if down < up else "tie")
-                log.info("Odds %s: up %.0f down %.0f -> %s",
-                         et_time(nxt).strftime("%H:%M"), up * 100, down * 100, fav)
-                # Settle the one just quoted, then store it. No message: the
-                # report is pulled, never pushed.
-                time.sleep(max(0, nxt + GRANULARITY + ODDS_SETTLE - time.time()))
-                winner, beat, final = pmc.resolution(m.get("id"))
-                if winner is None and beat and final:
-                    winner = "up" if float(final) > float(beat) else "down"
+                mins = int((pmc._duration(m) or GRANULARITY) / 60)
+                log.info("Odds %s: up %.0f down %.0f -> %s [%s, %dm]",
+                         et_time(nxt).strftime("%H:%M"), up * 100, down * 100,
+                         fav, src, mins)
                 row = {"t": nxt, "et": et_time(nxt).isoformat(),
                        "hour_et": et_time(nxt).hour, "up": up, "down": down,
-                       "favourite": fav, "winner": winner, "beat": beat,
-                       "final": final, "source": src, "market_id": m.get("id"),
-                       "title": (m.get("question") or "")[:70],
-                       "minutes": int((pmc._duration(m) or GRANULARITY) / 60)}
+                       "favourite": fav, "winner": None, "beat": None,
+                       "final": None, "source": src, "market_id": m.get("id"),
+                       "title": (m.get("question") or "")[:70], "minutes": mins}
                 pmc.append(row)
-                # Polymarket does not always publish the outcome in the seconds
-                # we wait, and a row with no winner is dropped by the report.
-                # Sweep them up once an hour rather than losing the window.
-                if int(nxt) % 3600 < GRANULARITY:
+                self.last = row
+                self.errors = 0
+                # Fill in outcomes for everything already stored. Cheap, and it
+                # keeps the file complete without ever blocking a collection.
+                if int(nxt) % 1800 < GRANULARITY:
                     try:
                         pmc.resolve_pending()
                     except Exception as exc:  # noqa: BLE001
                         log.warning("resolve_pending: %s", exc)
-                self.last = row
-                self.errors = 0
             except Exception as exc:  # noqa: BLE001 - one bad window is not fatal
                 self.errors += 1
                 log.warning("Odds watcher error: %s: %s",
@@ -2556,7 +2570,21 @@ class OddsWatcher:
                     send_message(self.chat_id,
                                  "⚠️ پایشِ بالا/پایین به پلی‌مارکت وصل نمی‌شود "
                                  f"({type(exc).__name__}). با VPN امتحان کن.")
-                time.sleep(10)
+
+    def _explain(self, pmc, boundary, short):
+        """
+        Keep the full diagnosis of a failure, not just a one-line label.
+
+        A report that says only "market not found" while /oddsdebug says
+        everything is fine is worse than useless — it sends you looking in the
+        wrong place. Whatever went wrong is captured here at the moment it
+        happened, for the next /odds to show.
+        """
+        self.why = short
+        try:
+            self.why_detail = pmc.diagnose(boundary)
+        except Exception as exc:  # noqa: BLE001
+            self.why_detail = f"عیب‌یابی هم شکست خورد: {type(exc).__name__}"
 
 
 def _fa_side(side):
