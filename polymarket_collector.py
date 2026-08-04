@@ -120,9 +120,13 @@ def _by_date(boundary):
     itself now can only return the right window.
     """
     want = boundary + GRAN
-    return get(f"{GAMMA}/markets", closed="false", limit=LIMIT,
-               order="endDate", ascending="true",
-               end_date_min=_iso(want - 90), end_date_max=_iso(want + 90))
+    params = dict(limit=LIMIT, order="endDate", ascending="true",
+                  end_date_min=_iso(want - 90), end_date_max=_iso(want + 90))
+    # Only filter to open markets when the window is still ahead of us. For a
+    # backfill the market has long since closed and closed=false hides it.
+    if want > time.time():
+        params["closed"] = "false"
+    return get(f"{GAMMA}/markets", **params)
 
 
 def _matches(item):
@@ -291,6 +295,96 @@ def collect_one(boundary):
     hit = "—" if winner is None else ("✅" if winner == fav else "❌")
     log(f"   نتیجه: {winner or 'نامشخص'}  {hit}   (ثبت شد)")
     return row
+
+
+# --- recovering windows that were missed while offline ----------------------
+def history_price(token_id, at_ts, span=900):
+    """
+    The token's price as of `at_ts`, from the CLOB's price history.
+
+    The live midpoint is a snapshot and cannot be asked for after the fact, but
+    the order book's history can — so a window missed while the phone was
+    offline is not lost, only late. Takes the last point at or before the
+    moment wanted; returns None if the series does not reach back that far.
+    """
+    try:
+        data = get(f"{CLOB}/prices-history", market=token_id,
+                   startTs=int(at_ts - span), endTs=int(at_ts + 60), fidelity=1)
+    except Exception:
+        return None
+    pts = data.get("history") if isinstance(data, dict) else data
+    if not pts:
+        return None
+    best = None
+    for p in pts:
+        try:
+            t, v = int(p["t"]), float(p["p"])
+        except (KeyError, TypeError, ValueError):
+            continue
+        if t <= at_ts and (best is None or t > best[0]):
+            best = (t, v)
+    return best[1] if best else None
+
+
+def stored_windows():
+    """Boundaries already in the file, so a backfill never duplicates one."""
+    seen = set()
+    if not os.path.exists(STORE):
+        return seen
+    with open(STORE) as f:
+        for line in f:
+            try:
+                seen.add(int(json.loads(line)["t"]))
+            except (ValueError, KeyError, TypeError):
+                continue
+    return seen
+
+
+def backfill(hours=24, limit=200, on_progress=None):
+    """
+    Fill in every window of the last `hours` that is missing from the file.
+
+    Returns (added, missing_before, failed). Each recovered row is marked
+    backfilled so it can be told apart from one caught live — the price comes
+    from the history series rather than the live midpoint, and that difference
+    should stay visible.
+    """
+    now = int(time.time()) // GRAN * GRAN
+    start = now - hours * 3600
+    have = stored_windows()
+    todo = [b for b in range(start, now, GRAN) if b not in have]
+    added = failed = 0
+    for i, b in enumerate(todo[:limit]):
+        m = market_for(b)
+        if not m:
+            failed += 1
+            continue
+        outcomes = [str(o).lower() for o in _jload(m.get("outcomes"), [])]
+        tokens = _jload(m.get("clobTokenIds"), [])
+        if len(tokens) != len(outcomes) or "up" not in outcomes:
+            failed += 1
+            continue
+        up = history_price(tokens[outcomes.index("up")], b - LEAD)
+        if up is None:
+            failed += 1
+            continue
+        down = round(1.0 - up, 4)
+        winner, beat, final = resolution(m.get("id"))
+        if winner is None and beat and final:
+            winner = "up" if float(final) > float(beat) else "down"
+        fav = "up" if up > down else ("down" if down > up else "tie")
+        append({"t": b, "et": datetime.fromtimestamp(b, ET).isoformat(),
+                "hour_et": datetime.fromtimestamp(b, ET).hour,
+                "up": round(up, 4), "down": down, "favourite": fav,
+                "winner": winner, "beat": beat, "final": final,
+                "source": "history", "market_id": m.get("id"),
+                "title": (m.get("question") or "")[:70],
+                "minutes": int((_duration(m) or GRAN) / 60),
+                "backfilled": True})
+        added += 1
+        if on_progress and added % 25 == 0:
+            on_progress(added, len(todo))
+    return added, len(todo), failed
 
 
 # --- filling in results that were not published in time ---------------------
@@ -501,10 +595,15 @@ if __name__ == "__main__":
     ap.add_argument("--report", action="store_true")
     ap.add_argument("--once", action="store_true")
     ap.add_argument("--diagnose", action="store_true")
+    ap.add_argument("--backfill", type=int, metavar="HOURS",
+                    help="پنجره‌های جاافتادهٔ N ساعتِ گذشته را از تاریخچه بازیابی کن")
     ap.add_argument("--resolve", action="store_true",
                     help="نتیجهٔ پنجره‌های معلق را الحاق کن و خارج شو")
     a = ap.parse_args()
-    if a.resolve:
+    if a.backfill:
+        add, miss, bad = backfill(a.backfill)
+        print(f"{miss} پنجره جا افتاده بود · {add} بازیابی شد · {bad} نشد")
+    elif a.resolve:
         print(f"{resolve_pending()} ردیف تکمیل شد.")
     elif a.diagnose:
         import re as _re

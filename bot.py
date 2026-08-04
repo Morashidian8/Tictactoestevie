@@ -658,6 +658,7 @@ def set_bot_commands():
         {"command": "odds", "description": "گزارشِ بالا/پایین — بعدش عدد بزن: /odds 1"},
         {"command": "oddscollect", "description": "روشن/خاموش کردنِ جمع‌آوریِ بی‌صدا"},
         {"command": "oddsdebug", "description": "چرا بالا/پایین چیزی جمع نمی‌کند؟"},
+        {"command": "oddsfill", "description": "بازیابیِ پنجره‌های جاافتاده (پیش‌فرض ۲۴ ساعت)"},
         {"command": "oddsreport", "description": "جمع‌بندیِ بالا/پایین به تفکیکِ ساعت"},
         {"command": "menu", "description": "نمایش منوی سریع"},
         {"command": "update", "description": "دریافت آخرین نسخه و ری‌استارت"},
@@ -2766,6 +2767,44 @@ def command_listener(monitor: Monitor):
                         bm.flush_untold()   # mark anything queued as seen
                     else:
                         send_message(chat_id, "سابقه‌ای در دسترس نیست.")
+                elif text.startswith("/oddsfill"):
+                    parts = text.split()
+                    hrs = 24
+                    if len(parts) > 1:
+                        try:
+                            hrs = max(1, min(168, int(float(parts[1]))))
+                        except ValueError:
+                            pass
+                    send_message(chat_id,
+                                 f"⏳ در حال بازیابیِ پنجره‌های جاافتادهٔ "
+                                 f"{hrs} ساعتِ گذشته…\n"
+                                 "<i>هر پنجره چند درخواست لازم دارد، پس ممکن "
+                                 "است چند دقیقه طول بکشد.</i>")
+
+                    def _fill(cid=chat_id, hours=hrs):
+                        try:
+                            import polymarket_collector as pmc
+                            add, miss, bad = pmc.backfill(hours)
+                            if not miss:
+                                send_message(cid, "✅ هیچ پنجره‌ای جا نیفتاده بود.")
+                            else:
+                                send_message(
+                                    cid,
+                                    f"📥 <b>بازیابی تمام شد</b>\n"
+                                    f"جا افتاده بود: <b>{miss}</b> پنجره\n"
+                                    f"بازیابی شد: <b>{add}</b>\n"
+                                    f"نشد: <b>{bad}</b>"
+                                    + ("\n\n<i>قیمتِ این‌ها از تاریخچهٔ دفترِ "
+                                       "سفارش گرفته شده، نه لحظه‌ای — در گزارش "
+                                       "با منبعِ history مشخص‌اند.</i>"
+                                       if add else "")
+                                    + ("\n\n<i>«نشد»ها یا بازارشان دیگر در "
+                                       "دسترس نیست یا تاریخچه‌شان آن‌قدر عقب "
+                                       "نمی‌رود.</i>" if bad else ""))
+                        except Exception as exc:  # noqa: BLE001
+                            send_message(cid, f"❌ بازیابی خطا داد: "
+                                              f"{type(exc).__name__}: {exc}")
+                    threading.Thread(target=_fill, daemon=True).start()
                 elif text.startswith("/oddsdebug"):
                     send_message(chat_id, "🔧 در حال بررسی…")
 
