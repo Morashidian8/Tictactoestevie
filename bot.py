@@ -2542,7 +2542,7 @@ class OddsWatcher:
                 m = up = None
                 deadline = nxt + ODDS_GRACE
                 while time.time() < deadline:
-                    m = pmc.market_for(nxt)
+                    m = pmc.market_for(nxt, deadline=deadline)
                     if m:
                         up, down, src = pmc.quote(m)
                         if up is not None:
@@ -2574,10 +2574,11 @@ class OddsWatcher:
                 # Fill in outcomes for everything already stored. Cheap, and it
                 # keeps the file complete without ever blocking a collection.
                 if int(nxt) % 1800 < GRANULARITY:
-                    try:
-                        pmc.resolve_pending()
-                    except Exception as exc:  # noqa: BLE001
-                        log.warning("resolve_pending: %s", exc)
+                    # In its own thread: it makes one network call per pending
+                    # row, and doing that inline stalled the loop straight past
+                    # the next window.
+                    threading.Thread(target=self._sweep, args=(pmc,),
+                                     daemon=True).start()
             except Exception as exc:  # noqa: BLE001 - one bad window is not fatal
                 self.errors += 1
                 log.warning("Odds watcher error: %s: %s",
@@ -2586,6 +2587,15 @@ class OddsWatcher:
                     send_message(self.chat_id,
                                  "⚠️ پایشِ بالا/پایین به پلی‌مارکت وصل نمی‌شود "
                                  f"({type(exc).__name__}). با VPN امتحان کن.")
+
+    @staticmethod
+    def _sweep(pmc):
+        try:
+            n = pmc.resolve_pending()
+            if n:
+                log.info("Odds: filled in %d pending outcomes.", n)
+        except Exception as exc:  # noqa: BLE001
+            log.warning("resolve_pending: %s", exc)
 
     def _explain(self, pmc, boundary, short):
         """
@@ -2598,6 +2608,8 @@ class OddsWatcher:
         """
         self.why = short
         try:
+            # Bounded: the diagnosis is for the report, not worth another
+            # window. It probes the same endpoints that just failed.
             self.why_detail = pmc.diagnose(boundary)
         except Exception as exc:  # noqa: BLE001
             self.why_detail = f"عیب‌یابی هم شکست خورد: {type(exc).__name__}"

@@ -36,8 +36,11 @@ SETTLE_WAIT = int(os.environ.get("ODDS_SETTLE_WAIT", "45"))  # after the close
 STORE = os.environ.get("ODDS_STORE", "polymarket_odds.jsonl")
 GAMMA = "https://gamma-api.polymarket.com"
 CLOB = "https://clob.polymarket.com"
-TIMEOUT = 20
-RETRIES = int(os.environ.get("ODDS_RETRIES", "3"))   # per request, on DNS/connect
+# Short and shallow on purpose. A five-minute window is only worth chasing for
+# seconds, and the caller retries anyway — deep urllib3 retries turned a dead
+# network into a four-minute stall that swallowed the NEXT window too.
+TIMEOUT = int(os.environ.get("ODDS_TIMEOUT", "6"))
+RETRIES = int(os.environ.get("ODDS_RETRIES", "1"))
 UA = {"User-Agent": "Mozilla/5.0 (Android) btc-odds/1.0"}
 ET = timezone(timedelta(hours=-4))          # Polymarket labels windows in ET
 
@@ -56,7 +59,7 @@ try:
     from requests.adapters import HTTPAdapter
     from urllib3.util.retry import Retry
     _SESSION.mount("https://", HTTPAdapter(max_retries=Retry(
-        total=RETRIES, connect=RETRIES, read=2, backoff_factor=0.6,
+        total=RETRIES, connect=RETRIES, read=1, backoff_factor=0.3,
         status_forcelist=(429, 500, 502, 503, 504),
         allowed_methods=frozenset(["GET"]))))
 except Exception:                       # noqa: BLE001 - retries are a bonus
@@ -165,8 +168,14 @@ def _is_five_minute(m, boundary):
     return d is not None and abs(d - GRAN) <= 60
 
 
-def market_for(boundary):
-    """The 5-minute market whose window STARTS at `boundary`, or None."""
+def market_for(boundary, deadline=None):
+    """
+    The 5-minute market whose window STARTS at `boundary`, or None.
+
+    `deadline` is a hard wall-clock stop. Without it a dead network let this
+    walk all three sources at full timeout and return minutes later, by which
+    point the next window had already been missed as well.
+    """
     want_end = boundary + GRAN
     slug = _slug_for(boundary)
     # Slug first: it names both ends of the window, so it cannot return the
@@ -180,6 +189,8 @@ def market_for(boundary):
         ("end-date window", lambda: _by_date(boundary)),
     )
     for _, fn in tries:
+        if deadline and time.time() >= deadline:
+            return None
         try:
             data = fn()
         except Exception:
@@ -283,7 +294,7 @@ def collect_one(boundary):
 
 
 # --- filling in results that were not published in time ---------------------
-def resolve_pending(max_age_h=24):
+def resolve_pending(max_age_h=24, limit=15):
     """
     Go back over rows stored without a winner and fill them in.
 
@@ -302,7 +313,7 @@ def resolve_pending(max_age_h=24):
                 r = json.loads(line)
             except ValueError:
                 continue
-            if (not r.get("winner") and r.get("market_id")
+            if (not r.get("winner") and r.get("market_id") and changed < limit
                     and now - r["t"] < max_age_h * 3600):
                 w, beat, final = resolution(r["market_id"])
                 if w is None and beat and final:
