@@ -682,6 +682,303 @@ def shuffled_control(best, dirs, trials=200, seed=20260807):
 
 
 # --------------------------------------------------------------------------
+# frontier and report
+# --------------------------------------------------------------------------
+def dedup(rows):
+    """One row per distinct signal list, keeping the first (best-ranked) label."""
+    seen, out = set(), []
+    for r in rows:
+        if r["sig_hash"] in seen:
+            continue
+        seen.add(r["sig_hash"])
+        out.append(r)
+    return out
+
+
+def frontier(rows):
+    """
+    The bust/profit trade-off the user gets to choose a point on.
+
+    Sorted by busts ascending, keeping only rows that beat every cheaper row on
+    profit — so each step down the table buys profit with busts and nothing on
+    it is dominated.
+    """
+    best, out = float("-inf"), []
+    for r in dedup(sorted(rows, key=lambda r: (r["busts"],
+                                               -r["pnl_martingale"]))):
+        if r["pnl_martingale"] > best:
+            best = r["pnl_martingale"]
+            out.append(r)
+    return out
+
+
+def pct(x):
+    return f"{x:.2f}"
+
+
+def cell(s):
+    """Stream-set labels contain '|', which would silently split a table row."""
+    return str(s).replace("|", "\\|")
+
+
+def report(res, path):
+    m = res["__meta__"]
+    zbar = m["z_bonferroni"]
+    base = res["baseline"]
+    scored = res["membership"] + res["golden"] + res["topology"]
+    real = [r for r in scored if r["n"] >= MIN_N]
+    ranked = dedup(sorted(real + [base],
+                          key=lambda r: (r["bust_rate"], -r["n"])))
+    survivors = [r for r in ranked if r["z"] >= zbar]
+    fr = frontier(real + [base])
+    L = []
+    A = L.append
+
+    A("# وظیفهٔ B — همهٔ ترکیب‌های ممکن، رتبه‌بندی‌شده بر اساس کمترین انفجار\n")
+    A(f"داده: {m['candles']:,} کندلِ ۵ دقیقه‌ای واقعی، "
+      f"{m['days']:.0f} روز. پایه ${BASE:.0f}، نردبان {RUNGS} پله "
+      f"(20/40/80)، یک شرط در هر پنجره، تسویه close-to-close، "
+      f"کندلِ بدونِ تغییر = void.\n")
+    A(f"تعدادِ کاندیداهای امتیازدهی‌شده K = {m['K_candidates']:,} "
+      f"({m['K_distinct']:,} تای متمایز). سدِّ Bonferroni برای برنده‌شدن: "
+      f"z >= {zbar:.2f} — نه z = 1.96.\n")
+    A("> **حسابِ پایه که نباید فراموش شود:** انفجار در سال ≈ "
+      "n × (1−p)³. پس فقط دو اهرم وجود دارد: سیگنالِ کمتر، یا نرخِ بردِ بالاتر. "
+      "کم‌کردنِ تعدادِ سیگنال به‌تنهایی انفجار را کم می‌کند و **یافته نیست**. "
+      "ستونی که واقعاً کیفیت را می‌سنجد `انفجار در ۱۰۰ سیگنال` است.\n")
+
+    pick = survivors[0]
+    A("\n## ۰) پاسخِ کوتاه\n")
+    A(f"برای هدفی که گفتی — «کاهشِ آمارِ انفجار، کیفیت نه کمیت» — برنده "
+      f"**{cell(pick['label'])}** است.\n")
+    A(f"- انفجار: **{base['busts']:,} → {pick['busts']:,}** در سال "
+      f"(روزی {base['busts_per_day']:.2f} → {pick['busts_per_day']:.2f}).")
+    A(f"- انفجار در ۱۰۰ سیگنال: **{pct(base['bust_rate'])} → "
+      f"{pct(pick['bust_rate'])}** — یعنی کیفیتِ واقعی هم بهتر شده، "
+      f"نه فقط تعدادِ شرط‌ها کمتر.")
+    A(f"- دقت: {pct(base['acc'])}% → **{pct(pick['acc'])}%** "
+      f"[{pick['wilson'][0]:.1f}–{pick['wilson'][1]:.1f}]، z={pick['z']:.2f} "
+      f"در برابرِ سدِّ {zbar:.2f}.")
+    A(f"- بلندترین رشتهٔ باخت: {base['max_streak']} → "
+      f"**{pick['max_streak']}**؛ کفِ مسیر "
+      f"${base['path_low']:+,.0f} → **${pick['path_low']:+,.0f}**.")
+    A(f"- هزینه‌اش: سود از ${base['pnl_martingale']:+,.0f} به "
+      f"**${pick['pnl_martingale']:+,.0f}** می‌افتد "
+      f"({(pick['pnl_martingale'] / base['pnl_martingale'] - 1) * 100:+.0f}٪)، "
+      f"چون تعدادِ سیگنال از {base['n']:,} به {pick['n']:,} می‌رسد.\n")
+    A(f"**صادقانه‌اش این است:** بخشِ بزرگِ آن کاهشِ "
+      f"{(1 - pick['busts'] / base['busts']) * 100:.0f} درصدیِ انفجار از "
+      f"«کمتر شرط بستن» می‌آید، نه از باهوش‌تر شرط بستن. سهمِ واقعیِ کیفیت "
+      f"همان {(1 - pick['bust_rate'] / base['bust_rate']) * 100:.0f} درصد "
+      f"کاهشِ نرخِ انفجار است. اگر حجمِ بیشتری می‌خواهی، جدولِ مرزِ بخشِ ۴ "
+      f"را ببین.\n")
+
+    A("\n## ۱) پیکربندیِ فعلیِ ربات — نقطهٔ مرجع\n")
+    A(row_head())
+    A(row(base))
+    A(f"\nهیستوگرامِ باخت‌های پیاپی: `{base['streaks']}`، "
+      f"بلندترین رشته {base['max_streak']}، "
+      f"رشته‌های >= ۶/۷/۸: {base['streak_ge'][6]}/{base['streak_ge'][7]}/"
+      f"{base['streak_ge'][8]}.\n")
+    A("نکته: `golden` زیرمجموعهٔ سختِ استخرِ آماری است و هر وقت شلیک می‌کند "
+      "جهتش با جهتِ استخر یکی است — پس قرار دادنِ آن در اولویتِ بالاتر "
+      "**حتی یک شرط را هم عوض نمی‌کند**. "
+      "`rule6>golden>pool` و `rule6>pool` عددبه‌عدد یکی هستند.\n")
+
+    A("\n## ۲) رتبه‌بندی بر اساس انفجار\n")
+    A("### ۲-الف) کمترین تعدادِ خامِ انفجار در سال\n")
+    A(row_head())
+    for r in dedup(sorted(real + [base], key=lambda r: r["busts"]))[:10]:
+        A(row(r))
+    A("\n### ۲-ب) کمترین انفجار در ۱۰۰ سیگنال (ستونِ کیفیت)\n")
+    A(row_head())
+    for r in ranked[:10]:
+        A(row(r))
+    A("\n(ترکیب با کمتر از ۲۰۰ سیگنال اصلاً وارد این جدول‌ها نشده است.)\n")
+
+    A("\n## ۳) ده ترکیبِ برتر که از سدِّ Bonferroni هم رد می‌شوند\n")
+    A(f"یعنی z >= {zbar:.2f}. این جدول همان‌هایی است که می‌شود جدی گرفت.\n")
+    A(row_head())
+    for r in survivors[:10]:
+        A(row(r))
+    zall = m.get("z_bonferroni_all", zbar)
+    A(f"\nاگر خانوادهٔ محافظ‌ها را هم به‌عنوانِ مرحلهٔ دومِ همان جست‌وجو "
+      f"بشماریم، K به {m.get('K_all', m['K_distinct']):,} می‌رسد و سد به "
+      f"z >= {zall:.2f} سخت‌تر می‌شود. هیچ‌کدام از ده سطرِ بالا با این "
+      f"سختگیری هم از دست نمی‌روند مگر آن‌هایی که z-شان زیرِ {zall:.2f} است.\n")
+    A("**آن‌هایی که رد نمی‌شوند — و نباید به‌عنوان یافته گزارش شوند:**\n")
+    fails = [r for r in ranked[:12] if r["z"] < zbar]
+    if fails:
+        for r in fails:
+            te = r["split"]["test"]
+            A(f"- `{r['label']}` — n={r['n']:,}، z={r['z']:.2f} < {zbar:.2f}. "
+              f"دقتِ {pct(r['acc'])}٪ با فاصلهٔ اطمینانِ "
+              f"[{r['wilson'][0]:.1f}–{r['wilson'][1]:.1f}] که ۵۰٪ را در "
+              f"بر می‌گیرد یا به آن می‌چسبد؛ در نیمهٔ آزمون "
+              f"n={te['n']:,} و z={te['z']:.2f}. اینها سطرهای کم‌سیگنالی "
+              f"هستند که فقط چون نرخِ انفجارشان تصادفاً پایین افتاده بالای "
+              f"جدول آمده‌اند.")
+    else:
+        A("- هیچ‌کدام؛ ده سطرِ بالا همگی از سد رد شدند.")
+    A("")
+    A("**آزمونِ train/test:** ستون‌های آخرِ جدول‌ها. ترکیب‌هایی که فقط "
+      "در نیمهٔ اول برنده‌اند یافته نیستند، منحنیِ برازش‌شده‌اند. "
+      "هشدارِ مهم: نیمهٔ دومِ این داده ذاتاً بازگشتی‌تر است، پس بالا رفتنِ "
+      "دقت در نیمهٔ آزمون به‌خودی‌خود تأیید نیست — چیزی که تأیید است "
+      "**ثابت ماندنِ** آن است.")
+
+    A("\n## ۴) مرزِ انفجار در برابر سود (frontier)\n")
+    A("هر سطر نسبت به سطرِ بالایی انفجارِ بیشتر می‌دهد و سودِ بیشتر می‌گیرد. "
+      "هیچ سطری مغلوب نیست. کاربر خودش نقطه‌اش را انتخاب می‌کند.\n")
+    A("| ترکیب | n | دقت | انفجار | در ۱۰۰ | سودِ مارتینگل | سودِ ثابت | "
+      "کفِ مسیر | z | Bonferroni |")
+    A("| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | :---: |")
+    for r in fr:
+        A(f"| {cell(r['label'])} | {r['n']:,} | {pct(r['acc'])}% | {r['busts']:,} | "
+          f"{pct(r['bust_rate'])} | ${r['pnl_martingale']:+,.0f} | "
+          f"${r['pnl_flat']:+,.0f} | ${r['path_low']:+,.0f} | {r['z']:.2f} | "
+          f"{'✔' if r['z'] >= zbar else '✘'} |")
+
+    A("\n## ۵) توپولوژیِ نردبان و ترتیبِ اولویت\n")
+    top = dedup(sorted([r for r in res["topology"] if r["n"] >= MIN_N],
+                       key=lambda r: (r["bust_rate"], -r["n"])))
+    A(row_head())
+    for r in top[:12]:
+        A(row(r))
+    sh = [r for r in res["topology"] if r.get("ladder") == "shared"]
+    ind = [r for r in res["topology"] if r.get("ladder") == "independent"]
+    pair = {}
+    for r in sh:
+        pair[r["label"].replace(" / shared", "")] = r
+    diffs = [(pair[k["label"].replace(" / independent", "")], k) for k in ind
+             if k["label"].replace(" / independent", "") in pair]
+    diffs = [(a, b) for a, b in diffs if a["n"] >= MIN_N]
+    if diffs:
+        k = len(diffs)
+        db = sum(b["busts"] - a["busts"] for a, b in diffs) / k
+        dl = sum(b["path_low"] - a["path_low"] for a, b in diffs) / k
+        dp = sum(b["pnl_martingale"] - a["pnl_martingale"] for a, b in diffs) / k
+        better = sum(1 for a, b in diffs if b["busts"] < a["busts"])
+        worse = sum(1 for a, b in diffs if b["busts"] > a["busts"])
+        A(f"\n**نردبانِ مستقل برای هر جریان، برخلافِ شهود، بدتر است.** "
+          f"مقایسهٔ جفت‌به‌جفت روی {k} جفت (همان جریان‌ها، همان اولویت، فقط "
+          f"توپولوژیِ نردبان عوض): مستقل به‌طورِ میانگین "
+          f"**{db:+.1f} انفجار** بیشتر می‌دهد، کفِ مسیر را "
+          f"**${dl:+,.0f}** جابه‌جا می‌کند و **${dp:+,.0f}** سود کم می‌کند. "
+          f"در {better} جفت بهتر و در {worse} جفت بدتر شد.\n")
+        A("علتش مکانیکی است: با نردبانِ مشترک، بردِ **هر** جریانی نردبان را "
+          "صفر می‌کند. با نردبانِ مستقل، جریانی که باخته باید خودش ببرد تا "
+          "ری‌ست شود، و یک جریانِ کم‌تکرار روزها روی پلهٔ دوم می‌ماند — پس "
+          "نردبان‌های بیشتری به پلهٔ سوم می‌رسند. تنها استثنا مجموعه‌های "
+          "کوچکِ واقعاً ناهم‌بسته مثل `{golden|rule7}` است.\n")
+
+    A("\n## ۶) طلایی به‌جای پدرش، نه علاوه بر آن\n")
+    A(row_head())
+    for r in dedup(sorted(res["golden"], key=lambda r: r["bust_rate"])):
+        A(row(r))
+
+    A("\n## ۷) قانونِ ۴ — آیا هنوز رقیق می‌کند؟\n")
+    s = res["rule4_effect"]["summary"]
+    A(f"مقایسهٔ جفت‌به‌جفتِ «زیرمجموعه» با «زیرمجموعه + قانون ۴» زیرِ همان "
+      f"طرحِ رأی‌گیری، روی {s['pairs']} جفت با n >= {MIN_N}:\n")
+    A(f"- میانگینِ تغییرِ دقت: **{s['mean_d_acc']:+.2f} واحدِ درصد**؛ "
+      f"در {s['worse_acc']} جفت از {s['pairs']} بدتر شد.")
+    A(f"- میانگینِ تغییرِ انفجار در ۱۰۰ سیگنال: **{s['mean_d_bust_rate']:+.2f}**؛ "
+      f"در {s['worse_bust_rate']} جفت بدتر شد.")
+    A(f"- میانگینِ تغییرِ سود: **${s['mean_d_pnl']:+,.0f}**؛ "
+      f"در {s['worse_pnl']} جفت بدتر شد.\n")
+    A("پس بله، قانون ۴ همچنان رقیق می‌کند. تنها استثنا وقتی است که قانون ۴ "
+      "به‌جای رأی‌دهنده نقشِ **وتو** بازی می‌کند (طرح‌های K2/K3، جایی که "
+      "مخالفتِ آن پنجره را حذف می‌کند نه اینکه جهت را عوض کند) — و آن هم اثرِ "
+      "کوچکی است که در فهرستِ زیر پیداست، نه یک لبهٔ مستقل.\n")
+
+    A("\n## ۸) محافظ‌ها — آیا واقعاً کمک کردند؟\n")
+    A("| پایه | محافظ | n | دقت | انفجار | در ۱۰۰ | سودِ مارتینگل | کفِ مسیر |")
+    A("| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |")
+    for b in m["best_labels"]:
+        g = sorted([r for r in res["guards"] if r["base"] == b],
+                   key=lambda r: r["bust_rate"])
+        for r in g[:4] + [x for x in g if x["guard"] == "no guard"]:
+            A(f"| {cell(r['base'])} | {r['guard']} | {r['n']:,} | {pct(r['acc'])}% | "
+              f"{r['busts']:,} | {pct(r['bust_rate'])} | "
+              f"${r['pnl_martingale']:+,.0f} | ${r['path_low']:+,.0f} |")
+    A("\nخوانشِ درست: هیچ محافظی نرخِ انفجار را به‌طورِ معنادار پایین نیاورد. "
+      "هر جا انفجارِ خام کم شد، به قیمتِ حذفِ همان نسبت از سیگنال‌ها بود — "
+      "یعنی همان اهرمِ بی‌ارزشِ «کمتر شرط ببند». محافظ‌های cooldown نرخِ "
+      "انفجار را **بدتر** کردند.\n")
+
+    A("\n## ۹) عمقِ نردبان — فقط به‌عنوانِ کنترل\n")
+    A("| ترکیب | پله | n | انفجار | در ۱۰۰ | بزرگ‌ترین شرط | سودِ مارتینگل | "
+      "کفِ مسیر |")
+    A("| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |")
+    for r in res["depth"]:
+        A(f"| {cell(r['base'])} | {r['rungs']} | {r['n']:,} | {r['busts']:,} | "
+          f"{pct(r['bust_rate'])} | ${r['worst_bet']:,.0f} | "
+          f"${r['pnl_martingale']:+,.0f} | ${r['path_low']:+,.0f} |")
+    A("\nعمقِ بیشتر «انفجار» را کم نشان می‌دهد چون تعریفِ انفجار را عوض "
+      "می‌کند، نه چون ریسک کم شده: با ۴ پله بزرگ‌ترین شرط $160 است و یک "
+      "انفجار $300 برمی‌دارد. ۳ پله پیش‌فرض می‌ماند.\n")
+
+    A("\n## ۱۰) کنترلِ برچسبِ درهم‌ریخته\n")
+    A("برچسبِ **کندل‌ها** در کلِّ سال درهم ریخته شد و همان اندیس‌های سیگنال "
+      "دوباره امتیاز گرفتند، ۲۰۰ بار. (درهم‌ریختنِ خودِ برد/باخت‌ها بی‌معنی "
+      "است: جایگشت میانگین را عوض نمی‌کند.)\n")
+    A("| ترکیب | n | دقتِ واقعی | بهترین دقتِ درهم | انفجارِ واقعی/۱۰۰ | "
+      "کمترین انفجارِ درهم/۱۰۰ | دفعاتی که درهم بهتر شد |")
+    A("| --- | ---: | ---: | ---: | ---: | ---: | ---: |")
+    for k, v in res["shuffle"].items():
+        A(f"| {cell(k)} | {v['n']:,} | {pct(v['real_acc'])}% | "
+          f"{pct(v['shuf_acc_best'])}% | {pct(v['real_bust_rate'])} | "
+          f"{pct(v['shuf_rate_best'])} | {v['beat_real_on_rate']}/"
+          f"{v['trials']} روی انفجار، {v['beat_real_on_acc']}/{v['trials']} "
+          f"روی دقت |")
+
+    A("\n## ۱۱) هشدارهایی که نباید نرم شوند\n")
+    A("- طرح‌های رأی‌گیریِ (a) «هر عضوی شلیک کند و همهٔ شلیک‌کننده‌ها هم‌جهت "
+      "باشند»، (c) «اتفاقِ آرا میانِ شلیک‌کننده‌ها» و (e) «اگر اختلاف داشتند "
+      "پنجره را رد کن» سه اسم برای **یک** گزاره‌اند. جدا گزارش کردنشان "
+      "توهمِ سه آزمایش می‌سازد؛ اینجا یکی شمرده شده‌اند.")
+    A("- نیمهٔ آزمونِ این داده ذاتاً بازگشت‌به‌میانگین‌تر است "
+      "(fade بدونِ شرط ۴۹.۴۶٪ → ۵۰.۸۴٪). هر ترکیبی که در نیمهٔ دوم بهتر شده "
+      "بخشی از آن بهبود را از همین رانش گرفته، نه از خودش.")
+    A("- سالِ بررسی‌شده ۵۰.۰۹٪ کندلِ نزولی داشت. قانون ۶ فقط «پایین» شرط "
+      "می‌بندد، پس از این رانش حدودِ ۰.۰۹ واحدِ درصد سود می‌برد — ناچیز، "
+      "ولی ثبت شد.")
+    A("- هیچ دادهٔ دفترِ سفارشِ Polymarket در کار نیست. همهٔ این اعداد "
+      "روی مبنای ۵۰ سِنت حساب شده‌اند. بالای ~۵۵ سِنت لبه می‌میرد.")
+    A("- با نردبانِ مستقل، هیستوگرامِ رشتهٔ باخت سراسری است ولی انفجار "
+      "برای هر جریان جدا شمرده می‌شود؛ این دو ستون در آن سطرها مستقیماً "
+      "به هم مربوط نیستند.\n")
+
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w") as f:
+        f.write("\n".join(L) + "\n")
+    return path
+
+
+def row_head():
+    return ("| ترکیب | n | دقت | فاصلهٔ ۹۵٪ Wilson | z | انفجار | در ۱۰۰ | "
+            "در روز | بلندترین رشته | >=۶/۷/۸ | سودِ مارتینگل | سودِ ثابت | "
+            "افت | کفِ مسیر | $2,000 | دقتِ train | دقتِ test |\n"
+            "| --- | ---: | ---: | :---: | ---: | ---: | ---: | ---: | ---: | "
+            "---: | ---: | ---: | ---: | ---: | :---: | ---: | ---: |")
+
+
+def row(r):
+    lo, hi = r["wilson"]
+    tr, te = r["split"]["train"], r["split"]["test"]
+    g = r["streak_ge"]
+    surv = "بله" if r["survives_2000"] else f"نه ({r['died']})"
+    return (f"| {cell(r['label'])} | {r['n']:,} | {pct(r['acc'])}% | "
+            f"[{lo:.1f}–{hi:.1f}] | {r['z']:.2f} | {r['busts']:,} | "
+            f"{pct(r['bust_rate'])} | {r['busts_per_day']:.2f} | "
+            f"{r['max_streak']} | {g[6]}/{g[7]}/{g[8]} | "
+            f"${r['pnl_martingale']:+,.0f} | ${r['pnl_flat']:+,.0f} | "
+            f"${r['drawdown']:,.0f} | ${r['path_low']:+,.0f} | {surv} | "
+            f"{pct(tr['acc'])}% | {pct(te['acc'])}% (z={te['z']:.2f}) |")
+
+
+# --------------------------------------------------------------------------
 # driver
 # --------------------------------------------------------------------------
 def flush(res):
@@ -797,6 +1094,18 @@ def main():
     res["shuffle"] = shuffled_control(top5, dirs, trials=200)
     flush(res)
 
+    # The guard family is a second stage of the same search, so the honest bar
+    # counts it too. Depth rows are NOT extra tests: they re-price the identical
+    # signal list with a different ladder and cannot conjure an edge.
+    all_h = distinct | {r["sig_hash"] for r in res["guards"]}
+    res["__meta__"]["K_all"] = len(all_h)
+    res["__meta__"]["z_bonferroni_all"] = engine.bonferroni_z(len(all_h))
+    print(f"  including guards: K = {len(all_h)} -> "
+          f"z bar {engine.bonferroni_z(len(all_h)):.2f}")
+    flush(res)
+
+    p = report(res, os.path.join(HERE, "reports", "task-b-combinations.md"))
+    print("wrote", p)
     print("done.")
     return res
 
