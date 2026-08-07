@@ -17,3 +17,7 @@ breakout_closes.json
 .bot.pid
 .bot.loop.pid
 .bot.stop
+
+# Intermediate research pickles: regenerable by the task_*.py scripts and
+# rewritten on every run, so they are handoff data between agents, not history.
+research/btc5m/out/
