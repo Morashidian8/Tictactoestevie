@@ -1118,6 +1118,37 @@ BREAKOUT_DEPTH_TIERS = (
 )
 
 
+def _favourite(up, down):
+    """
+    Which side the market is charging more for. "tie" only when they are equal.
+
+    This existed inline and read `"down" if down < up`, which inside the else
+    branch — where up <= down is already known — can never be true. Every window
+    with DOWN as the favourite was therefore filed as a tie, and since the
+    reader drops ties, roughly half of all collected windows vanished from the
+    report and from every statistic computed over it.
+    """
+    if up > down:
+        return "up"
+    if down > up:
+        return "down"
+    return "tie"
+
+
+def favourite_of(row):
+    """
+    The favourite recomputed from the stored prices, never read from the file.
+
+    Rows written before the bug above carry a wrong `favourite`, and the prices
+    beside them are correct — so deriving it on read repairs the whole history
+    without rewriting a single stored row.
+    """
+    up, down = row.get("up"), row.get("down")
+    if up is None or down is None:
+        return row.get("favourite")
+    return _favourite(up, down)
+
+
 def breakout_depth_note(depth):
     """
     One line telling the user what this particular break is worth.
@@ -2626,12 +2657,12 @@ class OddsWatcher:
         rows.sort(key=lambda r: r["t"])
         n = len(rows)
         # Every window collected is listed; only the settled ones can be scored.
-        done = [r for r in rows if r.get("winner") and r.get("favourite") != "tie"]
+        done = [r for r in rows if r.get("winner") and favourite_of(r) != "tie"]
         pending = n - len(done)
         lines = []
         for r in rows[-ODDS_SHOW:]:
             if r.get("winner"):
-                mark = "✅" if r["winner"] == r["favourite"] else "❌"
+                mark = "✅" if r["winner"] == favourite_of(r) else "❌"
                 tail = f"برنده {_fa_side(r['winner'])}"
             else:
                 mark, tail = "⏳", "<i>منتظرِ نتیجه</i>"
@@ -2652,7 +2683,7 @@ class OddsWatcher:
             return (head + "\n\nهنوز هیچ‌کدام تسویه نشده‌اند — نتیجه‌ها با "
                     "تأخیر از پلی‌مارکت می‌آیند.\n\n" + "\n".join(lines) + more)
         d = len(done)
-        hit = sum(1 for r in done if r["winner"] == r["favourite"])
+        hit = sum(1 for r in done if r["winner"] == favourite_of(r))
         paid = sum(max(r["up"], r["down"]) for r in done) / d
         edge = hit / d / paid - 1 if paid else 0
         return (head + f"\nاز {d} پنجرهٔ تسویه‌شده: سمتِ گران‌تر "
@@ -2711,7 +2742,7 @@ class OddsWatcher:
                     self._explain(pmc, nxt, "قیمت خوانده نشد")
                     continue
                 self.why = ""
-                fav = "up" if up > down else ("down" if down < up else "tie")
+                fav = _favourite(up, down)
                 mins = int((pmc._duration(m) or GRANULARITY) / 60)
                 log.info("Odds %s: up %.0f down %.0f -> %s [%s, %dm]",
                          et_time(nxt).strftime("%H:%M"), up * 100, down * 100,
