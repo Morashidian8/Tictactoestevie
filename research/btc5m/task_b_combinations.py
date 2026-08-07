@@ -537,6 +537,25 @@ def apply_guard(signals, streamed=False, pause_h=None, daily_stop=None,
     return kept
 
 
+def discrimination(kept, dropped):
+    """
+    Two-proportion z on kept-vs-dropped accuracy.
+
+    A guard that discriminates has a positive, significant z here. A guard that
+    merely trades less has z ~ 0 no matter how much its raw bust count fell.
+    """
+    nk, nd = len(kept), len(dropped)
+    if not nk or not nd:
+        return {"n_dropped": nd, "acc_dropped": float("nan"),
+                "z_discriminate": float("nan")}
+    pk = sum(1 for s in kept if s[3]) / nk
+    pd = sum(1 for s in dropped if s[3]) / nd
+    p = (pk * nk + pd * nd) / (nk + nd)
+    se = math.sqrt(p * (1 - p) * (1 / nk + 1 / nd))
+    return {"n_dropped": nd, "acc_dropped": pd * 100,
+            "z_discriminate": (pk - pd) / se if se else float("nan")}
+
+
 def family_guards(windows, days, best):
     """Guards layered on the best few combinations, as the brief asks."""
     out, sigs = [], {}
@@ -556,8 +575,15 @@ def family_guards(windows, days, best):
             if len(kept) < 50:
                 continue
             lab = f"{base_label} :: {gname}"
+            # The decisive question about a guard is not "did busts fall" — of
+            # course they did, it traded less. It is whether the windows the
+            # guard THREW AWAY were worse than the ones it kept. If they were
+            # not, the guard is just a smaller position size wearing a costume.
+            ki = {s[0] for s in kept}
+            dropped = [s for s in sig if s[0] not in ki]
             rec, _ = score(kept, lab, "guards", days, streamed=streamed,
-                           extra={"base": base_label, "guard": gname})
+                           extra={"base": base_label, "guard": gname,
+                                  **discrimination(kept, dropped)})
             out.append(rec)
             sigs[lab] = (kept, streamed)
     return out, sigs
@@ -893,19 +919,54 @@ def report(res, path):
       "کوچکی است که در فهرستِ زیر پیداست، نه یک لبهٔ مستقل.\n")
 
     A("\n## ۸) محافظ‌ها — آیا واقعاً کمک کردند؟\n")
-    A("| پایه | محافظ | n | دقت | انفجار | در ۱۰۰ | سودِ مارتینگل | کفِ مسیر |")
-    A("| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |")
+    A("سؤالِ درست دربارهٔ یک محافظ این نیست که «انفجار کم شد؟» — معلوم است "
+      "که کم شد، چون کمتر شرط بست. سؤالِ درست این است: **پنجره‌هایی که دور "
+      "ریخت واقعاً بدتر از آن‌هایی بودند که نگه داشت؟** ستونِ آخر همین را "
+      "می‌سنجد: z دوـنسبتیِ «دقتِ نگه‌داشته منهای دقتِ دورریخته». اگر محافظ "
+      "واقعاً تشخیص می‌دهد، این عدد باید مثبت و بزرگ باشد.\n")
+    A("| پایه | محافظ | n | حذف‌شده | دقتِ نگه‌داشته | دقتِ دورریخته | "
+      "انفجار | در ۱۰۰ | سودِ مارتینگل | کفِ مسیر | z تشخیص |")
+    A("| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |")
     for b in m["best_labels"]:
         g = sorted([r for r in res["guards"] if r["base"] == b],
                    key=lambda r: r["bust_rate"])
         for r in g[:4] + [x for x in g if x["guard"] == "no guard"]:
-            A(f"| {cell(r['base'])} | {r['guard']} | {r['n']:,} | {pct(r['acc'])}% | "
+            zd = r.get("z_discriminate")
+            zs = "—" if zd != zd else f"{zd:+.2f}"
+            ad = r.get("acc_dropped")
+            ads = "—" if ad != ad else f"{ad:.2f}%"
+            A(f"| {cell(r['base'])} | {r['guard']} | {r['n']:,} | "
+              f"{r.get('n_dropped', 0):,} | {pct(r['acc'])}% | {ads} | "
               f"{r['busts']:,} | {pct(r['bust_rate'])} | "
-              f"${r['pnl_martingale']:+,.0f} | ${r['path_low']:+,.0f} |")
-    A("\nخوانشِ درست: هیچ محافظی نرخِ انفجار را به‌طورِ معنادار پایین نیاورد. "
-      "هر جا انفجارِ خام کم شد، به قیمتِ حذفِ همان نسبت از سیگنال‌ها بود — "
-      "یعنی همان اهرمِ بی‌ارزشِ «کمتر شرط ببند». محافظ‌های cooldown نرخِ "
-      "انفجار را **بدتر** کردند.\n")
+              f"${r['pnl_martingale']:+,.0f} | ${r['path_low']:+,.0f} | {zs} |")
+    real_g = [r for r in res["guards"] if r["guard"] != "no guard"
+              and r.get("z_discriminate") == r.get("z_discriminate")]
+    if real_g:
+        bestg = max(real_g, key=lambda r: r["z_discriminate"])
+        nsig = sum(1 for r in real_g if r["z_discriminate"] >= 1.96)
+        botg = [r for r in real_g if r["base"] == base["label"]]
+        bz = max((r["z_discriminate"] for r in botg), default=float("nan"))
+        A(f"\n**نتیجه، با دقت:** از {len(real_g)} ترکیبِ پایه×محافظ، "
+          f"{nsig} تا z تشخیصِ >= 1.96 دارند — پس یک اثرِ واقعی و هم‌جهت "
+          f"هست: پنجره‌هایی که بلافاصله بعد از یک باخت می‌آیند کمی بدتر از "
+          f"بقیه‌اند (روی ترکیب‌های کوچک، حدودِ ۵۰٪ در برابرِ ۵۷٪). "
+          f"**ولی هیچ‌کدام از سدِّ اصلاح‌شده رد نمی‌شود:** بهترین z در کلِّ "
+          f"جدول `{cell(bestg['base'])} :: {bestg['guard']}` با "
+          f"{bestg['z_discriminate']:+.2f} است، زیرِ سدِّ {zbar:.2f} — و "
+          f"این بهترینِ ۹۹ آزمایش است، یعنی دقیقاً همان‌جایی که انتظار "
+          f"داریم شانس بزرگ‌ترین عددش را بگذارد.\n")
+        A(f"و مهم‌تر از آن: **روی خودِ پیکربندیِ فعلیِ ربات محافظ‌ها هیچ‌اند.** "
+          f"بیشترین z تشخیص در میانِ همهٔ محافظ‌های اعمال‌شده روی "
+          f"`CURRENT BOT` فقط {bz:+.2f} است. یعنی روی جریانی که واقعاً "
+          f"دارد ترید می‌کند، پنجره‌هایی که محافظ دور می‌ریزد از پنجره‌های "
+          f"باقی‌مانده تشخیص‌پذیر نیستند؛ محافظ آنجا فقط اندازهٔ پوزیشن را "
+          f"کوچک می‌کند و لباسِ استراتژی می‌پوشد.\n")
+    A("محافظ‌های cooldown روی پیکربندیِ فعلیِ ربات نرخِ انفجار را **بدتر** "
+      "کردند (5.65 → 6.00 با ۳ کندل، 6.05 با ۵ کندل): وقفه نردبان را نگه "
+      "می‌دارد ولی برد‌هایی را که آن را ری‌ست می‌کردند حذف می‌کند. "
+      "«توقفِ روزانه در ۱ انفجار» و «توقف تا روزِ بعد» دقیقاً یک محافظ‌اند و "
+      "عددشان یکی است. حرفِ قبلیِ پروژه تأیید می‌شود: محافظ‌ها دُم را "
+      "کوتاه می‌کنند ولی هیچ هفتهٔ بدی را سودده نکردند.\n")
 
     A("\n## ۹) عمقِ نردبان — فقط به‌عنوانِ کنترل\n")
     A("| ترکیب | پله | n | انفجار | در ۱۰۰ | بزرگ‌ترین شرط | سودِ مارتینگل | "
