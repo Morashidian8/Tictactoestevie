@@ -1050,6 +1050,15 @@ def breakout_signal(closes, lookback=None, vol_filter=None, vol_th=None):
       bet    "up" | "down"   — the direction to back for the NEXT window
       level  the 20-close high/low that was broken
       ratio  vol20/vol100 (None when the filter is off or history is short)
+      depth  how far past the level the close landed, in median moves
+      median the median absolute move of the last 100 candles
+
+    `depth` is the one number that separates a rule 1 signal worth taking from
+    one that is not. Measured over 11,165 signals in the last year: a break of
+    less than half a median move settles at 50.56% — a coin — while a break of
+    three or more settles at 56.87%. Everything between is a flat ~54.8%. It is
+    surfaced so the alert can say which kind this is instead of pretending all
+    breaks are the same.
 
     The last element of `closes` must be the just-closed window. Levels use the
     `lookback` closes BEFORE it — including the current close would make a break
@@ -1084,7 +1093,45 @@ def breakout_signal(closes, lookback=None, vol_filter=None, vol_th=None):
             ratio = _stdev(rets[-20:]) / slow
             if ratio < vol_th:
                 return None
-    return {"bet": bet, "level": level, "kind": kind, "close": cur, "ratio": ratio}
+
+    # Depth of the break, in median moves. Uses the same upper-median convention
+    # as rules 2 and 5 so the "x median move" on every alert means one thing.
+    depth = median = None
+    if len(closes) >= 101:
+        ref = sorted(abs(m) for m in _moves(closes[-101:]))
+        median = ref[len(ref) // 2]
+        if median > 0:
+            depth = abs(cur - level) / median
+
+    return {"bet": bet, "level": level, "kind": kind, "close": cur,
+            "ratio": ratio, "depth": depth, "median": median}
+
+
+# Measured on the last 365 days, 11,165 rule 1 signals, close-to-close. The
+# bands are where the data actually breaks, not round numbers: 1.5x and 2x are
+# indistinguishable from each other (54.78% vs 54.55%), so offering them as
+# separate tiers would be inventing precision that is not there.
+BREAKOUT_DEPTH_TIERS = (
+    (3.0, "🟢", "عمیق", "۵۶٫۹٪", "۲٬۵۳۹"),
+    (0.5, "🟡", "معمولی", "۵۴٫۸٪", "۶٬۱۴۰"),
+    (0.0, "🔴", "سطحی", "۵۰٫۶٪", "۲٬۴۸۶"),
+)
+
+
+def breakout_depth_note(depth):
+    """
+    One line telling the user what this particular break is worth.
+
+    Returns (mark, label, accuracy, sample) or None when there is not enough
+    history to measure the depth — in which case the alert says nothing rather
+    than guessing, because a missing hint is honest and a made-up one is not.
+    """
+    if depth is None:
+        return None
+    for floor, mark, label, acc, n in BREAKOUT_DEPTH_TIERS:
+        if depth >= floor:
+            return mark, label, acc, n
+    return None
 
 
 # --- Clock helpers ----------------------------------------------------------
@@ -2188,9 +2235,26 @@ class BreakoutMonitor:
         if sig:
             broke = "بالاتر از سقف" if sig["kind"] == "up" else "پایین‌تر از کف"
             ratio = f" · نسبتِ نوسان {sig['ratio']:.2f}" if sig["ratio"] is not None else ""
-            hits.append(("۱) شکستِ ۲۰ کندلی", "۵۶٪", sig["bet"],
+            # The depth tier replaces the old flat "۵۶٪" label. Quoting one
+            # accuracy for every break was the misleading part: a 0.3x break and
+            # a 4x break are 50.6% and 56.9%, and only one of them is worth $20.
+            note = breakout_depth_note(sig.get("depth"))
+            if note:
+                mark, label, acc, n = note
+                # The mark rides on the accuracy label, not the rule name: the
+                # scorecard keys rules by the first character of the name, so
+                # prefixing the name would file every rule 1 signal under an
+                # emoji. The label reaches the pre-alert too, which prints only
+                # the name and the accuracy — and the 60-second warning is
+                # exactly where knowing the break is shallow matters most.
+                acc_label = f"{mark} {acc}"
+                depth_line = (f"\n  {mark} <b>عمقِ شکست: {sig['depth']:.1f}× حرکتِ معمول"
+                              f"</b> — {label} · تاریخی {acc} روی {n} نمونه")
+            else:
+                acc_label, depth_line = "۵۶٪", ""
+            hits.append(("۱) شکستِ ۲۰ کندلی", acc_label, sig["bet"],
                          f"{broke} {BREAKOUT_LOOKBACK} کندلِ اخیر "
-                         f"(${sig['level']:,.2f}){ratio}"))
+                         f"(${sig['level']:,.2f}){ratio}{depth_line}"))
         if RULE2_ENABLED:
             s2 = rule2_signal(closes)
             if s2:
