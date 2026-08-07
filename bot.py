@@ -659,6 +659,7 @@ def set_bot_commands():
         {"command": "oddscollect", "description": "روشن/خاموش کردنِ جمع‌آوریِ بی‌صدا"},
         {"command": "oddsdebug", "description": "چرا بالا/پایین چیزی جمع نمی‌کند؟"},
         {"command": "oddsfill", "description": "بازیابیِ پنجره‌های جاافتاده (پیش‌فرض ۲۴ ساعت)"},
+        {"command": "oddstest", "description": "آیا جمع‌آوری کامل و درست است؟"},
         {"command": "oddsreport", "description": "جمع‌بندیِ بالا/پایین به تفکیکِ ساعت"},
         {"command": "menu", "description": "نمایش منوی سریع"},
         {"command": "update", "description": "دریافت آخرین نسخه و ری‌استارت"},
@@ -2465,6 +2466,62 @@ class OddsWatcher:
                     "<code>/odds 6</code> برای ۶ ساعتِ گذشته.")
         return ("📉 <b>جمع‌آوری خاموش شد</b> — دادهٔ ثبت‌شده سرِ جایش می‌ماند.")
 
+    def self_test(self, hours=3):
+        """
+        Grade the collection itself, so the user is not the one finding bugs.
+
+        Three things can go wrong and each is invisible in a normal report: a
+        window silently missing, a price that is really an API default, and a
+        sample taken so late it no longer represents the open. All three are
+        checked here and the verdict is stated plainly.
+        """
+        import polymarket_collector as pmc
+        cut = time.time() // GRANULARITY * GRANULARITY - hours * 3600
+        rows = sorted((r for r in pmc.load_all() if r["t"] >= cut),
+                      key=lambda r: r["t"])
+        if len(rows) < 2:
+            return (f"🧪 <b>تستِ جمع‌آوری</b>\n\nهنوز داده‌ای برای سنجیدن نیست "
+                    f"({len(rows)} ردیف در {hours} ساعت).")
+        first, last = rows[0]["t"], rows[-1]["t"]
+        want = int((last - first) / GRANULARITY) + 1
+        have = len({r["t"] for r in rows})
+        missing = sorted({first + GRANULARITY * i for i in range(want)}
+                         - {r["t"] for r in rows})
+        flat = [r for r in rows if abs(r["up"] - 0.5) < 1e-9
+                and abs(r["down"] - 0.5) < 1e-9]
+        late = [r for r in rows if (r.get("lag") or 0) > 5]
+        nosum = [r for r in rows if abs(r["up"] + r["down"] - 1) > 0.02]
+        unresolved = [r for r in rows if not r.get("winner")]
+
+        def line(ok, label, detail):
+            return f"{'✅' if ok else '❌'} {label}: {detail}"
+
+        out = [f"🧪 <b>تستِ جمع‌آوری — {hours} ساعتِ گذشته</b>", ""]
+        out.append(line(not missing, "پوشش",
+                        f"{have}/{want} پنجره"
+                        + (f" · {len(missing)} جاافتاده" if missing else " · کامل")))
+        out.append(line(not flat, "قیمت‌ها",
+                        f"{len(flat)} ردیفِ دقیقاً ۵۰-۵۰"
+                        if flat else "هیچ ۵۰-۵۰ی نیست"))
+        out.append(line(not nosum, "جمعِ دو طرف",
+                        f"{len(nosum)} ردیف جمعشان ۱۰۰ نیست"
+                        if nosum else "همه ۱۰۰"))
+        out.append(line(not late, "زمانِ نمونه",
+                        f"{len(late)} ردیف بعد از باز شدنِ پنجره"
+                        if late else "همه پیش از باز شدن"))
+        out.append(f"ℹ️ نتیجه‌های معلق: {len(unresolved)}"
+                   + ("  (با /oddsfill یا خودکار پر می‌شوند)" if unresolved else ""))
+        if missing:
+            show = missing[:12]
+            out += ["", "<b>پنجره‌های جاافتاده:</b>",
+                    "  ".join(f"{et_time(t):%H:%M}" for t in show)
+                    + (f"  … و {len(missing)-len(show)} تای دیگر"
+                       if len(missing) > len(show) else "")]
+        ok = not (missing or flat or nosum)
+        out += ["", "<b>✅ همه‌چیز درست است.</b>" if ok
+                else "<b>❌ هنوز ایراد دارد — همین پیام را بفرست.</b>"]
+        return "\n".join(out)
+
     def window_report(self, hours=3):
         """
         The windows of the last `hours`, newest last — only when asked for.
@@ -2608,12 +2665,16 @@ class OddsWatcher:
         happened, for the next /odds to show.
         """
         self.why = short
-        try:
-            # Bounded: the diagnosis is for the report, not worth another
-            # window. It probes the same endpoints that just failed.
-            self.why_detail = pmc.diagnose(boundary)
-        except Exception as exc:  # noqa: BLE001
-            self.why_detail = f"عیب‌یابی هم شکست خورد: {type(exc).__name__}"
+
+        def _probe():
+            # On its own thread: diagnose walks every endpoint again and can
+            # take over a minute. Doing that inline ate the next window, which
+            # is how a failure turned into two.
+            try:
+                self.why_detail = pmc.diagnose(boundary)
+            except Exception as exc:  # noqa: BLE001
+                self.why_detail = f"عیب‌یابی هم شکست خورد: {type(exc).__name__}"
+        threading.Thread(target=_probe, daemon=True).start()
 
 
 def _fa_side(side):
@@ -2767,6 +2828,10 @@ def command_listener(monitor: Monitor):
                         bm.flush_untold()   # mark anything queued as seen
                     else:
                         send_message(chat_id, "سابقه‌ای در دسترس نیست.")
+                elif text.startswith("/oddstest"):
+                    bm = globals().get("ODDS_WATCHER")
+                    send_message(chat_id, bm.self_test() if bm
+                                 else "پایشِ بالا/پایین در دسترس نیست.")
                 elif text.startswith("/oddsfill"):
                     parts = text.split()
                     hrs = 24
