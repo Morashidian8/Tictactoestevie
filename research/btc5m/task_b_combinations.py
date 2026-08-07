@@ -233,6 +233,10 @@ def score(signals, label, family, days, streamed=False, extra=None):
                 "bust_rate": h["bust_rate"], "pnl": h["pnl"],
                 "path_low": h["path_low"]}
     ge = {k: sum(v for L, v in st["streaks"].items() if L >= k) for k in (6, 7, 8)}
+    # Side mix matters for anything built on rule6, which only ever bets down: a
+    # one-sided strategy in a drifting year is measuring the drift. (It isn't
+    # here — the year is 50.09% down — but the number belongs in the record.)
+    up = sum(1 for s in signals if s[2] == "up")
     rec = {
         "label": label, "family": family, "n": n,
         "acc": st["acc"], "wilson": (lo, hi),
@@ -248,6 +252,8 @@ def score(signals, label, family, days, streamed=False, extra=None):
         "died": day_of(st["ruin_ts"]) if st["ruin_ts"] else None,
         "split": {"train": half(tr), "test": half(te)},
         "streamed": streamed,
+        "bets_up": up, "bets_down": n - up,
+        "up_share": up / n * 100 if n else float("nan"),
         "sig_hash": hashlib.md5(
             repr([(s[0], s[2]) for s in signals]).encode()).hexdigest(),
     }
