@@ -1112,10 +1112,22 @@ def breakout_signal(closes, lookback=None, vol_filter=None, vol_th=None):
 # indistinguishable from each other (54.78% vs 54.55%), so offering them as
 # separate tiers would be inventing precision that is not there.
 BREAKOUT_DEPTH_TIERS = (
-    (3.0, "🟢", "عمیق", "۵۶٫۹٪", "۲٬۵۳۹"),
-    (0.5, "🟡", "معمولی", "۵۴٫۸٪", "۶٬۱۴۰"),
-    (0.0, "🔴", "سطحی", "۵۰٫۶٪", "۲٬۴۸۶"),
+    (3.0, "🟢", "قوی", "۵۶٫۹٪", "۲٬۵۶۱"),
+    (0.5, "🟡", "معمولی", "۵۴٫۸٪", "۶٬۱۲۴"),
+    (0.0, "🔴", "خطرناک", "۵۰٫۶٪", "۲٬۴۷۹"),
 )
+
+# Below this the break is not a break. Those 2,479 signals settle at 50.63%
+# [48.7-52.6] — an interval that contains 50, i.e. a coin — and 70% of them fire
+# when no other rule does, where they are 50.23%. Rule 1 is therefore dropped
+# below the floor when it is ALONE, and merely flagged when other rules are
+# already carrying the window.
+#
+# Only two tiers exist above the floor, not four. Sliced finer the bands are
+# 0.5-1x 54.41%, 1-2x 55.41%, 2-3x 54.17%, 3-5x 57.35%, 5x+ 56.36% — every
+# confidence interval overlapping every other, and not even monotonic. Offering
+# four labels would be inventing a precision the data does not contain.
+BREAKOUT_DEPTH_MIN = float(os.environ.get("BREAKOUT_DEPTH_MIN", "0.5"))
 
 
 def _favourite(up, down):
@@ -1163,6 +1175,60 @@ def breakout_depth_note(depth):
         if depth >= floor:
             return mark, label, acc, n
     return None
+
+
+def rule1_entry(sig, accompanied):
+    """
+    Rule 1's line in the alert, or None when the break is too shallow to bet.
+
+    `accompanied` says whether any other rule fired on this same window, and it
+    decides what happens to a sub-0.5x break:
+
+      alone       -> None. Nothing is emitted; measured 50.23% over 1,732
+                     signals, which is a coin wearing a rule's name.
+      accompanied -> emitted with a red warning. The window is being carried by
+                     the other rules anyway, so suppressing it would only hide
+                     from the reader that rule 1's contribution here is worthless.
+
+    Measured over the last year on the live configuration, dropping the alone
+    case removes 1,741 signals and flags 751: accuracy 53.86% -> 54.18%, worst
+    drawdown $1,780 -> $1,360, and at a fixed $2,000 risk budget the base it can
+    carry goes $22 -> $29 and the year's profit $69,416 -> $85,853.
+    """
+    if not sig:
+        return None
+    depth = sig.get("depth")
+    shallow = depth is not None and depth < BREAKOUT_DEPTH_MIN
+    if shallow and not accompanied:
+        return None
+
+    broke = "بالاتر از سقف" if sig["kind"] == "up" else "پایین‌تر از کف"
+    ratio = f" · نسبتِ نوسان {sig['ratio']:.2f}" if sig["ratio"] is not None else ""
+    note = breakout_depth_note(depth)
+    if note:
+        mark, label, acc, n = note
+        # The mark rides on the accuracy label, not the rule name: the scorecard
+        # keys rules by the first character of the name, so prefixing the name
+        # would file every rule 1 signal under an emoji. The label reaches the
+        # pre-alert too, which prints only the name and the accuracy — and the
+        # 60-second warning is exactly where knowing the break is shallow matters
+        # most.
+        acc_label = f"{mark} {acc}"
+        depth_line = (f"\n  {mark} <b>عمقِ شکست: {depth:.1f}× حرکتِ معمول</b> — "
+                      f"{label} · تاریخی {acc} روی {n} نمونه")
+        if shallow:
+            depth_line += ("\n  ⚠️ <b>زیرِ ۰٫۵× است — خطرناک.</b> این شکست به‌تنهایی "
+                           "ارزشِ شرط ندارد؛ فقط چون قانون‌های دیگر هم شلیک "
+                           "کرده‌اند نمایش داده می‌شود.")
+        elif label == "قوی":
+            # Said out loud because the tier looks stronger than its evidence:
+            # 56.93% vs 54.78% is z=+1.84, which does not clear 1.96.
+            depth_line += "\n  <i>برتریِ این سطح هنوز قطعی نیست (z=+۱٫۸۴)</i>"
+    else:
+        acc_label, depth_line = "۵۶٪", ""
+    return ("۱) شکستِ ۲۰ کندلی", acc_label, sig["bet"],
+            f"{broke} {BREAKOUT_LOOKBACK} کندلِ اخیر "
+            f"(${sig['level']:,.2f}){ratio}{depth_line}")
 
 
 # --- Clock helpers ----------------------------------------------------------
@@ -2262,30 +2328,10 @@ class BreakoutMonitor:
         and the pre-alert so the two can never drift apart.
         """
         hits = []
+        # Rule 1 is evaluated now but decided LAST: whether a shallow break is
+        # dropped or merely flagged depends on whether anything else fired, and
+        # that is not known until the other rules have run.
         sig = breakout_signal(closes)
-        if sig:
-            broke = "بالاتر از سقف" if sig["kind"] == "up" else "پایین‌تر از کف"
-            ratio = f" · نسبتِ نوسان {sig['ratio']:.2f}" if sig["ratio"] is not None else ""
-            # The depth tier replaces the old flat "۵۶٪" label. Quoting one
-            # accuracy for every break was the misleading part: a 0.3x break and
-            # a 4x break are 50.6% and 56.9%, and only one of them is worth $20.
-            note = breakout_depth_note(sig.get("depth"))
-            if note:
-                mark, label, acc, n = note
-                # The mark rides on the accuracy label, not the rule name: the
-                # scorecard keys rules by the first character of the name, so
-                # prefixing the name would file every rule 1 signal under an
-                # emoji. The label reaches the pre-alert too, which prints only
-                # the name and the accuracy — and the 60-second warning is
-                # exactly where knowing the break is shallow matters most.
-                acc_label = f"{mark} {acc}"
-                depth_line = (f"\n  {mark} <b>عمقِ شکست: {sig['depth']:.1f}× حرکتِ معمول"
-                              f"</b> — {label} · تاریخی {acc} روی {n} نمونه")
-            else:
-                acc_label, depth_line = "۵۶٪", ""
-            hits.append(("۱) شکستِ ۲۰ کندلی", acc_label, sig["bet"],
-                         f"{broke} {BREAKOUT_LOOKBACK} کندلِ اخیر "
-                         f"(${sig['level']:,.2f}){ratio}{depth_line}"))
         if RULE2_ENABLED:
             s2 = rule2_signal(closes)
             if s2:
@@ -2315,6 +2361,12 @@ class BreakoutMonitor:
                 hits.append(("۷) باندِ بولینگر + RSI", "۵۶٪", s7["bet"],
                              f"بسته‌شدن بیرونِ باند (${s7['band']:,.0f}) "
                              f"با RSI={s7['rsi']:.0f}"))
+        # Rule 1 last, and first in the list. It goes to the FRONT because the
+        # scorecard and the golden tier both read `hits` in order, and rule 1 has
+        # always been the opening line of an alert.
+        entry = rule1_entry(sig, accompanied=bool(hits))
+        if entry:
+            hits.insert(0, entry)
         # Quality tier: enough statistical rules pointing the same way, on a
         # genuinely over-extended move. Rule 4 is excluded — it has no edge, so
         # letting it vote would dilute the very thing this tier measures.
