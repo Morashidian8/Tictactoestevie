@@ -119,6 +119,17 @@ def block_of(signals):
     return acc_block(w, len(signals))
 
 
+def two_prop_z(a, b):
+    """Is block a's accuracy really different from block b's? Pooled z."""
+    if not a["n"] or not b["n"]:
+        return float("nan")
+    p = (a["wins"] + b["wins"]) / (a["n"] + b["n"])
+    se = math.sqrt(p * (1 - p) * (1 / a["n"] + 1 / b["n"]))
+    if se == 0:
+        return float("nan")
+    return (a["wins"] / a["n"] - b["wins"] / b["n"]) / se
+
+
 # --- 1. sanity: is resample() actually producing correct bars? ---------------
 def sanity(year):
     rng = random.Random(SEED)
@@ -387,6 +398,9 @@ def _overlap_at(sig5_by_ts, sig15, offsets, base_rate):
                 "overlap_rate": out["with_5m"] / n15 * 100 if n15 else float("nan"),
                 "expected_rate": exp,
                 "lift": (out["with_5m"] / n15 * 100 / exp) if n15 and exp else float("nan")})
+    # does a contemporaneous 5m confirmation actually improve the 15m bet?
+    out["agree_vs_alone_z"] = two_prop_z(out["agree"], out["alone"])
+    out["disagree_vs_alone_z"] = two_prop_z(out["disagree"], out["alone"])
     return out
 
 

@@ -28,6 +28,11 @@ PICKLE STRUCTURE  (engine.save(results, "task_e.pkl"))
       "year":        block dict for the trailing 365 days (see BLOCK below),
       "recent":      block dict for the trailing RECENT_N signals,
       "earlier":     block dict for the year minus the recent stretch,
+      "quarter":     block dict for the 90 days BEFORE the recent stretch, plus
+                     "z_vs_recent"/"p_vs_recent". This is the within-block
+                     control: the year spans two regimes (2025-08/09 near 50%,
+                     2026 near 55%), so comparing against the whole year
+                     flatters the recent stretch.
       "rate":        {"sigs_per_day", "days_for_recent", "recent_span_days"},
       "ztest":       {"z", "p", "diff_pts", "powered", "n_needed_53_vs_57"},
       "streaks":     {"year_hist", "recent_hist", "ge7_count_year",
@@ -35,8 +40,14 @@ PICKLE STRUCTURE  (engine.save(results, "task_e.pkl"))
                       "theoretical_ge7"},
       "windows":     {"n_draws", "acc": [...], "busts": [...], "maxstreak": [...],
                       "pct_acc", "pct_busts", "pct_maxstreak"},
-      "deadband":    {"band_stats", "voided", "voided_pct", "raw", "banded",
-                      "tiny_wins", "tiny_losses", "acc_shift_pts"},
+      "deadband":    {"band_median", "band_at_floor_pct", "voided", "voided_pct",
+                      "raw", "banded", "recent_banded", "tiny_wins",
+                      "tiny_losses", "acc_shift_pts",
+                      "feed_slack": {threshold: {n, pct, wins}},
+                      "graded_under_1usd"},
+      "sensitivity": {"order", "year", "recent", "z", "p"} — the same walk with
+                     disagreement resolved by rule priority instead of skipped,
+                     proving the consensus choice does not drive the result,
       "daily":       [ {date, n, wins, acc, lo, hi, busts, pnl}, ... ]  # recent
       "monthly":     [ {month, n, wins, acc, lo, hi}, ... ]            # year
     }
@@ -366,6 +377,18 @@ def main():
         "year_span_days": span_days,
     }
 
+    # The year is NOT one regime: the 2025-08/09 block runs near 50% and the
+    # 2026 months near 55%, the same train/test drift the project has been
+    # burned by before. Comparing the recent stretch against the WHOLE year
+    # therefore flatters it. The honest contrast is against its own neighbourhood.
+    q_cut = recent[0][1] - 90 * 86400
+    quarter = [s for s in earlier if s[1] >= q_cut]
+    res["quarter"] = block(quarter, "90 روزِ قبل از بازهٔ اخیر")
+    zq, pq = two_prop_z(res["recent"]["wins"], res["recent"]["n"],
+                        res["quarter"]["wins"], res["quarter"]["n"])
+    res["quarter"]["z_vs_recent"] = zq
+    res["quarter"]["p_vs_recent"] = pq
+
     # --- z-test recent vs the rest of the year (within-block contrast) -------
     z, p = two_prop_z(res["recent"]["wins"], res["recent"]["n"],
                       res["earlier"]["wins"], res["earlier"]["n"])
@@ -547,7 +570,7 @@ def report(r, path):
       f"({r['recent']['t0'] and datetime.datetime.fromtimestamp(r['recent']['t0'], E.UTC):%Y-%m-%d %H:%M} .. "
       f"{datetime.datetime.fromtimestamp(r['recent']['t1'], E.UTC):%Y-%m-%d %H:%M} UTC)")
 
-    for k in ("recent", "earlier", "year"):
+    for k in ("recent", "quarter", "earlier", "year"):
         b = r[k]
         p(f"\n  {b['label']:<22} n={b['n']:6d}  acc={b['acc']:6.2f}% "
           f"[{b['lo']:.2f}–{b['hi']:.2f}]  (+/-{b['half_width']:.2f})  "
@@ -564,6 +587,9 @@ def report(r, path):
       f"z={z['vs_earlier']['z']:+.3f}  p={z['vs_earlier']['p']:.3f}  "
       f"diff={z['vs_earlier']['diff_pts']:+.2f} pts")
     p(f"    recent vs whole year:  z={z['vs_year']['z']:+.3f}  p={z['vs_year']['p']:.3f}")
+    p(f"    recent vs its OWN 90-day neighbourhood (the within-block control): "
+      f"z={r['quarter']['z_vs_recent']:+.3f}  p={r['quarter']['p_vs_recent']:.3f}  "
+      f"diff={r['recent']['acc'] - r['quarter']['acc']:+.2f} pts")
     p(f"    POWER: {RECENT_N} signals give +/-{z['recent_half_width']:.2f} points. "
       f"Telling 53% from 57% needs {z['n_needed_53_vs_57']:,} per group "
       f"-> underpowered by {z['n_needed_53_vs_57'] / RECENT_N:.1f}x")
