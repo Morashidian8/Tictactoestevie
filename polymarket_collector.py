@@ -19,6 +19,7 @@ are recorded so the two can be checked against each other later.
 import argparse
 import json
 import re
+import threading
 import os
 import sys
 import time
@@ -218,29 +219,55 @@ def market_for(boundary, deadline=None):
     return None
 
 
+def _book_mid(token_id):
+    """(mid, spread) from the live order book, or (None, None) if it is empty."""
+    try:
+        b = get(f"{CLOB}/book", token_id=token_id)
+    except Exception:
+        return None, None
+    try:
+        bid = max(float(x["price"]) for x in (b.get("bids") or []))
+        ask = min(float(x["price"]) for x in (b.get("asks") or []))
+    except (ValueError, KeyError, TypeError):
+        return None, None
+    if not (0 < bid <= ask < 1):
+        return None, None
+    return (bid + ask) / 2, ask - bid
+
+
 def quote(market):
     """
-    (up, down) as fractions of a dollar, live.
+    (up, down, source) as fractions of a dollar.
 
-    CLOB midpoints are the real-time number the screen shows; Gamma's cached
-    outcomePrices are the fallback when the CLOB refuses.
+    Read from the order book, not from /midpoint. The midpoint endpoint answers
+    0.5 when it has nothing to price, and a 50/50 reading is indistinguishable
+    from a real coin-flip market — the user checked the site and found no window
+    ever actually sits at exactly 50/50, so every one of those rows was a
+    silent failure being recorded as data.
+
+    A reading is only returned when the book gave a real bid and ask on at
+    least one side; the other side is then 1 - p, which is what the market
+    enforces anyway.
     """
     outcomes = [str(o).lower() for o in _jload(market.get("outcomes"), [])]
     tokens = _jload(market.get("clobTokenIds"), [])
-    if tokens and len(tokens) == len(outcomes):
-        prices = {}
-        for name, tok in zip(outcomes, tokens):
-            try:
-                prices[name] = float(get(f"{CLOB}/midpoint", token_id=tok)["mid"])
-            except Exception:
-                prices = {}
-                break
-        if prices:
-            return prices.get("up"), prices.get("down"), "clob-midpoint"
+    if tokens and len(tokens) == len(outcomes) and "up" in outcomes:
+        up_tok = tokens[outcomes.index("up")]
+        mid, spread = _book_mid(up_tok)
+        if mid is not None:
+            return round(mid, 4), round(1 - mid, 4), f"book(spread {spread:.3f})"
+        if "down" in outcomes:
+            mid, spread = _book_mid(tokens[outcomes.index("down")])
+            if mid is not None:
+                return round(1 - mid, 4), round(mid, 4), f"book-down(spread {spread:.3f})"
     cached = [float(p) for p in _jload(market.get("outcomePrices"), [])]
     if len(cached) == len(outcomes) == 2:
         d = dict(zip(outcomes, cached))
-        return d.get("up"), d.get("down"), "gamma-cached"
+        u, dn = d.get("up"), d.get("down")
+        # Gamma serves 0.5/0.5 for a market it has not priced yet. Refusing it
+        # costs one window; recording it poisons the statistics forever.
+        if u is not None and not (abs(u - 0.5) < 1e-9 and abs(dn - 0.5) < 1e-9):
+            return u, dn, "gamma-cached"
     return None, None, "unavailable"
 
 
@@ -259,9 +286,17 @@ def resolution(market_id):
 
 
 # --- the loop ---------------------------------------------------------------
+# One lock over every write to the store. resolve_pending rewrites the whole
+# file, and it runs on its own thread for minutes at a time; a row appended
+# between its read and its os.replace was silently thrown away. That is a
+# collector quietly deleting the data it just gathered.
+_LOCK = threading.Lock()
+
+
 def append(row):
-    with open(STORE, "a") as f:
-        f.write(json.dumps(row, ensure_ascii=False) + "\n")
+    with _LOCK:
+        with open(STORE, "a") as f:
+            f.write(json.dumps(row, ensure_ascii=False) + "\n")
 
 
 def collect_one(boundary):
@@ -324,6 +359,20 @@ def history_price(token_id, at_ts, span=900):
         if t <= at_ts and (best is None or t > best[0]):
             best = (t, v)
     return best[1] if best else None
+
+
+def load_all():
+    """Every stored row, including ones with no winner yet."""
+    out = []
+    if not os.path.exists(STORE):
+        return out
+    with open(STORE) as f:
+        for line in f:
+            try:
+                out.append(json.loads(line))
+            except ValueError:
+                continue
+    return out
 
 
 def stored_windows():
@@ -392,37 +441,55 @@ def resolve_pending(max_age_h=24, limit=15):
     """
     Go back over rows stored without a winner and fill them in.
 
-    Polymarket does not always publish the outcome within the seconds the
-    collector waits, and a row written with winner=None was previously dead —
-    the report drops it, so the window was collected and then thrown away. This
-    rewrites the file with whatever has resolved since.
+    The network work happens first, outside the lock, because it takes minutes.
+    Only then is the file re-read and rewritten under the lock, so rows that
+    arrived in the meantime survive — the earlier version replaced the file
+    wholesale and lost every window collected while it was working.
     """
     if not os.path.exists(STORE):
         return 0
-    rows, changed = [], 0
     now = time.time()
+    want = []
     with open(STORE) as f:
         for line in f:
             try:
                 r = json.loads(line)
             except ValueError:
                 continue
-            if (not r.get("winner") and r.get("market_id") and changed < limit
-                    and now - r["t"] < max_age_h * 3600):
-                w, beat, final = resolution(r["market_id"])
-                if w is None and beat and final:
-                    w = "up" if float(final) > float(beat) else "down"
-                if w:
-                    r["winner"], r["beat"], r["final"] = w, beat, final
+            if (not r.get("winner") and r.get("market_id")
+                    and now - r.get("t", 0) < max_age_h * 3600):
+                want.append((r["t"], r["market_id"]))
+            if len(want) >= limit:
+                break
+
+    found = {}
+    for t, mid in want:
+        w, beat, final = resolution(mid)
+        if w is None and beat and final:
+            w = "up" if float(final) > float(beat) else "down"
+        if w:
+            found[t] = (w, beat, final)
+    if not found:
+        return 0
+
+    with _LOCK:
+        rows, changed = [], 0
+        with open(STORE) as f:
+            for line in f:
+                try:
+                    r = json.loads(line)
+                except ValueError:
+                    continue
+                if not r.get("winner") and r.get("t") in found:
+                    r["winner"], r["beat"], r["final"] = found[r["t"]]
                     changed += 1
-            rows.append(r)
-    if changed:
+                rows.append(r)
         tmp = STORE + ".tmp"
         with open(tmp, "w") as f:
             for r in rows:
                 f.write(json.dumps(r, ensure_ascii=False) + "\n")
-        os.replace(tmp, STORE)          # atomic: a crash cannot truncate the data
-        log(f"نتیجهٔ {changed} پنجرهٔ معلق الحاق شد.")
+        os.replace(tmp, STORE)
+    log(f"نتیجهٔ {changed} پنجرهٔ معلق الحاق شد.")
     return changed
 
 
