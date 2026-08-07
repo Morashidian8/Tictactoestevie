@@ -2596,7 +2596,20 @@ class OddsWatcher:
         """
         import polymarket_collector as pmc
         cutoff = time.time() - hours * 3600
-        rows = [r for r in pmc.load() if r["t"] >= cutoff]
+        # load_all(), NOT load(). load() drops every row whose winner is still
+        # unknown, and since the collector deliberately writes the row the
+        # moment it has a price and fills the outcome in later, the newest
+        # windows are ALWAYS unresolved. The report was therefore showing the
+        # older half of every hour and silently hiding the rest — 5 windows out
+        # of 12, which read exactly like a collector that had stopped.
+        rows = [r for r in pmc.load_all() if r["t"] >= cutoff
+                and r.get("up") is not None]
+        # Asking for the report is the best moment to chase the outcomes that
+        # are still open — on its own thread, because a button press must not
+        # wait on fifteen network calls. This message says how many are pending;
+        # the next one will have them.
+        if any(not r.get("winner") for r in rows):
+            threading.Thread(target=self._sweep, args=(pmc,), daemon=True).start()
         if not rows:
             msg = f"📈 <b>{hours} ساعتِ گذشته</b>\n\nهنوز پنجره‌ای ثبت نشده."
             if not self.on:
@@ -2612,19 +2625,38 @@ class OddsWatcher:
             return msg
         rows.sort(key=lambda r: r["t"])
         n = len(rows)
-        hit = sum(1 for r in rows if r["winner"] == r["favourite"])
-        paid = sum(max(r["up"], r["down"]) for r in rows) / n
+        # Every window collected is listed; only the settled ones can be scored.
+        done = [r for r in rows if r.get("winner") and r.get("favourite") != "tie"]
+        pending = n - len(done)
         lines = []
         for r in rows[-ODDS_SHOW:]:
-            mark = "✅" if r["winner"] == r["favourite"] else "❌"
+            if r.get("winner"):
+                mark = "✅" if r["winner"] == r["favourite"] else "❌"
+                tail = f"برنده {_fa_side(r['winner'])}"
+            else:
+                mark, tail = "⏳", "<i>منتظرِ نتیجه</i>"
             lines.append(f"{mark} <b>{et_time(r['t']):%I:%M%p}</b>  "
-                         f"🟢{r['up']*100:.0f} 🔴{r['down']*100:.0f}  →  "
-                         f"برنده {_fa_side(r['winner'])}")
+                         f"🟢{r['up']*100:.0f} 🔴{r['down']*100:.0f}  →  {tail}")
         more = (f"\n<i>… و {n - ODDS_SHOW} پنجرهٔ دیگر در همین بازه</i>"
                 if n > ODDS_SHOW else "")
-        edge = hit / n / paid - 1 if paid else 0
-        return (f"📈 <b>بالا/پایینِ {hours} ساعتِ گذشته</b>\n"
-                f"{n} پنجره  ·  سمتِ گران‌تر <b>{hit}/{n} = {hit/n*100:.0f}%</b> برد  ·  "
+
+        # Coverage, stated up front. A missing window is the one failure that
+        # used to be invisible, so the report now says how many it expected.
+        span = int((rows[-1]["t"] - rows[0]["t"]) / GRANULARITY) + 1
+        cover = (f"{n}/{span} پنجره"
+                 + ("" if n >= span else f"  ·  ⚠️ <b>{span - n} جاافتاده</b>"))
+        head = f"📈 <b>بالا/پایینِ {hours} ساعتِ گذشته</b>\n{cover}"
+        if pending:
+            head += f"  ·  ⏳ {pending} منتظرِ نتیجه"
+        if not done:
+            return (head + "\n\nهنوز هیچ‌کدام تسویه نشده‌اند — نتیجه‌ها با "
+                    "تأخیر از پلی‌مارکت می‌آیند.\n\n" + "\n".join(lines) + more)
+        d = len(done)
+        hit = sum(1 for r in done if r["winner"] == r["favourite"])
+        paid = sum(max(r["up"], r["down"]) for r in done) / d
+        edge = hit / d / paid - 1 if paid else 0
+        return (head + f"\nاز {d} پنجرهٔ تسویه‌شده: سمتِ گران‌تر "
+                f"<b>{hit}/{d} = {hit/d*100:.0f}%</b> برد  ·  "
                 f"میانگینِ قیمتش <b>{paid*100:.0f}¢</b>\n"
                 f"اگر همیشه سمتِ گران را می‌گرفتی: <b>{edge*100:+.1f}%</b> در هر معامله\n\n"
                 + "\n".join(lines) + more)
@@ -2695,7 +2727,7 @@ class OddsWatcher:
                 self.errors = 0
                 # Fill in outcomes for everything already stored. Cheap, and it
                 # keeps the file complete without ever blocking a collection.
-                if int(nxt) % 1800 < GRANULARITY:
+                if int(nxt) % 600 < GRANULARITY:
                     # In its own thread: it makes one network call per pending
                     # row, and doing that inline stalled the loop straight past
                     # the next window.

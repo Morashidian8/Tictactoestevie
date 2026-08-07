@@ -536,15 +536,24 @@ def report_text(html=False):
         out.append(line)
 
     rows = load()
+    # Every scored number below can only come from a settled window, but the
+    # count must be honest about the difference: calling the settled rows
+    # "پنجره‌های ثبت‌شده" made a full store look like a half-empty one, because
+    # the newest windows are always still waiting on Polymarket.
+    stored = len(load_all())
     if not rows:
-        return f"هنوز داده‌ای در {STORE} نیست."
+        return (f"هنوز پنجرهٔ تسویه‌شده‌ای نیست"
+                + (f" — {stored} پنجره ثبت شده و منتظرِ نتیجه است." if stored
+                   else f" و داده‌ای در {STORE} نیست."))
     n = len(rows)
     hit = sum(1 for r in rows if r["winner"] == r["favourite"])
     paid = sum(max(r["up"], r["down"]) for r in rows) / n
     edge = hit / n / paid - 1
     p(f"📈 قیمتِ پلی‌مارکت، {LEAD} ثانیه قبل از باز شدنِ پنجره")
     p()
-    p(f"پنجره‌های ثبت‌شده: {b(n)}")
+    p(f"پنجره‌های ثبت‌شده: {b(stored)}"
+      + (f"  ·  منتظرِ نتیجه: {b(stored - n)}" if stored > n else ""))
+    p(f"مبنای آمارِ زیر: {b(n)} پنجرهٔ تسویه‌شده")
     p(f"سمتِ گران‌تر برد: {b(f'{hit}/{n} = {hit/n*100:.1f}%')}")
     p(f"میانگینِ قیمتش: {b(f'{paid*100:.1f}¢')} — برای سود باید دقت از این بیشتر باشد")
     p(f"سود/زیانِ هر معامله: {b(f'{edge*100:+.1f}%')}")
