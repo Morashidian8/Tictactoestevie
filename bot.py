@@ -190,7 +190,11 @@ SETTLE_DEADBAND = float(os.environ.get("SETTLE_DEADBAND", "0.05"))
 # numbers the feed sits about $1 away at the same instant, so the move this bot
 # computes can be a couple of dollars off the one the market settles on. Below
 # that, a verdict here says nothing about the verdict there.
-SETTLE_FLOOR = float(os.environ.get("SETTLE_FLOOR", "3"))
+# Relative, not absolute: a fixed dollar floor is a rounding error when BTC
+# moves $50 a candle and most of a candle when it moves $5. 1e-5 of the price is
+# ~$0.65 at $65,000 — still far above the four-cent move that made this
+# necessary, and far below any move Polymarket would actually settle on.
+SETTLE_FLOOR_REL = float(os.environ.get("SETTLE_FLOOR_REL", "0.00001"))
 # Depth of the martingale ladder being followed, for display only. Without it
 # the message reports a raw losing streak — "پلهٔ ۵" on a three-rung ladder,
 # which is not a rung at all, it is two busts and a fresh start.
@@ -661,6 +665,7 @@ def set_bot_commands():
         {"command": "oddsfill", "description": "بازیابیِ پنجره‌های جاافتاده (پیش‌فرض ۲۴ ساعت)"},
         {"command": "oddstest", "description": "آیا جمع‌آوری کامل و درست است؟"},
         {"command": "verify", "description": "کارنامه را با قیمتِ رسمیِ پلی‌مارکت بسنج"},
+        {"command": "feed", "description": "آیا فیدِ قیمت با بازار هم‌گام است؟"},
         {"command": "oddsreport", "description": "جمع‌بندیِ بالا/پایین به تفکیکِ ساعت"},
         {"command": "menu", "description": "نمایش منوی سریع"},
         {"command": "update", "description": "دریافت آخرین نسخه و ری‌استارت"},
@@ -1908,19 +1913,29 @@ class BreakoutMonitor:
                    "قیمت است نه از قانون‌ها — همان را بگو تا عوضش کنم.</i>")
         return "\n".join(out)
 
-    def _deadband(self):
+    def _deadband(self, price=None):
         """
         Smallest move worth calling a result, in dollars.
 
-        Scaled to the current regime rather than fixed: $2 is nothing in a busy
-        hour and is most of a candle at 4am. Falls back to a small absolute
-        floor until there is enough history to measure the regime.
+        The floor used to be a flat $3, chosen when a typical 5-minute candle
+        moved about $50. On a quiet night it is not a rounding error at all:
+        Polymarket settled four consecutive windows on moves of $2.66, $3.95,
+        $4.74 and $7.27, so a $3 floor voids the first outright and grades the
+        rest on a threshold worth most of a candle. Meanwhile the thing the
+        floor was built to stop — a window graded a win on a FOUR CENT move —
+        is six orders of magnitude smaller.
+
+        So the floor is now a fraction of the price rather than a fixed number
+        of dollars: ~$0.65 at $65k. It still throws away the four-cent case and
+        stops throwing away real results.
         """
         mv = [abs(m) for m in _moves(self.closes[-101:])] if len(self.closes) > 20 else []
+        price = price or (self.closes[-1] if self.closes else 0.0)
+        floor = price * SETTLE_FLOOR_REL
         if not mv:
-            return 0.0
+            return floor
         med = sorted(mv)[len(mv) // 2]
-        return max(med * SETTLE_DEADBAND, SETTLE_FLOOR)
+        return max(med * SETTLE_DEADBAND, floor)
 
     def _prev_result_line(self, this_window):
         """
@@ -1981,13 +1996,15 @@ class BreakoutMonitor:
             return None
         ref = p["ref"]
         delta = price - ref
-        if abs(delta) <= self._deadband():
+        if abs(delta) <= self._deadband(price):
             self.score["void"] += 1
             for row in reversed(self.signals):
                 if row["t"] == p["window"]:
                     row["void"] = True
                     row["delta"] = delta
                     row["ref"], row["settle"] = ref, price
+                    row["ref_age"] = p.get("ref_age")
+                    row["feed"] = p.get("feed")
                     break
             log.info("Settled: VOID (%.2f -> %.2f, delta %+.2f is inside the "
                      "dead band)", ref, price, delta)
@@ -2005,6 +2022,8 @@ class BreakoutMonitor:
                 row["won"] = won
                 row["delta"] = delta
                 row["ref"], row["settle"] = ref, price
+                row["ref_age"] = p.get("ref_age")
+                row["feed"] = p.get("feed")
                 break
         self.history.append({"won": won, "bet": p["bet"], "mine": mine,
                              "t": p["window"]})
@@ -2247,6 +2266,63 @@ class BreakoutMonitor:
             if not r.get("told"):
                 r["rules"] = list(r.get("rules") or []) + ["📡 پیامش نرسیده بود"]
         return self._send_rows(head, marked, foot)
+
+    def feed_report(self):
+        """
+        Is the price feed actually tracking the market Polymarket settles on?
+
+        The bot reads Chainlink BTC/USD because a comment in this file has long
+        asserted Polymarket settles on it. The evidence says otherwise: the
+        market's own reference price moves by two to seven dollars every five
+        minutes, quoted to the cent, while a Chainlink deviation feed at
+        $65,000 does not move at all until the price shifts by far more than
+        that. A feed that only updates occasionally produces repeated samples,
+        and a repeated sample is a zero move — which is graded as a push or, a
+        few dollars later, as a coin flip.
+
+        This is measured rather than argued: every settled signal records the
+        move it was graded on and how old the oracle round was. If the feed is
+        stale, the zero and near-zero bucket is enormous and `ref_age` is large.
+        """
+        rows = [r for r in self.signals
+                if r.get("delta") is not None and r.get("ref")]
+        if len(rows) < 20:
+            return ("📡 <b>سلامتِ فید</b>\n\nهنوز داده کافی نیست "
+                    f"({len(rows)} سیگنالِ تسویه‌شده). چند ساعت دیگر دوباره بزن.")
+        deltas = [abs(r["delta"]) for r in rows]
+        zero = sum(1 for d in deltas if d == 0)
+        tiny = sum(1 for d in deltas if 0 < d < 1)
+        ages = [r["ref_age"] for r in rows if r.get("ref_age") is not None]
+        feeds = {}
+        for r in rows:
+            feeds[r.get("feed") or "?"] = feeds.get(r.get("feed") or "?", 0) + 1
+        s = sorted(deltas)
+        med = s[len(s) // 2]
+        out = [f"📡 <b>سلامتِ فید — {len(rows)} سیگنالِ تسویه‌شده</b>", ""]
+        out.append(f"میانهٔ حرکتِ پنجره: <b>${med:,.2f}</b>")
+        out.append(f"صدکِ ۱۰ و ۹۰: ${s[len(s)//10]:,.2f} .. ${s[len(s)*9//10]:,.2f}")
+        out.append("")
+        out.append(f"🔴 حرکتِ دقیقاً صفر: <b>{zero}</b> ({zero/len(rows)*100:.1f}%)")
+        out.append(f"🟡 زیرِ یک دلار: <b>{tiny}</b> ({tiny/len(rows)*100:.1f}%)")
+        if ages:
+            a = sorted(ages)
+            out.append("")
+            out.append(f"سنِ دادهٔ اوراکل — میانه <b>{a[len(a)//2]:.0f}s</b>، "
+                       f"بیشینه <b>{a[-1]:.0f}s</b>")
+            over = sum(1 for x in ages if x > GRANULARITY)
+            out.append(f"قدیمی‌تر از یک پنجره: <b>{over}</b> "
+                       f"({over/len(ages)*100:.1f}%)")
+        out.append("")
+        out.append("منبع: " + "، ".join(f"{k} {v}" for k, v in feeds.items()))
+        out.append("")
+        if zero / len(rows) > 0.10 or (ages and sorted(ages)[len(ages)//2] > GRANULARITY):
+            out.append("❌ <b>فید عقب است.</b> نمونه‌های تکراری یعنی قیمت بینِ "
+                       "دو مرزِ پنجره اصلاً به‌روز نشده، و آن‌وقت نتیجه‌ای که "
+                       "بات ثبت می‌کند ربطی به آنچه پلی‌مارکت تسویه کرده ندارد.\n"
+                       "راهِ حل: <code>BREAKOUT_FEED=binance</code>")
+        else:
+            out.append("✅ فید هم‌گام است — حرکت‌ها واقعی‌اند و اوراکل تازه است.")
+        return "\n".join(out)
 
     def reconcile(self, hours=24, announce=True):
         """
@@ -2670,7 +2746,8 @@ class BreakoutMonitor:
                 bet = bets.pop()
                 self.pending = {"bet": bet, "ref": price,
                                 "window": window_start + GRANULARITY,
-                                "rules": rules, "ref_age": self.feed_age}
+                                "rules": rules, "ref_age": self.feed_age,
+                                "feed": self.feed_used}
                 # Log it before trying to send: if the send fails, or we are
                 # replaying an outage, the row is already there waiting to be
                 # reported, and nothing depends on Telegram having worked.
@@ -3217,6 +3294,10 @@ def command_listener(monitor: Monitor):
                         bm.flush_untold()   # mark anything queued as seen
                     else:
                         send_message(chat_id, "سابقه‌ای در دسترس نیست.")
+                elif text.startswith("/feed"):
+                    bm = globals().get("BREAKOUT_MONITOR")
+                    send_message(chat_id, bm.feed_report() if bm
+                                 else "کارنامه‌ای در دسترس نیست.")
                 elif text.startswith("/verify"):
                     bm = globals().get("BREAKOUT_MONITOR")
                     if not bm:
