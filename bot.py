@@ -1555,6 +1555,11 @@ class BreakoutMonitor:
         self.pre_done = set()     # (boundary, stage) pre-alerts already sent
         self.pre_bet = {}         # boundary -> side promised by the last stage
         self.gap_note = None      # (windows missed, when) after an outage
+        # An outage whose backfill has not succeeded yet. Persisted, because the
+        # retry may only work several restarts later and _seed() destroys the
+        # only other record of where the hole was.
+        self.recover_from = None
+        self.recover_to = None
         self.feed_age = None      # seconds since the sampled round was published
         self.backfilled = 0       # windows scored from replay, not from live alerts
         self._load()
@@ -1581,6 +1586,8 @@ class BreakoutMonitor:
             if isinstance(s.get("signals"), list):
                 self.signals = s["signals"][-SIGNALS_KEEP:]
             self.backfilled = int(s.get("backfilled", 0))
+            self.recover_from = s.get("recover_from") or None
+            self.recover_to = s.get("recover_to") or None
             if self.closes:
                 log.info("Breakout: restored %d closes from %s",
                          len(self.closes), self.STATE_FILE)
@@ -1607,9 +1614,15 @@ class BreakoutMonitor:
                 log.warning("klines: %s failed: %s", host, exc)
         return []
 
-    def _backfill(self, missed):
+    def _backfill(self, missed, since=None, until=None):
         """
         Replay the windows lost to an outage from real candles.
+
+        `since` is the last window scored before the gap, `until` the last one
+        to replay. Both matter for a LATE recovery: when the first attempt fails
+        because the network is not up yet, the retry happens after live sampling
+        has already resumed, and replaying past `until` would score the same
+        windows twice — once live, once again from candles.
 
         Losing connectivity for an hour would otherwise punch a hole in the
         scorecard, and the whole point of the scorecard is a continuous record.
@@ -1622,19 +1635,28 @@ class BreakoutMonitor:
         counted separately so the record stays honest about which outcomes came
         from alerts actually received.
         """
+        since = self.last_window if since is None else since
         kl = self._fetch_klines(missed + BREAKOUT_HISTORY + 5)
         if not kl:
             return False
-        start = next((i for i, (t, _) in enumerate(kl) if t > self.last_window), None)
+        start = next((i for i, (t, _) in enumerate(kl) if t > since), None)
         if start is None or start == 0:
             return False          # our last window is not inside this range
+        windows = [(t, c) for t, c in kl[start:] if until is None or t <= until]
+        if not windows:
+            return False
+        # A late recovery must not disturb the live series: the scorecard and
+        # signal log are what we came for, the close buffer is already current.
+        snapshot = (list(self.closes), self.last_window, self.pending)
         self.closes = [c for _, c in kl[:start]][-BREAKOUT_HISTORY:]
         n = 0
-        for t, c in kl[start:]:
+        for t, c in windows:
             # Replayed windows log their signals into self.signals with
             # told=False, so the catch-up below is just a flush of that queue.
             self._on_window_close(t, c, replay=True)
             n += 1
+        if until is not None:
+            self.closes, self.last_window, self.pending = snapshot
         self.backfilled += n
         log.info("Breakout: backfilled %d missed windows from real candles "
                  "(scorecard stays continuous).", n)
@@ -1674,9 +1696,50 @@ class BreakoutMonitor:
         self.pending = None       # the candle that would have settled it never came
         self.gap_note = (missed, now)
         if self._backfill(missed):
+            self.recover_from = self.recover_to = None
             return False          # history rebuilt AND scored; nothing else to do
+        # The candles could not be reached RIGHT NOW — which at startup is the
+        # normal case, because the process comes up before the phone's network
+        # does. Remember where the hole is so the loop can retry, because in a
+        # moment _seed() will move last_window to the present and the only
+        # record of where the outage began will be this pair.
+        self.recover_from = self.last_window
+        self.recover_to = now // GRANULARITY * GRANULARITY - GRANULARITY
+        log.warning("Breakout: backfill failed; will retry for the window "
+                    "%s .. %s", self.recover_from, self.recover_to)
         self.closes = []          # could not recover the candles — start clean
         return True
+
+    def _retry_recovery(self):
+        """
+        Try again to replay an outage whose first backfill attempt failed.
+
+        Called from the loop, where the network is demonstrably working — the
+        loop only gets here after a successful price read. Without this a single
+        failed fetch in the first second of the process silently cost every
+        window of the outage, with no error and no second chance.
+        """
+        if not self.recover_from:
+            return
+        missed = int((self.recover_to - self.recover_from) // GRANULARITY)
+        if missed <= GAP_TOLERANCE:
+            self.recover_from = self.recover_to = None
+            return
+        if missed + BREAKOUT_HISTORY + 5 > 1000:
+            # Past what the feed will return, so it is gone. Say so rather than
+            # retrying forever against a wall.
+            hours = missed * GRANULARITY / 3600
+            send_message(self.chat_id,
+                         f"⚠️ <b>{hours:.0f} ساعت قطعی قابلِ بازیابی نیست</b>\n"
+                         f"{missed} پنجره بیش از آن است که صرافی کندل‌هایش را "
+                         "برگرداند. آمارِ این مدت از دست رفت.")
+            self.recover_from = self.recover_to = None
+            self._save()
+            return
+        if self._backfill(missed, since=self.recover_from, until=self.recover_to):
+            log.info("Breakout: recovered the outage on retry.")
+            self.recover_from = self.recover_to = None
+            self._save()
 
     def _save(self):
         try:
@@ -1687,7 +1750,9 @@ class BreakoutMonitor:
                            "score": self.score,
                            "history": self.history[-HISTORY_KEEP:],
                            "signals": self.signals[-SIGNALS_KEEP:],
-                           "backfilled": self.backfilled}, f)
+                           "backfilled": self.backfilled,
+                           "recover_from": self.recover_from,
+                           "recover_to": self.recover_to}, f)
         except Exception as exc:  # noqa: BLE001 - disk issues must not be fatal
             log.warning("Breakout: could not write %s: %s", self.STATE_FILE, exc)
 
@@ -2551,6 +2616,7 @@ class BreakoutMonitor:
                 # Anything the user was never shown — a send that failed, a
                 # window replayed after an outage — goes out now that there is
                 # clearly a working connection.
+                self._retry_recovery()
                 if self.untold():
                     self.flush_untold()
                 fail = self.err_count = 0
