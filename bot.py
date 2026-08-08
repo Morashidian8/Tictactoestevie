@@ -1535,6 +1535,11 @@ class BreakoutMonitor:
         self.last_alert = 0.0
         self.seeded_from = None   # feed used to backfill history, if any
         self.feed_used = BREAKOUT_FEED  # feed that produced the latest sample
+        # The close series is kept in ONE feed's price level. Binance BTCUSDT and
+        # Chainlink BTC/USD sit tens of dollars apart, so a sample or a candle
+        # from the other one has to be converted before it can join the series.
+        self.feed_offset = None   # binance - live feed, learned from an overlap
+        self.align_pending = False  # seeded history not yet anchored to the feed
         # Self-scoring: the bet just placed, and the running tally. A signal on
         # the window closing at price P is settled by the NEXT close, exactly the
         # way Polymarket settles it — so the bot can grade itself with no manual
@@ -1620,6 +1625,40 @@ class BreakoutMonitor:
                 log.warning("klines: %s failed: %s", host, exc)
         return []
 
+    def _align_klines(self, kl):
+        """
+        Shift a fetched Binance series onto the live feed's price level.
+
+        `_fetch_klines` returns Binance BTCUSDT. The live samples are Chainlink
+        BTC/USD. USDT is not exactly a dollar, so at $65,000 the two sit tens of
+        dollars apart — measured live: Chainlink 64,974.23 while Binance read
+        65,000.01 for the same instant, a $26 gap, and $44 an hour later.
+
+        Splicing one series into the other therefore invents a move that never
+        happened. On a night whose median candle is $5, a $47 phantom jump is a
+        9x "stretch" — which is exactly how rule 5 fired on nothing, and how the
+        bet before it got settled against a price the market never traded.
+
+        Both series use the same convention: entry (window_start, close) is the
+        price at window_start + GRANULARITY, which is also what self.closes[-1]
+        holds for self.last_window. So the offset is read straight off that
+        shared point, with no estimation.
+
+        Returns (series, offset) with offset None when there is no overlap to
+        anchor on — in which case the caller must NOT treat the result as
+        comparable with anything already recorded.
+        """
+        if not self.closes or not self.last_window:
+            return kl, None
+        anchor = next((c for t, c in kl if t == self.last_window), None)
+        if anchor is None:
+            return kl, None
+        off = self.closes[-1] - anchor
+        self.feed_offset = -off          # binance - live, for the fallback path
+        if abs(off) < 1e-9:
+            return kl, 0.0
+        return [(t, c + off) for t, c in kl], off
+
     def _backfill(self, missed, since=None, until=None, restore=False):
         """
         Replay the windows lost to an outage from real candles.
@@ -1645,6 +1684,18 @@ class BreakoutMonitor:
         kl = self._fetch_klines(missed + BREAKOUT_HISTORY + 5)
         if not kl:
             return False
+        kl, off = self._align_klines(kl)
+        if off is None and self.pending:
+            # Without an anchor the fetched prices are in a different currency
+            # to the open bet's reference, and settling one against the other
+            # produces a win or a loss that never happened. Drop the bet rather
+            # than grade it wrong.
+            log.warning("Backfill: no overlap to align the feeds; dropping the "
+                        "open bet instead of settling it across feeds.")
+            self.pending = None
+        elif off:
+            log.info("Backfill: shifted the fetched series by %+.2f onto the "
+                     "live feed.", off)
         start = next((i for i, (t, _) in enumerate(kl) if t > since), None)
         if start is None or start == 0:
             return False          # our last window is not inside this range
@@ -1806,6 +1857,9 @@ class BreakoutMonitor:
             if closed:
                 self.last_window = int(closed[-1][0]) // 1000 // GRANULARITY * GRANULARITY
             self.seeded_from = "binance"
+            # These are Binance prices; the live feed is somewhere else entirely.
+            # The first live sample supplies the overlap that anchors them.
+            self.align_pending = BREAKOUT_FEED != "binance"
             log.info("Breakout: seeded %d closes from Binance (levels refine as "
                      "live %s samples replace them).", len(self.closes), BREAKOUT_FEED)
             self._save()
@@ -2716,7 +2770,52 @@ class BreakoutMonitor:
                      head + f"\n{arrow}\n{names}\n\n"
                      f"پنجره: <b>{o_et:%I:%M%p ET}</b>  ·  ${price:,.2f}" + foot)
 
+    def _normalise(self, window_start, price):
+        """
+        Put this sample, and the series it joins, on one consistent price level.
+
+        Two ways a foreign price gets in. The history is SEEDED from Binance
+        before any live sample exists, and the live feed FALLS BACK to Binance
+        when every Polygon RPC is down. The two feeds are tens of dollars apart
+        — Chainlink read 64,974.23 for an instant Binance called 65,000.01 —
+        so appending one onto the other fabricates a move of that size. On a
+        night whose median candle is $5 that is a nine-sigma stretch, and the
+        rules duly fire on it.
+
+        Returns the price in series units, or None when it cannot be converted,
+        in which case the caller must skip the window rather than corrupt it.
+        """
+        feed = self.feed_used
+        native = feed == BREAKOUT_FEED
+        if self.align_pending and self.closes and native:
+            kl = self._fetch_klines(5)
+            anchor = next((c for t, c in kl if t == window_start), None)
+            if anchor is not None:
+                off = price - anchor
+                self.feed_offset = -off
+                if abs(off) > 0.005:
+                    self.closes = [c + off for c in self.closes]
+                    log.info("Seeded history shifted %+.2f onto the live feed.", off)
+                self.align_pending = False
+        if not native and self.closes:
+            if self.feed_offset is None:
+                kl = self._fetch_klines(5)
+                anchor = next((c for t, c in kl if t == self.last_window), None)
+                if anchor is None:
+                    log.warning("Fallback sample cannot be aligned to the series; "
+                                "skipping this window rather than corrupting it.")
+                    return None
+                self.feed_offset = anchor - self.closes[-1]
+            log.info("Fallback sample converted by %+.2f onto the series.",
+                     -self.feed_offset)
+            return price - self.feed_offset
+        return price
+
     def _on_window_close(self, window_start, price, lag=0.0, replay=False):
+        if not replay:
+            price = self._normalise(window_start, price)
+            if price is None:
+                return [], None
         # Settle the previous signal BEFORE appending, so `ref` is compared with
         # the close that actually decided it.
         settled = self._settle(price)
