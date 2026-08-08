@@ -660,6 +660,7 @@ def set_bot_commands():
         {"command": "oddsdebug", "description": "چرا بالا/پایین چیزی جمع نمی‌کند؟"},
         {"command": "oddsfill", "description": "بازیابیِ پنجره‌های جاافتاده (پیش‌فرض ۲۴ ساعت)"},
         {"command": "oddstest", "description": "آیا جمع‌آوری کامل و درست است؟"},
+        {"command": "verify", "description": "کارنامه را با قیمتِ رسمیِ پلی‌مارکت بسنج"},
         {"command": "oddsreport", "description": "جمع‌بندیِ بالا/پایین به تفکیکِ ساعت"},
         {"command": "menu", "description": "نمایش منوی سریع"},
         {"command": "update", "description": "دریافت آخرین نسخه و ری‌استارت"},
@@ -2005,7 +2006,8 @@ class BreakoutMonitor:
                 row["delta"] = delta
                 row["ref"], row["settle"] = ref, price
                 break
-        self.history.append({"won": won, "bet": p["bet"], "mine": mine})
+        self.history.append({"won": won, "bet": p["bet"], "mine": mine,
+                             "t": p["window"]})
         self.history = self.history[-HISTORY_KEEP:]
         for name in p.get("rules", []):
             r = self.score["rules"].setdefault(name, {"n": 0, "wins": 0})
@@ -2245,6 +2247,99 @@ class BreakoutMonitor:
             if not r.get("told"):
                 r["rules"] = list(r.get("rules") or []) + ["📡 پیامش نرسیده بود"]
         return self._send_rows(head, marked, foot)
+
+    def reconcile(self, hours=24, announce=True):
+        """
+        Re-grade the scorecard against the prices Polymarket actually paid on.
+
+        The bot settles at the window boundary from its own oracle, because that
+        is the only thing available at the time — Polymarket has not resolved
+        yet. But the two are different feeds read at slightly different instants,
+        and on a window whose whole move is a few dollars that difference
+        decides the answer. A real case: price to beat $64,944.94, final
+        $64,940.99, a move of $3.95. Any couple of dollars of disagreement
+        between the feeds flips it, and the scorecard then records the opposite
+        of what the market paid.
+
+        So once the odds collector has the market's own startPrice/endPrice for
+        a window, those replace the guess. This is not a cosmetic fix: an
+        accuracy measured against the wrong prices cannot be compared with a
+        backtest, and every decision here rests on that comparison.
+
+        Returns (checked, corrected, unvoided).
+        """
+        try:
+            import polymarket_collector as pmc
+        except Exception:  # noqa: BLE001 - the collector is optional
+            return 0, 0, 0
+        cut = time.time() - hours * 3600
+        truth = {}
+        for r in pmc.load_all():
+            t = int(r.get("t") or 0)
+            if t < cut:
+                continue
+            w = r.get("winner")
+            if w not in ("up", "down"):
+                beat, final = r.get("beat"), r.get("final")
+                if beat in (None, "") or final in (None, ""):
+                    continue
+                try:
+                    beat, final = float(beat), float(final)
+                except (TypeError, ValueError):
+                    continue
+                if beat == final:
+                    continue
+                w = "up" if final > beat else "down"
+            truth[t] = (w, r.get("beat"), r.get("final"))
+
+        by_t = {h.get("t"): h for h in self.history if h.get("t")}
+        checked = corrected = unvoided = 0
+        for row in self.signals:
+            t = int(row.get("t") or 0)
+            if t not in truth or row.get("verified"):
+                continue
+            winner, beat, final = truth[t]
+            truth_won = row["bet"] == winner
+            checked += 1
+            row["verified"] = True
+            row["pm_beat"], row["pm_final"] = beat, final
+            if row.get("void"):
+                # The bot called it too small to grade; the market disagreed and
+                # paid someone. It counts.
+                row["void"] = False
+                row["won"] = truth_won
+                self.score["void"] = max(0, self.score["void"] - 1)
+                self.score["n"] += 1
+                self.score["wins"] += 1 if truth_won else 0
+                for name in row.get("rules") or []:
+                    d = self.score["rules"].setdefault(name, {"n": 0, "wins": 0})
+                    d["n"] += 1
+                    d["wins"] += 1 if truth_won else 0
+                unvoided += 1
+            elif row.get("won") is not None and row["won"] != truth_won:
+                row["won"] = truth_won
+                self.score["wins"] += 1 if truth_won else -1
+                self.score["wins"] = max(0, self.score["wins"])
+                for name in row.get("rules") or []:
+                    d = self.score["rules"].setdefault(name, {"n": 0, "wins": 0})
+                    d["wins"] = max(0, d["wins"] + (1 if truth_won else -1))
+                if t in by_t:
+                    by_t[t]["won"] = truth_won
+                corrected += 1
+        if checked:
+            self._save()
+        if announce and (corrected or unvoided):
+            send_message(self.chat_id,
+                         "🔎 <b>کارنامه با قیمت‌های واقعیِ پلی‌مارکت تصحیح شد</b>\n"
+                         f"{checked} پنجره بررسی شد.\n"
+                         + (f"↔️ <b>{corrected}</b> نتیجه برعکس بود و اصلاح شد.\n"
+                            if corrected else "")
+                         + (f"➕ <b>{unvoided}</b> موردِ «بی‌نتیجه» در واقع نتیجه داشت.\n"
+                            if unvoided else "")
+                         + "\n<i>بات سرِ مرزِ پنجره با فیدِ خودش تسویه می‌کند چون "
+                           "پلی‌مارکت هنوز نتیجه نداده؛ وقتی قیمتِ رسمی آمد، "
+                           "همان جایگزین می‌شود.</i>")
+        return checked, corrected, unvoided
 
     def _track(self, mine):
         """History for one track: the user's AABA rule, or the statistical ones."""
@@ -2941,6 +3036,11 @@ class OddsWatcher:
             n = pmc.resolve_pending()
             if n:
                 log.info("Odds: filled in %d pending outcomes.", n)
+                # Fresh official prices just landed, which is the only moment
+                # the scorecard can be checked against what the market paid.
+                bm = globals().get("BREAKOUT_MONITOR")
+                if bm:
+                    bm.reconcile()
         except Exception as exc:  # noqa: BLE001
             log.warning("resolve_pending: %s", exc)
 
@@ -3117,6 +3217,36 @@ def command_listener(monitor: Monitor):
                         bm.flush_untold()   # mark anything queued as seen
                     else:
                         send_message(chat_id, "سابقه‌ای در دسترس نیست.")
+                elif text.startswith("/verify"):
+                    bm = globals().get("BREAKOUT_MONITOR")
+                    if not bm:
+                        send_message(chat_id, "کارنامه‌ای در دسترس نیست.")
+                    else:
+                        parts = text.split()
+                        hrs = 24
+                        if len(parts) > 1:
+                            try:
+                                hrs = max(1, min(720, int(float(parts[1]))))
+                            except ValueError:
+                                pass
+                        ch, co, un = bm.reconcile(hours=hrs, announce=False)
+                        if not ch:
+                            send_message(chat_id,
+                                         "🔎 <b>راستی‌آزمایی</b>\n\nهیچ پنجره‌ای با "
+                                         "قیمتِ رسمیِ پلی‌مارکت پیدا نشد.\n"
+                                         "جمع‌آوریِ بالا/پایین باید روشن باشد — "
+                                         "/oddscollect")
+                        else:
+                            send_message(chat_id,
+                                         f"🔎 <b>راستی‌آزمایی — {hrs} ساعتِ گذشته</b>\n\n"
+                                         f"{ch} پنجره با قیمتِ رسمیِ پلی‌مارکت "
+                                         "مقایسه شد.\n"
+                                         + (f"↔️ <b>{co}</b> نتیجه برعکس بود و "
+                                            "اصلاح شد.\n" if co else
+                                            "✅ همه درست بودند.\n")
+                                         + (f"➕ <b>{un}</b> موردِ «بی‌نتیجه» در واقع "
+                                            "نتیجه داشت.\n" if un else "")
+                                         + f"\nنرخِ اختلاف: <b>{(co+un)/ch*100:.1f}%</b>")
                 elif text.startswith("/oddstest"):
                     bm = globals().get("ODDS_WATCHER")
                     send_message(chat_id, bm.self_test() if bm
