@@ -190,11 +190,7 @@ SETTLE_DEADBAND = float(os.environ.get("SETTLE_DEADBAND", "0.05"))
 # numbers the feed sits about $1 away at the same instant, so the move this bot
 # computes can be a couple of dollars off the one the market settles on. Below
 # that, a verdict here says nothing about the verdict there.
-# Relative, not absolute: a fixed dollar floor is a rounding error when BTC
-# moves $50 a candle and most of a candle when it moves $5. 1e-5 of the price is
-# ~$0.65 at $65,000 — still far above the four-cent move that made this
-# necessary, and far below any move Polymarket would actually settle on.
-SETTLE_FLOOR_REL = float(os.environ.get("SETTLE_FLOOR_REL", "0.00001"))
+SETTLE_FLOOR = float(os.environ.get("SETTLE_FLOOR", "3"))
 # Depth of the martingale ladder being followed, for display only. Without it
 # the message reports a raw losing streak — "پلهٔ ۵" on a three-rung ladder,
 # which is not a rung at all, it is two busts and a fresh start.
@@ -664,8 +660,6 @@ def set_bot_commands():
         {"command": "oddsdebug", "description": "چرا بالا/پایین چیزی جمع نمی‌کند؟"},
         {"command": "oddsfill", "description": "بازیابیِ پنجره‌های جاافتاده (پیش‌فرض ۲۴ ساعت)"},
         {"command": "oddstest", "description": "آیا جمع‌آوری کامل و درست است؟"},
-        {"command": "verify", "description": "کارنامه را با قیمتِ رسمیِ پلی‌مارکت بسنج"},
-        {"command": "feed", "description": "آیا فیدِ قیمت با بازار هم‌گام است؟"},
         {"command": "oddsreport", "description": "جمع‌بندیِ بالا/پایین به تفکیکِ ساعت"},
         {"command": "menu", "description": "نمایش منوی سریع"},
         {"command": "update", "description": "دریافت آخرین نسخه و ری‌استارت"},
@@ -1048,6 +1042,37 @@ def rule7_signal(closes):
     return None
 
 
+def _favourite(up, down):
+    """
+    Which side the market is charging more for. "tie" only when they are equal.
+
+    This existed inline as `"down" if down < up`, which inside the else branch —
+    where up <= down is already known — can never be true. Every window with
+    DOWN as the favourite was therefore filed as a tie, and since the reader
+    drops ties, roughly half of all collected windows vanished from the report
+    and from every statistic computed over it.
+    """
+    if up > down:
+        return "up"
+    if down > up:
+        return "down"
+    return "tie"
+
+
+def favourite_of(row):
+    """
+    The favourite recomputed from the stored prices, never read from the file.
+
+    Rows written before the bug above carry a wrong `favourite`, and the prices
+    beside them are correct — so deriving it on read repairs the whole history
+    without rewriting a single stored row.
+    """
+    up, down = row.get("up"), row.get("down")
+    if up is None or down is None:
+        return row.get("favourite")
+    return _favourite(up, down)
+
+
 def breakout_signal(closes, lookback=None, vol_filter=None, vol_th=None):
     """
     Evaluate RULE 1 on a series of 5-minute closing prices (oldest -> newest).
@@ -1056,15 +1081,6 @@ def breakout_signal(closes, lookback=None, vol_filter=None, vol_th=None):
       bet    "up" | "down"   — the direction to back for the NEXT window
       level  the 20-close high/low that was broken
       ratio  vol20/vol100 (None when the filter is off or history is short)
-      depth  how far past the level the close landed, in median moves
-      median the median absolute move of the last 100 candles
-
-    `depth` is the one number that separates a rule 1 signal worth taking from
-    one that is not. Measured over 11,165 signals in the last year: a break of
-    less than half a median move settles at 50.56% — a coin — while a break of
-    three or more settles at 56.87%. Everything between is a flat ~54.8%. It is
-    surfaced so the alert can say which kind this is instead of pretending all
-    breaks are the same.
 
     The last element of `closes` must be the just-closed window. Levels use the
     `lookback` closes BEFORE it — including the current close would make a break
@@ -1099,142 +1115,7 @@ def breakout_signal(closes, lookback=None, vol_filter=None, vol_th=None):
             ratio = _stdev(rets[-20:]) / slow
             if ratio < vol_th:
                 return None
-
-    # Depth of the break, in median moves. Uses the same upper-median convention
-    # as rules 2 and 5 so the "x median move" on every alert means one thing.
-    depth = median = None
-    if len(closes) >= 101:
-        ref = sorted(abs(m) for m in _moves(closes[-101:]))
-        median = ref[len(ref) // 2]
-        if median > 0:
-            depth = abs(cur - level) / median
-
-    return {"bet": bet, "level": level, "kind": kind, "close": cur,
-            "ratio": ratio, "depth": depth, "median": median}
-
-
-# Measured on the last 365 days, 11,165 rule 1 signals, close-to-close. The
-# bands are where the data actually breaks, not round numbers: 1.5x and 2x are
-# indistinguishable from each other (54.78% vs 54.55%), so offering them as
-# separate tiers would be inventing precision that is not there.
-BREAKOUT_DEPTH_TIERS = (
-    (3.0, "🟢", "قوی", "۵۶٫۹٪", "۲٬۵۶۱"),
-    (0.5, "🟡", "معمولی", "۵۴٫۸٪", "۶٬۱۲۴"),
-    (0.0, "🔴", "خطرناک", "۵۰٫۶٪", "۲٬۴۷۹"),
-)
-
-# Below this the break is not a break. Those 2,479 signals settle at 50.63%
-# [48.7-52.6] — an interval that contains 50, i.e. a coin — and 70% of them fire
-# when no other rule does, where they are 50.23%. Rule 1 is therefore dropped
-# below the floor when it is ALONE, and merely flagged when other rules are
-# already carrying the window.
-#
-# Only two tiers exist above the floor, not four. Sliced finer the bands are
-# 0.5-1x 54.41%, 1-2x 55.41%, 2-3x 54.17%, 3-5x 57.35%, 5x+ 56.36% — every
-# confidence interval overlapping every other, and not even monotonic. Offering
-# four labels would be inventing a precision the data does not contain.
-BREAKOUT_DEPTH_MIN = float(os.environ.get("BREAKOUT_DEPTH_MIN", "0.5"))
-
-
-def _favourite(up, down):
-    """
-    Which side the market is charging more for. "tie" only when they are equal.
-
-    This existed inline and read `"down" if down < up`, which inside the else
-    branch — where up <= down is already known — can never be true. Every window
-    with DOWN as the favourite was therefore filed as a tie, and since the
-    reader drops ties, roughly half of all collected windows vanished from the
-    report and from every statistic computed over it.
-    """
-    if up > down:
-        return "up"
-    if down > up:
-        return "down"
-    return "tie"
-
-
-def favourite_of(row):
-    """
-    The favourite recomputed from the stored prices, never read from the file.
-
-    Rows written before the bug above carry a wrong `favourite`, and the prices
-    beside them are correct — so deriving it on read repairs the whole history
-    without rewriting a single stored row.
-    """
-    up, down = row.get("up"), row.get("down")
-    if up is None or down is None:
-        return row.get("favourite")
-    return _favourite(up, down)
-
-
-def breakout_depth_note(depth):
-    """
-    One line telling the user what this particular break is worth.
-
-    Returns (mark, label, accuracy, sample) or None when there is not enough
-    history to measure the depth — in which case the alert says nothing rather
-    than guessing, because a missing hint is honest and a made-up one is not.
-    """
-    if depth is None:
-        return None
-    for floor, mark, label, acc, n in BREAKOUT_DEPTH_TIERS:
-        if depth >= floor:
-            return mark, label, acc, n
-    return None
-
-
-def rule1_entry(sig, accompanied):
-    """
-    Rule 1's line in the alert, or None when the break is too shallow to bet.
-
-    `accompanied` says whether any other rule fired on this same window, and it
-    decides what happens to a sub-0.5x break:
-
-      alone       -> None. Nothing is emitted; measured 50.23% over 1,732
-                     signals, which is a coin wearing a rule's name.
-      accompanied -> emitted with a red warning. The window is being carried by
-                     the other rules anyway, so suppressing it would only hide
-                     from the reader that rule 1's contribution here is worthless.
-
-    Measured over the last year on the live configuration, dropping the alone
-    case removes 1,741 signals and flags 751: accuracy 53.86% -> 54.18%, worst
-    drawdown $1,780 -> $1,360, and at a fixed $2,000 risk budget the base it can
-    carry goes $22 -> $29 and the year's profit $69,416 -> $85,853.
-    """
-    if not sig:
-        return None
-    depth = sig.get("depth")
-    shallow = depth is not None and depth < BREAKOUT_DEPTH_MIN
-    if shallow and not accompanied:
-        return None
-
-    broke = "بالاتر از سقف" if sig["kind"] == "up" else "پایین‌تر از کف"
-    ratio = f" · نسبتِ نوسان {sig['ratio']:.2f}" if sig["ratio"] is not None else ""
-    note = breakout_depth_note(depth)
-    if note:
-        mark, label, acc, n = note
-        # The mark rides on the accuracy label, not the rule name: the scorecard
-        # keys rules by the first character of the name, so prefixing the name
-        # would file every rule 1 signal under an emoji. The label reaches the
-        # pre-alert too, which prints only the name and the accuracy — and the
-        # 60-second warning is exactly where knowing the break is shallow matters
-        # most.
-        acc_label = f"{mark} {acc}"
-        depth_line = (f"\n  {mark} <b>عمقِ شکست: {depth:.1f}× حرکتِ معمول</b> — "
-                      f"{label} · تاریخی {acc} روی {n} نمونه")
-        if shallow:
-            depth_line += ("\n  ⚠️ <b>زیرِ ۰٫۵× است — خطرناک.</b> این شکست به‌تنهایی "
-                           "ارزشِ شرط ندارد؛ فقط چون قانون‌های دیگر هم شلیک "
-                           "کرده‌اند نمایش داده می‌شود.")
-        elif label == "قوی":
-            # Said out loud because the tier looks stronger than its evidence:
-            # 56.93% vs 54.78% is z=+1.84, which does not clear 1.96.
-            depth_line += "\n  <i>برتریِ این سطح هنوز قطعی نیست (z=+۱٫۸۴)</i>"
-    else:
-        acc_label, depth_line = "۵۶٪", ""
-    return ("۱) شکستِ ۲۰ کندلی", acc_label, sig["bet"],
-            f"{broke} {BREAKOUT_LOOKBACK} کندلِ اخیر "
-            f"(${sig['level']:,.2f}){ratio}{depth_line}")
+    return {"bet": bet, "level": level, "kind": kind, "close": cur, "ratio": ratio}
 
 
 # --- Clock helpers ----------------------------------------------------------
@@ -1535,11 +1416,6 @@ class BreakoutMonitor:
         self.last_alert = 0.0
         self.seeded_from = None   # feed used to backfill history, if any
         self.feed_used = BREAKOUT_FEED  # feed that produced the latest sample
-        # The close series is kept in ONE feed's price level. Binance BTCUSDT and
-        # Chainlink BTC/USD sit tens of dollars apart, so a sample or a candle
-        # from the other one has to be converted before it can join the series.
-        self.feed_offset = None   # binance - live feed, learned from an overlap
-        self.align_pending = False  # seeded history not yet anchored to the feed
         # Self-scoring: the bet just placed, and the running tally. A signal on
         # the window closing at price P is settled by the NEXT close, exactly the
         # way Polymarket settles it — so the bot can grade itself with no manual
@@ -1566,11 +1442,6 @@ class BreakoutMonitor:
         self.pre_done = set()     # (boundary, stage) pre-alerts already sent
         self.pre_bet = {}         # boundary -> side promised by the last stage
         self.gap_note = None      # (windows missed, when) after an outage
-        # An outage whose backfill has not succeeded yet. Persisted, because the
-        # retry may only work several restarts later and _seed() destroys the
-        # only other record of where the hole was.
-        self.recover_from = None
-        self.recover_to = None
         self.feed_age = None      # seconds since the sampled round was published
         self.backfilled = 0       # windows scored from replay, not from live alerts
         self._load()
@@ -1597,8 +1468,6 @@ class BreakoutMonitor:
             if isinstance(s.get("signals"), list):
                 self.signals = s["signals"][-SIGNALS_KEEP:]
             self.backfilled = int(s.get("backfilled", 0))
-            self.recover_from = s.get("recover_from") or None
-            self.recover_to = s.get("recover_to") or None
             if self.closes:
                 log.info("Breakout: restored %d closes from %s",
                          len(self.closes), self.STATE_FILE)
@@ -1625,53 +1494,9 @@ class BreakoutMonitor:
                 log.warning("klines: %s failed: %s", host, exc)
         return []
 
-    def _align_klines(self, kl):
-        """
-        Shift a fetched Binance series onto the live feed's price level.
-
-        `_fetch_klines` returns Binance BTCUSDT. The live samples are Chainlink
-        BTC/USD. USDT is not exactly a dollar, so at $65,000 the two sit tens of
-        dollars apart — measured live: Chainlink 64,974.23 while Binance read
-        65,000.01 for the same instant, a $26 gap, and $44 an hour later.
-
-        Splicing one series into the other therefore invents a move that never
-        happened. On a night whose median candle is $5, a $47 phantom jump is a
-        9x "stretch" — which is exactly how rule 5 fired on nothing, and how the
-        bet before it got settled against a price the market never traded.
-
-        Both series use the same convention: entry (window_start, close) is the
-        price at window_start + GRANULARITY, which is also what self.closes[-1]
-        holds for self.last_window. So the offset is read straight off that
-        shared point, with no estimation.
-
-        Returns (series, offset) with offset None when there is no overlap to
-        anchor on — in which case the caller must NOT treat the result as
-        comparable with anything already recorded.
-        """
-        if not self.closes or not self.last_window:
-            return kl, None
-        anchor = next((c for t, c in kl if t == self.last_window), None)
-        if anchor is None:
-            return kl, None
-        off = self.closes[-1] - anchor
-        if not self.align_pending:
-            # Only meaningful once the buffer really is in live-feed units;
-            # while it is still the seeded Binance series this would measure
-            # Binance against Binance and record a zero basis.
-            self.feed_offset = -off      # binance - live, for the fallback path
-        if abs(off) < 1e-9:
-            return kl, 0.0
-        return [(t, c + off) for t, c in kl], off
-
-    def _backfill(self, missed, since=None, until=None, restore=False):
+    def _backfill(self, missed):
         """
         Replay the windows lost to an outage from real candles.
-
-        `since` is the last window scored before the gap, `until` the last one
-        to replay. Both matter for a LATE recovery: when the first attempt fails
-        because the network is not up yet, the retry happens after live sampling
-        has already resumed, and replaying past `until` would score the same
-        windows twice — once live, once again from candles.
 
         Losing connectivity for an hour would otherwise punch a hole in the
         scorecard, and the whole point of the scorecard is a continuous record.
@@ -1684,40 +1509,19 @@ class BreakoutMonitor:
         counted separately so the record stays honest about which outcomes came
         from alerts actually received.
         """
-        since = self.last_window if since is None else since
         kl = self._fetch_klines(missed + BREAKOUT_HISTORY + 5)
         if not kl:
             return False
-        kl, off = self._align_klines(kl)
-        if off is None and self.pending:
-            # Without an anchor the fetched prices are in a different currency
-            # to the open bet's reference, and settling one against the other
-            # produces a win or a loss that never happened. Drop the bet rather
-            # than grade it wrong.
-            log.warning("Backfill: no overlap to align the feeds; dropping the "
-                        "open bet instead of settling it across feeds.")
-            self.pending = None
-        elif off:
-            log.info("Backfill: shifted the fetched series by %+.2f onto the "
-                     "live feed.", off)
-        start = next((i for i, (t, _) in enumerate(kl) if t > since), None)
+        start = next((i for i, (t, _) in enumerate(kl) if t > self.last_window), None)
         if start is None or start == 0:
             return False          # our last window is not inside this range
-        windows = [(t, c) for t, c in kl[start:] if until is None or t <= until]
-        if not windows:
-            return False
-        # A late recovery must not disturb the live series: the scorecard and
-        # signal log are what we came for, the close buffer is already current.
-        snapshot = (list(self.closes), self.last_window, self.pending)
         self.closes = [c for _, c in kl[:start]][-BREAKOUT_HISTORY:]
         n = 0
-        for t, c in windows:
+        for t, c in kl[start:]:
             # Replayed windows log their signals into self.signals with
             # told=False, so the catch-up below is just a flush of that queue.
             self._on_window_close(t, c, replay=True)
             n += 1
-        if restore:
-            self.closes, self.last_window, self.pending = snapshot
         self.backfilled += n
         log.info("Breakout: backfilled %d missed windows from real candles "
                  "(scorecard stays continuous).", n)
@@ -1751,64 +1555,15 @@ class BreakoutMonitor:
         now = time.time() if now is None else now
         missed = int((now - self.last_window) // GRANULARITY) - 1
         if missed <= GAP_TOLERANCE:
-            # A one or two window hiccup is left alone, exactly as it always was.
-            # Replaying it was added here on a hunch and never asked for, and it
-            # is what dragged Binance candles into a Chainlink series several
-            # times a day: a fabricated $47 move, a signal fired on it, and the
-            # open bet settled against a price the market never traded. The hole
-            # it was meant to close is one or two unscored windows; the hole it
-            # opened was a wrong result. Not a trade worth making.
             return False
         log.warning("Breakout: %d windows missing (%.1f hours offline).",
                     missed, missed * GRANULARITY / 3600)
         self.pending = None       # the candle that would have settled it never came
         self.gap_note = (missed, now)
         if self._backfill(missed):
-            self.recover_from = self.recover_to = None
             return False          # history rebuilt AND scored; nothing else to do
-        # The candles could not be reached RIGHT NOW — which at startup is the
-        # normal case, because the process comes up before the phone's network
-        # does. Remember where the hole is so the loop can retry, because in a
-        # moment _seed() will move last_window to the present and the only
-        # record of where the outage began will be this pair.
-        self.recover_from = self.last_window
-        self.recover_to = now // GRANULARITY * GRANULARITY - GRANULARITY
-        log.warning("Breakout: backfill failed; will retry for the window "
-                    "%s .. %s", self.recover_from, self.recover_to)
         self.closes = []          # could not recover the candles — start clean
         return True
-
-    def _retry_recovery(self):
-        """
-        Try again to replay an outage whose first backfill attempt failed.
-
-        Called from the loop, where the network is demonstrably working — the
-        loop only gets here after a successful price read. Without this a single
-        failed fetch in the first second of the process silently cost every
-        window of the outage, with no error and no second chance.
-        """
-        if not self.recover_from:
-            return
-        missed = int((self.recover_to - self.recover_from) // GRANULARITY)
-        if missed <= 0:
-            self.recover_from = self.recover_to = None
-            return
-        if missed + BREAKOUT_HISTORY + 5 > 1000:
-            # Past what the feed will return, so it is gone. Say so rather than
-            # retrying forever against a wall.
-            hours = missed * GRANULARITY / 3600
-            send_message(self.chat_id,
-                         f"⚠️ <b>{hours:.0f} ساعت قطعی قابلِ بازیابی نیست</b>\n"
-                         f"{missed} پنجره بیش از آن است که صرافی کندل‌هایش را "
-                         "برگرداند. آمارِ این مدت از دست رفت.")
-            self.recover_from = self.recover_to = None
-            self._save()
-            return
-        if self._backfill(missed, since=self.recover_from,
-                          until=self.recover_to, restore=True):
-            log.info("Breakout: recovered the outage on retry.")
-            self.recover_from = self.recover_to = None
-            self._save()
 
     def _save(self):
         try:
@@ -1819,9 +1574,7 @@ class BreakoutMonitor:
                            "score": self.score,
                            "history": self.history[-HISTORY_KEEP:],
                            "signals": self.signals[-SIGNALS_KEEP:],
-                           "backfilled": self.backfilled,
-                           "recover_from": self.recover_from,
-                           "recover_to": self.recover_to}, f)
+                           "backfilled": self.backfilled}, f)
         except Exception as exc:  # noqa: BLE001 - disk issues must not be fatal
             log.warning("Breakout: could not write %s: %s", self.STATE_FILE, exc)
 
@@ -1859,9 +1612,6 @@ class BreakoutMonitor:
             if closed:
                 self.last_window = int(closed[-1][0]) // 1000 // GRANULARITY * GRANULARITY
             self.seeded_from = "binance"
-            # These are Binance prices; the live feed is somewhere else entirely.
-            # The first live sample supplies the overlap that anchors them.
-            self.align_pending = BREAKOUT_FEED != "binance"
             log.info("Breakout: seeded %d closes from Binance (levels refine as "
                      "live %s samples replace them).", len(self.closes), BREAKOUT_FEED)
             self._save()
@@ -1969,29 +1719,19 @@ class BreakoutMonitor:
                    "قیمت است نه از قانون‌ها — همان را بگو تا عوضش کنم.</i>")
         return "\n".join(out)
 
-    def _deadband(self, price=None):
+    def _deadband(self):
         """
         Smallest move worth calling a result, in dollars.
 
-        The floor used to be a flat $3, chosen when a typical 5-minute candle
-        moved about $50. On a quiet night it is not a rounding error at all:
-        Polymarket settled four consecutive windows on moves of $2.66, $3.95,
-        $4.74 and $7.27, so a $3 floor voids the first outright and grades the
-        rest on a threshold worth most of a candle. Meanwhile the thing the
-        floor was built to stop — a window graded a win on a FOUR CENT move —
-        is six orders of magnitude smaller.
-
-        So the floor is now a fraction of the price rather than a fixed number
-        of dollars: ~$0.65 at $65k. It still throws away the four-cent case and
-        stops throwing away real results.
+        Scaled to the current regime rather than fixed: $2 is nothing in a busy
+        hour and is most of a candle at 4am. Falls back to a small absolute
+        floor until there is enough history to measure the regime.
         """
         mv = [abs(m) for m in _moves(self.closes[-101:])] if len(self.closes) > 20 else []
-        price = price or (self.closes[-1] if self.closes else 0.0)
-        floor = price * SETTLE_FLOOR_REL
         if not mv:
-            return floor
+            return 0.0
         med = sorted(mv)[len(mv) // 2]
-        return max(med * SETTLE_DEADBAND, floor)
+        return max(med * SETTLE_DEADBAND, SETTLE_FLOOR)
 
     def _prev_result_line(self, this_window):
         """
@@ -2052,15 +1792,13 @@ class BreakoutMonitor:
             return None
         ref = p["ref"]
         delta = price - ref
-        if abs(delta) <= self._deadband(price):
+        if abs(delta) <= self._deadband():
             self.score["void"] += 1
             for row in reversed(self.signals):
                 if row["t"] == p["window"]:
                     row["void"] = True
                     row["delta"] = delta
                     row["ref"], row["settle"] = ref, price
-                    row["ref_age"] = p.get("ref_age")
-                    row["feed"] = p.get("feed")
                     break
             log.info("Settled: VOID (%.2f -> %.2f, delta %+.2f is inside the "
                      "dead band)", ref, price, delta)
@@ -2078,11 +1816,8 @@ class BreakoutMonitor:
                 row["won"] = won
                 row["delta"] = delta
                 row["ref"], row["settle"] = ref, price
-                row["ref_age"] = p.get("ref_age")
-                row["feed"] = p.get("feed")
                 break
-        self.history.append({"won": won, "bet": p["bet"], "mine": mine,
-                             "t": p["window"]})
+        self.history.append({"won": won, "bet": p["bet"], "mine": mine})
         self.history = self.history[-HISTORY_KEEP:]
         for name in p.get("rules", []):
             r = self.score["rules"].setdefault(name, {"n": 0, "wins": 0})
@@ -2144,42 +1879,6 @@ class BreakoutMonitor:
             out.append((head if i == 0 else "") + "\n".join(part) + more
                        + (foot if i + per >= len(rows) else ""))
         return out
-
-    def _period_stats(self, rows):
-        """
-        What the outage actually did to the account, not just which signals fired.
-
-        "Bring the stats for the time I was off" means the ladder result, so the
-        same 3-rung simulation the scorecard uses is run over exactly these rows:
-        a list of ticks and crosses does not tell anyone whether they would have
-        been up or down over those hours.
-        """
-        settled = [r for r in rows if r["won"] is not None]
-        n = len(settled)
-        if not n:
-            return f"\n📋 <b>{len(rows)} سیگنال</b> (هنوز تسویه نشده‌اند)"
-        w = sum(1 for r in settled if r["won"])
-        rung = pnl = busts = streak = worst = 0
-        for r in settled:
-            stake = STAKE_BASE * 2 ** rung
-            if r["won"]:
-                pnl += stake
-                rung = streak = 0
-            else:
-                pnl -= stake
-                rung += 1
-                streak += 1
-                worst = max(worst, streak)
-                if rung >= LADDER_RUNGS:
-                    busts += 1
-                    rung = 0
-        void = len(rows) - n
-        return (f"\n📋 <b>{len(rows)} سیگنال</b> — {w}/{n} برد "
-                f"(<b>{w / n * 100:.0f}%</b>)"
-                + (f"، {void} بی‌نتیجه" if void else "")
-                + f"\n💥 انفجارِ سه‌پله‌ای: <b>{busts}</b>"
-                f"  ·  بلندترین رشتهٔ باخت: <b>{worst}</b>"
-                f"\n💵 با پایهٔ ${STAKE_BASE:,.0f}: <b>${pnl:+,.0f}</b>")
 
     def _send_rows(self, head, rows, foot=""):
         """Send a chunked report. True only if every part got through."""
@@ -2285,15 +1984,17 @@ class BreakoutMonitor:
         rows = self.untold()
         if not rows:
             return False
-        # EVERY row, not the last fifteen. The rest were being marked told and
-        # never shown again, so a six-hour outage reported a quarter of itself
-        # and silently dropped the other three quarters. _send_rows already
-        # splits into as many messages as it takes.
+        shown = rows[-MISSED_SHOW:]
+        w = sum(1 for r in rows if r["won"])
+        n = sum(1 for r in rows if r["won"] is not None)
         head = ((head or "📡 <b>سیگنال‌های جاافتاده</b>\n")
-                + self._period_stats(rows) + "\n\n")
+                + f"\n📋 <b>{len(rows)} سیگنال</b>"
+                + (f" — {w}/{n} برد" if n else "")
+                + (f"  (۱۵ موردِ آخر نشان داده می‌شود)"
+                   if len(rows) > len(shown) else "") + ":\n\n")
         foot = ("\n\n<i>ساعت‌ها ET است و همه مربوط به گذشته‌اند — "
                 "برای ورود نیست، فقط برای آمار.</i>")
-        if not self._send_rows(head, rows, foot):
+        if not self._send_rows(head, shown, foot):
             log.warning("Catch-up report could not be delivered; will retry.")
             return False
         for r in rows:
@@ -2322,156 +2023,6 @@ class BreakoutMonitor:
             if not r.get("told"):
                 r["rules"] = list(r.get("rules") or []) + ["📡 پیامش نرسیده بود"]
         return self._send_rows(head, marked, foot)
-
-    def feed_report(self):
-        """
-        Is the price feed actually tracking the market Polymarket settles on?
-
-        The bot reads Chainlink BTC/USD because a comment in this file has long
-        asserted Polymarket settles on it. The evidence says otherwise: the
-        market's own reference price moves by two to seven dollars every five
-        minutes, quoted to the cent, while a Chainlink deviation feed at
-        $65,000 does not move at all until the price shifts by far more than
-        that. A feed that only updates occasionally produces repeated samples,
-        and a repeated sample is a zero move — which is graded as a push or, a
-        few dollars later, as a coin flip.
-
-        This is measured rather than argued: every settled signal records the
-        move it was graded on and how old the oracle round was. If the feed is
-        stale, the zero and near-zero bucket is enormous and `ref_age` is large.
-        """
-        rows = [r for r in self.signals
-                if r.get("delta") is not None and r.get("ref")]
-        if len(rows) < 20:
-            return ("📡 <b>سلامتِ فید</b>\n\nهنوز داده کافی نیست "
-                    f"({len(rows)} سیگنالِ تسویه‌شده). چند ساعت دیگر دوباره بزن.")
-        deltas = [abs(r["delta"]) for r in rows]
-        zero = sum(1 for d in deltas if d == 0)
-        tiny = sum(1 for d in deltas if 0 < d < 1)
-        ages = [r["ref_age"] for r in rows if r.get("ref_age") is not None]
-        feeds = {}
-        for r in rows:
-            feeds[r.get("feed") or "?"] = feeds.get(r.get("feed") or "?", 0) + 1
-        s = sorted(deltas)
-        med = s[len(s) // 2]
-        out = [f"📡 <b>سلامتِ فید — {len(rows)} سیگنالِ تسویه‌شده</b>", ""]
-        out.append(f"میانهٔ حرکتِ پنجره: <b>${med:,.2f}</b>")
-        out.append(f"صدکِ ۱۰ و ۹۰: ${s[len(s)//10]:,.2f} .. ${s[len(s)*9//10]:,.2f}")
-        out.append("")
-        out.append(f"🔴 حرکتِ دقیقاً صفر: <b>{zero}</b> ({zero/len(rows)*100:.1f}%)")
-        out.append(f"🟡 زیرِ یک دلار: <b>{tiny}</b> ({tiny/len(rows)*100:.1f}%)")
-        if ages:
-            a = sorted(ages)
-            out.append("")
-            out.append(f"سنِ دادهٔ اوراکل — میانه <b>{a[len(a)//2]:.0f}s</b>، "
-                       f"بیشینه <b>{a[-1]:.0f}s</b>")
-            over = sum(1 for x in ages if x > GRANULARITY)
-            out.append(f"قدیمی‌تر از یک پنجره: <b>{over}</b> "
-                       f"({over/len(ages)*100:.1f}%)")
-        out.append("")
-        out.append("منبع: " + "، ".join(f"{k} {v}" for k, v in feeds.items()))
-        out.append("")
-        if zero / len(rows) > 0.10 or (ages and sorted(ages)[len(ages)//2] > GRANULARITY):
-            out.append("❌ <b>فید عقب است.</b> نمونه‌های تکراری یعنی قیمت بینِ "
-                       "دو مرزِ پنجره اصلاً به‌روز نشده، و آن‌وقت نتیجه‌ای که "
-                       "بات ثبت می‌کند ربطی به آنچه پلی‌مارکت تسویه کرده ندارد.\n"
-                       "راهِ حل: <code>BREAKOUT_FEED=binance</code>")
-        else:
-            out.append("✅ فید هم‌گام است — حرکت‌ها واقعی‌اند و اوراکل تازه است.")
-        return "\n".join(out)
-
-    def reconcile(self, hours=24, announce=True):
-        """
-        Re-grade the scorecard against the prices Polymarket actually paid on.
-
-        The bot settles at the window boundary from its own oracle, because that
-        is the only thing available at the time — Polymarket has not resolved
-        yet. But the two are different feeds read at slightly different instants,
-        and on a window whose whole move is a few dollars that difference
-        decides the answer. A real case: price to beat $64,944.94, final
-        $64,940.99, a move of $3.95. Any couple of dollars of disagreement
-        between the feeds flips it, and the scorecard then records the opposite
-        of what the market paid.
-
-        So once the odds collector has the market's own startPrice/endPrice for
-        a window, those replace the guess. This is not a cosmetic fix: an
-        accuracy measured against the wrong prices cannot be compared with a
-        backtest, and every decision here rests on that comparison.
-
-        Returns (checked, corrected, unvoided).
-        """
-        try:
-            import polymarket_collector as pmc
-        except Exception:  # noqa: BLE001 - the collector is optional
-            return 0, 0, 0
-        cut = time.time() - hours * 3600
-        truth = {}
-        for r in pmc.load_all():
-            t = int(r.get("t") or 0)
-            if t < cut:
-                continue
-            w = r.get("winner")
-            if w not in ("up", "down"):
-                beat, final = r.get("beat"), r.get("final")
-                if beat in (None, "") or final in (None, ""):
-                    continue
-                try:
-                    beat, final = float(beat), float(final)
-                except (TypeError, ValueError):
-                    continue
-                if beat == final:
-                    continue
-                w = "up" if final > beat else "down"
-            truth[t] = (w, r.get("beat"), r.get("final"))
-
-        by_t = {h.get("t"): h for h in self.history if h.get("t")}
-        checked = corrected = unvoided = 0
-        for row in self.signals:
-            t = int(row.get("t") or 0)
-            if t not in truth or row.get("verified"):
-                continue
-            winner, beat, final = truth[t]
-            truth_won = row["bet"] == winner
-            checked += 1
-            row["verified"] = True
-            row["pm_beat"], row["pm_final"] = beat, final
-            if row.get("void"):
-                # The bot called it too small to grade; the market disagreed and
-                # paid someone. It counts.
-                row["void"] = False
-                row["won"] = truth_won
-                self.score["void"] = max(0, self.score["void"] - 1)
-                self.score["n"] += 1
-                self.score["wins"] += 1 if truth_won else 0
-                for name in row.get("rules") or []:
-                    d = self.score["rules"].setdefault(name, {"n": 0, "wins": 0})
-                    d["n"] += 1
-                    d["wins"] += 1 if truth_won else 0
-                unvoided += 1
-            elif row.get("won") is not None and row["won"] != truth_won:
-                row["won"] = truth_won
-                self.score["wins"] += 1 if truth_won else -1
-                self.score["wins"] = max(0, self.score["wins"])
-                for name in row.get("rules") or []:
-                    d = self.score["rules"].setdefault(name, {"n": 0, "wins": 0})
-                    d["wins"] = max(0, d["wins"] + (1 if truth_won else -1))
-                if t in by_t:
-                    by_t[t]["won"] = truth_won
-                corrected += 1
-        if checked:
-            self._save()
-        if announce and (corrected or unvoided):
-            send_message(self.chat_id,
-                         "🔎 <b>کارنامه با قیمت‌های واقعیِ پلی‌مارکت تصحیح شد</b>\n"
-                         f"{checked} پنجره بررسی شد.\n"
-                         + (f"↔️ <b>{corrected}</b> نتیجه برعکس بود و اصلاح شد.\n"
-                            if corrected else "")
-                         + (f"➕ <b>{unvoided}</b> موردِ «بی‌نتیجه» در واقع نتیجه داشت.\n"
-                            if unvoided else "")
-                         + "\n<i>بات سرِ مرزِ پنجره با فیدِ خودش تسویه می‌کند چون "
-                           "پلی‌مارکت هنوز نتیجه نداده؛ وقتی قیمتِ رسمی آمد، "
-                           "همان جایگزین می‌شود.</i>")
-        return checked, corrected, unvoided
 
     def _track(self, mine):
         """History for one track: the user's AABA rule, or the statistical ones."""
@@ -2664,10 +2215,13 @@ class BreakoutMonitor:
         and the pre-alert so the two can never drift apart.
         """
         hits = []
-        # Rule 1 is evaluated now but decided LAST: whether a shallow break is
-        # dropped or merely flagged depends on whether anything else fired, and
-        # that is not known until the other rules have run.
         sig = breakout_signal(closes)
+        if sig:
+            broke = "بالاتر از سقف" if sig["kind"] == "up" else "پایین‌تر از کف"
+            ratio = f" · نسبتِ نوسان {sig['ratio']:.2f}" if sig["ratio"] is not None else ""
+            hits.append(("۱) شکستِ ۲۰ کندلی", "۵۶٪", sig["bet"],
+                         f"{broke} {BREAKOUT_LOOKBACK} کندلِ اخیر "
+                         f"(${sig['level']:,.2f}){ratio}"))
         if RULE2_ENABLED:
             s2 = rule2_signal(closes)
             if s2:
@@ -2697,12 +2251,6 @@ class BreakoutMonitor:
                 hits.append(("۷) باندِ بولینگر + RSI", "۵۶٪", s7["bet"],
                              f"بسته‌شدن بیرونِ باند (${s7['band']:,.0f}) "
                              f"با RSI={s7['rsi']:.0f}"))
-        # Rule 1 last, and first in the list. It goes to the FRONT because the
-        # scorecard and the golden tier both read `hits` in order, and rule 1 has
-        # always been the opening line of an alert.
-        entry = rule1_entry(sig, accompanied=bool(hits))
-        if entry:
-            hits.insert(0, entry)
         # Quality tier: enough statistical rules pointing the same way, on a
         # genuinely over-extended move. Rule 4 is excluded — it has no edge, so
         # letting it vote would dilute the very thing this tier measures.
@@ -2772,67 +2320,7 @@ class BreakoutMonitor:
                      head + f"\n{arrow}\n{names}\n\n"
                      f"پنجره: <b>{o_et:%I:%M%p ET}</b>  ·  ${price:,.2f}" + foot)
 
-    def _normalise(self, window_start, price):
-        """
-        Put this sample, and the series it joins, on one consistent price level.
-
-        Two ways a foreign price gets in. The history is SEEDED from Binance
-        before any live sample exists, and the live feed FALLS BACK to Binance
-        when every Polygon RPC is down. The two feeds are tens of dollars apart
-        — Chainlink read 64,974.23 for an instant Binance called 65,000.01 —
-        so appending one onto the other fabricates a move of that size. On a
-        night whose median candle is $5 that is a nine-sigma stretch, and the
-        rules duly fire on it.
-
-        Returns the price in series units, or None when it cannot be converted,
-        in which case the caller must skip the window rather than corrupt it.
-        """
-        feed = self.feed_used
-        native = feed == BREAKOUT_FEED
-        if self.align_pending and self.closes:
-            # The buffer is still all Binance. A native sample appended now
-            # would sit in the buffer in LIVE units, and the shift below moves
-            # every element — so that one entry would be shifted a second time,
-            # putting a $46 hole in the series exactly where there was none.
-            # The buffer carries no per-entry marker, so the only safe move is
-            # to refuse the sample until the anchor exists.
-            kl = self._fetch_klines(5) if native else []
-            anchor = next((c for t, c in kl if t == window_start), None)
-            if anchor is None:
-                log.warning("Seeded history not anchored yet (no overlapping "
-                            "candle); skipping this window rather than mixing "
-                            "feeds.")
-                return None
-            off = price - anchor
-            if abs(off) > 0.005:
-                self.closes = [c + off for c in self.closes]
-                log.info("Seeded history shifted %+.2f onto the live feed.", off)
-            self.feed_offset = -off
-            self.align_pending = False
-            return price
-        if not native and self.closes:
-            # Measured fresh every time, never cached. The USDT basis is not a
-            # constant — the same pair read $26 apart one hour and $44 apart the
-            # next — so converting with an offset learned hours ago leaves an
-            # error the same size as the phantom move this exists to prevent.
-            # The call only happens while the primary feed is actually down.
-            kl = self._fetch_klines(5)
-            anchor = next((c for t, c in kl if t == self.last_window), None)
-            if anchor is None:
-                log.warning("Fallback sample cannot be aligned to the series; "
-                            "skipping this window rather than corrupting it.")
-                return None
-            self.feed_offset = anchor - self.closes[-1]
-            log.info("Fallback sample converted by %+.2f onto the series.",
-                     -self.feed_offset)
-            return price - self.feed_offset
-        return price
-
     def _on_window_close(self, window_start, price, lag=0.0, replay=False):
-        if not replay:
-            price = self._normalise(window_start, price)
-            if price is None:
-                return [], None
         # Settle the previous signal BEFORE appending, so `ref` is compared with
         # the close that actually decided it.
         settled = self._settle(price)
@@ -2862,8 +2350,7 @@ class BreakoutMonitor:
                 bet = bets.pop()
                 self.pending = {"bet": bet, "ref": price,
                                 "window": window_start + GRANULARITY,
-                                "rules": rules, "ref_age": self.feed_age,
-                                "feed": self.feed_used}
+                                "rules": rules, "ref_age": self.feed_age}
                 # Log it before trying to send: if the send fails, or we are
                 # replaying an outage, the row is already there waiting to be
                 # reported, and nothing depends on Telegram having worked.
@@ -2948,7 +2435,6 @@ class BreakoutMonitor:
                 # Anything the user was never shown — a send that failed, a
                 # window replayed after an outage — goes out now that there is
                 # clearly a working connection.
-                self._retry_recovery()
                 if self.untold():
                     self.flush_untold()
                 fail = self.err_count = 0
@@ -3087,8 +2573,7 @@ class OddsWatcher:
                 and r.get("up") is not None]
         # Asking for the report is the best moment to chase the outcomes that
         # are still open — on its own thread, because a button press must not
-        # wait on fifteen network calls. This message says how many are pending;
-        # the next one will have them.
+        # wait on fifteen network calls.
         if any(not r.get("winner") for r in rows):
             threading.Thread(target=self._sweep, args=(pmc,), daemon=True).start()
         if not rows:
@@ -3122,7 +2607,9 @@ class OddsWatcher:
                 if n > ODDS_SHOW else "")
 
         # Coverage, stated up front. A missing window is the one failure that
-        # used to be invisible, so the report now says how many it expected.
+        # used to be invisible, so the report now says how many it expected —
+        # and keeps "missing" separate from "not settled yet", which used to
+        # look identical.
         span = int((rows[-1]["t"] - rows[0]["t"]) / GRANULARITY) + 1
         cover = (f"{n}/{span} پنجره"
                  + ("" if n >= span else f"  ·  ⚠️ <b>{span - n} جاافتاده</b>"))
@@ -3229,11 +2716,6 @@ class OddsWatcher:
             n = pmc.resolve_pending()
             if n:
                 log.info("Odds: filled in %d pending outcomes.", n)
-                # Fresh official prices just landed, which is the only moment
-                # the scorecard can be checked against what the market paid.
-                bm = globals().get("BREAKOUT_MONITOR")
-                if bm:
-                    bm.reconcile()
         except Exception as exc:  # noqa: BLE001
             log.warning("resolve_pending: %s", exc)
 
@@ -3410,40 +2892,6 @@ def command_listener(monitor: Monitor):
                         bm.flush_untold()   # mark anything queued as seen
                     else:
                         send_message(chat_id, "سابقه‌ای در دسترس نیست.")
-                elif text.startswith("/feed"):
-                    bm = globals().get("BREAKOUT_MONITOR")
-                    send_message(chat_id, bm.feed_report() if bm
-                                 else "کارنامه‌ای در دسترس نیست.")
-                elif text.startswith("/verify"):
-                    bm = globals().get("BREAKOUT_MONITOR")
-                    if not bm:
-                        send_message(chat_id, "کارنامه‌ای در دسترس نیست.")
-                    else:
-                        parts = text.split()
-                        hrs = 24
-                        if len(parts) > 1:
-                            try:
-                                hrs = max(1, min(720, int(float(parts[1]))))
-                            except ValueError:
-                                pass
-                        ch, co, un = bm.reconcile(hours=hrs, announce=False)
-                        if not ch:
-                            send_message(chat_id,
-                                         "🔎 <b>راستی‌آزمایی</b>\n\nهیچ پنجره‌ای با "
-                                         "قیمتِ رسمیِ پلی‌مارکت پیدا نشد.\n"
-                                         "جمع‌آوریِ بالا/پایین باید روشن باشد — "
-                                         "/oddscollect")
-                        else:
-                            send_message(chat_id,
-                                         f"🔎 <b>راستی‌آزمایی — {hrs} ساعتِ گذشته</b>\n\n"
-                                         f"{ch} پنجره با قیمتِ رسمیِ پلی‌مارکت "
-                                         "مقایسه شد.\n"
-                                         + (f"↔️ <b>{co}</b> نتیجه برعکس بود و "
-                                            "اصلاح شد.\n" if co else
-                                            "✅ همه درست بودند.\n")
-                                         + (f"➕ <b>{un}</b> موردِ «بی‌نتیجه» در واقع "
-                                            "نتیجه داشت.\n" if un else "")
-                                         + f"\nنرخِ اختلاف: <b>{(co+un)/ch*100:.1f}%</b>")
                 elif text.startswith("/oddstest"):
                     bm = globals().get("ODDS_WATCHER")
                     send_message(chat_id, bm.self_test() if bm
