@@ -201,6 +201,72 @@ finally:
     bot.BREAKOUT_FEED = old_feed
 
 # ---------------------------------------------------------------------------
+
+
+
+# =========================================================================== #
+# Findings from the adversarial review, each with the repro that found it.
+# =========================================================================== #
+print("\n10. a failed anchor fetch must NOT let a native sample in unshifted")
+m10 = bot.BreakoutMonitor("1")
+chain = chainlink_series(130, 64950.0)
+m10.closes = [c + OFFSET for c in chain]
+m10.last_window = times[-1]
+m10.align_pending = True
+m10.feed_used = "chainlink"
+m10.pending = None
+m10.signals = []
+m10._fetch_klines = lambda limit: []            # the fetch fails this window
+n_before = len(m10.closes)
+live1 = chain[-1] + 2.0
+m10._on_window_close(times[-1] + G, live1)
+check("window skipped while the anchor is unavailable",
+      len(m10.closes) == n_before and m10.align_pending is True)
+
+# now the fetch works, on the NEXT window
+allt2 = times + [times[-1] + G, times[-1] + 2 * G]
+allc2 = chain + [live1, chain[-1] + 4.0]
+m10._fetch_klines = lambda limit: klines_binance(allt2, allc2)[-limit:]
+m10._on_window_close(times[-1] + 2 * G, chain[-1] + 4.0)
+mv10 = [abs(m10.closes[i] - m10.closes[i - 1]) for i in range(1, len(m10.closes))]
+true_max = max(abs(chain[i] - chain[i - 1]) for i in range(1, len(chain)))
+check("no double-shift once the anchor arrives",
+      max(mv10) < true_max * 3,
+      f"largest move ${max(mv10):.2f} (true max ${true_max:.2f})")
+check("series ends at the live feed's level",
+      abs(m10.closes[-1] - (chain[-1] + 4.0)) < 0.01,
+      f"{m10.closes[-1]:.2f} vs truth {chain[-1] + 4.0:.2f}")
+
+print("\n11. the fallback basis is re-measured, never reused from hours ago")
+m11 = fresh(hist, last_w)
+m11.signals = []
+m11.feed_used = "binance-fallback"
+m11.feed_offset = 26.00                          # a stale basis from hours ago
+drifted = 46.00                                  # what it really is now
+m11._fetch_klines = lambda limit: [(t, c + drifted) for t, c in zip(allt, allc)][-limit:]
+m11._on_window_close(last_w + G, hist[-1] + 3.0 + drifted)
+check("stale cached basis was not used",
+      abs(m11.feed_offset - drifted) < 0.01,
+      f"offset now {m11.feed_offset:.2f}, was 26.00")
+check("converted sample lands at the live level",
+      abs(m11.closes[-1] - (hist[-1] + 3.0)) < 0.5,
+      f"{m11.closes[-1]:.2f} vs truth {hist[-1] + 3.0:.2f}")
+check("no phantom move from a drifted basis",
+      abs(m11.closes[-1] - m11.closes[-2]) < 25)
+
+print("\n12. a fallback sample while the seed is still unanchored is refused")
+m12 = bot.BreakoutMonitor("1")
+m12.closes = [c + OFFSET for c in chain]
+m12.last_window = times[-1]
+m12.align_pending = True
+m12.feed_used = "binance-fallback"
+m12.pending = None
+m12.signals = []
+m12._fetch_klines = lambda limit: klines_binance(allt2, allc2)[-limit:]
+n12 = len(m12.closes)
+m12._on_window_close(times[-1] + G, chain[-1] + 2.0 + OFFSET)
+check("window skipped, nothing appended", len(m12.closes) == n12)
+
 print(f"\n{len(PASS)} passed, {len(FAIL)} failed")
 if FAIL:
     for f in FAIL:
