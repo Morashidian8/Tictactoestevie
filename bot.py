@@ -1654,7 +1654,11 @@ class BreakoutMonitor:
         if anchor is None:
             return kl, None
         off = self.closes[-1] - anchor
-        self.feed_offset = -off          # binance - live, for the fallback path
+        if not self.align_pending:
+            # Only meaningful once the buffer really is in live-feed units;
+            # while it is still the seeded Binance series this would measure
+            # Binance against Binance and record a zero basis.
+            self.feed_offset = -off      # binance - live, for the fallback path
         if abs(off) < 1e-9:
             return kl, 0.0
         return [(t, c + off) for t, c in kl], off
@@ -2785,25 +2789,40 @@ class BreakoutMonitor:
         """
         feed = self.feed_used
         native = feed == BREAKOUT_FEED
-        if self.align_pending and self.closes and native:
-            kl = self._fetch_klines(5)
+        if self.align_pending and self.closes:
+            # The buffer is still all Binance. A native sample appended now
+            # would sit in the buffer in LIVE units, and the shift below moves
+            # every element — so that one entry would be shifted a second time,
+            # putting a $46 hole in the series exactly where there was none.
+            # The buffer carries no per-entry marker, so the only safe move is
+            # to refuse the sample until the anchor exists.
+            kl = self._fetch_klines(5) if native else []
             anchor = next((c for t, c in kl if t == window_start), None)
-            if anchor is not None:
-                off = price - anchor
-                self.feed_offset = -off
-                if abs(off) > 0.005:
-                    self.closes = [c + off for c in self.closes]
-                    log.info("Seeded history shifted %+.2f onto the live feed.", off)
-                self.align_pending = False
+            if anchor is None:
+                log.warning("Seeded history not anchored yet (no overlapping "
+                            "candle); skipping this window rather than mixing "
+                            "feeds.")
+                return None
+            off = price - anchor
+            if abs(off) > 0.005:
+                self.closes = [c + off for c in self.closes]
+                log.info("Seeded history shifted %+.2f onto the live feed.", off)
+            self.feed_offset = -off
+            self.align_pending = False
+            return price
         if not native and self.closes:
-            if self.feed_offset is None:
-                kl = self._fetch_klines(5)
-                anchor = next((c for t, c in kl if t == self.last_window), None)
-                if anchor is None:
-                    log.warning("Fallback sample cannot be aligned to the series; "
-                                "skipping this window rather than corrupting it.")
-                    return None
-                self.feed_offset = anchor - self.closes[-1]
+            # Measured fresh every time, never cached. The USDT basis is not a
+            # constant — the same pair read $26 apart one hour and $44 apart the
+            # next — so converting with an offset learned hours ago leaves an
+            # error the same size as the phantom move this exists to prevent.
+            # The call only happens while the primary feed is actually down.
+            kl = self._fetch_klines(5)
+            anchor = next((c for t, c in kl if t == self.last_window), None)
+            if anchor is None:
+                log.warning("Fallback sample cannot be aligned to the series; "
+                            "skipping this window rather than corrupting it.")
+                return None
+            self.feed_offset = anchor - self.closes[-1]
             log.info("Fallback sample converted by %+.2f onto the series.",
                      -self.feed_offset)
             return price - self.feed_offset
