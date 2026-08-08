@@ -1614,7 +1614,7 @@ class BreakoutMonitor:
                 log.warning("klines: %s failed: %s", host, exc)
         return []
 
-    def _backfill(self, missed, since=None, until=None):
+    def _backfill(self, missed, since=None, until=None, restore=False):
         """
         Replay the windows lost to an outage from real candles.
 
@@ -1655,7 +1655,7 @@ class BreakoutMonitor:
             # told=False, so the catch-up below is just a flush of that queue.
             self._on_window_close(t, c, replay=True)
             n += 1
-        if until is not None:
+        if restore:
             self.closes, self.last_window, self.pending = snapshot
         self.backfilled += n
         log.info("Breakout: backfilled %d missed windows from real candles "
@@ -1689,7 +1689,16 @@ class BreakoutMonitor:
             return False
         now = time.time() if now is None else now
         missed = int((now - self.last_window) // GRANULARITY) - 1
+        if missed <= 0:
+            return False
         if missed <= GAP_TOLERANCE:
+            # One or two missing windows do not invalidate the levels, so the
+            # series is kept — but they were being skipped without ever being
+            # scored, which over a day of small hiccups is a real hole in the
+            # record. Replay them for the scorecard and move on.
+            end = now // GRANULARITY * GRANULARITY - GRANULARITY
+            if not self._backfill(missed, until=end):
+                self.recover_from, self.recover_to = self.last_window, end
             return False
         log.warning("Breakout: %d windows missing (%.1f hours offline).",
                     missed, missed * GRANULARITY / 3600)
@@ -1722,7 +1731,7 @@ class BreakoutMonitor:
         if not self.recover_from:
             return
         missed = int((self.recover_to - self.recover_from) // GRANULARITY)
-        if missed <= GAP_TOLERANCE:
+        if missed <= 0:
             self.recover_from = self.recover_to = None
             return
         if missed + BREAKOUT_HISTORY + 5 > 1000:
@@ -1736,7 +1745,8 @@ class BreakoutMonitor:
             self.recover_from = self.recover_to = None
             self._save()
             return
-        if self._backfill(missed, since=self.recover_from, until=self.recover_to):
+        if self._backfill(missed, since=self.recover_from,
+                          until=self.recover_to, restore=True):
             log.info("Breakout: recovered the outage on retry.")
             self.recover_from = self.recover_to = None
             self._save()
@@ -2058,6 +2068,42 @@ class BreakoutMonitor:
                        + (foot if i + per >= len(rows) else ""))
         return out
 
+    def _period_stats(self, rows):
+        """
+        What the outage actually did to the account, not just which signals fired.
+
+        "Bring the stats for the time I was off" means the ladder result, so the
+        same 3-rung simulation the scorecard uses is run over exactly these rows:
+        a list of ticks and crosses does not tell anyone whether they would have
+        been up or down over those hours.
+        """
+        settled = [r for r in rows if r["won"] is not None]
+        n = len(settled)
+        if not n:
+            return f"\n📋 <b>{len(rows)} سیگنال</b> (هنوز تسویه نشده‌اند)"
+        w = sum(1 for r in settled if r["won"])
+        rung = pnl = busts = streak = worst = 0
+        for r in settled:
+            stake = STAKE_BASE * 2 ** rung
+            if r["won"]:
+                pnl += stake
+                rung = streak = 0
+            else:
+                pnl -= stake
+                rung += 1
+                streak += 1
+                worst = max(worst, streak)
+                if rung >= LADDER_RUNGS:
+                    busts += 1
+                    rung = 0
+        void = len(rows) - n
+        return (f"\n📋 <b>{len(rows)} سیگنال</b> — {w}/{n} برد "
+                f"(<b>{w / n * 100:.0f}%</b>)"
+                + (f"، {void} بی‌نتیجه" if void else "")
+                + f"\n💥 انفجارِ سه‌پله‌ای: <b>{busts}</b>"
+                f"  ·  بلندترین رشتهٔ باخت: <b>{worst}</b>"
+                f"\n💵 با پایهٔ ${STAKE_BASE:,.0f}: <b>${pnl:+,.0f}</b>")
+
     def _send_rows(self, head, rows, foot=""):
         """Send a chunked report. True only if every part got through."""
         ok = True
@@ -2162,17 +2208,15 @@ class BreakoutMonitor:
         rows = self.untold()
         if not rows:
             return False
-        shown = rows[-MISSED_SHOW:]
-        w = sum(1 for r in rows if r["won"])
-        n = sum(1 for r in rows if r["won"] is not None)
+        # EVERY row, not the last fifteen. The rest were being marked told and
+        # never shown again, so a six-hour outage reported a quarter of itself
+        # and silently dropped the other three quarters. _send_rows already
+        # splits into as many messages as it takes.
         head = ((head or "📡 <b>سیگنال‌های جاافتاده</b>\n")
-                + f"\n📋 <b>{len(rows)} سیگنال</b>"
-                + (f" — {w}/{n} برد" if n else "")
-                + (f"  (۱۵ موردِ آخر نشان داده می‌شود)"
-                   if len(rows) > len(shown) else "") + ":\n\n")
+                + self._period_stats(rows) + "\n\n")
         foot = ("\n\n<i>ساعت‌ها ET است و همه مربوط به گذشته‌اند — "
                 "برای ورود نیست، فقط برای آمار.</i>")
-        if not self._send_rows(head, shown, foot):
+        if not self._send_rows(head, rows, foot):
             log.warning("Catch-up report could not be delivered; will retry.")
             return False
         for r in rows:
