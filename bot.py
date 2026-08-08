@@ -1746,16 +1746,14 @@ class BreakoutMonitor:
             return False
         now = time.time() if now is None else now
         missed = int((now - self.last_window) // GRANULARITY) - 1
-        if missed <= 0:
-            return False
         if missed <= GAP_TOLERANCE:
-            # One or two missing windows do not invalidate the levels, so the
-            # series is kept — but they were being skipped without ever being
-            # scored, which over a day of small hiccups is a real hole in the
-            # record. Replay them for the scorecard and move on.
-            end = now // GRANULARITY * GRANULARITY - GRANULARITY
-            if not self._backfill(missed, until=end):
-                self.recover_from, self.recover_to = self.last_window, end
+            # A one or two window hiccup is left alone, exactly as it always was.
+            # Replaying it was added here on a hunch and never asked for, and it
+            # is what dragged Binance candles into a Chainlink series several
+            # times a day: a fabricated $47 move, a signal fired on it, and the
+            # open bet settled against a price the market never traded. The hole
+            # it was meant to close is one or two unscored windows; the hole it
+            # opened was a wrong result. Not a trade worth making.
             return False
         log.warning("Breakout: %d windows missing (%.1f hours offline).",
                     missed, missed * GRANULARITY / 3600)
