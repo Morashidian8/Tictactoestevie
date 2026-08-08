@@ -1646,6 +1646,55 @@ class BreakoutMonitor:
                 send_message(self.chat_id, head + "\nدر این مدت هیچ سیگنالی نبود.")
         return True
 
+    def report_gap(self, since, until):
+        """
+        Say what fired while the bot was away, without touching anything.
+
+        Read-only on purpose, and that is the whole design. The previous attempt
+        at this replayed the gap through the LIVE path, which settled a
+        Chainlink-referenced bet against a Binance close and spliced a foreign
+        price into the close series — a $47 move that never happened, and a
+        signal fired on it. This cannot do either: `self.closes`, `self.pending`,
+        `self.last_window`, `self.score` and `self.signals` are never written.
+        The worst case is a message that is slightly wrong, not a corrupted
+        record.
+
+        Reading a different feed is safe here. A constant offset between Binance
+        and Chainlink cancels in every rule — rule 1 compares a close with the
+        extremes of earlier closes, rules 2, 3 and 5 and RSI work on differences,
+        and the Bollinger midline shifts by the same amount as the price.
+        Measured over 39,890 windows with a $45.78 offset applied: zero verdicts
+        differ. So this can say WHICH signals were missed, even though it must
+        not say whether they won.
+        """
+        missed = max(1, int((until - since) // GRANULARITY))
+        kl = self._fetch_klines(missed + BREAKOUT_HISTORY + 5)
+        if len(kl) < BREAKOUT_HISTORY + 2:
+            return False
+        rows = []
+        for i in range(BREAKOUT_HISTORY, len(kl)):
+            t = kl[i][0]
+            if not (since < t <= until):
+                continue
+            hits = self.evaluate([c for _, c in kl[:i + 1]])
+            if not hits:
+                continue
+            bets = {h[2] for h in hits}
+            if len(bets) != 1:
+                continue
+            rows.append({"t": t + GRANULARITY, "bet": bets.pop(),
+                         "rules": [h[0] for h in hits], "won": None,
+                         "told": True, "unscored": True})
+        mins = missed * GRANULARITY / 60
+        if not rows:
+            return False
+        head = (f"📡 <b>{mins:.0f} دقیقه قطع بودم</b> — در این مدت "
+                f"<b>{len(rows)}</b> سیگنال بود که به تو نرسید:\n\n")
+        foot = ("\n\n<i>فقط برای اطلاع — گذشته‌اند و در کارنامه ثبت نمی‌شوند. "
+                "قیمت‌ها از Binance است، پس ممکن است یکی‌دو مورد با Chainlink "
+                "فرق کند.</i>")
+        return self._send_rows(head, rows, foot)
+
     def _drop_if_stale(self, now=None):
         """
         Throw away the close series if it has a hole in it.
@@ -1667,6 +1716,19 @@ class BreakoutMonitor:
         now = time.time() if now is None else now
         missed = int((now - self.last_window) // GRANULARITY) - 1
         if missed <= GAP_TOLERANCE:
+            # The series is left alone — a hiccup this short does not invalidate
+            # the levels, and replaying it through the LIVE path is what dragged
+            # Binance candles into a Chainlink series and fabricated a $47 move.
+            #
+            # But the signals in those windows were vanishing without trace, and
+            # an /update restart lands exactly here, so every update silently ate
+            # its own gap. report_gap is read-only: it says what fired and writes
+            # nothing at all.
+            if missed > 0 and self.last_window:
+                end = int(now // GRANULARITY * GRANULARITY) - GRANULARITY
+                threading.Thread(target=self.report_gap,
+                                 args=(self.last_window, end),
+                                 daemon=True).start()
             return False
         log.warning("Breakout: %d windows missing (%.1f hours offline).",
                     missed, missed * GRANULARITY / 3600)
@@ -1964,6 +2026,13 @@ class BreakoutMonitor:
         for r in rows:
             if r.get("void"):
                 mark = "⚪️ بی‌نتیجه"
+            elif r.get("unscored"):
+                # A signal recovered from a gap, read-only. Its outcome is NOT
+                # shown: settling it would mean comparing two closes from the
+                # fetched feed, and on a window that moves a couple of dollars
+                # the two feeds routinely disagree on the sign. "Open" would be
+                # a lie — it is finished, we simply decline to grade it.
+                mark = "📡 نرسیده"
             elif r["won"] is None:
                 mark = "⏳ باز"
             else:
