@@ -272,6 +272,24 @@ def rule7(closes, bb_n=RULE7_BB_N, bb_sd=RULE7_BB_SD, rsi_n=RULE7_RSI_N,
     return None
 
 
+RULE8_MA = 20
+RULE8_MULT = 3.5
+
+
+def rule8(closes, ma=RULE8_MA, mult=RULE8_MULT):
+    """Price far from its own 20-candle average, in median moves -> fade."""
+    if len(closes) < 101 + ma:
+        return None
+    avg = sum(closes[-ma:]) / ma
+    med = _median([abs(m) for m in _moves(closes[-101:])])
+    if med <= 0:
+        return None
+    gap = closes[-1] - avg
+    if abs(gap) / med < mult:
+        return None
+    return {"side": "down" if gap > 0 else "up", "times": abs(gap) / med}
+
+
 def golden(closes, need=GOLDEN_RULES, mult=GOLDEN_MULT):
     """Quality tier: >= `need` statistical rules agreeing on an extreme stretch."""
     fired = [r for r in (rule1(closes), rule2(closes), rule3(closes),
@@ -307,12 +325,13 @@ def pool(closes, members=("rule1", "rule2", "rule3", "rule5")):
 
 RULES = {
     "rule1": rule1, "rule2": rule2, "rule3": rule3, "rule4": rule4,
-    "rule5": rule5, "rule6": rule6, "rule7": rule7, "golden": golden,
+    "rule5": rule5, "rule6": rule6, "rule7": rule7, "rule8": rule8,
+    "golden": golden,
 }
 
 # How many closes each rule needs before it can speak. Every backtest starts at
 # WARMUP so that all rules see the same windows and their stats are comparable.
-WARMUP = 106
+WARMUP = 122   # rule 8 needs 101 + its 20-candle average
 
 
 # --- walking the chart ------------------------------------------------------
