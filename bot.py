@@ -162,6 +162,30 @@ RULE7_BB_SD = float(os.environ.get("RULE7_BB_SD", "2.0"))
 RULE7_RSI_N = int(os.environ.get("RULE7_RSI_N", "7"))
 RULE7_RSI_HI = float(os.environ.get("RULE7_RSI_HI", "80"))
 RULE7_RSI_LO = float(os.environ.get("RULE7_RSI_LO", "20"))
+# RULE 8 — fade price that has drifted far from its own 20-candle average.
+#
+# Found by sweeping 181 candidate rules across eight families (oscillators,
+# trend, channels, candlesticks, market structure, volume, statistical,
+# multi-timeframe) over 105,121 real candles, with discovery on the train half
+# only, a 300-occurrence floor, Bonferroni over the candidate count, and an
+# empirical null from shuffling the candle labels — which turned out to be the
+# STRICTER bar (z=3.92 against Bonferroni's 3.28).
+#
+# It is the only survivor that sees something rules 1-7 do not. Those seven fire
+# on just 21.4% of windows; this one adds 19,610 windows a year they never look
+# at, and settles 52.41% there — train 52.5%, test 52.2%, and positive in five
+# of six blocks across the year. Shuffling the labels 200 times never beat it.
+#
+# Defined on closes alone, deliberately: the monitor keeps no highs or lows, so
+# an ATR version could not run here. The median absolute move is the same
+# convention rules 2 and 5 already use, and the ATR and close-only forms score
+# within a few percent of each other.
+#
+# The edge is THIN — 52.4% against a 50% break-even. It survives every control
+# but it has half the margin of rule 6, and a two-cent fill cost erases it.
+RULE8_ENABLED = os.environ.get("RULE8", "1").strip() not in ("0", "false", "no")
+RULE8_MA = int(os.environ.get("RULE8_MA", "20"))
+RULE8_MULT = float(os.environ.get("RULE8_MULT", "3.5"))
 RULE5_ENABLED = os.environ.get("RULE5", "1").strip() not in ("0", "false", "no")
 RULE5_MULT = float(os.environ.get("RULE5_MULT", "5.7"))
 RULE5_SPAN = int(os.environ.get("RULE5_SPAN", "4"))
@@ -1150,6 +1174,31 @@ def rule1_entry(sig, accompanied):
             f"{broke} {BREAKOUT_LOOKBACK} کندلِ اخیر "
             f"(${sig['level']:,.2f}){ratio}{depth_line}")
 
+
+
+def rule8_signal(closes, ma=None, mult=None):
+    """
+    RULE 8 — price far from its own 20-candle average -> fade it.
+
+    Distance is measured in median absolute moves, so the threshold means the
+    same thing in a busy hour and a quiet one. Both directions, because the
+    measurement found both sides real: above the average bet down, below it up.
+    """
+    ma = RULE8_MA if ma is None else ma
+    mult = RULE8_MULT if mult is None else mult
+    if len(closes) < 101 + ma:
+        return None
+    avg = sum(closes[-ma:]) / ma
+    ref = sorted(abs(m) for m in _moves(closes[-101:]))
+    med = ref[len(ref) // 2]
+    if med <= 0:
+        return None
+    gap = closes[-1] - avg
+    times = abs(gap) / med
+    if times < mult:
+        return None
+    return {"bet": "down" if gap > 0 else "up", "avg": avg,
+            "gap": gap, "median": med, "times": times}
 
 
 def breakout_signal(closes, lookback=None, vol_filter=None, vol_th=None):
@@ -2479,6 +2528,19 @@ class BreakoutMonitor:
         entry = rule1_entry(sig, accompanied=bool(hits))
         if entry:
             hits.insert(0, entry)
+        # Rule 8 fills the silence and nothing else. It was measured only on the
+        # windows where rules 1-7 say nothing, so letting it speak over them
+        # would be claiming an edge that was never tested — and it is the
+        # thinnest of the set, so it must never dilute a stronger call.
+        if RULE8_ENABLED and not hits:
+            s8 = rule8_signal(closes)
+            if s8:
+                hits.append(("۸) کشیدگی از میانگینِ ۲۰ کندلی", "۵۲٪", s8["bet"],
+                             f"قیمت ${abs(s8['gap']):,.0f} از میانگینِ ۲۰ کندلی "
+                             f"(${s8['avg']:,.2f}) فاصله دارد = "
+                             f"{s8['times']:.1f}× حرکتِ معمول"
+                             f"\n  <i>لبهٔ نازک — روی ۱۹٬۶۱۰ نمونه ۵۲٫۴٪، و "
+                             f"سربه‌سر ۵۰٪ است</i>"))
         # Quality tier: enough statistical rules pointing the same way, on a
         # genuinely over-extended move. Rule 4 is excluded — it has no edge, so
         # letting it vote would dilute the very thing this tier measures.
