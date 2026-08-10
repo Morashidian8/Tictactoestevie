@@ -400,6 +400,13 @@ def _git(*args, timeout=30):
                           capture_output=True, text=True, timeout=timeout)
 
 
+# The commit this PROCESS loaded, captured once at import. Comparing it with
+# what is on disk is the only way to tell a stale process from a current one —
+# and a stale process is invisible from the outside, which is exactly how a
+# phone kept running week-old rules while every file on disk was up to date.
+RUNNING_VERSION = code_version()
+
+
 def git_pull():
     """
     Pull the branch this checkout is on. Returns (ok, output, moved).
@@ -2318,7 +2325,10 @@ class BreakoutMonitor:
                  f"کندل‌های در حافظه: <b>{len(self.closes)}</b> از {BREAKOUT_HISTORY}",
                  f"کلِ پنجره‌های پردازش‌شده: <b>{self.windows_seen}</b>",
                  f"فید: <b>{self.feed_used}</b>",
-                 f"نسخهٔ کد: <b>{code_version()}</b>  ·  سابقه: {HISTORY_SHOW}"]
+                 f"نسخهٔ کد: <b>{RUNNING_VERSION}</b>  ·  سابقه: {HISTORY_SHOW}"]
+        if code_version() != RUNNING_VERSION:
+            lines.append(f"♻️ <b>روی دیسک نسخهٔ تازه‌تری هست</b> "
+                         f"({code_version()}) — /update بزن تا اجرا شود.")
         if self.last_signal:
             lines.append(f"آخرین سیگنال: <b>{(now - self.last_signal)/60:.0f}</b> دقیقه پیش")
         else:
@@ -3091,10 +3101,25 @@ def command_listener(monitor: Monitor):
                         if not ok:
                             send_message(chat_id,
                                          f"❌ به‌روزرسانی نشد:\n<code>{out}</code>")
-                        elif not moved:
+                        elif not moved and code_version() == RUNNING_VERSION:
                             send_message(chat_id,
                                          f"✅ همین الان جدیدترین نسخه است.\n"
                                          f"نسخه: <b>{code_version()}</b>")
+                        elif not moved:
+                            # Nothing to pull, but the running process is older
+                            # than the files. Happens whenever the pull was done
+                            # from the terminal: git moves, the live process does
+                            # not, and it keeps serving the old rules for ever
+                            # while /update cheerfully reports "already latest".
+                            send_message(chat_id,
+                                         "♻️ فایل‌ها به‌روز بودند ولی پروسه "
+                                         "نسخهٔ قدیمی را اجرا می‌کرد.\n"
+                                         f"در حال اجرا: <b>{RUNNING_VERSION}</b>\n"
+                                         f"روی دیسک: <b>{code_version()}</b>\n\n"
+                                         "🔄 در حال ری‌استارت…")
+                            log.info("Restarting: process %s is behind disk %s.",
+                                     RUNNING_VERSION, code_version())
+                            os._exit(0)
                         else:
                             send_message(chat_id,
                                          f"✅ به‌روز شد به <b>{code_version()}</b>\n"
