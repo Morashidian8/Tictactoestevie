@@ -1724,11 +1724,21 @@ class BreakoutMonitor:
             # an /update restart lands exactly here, so every update silently ate
             # its own gap. report_gap is read-only: it says what fired and writes
             # nothing at all.
-            if missed > 0 and self.last_window:
-                end = int(now // GRANULARITY * GRANULARITY) - GRANULARITY
-                threading.Thread(target=self.report_gap,
-                                 args=(self.last_window, end),
-                                 daemon=True).start()
+            # missed == 1 is NORMAL, not a gap. The loop wakes just after a
+            # boundary and processes `ended = (now//G - 1)*G`, so last_window is
+            # always two windows behind `now` — the arithmetic reads 1 even when
+            # nothing at all was skipped. Reporting on that fired every five
+            # minutes and announced the window being processed right then as
+            # "missed", which is how this landed in the user's chat sixty times
+            # a day.
+            skipped = missed - 1
+            if skipped > 0 and self.last_window:
+                # Only the windows strictly BEFORE the one about to be processed.
+                end = int(now // GRANULARITY * GRANULARITY) - 2 * GRANULARITY
+                if end > self.last_window:
+                    threading.Thread(target=self.report_gap,
+                                     args=(self.last_window, end),
+                                     daemon=True).start()
             return False
         log.warning("Breakout: %d windows missing (%.1f hours offline).",
                     missed, missed * GRANULARITY / 3600)
