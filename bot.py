@@ -1554,6 +1554,11 @@ class BreakoutMonitor:
         self.pre_done = set()     # (boundary, stage) pre-alerts already sent
         self.pre_bet = {}         # boundary -> side promised by the last stage
         self.gap_note = None      # (windows missed, when) after an outage
+        # An outage whose backfill has not succeeded yet. Persisted, because the
+        # retry may only work several restarts later and _seed() destroys the
+        # only other record of where the hole was.
+        self.recover_from = None
+        self.recover_to = None
         self.feed_age = None      # seconds since the sampled round was published
         self.backfilled = 0       # windows scored from replay, not from live alerts
         self._load()
@@ -1580,6 +1585,8 @@ class BreakoutMonitor:
             if isinstance(s.get("signals"), list):
                 self.signals = s["signals"][-SIGNALS_KEEP:]
             self.backfilled = int(s.get("backfilled", 0))
+            self.recover_from = s.get("recover_from") or None
+            self.recover_to = s.get("recover_to") or None
             if self.closes:
                 log.info("Breakout: restored %d closes from %s",
                          len(self.closes), self.STATE_FILE)
@@ -1606,7 +1613,7 @@ class BreakoutMonitor:
                 log.warning("klines: %s failed: %s", host, exc)
         return []
 
-    def _backfill(self, missed):
+    def _backfill(self, missed, until=None, restore=False):
         """
         Replay the windows lost to an outage from real candles.
 
@@ -1627,13 +1634,26 @@ class BreakoutMonitor:
         start = next((i for i, (t, _) in enumerate(kl) if t > self.last_window), None)
         if start is None or start == 0:
             return False          # our last window is not inside this range
+        windows = [(t, c) for t, c in kl[start:] if until is None or t <= until]
+        if not windows:
+            return False
+        # A short gap must be SCORED without disturbing the live series. These
+        # candles come from a different feed than the live sampler, and splicing
+        # one into the other fabricates a move the size of the gap between the
+        # two feeds. Scoring is safe either way: a replayed window's reference
+        # and settle price both come from the SAME fetched series, so the
+        # direction it settles on is right whatever the offset.
+        snapshot = (list(self.closes), self.last_window)
         self.closes = [c for _, c in kl[:start]][-BREAKOUT_HISTORY:]
         n = 0
-        for t, c in kl[start:]:
+        for t, c in windows:
             # Replayed windows log their signals into self.signals with
             # told=False, so the catch-up below is just a flush of that queue.
             self._on_window_close(t, c, replay=True)
             n += 1
+        if restore:
+            self.closes, self.last_window = snapshot
+            self.pending = None   # its settling candle never arrived, and never will
         self.backfilled += n
         log.info("Breakout: backfilled %d missed windows from real candles "
                  "(scorecard stays continuous).", n)
@@ -1646,54 +1666,6 @@ class BreakoutMonitor:
                 send_message(self.chat_id, head + "\nدر این مدت هیچ سیگنالی نبود.")
         return True
 
-    def report_gap(self, since, until):
-        """
-        Say what fired while the bot was away, without touching anything.
-
-        Read-only on purpose, and that is the whole design. The previous attempt
-        at this replayed the gap through the LIVE path, which settled a
-        Chainlink-referenced bet against a Binance close and spliced a foreign
-        price into the close series — a $47 move that never happened, and a
-        signal fired on it. This cannot do either: `self.closes`, `self.pending`,
-        `self.last_window`, `self.score` and `self.signals` are never written.
-        The worst case is a message that is slightly wrong, not a corrupted
-        record.
-
-        Reading a different feed is safe here. A constant offset between Binance
-        and Chainlink cancels in every rule — rule 1 compares a close with the
-        extremes of earlier closes, rules 2, 3 and 5 and RSI work on differences,
-        and the Bollinger midline shifts by the same amount as the price.
-        Measured over 39,890 windows with a $45.78 offset applied: zero verdicts
-        differ. So this can say WHICH signals were missed, even though it must
-        not say whether they won.
-        """
-        missed = max(1, int((until - since) // GRANULARITY))
-        kl = self._fetch_klines(missed + BREAKOUT_HISTORY + 5)
-        if len(kl) < BREAKOUT_HISTORY + 2:
-            return False
-        rows = []
-        for i in range(BREAKOUT_HISTORY, len(kl)):
-            t = kl[i][0]
-            if not (since < t <= until):
-                continue
-            hits = self.evaluate([c for _, c in kl[:i + 1]])
-            if not hits:
-                continue
-            bets = {h[2] for h in hits}
-            if len(bets) != 1:
-                continue
-            rows.append({"t": t + GRANULARITY, "bet": bets.pop(),
-                         "rules": [h[0] for h in hits], "won": None,
-                         "told": True, "unscored": True})
-        mins = missed * GRANULARITY / 60
-        if not rows:
-            return False
-        head = (f"📡 <b>{mins:.0f} دقیقه قطع بودم</b> — در این مدت "
-                f"<b>{len(rows)}</b> سیگنال بود که به تو نرسید:\n\n")
-        foot = ("\n\n<i>فقط برای اطلاع — گذشته‌اند و در کارنامه ثبت نمی‌شوند. "
-                "قیمت‌ها از Binance است، پس ممکن است یکی‌دو مورد با Chainlink "
-                "فرق کند.</i>")
-        return self._send_rows(head, rows, foot)
 
     def _drop_if_stale(self, now=None):
         """
@@ -1715,39 +1687,76 @@ class BreakoutMonitor:
             return False
         now = time.time() if now is None else now
         missed = int((now - self.last_window) // GRANULARITY) - 1
-        if missed <= GAP_TOLERANCE:
-            # The series is left alone — a hiccup this short does not invalidate
-            # the levels, and replaying it through the LIVE path is what dragged
-            # Binance candles into a Chainlink series and fabricated a $47 move.
-            #
-            # But the signals in those windows were vanishing without trace, and
-            # an /update restart lands exactly here, so every update silently ate
-            # its own gap. report_gap is read-only: it says what fired and writes
-            # nothing at all.
-            # missed == 1 is NORMAL, not a gap. The loop wakes just after a
-            # boundary and processes `ended = (now//G - 1)*G`, so last_window is
-            # always two windows behind `now` — the arithmetic reads 1 even when
-            # nothing at all was skipped. Reporting on that fired every five
-            # minutes and announced the window being processed right then as
-            # "missed", which is how this landed in the user's chat sixty times
-            # a day.
-            skipped = missed - 1
-            if skipped > 0 and self.last_window:
-                # Only the windows strictly BEFORE the one about to be processed.
-                end = int(now // GRANULARITY * GRANULARITY) - 2 * GRANULARITY
-                if end > self.last_window:
-                    threading.Thread(target=self.report_gap,
-                                     args=(self.last_window, end),
-                                     daemon=True).start()
+        # The loop wakes just after a boundary and closes `(now//G - 1)*G`, so
+        # last_window trails `now` by two windows even in perfect health and
+        # `missed` reads 1 with nothing lost at all. Only the excess is real.
+        skipped = missed - 1
+        if skipped <= 0:
+            return False                      # healthy — say nothing
+        # The window about to be processed normally is not part of the gap.
+        end = int(now // GRANULARITY * GRANULARITY) - 2 * GRANULARITY
+
+        if skipped <= GAP_TOLERANCE:
+            # Short enough that the levels are still meaningful, so the close
+            # series is kept — but the windows are still SCORED and reported.
+            # A hole in the record is a hole whatever its size.
+            if not self._backfill(skipped, until=end, restore=True):
+                self._remember_gap(end)
             return False
+
         log.warning("Breakout: %d windows missing (%.1f hours offline).",
-                    missed, missed * GRANULARITY / 3600)
+                    skipped, skipped * GRANULARITY / 3600)
         self.pending = None       # the candle that would have settled it never came
-        self.gap_note = (missed, now)
+        self.gap_note = (skipped, now)
         if self._backfill(missed):
+            self.recover_from = self.recover_to = None
             return False          # history rebuilt AND scored; nothing else to do
+        # Could not reach the candles right now — which at startup is the NORMAL
+        # case, because the process comes up before the phone's network does.
+        # Remember the hole: _seed() is about to move last_window to the present
+        # and erase the only other record of it. Seven hours went unreported
+        # exactly this way.
+        self._remember_gap(end)
         self.closes = []          # could not recover the candles — start clean
         return True
+
+    def _remember_gap(self, end):
+        """Park an unrecovered gap so the loop can try again on a live network."""
+        self.recover_from, self.recover_to = self.last_window, end
+        log.warning("Breakout: backfill failed; will retry %s .. %s",
+                    self.recover_from, self.recover_to)
+
+    def _retry_recovery(self):
+        """
+        Try again to replay an outage whose first backfill attempt failed.
+
+        Called from the loop, where the network is demonstrably working — the
+        loop only reaches it after a successful price read. Without this, a
+        single failed fetch in the first second of the process costs every
+        window of the outage, with no error and no second chance. Seven hours
+        vanished exactly that way.
+        """
+        if not self.recover_from:
+            return
+        skipped = int((self.recover_to - self.recover_from) // GRANULARITY)
+        if skipped <= 0:
+            self.recover_from = self.recover_to = None
+            return
+        if skipped + BREAKOUT_HISTORY + 5 > 1000:
+            hours = skipped * GRANULARITY / 3600
+            send_message(self.chat_id,
+                         f"\u26a0\ufe0f <b>{hours:.0f} \u0633\u0627\u0639\u062a \u0642\u0637\u0639\u06cc "
+                         "\u0642\u0627\u0628\u0644\u0650 \u0628\u0627\u0632\u06cc\u0627\u0628\u06cc \u0646\u06cc\u0633\u062a</b>")
+            self.recover_from = self.recover_to = None
+            self._save()
+            return
+        saved, self.last_window = self.last_window, self.recover_from
+        ok = self._backfill(skipped, until=self.recover_to, restore=True)
+        self.last_window = saved
+        if ok:
+            log.info("Breakout: recovered the outage on retry.")
+            self.recover_from = self.recover_to = None
+            self._save()
 
     def _save(self):
         try:
@@ -1758,7 +1767,9 @@ class BreakoutMonitor:
                            "score": self.score,
                            "history": self.history[-HISTORY_KEEP:],
                            "signals": self.signals[-SIGNALS_KEEP:],
-                           "backfilled": self.backfilled}, f)
+                           "backfilled": self.backfilled,
+                           "recover_from": self.recover_from,
+                           "recover_to": self.recover_to}, f)
         except Exception as exc:  # noqa: BLE001 - disk issues must not be fatal
             log.warning("Breakout: could not write %s: %s", self.STATE_FILE, exc)
 
@@ -2175,7 +2186,10 @@ class BreakoutMonitor:
         rows = self.untold()
         if not rows:
             return False
-        shown = rows[-MISSED_SHOW:]
+        # EVERY row. Capping at fifteen while marking ALL of them told meant a
+        # seven-hour outage reported a fraction of itself and silently discarded
+        # the rest. _send_rows already splits into as many messages as needed.
+        shown = rows
         w = sum(1 for r in rows if r["won"])
         n = sum(1 for r in rows if r["won"] is not None)
         head = ((head or "📡 <b>سیگنال‌های جاافتاده</b>\n")
@@ -2629,6 +2643,7 @@ class BreakoutMonitor:
                 # Anything the user was never shown — a send that failed, a
                 # window replayed after an outage — goes out now that there is
                 # clearly a working connection.
+                self._retry_recovery()
                 if self.untold():
                     self.flush_untold()
                 fail = self.err_count = 0
