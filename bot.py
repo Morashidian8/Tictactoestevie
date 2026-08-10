@@ -1947,15 +1947,25 @@ class BreakoutMonitor:
                 # Say it rather than skip it: silence here reads as "the last
                 # signal never resolved", which is a different and worse story.
                 d = row.get("delta")
-                near = f"  <i>({d:+,.2f}$ — زیرِ آستانه)</i>" if d is not None else ""
+                near = (f"  <i>(قیمت فقط {abs(d):,.2f}$ "
+                        f"{'بالا' if d > 0 else 'پایین'} رفت — زیرِ آستانه)</i>"
+                        if d is not None else "")
                 return (f"<b>سیگنالِ قبلی</b> ({et_time(row['t']):%I:%M%p}): "
                         f"⚪️ خیلی نزدیک — بی‌نتیجه{near}\n")
             mark = "✅ برد" if row["won"] else "❌ باخت"
             # The numbers go in the message: a result you cannot check is a
             # result you cannot trust, and one four-cent "win" cost more
             # confidence than every correct call had built.
+            #
+            # But NEVER as a signed dollar figure next to the word "won". This
+            # is the price MOVE, not money, and "برد (-$28.96)" was read as
+            # "won, minus twenty-nine dollars" — a losing trade announced as a
+            # win. It is spelled out instead: which way the price went, and by
+            # how much, with no sign to misread.
             d = row.get("delta")
-            amount = f"  <i>({d:+,.2f}$)</i>" if d is not None else ""
+            amount = (f"  <i>(قیمت {abs(d):,.2f}$ "
+                      f"{'بالا' if d > 0 else 'پایین'} رفت)</i>"
+                      if d is not None else "")
             # Both prices, so the line can be held against Polymarket's own
             # "Price to beat" and "Final price" without trusting anything here.
             pair = ""
