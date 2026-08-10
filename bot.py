@@ -2564,6 +2564,26 @@ class BreakoutMonitor:
 
         hits = self.evaluate(self.closes)
 
+        # A pre-alert that was CONFIRMED and then evaporated used to end in
+        # silence. The stages run at 60s and 30s and nothing runs between the
+        # last stage and the boundary, so when the signal died in those final
+        # seconds the user was left holding "go to your account now" with no
+        # follow-up. The bot's own measurement says this happens to about 13% of
+        # early signals, so silence is the wrong answer often enough to matter.
+        if not replay:
+            promised = self.pre_bet.pop(window_start + GRANULARITY, None)
+            if promised:
+                sides = {h[2] for h in hits} if hits else set()
+                actual = sides.pop() if len(sides) == 1 else None
+                if actual is None:
+                    log.info("PRE-ALERT %s did not survive the close.", promised)
+                    send_message(
+                        self.chat_id,
+                        f"❌ <b>لغو شد</b> — پیش‌هشدارِ "
+                        f"{self._side_label(promised)} تا بسته‌شدنِ کندل دوام "
+                        "نیاورد.\n<i>وارد نشو. حدود ۱۳٪ سیگنال‌های زودهنگام "
+                        "در ثانیه‌های آخر از بین می‌روند.</i>")
+
         log.info("%swindow %s closed at %.2f (%d closes) -> %s",
                  "[replay] " if replay else "",
                  datetime.fromtimestamp(window_start, tz=timezone.utc).strftime("%H:%M"),
