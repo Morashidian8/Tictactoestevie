@@ -72,6 +72,47 @@ stop_loop() {
     fi
 }
 
+# --------------------------------------------------------------------------- #
+# Opening Termux should be enough
+# --------------------------------------------------------------------------- #
+# When Android kills Termux the bot dies with it, and until now the only cure
+# was remembering to type `run_bot.sh start`. That is exactly the checking the
+# user asked not to have to do. A line in .bashrc closes it: every new Termux
+# session runs one health check, so simply opening the app revives the bot.
+#
+# Three properties matter here. It must be silent (a prompt that prints a
+# paragraph is worse than the problem). It must not block (the check can take
+# seconds if a restart is needed, and nobody should watch a prompt hang). And it
+# must be idempotent — re-running install must not stack another copy, which is
+# why the block is fenced by markers and stripped before being rewritten.
+HOOK_BEGIN="# >>> btc-bot watchdog >>>"
+HOOK_END="# <<< btc-bot watchdog <<<"
+
+strip_shell_hook() {
+    local rc="$HOME/.bashrc"
+    [ -f "$rc" ] || return 0
+    sed -i.btcbak "\|^$HOOK_BEGIN\$|,\|^$HOOK_END\$|d" "$rc" 2>/dev/null \
+        && rm -f "$rc.btcbak"
+}
+
+install_shell_hook() {
+    local rc="$HOME/.bashrc"
+    touch "$rc" 2>/dev/null || { say "could not write $rc — shell hook skipped."; return 0; }
+    strip_shell_hook
+    cat >>"$rc" <<EOF
+$HOOK_BEGIN
+# Revive the BTC bot whenever a Termux session opens. Interactive shells only,
+# backgrounded so it never holds the prompt, silent unless something was wrong
+# (a restart announces itself on Telegram instead).
+case \$- in *i*)
+    [ -f "$DIR/watchdog.sh" ] && ( bash "$DIR/watchdog.sh" check >/dev/null 2>&1 & )
+    ;;
+esac
+$HOOK_END
+EOF
+    say "shell hook added to ~/.bashrc — opening Termux now revives the bot."
+}
+
 mtime() { [ -f "$1" ] && stat -c %Y "$1" 2>/dev/null || echo 0; }
 
 running() {
@@ -189,6 +230,7 @@ case "${1:-check}" in
             echo $! >"$LOOPFILE"
             say "fallback loop started (pid $!)."
         fi
+        install_shell_hook
         # Also start on reboot, if Termux:Boot is installed.
         mkdir -p "$HOME/.termux/boot" 2>/dev/null && {
             cat >"$HOME/.termux/boot/btc-bot.sh" <<EOF
@@ -212,8 +254,9 @@ EOF
     remove)
         have termux-job-scheduler && run_limited 20 termux-job-scheduler --cancel-job-id 8412
         stop_loop
+        strip_shell_hook
         rm -f "$HOME/.termux/boot/btc-bot.sh"
-        say "watchdog removed."
+        say "watchdog removed (shell hook, boot script and schedule all gone)."
         ;;
     status)
         echo "supervisor: $(running && echo RUNNING || echo 'NOT running')"
@@ -225,6 +268,11 @@ EOF
         [ -f "$STOPFLAG" ] && echo "stop flag:  SET — bot is off on purpose"
         if [ -f "$LOOPFILE" ] && kill -0 "$(cat "$LOOPFILE")" 2>/dev/null; then
             echo "fallback:   in-Termux loop running (pid $(cat "$LOOPFILE"))"
+        fi
+        if grep -qF "$HOOK_BEGIN" "$HOME/.bashrc" 2>/dev/null; then
+            echo "shell hook: installed — opening Termux revives the bot"
+        else
+            echo "shell hook: NOT installed (bash watchdog.sh install)"
         fi
         # Same hang risk as install: ask, but never wait forever for an answer.
         if have termux-job-scheduler; then
