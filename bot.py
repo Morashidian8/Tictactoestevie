@@ -3502,10 +3502,11 @@ def main():
         log.info("Odds watcher ready (%s).", "ON" if odds.on else "OFF — /odds")
         log.info(
             "Breakout-fade alerts ON | feed=%s lookback=%d vol_filter=%s | "
-            "history=%d rules=1,2,3%s%s%s%s",
+            "history=%d rules=1,2,3%s%s%s%s%s",
             BREAKOUT_FEED, BREAKOUT_LOOKBACK, BREAKOUT_VOL_FILTER, HISTORY_SHOW,
             ",5" if RULE5_ENABLED else "", ",6" if RULE6_ENABLED else "",
-            ",7" if RULE7_ENABLED else "", ",4" if RULE4_ENABLED else "",
+            ",7" if RULE7_ENABLED else "", ",8" if RULE8_ENABLED else "",
+            ",4" if RULE4_ENABLED else "",
         )
         keep_alive("breakout", breakout.run)
 
