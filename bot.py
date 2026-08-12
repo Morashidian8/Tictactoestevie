@@ -1187,7 +1187,14 @@ def rule1_entry(sig, accompanied):
             # 56.93% vs 54.78% is z=+1.84, which does not clear 1.96.
             depth_line += "\n  <i>برتریِ این سطح هنوز قطعی نیست (z=+۱٫۸۴)</i>"
     else:
-        acc_label, depth_line = "۵۶٪", ""
+        # No depth means fewer than 101 closes, which means the volatility filter
+        # did not run either — the two need the same history. Printing the
+        # measured rule's 56% here was the worst kind of wrong: the number was
+        # right for a rule that was not the one firing. Say what is missing.
+        acc_label = "⏳ نامعلوم"
+        depth_line = ("\n  ⏳ <b>عمقِ شکست هنوز اندازه‌گیری نشده</b> — تاریخچه "
+                      "کامل نیست. فیلترِ نوسان هم اعمال نشده، پس این سیگنال "
+                      "همان قانونِ ۵۶٪ نیست و ضعیف‌تر است. /status را ببین.")
     return ("۱) شکستِ ۲۰ کندلی", acc_label, sig["bet"],
             f"{broke} {BREAKOUT_LOOKBACK} کندلِ اخیر "
             f"(${sig['level']:,.2f}){ratio}{depth_line}")
@@ -1302,6 +1309,12 @@ BREAKOUT_DEPTH_TIERS = (
 # confidence interval overlapping every other, and not even monotonic. Offering
 # four labels would be inventing a precision the data does not contain.
 BREAKOUT_DEPTH_MIN = float(os.environ.get("BREAKOUT_DEPTH_MIN", "0.5"))
+
+# Closes needed before rule 1 is the rule that was measured: 101 gives the 100
+# returns the volatility filter and the depth median are both built on. Below
+# this the rule still fires arithmetically, but with no filter and no depth —
+# which is a different, unmeasured rule wearing the same name.
+BREAKOUT_FULL_HISTORY = 101
 
 
 # --- Clock helpers ----------------------------------------------------------
@@ -1858,7 +1871,15 @@ class BreakoutMonitor:
         recent series matters (rolling extremes and a volatility ratio), and the
         seeded values age out of the window within ~11 hours of live sampling.
         """
-        if len(self.closes) >= BREAKOUT_LOOKBACK + 2:
+        # Rule 1 can be COMPUTED from 22 closes, but the rule that was MEASURED —
+        # the one whose 56% is printed on every alert — includes the volatility
+        # filter and the depth tier, and both need 101 closes for 100 returns.
+        # This guard used to stop at BREAKOUT_LOOKBACK + 2, i.e. the bare minimum
+        # to take a max and a min, so after any rebuild the bot decided it had
+        # "enough" history at 22 and stopped seeding. It then spent the next eight
+        # hours firing an unfiltered, undepthed rule under the measured rule's
+        # name. The threshold has to be what the rule needs, not what it tolerates.
+        if len(self.closes) >= BREAKOUT_FULL_HISTORY:
             return
         try:
             rows = None
@@ -1880,7 +1901,15 @@ class BreakoutMonitor:
             closed = [row for row in rows if int(row[6]) / 1000.0 <= now]
             self.closes = [float(row[4]) for row in closed][-BREAKOUT_HISTORY:]
             if closed:
-                self.last_window = int(closed[-1][0]) // 1000 // GRANULARITY * GRANULARITY
+                seeded_window = (int(closed[-1][0]) // 1000
+                                 // GRANULARITY * GRANULARITY)
+                # Only ever forward. Seeding used to run exclusively on a series
+                # too short to have a meaningful last_window, so assigning it was
+                # safe; now that it also runs at 22-100 closes it can meet a
+                # restored state that is AHEAD of Binance's last closed kline.
+                # Moving the marker back would make the loop re-process windows
+                # it has already alerted and scored — the same signal twice.
+                self.last_window = max(self.last_window, seeded_window)
             self.seeded_from = "binance"
             log.info("Breakout: seeded %d closes from Binance (levels refine as "
                      "live %s samples replace them).", len(self.closes), BREAKOUT_FEED)
@@ -2390,7 +2419,17 @@ class BreakoutMonitor:
         lines = [f"🩺 <b>سلامتِ موتورِ سیگنال</b>\n", f"وضعیت: {head}",
                  f"آخرین کندلِ نمونه‌برداری‌شده: <b>{age/60:.1f}</b> دقیقه پیش "
                  f"(باید زیر ۵ باشد)",
-                 f"کندل‌های در حافظه: <b>{len(self.closes)}</b> از {BREAKOUT_HISTORY}",
+                 f"کندل‌های در حافظه: <b>{len(self.closes)}</b> از {BREAKOUT_HISTORY}",]
+        if len(self.closes) < BREAKOUT_FULL_HISTORY:
+            short = BREAKOUT_FULL_HISTORY - len(self.closes)
+            lines.append(
+                f"⚠️ <b>زیرِ {BREAKOUT_FULL_HISTORY} کندل</b> — فیلترِ نوسان و "
+                f"عمقِ شکست هیچ‌کدام کار نمی‌کنند. {short} کندلِ دیگر لازم است "
+                f"(≈{short * GRANULARITY / 3600:.1f} ساعت اگر تاریخچه از "
+                f"بایننس نیاید). سیگنال‌های قانونِ ۱ تا آن موقع ضعیف‌ترند.")
+        if self.seeded_from:
+            lines.append(f"تاریخچهٔ اولیه از: <b>{self.seeded_from}</b>")
+        lines += [
                  f"کلِ پنجره‌های پردازش‌شده: <b>{self.windows_seen}</b>",
                  f"فید: <b>{self.feed_used}</b>",
                  f"نسخهٔ کد: <b>{RUNNING_VERSION}</b>  ·  سابقه: {HISTORY_SHOW}"]
