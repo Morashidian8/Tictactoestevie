@@ -34,6 +34,10 @@ LOOPFILE="$DIR/.watchdog.loop.pid"
 # pause or a phone doze never trips it; short enough that a real wedge is caught
 # within one window of it mattering.
 STALE_AFTER=${STALE_AFTER:-900}
+# Windows close every 5 minutes, so four missed in a row is not a quiet market —
+# it is a loop that has stopped advancing. Kept looser than STALE_AFTER because
+# a single slow or skipped boundary is normal and must not trigger a restart.
+WINDOW_STALE=${WINDOW_STALE:-1200}
 # A fresh start has not had time to beat yet. Judging it by the heartbeat would
 # restart it immediately, forever.
 BOOT_GRACE=${BOOT_GRACE:-180}
@@ -185,8 +189,27 @@ check() {
     age=$(( $(now) - $(mtime "$BEAT") ))
     if [ "$age" -gt "$STALE_AFTER" ]; then
         restart "heartbeat ${age}s old (limit ${STALE_AFTER}s)"
+        return 0
+    fi
+
+    # A beating heart is not a working bot. The loop turns every few seconds
+    # while merely waiting for the next boundary, so the timestamp above only
+    # proves the thread is scheduled. The third field is the last window the
+    # loop actually PROCESSED — if that stops advancing while the timestamp
+    # keeps refreshing, the bot is awake, healthy-looking, and silent. That is
+    # the shape of "no signals for two hours" with nothing in the log.
+    local win win_age
+    win=$(awk '{print $3+0}' "$BEAT" 2>/dev/null)
+    win=${win:-0}
+    if [ "$win" -gt 0 ]; then
+        win_age=$(( $(now) - win ))
+        if [ "$win_age" -gt "$WINDOW_STALE" ]; then
+            restart "loop alive but no window processed for ${win_age}s"
+            return 0
+        fi
+        say "healthy — heartbeat ${age}s old, last window ${win_age}s ago."
     else
-        say "healthy — heartbeat ${age}s old."
+        say "healthy — heartbeat ${age}s old (no window marker yet)."
     fi
 }
 
@@ -261,7 +284,13 @@ EOF
     status)
         echo "supervisor: $(running && echo RUNNING || echo 'NOT running')"
         if [ -f "$BEAT" ]; then
-            echo "heartbeat:  $(( $(now) - $(mtime "$BEAT") ))s old  ($(cat "$BEAT"))"
+            echo "heartbeat:  $(( $(now) - $(mtime "$BEAT") ))s old"
+            w=$(awk '{print $3+0}' "$BEAT" 2>/dev/null); w=${w:-0}
+            if [ "$w" -gt 0 ]; then
+                echo "last window: $(( $(now) - w ))s ago (limit ${WINDOW_STALE}s)"
+            else
+                echo "last window: none processed yet"
+            fi
         else
             echo "heartbeat:  (none yet)"
         fi

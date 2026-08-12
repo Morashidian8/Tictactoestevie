@@ -111,11 +111,21 @@ GAP_TOLERANCE = int(os.environ.get("GAP_TOLERANCE", "2"))
 HEARTBEAT_FILE = os.environ.get("HEARTBEAT_FILE", ".bot.heartbeat")
 
 
-def beat(what="loop"):
-    """Record that a working loop just came round. Never raises."""
+def beat(what="loop", window=0):
+    """
+    Record that a working loop just came round. Never raises.
+
+    `window` is the last window the loop actually PROCESSED, and it is the more
+    important of the two numbers. The loop turns every few seconds even when it
+    is only waiting for the next boundary, so a timestamp alone proves nothing
+    beyond "the thread is scheduled". A loop that has gone round ten thousand
+    times without processing a window — a marker stuck in the future, a boundary
+    condition that never becomes true — beats perfectly while sending nothing,
+    which is indistinguishable from health at exactly the moment it matters.
+    """
     try:
         with open(HEARTBEAT_FILE, "w") as f:
-            f.write(f"{time.time():.0f} {what}\n")
+            f.write(f"{time.time():.0f} {what} {int(window)}\n")
     except OSError:
         pass
 
@@ -2756,7 +2766,7 @@ class BreakoutMonitor:
             # heartbeat means "the loop is turning" and not "the network is up".
             # A network outage is already handled by the retry below; only a
             # wedge should look like a wedge.
-            beat("breakout")
+            beat("breakout", self.last_window)
             now = time.time()
             ended = (int(now) // GRANULARITY - 1) * GRANULARITY
             if ended <= self.last_window:
