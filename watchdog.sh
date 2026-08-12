@@ -28,6 +28,7 @@ LOOPPID="$DIR/.bot.loop.pid"
 STOPFLAG="$DIR/.bot.stop"
 BEAT="$DIR/.bot.heartbeat"
 LOG="$DIR/watchdog.log"
+LOOPFILE="$DIR/.watchdog.loop.pid"
 
 # Three missed 5-minute windows. Long enough that a slow network, a pre-alert
 # pause or a phone doze never trips it; short enough that a real wedge is caught
@@ -41,6 +42,35 @@ PERIOD_MS=${PERIOD_MS:-900000}
 have() { command -v "$1" >/dev/null 2>&1; }
 now() { date +%s; }
 say() { echo "$(date '+%Y-%m-%d %H:%M:%S') | $*" >>"$LOG"; echo "$*"; }
+
+# Run a command with a time limit, whether or not coreutils' `timeout` is here.
+run_limited() {
+    local secs="$1"; shift
+    if have timeout; then
+        timeout "$secs" "$@" >/dev/null 2>&1
+        return $?
+    fi
+    "$@" >/dev/null 2>&1 &
+    local pid=$! i=0
+    while kill -0 "$pid" 2>/dev/null; do
+        i=$((i + 1))
+        [ "$i" -ge "$secs" ] && { kill "$pid" 2>/dev/null; return 124; }
+        sleep 1
+    done
+    wait "$pid"
+}
+
+# The fallback loop is tracked by pidfile rather than found again with
+# `pkill -f`. A -f pattern matches any process whose command line merely
+# CONTAINS the text — including the shell that is running this script if the
+# user happened to type the pattern, which during testing killed the installer
+# mid-run and left no output to explain why.
+stop_loop() {
+    if [ -f "$LOOPFILE" ]; then
+        kill "$(cat "$LOOPFILE" 2>/dev/null)" 2>/dev/null
+        rm -f "$LOOPFILE"
+    fi
+}
 
 mtime() { [ -f "$1" ] && stat -c %Y "$1" 2>/dev/null || echo 0; }
 
@@ -124,22 +154,39 @@ case "${1:-check}" in
         check
         ;;
     install)
+        chmod +x "$DIR/watchdog.sh" 2>/dev/null   # job-scheduler execs this file
+        ok=0
         if have termux-job-scheduler; then
-            termux-job-scheduler \
-                --script "$DIR/watchdog.sh" \
-                --job-id 8412 \
-                --period-ms "$PERIOD_MS" \
-                --persisted true \
-                --network any
-            say "scheduled with Android every $((PERIOD_MS / 60000)) min (job 8412, persisted)."
+            # Wrapped in a timeout because the `termux-*` commands talk to the
+            # Termux:API *app*, not the package. With the package installed and
+            # the app missing, this call blocks forever waiting for an answer
+            # that never comes — and since run_bot.sh calls install right after
+            # starting the bot, that hang holds the whole start command open.
+            # Protecting the bot from its own watchdog matters more than the
+            # watchdog getting installed.
+            if run_limited 20 termux-job-scheduler \
+                    --script "$DIR/watchdog.sh" \
+                    --job-id 8412 \
+                    --period-ms "$PERIOD_MS" \
+                    --persisted true \
+                    --network any; then
+                ok=1
+                say "scheduled with Android every $((PERIOD_MS / 60000)) min (job 8412, persisted)."
+            else
+                say "termux-job-scheduler did not answer within 20s."
+                say "The Termux:API *app* is probably missing — the package"
+                say "alone is not enough. Install it from the same store you"
+                say "installed Termux from, then re-run: bash watchdog.sh install"
+            fi
         else
-            say "termux-job-scheduler not found — install Termux:API for the"
-            say "strongest protection:  pkg install termux-api"
-            say "(and install the Termux:API app from the same store as Termux)"
-            say "Falling back to an in-Termux loop, which does NOT survive"
-            say "Android killing Termux."
-            pkill -f "watchdog.sh _loop" 2>/dev/null
+            say "termux-job-scheduler not found (pkg install termux-api)."
+        fi
+        if [ "$ok" = 0 ]; then
+            say "Falling back to an in-Termux loop — it works, but does NOT"
+            say "survive Android killing Termux."
+            stop_loop
             setsid bash "$0" _loop </dev/null >/dev/null 2>&1 &
+            echo $! >"$LOOPFILE"
             say "fallback loop started (pid $!)."
         fi
         # Also start on reboot, if Termux:Boot is installed.
@@ -163,8 +210,8 @@ EOF
         done
         ;;
     remove)
-        have termux-job-scheduler && termux-job-scheduler --cancel-job-id 8412
-        pkill -f "watchdog.sh _loop" 2>/dev/null
+        have termux-job-scheduler && run_limited 20 termux-job-scheduler --cancel-job-id 8412
+        stop_loop
         rm -f "$HOME/.termux/boot/btc-bot.sh"
         say "watchdog removed."
         ;;
@@ -176,7 +223,17 @@ EOF
             echo "heartbeat:  (none yet)"
         fi
         [ -f "$STOPFLAG" ] && echo "stop flag:  SET — bot is off on purpose"
-        have termux-job-scheduler && termux-job-scheduler --pending 2>/dev/null | grep -A2 8412
+        if [ -f "$LOOPFILE" ] && kill -0 "$(cat "$LOOPFILE")" 2>/dev/null; then
+            echo "fallback:   in-Termux loop running (pid $(cat "$LOOPFILE"))"
+        fi
+        # Same hang risk as install: ask, but never wait forever for an answer.
+        if have termux-job-scheduler; then
+            if run_limited 15 termux-job-scheduler --pending; then
+                echo "android job: $(termux-job-scheduler --pending 2>/dev/null | grep -c 8412) entr(y/ies) for 8412"
+            else
+                echo "android job: Termux:API app not answering — install the APP, not just the package"
+            fi
+        fi
         [ -f "$LOG" ] && { echo "--- last 10 watchdog lines ---"; tail -n 10 "$LOG"; }
         ;;
     *)

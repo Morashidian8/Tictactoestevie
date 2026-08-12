@@ -87,8 +87,20 @@ case "${1:-start}" in
         # group live. Hand a second copy of the job to Android itself, which
         # outlives Termux being swiped away. Skipped when the watchdog is what
         # called us, so a restart does not re-register on every cycle.
-        if [ -x "$DIR/watchdog.sh" ] && [ "${WATCHDOG_CALLING:-}" != "1" ]; then
-            bash "$DIR/watchdog.sh" install 2>/dev/null | sed 's/^/  /'
+        #
+        # Tested with -f, not -x, and the bit is set here rather than assumed:
+        # depending on how the repo was cloned the executable bit may not have
+        # survived, and an -x test then silently skipped this whole block — the
+        # watchdog looked installed because nothing said otherwise. The bit is
+        # still needed, because termux-job-scheduler --script execs the file
+        # directly; it just must not be the thing that decides whether we try.
+        # stderr is deliberately NOT discarded: if the scheduler refuses the
+        # job, that message is the only warning you would get.
+        if [ -f "$DIR/watchdog.sh" ] && [ "${WATCHDOG_CALLING:-}" != "1" ]; then
+            chmod +x "$DIR/watchdog.sh" 2>/dev/null
+            bash "$DIR/watchdog.sh" install 2>&1 | sed 's/^/  /'
+        else
+            [ -f "$DIR/watchdog.sh" ] || echo "  note: watchdog.sh missing — no Android-level restart."
         fi
         ;;
     _supervise)
