@@ -101,6 +101,24 @@ BOUNDARY_LAG = float(os.environ.get("BOUNDARY_LAG", "2"))
 # a single enormous candle.
 GAP_TOLERANCE = int(os.environ.get("GAP_TOLERANCE", "2"))
 
+# --- Heartbeat ---------------------------------------------------------------
+# A process that is alive is not the same as a process that is working. The one
+# failure the supervisor in run_bot.sh cannot see is a wedged loop: the thread
+# blocks forever on a socket, or the phone suspends mid-sleep, and bot.py sits
+# there as a healthy-looking pid producing nothing. So the working loops stamp a
+# file every pass; anything outside the process can then ask "when did this last
+# actually do something?" instead of "does the pid exist?".
+HEARTBEAT_FILE = os.environ.get("HEARTBEAT_FILE", ".bot.heartbeat")
+
+
+def beat(what="loop"):
+    """Record that a working loop just came round. Never raises."""
+    try:
+        with open(HEARTBEAT_FILE, "w") as f:
+            f.write(f"{time.time():.0f} {what}\n")
+    except OSError:
+        pass
+
 # --- RULES 2 and 3: the other two mean-reversion edges -----------------------
 # Both are stated in terms of close-to-close moves, because that is all the
 # settlement feed gives us — and it is also exactly what Polymarket settles on.
@@ -1545,6 +1563,7 @@ class Monitor:
             if max_runtime is not None and time.time() - started >= max_runtime:
                 log.info("Max runtime (%ss) reached; exiting cleanly.", max_runtime)
                 return
+            beat("alternation")
             try:
                 self.refresh_threshold(time.time())
                 candles = fetch_candles()
@@ -2694,6 +2713,11 @@ class BreakoutMonitor:
             if max_runtime is not None and time.time() - started >= max_runtime:
                 log.info("Breakout: max runtime reached; exiting.")
                 return
+            # Stamped at the TOP of the pass, before any network call, so the
+            # heartbeat means "the loop is turning" and not "the network is up".
+            # A network outage is already handled by the retry below; only a
+            # wedge should look like a wedge.
+            beat("breakout")
             now = time.time()
             ended = (int(now) // GRANULARITY - 1) * GRANULARITY
             if ended <= self.last_window:
@@ -3356,6 +3380,53 @@ def command_listener(monitor: Monitor):
             _net.ok()
 
 
+# ---------------------------------------------------------------------------
+# Worker supervision
+# ---------------------------------------------------------------------------
+_WORKERS = {}   # name -> [thread, target]
+
+
+def keep_alive(name, target):
+    """Start `target` in a daemon thread and remember how to restart it."""
+    t = threading.Thread(target=target, daemon=True, name=name)
+    t.start()
+    _WORKERS[name] = [t, target]
+    return t
+
+
+def watch_workers(poll=30):
+    """
+    Never return; restart any worker thread that has died.
+
+    Every loop below already catches Exception, so a thread that exits got past
+    that — and when it did, the main thread was parked in a bare hour-long
+    sleep. The process stayed up, the pid stayed valid, run_bot.sh's supervisor
+    saw a perfectly healthy bot, and no signal was sent for as long as it took
+    someone to notice. Restarting in-process is both faster than bouncing the
+    whole thing and cheaper: the rolling close series stays in memory instead of
+    being re-seeded from the network.
+
+    Deliberately does NOT touch the heartbeat. A wedged worker with a healthy
+    main thread is the case the external watchdog exists to catch, and stamping
+    the file here would hide exactly that.
+    """
+    while True:
+        time.sleep(poll)
+        for name, entry in _WORKERS.items():
+            if entry[0].is_alive():
+                continue
+            log.error("Worker %r died; restarting it.", name)
+            entry[0] = threading.Thread(target=entry[1], daemon=True, name=name)
+            entry[0].start()
+            try:
+                cid = load_chat_id()
+                if cid:
+                    send_message(cid, f"♻️ بخشِ «{name}» متوقف شده بود و "
+                                      f"دوباره راه‌اندازی شد. کاری لازم نیست.")
+            except Exception:  # noqa: BLE001 - notifying must never kill the watcher
+                pass
+
+
 def main():
     log.info("=== bot.py version %s ===", code_version())
     if not TELEGRAM_TOKEN:
@@ -3369,10 +3440,7 @@ def main():
         log.info("Using chat_id %s remembered from a previous /start.", chat_id)
     monitor = Monitor(chat_id)
 
-    listener = threading.Thread(
-        target=command_listener, args=(monitor,), daemon=True
-    )
-    listener.start()
+    keep_alive("listener", lambda: command_listener(monitor))
 
     if STRATEGY in ("breakout", "both"):
         breakout = BreakoutMonitor(chat_id, chat_source=monitor)
@@ -3381,7 +3449,7 @@ def main():
         globals()["BREAKOUT_MONITOR"] = breakout
         odds = OddsWatcher(monitor)
         globals()["ODDS_WATCHER"] = odds
-        threading.Thread(target=odds.run, daemon=True).start()
+        keep_alive("odds", odds.run)
         log.info("Odds watcher ready (%s).", "ON" if odds.on else "OFF — /odds")
         log.info(
             "Breakout-fade alerts ON | feed=%s lookback=%d vol_filter=%s | "
@@ -3390,22 +3458,29 @@ def main():
             ",5" if RULE5_ENABLED else "", ",6" if RULE6_ENABLED else "",
             ",7" if RULE7_ENABLED else "", ",4" if RULE4_ENABLED else "",
         )
-        threading.Thread(target=breakout.run, daemon=True).start()
+        keep_alive("breakout", breakout.run)
 
-    if STRATEGY == "breakout":
-        # Only the breakout alerts were requested; park the main thread on it
-        # instead of also running the alternation monitor.
-        while True:
-            time.sleep(3600)
+    if STRATEGY != "breakout":
+        log.info(
+            "Starting BTC candle alternation bot | product=%s granularity=%ds "
+            "threshold=%d",
+            PRODUCT,
+            GRANULARITY,
+            ALTERNATION_THRESHOLD,
+        )
+        keep_alive("alternation", monitor.run)
 
-    log.info(
-        "Starting BTC candle alternation bot | product=%s granularity=%ds "
-        "threshold=%d",
-        PRODUCT,
-        GRANULARITY,
-        ALTERNATION_THRESHOLD,
-    )
-    monitor.run()
+    # The main thread does nothing but keep the others alive. It used to BE one
+    # of the workers, which meant the one thread nobody was watching was the one
+    # holding the process open.
+    log.info("Worker supervisor active over: %s", ", ".join(_WORKERS))
+    # Only stamped once the workers are actually up — never at the top of main().
+    # A bot that dies on startup gets restarted by the supervisor every few
+    # seconds, and a heartbeat written before the workers exist would be
+    # refreshed by every one of those failed attempts: a crash loop would read
+    # as perfect health and the watchdog would never fire.
+    beat("startup")
+    watch_workers()
 
 
 if __name__ == "__main__":

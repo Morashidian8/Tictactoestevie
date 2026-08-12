@@ -83,6 +83,13 @@ case "${1:-start}" in
         echo "started. supervisor pid $(cat "$LOOPPID")"
         echo "log: $LOG   (follow it with: bash run_bot.sh log)"
         echo "it will keep running — and restart itself — until: bash run_bot.sh stop"
+        # The supervisor here only survives as long as Android lets this process
+        # group live. Hand a second copy of the job to Android itself, which
+        # outlives Termux being swiped away. Skipped when the watchdog is what
+        # called us, so a restart does not re-register on every cycle.
+        if [ -x "$DIR/watchdog.sh" ] && [ "${WATCHDOG_CALLING:-}" != "1" ]; then
+            bash "$DIR/watchdog.sh" install 2>/dev/null | sed 's/^/  /'
+        fi
         ;;
     _supervise)
         supervise
@@ -102,6 +109,13 @@ case "${1:-start}" in
             echo "RUNNING (supervisor pid $(cat "$LOOPPID"), bot pid $(cat "$PIDFILE" 2>/dev/null))"
         else
             echo "NOT running"
+        fi
+        # A live pid is not the same as a working loop, so report the heartbeat
+        # too — that is the number that says whether it is actually doing its job.
+        if [ -f "$DIR/.bot.heartbeat" ]; then
+            echo "heartbeat: $(( $(date +%s) - $(stat -c %Y "$DIR/.bot.heartbeat") ))s old"
+        else
+            echo "heartbeat: (none yet)"
         fi
         [ -f "$LOG" ] && { echo "--- last 12 log lines ---"; tail -n 12 "$LOG"; }
         ;;
