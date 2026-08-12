@@ -658,6 +658,7 @@ def handle_callback(monitor, cq):
 # Persistent Telegram menu (a reply keyboard that stays under the text box)
 # ---------------------------------------------------------------------------
 MENU_STATUS = "📊 وضعیت"
+MENU_WHY = "🔍 چرا سیگنال نیست"
 MENU_REFRESH = "🔄 منو"
 MENU_SCORE = "🎯 کارنامه"
 MENU_UPDATE = "⬆️ به‌روزرسانی"
@@ -711,6 +712,7 @@ def set_bot_commands():
         {"command": "threshold", "description": "تغییر آستانهٔ هشدار (۲ تا ۷ تناوب)"},
         {"command": "score", "description": "کارنامهٔ سیگنال‌ها (برد/باخت واقعی)"},
         {"command": "status", "description": "وضعیت و آستانهٔ فعلی"},
+        {"command": "why", "description": "چرا سیگنالی نیست؟ فاصله تا شلیکِ هر قانون"},
         {"command": "missed", "description": "سابقهٔ سیگنال‌ها با ساعت و نتیجه"},
         {"command": "last", "description": "سیگنال‌های N ساعتِ گذشته (پیش‌فرض ۶)"},
         {"command": "check", "description": "قیمت‌های تسویه برای مقایسه با پلی‌مارکت"},
@@ -2414,6 +2416,96 @@ class BreakoutMonitor:
                     f"({k} باختِ پیاپی)")
         return out
 
+    def why_report(self):
+        """
+        Why is there no signal right now — with the distance to each trigger.
+
+        "No signal" and "broken" look identical from the outside, and the only
+        way anyone could tell them apart was to send me the log. This answers it
+        on the phone: for every rule, how far price is from firing it. A rule
+        that is $6 away is a quiet market; a rule that reports nonsense is a bug.
+
+        The volatility ratio gets its own line because it is the one gate that
+        rejects a break silently — twice in one evening, on breaks that had
+        genuinely happened — and nothing in the log says so.
+        """
+        cl = self.closes
+        n = len(cl)
+        L = [f"🔍 <b>چرا سیگنالی نیست؟</b>\n",
+             f"کندل در حافظه: <b>{n}</b>  ·  آخرین قیمت: <b>${cl[-1]:,.2f}</b>"
+             if n else "هنوز هیچ کندلی نیست."]
+        if n < BREAKOUT_LOOKBACK + 2:
+            L.append("تاریخچه برای هیچ قانونی کافی نیست.")
+            return "\n".join(L)
+
+        win = cl[-(BREAKOUT_LOOKBACK + 1):-1]
+        hi, lo, cur = max(win), min(win), cl[-1]
+        L.append(f"\n<b>۱) شکستِ ۲۰ کندلی</b>")
+        L.append(f"  سقف ${hi:,.2f} · کف ${lo:,.2f}")
+        if cur > hi or cur < lo:
+            L.append(f"  ✅ شکست رخ داده ({'بالای سقف' if cur > hi else 'زیرِ کف'})")
+        else:
+            L.append(f"  ⏳ تا شکست: <b>${min(hi - cur, cur - lo):,.2f}</b> "
+                     f"(بالا ${hi - cur:,.2f} · پایین ${cur - lo:,.2f})")
+        if BREAKOUT_VOL_FILTER:
+            if n >= 101:
+                rets = [(cl[i] - cl[i - 1]) / cl[i - 1]
+                        for i in range(len(cl) - 100, len(cl)) if cl[i - 1]]
+                slow = _stdev(rets)
+                ratio = _stdev(rets[-20:]) / slow if slow > 0 else 0.0
+                ok = ratio >= BREAKOUT_VOL_TH
+                L.append(f"  فیلترِ نوسان: <b>{ratio:.2f}</b> "
+                         f"(باید ≥ {BREAKOUT_VOL_TH:.2f}) "
+                         f"{'✅ باز' if ok else '⛔️ بسته — شکست هم باشد رد می‌شود'}")
+            else:
+                L.append(f"  فیلترِ نوسان: ⏳ به ۱۰۱ کندل نیاز دارد ({n} هست)")
+
+        mv = _moves(cl)
+        if n >= 104:
+            ref = sorted(abs(m) for m in mv[-101:-1])
+            med = ref[len(ref) // 2]
+            last = mv[-1]
+            same3 = (len(mv) >= 3 and all(m != 0 for m in mv[-3:])
+                     and (mv[-3] > 0) == (mv[-2] > 0) == (mv[-1] > 0))
+            L.append(f"\n<b>۲) حرکتِ بزرگ پس از ۳ هم‌جهت</b>")
+            L.append(f"  ۳ حرکتِ هم‌جهت: {'✅' if same3 else '❌'}  ·  "
+                     f"حرکتِ آخر ${abs(last):,.2f} از ${RULE2_MULT * med:,.2f} لازم")
+        # run length, whatever it is
+        run, up = 0, None
+        for m in reversed(mv):
+            if m == 0:
+                break
+            if up is None:
+                up = m > 0
+            elif (m > 0) != up:
+                break
+            run += 1
+        L.append(f"\n<b>۳) رشتهٔ هم‌جهت</b>")
+        L.append(f"  رشتهٔ فعلی: <b>{run}</b> از {RULE3_RUN} لازم")
+        if n >= 101 + RULE5_SPAN:
+            ref = sorted(abs(m) for m in _moves(cl[-101:]))
+            med = ref[len(ref) // 2]
+            net = cl[-1] - cl[-1 - RULE5_SPAN]
+            t = abs(net) / med if med > 0 else 0
+            L.append(f"\n<b>۵) کشیدگی در {RULE5_SPAN} کندل</b>")
+            L.append(f"  حرکتِ خالص ${abs(net):,.2f} = <b>{t:.1f}×</b> "
+                     f"از {RULE5_MULT:.1f}× لازم")
+        if RULE8_ENABLED and n >= 101 + RULE8_MA:
+            avg = sum(cl[-RULE8_MA:]) / RULE8_MA
+            ref = sorted(abs(m) for m in _moves(cl[-101:]))
+            med = ref[len(ref) // 2]
+            t = abs(cl[-1] - avg) / med if med > 0 else 0
+            L.append(f"\n<b>۸) فاصله از میانگینِ {RULE8_MA} کندلی</b>")
+            L.append(f"  ${abs(cl[-1] - avg):,.2f} = <b>{t:.1f}×</b> "
+                     f"از {RULE8_MULT:.1f}× لازم")
+        hits = self.evaluate(cl)
+        # Kept out of the f-string: a newline inside an f-string expression is
+        # only legal from Python 3.12, and Termux ships whatever it ships.
+        verdict = (f"✅ همین حالا {len(hits)} قانون فعال است" if hits
+                   else "❌ هیچ قانونی فعال نیست — بازار آرام است")
+        L.append("\n" + verdict)
+        return "\n".join(L)
+
     def health_report(self):
         """Is the loop alive, or is the market simply quiet? Answer both."""
         now = time.time()
@@ -3415,6 +3507,10 @@ def command_listener(monitor: Monitor):
                     bm = globals().get("BREAKOUT_MONITOR")
                     if bm:
                         send_message(chat_id, bm.health_report())
+                elif text.startswith("/why") or text == MENU_WHY:
+                    bm = globals().get("BREAKOUT_MONITOR")
+                    send_message(chat_id, bm.why_report() if bm else
+                                 "موتورِ سیگنال روشن نیست (STRATEGY را ببین).")
         except requests.RequestException as exc:
             # While the phone has no connection this fires every few seconds and
             # buries the signal-engine lines that actually matter. Collapse a run
