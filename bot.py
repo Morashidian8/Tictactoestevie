@@ -2776,6 +2776,14 @@ class BreakoutMonitor:
                 # actually matters is how long collection has been dead.
                 L.append(f"  ⛔️ <b>{(now - ks[-1]) / 3600:.0f} ساعت است چیزی "
                          f"ثبت نشده</b> — جمع‌آوری متوقف است.")
+                # Saying only "stopped" while the switch is on sends you to the
+                # switch, which is the one thing that is not wrong. Name it.
+                if ow is not None and ow.on:
+                    L.append("  کلید <b>روشن</b> است — پس مشکل از دکمه نیست، "
+                             "از رسیدن به پلی‌مارکت است.")
+                    if getattr(ow, "why", ""):
+                        L.append(f"  آخرین دلیل: <b>{ow.why}</b>")
+                    L.append("  <b>/oddsdebug</b> بزن — می‌گوید کجا گیر کرده.")
             else:
                 # Coverage against what was POSSIBLE, not against a round number:
                 # a night the bot was off should read as a gap, not as success.
