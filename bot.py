@@ -2727,6 +2727,45 @@ class BreakoutMonitor:
             L.append("<i>⚠️ زیرِ ۵۰٪ — سربه‌سرِ هر دو روش دقیقاً ۵۰٪ است.</i>")
         return "\n".join(L)
 
+    @staticmethod
+    def odds_rows():
+        """
+        Stored windows for THIS timeframe, plus why anything was left out.
+
+        `minutes` comes from endDate - startDate, and Polymarket's startDate is
+        often when the market was LISTED rather than when the window opens — so
+        the field can read 1440 for a five-minute market. Filtering on
+        `minutes == 5` therefore threw away perfectly good rows, and the report
+        then said "nothing collected for 253 hours" while the collector was
+        writing a row every five minutes. Both halves were telling the truth.
+        The field is only trusted when it is a plausible window length; anything
+        else means the dates were unusable, not that the window was long.
+
+        Returns (rows_by_boundary, dropped) so a caller can SAY what it dropped
+        instead of silently disagreeing with the collector.
+        """
+        want = GRANULARITY // 60
+        rows, dropped = {}, {"other_tf": 0, "no_price": 0, "bad_t": 0}
+        try:
+            import polymarket_collector as pmc
+            for r in pmc.load_all():
+                try:
+                    t = int(r["t"])
+                except (KeyError, TypeError, ValueError):
+                    dropped["bad_t"] += 1
+                    continue
+                if r.get("up") is None:
+                    dropped["no_price"] += 1
+                    continue
+                mins = r.get("minutes")
+                if isinstance(mins, (int, float)) and 1 <= mins <= 60 and mins != want:
+                    dropped["other_tf"] += 1
+                    continue
+                rows[t] = r
+        except Exception as exc:  # noqa: BLE001
+            log.warning("Odds rows: %s", exc)
+        return rows, dropped
+
     def collect_report(self):
         """
         Is everything actually being recorded, and when will /edge mean anything?
@@ -2795,20 +2834,17 @@ class BreakoutMonitor:
                          "<b>/collect</b> بزن.")
             if getattr(ow, "why", ""):
                 L.append(f"  آخرین دلیلِ شکست: <b>{ow.why}</b>")
-        odds = {}
-        try:
-            import polymarket_collector as pmc
-            odds = {int(r["t"]): r for r in pmc.load_all()
-                    if r.get("up") is not None
-                    and (r.get("minutes") or 5) == GRANULARITY // 60}
-        except Exception as exc:  # noqa: BLE001
-            L.append(f"  ⚠️ خواندنِ فایل نشد: {exc}")
+        odds, dropped = self.odds_rows()
         if odds:
             ks = sorted(odds)
             recent = [k for k in ks if k >= day]
             L.append(f"  {len(odds)} پنجره · از "
                      f"{datetime.fromtimestamp(ks[0], TEHRAN):%m-%d %H:%M} تا "
                      f"{datetime.fromtimestamp(ks[-1], TEHRAN):%m-%d %H:%M}")
+            if any(dropped.values()):
+                L.append(f"  <i>ردشده: {dropped['other_tf']} تایم‌فریمِ دیگر · "
+                         f"{dropped['no_price']} بی‌قیمت · "
+                         f"{dropped['bad_t']} خراب</i>")
             if not recent:
                 # Every row older than a day. A percentage here is meaningless —
                 # the span it would divide by is negative — and the number that
@@ -2876,13 +2912,7 @@ class BreakoutMonitor:
         derived from the other, and the join is exact because both key on the
         window boundary.
         """
-        try:
-            import polymarket_collector as pmc
-            odds = {int(r["t"]): r for r in pmc.load_all()
-                    if r.get("up") is not None
-                    and (r.get("minutes") or 5) == GRANULARITY // 60}
-        except Exception as exc:  # noqa: BLE001
-            return f"خواندنِ فایلِ بالا/پایین نشد: {exc}"
+        odds, _ = self.odds_rows()
         if not odds:
             return ("هنوز هیچ قیمتی از پلی‌مارکت جمع نشده.\n"
                     "با <b>/oddscollect</b> روشنش کن؛ بدونِ آن این آزمون "
@@ -3690,7 +3720,15 @@ class OddsWatcher:
                     continue
                 self.why = ""
                 fav = _favourite(up, down)
-                mins = int((pmc._duration(m) or GRANULARITY) / 60)
+                # endDate - startDate, but only when the answer is a plausible
+                # window length. Polymarket's startDate is frequently the moment
+                # the market was listed, not the moment the window opens, which
+                # makes this read hours or days for a five-minute market — and
+                # anything reading that back then treats the row as a different
+                # timeframe and discards it.
+                dur = pmc._duration(m)
+                mins = (int(dur / 60) if dur and 60 <= dur <= 3600
+                        else GRANULARITY // 60)
                 log.info("Odds %s: up %.0f down %.0f -> %s [%s, %dm]",
                          et_time(nxt).strftime("%H:%M"), up * 100, down * 100,
                          fav, src, mins)
