@@ -877,6 +877,7 @@ def set_bot_commands():
         {"command": "why", "description": "چرا سیگنالی نیست؟ فاصله تا شلیکِ هر قانون"},
         {"command": "pnl", "description": "سود و زیانِ روزانه — بعدش عدد بزن: /pnl 20"},
         {"command": "export", "description": "گرفتنِ فایلِ کاملِ رکوردِ سیگنال‌ها"},
+        {"command": "edge", "description": "لبهٔ ما در برابرِ قیمتِ بازار (نیاز به /oddscollect)"},
         {"command": "missed", "description": "سابقهٔ سیگنال‌ها با ساعت و نتیجه"},
         {"command": "last", "description": "سیگنال‌های N ساعتِ گذشته (پیش‌فرض ۶)"},
         {"command": "check", "description": "قیمت‌های تسویه برای مقایسه با پلی‌مارکت"},
@@ -1196,6 +1197,23 @@ def _stdev(values):
         return 0.0
     mean = sum(values) / n
     return (sum((v - mean) ** 2 for v in values) / (n - 1)) ** 0.5
+
+
+def _wilson(wins, n, z=1.96):
+    """
+    95% interval for a win rate — the same one the research uses.
+
+    A bare percentage invites reading 8/12 as 67% skill. The interval says what
+    the sample can actually support, and on the small counts these reports start
+    with, it is usually "almost nothing".
+    """
+    if not n:
+        return 0.0, 0.0
+    p = wins / n
+    d = 1 + z * z / n
+    c = p + z * z / (2 * n)
+    m = z * ((p * (1 - p) / n + z * z / (4 * n * n)) ** 0.5)
+    return max(0.0, (c - m) / d), min(1.0, (c + m) / d)
 
 
 def _pstdev(values):
@@ -2703,6 +2721,97 @@ class BreakoutMonitor:
             L.append("<i>⚠️ زیرِ ۵۰٪ — سربه‌سرِ هر دو روش دقیقاً ۵۰٪ است.</i>")
         return "\n".join(L)
 
+    def edge_report(self):
+        """
+        Does our accuracy depend on what the market was charging for our side?
+
+        The idea this answers came from the user: find the sharp traders and
+        follow them. Chasing individual wallets does not survive a 5-minute
+        window — by the time a fill is queryable the price has already moved,
+        and it moved because they traded — but the question underneath it is
+        answerable, because the price IS the aggregated position of everyone
+        informed. So instead of asking "who is smart", ask "do we do better when
+        the market disagrees with us?".
+
+        Two numbers per bucket, and the second is the one that decides:
+
+          accuracy  — how often our side won.
+          EV        — (accuracy / price) - 1, the return per dollar staked. A
+                      share costs `price` and pays $1, so 56% accuracy at 52c is
+                      +7.7% a trade while the same 56% at 58c is -3.4%. Accuracy
+                      alone cannot tell those apart, and only one of them is a
+                      business.
+
+        Needs both records: the signal ledger and /oddscollect. Neither is
+        derived from the other, and the join is exact because both key on the
+        window boundary.
+        """
+        try:
+            import polymarket_collector as pmc
+            odds = {int(r["t"]): r for r in pmc.load_all()
+                    if r.get("up") is not None
+                    and (r.get("minutes") or 5) == GRANULARITY // 60}
+        except Exception as exc:  # noqa: BLE001
+            return f"خواندنِ فایلِ بالا/پایین نشد: {exc}"
+        if not odds:
+            return ("هنوز هیچ قیمتی از پلی‌مارکت جمع نشده.\n"
+                    "با <b>/oddscollect</b> روشنش کن؛ بدونِ آن این آزمون "
+                    "قابلِ اجرا نیست.")
+        sigs = [r for r in ledger_rows() if r.get("status") in ("win", "loss")]
+        if not sigs:
+            return "هنوز سیگنالِ تسویه‌شده‌ای در رکورد نیست."
+
+        BUCKETS = ((0.00, 0.45, "بازار مخالفِ ماست (زیر ۴۵¢)"),
+                   (0.45, 0.50, "کمی مخالف (۴۵–۵۰¢)"),
+                   (0.50, 0.55, "کمی موافق (۵۰–۵۵¢)"),
+                   (0.55, 0.60, "موافق (۵۵–۶۰¢)"),
+                   (0.60, 1.01, "کاملاً موافق (بالای ۶۰¢)"))
+        agg = {b[2]: [0, 0, 0.0] for b in BUCKETS}     # n, wins, price sum
+        matched = 0
+        for s in sigs:
+            row = odds.get(int(s["window_epoch"]))
+            if not row:
+                continue
+            price = row["up"] if s["bet"] == "up" else row.get("down")
+            if price is None:
+                continue
+            matched += 1
+            for lo, hi, name in BUCKETS:
+                if lo <= price < hi:
+                    a = agg[name]
+                    a[0] += 1
+                    a[1] += (s["status"] == "win")
+                    a[2] += price
+                    break
+        if not matched:
+            return (f"هیچ پنجره‌ای مشترک نیست — {len(sigs)} سیگنال و "
+                    f"{len(odds)} قیمت داریم ولی همپوشانی ندارند.\n"
+                    "یعنی جمع‌آوریِ قیمت بعد از این سیگنال‌ها روشن شده. "
+                    "چند روز صبر کن.")
+        L = [f"🎯 <b>لبهٔ ما در برابرِ قیمتِ بازار</b>",
+             f"<i>{matched} پنجره که هم سیگنال داریم هم قیمت</i>", ""]
+        for lo, hi, name in BUCKETS:
+            n, w, ps = agg[name]
+            if not n:
+                L.append(f"<b>{name}</b>\n  — نمونه‌ای نیست")
+                continue
+            acc = w / n
+            avg = ps / n
+            ev = acc / avg - 1 if avg > 0 else 0
+            clo, chi = _wilson(w, n)
+            flag = "✅" if ev > 0 else "❌"
+            L.append(f"<b>{name}</b>\n"
+                     f"  {w}/{n} = <b>{acc*100:.1f}%</b> "
+                     f"[{clo*100:.0f}–{chi*100:.0f}]  ·  میانگینِ قیمت {avg*100:.0f}¢\n"
+                     f"  {flag} بازده هر معامله: <b>{ev*100:+.1f}%</b>")
+        L += ["", "<i>بازده = دقت ÷ قیمت − ۱. سهم به قیمتِ p خریده می‌شود و "
+              "۱ دلار می‌دهد، پس ۵۶٪ روی ۵۲¢ سود است و همان ۵۶٪ روی ۵۸¢ زیان. "
+              "دقت به‌تنهایی این دو را از هم جدا نمی‌کند.</i>"]
+        if matched < 200:
+            L.append(f"<i>⚠️ فقط {matched} نمونه — هنوز برای تصمیم کافی نیست. "
+                     f"زیرِ ۲۰۰ تا، اختلافِ بینِ ردیف‌ها احتمالاً شانس است.</i>")
+        return "\n".join(L)
+
     def why_report(self):
         """
         Why is there no signal right now — with the distance to each trigger.
@@ -3821,6 +3930,10 @@ def command_listener(monitor: Monitor):
                         if len(parts) > 1 and parts[1].isdigit():
                             n = max(1, min(90, int(parts[1])))
                         send_chunked(chat_id, bm.pnl_report(days=n))
+                elif text.startswith("/edge"):
+                    bm = globals().get("BREAKOUT_MONITOR")
+                    send_chunked(chat_id, bm.edge_report() if bm else
+                                 "موتورِ سیگنال روشن نیست.")
                 elif text.startswith("/why") or text == MENU_WHY:
                     bm = globals().get("BREAKOUT_MONITOR")
                     send_chunked(chat_id, bm.why_report() if bm else
