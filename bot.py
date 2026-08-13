@@ -9,6 +9,7 @@ Data source: Binance public market-data API (no API key required).
 """
 
 import os
+import csv
 import json
 import time
 import threading
@@ -285,6 +286,113 @@ HISTORY_SHOW = int(os.environ.get("HISTORY_SHOW", "20"))
 # Full per-signal log (time, side, rules, outcome, whether you were told). Kept
 # much longer than the ✅❌ strip because it is what /missed and /log read.
 SIGNALS_KEEP = int(os.environ.get("SIGNALS_KEEP", "300"))
+
+# --- The permanent record ----------------------------------------------------
+# SIGNALS_KEEP above caps what the state file carries, and at ~2.6 signals an
+# hour that is roughly five days: everything older was being dropped on every
+# save, silently. Raising the cap would not fix it either, because the state
+# file is ONE json blob rewritten in full on every save — a battery that dies
+# mid-write (and this phone has reached 4%) takes the whole year with it.
+#
+# So the durable record is a separate append-only CSV. A torn write costs the
+# last line, not the file. Nothing is ever rewritten, nothing is ever trimmed.
+#
+# Two rows are written per signal — one when it fires, one when it settles —
+# because a single row written only at settlement would lose any signal the bot
+# did not live long enough to grade. Readers group by window and keep the last
+# row, which `ledger_rows` does for you.
+#
+# Only FACTS are stored, never derived money. Stake, rung, bust and P&L are all
+# functions of the ladder settings, so storing them would freeze last month's
+# numbers under this month's settings. They are recomputed at read time.
+LEDGER_FILE = os.environ.get("LEDGER_FILE", "signals_ledger.csv")
+LEDGER_COLS = ("window_epoch", "tehran", "et", "status", "bet", "rules",
+               "ref", "settle", "delta", "mine", "replay", "told")
+
+
+def _ledger_unterminated():
+    """
+    True when the file does not end in a newline.
+
+    A write cut off by a power loss leaves a line with no terminator, and the
+    next append then lands on the SAME line — so one power cut destroys two
+    records instead of one, and the second is a perfectly good signal that
+    arrives afterwards. Measured, not assumed: a torn line in the test swallowed
+    the record written after it.
+    """
+    try:
+        if os.path.getsize(LEDGER_FILE) == 0:
+            return False
+        with open(LEDGER_FILE, "rb") as f:
+            f.seek(-1, os.SEEK_END)
+            return f.read(1) not in (b"\n", b"\r")
+    except OSError:
+        return False
+
+
+def ledger_append(row):
+    """One line onto the permanent record. Never raises, never blocks."""
+    try:
+        new = not os.path.exists(LEDGER_FILE) or os.path.getsize(LEDGER_FILE) == 0
+        heal = (not new) and _ledger_unterminated()
+        with open(LEDGER_FILE, "a", newline="") as f:
+            if heal:
+                # Close the torn line off so this record starts clean. The
+                # damaged line stays and is skipped on read; only it is lost.
+                f.write("\n")
+            w = csv.DictWriter(f, fieldnames=LEDGER_COLS, extrasaction="ignore")
+            if new:
+                w.writeheader()
+            w.writerow(row)
+            # Push it to the OS now. Buffering a signal in userspace until the
+            # process happens to exit is exactly how a record is lost when the
+            # battery dies, and one flush per signal costs nothing at this rate.
+            f.flush()
+            os.fsync(f.fileno())
+    except Exception as exc:  # noqa: BLE001 - the record must never stop the bot
+        log.warning("Ledger: could not append: %s", exc)
+
+
+def ledger_row(sig, status):
+    """Build a ledger line from a signal record."""
+    t = sig["t"]
+    return {"window_epoch": int(t),
+            "tehran": datetime.fromtimestamp(t, TEHRAN).strftime("%Y-%m-%d %H:%M"),
+            "et": et_time(t).strftime("%Y-%m-%d %I:%M%p"),
+            "status": status,
+            "bet": sig.get("bet", ""),
+            "rules": " + ".join(sig.get("rules") or []),
+            "ref": f"{sig['ref']:.2f}" if sig.get("ref") is not None else "",
+            "settle": f"{sig['settle']:.2f}" if sig.get("settle") is not None else "",
+            "delta": f"{sig['delta']:.2f}" if sig.get("delta") is not None else "",
+            "mine": int(bool(sig.get("mine"))),
+            "replay": int(bool(sig.get("replay"))),
+            "told": int(bool(sig.get("told")))}
+
+
+def ledger_rows():
+    """
+    The whole record, oldest first, one entry per signal.
+
+    Later rows for the same window supersede earlier ones, so the "settled" row
+    wins over the "issued" row it followed. Unreadable lines are skipped rather
+    than fatal: a line torn by a power cut must cost one signal, not the file.
+    """
+    out = {}
+    try:
+        with open(LEDGER_FILE, newline="") as f:
+            for r in csv.DictReader(f):
+                try:
+                    t = int(r["window_epoch"])
+                except (TypeError, ValueError, KeyError):
+                    continue
+                out[t] = r
+    except FileNotFoundError:
+        return []
+    except Exception as exc:  # noqa: BLE001
+        log.warning("Ledger: could not read: %s", exc)
+        return []
+    return [out[k] for k in sorted(out)]
 # Most recent missed signals listed in the catch-up message after an outage.
 MISSED_SHOW = int(os.environ.get("MISSED_SHOW", "15"))
 # Rules 1,2,3,5 are the measured mean-reversion edges; rule 4 is the user's own
@@ -707,6 +815,59 @@ def send_menu(chat_id, text):
     })
 
 
+def send_chunked(chat_id, text, limit=3800):
+    """
+    Send a long report as several messages, splitting on line boundaries.
+
+    Telegram rejects anything past 4096 characters and says nothing about it, so
+    a report that outgrew the limit would simply never arrive — which is the
+    exact silent failure these reports exist to prevent. /pnl over a year is
+    5,200 characters, so this is not hypothetical.
+
+    Splitting only at newlines keeps every HTML tag inside one message; each
+    line here opens and closes its own.
+    """
+    parts, cur = [], ""
+    for line in text.split("\n"):
+        if cur and len(cur) + len(line) + 1 > limit:
+            parts.append(cur)
+            cur = line
+        else:
+            cur = f"{cur}\n{line}" if cur else line
+    if cur:
+        parts.append(cur)
+    ok = True
+    for i, p in enumerate(parts):
+        tag = f"\n<i>(بخش {i+1} از {len(parts)})</i>" if len(parts) > 1 else ""
+        ok = send_message(chat_id, p + tag) and ok
+    return ok
+
+
+def send_document(chat_id, path, caption=""):
+    """
+    Send a file to Telegram. Returns True on success.
+
+    The record living only on the phone is the record living one dropped phone
+    from gone, so getting it off the device has to be one command away.
+    """
+    if not chat_id:
+        return False
+    try:
+        with open(path, "rb") as f:
+            resp = requests.post(
+                f"{TELEGRAM_API}/sendDocument",
+                data={"chat_id": chat_id, "caption": caption[:1000]},
+                files={"document": (os.path.basename(path), f)},
+                timeout=120)
+        if resp.status_code != 200:
+            log.error("sendDocument failed: %s", resp.text[:300])
+            return False
+        return True
+    except Exception as exc:  # noqa: BLE001
+        log.error("sendDocument error: %s", exc)
+        return False
+
+
 def set_bot_commands():
     """Register slash commands so they show in Telegram's "/" and Menu button."""
     _tg("setMyCommands", {"commands": [
@@ -715,6 +876,7 @@ def set_bot_commands():
         {"command": "status", "description": "وضعیت و آستانهٔ فعلی"},
         {"command": "why", "description": "چرا سیگنالی نیست؟ فاصله تا شلیکِ هر قانون"},
         {"command": "pnl", "description": "سود و زیانِ روزانه — بعدش عدد بزن: /pnl 20"},
+        {"command": "export", "description": "گرفتنِ فایلِ کاملِ رکوردِ سیگنال‌ها"},
         {"command": "missed", "description": "سابقهٔ سیگنال‌ها با ساعت و نتیجه"},
         {"command": "last", "description": "سیگنال‌های N ساعتِ گذشته (پیش‌فرض ۶)"},
         {"command": "check", "description": "قیمت‌های تسویه برای مقایسه با پلی‌مارکت"},
@@ -1664,6 +1826,7 @@ class BreakoutMonitor:
         self.feed_age = None      # seconds since the sampled round was published
         self.backfilled = 0       # windows scored from replay, not from live alerts
         self._load()
+        self._seed_ledger()
 
     @property
     def chat_id(self):
@@ -1859,6 +2022,36 @@ class BreakoutMonitor:
             log.info("Breakout: recovered the outage on retry.")
             self.recover_from = self.recover_to = None
             self._save()
+
+    def _seed_ledger(self):
+        """
+        Copy whatever the state file still holds into the ledger, once.
+
+        The ledger starts empty on the day it is introduced, while the state
+        file is carrying the last SIGNALS_KEEP signals — the only surviving
+        record of everything before today. Writing them across on first run is
+        the difference between the permanent record starting with the full
+        history that survived and starting from zero.
+
+        Keyed on window, so running twice adds nothing.
+        """
+        if not self.signals:
+            return
+        have = {r["window_epoch"] for r in ledger_rows()
+                if r.get("window_epoch")}
+        have = {int(x) for x in have if str(x).isdigit()}
+        n = 0
+        for s in sorted(self.signals, key=lambda r: r["t"]):
+            if int(s["t"]) in have:
+                continue
+            status = ("void" if s.get("void") else
+                      "issued" if s.get("won") is None else
+                      "win" if s["won"] else "loss")
+            ledger_append(ledger_row(s, status))
+            n += 1
+        if n:
+            log.info("Ledger: carried %d earlier signals into %s.",
+                     n, LEDGER_FILE)
 
     def _save(self):
         try:
@@ -2122,6 +2315,7 @@ class BreakoutMonitor:
                     row["void"] = True
                     row["delta"] = delta
                     row["ref"], row["settle"] = ref, price
+                    ledger_append(ledger_row(row, "void"))
                     break
             log.info("Settled: VOID (%.2f -> %.2f, delta %+.2f is inside the "
                      "dead band)", ref, price, delta)
@@ -2139,6 +2333,7 @@ class BreakoutMonitor:
                 row["won"] = won
                 row["delta"] = delta
                 row["ref"], row["settle"] = ref, price
+                ledger_append(ledger_row(row, "win" if won else "loss"))
                 break
         self.history.append({"won": won, "bet": p["bet"], "mine": mine})
         self.history = self.history[-HISTORY_KEEP:]
@@ -2443,7 +2638,20 @@ class BreakoutMonitor:
         Rule 4 rides its own ladder (MINE_RULES), exactly as suggested_stake
         does, because a losing run there says nothing about a rule-1 stake.
         """
-        rows = [r for r in self.signals if r.get("won") is not None]
+        # The ledger is the source of truth — the in-memory list is capped at
+        # SIGNALS_KEEP and cannot answer a question about a year. Memory is the
+        # fallback only for the minutes before the first ledger write.
+        led = ledger_rows()
+        if led:
+            rows = [{"t": int(r["window_epoch"]),
+                     "won": r["status"] == "win",
+                     "mine": r.get("mine") == "1"}
+                    for r in led if r.get("status") in ("win", "loss")]
+            src = f"{LEDGER_FILE} ({len(led)} رکورد)"
+        else:
+            rows = [{"t": r["t"], "won": r["won"], "mine": bool(r.get("mine"))}
+                    for r in self.signals if r.get("won") is not None]
+            src = "حافظه"
         if not rows:
             return "هنوز هیچ سیگنالِ تسویه‌شده‌ای ثبت نشده."
         rows.sort(key=lambda r: r["t"])
@@ -2489,7 +2697,8 @@ class BreakoutMonitor:
               f"سود با مارتینگلِ {LADDER_RUNGS} پله: <b>{tm:+,.0f}$</b>",
               "",
               f"<i>ربات همین حالا {_stake_label()} پیشنهاد می‌دهد. ستونِ "
-              f"مارتینگل محاسبه است، نه چیزی که بسته شده.</i>"]
+              f"مارتینگل محاسبه است، نه چیزی که بسته شده.</i>",
+              f"<i>منبع: {src}</i>"]
         if acc and acc <= 50:
             L.append("<i>⚠️ زیرِ ۵۰٪ — سربه‌سرِ هر دو روش دقیقاً ۵۰٪ است.</i>")
         return "\n".join(L)
@@ -2907,6 +3116,7 @@ class BreakoutMonitor:
                     "rules": list(rules),
                     "won": None, "mine": self._is_mine(rules),
                     "told": False, "replay": bool(replay)})
+                ledger_append(ledger_row(self.signals[-1], "issued"))
                 self.signals = self.signals[-SIGNALS_KEEP:]
             if not replay:
                 self._alert(hits, price, window_start + GRANULARITY, lag, settled)
@@ -3585,6 +3795,22 @@ def command_listener(monitor: Monitor):
                     bm = globals().get("BREAKOUT_MONITOR")
                     if bm:
                         send_message(chat_id, bm.health_report())
+                elif text.startswith("/export"):
+                    if not os.path.exists(LEDGER_FILE):
+                        send_message(chat_id, "هنوز رکوردی ثبت نشده.")
+                    else:
+                        rows = ledger_rows()
+                        size = os.path.getsize(LEDGER_FILE) / 1024
+                        span = ""
+                        if rows:
+                            span = (f"\nاز {rows[0].get('tehran','?')} "
+                                    f"تا {rows[-1].get('tehran','?')}")
+                        ok = send_document(
+                            chat_id, LEDGER_FILE,
+                            f"📒 رکوردِ کاملِ سیگنال‌ها — {len(rows)} سیگنال، "
+                            f"{size:.0f} کیلوبایت{span}")
+                        if not ok:
+                            send_message(chat_id, "ارسالِ فایل نشد؛ دوباره بزن.")
                 elif text.startswith("/pnl") or text == MENU_PNL:
                     bm = globals().get("BREAKOUT_MONITOR")
                     if not bm:
@@ -3594,10 +3820,10 @@ def command_listener(monitor: Monitor):
                         n = 20
                         if len(parts) > 1 and parts[1].isdigit():
                             n = max(1, min(90, int(parts[1])))
-                        send_message(chat_id, bm.pnl_report(days=n))
+                        send_chunked(chat_id, bm.pnl_report(days=n))
                 elif text.startswith("/why") or text == MENU_WHY:
                     bm = globals().get("BREAKOUT_MONITOR")
-                    send_message(chat_id, bm.why_report() if bm else
+                    send_chunked(chat_id, bm.why_report() if bm else
                                  "موتورِ سیگنال روشن نیست (STRATEGY را ببین).")
         except requests.RequestException as exc:
             # While the phone has no connection this fires every few seconds and

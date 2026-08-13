@@ -21,3 +21,6 @@ breakout_closes.json
 # Intermediate research pickles: regenerable by the task_*.py scripts and
 # rewritten on every run, so they are handoff data between agents, not history.
 research/btc5m/out/
+
+# The permanent signal record — device data, never committed.
+signals_ledger.csv
