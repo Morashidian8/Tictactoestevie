@@ -878,6 +878,7 @@ def set_bot_commands():
         {"command": "pnl", "description": "سود و زیانِ روزانه — بعدش عدد بزن: /pnl 20"},
         {"command": "export", "description": "گرفتنِ فایلِ کاملِ رکوردِ سیگنال‌ها"},
         {"command": "edge", "description": "لبهٔ ما در برابرِ قیمتِ بازار (نیاز به /oddscollect)"},
+        {"command": "collect", "description": "آیا همه‌چیز ضبط می‌شود؟ و /edge کِی آماده است؟"},
         {"command": "missed", "description": "سابقهٔ سیگنال‌ها با ساعت و نتیجه"},
         {"command": "last", "description": "سیگنال‌های N ساعتِ گذشته (پیش‌فرض ۶)"},
         {"command": "check", "description": "قیمت‌های تسویه برای مقایسه با پلی‌مارکت"},
@@ -2721,6 +2722,92 @@ class BreakoutMonitor:
             L.append("<i>⚠️ زیرِ ۵۰٪ — سربه‌سرِ هر دو روش دقیقاً ۵۰٪ است.</i>")
         return "\n".join(L)
 
+    def collect_report(self):
+        """
+        Is everything actually being recorded, and when will /edge mean anything?
+
+        "It says nothing" and "it is broken" look identical from outside, and
+        the only cure so far was to ask me. Three questions get answered here
+        without me: are signals still landing, are prices still landing, and how
+        many days of waiting are left before the two overlap enough to decide.
+
+        The last one matters most. /edge will happily print a full table off
+        twenty samples, and that table is noise — so the wait needs a number
+        attached to it, not a vague "a few days".
+        """
+        now = time.time()
+        day = now - 86400
+        L = ["📦 <b>وضعیتِ جمع‌آوری</b>", ""]
+
+        led = ledger_rows()
+        L.append(f"<b>رکوردِ سیگنال‌ها</b> — <code>{LEDGER_FILE}</code>")
+        if not led:
+            L.append("  ⛔️ هنوز خالی است. تا اولین سیگنال صبر کن.")
+        else:
+            fresh = sum(1 for r in led
+                        if str(r.get("window_epoch", "")).isdigit()
+                        and int(r["window_epoch"]) >= day)
+            L.append(f"  {len(led)} سیگنال · از {led[0].get('tehran','?')} "
+                     f"تا {led[-1].get('tehran','?')}")
+            L.append(f"  ۲۴ ساعتِ اخیر: <b>{fresh}</b> تازه "
+                     f"{'✅' if fresh else '⚠️ هیچ — یا بازار آرام بوده یا بات خوابیده'}")
+
+        ow = globals().get("ODDS_WATCHER")
+        L.append(f"\n<b>قیمت‌های پلی‌مارکت</b>")
+        odds = {}
+        try:
+            import polymarket_collector as pmc
+            odds = {int(r["t"]): r for r in pmc.load_all()
+                    if r.get("up") is not None
+                    and (r.get("minutes") or 5) == GRANULARITY // 60}
+        except Exception as exc:  # noqa: BLE001
+            L.append(f"  ⚠️ خواندنِ فایل نشد: {exc}")
+        if ow is not None and not ow.on:
+            L.append("  ⛔️ <b>خاموش است</b> — /oddscollect را بزن.")
+        if odds:
+            ks = sorted(odds)
+            recent = [k for k in ks if k >= day]
+            L.append(f"  {len(odds)} پنجره · از "
+                     f"{datetime.fromtimestamp(ks[0], TEHRAN):%m-%d %H:%M} تا "
+                     f"{datetime.fromtimestamp(ks[-1], TEHRAN):%m-%d %H:%M}")
+            if not recent:
+                # Every row older than a day. A percentage here is meaningless —
+                # the span it would divide by is negative — and the number that
+                # actually matters is how long collection has been dead.
+                L.append(f"  ⛔️ <b>{(now - ks[-1]) / 3600:.0f} ساعت است چیزی "
+                         f"ثبت نشده</b> — جمع‌آوری متوقف است.")
+            else:
+                # Coverage against what was POSSIBLE, not against a round number:
+                # a night the bot was off should read as a gap, not as success.
+                span = max(1.0, (min(now, ks[-1]) - max(day, ks[0]))
+                           / GRANULARITY + 1)
+                pct = min(100.0, len(recent) / span * 100)
+                L.append(f"  ۲۴ ساعتِ اخیر: <b>{len(recent)}</b> از {span:.0f} ممکن "
+                         f"(<b>{pct:.0f}%</b>) {'✅' if pct >= 90 else '⚠️'}")
+        elif ow is None or ow.on:
+            L.append("  هنوز چیزی جمع نشده.")
+
+        L.append("\n<b>همپوشانی — چیزی که /edge لازم دارد</b>")
+        settled = [r for r in led if r.get("status") in ("win", "loss")]
+        both = [r for r in settled
+                if str(r.get("window_epoch", "")).isdigit()
+                and int(r["window_epoch"]) in odds]
+        need = 200
+        L.append(f"  <b>{len(both)}</b> از {need} پنجرهٔ لازم")
+        if len(both) >= need:
+            L.append("  ✅ کافی است — /edge بزن.")
+        else:
+            rate = sum(1 for r in both if int(r["window_epoch"]) >= day)
+            if rate > 0:
+                L.append(f"  با نرخِ {rate} در روز: حدود "
+                         f"<b>{(need - len(both) + rate - 1) // rate}</b> روزِ دیگر")
+            elif odds and settled:
+                L.append("  ⚠️ در ۲۴ ساعتِ اخیر هیچ همپوشانی‌ای نبوده — "
+                         "یعنی یکی از دو طرف ثبت نمی‌شود.")
+            else:
+                L.append("  هنوز نمی‌شود تخمین زد؛ هر دو طرف باید شروع کنند.")
+        return "\n".join(L)
+
     def edge_report(self):
         """
         Does our accuracy depend on what the market was charging for our side?
@@ -3930,6 +4017,10 @@ def command_listener(monitor: Monitor):
                         if len(parts) > 1 and parts[1].isdigit():
                             n = max(1, min(90, int(parts[1])))
                         send_chunked(chat_id, bm.pnl_report(days=n))
+                elif text.startswith("/collect"):
+                    bm = globals().get("BREAKOUT_MONITOR")
+                    send_chunked(chat_id, bm.collect_report() if bm else
+                                 "موتورِ سیگنال روشن نیست.")
                 elif text.startswith("/edge"):
                     bm = globals().get("BREAKOUT_MONITOR")
                     send_chunked(chat_id, bm.edge_report() if bm else
