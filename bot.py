@@ -659,6 +659,7 @@ def handle_callback(monitor, cq):
 # ---------------------------------------------------------------------------
 MENU_STATUS = "📊 وضعیت"
 MENU_WHY = "🔍 چرا سیگنال نیست"
+MENU_PNL = "💵 سود و زیان"
 MENU_REFRESH = "🔄 منو"
 MENU_SCORE = "🎯 کارنامه"
 MENU_UPDATE = "⬆️ به‌روزرسانی"
@@ -713,6 +714,7 @@ def set_bot_commands():
         {"command": "score", "description": "کارنامهٔ سیگنال‌ها (برد/باخت واقعی)"},
         {"command": "status", "description": "وضعیت و آستانهٔ فعلی"},
         {"command": "why", "description": "چرا سیگنالی نیست؟ فاصله تا شلیکِ هر قانون"},
+        {"command": "pnl", "description": "سود و زیانِ روزانه — بعدش عدد بزن: /pnl 20"},
         {"command": "missed", "description": "سابقهٔ سیگنال‌ها با ساعت و نتیجه"},
         {"command": "last", "description": "سیگنال‌های N ساعتِ گذشته (پیش‌فرض ۶)"},
         {"command": "check", "description": "قیمت‌های تسویه برای مقایسه با پلی‌مارکت"},
@@ -2416,6 +2418,82 @@ class BreakoutMonitor:
                     f"({k} باختِ پیاپی)")
         return out
 
+    def pnl_report(self, days=20):
+        """
+        Day-by-day P&L over the signals this bot actually announced.
+
+        Two columns, because the bot and the research do not stake the same way.
+        STAKE_MODE is flat, so every alert says "$20, حجمِ ثابت" — that is the
+        real money. But every bust figure ever quoted comes from the 3-rung
+        ladder, and "how many busts" is meaningless under flat staking. Showing
+        one without the other would either invent busts that did not happen or
+        drop the number that was asked for.
+
+        Three things this gets right that a per-day loop would not:
+
+        The ladder is replayed from the FIRST signal on record, not from the
+        start of the window being shown. A rung is carried state; beginning the
+        replay 20 days ago would assume rung 0 on a day that may have opened
+        mid-losing-run, and every stake after it would be wrong.
+
+        Money is attributed to the day the bet SETTLED, which is when it moved.
+        A ladder that opens at 23:55 and busts at 00:10 spent on two days, and
+        pretending otherwise would make one day look better than it was.
+
+        Rule 4 rides its own ladder (MINE_RULES), exactly as suggested_stake
+        does, because a losing run there says nothing about a rule-1 stake.
+        """
+        rows = [r for r in self.signals if r.get("won") is not None]
+        if not rows:
+            return "هنوز هیچ سیگنالِ تسویه‌شده‌ای ثبت نشده."
+        rows.sort(key=lambda r: r["t"])
+
+        rung = {True: 0, False: 0}          # keyed by "is this the AABA track"
+        day = {}
+        for r in rows:
+            mine = bool(r.get("mine"))
+            k = datetime.fromtimestamp(r["t"], TEHRAN).strftime("%Y-%m-%d")
+            d = day.setdefault(k, {"n": 0, "w": 0, "busts": 0,
+                                   "flat": 0.0, "mart": 0.0})
+            d["n"] += 1
+            stake = STAKE_BASE * 2 ** rung[mine]
+            if r["won"]:
+                d["w"] += 1
+                d["flat"] += STAKE_BASE
+                d["mart"] += stake
+                rung[mine] = 0
+            else:
+                d["flat"] -= STAKE_BASE
+                d["mart"] -= stake
+                rung[mine] += 1
+                if LADDER_RUNGS and rung[mine] >= LADDER_RUNGS:
+                    d["busts"] += 1
+                    rung[mine] = 0
+
+        keys = sorted(day)[-days:]
+        L = [f"💵 <b>سود و زیانِ {len(keys)} روزِ اخیر</b>",
+             f"<i>بر پایهٔ سیگنال‌هایی که واقعاً اعلام شد — پایه ${STAKE_BASE:,.0f}</i>",
+             "", "<code>روز        تعداد  برد  انفجار    ثابت   مارتینگل</code>"]
+        tf = tm = tn = tw = tb = 0
+        for k in keys:
+            d = day[k]
+            tn += d["n"]; tw += d["w"]; tb += d["busts"]
+            tf += d["flat"]; tm += d["mart"]
+            L.append(f"<code>{k[5:]}    {d['n']:>4}  {d['w']:>3}  "
+                     f"{d['busts']:>5}  {d['flat']:>+7,.0f}  {d['mart']:>+8,.0f}</code>")
+        acc = tw / tn * 100 if tn else 0
+        L += ["",
+              f"<b>جمع:</b> {tn} سیگنال · {tw} برد · دقت <b>{acc:.1f}%</b>",
+              f"انفجار (۳ باختِ پیاپی): <b>{tb}</b>",
+              f"سود با حجمِ ثابت: <b>{tf:+,.0f}$</b>",
+              f"سود با مارتینگلِ {LADDER_RUNGS} پله: <b>{tm:+,.0f}$</b>",
+              "",
+              f"<i>ربات همین حالا {_stake_label()} پیشنهاد می‌دهد. ستونِ "
+              f"مارتینگل محاسبه است، نه چیزی که بسته شده.</i>"]
+        if acc and acc <= 50:
+            L.append("<i>⚠️ زیرِ ۵۰٪ — سربه‌سرِ هر دو روش دقیقاً ۵۰٪ است.</i>")
+        return "\n".join(L)
+
     def why_report(self):
         """
         Why is there no signal right now — with the distance to each trigger.
@@ -3507,6 +3585,16 @@ def command_listener(monitor: Monitor):
                     bm = globals().get("BREAKOUT_MONITOR")
                     if bm:
                         send_message(chat_id, bm.health_report())
+                elif text.startswith("/pnl") or text == MENU_PNL:
+                    bm = globals().get("BREAKOUT_MONITOR")
+                    if not bm:
+                        send_message(chat_id, "موتورِ سیگنال روشن نیست.")
+                    else:
+                        parts = text.split()
+                        n = 20
+                        if len(parts) > 1 and parts[1].isdigit():
+                            n = max(1, min(90, int(parts[1])))
+                        send_message(chat_id, bm.pnl_report(days=n))
                 elif text.startswith("/why") or text == MENU_WHY:
                     bm = globals().get("BREAKOUT_MONITOR")
                     send_message(chat_id, bm.why_report() if bm else
