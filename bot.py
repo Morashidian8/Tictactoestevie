@@ -2754,6 +2754,29 @@ class BreakoutMonitor:
 
         ow = globals().get("ODDS_WATCHER")
         L.append(f"\n<b>قیمت‌های پلی‌مارکت</b>")
+        # Stated positively. The first version signalled "off" by printing a
+        # line and "on" by printing nothing, so a missing watcher object read
+        # exactly like a healthy one — and sent us hunting the wrong fault for
+        # a day. Three independent facts, each named whatever its value.
+        if ow is None:
+            L.append("  ❌ <b>شیءِ واچر وجود ندارد</b> — بات را ری‌استارت کن.")
+        else:
+            alive = any(e[0].is_alive() for name, e in _WORKERS.items()
+                        if name == "odds")
+            L.append(f"  کلید: <b>{'🟢 روشن' if ow.on else '🔴 خاموش'}</b>"
+                     f"{'' if ow.on else ' — /oddscollect را بزن'}")
+            L.append(f"  نخِ جمع‌آوری: "
+                     f"<b>{'🟢 زنده' if alive else '🔴 مرده'}</b>")
+            att = getattr(ow, "last_attempt", 0) or 0
+            L.append("  آخرین چرخشِ حلقه: " + (
+                f"<b>{(now - att) / 60:.0f}</b> دقیقه پیش"
+                if att else "<b>هرگز</b> — حلقه اصلاً نچرخیده"))
+            sto = getattr(ow, "last_stored", 0) or 0
+            L.append("  آخرین ذخیرهٔ موفق: " + (
+                f"<b>{(now - sto) / 60:.0f}</b> دقیقه پیش"
+                if sto else "<b>هرگز</b> در این اجرا"))
+            if getattr(ow, "why", ""):
+                L.append(f"  آخرین دلیلِ شکست: <b>{ow.why}</b>")
         odds = {}
         try:
             import polymarket_collector as pmc
@@ -2762,8 +2785,6 @@ class BreakoutMonitor:
                     and (r.get("minutes") or 5) == GRANULARITY // 60}
         except Exception as exc:  # noqa: BLE001
             L.append(f"  ⚠️ خواندنِ فایل نشد: {exc}")
-        if ow is not None and not ow.on:
-            L.append("  ⛔️ <b>خاموش است</b> — /oddscollect را بزن.")
         if odds:
             ks = sorted(odds)
             recent = [k for k in ks if k >= day]
@@ -2779,10 +2800,6 @@ class BreakoutMonitor:
                 # Saying only "stopped" while the switch is on sends you to the
                 # switch, which is the one thing that is not wrong. Name it.
                 if ow is not None and ow.on:
-                    L.append("  کلید <b>روشن</b> است — پس مشکل از دکمه نیست، "
-                             "از رسیدن به پلی‌مارکت است.")
-                    if getattr(ow, "why", ""):
-                        L.append(f"  آخرین دلیل: <b>{ow.why}</b>")
                     L.append("  <b>/oddsdebug</b> بزن — می‌گوید کجا گیر کرده.")
             else:
                 # Coverage against what was POSSIBLE, not against a round number:
@@ -3442,6 +3459,8 @@ class OddsWatcher:
         self.errors = 0
         self.why = ""             # why the last attempt collected nothing
         self.why_detail = ""      # the full diagnosis from that moment
+        self.last_attempt = 0.0   # loop turned (regardless of on/off)
+        self.last_stored = 0.0    # a row actually reached the file
         self.done_for = 0         # boundary already handled this pass
 
     @property
@@ -3622,6 +3641,11 @@ class OddsWatcher:
                 nxt += GRANULARITY
             time.sleep(max(1.0, nxt - ODDS_LEAD - now))
             self.done_for = nxt
+            # Stamped before the on/off check so it means "the loop is turning",
+            # which is a different fact from "the switch is on" and from "a row
+            # was stored". Reporting only the last stored row made a dead thread
+            # and a thread being refused by Polymarket look identical.
+            self.last_attempt = time.time()
             if not self.on:
                 continue
             try:
@@ -3659,6 +3683,7 @@ class OddsWatcher:
                        "title": (m.get("question") or "")[:70], "minutes": mins,
                        "lag": round(time.time() - nxt)}
                 pmc.append(row)
+                self.last_stored = time.time()
                 self.last = row
                 self.errors = 0
                 # Fill in outcomes for everything already stored. Cheap, and it
