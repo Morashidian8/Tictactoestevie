@@ -565,6 +565,11 @@ def _git(*args, timeout=30):
 # and a stale process is invisible from the outside, which is exactly how a
 # phone kept running week-old rules while every file on disk was up to date.
 RUNNING_VERSION = code_version()
+# When this process started. "Nothing has happened yet" and "nothing has
+# happened for hours" are opposite diagnoses, and without a start time a report
+# cannot tell them apart — it just says "never" and sends you hunting a fault
+# that is thirty seconds from resolving itself.
+PROCESS_START = time.time()
 
 
 def git_pull():
@@ -2767,14 +2772,27 @@ class BreakoutMonitor:
                      f"{'' if ow.on else ' — /oddscollect را بزن'}")
             L.append(f"  نخِ جمع‌آوری: "
                      f"<b>{'🟢 زنده' if alive else '🔴 مرده'}</b>")
+            # The loop sleeps until 15s before the next 5-minute boundary, so
+            # for the first few minutes after a restart "never" is the correct
+            # and expected state. Saying "never" flatly there reads as a fault
+            # and sends you debugging something that is about to fix itself.
+            young = now - PROCESS_START < GRANULARITY + 60
+            since = f"از راه‌اندازی ({(now - PROCESS_START) / 60:.0f} دقیقه) "
             att = getattr(ow, "last_attempt", 0) or 0
             L.append("  آخرین چرخشِ حلقه: " + (
                 f"<b>{(now - att) / 60:.0f}</b> دقیقه پیش"
-                if att else "<b>هرگز</b> — حلقه اصلاً نچرخیده"))
+                if att else
+                (f"<b>هنوز نه</b> — {since}هنوز به مرزِ بعدی نرسیده، طبیعی است"
+                 if young else "<b>هرگز</b> — حلقه اصلاً نچرخیده ⚠️")))
             sto = getattr(ow, "last_stored", 0) or 0
             L.append("  آخرین ذخیرهٔ موفق: " + (
                 f"<b>{(now - sto) / 60:.0f}</b> دقیقه پیش"
-                if sto else "<b>هرگز</b> در این اجرا"))
+                if sto else
+                (f"<b>هنوز نه</b> — {since}طبیعی است"
+                 if young else "<b>هرگز</b> در این اجرا ⚠️")))
+            if young:
+                L.append("  ⏳ تازه بالا آمده — ۱۰ دقیقهٔ دیگر دوباره "
+                         "<b>/collect</b> بزن.")
             if getattr(ow, "why", ""):
                 L.append(f"  آخرین دلیلِ شکست: <b>{ow.why}</b>")
         odds = {}
