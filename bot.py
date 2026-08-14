@@ -2514,7 +2514,8 @@ class BreakoutMonitor:
             names = r.get("rules") or []
             out.append(f"{mark}  ·  <b>{et_time(r['t']):%I:%M%p}</b>  ·  {side}"
                        f"{r.get('live_tag', '')}\n"
-                       f"   <i>{' · '.join(names)}</i>")
+                       f"   <i>{' · '.join(names)}</i>"
+                       f"{r.get('diff_note', '')}")
         return out
 
     @staticmethod
@@ -2537,7 +2538,21 @@ class BreakoutMonitor:
             hit = led.get(int(r["t"]))
             if hit is None:
                 r["live_tag"] = "  ⚠️ <b>موتورِ زنده نداشت</b>"
-            elif str(hit.get("told")) == "1":
+                continue
+            # Show the strategies that were actually SENT, not the ones this
+            # replay would have sent. Matching on the window and then printing
+            # the replay's names put "📨 فرستاده شد" beside strategies that were
+            # never in the message — the alert said rule 8, this list said rules
+            # 1 and 5. The two series disagree often enough that the replay's
+            # names cannot stand in for the live ones, and the names are exactly
+            # what a decision gets made on.
+            live = [x for x in (hit.get("rules") or "").split(" + ") if x]
+            differed = bool(live) and live != (r.get("rules") or [])
+            if live:
+                r["rules"] = live
+            if differed:
+                r["diff_note"] = "  <i>(بازپخشِ بایننس قانونِ دیگری دید)</i>"
+            if str(hit.get("told")) == "1":
                 r["live_tag"] = "  📨 فرستاده شد"
             else:
                 r["live_tag"] = "  ❗️ <b>ثبت شد ولی نرفت</b>"
