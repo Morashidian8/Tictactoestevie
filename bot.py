@@ -2407,9 +2407,36 @@ class BreakoutMonitor:
                 mark = "✅ برد" if r["won"] else "❌ باخت"
             side = "🟢 بالا" if r["bet"] == "up" else "🔴 پایین"
             names = r.get("rules") or []
-            out.append(f"{mark}  ·  <b>{et_time(r['t']):%I:%M%p}</b>  ·  {side}\n"
+            out.append(f"{mark}  ·  <b>{et_time(r['t']):%I:%M%p}</b>  ·  {side}"
+                       f"{r.get('live_tag', '')}\n"
                        f"   <i>{' · '.join(names)}</i>")
         return out
+
+    @staticmethod
+    def tag_against_live(rows):
+        """
+        Mark each replayed row with what the LIVE engine did on that window.
+
+        /last replays the rules over Binance klines; the engine trades Chainlink
+        and only sees windows it was actually running for. So a row here can be
+        a signal that was sent, a signal that fired but never reached Telegram,
+        or a window the engine never saw at all — three completely different
+        problems that look identical in this list, and the reason "there were
+        signals but no message" could not be answered without the log.
+
+        The ledger settles it, because `told` records whether the send worked.
+        """
+        led = {int(r["window_epoch"]): r for r in ledger_rows()
+               if str(r.get("window_epoch", "")).isdigit()}
+        for r in rows:
+            hit = led.get(int(r["t"]))
+            if hit is None:
+                r["live_tag"] = "  ⚠️ <b>موتورِ زنده نداشت</b>"
+            elif str(hit.get("told")) == "1":
+                r["live_tag"] = "  📨 فرستاده شد"
+            else:
+                r["live_tag"] = "  ❗️ <b>ثبت شد ولی نرفت</b>"
+        return rows
 
     @classmethod
     def _chunks(cls, head, rows, foot="", per=12):
@@ -2503,12 +2530,24 @@ class BreakoutMonitor:
                 f"🔍 <b>{hours} ساعتِ گذشته</b> ({windows} پنجره)\n\n" + why +
                 "\nهیچ سیگنالی در این بازه نبود — قانون‌ها فقط روی حرکت‌های "
                 "غیرعادی فعال می‌شوند و سکوت طبیعی است.")
+        self.tag_against_live(rows)
+        gone = sum(1 for r in rows if "نداشت" in r.get("live_tag", ""))
+        lost = sum(1 for r in rows if "نرفت" in r.get("live_tag", ""))
         n = sum(1 for r in rows if r["won"] is not None)
         w = sum(1 for r in rows if r["won"])
         head = (f"🔍 <b>سیگنال‌های {hours} ساعتِ گذشته</b> — تست\n"
                 f"{windows} پنجره بررسی شد  ·  <b>{len(rows)}</b> سیگنال"
                 + (f"  ·  {w}/{n} برد" if n else "") + "\n" + why + "\n")
-        foot = ("\n\n<i>این‌ها گذشته‌اند و امتیازی هم ثبت نشد — فقط برای اینکه "
+        verdict = ""
+        if gone:
+            verdict += (f"\n⚠️ <b>{gone}</b> مورد در رکوردِ زنده نیست — یا بات "
+                        "در آن پنجره‌ها بالا نبود، یا چین‌لینک چیزِ دیگری دید.")
+        if lost:
+            verdict += (f"\n❗️ <b>{lost}</b> مورد ثبت شد ولی پیامش نرفت — "
+                        "با /missed بازخوانی می‌شوند.")
+        if rows and not gone and not lost:
+            verdict = "\n✅ همه‌شان در رکوردِ زنده هستند و پیامشان هم رفته."
+        foot = (verdict + "\n\n<i>این‌ها گذشته‌اند و امتیازی هم ثبت نشد — فقط برای اینکه "
                 "ببینی موتور چه می‌دیده. قیمت‌ها از Binance است، پس ممکن است "
                 "یکی‌دو مورد با Chainlink فرق کند.</i>")
         return self._send_rows(head, rows, foot)
