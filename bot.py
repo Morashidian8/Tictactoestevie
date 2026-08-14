@@ -2966,6 +2966,71 @@ class BreakoutMonitor:
                           "odds": "✅ جمع‌آوریِ قیمت دوباره راه افتاد."}[key])
         self._faults = set(faults)
 
+    @staticmethod
+    def _alignment(closes, bet):
+        """
+        Which other rules were CLOSE, and did they point the same way.
+
+        Rule 8 fires only into silence, so by construction it can never appear
+        beside another rule — that is deliberate, since its 52.4% was measured
+        only on the windows the others ignore. But "nothing else fired" and
+        "everything else was pointing the other way" are very different things
+        to bet on, and the alert showed neither.
+
+        So the near misses are named with their direction. A rule $12 from
+        firing in the SAME direction is corroboration the number cannot claim; a
+        rule about to fire the OTHER way is a reason to skip.
+        """
+        cl = closes
+        if len(cl) < 101 + RULE5_SPAN:
+            return ""
+        near = []
+        win = cl[-(BREAKOUT_LOOKBACK + 1):-1]
+        hi, lo, cur = max(win), min(win), cl[-1]
+        # Rule 1 fades the break, so a break of the HIGH implies a down bet.
+        up_gap, dn_gap = hi - cur, cur - lo
+        r1_side = "down" if up_gap <= dn_gap else "up"
+        r1_dist = min(up_gap, dn_gap)
+        ref = sorted(abs(m) for m in _moves(cl[-101:]))
+        med = ref[len(ref) // 2] or 1.0
+        if r1_dist <= 0:
+            # Already past the level. Rule 1 did not fire anyway, which on a
+            # real break means the volatility filter refused it — the one
+            # rejection that leaves no trace anywhere else.
+            near.append(("۱) شکستِ ۲۰ کندلی", r1_side,
+                         "شکسته، ولی فیلترِ نوسان ردش کرد"))
+        elif r1_dist <= 3 * med:
+            near.append(("۱) شکستِ ۲۰ کندلی", r1_side,
+                         f"${r1_dist:,.0f} تا شکست"))
+        mv = _moves(cl)
+        run, up = 0, None
+        for x in reversed(mv):
+            if x == 0:
+                break
+            if up is None:
+                up = x > 0
+            elif (x > 0) != up:
+                break
+            run += 1
+        if run >= RULE3_RUN - 2 and up is not None:
+            near.append(("۳) رشتهٔ هم‌جهت", "down" if up else "up",
+                         f"رشتهٔ {run} از {RULE3_RUN}"))
+        net = cl[-1] - cl[-1 - RULE5_SPAN]
+        times5 = abs(net) / med
+        if times5 >= RULE5_MULT * 0.6 and net != 0:
+            near.append(("۵) کشیدگی ۴ کندلی", "down" if net > 0 else "up",
+                         f"{times5:.1f}× از {RULE5_MULT:.1f}×"))
+        if not near:
+            return "\n  <i>هیچ قانونِ دیگری حتی نزدیک هم نبود.</i>"
+        agree = [f"{n} ({d})" for n, s, d in near if s == bet]
+        against = [f"{n} ({d})" for n, s, d in near if s != bet]
+        out = ""
+        if agree:
+            out += "\n  ✅ <b>هم‌جهت:</b> " + " · ".join(agree)
+        if against:
+            out += "\n  ⚠️ <b>مخالف:</b> " + " · ".join(against)
+        return out + "\n  <i>هیچ‌کدام شلیک نکردند — فقط نزدیک بودند.</i>"
+
     def _near_miss(self):
         """
         "no signal" plus how close it came — one short line, every window.
@@ -3552,8 +3617,9 @@ class BreakoutMonitor:
                              f"قیمت ${abs(s8['gap']):,.0f} از میانگینِ ۲۰ کندلی "
                              f"(${s8['avg']:,.2f}) فاصله دارد = "
                              f"{s8['times']:.1f}× حرکتِ معمول"
-                             f"\n  <i>لبهٔ نازک — روی ۱۹٬۶۱۰ نمونه ۵۲٫۴٪، و "
-                             f"سربه‌سر ۵۰٪ است</i>"))
+                             + BreakoutMonitor._alignment(closes, s8["bet"])
+                             + f"\n  <i>لبهٔ نازک — روی ۱۹٬۶۱۰ نمونه ۵۲٫۴٪، و "
+                               f"سربه‌سر ۵۰٪ است</i>"))
         # Quality tier: enough statistical rules pointing the same way, on a
         # genuinely over-extended move. Rule 4 is excluded — it has no edge, so
         # letting it vote would dilute the very thing this tier measures.
