@@ -2766,6 +2766,62 @@ class BreakoutMonitor:
             L.append("<i>⚠️ زیرِ ۵۰٪ — سربه‌سرِ هر دو روش دقیقاً ۵۰٪ است.</i>")
         return "\n".join(L)
 
+    def _self_audit(self):
+        """
+        Notice our own broken states and say so, without being asked.
+
+        Every fault this bot has had shares one shape: it keeps running, keeps
+        logging, and quietly cannot do its job. The history emptied and six
+        windows passed with every history-dependent rule disabled. The odds
+        collector wrote rows a filter then discarded, for ten days. Signals were
+        recorded and never delivered. In each case the process looked healthy
+        from the inside and the owner found out by comparing a chart against
+        silence, hours later — which makes the owner the monitoring system.
+
+        So the engine checks itself once per window and reports on the EDGE
+        only: once when a fault appears, once when it clears. A warning every
+        five minutes gets muted within a day, and a muted warning is the same as
+        no warning.
+        """
+        faults = {}
+        n = len(self.closes)
+        if n < BREAKOUT_FULL_HISTORY:
+            short = BREAKOUT_FULL_HISTORY - n
+            faults["history"] = (
+                f"⚠️ <b>تاریخچه ناقص است</b>\nفقط <b>{n}</b> کندل از "
+                f"{BREAKOUT_FULL_HISTORY} لازم. تا پر شدنش قانون‌های "
+                f"<b>۱، ۵ و ۸</b> شلیک نمی‌کنند و فیلترِ نوسان هم کار نمی‌کند.\n"
+                f"<i>{short} کندلِ دیگر — اگر از بایننس پر نشود "
+                f"{short * GRANULARITY / 3600:.1f} ساعت.</i>")
+        undel = [r for r in self.signals if not r.get("told")
+                 and r.get("won") is not None]
+        if len(undel) >= 3:
+            faults["undelivered"] = (
+                f"⚠️ <b>{len(undel)} سیگنال ثبت شد ولی به تلگرام نرسید.</b>\n"
+                "با /missed بازخوانی‌شان کن.")
+        ow = globals().get("ODDS_WATCHER")
+        if ow is not None and ow.on:
+            last = getattr(ow, "last_stored", 0) or 0
+            if last and time.time() - last > 6 * GRANULARITY:
+                faults["odds"] = (
+                    f"⚠️ <b>جمع‌آوریِ قیمتِ پلی‌مارکت متوقف شده</b> — "
+                    f"{(time.time() - last) / 60:.0f} دقیقه است چیزی ثبت نشده.\n"
+                    "<i>سیگنال‌ها سالم‌اند؛ فقط /edge داده جمع نمی‌کند.</i>")
+
+        was = getattr(self, "_faults", set())
+        for key, text in faults.items():
+            if key not in was:
+                log.warning("SELF-AUDIT: %s", key)
+                send_message(self.chat_id, text)
+        for key in was - set(faults):
+            log.info("SELF-AUDIT cleared: %s", key)
+            send_message(self.chat_id,
+                         {"history": "✅ <b>تاریخچه کامل شد</b> — همهٔ قانون‌ها "
+                                     "دوباره فعال‌اند.",
+                          "undelivered": "✅ سیگنال‌های عقب‌افتاده رسیدند.",
+                          "odds": "✅ جمع‌آوریِ قیمت دوباره راه افتاد."}[key])
+        self._faults = set(faults)
+
     def _near_miss(self):
         """
         "no signal" plus how close it came — one short line, every window.
@@ -3566,6 +3622,23 @@ class BreakoutMonitor:
                 # window replayed after an outage — goes out now that there is
                 # clearly a working connection.
                 self._retry_recovery()
+                # Refill the series if it is short. _drop_if_stale empties it
+                # when a backfill fails, and nothing retried afterwards: with
+                # the series empty its own first line (`if not self.closes:
+                # return False`) makes it return False forever, so the only
+                # caller of _seed never fired again. The series then rebuilt one
+                # candle per window — 3, 4, 5, 6, 7, 8 — and every rule needing
+                # history stayed silent for half an hour while /last, which
+                # fetches its own candles, found nine signals in the same span.
+                # Here the network is demonstrably working: a price just arrived.
+                if len(self.closes) < BREAKOUT_FULL_HISTORY:
+                    keep = self.last_window
+                    self._seed()
+                    # Refilling history is all that is wanted; moving the window
+                    # marker is the loop's business and a seed that jumped it
+                    # forward would skip the next window's signal.
+                    self.last_window = keep
+                self._self_audit()
                 if self.untold():
                     self.flush_untold()
                 fail = self.err_count = 0
