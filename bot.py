@@ -776,8 +776,10 @@ MENU_PNL = "💵 سود و زیان"
 MENU_REFRESH = "🔄 منو"
 MENU_SCORE = "🎯 کارنامه"
 MENU_UPDATE = "⬆️ به‌روزرسانی"
-MENU_MISSED = "📋 سابقه"
-MENU_LAST = "🔍 ۶ ساعت اخیر"
+MENU_MISSED = "📥 جامانده‌ها"
+MENU_LAST = "📋 سیگنال‌های اخیر"
+MENU_COLLECT = "📦 جمع‌آوری"
+MENU_MORE = "⚙️ بیشتر"
 MENU_ODDS = "📈 بالا/پایین"
 
 
@@ -801,11 +803,22 @@ def _odds_keyboard():
 
 
 def _menu_keyboard():
-    """Always-visible quick keyboard: one آستانه button per timeframe + status."""
-    rows = [[f"🎚 آستانه {interval_label(iv)}"] for iv in THRESHOLD_INTERVALS]
-    rows.append([MENU_SCORE, MENU_MISSED])
-    rows.append([MENU_LAST, MENU_ODDS])
-    rows.append([MENU_STATUS, MENU_REFRESH, MENU_UPDATE])
+    """
+    The eight buttons worth a permanent place, in order of how often they get
+    pressed — not in the order the features happened to be built.
+
+    Two full-width rows used to go to the آستانه buttons, one per timeframe.
+    Those set the alternation monitor's threshold, and this account trades the
+    breakout rules; they were the two largest targets on screen and the two
+    least used. They are a /threshold away, listed under «بیشتر».
+
+    Everything rarely reached moves behind one button rather than being deleted:
+    a keyboard people have to read is no faster than typing.
+    """
+    rows = [[MENU_WHY, MENU_PNL],
+            [MENU_SCORE, MENU_LAST],
+            [MENU_COLLECT, MENU_STATUS],
+            [MENU_UPDATE, MENU_MORE]]
     return {
         "keyboard": [[{"text": t} for t in row] for row in rows],
         "resize_keyboard": True,
@@ -876,25 +889,25 @@ def send_document(chat_id, path, caption=""):
 def set_bot_commands():
     """Register slash commands so they show in Telegram's "/" and Menu button."""
     _tg("setMyCommands", {"commands": [
-        {"command": "threshold", "description": "تغییر آستانهٔ هشدار (۲ تا ۷ تناوب)"},
-        {"command": "score", "description": "کارنامهٔ سیگنال‌ها (برد/باخت واقعی)"},
-        {"command": "status", "description": "وضعیت و آستانهٔ فعلی"},
         {"command": "why", "description": "چرا سیگنالی نیست؟ فاصله تا شلیکِ هر قانون"},
         {"command": "pnl", "description": "سود و زیانِ روزانه — بعدش عدد بزن: /pnl 20"},
-        {"command": "export", "description": "گرفتنِ فایلِ کاملِ رکوردِ سیگنال‌ها"},
-        {"command": "edge", "description": "لبهٔ ما در برابرِ قیمتِ بازار (نیاز به /oddscollect)"},
-        {"command": "collect", "description": "آیا همه‌چیز ضبط می‌شود؟ و /edge کِی آماده است؟"},
-        {"command": "missed", "description": "سابقهٔ سیگنال‌ها با ساعت و نتیجه"},
+        {"command": "score", "description": "کارنامهٔ سیگنال‌ها (برد/باخت واقعی)"},
         {"command": "last", "description": "سیگنال‌های N ساعتِ گذشته (پیش‌فرض ۶)"},
-        {"command": "check", "description": "قیمت‌های تسویه برای مقایسه با پلی‌مارکت"},
+        {"command": "missed", "description": "سیگنال‌هایی که به دستت نرسید"},
+        {"command": "collect", "description": "آیا همه‌چیز ضبط می‌شود؟"},
+        {"command": "status", "description": "سلامتِ موتور و وضعیت"},
+        {"command": "edge", "description": "لبهٔ ما در برابرِ قیمتِ بازار"},
         {"command": "odds", "description": "گزارشِ بالا/پایین — بعدش عدد بزن: /odds 1"},
-        {"command": "oddscollect", "description": "روشن/خاموش کردنِ جمع‌آوریِ بی‌صدا"},
+        {"command": "oddscollect", "description": "روشن/خاموش کردنِ جمع‌آوریِ قیمت"},
+        {"command": "export", "description": "گرفتنِ فایلِ کاملِ رکوردِ سیگنال‌ها"},
+        {"command": "update", "description": "دریافت آخرین نسخه و ری‌استارت"},
+        {"command": "check", "description": "قیمت‌های تسویه برای مقایسه با پلی‌مارکت"},
+        {"command": "oddstest", "description": "آیا جمع‌آوری کامل و درست است؟"},
         {"command": "oddsdebug", "description": "چرا بالا/پایین چیزی جمع نمی‌کند؟"},
         {"command": "oddsfill", "description": "بازیابیِ پنجره‌های جاافتاده (پیش‌فرض ۲۴ ساعت)"},
-        {"command": "oddstest", "description": "آیا جمع‌آوری کامل و درست است؟"},
         {"command": "oddsreport", "description": "جمع‌بندیِ بالا/پایین به تفکیکِ ساعت"},
+        {"command": "threshold", "description": "آستانهٔ تناوب (استراتژیِ قدیمی)"},
         {"command": "menu", "description": "نمایش منوی سریع"},
-        {"command": "update", "description": "دریافت آخرین نسخه و ری‌استارت"},
         {"command": "start", "description": "شروع / راهنما"},
     ]})
 
@@ -4264,6 +4277,35 @@ def command_listener(monitor: Monitor):
 
                 if text.startswith("/start"):
                     send_menu(chat_id, start_text())
+                elif text == MENU_MORE:
+                    # A list, not a second keyboard. Telegram makes /commands
+                    # tappable in message text, so this costs no screen space
+                    # and stays readable — and grouping by purpose says what
+                    # each one is for, which a row of buttons never could.
+                    send_message(chat_id,
+                        "⚙️ <b>بقیهٔ دستورها</b>\n\n"
+                        "<b>سیگنال</b>\n"
+                        "/why — چرا همین حالا سیگنالی نیست\n"
+                        "/last 1 — سیگنال‌های یک ساعت اخیر (عدد را عوض کن)\n"
+                        "/missed — سیگنال‌هایی که به دستت نرسید\n"
+                        "/check — قیمت‌های تسویه برای مقایسه با پلی‌مارکت\n\n"
+                        "<b>پول</b>\n"
+                        "/pnl 20 — سود و زیانِ روزانه\n"
+                        "/score — کارنامهٔ کامل\n"
+                        "/export — گرفتنِ فایلِ کاملِ رکورد\n\n"
+                        "<b>قیمتِ بازار</b>\n"
+                        "/odds 1 — گزارشِ بالا/پایین\n"
+                        "/oddscollect — روشن/خاموش کردنِ جمع‌آوری\n"
+                        "/edge — لبهٔ ما در برابرِ قیمتِ بازار\n"
+                        "/oddstest — آیا جمع‌آوری سالم است\n"
+                        "/oddsdebug — چرا جمع نمی‌کند\n"
+                        "/oddsfill 24 — بازیابیِ پنجره‌های جاافتاده\n\n"
+                        "<b>دستگاه</b>\n"
+                        "/collect — آیا همه‌چیز ضبط می‌شود\n"
+                        "/status — سلامتِ موتور\n"
+                        "/update — گرفتنِ آخرین نسخه\n"
+                        "/threshold — آستانهٔ تناوب (استراتژیِ قدیمی)\n"
+                        "/menu — برگرداندنِ کیبورد")
                 elif text.startswith("/menu") or text == MENU_REFRESH:
                     send_menu(chat_id, "منوی سریع آماده است — از دکمه‌های پایین استفاده کن.")
                 elif text.startswith("🎚 آستانه"):
@@ -4487,7 +4529,7 @@ def command_listener(monitor: Monitor):
                         if len(parts) > 1 and parts[1].isdigit():
                             n = max(1, min(90, int(parts[1])))
                         send_chunked(chat_id, bm.pnl_report(days=n))
-                elif text.startswith("/collect"):
+                elif text.startswith("/collect") or text == MENU_COLLECT:
                     bm = globals().get("BREAKOUT_MONITOR")
                     send_chunked(chat_id, bm.collect_report() if bm else
                                  "موتورِ سیگنال روشن نیست.")
