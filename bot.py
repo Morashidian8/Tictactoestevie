@@ -2727,6 +2727,64 @@ class BreakoutMonitor:
             L.append("<i>⚠️ زیرِ ۵۰٪ — سربه‌سرِ هر دو روش دقیقاً ۵۰٪ است.</i>")
         return "\n".join(L)
 
+    def _near_miss(self):
+        """
+        "no signal" plus how close it came — one short line, every window.
+
+        A bare "no signal" cannot be checked against a chart. Someone looking at
+        a candle that clearly broke out has no way to tell whether the bot never
+        saw it, saw it and was blocked by the volatility filter, or measured the
+        break differently — and answering that meant sending me the log and
+        waiting. The distance to each trigger is already computed to decide the
+        window; printing it costs nothing and settles the question on the spot.
+
+        The filtered case is called out by name because it is the only one that
+        looks like a bug from outside: the break really did happen, and the bot
+        really did stay quiet.
+        """
+        cl = self.closes
+        if len(cl) < BREAKOUT_LOOKBACK + 2:
+            return f"no signal (only {len(cl)} closes)"
+        bits = []
+        win = cl[-(BREAKOUT_LOOKBACK + 1):-1]
+        hi, lo, cur = max(win), min(win), cl[-1]
+        if cur > hi or cur < lo:
+            # The break happened. Something else stopped it — say what.
+            if len(cl) >= 101:
+                rets = [(cl[i] - cl[i - 1]) / cl[i - 1]
+                        for i in range(len(cl) - 100, len(cl)) if cl[i - 1]]
+                slow = _stdev(rets)
+                ratio = _stdev(rets[-20:]) / slow if slow > 0 else 0.0
+                if ratio < BREAKOUT_VOL_TH:
+                    bits.append(f"r1 BROKE but vol {ratio:.2f}<{BREAKOUT_VOL_TH:.2f}")
+                else:
+                    sig = breakout_signal(cl)
+                    d = sig.get("depth") if sig else None
+                    bits.append(f"r1 broke, depth {d:.2f}x" if d is not None
+                                else "r1 broke, dropped")
+            else:
+                bits.append("r1 broke, no vol history")
+        else:
+            bits.append(f"r1 {min(hi - cur, cur - lo):.0f}$ away")
+        mv = _moves(cl)
+        run, up = 0, None
+        for x in reversed(mv):
+            if x == 0:
+                break
+            if up is None:
+                up = x > 0
+            elif (x > 0) != up:
+                break
+            run += 1
+        bits.append(f"r3 run {run}/{RULE3_RUN}")
+        if len(cl) >= 101 + RULE5_SPAN:
+            ref = sorted(abs(x) for x in _moves(cl[-101:]))
+            med = ref[len(ref) // 2]
+            if med > 0:
+                net = abs(cl[-1] - cl[-1 - RULE5_SPAN])
+                bits.append(f"r5 {net / med:.1f}/{RULE5_MULT:.1f}x")
+        return "no signal (" + ", ".join(bits) + ")"
+
     @staticmethod
     def odds_rows():
         """
@@ -3366,7 +3424,8 @@ class BreakoutMonitor:
                  "[replay] " if replay else "",
                  datetime.fromtimestamp(window_start, tz=timezone.utc).strftime("%H:%M"),
                  price, len(self.closes),
-                 ", ".join(f"{n}:{b}" for n, _, b, _ in hits) if hits else "no signal")
+                 ", ".join(f"{n}:{b}" for n, _, b, _ in hits) if hits else
+                 self._near_miss())
         if hits:
             if not replay:
                 self.last_signal = time.time()
