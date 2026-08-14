@@ -11,6 +11,8 @@ Data source: Binance public market-data API (no API key required).
 import os
 import csv
 import json
+import shutil
+import subprocess
 import time
 import threading
 import logging
@@ -901,6 +903,117 @@ def send_chunked(chat_id, text, limit=3800):
     return ok
 
 
+# --- Alerting from the phone itself ------------------------------------------
+# Telegram is a network away and behind a VPN, and the window is five minutes:
+# a message that arrives late is a message that arrived for nothing. A sound
+# played by the phone that is already running the bot depends on neither.
+#
+# Deliberately built on sox/mpv/espeak rather than termux-notification, because
+# every termux-* helper talks to the Termux:API *app* — which Play Protect
+# blocks on this device. Audio output needs no such bridge.
+#
+# Direction is carried by pitch, not by count: a rising pair for UP, a falling
+# pair for DOWN. Hearing which way it went is the whole point of not having to
+# look at the screen.
+LOCAL_ALERT = os.environ.get("LOCAL_ALERT", "auto").strip().lower()
+# espeak-ng speaks Persian with -v fa, but robotically enough that "بالا" and
+# "پایین" can be confused — and confusing the two here costs money. English
+# words for the direction are unambiguous at any speech rate.
+ALERT_VOICE = os.environ.get("ALERT_VOICE", "en").strip()
+_ALERT_TOOLS = None
+
+
+def _alert_tools():
+    """
+    (tone player, speech engine) — whichever are installed, decided once.
+
+    Both are used when both exist, and they do different jobs: the tone lands in
+    under a second and says only which way, which is what makes you look up; the
+    sentence that follows carries the rule and the rung. Waiting for speech to
+    finish before knowing the direction would waste the seconds the tone bought.
+    """
+    global _ALERT_TOOLS
+    if _ALERT_TOOLS is None:
+        tone = next((n for n in ("play", "mpv", "ffplay") if shutil.which(n)), "")
+        speech = next((n for n in ("espeak-ng", "espeak") if shutil.which(n)), "")
+        _ALERT_TOOLS = (tone, speech)
+        log.info("Local alert: tone=%s speech=%s",
+                 tone or "none (pkg install sox)",
+                 speech or "none (pkg install espeak)")
+    return _ALERT_TOOLS
+
+
+_FA_DIGITS = str.maketrans("۰۱۲۳۴۵۶۷۸۹", "0123456789")
+
+
+def _spoken(kind, side, rules=None, rung=None):
+    """The sentence to read out: direction first, then what fired, then stake."""
+    if kind == "cancel":
+        return "cancelled"
+    parts = ["up" if side == "up" else "down"]
+    if kind == "golden":
+        parts.insert(0, "golden")
+    nums = []
+    for name in (rules or []):
+        d = (name or " ")[0].translate(_FA_DIGITS)
+        if d.isdigit() and d not in nums:
+            nums.append(d)
+    if nums:
+        parts.append(("rules " if len(nums) > 1 else "rule ") + " and ".join(nums))
+    if rung:
+        parts.append(f"step {rung}")
+    return ", ".join(parts)
+
+
+def _tones_for(kind, side):
+    if kind == "golden":
+        return [(880, 0.10), (1175, 0.10), (1568, 0.18)]      # a rising fanfare
+    if kind == "cancel":
+        return [(700, 0.12), (500, 0.22)]
+    return ([(660, 0.13), (990, 0.20)] if side == "up"
+            else [(990, 0.13), (660, 0.20)])
+
+
+def play_alert(kind="signal", side="up", rules=None, rung=None):
+    """
+    Make a noise on this phone, then say what it was. Never blocks, never raises.
+
+    Runs on its own thread with hard timeouts: an audio device that is busy or a
+    player that hangs must not delay a five-minute signal by even a second.
+    """
+    if LOCAL_ALERT in ("0", "off", "no"):
+        return
+    tone, speech = _alert_tools()
+    if not tone and not speech:
+        return
+    sentence = _spoken(kind, side, rules, rung)
+
+    def _go():
+        try:
+            for freq, dur in (_tones_for(kind, side) if tone else []):
+                if tone == "play":
+                    cmd = ["play", "-q", "-n", "synth", str(dur), "sine",
+                           str(freq), "vol", "0.7"]
+                elif tone == "mpv":
+                    cmd = ["mpv", "--really-quiet", f"--length={dur}",
+                           f"av://lavfi:sine=frequency={freq}"]
+                else:
+                    cmd = ["ffplay", "-nodisp", "-autoexit", "-loglevel",
+                           "quiet", "-t", str(dur), f"sine=frequency={freq}"]
+                subprocess.run(cmd, timeout=6, stdout=subprocess.DEVNULL,
+                               stderr=subprocess.DEVNULL)
+            if speech:
+                subprocess.run([speech, "-v", ALERT_VOICE, "-s", "135",
+                                "-a", "180", sentence],
+                               timeout=12, stdout=subprocess.DEVNULL,
+                               stderr=subprocess.DEVNULL)
+        except Exception as exc:  # noqa: BLE001 - a silent phone is not a fault
+            log.debug("Local alert failed: %s", exc)
+
+    log.info("Local alert: %s", sentence)
+    threading.Thread(target=_go, daemon=True).start()
+
+
 def send_document(chat_id, path, caption=""):
     """
     Send a file to Telegram. Returns True on success.
@@ -929,6 +1042,7 @@ def send_document(chat_id, path, caption=""):
 def set_bot_commands():
     """Register slash commands so they show in Telegram's "/" and Menu button."""
     _tg("setMyCommands", {"commands": [
+        {"command": "beep", "description": "تستِ صدای گوشی (مستقل از تلگرام)"},
         {"command": "why", "description": "چرا سیگنالی نیست؟ فاصله تا شلیکِ هر قانون"},
         {"command": "pnl", "description": "سود و زیانِ روزانه — بعدش عدد بزن: /pnl 20"},
         {"command": "score", "description": "کارنامهٔ سیگنال‌ها (برد/باخت واقعی)"},
@@ -2320,8 +2434,8 @@ class BreakoutMonitor:
         self.last_alert = time.time()
         o_et, e_et = et_time(window_start), et_time(window_start + GRANULARITY)
         bets = {h[2] for h in hits}
-        if len(bets) == 1:
-            bet = bets.pop()
+        bet = next(iter(bets)) if len(bets) == 1 else None
+        if bet:
             head = ("🟢 <b>بالا (Up)</b>" if bet == "up" else "🔴 <b>پایین (Down)</b>")
             agree = (f"  ✅ {len(hits)} استراتژی هم‌نظر" if len(hits) > 1 else "")
         else:
@@ -2355,6 +2469,14 @@ class BreakoutMonitor:
             + self.history_line(mine)
         )
         log.info("ALERT: %s", " | ".join(f"{n}->{b}" for n, _, b, _ in hits))
+        # Before the send, not after: the phone can make a noise whether or not
+        # Telegram is reachable, and on a five-minute window the seconds spent
+        # waiting for a network round-trip are seconds off the entry.
+        if bet:
+            play_alert("golden" if golden else "signal", bet,
+                       rules=[h[0] for h in hits],
+                       rung=(self.loss_streak(mine) % LADDER_RUNGS + 1
+                             if LADDER_RUNGS else None))
         ok = send_message(self.chat_id, text)
         # Mark the just-logged signal as delivered — or leave it queued, so a
         # send that failed (no network, Telegram down) is reported later rather
@@ -3736,6 +3858,7 @@ class BreakoutMonitor:
                              f"برقرار نیست ({left} ثانیه مانده).\n"
                              "<i>وارد نشو. حدود ۱۳٪ سیگنال‌های زودهنگام تا "
                              "بسته‌شدنِ کندل از بین می‌روند.</i>")
+                play_alert("cancel", prev)
             return
 
         self.pre_bet[boundary] = bet
@@ -3802,6 +3925,7 @@ class BreakoutMonitor:
                         f"{self._side_label(promised)} تا بسته‌شدنِ کندل دوام "
                         "نیاورد.\n<i>وارد نشو. حدود ۱۳٪ سیگنال‌های زودهنگام "
                         "در ثانیه‌های آخر از بین می‌روند.</i>")
+                    play_alert("cancel", promised)
 
         log.info("%swindow %s closed at %.2f (%d closes) -> %s",
                  "[replay] " if replay else "",
@@ -4342,6 +4466,18 @@ def command_listener(monitor: Monitor):
 
                 if text.startswith("/start"):
                     send_menu(chat_id, start_text())
+                elif text.startswith("/beep"):
+                    tone, speech = _alert_tools()
+                    play_alert("signal", "up", rules=["۱)", "۵)"], rung=2)
+                    send_message(chat_id,
+                        "🔊 <b>تستِ صدای گوشی</b>\n\n"
+                        f"بوق: <b>{tone or '❌ نصب نیست'}</b>\n"
+                        f"گفتار: <b>{speech or '❌ نصب نیست'}</b>\n\n"
+                        + ("الان باید دو بوقِ بالارونده و بعد «up, rules 1 and 5, "
+                           "step 2» بشنوی." if (tone or speech) else
+                           "هیچ‌کدام نصب نیست:\n"
+                           "<code>pkg install sox espeak</code>\n"
+                           "بعدش ربات را ری‌استارت کن."))
                 elif text == MENU_MORE:
                     # A list, not a second keyboard. Telegram makes /commands
                     # tappable in message text, so this costs no screen space
@@ -4367,6 +4503,7 @@ def command_listener(monitor: Monitor):
                         "/oddsfill 24 — بازیابیِ پنجره‌های جاافتاده\n\n"
                         "<b>دستگاه</b>\n"
                         "/collect — آیا همه‌چیز ضبط می‌شود\n"
+                        "/beep — تستِ صدای گوشی\n"
                         "/status — سلامتِ موتور\n"
                         "/update — گرفتنِ آخرین نسخه\n"
                         "/threshold — آستانهٔ تناوب (استراتژیِ قدیمی)\n"
