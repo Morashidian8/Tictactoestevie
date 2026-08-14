@@ -925,6 +925,118 @@ def interval_from_menu_text(text):
 # ---------------------------------------------------------------------------
 # Candle fetching (Binance spot candles or Polymarket Up/Down series)
 # ---------------------------------------------------------------------------
+def _kl_binance(limit):
+    for host in BINANCE_HOSTS:
+        try:
+            r = requests.get(f"{host}/api/v3/klines",
+                             params={"symbol": "BTCUSDT", "interval": "5m",
+                                     "limit": limit},
+                             timeout=15, headers=_UA)
+            r.raise_for_status()
+            return [(int(x[0]) // 1000, float(x[4])) for x in r.json()]
+        except Exception:  # noqa: BLE001 - try the next host, then the next venue
+            continue
+    return None
+
+
+def _kl_okx(limit):
+    r = requests.get("https://www.okx.com/api/v5/market/candles",
+                     params={"instId": "BTC-USDT", "bar": "5m",
+                             "limit": min(300, limit)},
+                     timeout=15, headers=_UA)
+    r.raise_for_status()
+    # Newest first, and `confirm` == "1" marks a closed candle.
+    return [(int(x[0]) // 1000, float(x[4]))
+            for x in reversed(r.json().get("data") or [])
+            if len(x) < 9 or x[8] == "1"]
+
+
+def _kl_bybit(limit):
+    r = requests.get("https://api.bybit.com/v5/market/kline",
+                     params={"category": "spot", "symbol": "BTCUSDT",
+                             "interval": "5", "limit": min(200, limit)},
+                     timeout=15, headers=_UA)
+    r.raise_for_status()
+    rows = (r.json().get("result") or {}).get("list") or []
+    return [(int(x[0]) // 1000, float(x[4])) for x in reversed(rows)]
+
+
+def _kl_coinbase(limit):
+    r = requests.get("https://api.exchange.coinbase.com/products/BTC-USD/candles",
+                     params={"granularity": 300}, timeout=15, headers=_UA)
+    r.raise_for_status()
+    # [time, low, high, open, close, volume], newest first, seconds.
+    return [(int(x[0]), float(x[4])) for x in reversed(r.json())]
+
+
+def _kl_kraken(limit):
+    r = requests.get("https://api.kraken.com/0/public/OHLC",
+                     params={"pair": "XBTUSD", "interval": 5},
+                     timeout=15, headers=_UA)
+    r.raise_for_status()
+    res = r.json().get("result") or {}
+    rows = next((v for k, v in res.items() if k != "last"), [])
+    return [(int(x[0]), float(x[4])) for x in rows]
+
+
+_UA = {"User-Agent": "btc-candle-alert-bot/1.0"}
+# Every path that refills history used to reach for Binance and nothing else —
+# five hosts, all of them Binance. Binance blocks Iranian addresses, so on this
+# phone a refill could fail for hours, and when it did the close series stayed
+# empty and every rule needing history went quiet without anyone noticing. One
+# venue being unreachable must not blind the engine, so the same candles are
+# fetched from whichever venue answers.
+#
+# Mixing venues is safe HERE and nowhere else: these candles are used only to
+# re-derive shape — rolling extremes, a volatility ratio, a median move — and a
+# constant price offset cancels in every one of those (verified across 39,890
+# windows). Settlement is a different question and still belongs to one feed.
+KLINE_SOURCES = (("binance", _kl_binance), ("okx", _kl_okx),
+                 ("bybit", _kl_bybit), ("coinbase", _kl_coinbase),
+                 ("kraken", _kl_kraken))
+
+
+def fetch_klines(limit, spot=None, min_rows=60):
+    """
+    Closed 5-minute closes from any venue that answers: [(open_sec, close), ...].
+
+    Validated before being trusted, because a wrong symbol, a different quote
+    currency or a millisecond/second mix-up all return plausible-looking JSON
+    that would quietly poison the series. Spacing must be exactly one window,
+    prices must be positive, and — when a live price is available — the last
+    close must be near it. A source that fails any of these is skipped, not
+    patched up.
+    """
+    now = time.time()
+    for name, fn in KLINE_SOURCES:
+        try:
+            rows = fn(limit)
+        except Exception as exc:  # noqa: BLE001
+            log.warning("klines: %s failed: %s", name, type(exc).__name__)
+            continue
+        if not rows:
+            continue
+        rows = sorted({t: c for t, c in rows if c > 0}.items())
+        # Drop the candle still forming: its close is not a close yet.
+        rows = [(t, c) for t, c in rows if t + GRANULARITY <= now]
+        if len(rows) < min_rows:
+            log.warning("klines: %s returned %d rows (<%d)", name, len(rows), min_rows)
+            continue
+        gaps = {rows[i][0] - rows[i - 1][0] for i in range(1, len(rows))}
+        if gaps != {GRANULARITY}:
+            log.warning("klines: %s spacing %s, not %ds", name,
+                        sorted(gaps)[:3], GRANULARITY)
+            continue
+        if spot and not (0.9 * spot <= rows[-1][1] <= 1.1 * spot):
+            log.warning("klines: %s last close %.0f far from spot %.0f",
+                        name, rows[-1][1], spot)
+            continue
+        if name != "binance":
+            log.info("klines: served by %s (%d rows)", name, len(rows))
+        return name, rows[-limit:]
+    return None, None
+
+
 def fetch_candles():
     """Return closed candles oldest -> newest from the configured SOURCE."""
     if SOURCE == "polymarket":
@@ -2113,27 +2225,19 @@ class BreakoutMonitor:
         if len(self.closes) >= BREAKOUT_FULL_HISTORY:
             return
         try:
-            rows = None
-            for host in BINANCE_HOSTS:
-                try:
-                    r = requests.get(f"{host}/api/v3/klines",
-                                     params={"symbol": "BTCUSDT", "interval": "5m",
-                                             "limit": BREAKOUT_HISTORY},
-                                     timeout=20,
-                                     headers={"User-Agent": "btc-candle-alert-bot/1.0"})
-                    r.raise_for_status()
-                    rows = r.json()
-                    break
-                except requests.RequestException as exc:
-                    log.warning("Breakout seed: %s failed: %s", host, exc)
-            if not rows:
+            # Any venue will do for shape. Sanity-checked against the live feed
+            # so a wrong symbol or a different quote currency is rejected rather
+            # than written into the series.
+            try:
+                spot = fetch_spot_price()[0]
+            except Exception:  # noqa: BLE001 - the check is a bonus, not a gate
+                spot = None
+            src, closed = fetch_klines(BREAKOUT_HISTORY, spot=spot)
+            if not closed:
                 return
-            now = time.time()
-            closed = [row for row in rows if int(row[6]) / 1000.0 <= now]
-            self.closes = [float(row[4]) for row in closed][-BREAKOUT_HISTORY:]
+            self.closes = [c for _, c in closed][-BREAKOUT_HISTORY:]
             if closed:
-                seeded_window = (int(closed[-1][0]) // 1000
-                                 // GRANULARITY * GRANULARITY)
+                seeded_window = closed[-1][0] // GRANULARITY * GRANULARITY
                 # Only ever forward. Seeding used to run exclusively on a series
                 # too short to have a meaningful last_window, so assigning it was
                 # safe; now that it also runs at 22-100 closes it can meet a
@@ -2141,9 +2245,10 @@ class BreakoutMonitor:
                 # Moving the marker back would make the loop re-process windows
                 # it has already alerted and scored — the same signal twice.
                 self.last_window = max(self.last_window, seeded_window)
-            self.seeded_from = "binance"
-            log.info("Breakout: seeded %d closes from Binance (levels refine as "
-                     "live %s samples replace them).", len(self.closes), BREAKOUT_FEED)
+            self.seeded_from = src
+            log.info("Breakout: seeded %d closes from %s (levels refine as "
+                     "live %s samples replace them).",
+                     len(self.closes), src, BREAKOUT_FEED)
             self._save()
         except Exception as exc:  # noqa: BLE001 - seeding is best-effort
             log.warning("Breakout: seeding failed: %s", exc)
@@ -2783,7 +2888,14 @@ class BreakoutMonitor:
         five minutes gets muted within a day, and a muted warning is the same as
         no warning.
         """
+        # Every check REPAIRS first and reports only what the repair could not
+        # fix. Telling someone their bot is broken and leaving it broken just
+        # moves the work to them, which is the thing this is meant to end.
         faults = {}
+        if len(self.closes) < BREAKOUT_FULL_HISTORY:
+            keep = self.last_window
+            self._seed()                      # any venue that answers
+            self.last_window = keep
         n = len(self.closes)
         if n < BREAKOUT_FULL_HISTORY:
             short = BREAKOUT_FULL_HISTORY - n
@@ -2791,22 +2903,39 @@ class BreakoutMonitor:
                 f"⚠️ <b>تاریخچه ناقص است</b>\nفقط <b>{n}</b> کندل از "
                 f"{BREAKOUT_FULL_HISTORY} لازم. تا پر شدنش قانون‌های "
                 f"<b>۱، ۵ و ۸</b> شلیک نمی‌کنند و فیلترِ نوسان هم کار نمی‌کند.\n"
-                f"<i>{short} کندلِ دیگر — اگر از بایننس پر نشود "
-                f"{short * GRANULARITY / 3600:.1f} ساعت.</i>")
+                f"<i>هیچ‌کدام از {len(KLINE_SOURCES)} صرافی جواب ندادند؛ هر "
+                f"پنجره دوباره تلاش می‌شود. اگر خودش پر نشود، "
+                f"{short * GRANULARITY / 3600:.1f} ساعت طول می‌کشد.</i>")
         undel = [r for r in self.signals if not r.get("told")
                  and r.get("won") is not None]
+        if undel:
+            self.flush_untold()               # resend before complaining
+            undel = [r for r in self.signals if not r.get("told")
+                     and r.get("won") is not None]
         if len(undel) >= 3:
             faults["undelivered"] = (
-                f"⚠️ <b>{len(undel)} سیگنال ثبت شد ولی به تلگرام نرسید.</b>\n"
-                "با /missed بازخوانی‌شان کن.")
+                f"⚠️ <b>{len(undel)} سیگنال ثبت شد و ارسالِ دوباره‌اش هم "
+                f"نشد.</b>\nتلگرام در دسترس نیست — به‌محضِ وصل شدن خودکار "
+                "می‌روند. /missed هم دستی می‌فرستدشان.")
         ow = globals().get("ODDS_WATCHER")
         if ow is not None and ow.on:
             last = getattr(ow, "last_stored", 0) or 0
             if last and time.time() - last > 6 * GRANULARITY:
+                # A collector loop can wedge with `done_for` parked in the
+                # future, in which case every pass computes a boundary it has
+                # already handled and skips. Winding it back costs one duplicate
+                # window at worst and restores the loop at best.
+                ow.done_for = 0
+                dead = not any(e[0].is_alive() for k, e in _WORKERS.items()
+                               if k == "odds")
+                if dead:
+                    keep_alive("odds", ow.run)
+                    log.warning("SELF-REPAIR: restarted the odds thread")
                 faults["odds"] = (
-                    f"⚠️ <b>جمع‌آوریِ قیمتِ پلی‌مارکت متوقف شده</b> — "
-                    f"{(time.time() - last) / 60:.0f} دقیقه است چیزی ثبت نشده.\n"
-                    "<i>سیگنال‌ها سالم‌اند؛ فقط /edge داده جمع نمی‌کند.</i>")
+                    f"⚠️ <b>جمع‌آوریِ قیمتِ پلی‌مارکت متوقف شده بود</b> — "
+                    f"{(time.time() - last) / 60:.0f} دقیقه.\n"
+                    f"<i>{'نخش دوباره راه انداخته شد' if dead else 'حلقه‌اش عقب کشیده شد'}"
+                    " — سیگنال‌ها دست‌نخورده‌اند.</i>")
 
         was = getattr(self, "_faults", set())
         for key, text in faults.items():
