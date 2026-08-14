@@ -370,6 +370,46 @@ def ledger_row(sig, status):
             "told": int(bool(sig.get("told")))}
 
 
+WINDOWS_FILE = os.environ.get("WINDOWS_FILE", "windows_seen.log")
+_WINDOWS_CACHE = {"mtime": 0.0, "set": set()}
+
+
+def note_window(window_start, replay=False):
+    """Append a processed window boundary. Never raises."""
+    try:
+        with open(WINDOWS_FILE, "a") as f:
+            f.write(f"{int(window_start)}{' r' if replay else ''}\n")
+    except OSError:
+        pass
+
+
+def windows_seen_set():
+    """
+    Every window the engine has processed, as a set of boundaries.
+
+    Re-read only when the file changes: /last calls this once per report and the
+    file grows by one line every five minutes, so parsing it each time would be
+    the same work over and over for the same answer.
+    """
+    try:
+        mt = os.path.getmtime(WINDOWS_FILE)
+    except OSError:
+        return set()
+    if mt == _WINDOWS_CACHE["mtime"]:
+        return _WINDOWS_CACHE["set"]
+    seen = set()
+    try:
+        with open(WINDOWS_FILE) as f:
+            for line in f:
+                part = line.split()
+                if part and part[0].isdigit():
+                    seen.add(int(part[0]))
+    except OSError:
+        return _WINDOWS_CACHE["set"]
+    _WINDOWS_CACHE.update(mtime=mt, set=seen)
+    return seen
+
+
 def ledger_rows():
     """
     The whole record, oldest first, one entry per signal.
@@ -2547,10 +2587,21 @@ class BreakoutMonitor:
         """
         led = {int(r["window_epoch"]): r for r in ledger_rows()
                if str(r.get("window_epoch", "")).isdigit()}
+        seen = windows_seen_set()
         for r in rows:
             hit = led.get(int(r["t"]))
             if hit is None:
-                r["live_tag"] = "  ⚠️ <b>موتورِ زنده نداشت</b>"
+                # Two opposite meanings, now told apart by fact rather than
+                # guess: the engine processed this window and stayed quiet, or
+                # the engine never saw it at all.
+                if int(r["t"]) in seen:
+                    r["live_tag"] = "  🔵 موتور دید، شلیک نکرد"
+                    r["diff_note"] = ("  <i>(چین‌لینک این را سیگنال ندید — "
+                                      "بایننس دید)</i>")
+                elif seen:
+                    r["live_tag"] = "  ⚠️ <b>موتور این پنجره را ندید</b>"
+                else:
+                    r["live_tag"] = "  ⚠️ در رکوردِ زنده نیست"
                 continue
             # Show the strategies that were actually SENT, not the ones this
             # replay would have sent. Matching on the window and then printing
@@ -2664,7 +2715,9 @@ class BreakoutMonitor:
                 "\nهیچ سیگنالی در این بازه نبود — قانون‌ها فقط روی حرکت‌های "
                 "غیرعادی فعال می‌شوند و سکوت طبیعی است.")
         self.tag_against_live(rows)
-        gone = sum(1 for r in rows if "نداشت" in r.get("live_tag", ""))
+        quiet = sum(1 for r in rows if "شلیک نکرد" in r.get("live_tag", ""))
+        gone = sum(1 for r in rows if "ندید" in r.get("live_tag", "")
+                   and "شلیک نکرد" not in r.get("live_tag", ""))
         lost = sum(1 for r in rows if "نرفت" in r.get("live_tag", ""))
         n = sum(1 for r in rows if r["won"] is not None)
         w = sum(1 for r in rows if r["won"])
@@ -2672,9 +2725,13 @@ class BreakoutMonitor:
                 f"{windows} پنجره بررسی شد  ·  <b>{len(rows)}</b> سیگنال"
                 + (f"  ·  {w}/{n} برد" if n else "") + "\n" + why + "\n")
         verdict = ""
+        if quiet:
+            verdict += (f"\n🔵 <b>{quiet}</b> مورد را موتور دید ولی شلیک نکرد — "
+                        "روی چین‌لینک شرطِ قانون برقرار نبود. این خرابی نیست؛ "
+                        "دو فید روی حرکت‌های کوچک اختلاف دارند.")
         if gone:
-            verdict += (f"\n⚠️ <b>{gone}</b> مورد در رکوردِ زنده نیست — یا بات "
-                        "در آن پنجره‌ها بالا نبود، یا چین‌لینک چیزِ دیگری دید.")
+            verdict += (f"\n⚠️ <b>{gone}</b> پنجره را موتور اصلاً ندید — در آن "
+                        "لحظه‌ها بالا نبوده.")
         if lost:
             verdict += (f"\n❗️ <b>{lost}</b> مورد ثبت شد ولی پیامش نرفت — "
                         "با /missed بازخوانی می‌شوند.")
@@ -3711,6 +3768,14 @@ class BreakoutMonitor:
             self.closes = self.closes[-BREAKOUT_HISTORY:]
         self.last_window = window_start
         self.windows_seen += 1
+        # Record that this window was SEEN, signal or not. Without it, "there is
+        # no live record of this window" had two opposite meanings — the engine
+        # was down, or the engine was up and simply did not fire — and the
+        # report guessed. It guessed "was down", which read as constant outages
+        # when the missing windows were interleaved with delivered signals, i.e.
+        # proof the engine had been running the whole time. One integer per
+        # window is 400KB a year; a wrong diagnosis costs more than that.
+        note_window(window_start, replay)
         if not replay:
             # During a replay these would claim the engine is live and that a
             # signal just fired, hiding a real stall behind backfilled data.
