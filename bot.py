@@ -246,6 +246,10 @@ SETTLE_DEADBAND = float(os.environ.get("SETTLE_DEADBAND", "0.05"))
 # computes can be a couple of dollars off the one the market settles on. Below
 # that, a verdict here says nothing about the verdict there.
 SETTLE_FLOOR = float(os.environ.get("SETTLE_FLOOR", "3"))
+# Windows inside the dead band used to be dropped as pushes. They are graded
+# now — Polymarket settles them, so the money was real — and merely flagged.
+# Set NEAR_VOID=1 to go back to not grading them at all.
+NEAR_VOID = os.environ.get("NEAR_VOID", "0").strip() not in ("0", "false", "no")
 # Depth of the martingale ladder being followed, for display only. Without it
 # the message reports a raw losing streak — "پلهٔ ۵" on a three-rung ladder,
 # which is not a rung at all, it is two busts and a fresh start.
@@ -2567,7 +2571,12 @@ class BreakoutMonitor:
                         if d is not None else "")
                 return (f"<b>سیگنالِ قبلی</b> ({et_time(row['t']):%I:%M%p}): "
                         f"⚪️ خیلی نزدیک — بی‌نتیجه{near}\n")
-            mark = "✅ برد" if row["won"] else "❌ باخت"
+            # A graded near-miss is still a near-miss. It counts now, but the
+            # sign came from a move small enough that this feed and the market's
+            # can disagree about it, and a result you cannot check is a result
+            # you cannot trust — so the row says so instead of looking certain.
+            mark = ("✅ برد" if row["won"] else "❌ باخت") + (
+                " <i>(نزدیک)</i>" if row.get("near") else "")
             # The numbers go in the message: a result you cannot check is a
             # result you cannot trust, and one four-cent "win" cost more
             # confidence than every correct call had built.
@@ -2612,7 +2621,18 @@ class BreakoutMonitor:
             return None
         ref = p["ref"]
         delta = price - ref
-        if abs(delta) <= self._deadband():
+        # A window that moved a dollar still SETTLED on Polymarket — only an
+        # exactly equal close is a push there — so calling it "no result" left
+        # real wins and real losses out of the scorecard, and the scorecard then
+        # disagreed with the account. They are graded now.
+        #
+        # What the dead band measured is still true and has not been thrown
+        # away: inside it, this bot's sample and the market's settlement can
+        # disagree on the SIGN, so those rows are flagged `near` and counted
+        # separately in /score. Excluding them hid the uncertainty by hiding the
+        # rows; flagging them shows both. NEAR_VOID=1 restores the old push.
+        near = abs(delta) <= self._deadband()
+        if delta == 0 or (near and NEAR_VOID):
             self.score["void"] += 1
             for row in reversed(self.signals):
                 if row["t"] == p["window"]:
@@ -2621,8 +2641,9 @@ class BreakoutMonitor:
                     row["ref"], row["settle"] = ref, price
                     ledger_append(ledger_row(row, "void"))
                     break
-            log.info("Settled: VOID (%.2f -> %.2f, delta %+.2f is inside the "
-                     "dead band)", ref, price, delta)
+            log.info("Settled: VOID (%.2f -> %.2f, delta %+.2f — %s)",
+                     ref, price, delta,
+                     "exactly flat" if delta == 0 else "inside the dead band")
             return None
         won = (p["bet"] == "up") == (price > ref)
         self.score["n"] += 1
@@ -2636,6 +2657,7 @@ class BreakoutMonitor:
             if row["t"] == p["window"]:
                 row["won"] = won
                 row["delta"] = delta
+                row["near"] = near
                 row["ref"], row["settle"] = ref, price
                 ledger_append(ledger_row(row, "win" if won else "loss"))
                 break
@@ -3718,7 +3740,18 @@ class BreakoutMonitor:
                  f"مجموع: <b>{n}</b> سیگنال  ·  دقت <b>{acc:.1f}%</b>",
                  f"بازهٔ اطمینان ۹۵٪: <b>{lo:.0f}% تا {hi:.0f}%</b>"]
         if s["void"]:
-            lines.append(f"بی‌نتیجه (قیمت تغییر نکرد): {s['void']}")
+            lines.append(f"بی‌نتیجه (قیمت دقیقاً ثابت ماند): {s['void']}")
+        # How much of the record rests on moves too small to verify. Counting
+        # these was the point — the money was real — but an accuracy figure that
+        # leans on them is softer than it looks, and only this line says so.
+        graded = [r for r in self.signals if r.get("won") is not None]
+        nr = [r for r in graded if r.get("near")]
+        if nr:
+            nw = sum(1 for r in nr if r["won"])
+            lines.append(
+                f"از این‌ها <b>{len(nr)}</b> مورد حرکتِ خیلی کوچک بود "
+                f"({nw} برد / {len(nr) - nw} باخت) — شمرده شده‌اند، ولی روی "
+                f"چنین حرکتی فیدِ ما و تسویهٔ پلی‌مارکت ممکن است هم‌علامت نباشند.")
         if self.backfilled:
             lines.append(f"از این تعداد، <b>{self.backfilled}</b> مورد بازپخشِ "
                          "پنجره‌های قطعی است (نتیجه واقعی، ولی پیامش را نگرفتی)")
