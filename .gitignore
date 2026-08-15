@@ -25,3 +25,4 @@ research/btc5m/out/
 # The permanent signal record — device data, never committed.
 signals_ledger.csv
 windows_seen.log
+last_signal.txt

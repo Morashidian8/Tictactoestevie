@@ -9,6 +9,7 @@ Data source: Binance public market-data API (no API key required).
 """
 
 import os
+import re
 import csv
 import json
 import shutil
@@ -919,7 +920,7 @@ def send_chunked(chat_id, text, limit=3800):
 # Direction is carried by pitch, not by count: a rising pair for UP, a falling
 # pair for DOWN. Hearing which way it went is the whole point of not having to
 # look at the screen.
-LOCAL_ALERT = os.environ.get("LOCAL_ALERT", "auto").strip().lower()
+LOCAL_ALERT = os.environ.get("LOCAL_ALERT", "beep").strip().lower()
 # espeak-ng speaks Persian with -v fa, but robotically enough that "بالا" and
 # "پایین" can be confused — and confusing the two here costs money. English
 # words for the direction are unambiguous at any speech rate.
@@ -970,6 +971,19 @@ def _spoken(kind, side, rules=None, rung=None):
 
 
 def _tones_for(kind, side):
+    """
+    In `beep` mode the sound is a doorbell, not a report.
+
+    The talking version said the direction, the rules and the rung, which is
+    more than a five-minute window gives you time to listen to — by the time it
+    finished you could have read the whole message. So the default is one short
+    tone whose only job is "look at your phone", and the text carries the rest.
+    `full` keeps the spoken version for anyone who wants it hands-free.
+    """
+    if LOCAL_ALERT != "full":
+        if kind == "cancel":
+            return [(520, 0.10), (400, 0.14)]      # short, and clearly downward
+        return [(880, 0.09)] * (2 if kind == "golden" else 1)
     if kind == "golden":
         return [(880, 0.10), (1175, 0.10), (1568, 0.18)]      # a rising fanfare
     if kind == "cancel":
@@ -988,7 +1002,7 @@ def play_alert(kind="signal", side="up", rules=None, rung=None):
     if LOCAL_ALERT in ("0", "off", "no"):
         return
     tone, speech = _alert_tools()
-    if not tone and not speech:
+    if not tone and not (speech and LOCAL_ALERT == "full"):
         return
     sentence = _spoken(kind, side, rules, rung)
 
@@ -1006,7 +1020,7 @@ def play_alert(kind="signal", side="up", rules=None, rung=None):
                            "quiet", "-t", str(dur), f"sine=frequency={freq}"]
                 subprocess.run(cmd, timeout=6, stdout=subprocess.DEVNULL,
                                stderr=subprocess.DEVNULL)
-            if speech:
+            if speech and LOCAL_ALERT == "full":
                 subprocess.run([speech, "-v", ALERT_VOICE, "-s", "135",
                                 "-a", "180", sentence],
                                timeout=12, stdout=subprocess.DEVNULL,
@@ -1016,6 +1030,32 @@ def play_alert(kind="signal", side="up", rules=None, rung=None):
 
     log.info("Local alert: %s", sentence)
     threading.Thread(target=_go, daemon=True).start()
+
+
+LAST_SIGNAL_FILE = os.environ.get("LAST_SIGNAL_FILE", "last_signal.txt")
+_TAG_RE = re.compile(r"<[^>]+>")
+
+
+def write_last_signal(text):
+    """
+    Drop the newest alert on disk as plain text, so it can be read without
+    Telegram at all.
+
+    Android will not let Termux raise a notification without the Termux:API
+    app, so there is no way to push text onto the screen from here. What is
+    possible is to have it already waiting: the beep says look, and the text is
+    one command away — no network, no VPN, no message that may or may not have
+    arrived.
+
+    Overwritten each time on purpose. This answers "what is the signal RIGHT
+    NOW"; the ledger is what answers "what happened yesterday".
+    """
+    try:
+        plain = _TAG_RE.sub("", text).replace("&amp;", "&")
+        with open(LAST_SIGNAL_FILE, "w") as f:
+            f.write(f"{datetime.now(TEHRAN):%H:%M:%S}\n{'─' * 34}\n{plain}\n")
+    except OSError as exc:
+        log.debug("last_signal write failed: %s", exc)
 
 
 def send_document(chat_id, path, caption=""):
@@ -2476,6 +2516,7 @@ class BreakoutMonitor:
         # Before the send, not after: the phone can make a noise whether or not
         # Telegram is reachable, and on a five-minute window the seconds spent
         # waiting for a network round-trip are seconds off the entry.
+        write_last_signal(text)
         if bet:
             play_alert("golden" if golden else "signal", bet,
                        rules=[h[0] for h in hits],
@@ -4506,8 +4547,13 @@ def command_listener(monitor: Monitor):
                         "🔊 <b>تستِ صدای گوشی</b>\n\n"
                         f"بوق: <b>{tone or '❌ نصب نیست'}</b>\n"
                         f"گفتار: <b>{speech or '❌ نصب نیست'}</b>\n\n"
-                        + ("الان باید دو بوقِ بالارونده و بعد «up, rules 1 and 5, "
-                           "step 2» بشنوی." if (tone or speech) else
+                        f"حالت: <b>{LOCAL_ALERT}</b>\n\n"
+                        + (("یک بوقِ کوتاه باید شنیده باشی."
+                            if LOCAL_ALERT != "full" else
+                            "بوق و بعد «up, rules 1 and 5, step 2».")
+                           + "\n\nمتنِ آخرین سیگنال:\n"
+                             "<code>bash run_bot.sh signal</code>"
+                           if (tone or speech) else
                            "هیچ‌کدام نصب نیست:\n"
                            "<code>pkg install sox espeak</code>\n"
                            "بعدش ربات را ری‌استارت کن."))

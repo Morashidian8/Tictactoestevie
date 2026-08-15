@@ -134,8 +134,25 @@ case "${1:-start}" in
     log)
         tail -f "$LOG"
         ;;
+    signal|sig)
+        # The newest alert, in plain text, with no Telegram in the way. The beep
+        # says look; this is what you look at.
+        if [ -f "$DIR/last_signal.txt" ]; then
+            cat "$DIR/last_signal.txt"
+        else
+            echo "هنوز سیگنالی ثبت نشده."
+        fi
+        ;;
+    watch)
+        # Same thing, kept on screen and refreshed as it changes.
+        while true; do
+            clear
+            [ -f "$DIR/last_signal.txt" ] && cat "$DIR/last_signal.txt"
+            sleep 10
+        done
+        ;;
     *)
-        echo "usage: bash run_bot.sh [start|stop|status|log]"
+        echo "usage: bash run_bot.sh [start|stop|status|log|signal|watch]"
         exit 1
         ;;
 esac
