@@ -1052,16 +1052,34 @@ NTFY_SERVER = os.environ.get("NTFY_SERVER", "https://ntfy.sh").rstrip("/")
 NTFY_TOPIC = os.environ.get("NTFY_TOPIC", "").strip()
 
 
-def push_ntfy(title, body, priority=4, tags=None):
+def market_url(window_start):
+    """
+    The Polymarket page for this exact five-minute window.
+
+    Built from the same slug the collector already derives, so it is a string
+    operation with no lookup. Worth attaching because the notification then
+    replaces the whole errand: tap it and the market you are being told to bet
+    on is open, inside a window that only lasts five minutes.
+    """
+    try:
+        import polymarket_collector as pmc
+        return f"https://polymarket.com/event/{pmc._slug_for(window_start)}"
+    except Exception:  # noqa: BLE001 - a link is a convenience, never a gate
+        return None
+
+
+def push_ntfy(title, body, priority=4, tags=None, click=None):
     """Raise a notification on the phone. Never blocks, never raises."""
     if not NTFY_TOPIC:
         return
 
     def _go():
         try:
-            requests.post(NTFY_SERVER, timeout=10, json={
-                "topic": NTFY_TOPIC, "title": title, "message": body,
-                "priority": priority, "tags": tags or []})
+            payload = {"topic": NTFY_TOPIC, "title": title, "message": body,
+                       "priority": priority, "tags": tags or []}
+            if click:
+                payload["click"] = click
+            requests.post(NTFY_SERVER, timeout=10, json=payload)
         except Exception as exc:  # noqa: BLE001 - a push is a bonus, never a gate
             log.debug("ntfy failed: %s", exc)
 
@@ -2564,7 +2582,8 @@ class BreakoutMonitor:
             priority=5 if golden else 4,
             tags=["moneybag"] if golden else
                  (["chart_with_upwards_trend"] if bet == "up"
-                  else ["chart_with_downwards_trend"]))
+                  else ["chart_with_downwards_trend"]),
+            click=market_url(window_start + GRANULARITY))
         if bet:
             play_alert("golden" if golden else "signal", bet,
                        rules=[h[0] for h in hits],
