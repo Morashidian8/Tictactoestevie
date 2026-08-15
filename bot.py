@@ -2228,6 +2228,7 @@ class BreakoutMonitor:
         self.backfilled = 0       # windows scored from replay, not from live alerts
         self._load()
         self._seed_ledger()
+        self._rebuild_from_ledger()
 
     @property
     def chat_id(self):
@@ -2423,6 +2424,71 @@ class BreakoutMonitor:
             log.info("Breakout: recovered the outage on retry.")
             self.recover_from = self.recover_to = None
             self._save()
+
+    def _rebuild_from_ledger(self):
+        """
+        Rebuild the scorecard from the permanent record at startup.
+
+        There were two histories: the counters inside the state file, and the
+        append-only ledger. The state file is one json blob rewritten on every
+        save and capped at SIGNALS_KEEP, so a truncated write or a fresh install
+        empties it — and /score then read as though nothing had ever happened
+        while /pnl still showed a full year. Two answers to one question, and
+        the alarming one was the one on the button.
+
+        The ledger is the record that cannot be trimmed or half-written, so it
+        wins. Rebuilding from it every start also means the two can never drift
+        again, rather than merely being repaired this once.
+        """
+        led = ledger_rows()
+        if not led:
+            return
+        score = {"n": 0, "wins": 0, "void": 0, "rules": {}, "since": None}
+        signals, history = [], []
+        for r in led:
+            try:
+                t = int(r["window_epoch"])
+            except (KeyError, TypeError, ValueError):
+                continue
+            status = r.get("status")
+            rules = [x for x in (r.get("rules") or "").split(" + ") if x]
+            mine = self._is_mine(rules)
+            row = {"t": t, "bet": r.get("bet") or "", "rules": rules,
+                   "won": None, "mine": mine,
+                   "told": str(r.get("told")) == "1"}
+            for key in ("ref", "settle", "delta"):
+                try:
+                    row[key] = float(r[key])
+                except (KeyError, TypeError, ValueError):
+                    pass
+            if status == "void":
+                row["void"] = True
+                score["void"] += 1
+            elif status in ("win", "loss"):
+                won = status == "win"
+                row["won"] = won
+                score["n"] += 1
+                score["wins"] += won
+                if score["since"] is None:
+                    score["since"] = t
+                for name in rules:
+                    d = score["rules"].setdefault(name, {"n": 0, "wins": 0})
+                    d["n"] += 1
+                    d["wins"] += won
+                history.append({"won": won, "bet": row["bet"], "mine": mine})
+            signals.append(row)
+        if score["n"] < self.score.get("n", 0):
+            # The state file knows about settled signals the ledger does not —
+            # only possible for windows graded before the ledger existed. Keep
+            # the larger record rather than quietly shrinking the scorecard.
+            log.info("Ledger has %d settled vs %d in state; keeping state.",
+                     score["n"], self.score.get("n", 0))
+            return
+        self.score = score
+        self.signals = signals[-SIGNALS_KEEP:]
+        self.history = history[-HISTORY_KEEP:]
+        log.info("Scorecard rebuilt from %s: %d settled, %d wins, %d void.",
+                 LEDGER_FILE, score["n"], score["wins"], score["void"])
 
     def _seed_ledger(self):
         """
