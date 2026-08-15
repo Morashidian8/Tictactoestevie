@@ -1032,6 +1032,42 @@ def play_alert(kind="signal", side="up", rules=None, rung=None):
     threading.Thread(target=_go, daemon=True).start()
 
 
+# --- A real Android notification, without Termux:API --------------------------
+# I said this was impossible. It is not: ntfy is a push service whose entire
+# protocol is one HTTP POST, and its Android app is an ordinary Play Store /
+# F-Droid install — no Termux:API bridge, no Play Protect warning to click past.
+# The phone raises a normal notification with the full text, a sound and a
+# priority, which is exactly what was asked for and what a file on disk cannot
+# do.
+#
+# It still needs the network, like Telegram. What it does not need is Telegram's
+# client: the app that keeps wedging on "Connecting" behind the VPN is a large
+# one holding a stateful MTProto session, while ntfy holds a plain HTTP stream
+# and reconnects in seconds. Different failure mode, and both can run at once —
+# whichever arrives first is the one that mattered.
+#
+# Sent as JSON rather than headers on purpose: ntfy's Title header is latin-1,
+# and a Persian title silently becomes mojibake.
+NTFY_SERVER = os.environ.get("NTFY_SERVER", "https://ntfy.sh").rstrip("/")
+NTFY_TOPIC = os.environ.get("NTFY_TOPIC", "").strip()
+
+
+def push_ntfy(title, body, priority=4, tags=None):
+    """Raise a notification on the phone. Never blocks, never raises."""
+    if not NTFY_TOPIC:
+        return
+
+    def _go():
+        try:
+            requests.post(NTFY_SERVER, timeout=10, json={
+                "topic": NTFY_TOPIC, "title": title, "message": body,
+                "priority": priority, "tags": tags or []})
+        except Exception as exc:  # noqa: BLE001 - a push is a bonus, never a gate
+            log.debug("ntfy failed: %s", exc)
+
+    threading.Thread(target=_go, daemon=True).start()
+
+
 LAST_SIGNAL_FILE = os.environ.get("LAST_SIGNAL_FILE", "last_signal.txt")
 _TAG_RE = re.compile(r"<[^>]+>")
 
@@ -2517,6 +2553,18 @@ class BreakoutMonitor:
         # Telegram is reachable, and on a five-minute window the seconds spent
         # waiting for a network round-trip are seconds off the entry.
         write_last_signal(text)
+        # Fired before the Telegram send for the same reason the beep is: the
+        # window is five minutes and a round-trip to an app that may be wedged
+        # is not something to wait behind.
+        push_ntfy(
+            ("🏆 ورودِ طلایی — " if golden else "") +
+            (("🟢 بالا" if bet == "up" else "🔴 پایین") if bet
+             else "⚠️ اختلافِ نظر"),
+            _TAG_RE.sub("", text),
+            priority=5 if golden else 4,
+            tags=["moneybag"] if golden else
+                 (["chart_with_upwards_trend"] if bet == "up"
+                  else ["chart_with_downwards_trend"]))
         if bet:
             play_alert("golden" if golden else "signal", bet,
                        rules=[h[0] for h in hits],
@@ -4000,6 +4048,8 @@ class BreakoutMonitor:
                         "نیاورد.\n<i>وارد نشو. حدود ۱۳٪ سیگنال‌های زودهنگام "
                         "در ثانیه‌های آخر از بین می‌روند.</i>")
                     play_alert("cancel", promised)
+                    push_ntfy("❌ لغو شد", "پیش‌هشدار تا بسته‌شدنِ کندل دوام "
+                              "نیاورد — وارد نشو.", priority=4, tags=["x"])
 
         log.info("%swindow %s closed at %.2f (%d closes) -> %s",
                  "[replay] " if replay else "",
@@ -4543,11 +4593,16 @@ def command_listener(monitor: Monitor):
                 elif text.startswith("/beep"):
                     tone, speech = _alert_tools()
                     play_alert("signal", "up", rules=["۱)", "۵)"], rung=2)
+                    push_ntfy("🔊 تستِ اعلان",
+                              "اگر این را روی نوارِ اعلانِ گوشی می‌بینی، "
+                              "مسیرِ بدونِ تلگرام کار می‌کند.",
+                              priority=4, tags=["bell"])
                     send_message(chat_id,
                         "🔊 <b>تستِ صدای گوشی</b>\n\n"
                         f"بوق: <b>{tone or '❌ نصب نیست'}</b>\n"
                         f"گفتار: <b>{speech or '❌ نصب نیست'}</b>\n\n"
-                        f"حالت: <b>{LOCAL_ALERT}</b>\n\n"
+                        f"حالت: <b>{LOCAL_ALERT}</b>\n"
+                        f"اعلانِ ntfy: <b>{NTFY_TOPIC or '❌ تنظیم نشده'}</b>\n\n"
                         + (("یک بوقِ کوتاه باید شنیده باشی."
                             if LOCAL_ALERT != "full" else
                             "بوق و بعد «up, rules 1 and 5, step 2».")
