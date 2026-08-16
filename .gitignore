@@ -26,3 +26,4 @@ research/btc5m/out/
 signals_ledger.csv
 windows_seen.log
 last_signal.txt
+polymarket_trades.csv

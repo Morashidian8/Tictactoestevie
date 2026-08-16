@@ -317,7 +317,7 @@ LEDGER_COLS = ("window_epoch", "tehran", "et", "status", "bet", "rules",
                "ref", "settle", "delta", "mine", "replay", "told")
 
 
-def _ledger_unterminated():
+def _ledger_unterminated(path=None):
     """
     True when the file does not end in a newline.
 
@@ -328,26 +328,27 @@ def _ledger_unterminated():
     the record written after it.
     """
     try:
-        if os.path.getsize(LEDGER_FILE) == 0:
+        path = path or LEDGER_FILE
+        if os.path.getsize(path) == 0:
             return False
-        with open(LEDGER_FILE, "rb") as f:
+        with open(path, "rb") as f:
             f.seek(-1, os.SEEK_END)
             return f.read(1) not in (b"\n", b"\r")
     except OSError:
         return False
 
 
-def ledger_append(row):
-    """One line onto the permanent record. Never raises, never blocks."""
+def ledger_append_to(path, cols, row):
+    """One line onto an append-only record. Never raises, never blocks."""
     try:
-        new = not os.path.exists(LEDGER_FILE) or os.path.getsize(LEDGER_FILE) == 0
-        heal = (not new) and _ledger_unterminated()
-        with open(LEDGER_FILE, "a", newline="") as f:
+        new = not os.path.exists(path) or os.path.getsize(path) == 0
+        heal = (not new) and _ledger_unterminated(path)
+        with open(path, "a", newline="") as f:
             if heal:
                 # Close the torn line off so this record starts clean. The
                 # damaged line stays and is skipped on read; only it is lost.
                 f.write("\n")
-            w = csv.DictWriter(f, fieldnames=LEDGER_COLS, extrasaction="ignore")
+            w = csv.DictWriter(f, fieldnames=cols, extrasaction="ignore")
             if new:
                 w.writeheader()
             w.writerow(row)
@@ -357,7 +358,11 @@ def ledger_append(row):
             f.flush()
             os.fsync(f.fileno())
     except Exception as exc:  # noqa: BLE001 - the record must never stop the bot
-        log.warning("Ledger: could not append: %s", exc)
+        log.warning("Ledger: could not append to %s: %s", path, exc)
+
+
+def ledger_append(row):
+    ledger_append_to(LEDGER_FILE, LEDGER_COLS, row)
 
 
 def ledger_row(sig, status):
@@ -375,6 +380,91 @@ def ledger_row(sig, status):
             "mine": int(bool(sig.get("mine"))),
             "replay": int(bool(sig.get("replay"))),
             "told": int(bool(sig.get("told")))}
+
+
+# --- Who is on the other side ------------------------------------------------
+# The observation this exists to test: some accounts stake heavily at prices
+# under 20c and win. If that is real it is information, and information leaves a
+# trace — the same wallets doing it again next week.
+#
+# Polymarket publishes every fill, so this is answerable rather than arguable.
+# What it is NOT is a thing to copy on sight: a fill becomes queryable seconds
+# after it happens, and by then the price it moved is gone. The point of
+# collecting is to find out WHAT they know and whether we can compute it
+# ourselves, not to follow them into a trade.
+#
+# Only large fills are kept. A five-minute market has a long tail of dust that
+# would multiply the file size without carrying a single bit about skill.
+TRADES_FILE = os.environ.get("TRADES_FILE", "polymarket_trades.csv")
+TRADE_MIN_SIZE = float(os.environ.get("TRADE_MIN_SIZE", "50"))
+TRADES_ON = os.environ.get("TRADES", "1").strip() not in ("0", "false", "no")
+TRADE_COLS = ("window_epoch", "tehran", "wallet", "outcome", "side",
+              "price", "size", "ts", "condition_id")
+_TRADES_SHAPE_LOGGED = False
+
+
+def _pick(d, *names, default=None):
+    """First present key out of several spellings — the API renames things."""
+    for n in names:
+        if d.get(n) not in (None, ""):
+            return d[n]
+    return default
+
+
+def fetch_trades(condition_id, limit=500):
+    """Every published fill for one market, or None if it cannot be read."""
+    global _TRADES_SHAPE_LOGGED
+    if not condition_id:
+        return None
+    try:
+        r = requests.get("https://data-api.polymarket.com/trades",
+                         params={"market": condition_id, "limit": limit},
+                         timeout=20, headers=_UA)
+        r.raise_for_status()
+        rows = r.json()
+        if isinstance(rows, dict):
+            rows = rows.get("data") or rows.get("trades") or []
+        if rows and not _TRADES_SHAPE_LOGGED:
+            # Logged once, so if the field names differ from what is assumed
+            # here the mapping can be corrected from evidence instead of guessed
+            # at a second time.
+            _TRADES_SHAPE_LOGGED = True
+            log.info("trades: first row keys = %s", sorted(rows[0])[:14])
+        return rows if isinstance(rows, list) else None
+    except Exception as exc:  # noqa: BLE001
+        log.debug("trades fetch failed: %s", exc)
+        return None
+
+
+def collect_trades(window_start, condition_id):
+    """Append this window's large fills. Returns how many were kept."""
+    if not TRADES_ON:
+        return 0
+    rows = fetch_trades(condition_id)
+    if not rows:
+        return 0
+    kept = 0
+    for t in rows:
+        try:
+            size = float(_pick(t, "size", "amount", "shares", default=0) or 0)
+            price = float(_pick(t, "price", "avgPrice", default=0) or 0)
+        except (TypeError, ValueError):
+            continue
+        if size * price < TRADE_MIN_SIZE:
+            continue
+        ledger_append_to(TRADES_FILE, TRADE_COLS, {
+            "window_epoch": int(window_start),
+            "tehran": datetime.fromtimestamp(window_start, TEHRAN)
+                              .strftime("%Y-%m-%d %H:%M"),
+            "wallet": str(_pick(t, "proxyWallet", "maker", "user",
+                                "wallet", default=""))[:44],
+            "outcome": str(_pick(t, "outcome", "outcomeIndex", default=""))[:8],
+            "side": str(_pick(t, "side", default=""))[:4],
+            "price": f"{price:.4f}", "size": f"{size:.2f}",
+            "ts": int(_pick(t, "timestamp", "matchtime", default=0) or 0),
+            "condition_id": str(condition_id)[:70]})
+        kept += 1
+    return kept
 
 
 WINDOWS_FILE = os.environ.get("WINDOWS_FILE", "windows_seen.log")
@@ -1148,6 +1238,7 @@ def set_bot_commands():
         {"command": "missed", "description": "سیگنال‌هایی که به دستت نرسید"},
         {"command": "collect", "description": "آیا همه‌چیز ضبط می‌شود؟"},
         {"command": "status", "description": "سلامتِ موتور و وضعیت"},
+        {"command": "whales", "description": "معامله‌گرهای بزرگ — آیا مهارتشان پایدار است؟"},
         {"command": "edge", "description": "لبهٔ ما در برابرِ قیمتِ بازار"},
         {"command": "odds", "description": "گزارشِ بالا/پایین — بعدش عدد بزن: /odds 1"},
         {"command": "oddscollect", "description": "روشن/خاموش کردنِ جمع‌آوریِ قیمت"},
@@ -3637,6 +3728,119 @@ class BreakoutMonitor:
                 L.append("  هنوز نمی‌شود تخمین زد؛ هر دو طرف باید شروع کنند.")
         return "\n".join(L)
 
+    @staticmethod
+    def whales_report(min_trades=15):
+        """
+        Which wallets actually win, and does last week's winner win next week.
+
+        The first question is easy and worthless on its own: among hundreds of
+        wallets, dozens will look brilliant by luck. This project has already
+        shown how far that goes — shuffled labels produced better in-sample
+        patterns than the real data did. A ranking by win rate is a list of
+        lucky people with a few informed ones hidden in it, and nothing about
+        the list says which is which.
+
+        So the number that decides is the second one: split the record in half
+        by time, rank on the first half, and score those same wallets on the
+        second. If skill is real the two halves correlate. If the leaderboard is
+        noise, this week's stars are next week's average — and that answer is
+        worth as much as the other, because it stops the search.
+        """
+        rows = []
+        try:
+            with open(TRADES_FILE, newline="") as f:
+                for r in csv.DictReader(f):
+                    try:
+                        rows.append({"w": r["window_epoch"], "wallet": r["wallet"],
+                                     "outcome": (r.get("outcome") or "").lower(),
+                                     "price": float(r["price"]),
+                                     "size": float(r["size"]),
+                                     "t": int(r["window_epoch"])})
+                    except (KeyError, TypeError, ValueError):
+                        continue
+        except FileNotFoundError:
+            return ("هنوز هیچ معامله‌ای جمع نشده.\n"
+                    "<i>بعد از هر پنجره، معامله‌های بزرگ ثبت می‌شوند — "
+                    "چند ساعت صبر کن و دوباره بزن.</i>")
+        if not rows:
+            return "فایلِ معامله‌ها خالی است."
+
+        # Outcome per window comes from our own settled record.
+        won = {}
+        for r in ledger_rows():
+            if r.get("status") in ("win", "loss"):
+                try:
+                    won[int(r["window_epoch"])] = (
+                        r["bet"] if r["status"] == "win"
+                        else ("down" if r["bet"] == "up" else "up"))
+                except (KeyError, TypeError, ValueError):
+                    continue
+        graded = [r for r in rows if r["t"] in won]
+        if len(graded) < 50:
+            return (f"📊 <b>معامله‌های بزرگ</b>\n\n{len(rows)} معامله ثبت شده، "
+                    f"{len(graded)} تای‌شان روی پنجره‌ای که ما هم نتیجه‌اش را "
+                    f"داریم.\n<i>برای قضاوت خیلی کم است — دستِ‌کم چند صد تا "
+                    f"لازم است. چند روز صبر کن.</i>")
+
+        def tally(sub):
+            out = {}
+            for r in sub:
+                a = out.setdefault(r["wallet"], {"n": 0, "w": 0, "vol": 0.0,
+                                                 "pnl": 0.0})
+                hit = r["outcome"].startswith(won[r["t"]][:2])
+                a["n"] += 1
+                a["w"] += hit
+                a["vol"] += r["size"] * r["price"]
+                # A share bought at p returns 1 if it wins and 0 if it does not.
+                a["pnl"] += r["size"] * ((1 - r["price"]) if hit else -r["price"])
+            return out
+
+        mid = sorted(x["t"] for x in graded)[len(graded) // 2]
+        first = tally([r for r in graded if r["t"] < mid])
+        second = tally([r for r in graded if r["t"] >= mid])
+        allt = tally(graded)
+
+        L = [f"🐋 <b>معامله‌گرهای بزرگ</b>",
+             f"<i>{len(graded)} معاملهٔ بالای ${TRADE_MIN_SIZE:,.0f} روی "
+             f"{len(set(r['t'] for r in graded))} پنجره · "
+             f"{len(allt)} کیف‌پول</i>", ""]
+        top = sorted((a for a in allt.items() if a[1]["n"] >= min_trades),
+                     key=lambda kv: -kv[1]["pnl"])[:8]
+        if not top:
+            L.append(f"هیچ کیف‌پولی هنوز {min_trades} معاملهٔ بزرگ ندارد.")
+        else:
+            L.append("<code>کیف‌پول        معامله  برد   سود</code>")
+            for wal, a in top:
+                L.append(f"<code>{wal[:10]:<12}{a['n']:>6}{a['w']/a['n']*100:>6.0f}%"
+                         f"{a['pnl']:>+8,.0f}$</code>")
+
+        # The only test that matters.
+        pairs = [(first[k]["w"] / first[k]["n"], second[k]["w"] / second[k]["n"])
+                 for k in first
+                 if k in second and first[k]["n"] >= 8 and second[k]["n"] >= 8]
+        L.append("")
+        if len(pairs) < 5:
+            L.append(f"<b>آزمونِ پایداری:</b> فقط {len(pairs)} کیف‌پول در هر دو "
+                     "نیمه فعال بوده — هنوز قابلِ آزمون نیست.")
+        else:
+            n = len(pairs)
+            mx = sum(a for a, _ in pairs) / n
+            my = sum(b for _, b in pairs) / n
+            sx = (sum((a - mx) ** 2 for a, _ in pairs) / n) ** 0.5
+            sy = (sum((b - my) ** 2 for _, b in pairs) / n) ** 0.5
+            r = (sum((a - mx) * (b - my) for a, b in pairs) / n / (sx * sy)
+                 if sx > 0 and sy > 0 else 0.0)
+            L.append(f"<b>آزمونِ پایداری</b> ({n} کیف‌پولِ فعال در هر دو نیمه)")
+            L.append(f"همبستگیِ نیمهٔ اول و دوم: <b>{r:+.2f}</b>")
+            L.append("✅ <b>مهارت واقعی است</b> — برنده‌های نیمهٔ اول در نیمهٔ "
+                     "دوم هم برنده‌اند. ارزشِ دنبال‌کردن دارد."
+                     if r > 0.3 else
+                     ("⚪️ شواهدی از مهارتِ پایدار نیست — ستاره‌های این هفته "
+                      "هفتهٔ بعد متوسط‌اند. یعنی آن بردها شانس بوده‌اند، نه خبر."
+                      if abs(r) <= 0.3 else
+                      "⚠️ همبستگیِ منفی — یعنی نویزِ محض."))
+        return "\n".join(L)
+
     def edge_report(self):
         """
         Does our accuracy depend on what the market was charging for our side?
@@ -4299,6 +4503,8 @@ class OddsWatcher:
         self.errors = 0
         self.why = ""             # why the last attempt collected nothing
         self.why_detail = ""      # the full diagnosis from that moment
+        self.trade_queue = []     # (window, condition_id) awaiting their fills
+        self.trades_kept = 0
         self.last_attempt = 0.0   # loop turned (regardless of on/off)
         self.last_stored = 0.0    # a row actually reached the file
         self.done_for = 0         # boundary already handled this pass
@@ -4486,6 +4692,7 @@ class OddsWatcher:
             # was stored". Reporting only the last stored row made a dead thread
             # and a thread being refused by Polymarket look identical.
             self.last_attempt = time.time()
+            self._drain_trades()
             if not self.on:
                 continue
             try:
@@ -4528,10 +4735,15 @@ class OddsWatcher:
                        "hour_et": et_time(nxt).hour, "up": up, "down": down,
                        "favourite": fav, "winner": None, "beat": None,
                        "final": None, "source": src, "market_id": m.get("id"),
+                       "condition_id": m.get("conditionId") or m.get("condition_id"),
                        "title": (m.get("question") or "")[:70], "minutes": mins,
                        "lag": round(time.time() - nxt)}
                 pmc.append(row)
                 self.last_stored = time.time()
+                # Fills land after the window closes, so this is queued for
+                # later rather than fetched now — reading it here would spend
+                # the seconds that belong to the NEXT window's quote.
+                self.trade_queue.append((nxt, row.get("condition_id")))
                 self.last = row
                 self.errors = 0
                 # Fill in outcomes for everything already stored. Cheap, and it
@@ -4559,6 +4771,35 @@ class OddsWatcher:
                 log.info("Odds: filled in %d pending outcomes.", n)
         except Exception as exc:  # noqa: BLE001
             log.warning("resolve_pending: %s", exc)
+
+    def _drain_trades(self):
+        """
+        Fetch the fills for windows that have since closed.
+
+        Deliberately one window per pass and only for windows already over: the
+        fills are the whole point but they are never urgent, and this loop's
+        real job is to get a quote in the seconds before a boundary. Anything
+        that could push that late does not belong in front of it.
+        """
+        if not TRADES_ON or not self.trade_queue:
+            return
+        now = time.time()
+        ready = [x for x in self.trade_queue if x[0] + GRANULARITY + 60 <= now]
+        if not ready:
+            # Drop anything too old to still be worth a request.
+            self.trade_queue = [x for x in self.trade_queue
+                                if now - x[0] < 6 * 3600]
+            return
+        window, cid = ready[0]
+        self.trade_queue.remove((window, cid))
+        try:
+            n = collect_trades(window, cid)
+            self.trades_kept += n
+            if n:
+                log.info("trades: %d large fills for %s",
+                         n, et_time(window).strftime("%H:%M"))
+        except Exception as exc:  # noqa: BLE001 - never disturb the quote loop
+            log.debug("trade drain failed: %s", exc)
 
     def _explain(self, pmc, boundary, short):
         """
@@ -4717,6 +4958,7 @@ def command_listener(monitor: Monitor):
                         "/odds 1 — گزارشِ بالا/پایین\n"
                         "/oddscollect — روشن/خاموش کردنِ جمع‌آوری\n"
                         "/edge — لبهٔ ما در برابرِ قیمتِ بازار\n"
+                        "/whales — معامله‌گرهای بزرگ\n"
                         "/oddstest — آیا جمع‌آوری سالم است\n"
                         "/oddsdebug — چرا جمع نمی‌کند\n"
                         "/oddsfill 24 — بازیابیِ پنجره‌های جاافتاده\n\n"
@@ -4953,6 +5195,10 @@ def command_listener(monitor: Monitor):
                 elif text.startswith("/collect") or text == MENU_COLLECT:
                     bm = globals().get("BREAKOUT_MONITOR")
                     send_chunked(chat_id, bm.collect_report() if bm else
+                                 "موتورِ سیگنال روشن نیست.")
+                elif text.startswith("/whales"):
+                    bm = globals().get("BREAKOUT_MONITOR")
+                    send_chunked(chat_id, bm.whales_report() if bm else
                                  "موتورِ سیگنال روشن نیست.")
                 elif text.startswith("/edge"):
                     bm = globals().get("BREAKOUT_MONITOR")
