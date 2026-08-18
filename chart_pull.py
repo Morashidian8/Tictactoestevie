@@ -260,6 +260,33 @@ def probe():
             print(f"      ✅ {m.get('slug')}  "
                   f"start={m.get('startPrice')} end={m.get('endPrice')}")
 
+    # C and E proved the shape moved: closed=true is required, and the slug is
+    # now "<asset>-updown-5m-<epoch>". What is still unknown is which asset
+    # prefix is Bitcoin's and where the settlement prices went, so dump one
+    # whole market rather than guess at field names a third time.
+    print("\n" + "=" * 60)
+    try:
+        rows = pmc.get(f"{pmc.GAMMA}/markets", limit=100, order="endDate",
+                       ascending="true", closed="true",
+                       end_date_min=pmc._iso(end - 90),
+                       end_date_max=pmc._iso(end + 90))
+    except Exception as exc:
+        rows = []
+        print(f"listing failed: {exc}")
+    fives = [m for m in rows if "updown-5m" in (m.get("slug") or "")]
+    print(f"5-minute markets ending at this instant: {len(fives)}")
+    for m in fives:
+        print(f"  {m.get('slug')}   |  {(m.get('question') or '')[:60]}")
+    if fives:
+        pick = next((m for m in fives
+                     if "btc" in (m.get("slug") or "").lower()
+                     or "bitcoin" in (m.get("question") or "").lower()), fives[0])
+        print(f"\nfull object for {pick.get('slug')}:")
+        for k in sorted(pick):
+            v = pick[k]
+            v = v if len(str(v)) < 90 else str(v)[:87] + "..."
+            print(f"  {k:<26} = {v!r}")
+
     # And the one the live path actually uses, end to end.
     m = pmc.market_for(w)
     print(f"\nF  pmc.market_for(): {'found' if m else 'nothing'}")
