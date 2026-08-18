@@ -32,7 +32,10 @@ GRAN = pmc.GRAN
 # Six hours is 72 of our markets. Small enough that paging rarely goes past the
 # first page, large enough that a month is a couple of hundred requests.
 CHUNK = 6 * 3600
-PAGE = 500
+# Gamma caps a page at 100 whatever you ask for. Requesting 500 and then
+# stopping because "fewer than 500 came back" meant the first page was always
+# also the last: every chunk silently returned at most 100 of its markets.
+PAGE = 100
 
 
 def load_existing():
@@ -79,10 +82,15 @@ def window_of(m):
     """
     The five-minute window this market belongs to, or None.
 
-    Checked by rebuilding the slug from the candidate window and demanding it
-    match. That single test rejects the 15-minute markets, the hourly ones and
-    anything merely adjacent in time — the alternative, trusting endDate minus
-    300, would happily accept a 15-minute market's last five minutes.
+    Decided by the market's TITLE, which names both ends of the window
+    ("4:15PM-4:20PM ET") and so cannot be confused with the 15-minute market
+    finishing at the same instant. This is the collector's own test, already
+    proven against the live API.
+
+    The first version rebuilt Polymarket's slug and demanded an exact match.
+    That matched nothing at all — 100 markets a chunk, zero accepted — because
+    a slug format is a presentation detail and it had moved. The title carries
+    the actual claim, so it is what gets read.
     """
     end = m.get("endDate") or m.get("end_date_iso")
     if not end:
@@ -91,9 +99,10 @@ def window_of(m):
         ts = datetime.fromisoformat(str(end).replace("Z", "+00:00")).timestamp()
     except (ValueError, TypeError):
         return None
-    w = int(ts) // GRAN * GRAN - GRAN
-    slug = (m.get("slug") or "").lower()
-    return w if slug and slug == pmc._slug_for(w) else None
+    if int(ts) % GRAN:
+        return None                      # not on a five-minute boundary
+    w = int(ts) - GRAN
+    return w if pmc._is_five_minute(m, w) else None
 
 
 def main():
@@ -119,6 +128,7 @@ def main():
         w.writeheader()
 
     added = skipped = 0
+    shown = []
     chunks = list(range(start, now, CHUNK))
     for i, lo in enumerate(chunks, 1):
         hi = min(lo + CHUNK, now)
@@ -149,6 +159,17 @@ def main():
             got += 1
             added += 1
         f.flush()
+        if rows and not got and not shown:
+            # A chunk with markets but no matches means the shape moved again.
+            # Print the evidence once, here, rather than making someone run the
+            # whole thing a second time to find out why it produced nothing.
+            shown.append(1)
+            print("    ! no window matched. sample of what came back:")
+            for m in rows[:3]:
+                print(f"      slug : {m.get('slug')}")
+                print(f"      title: {m.get('question') or m.get('title')}")
+                print(f"      end  : {m.get('endDate')}  "
+                      f"start={m.get('startPrice')} end={m.get('endPrice')}")
         print(f"[{i:>3}/{len(chunks)}] "
               f"{datetime.fromtimestamp(lo, timezone.utc):%m-%d %H:%M}  "
               f"{len(rows):>4} markets → {got:>3} windows   (total {added:,})")
