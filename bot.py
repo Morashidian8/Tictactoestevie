@@ -1238,6 +1238,7 @@ def set_bot_commands():
         {"command": "missed", "description": "سیگنال‌هایی که به دستت نرسید"},
         {"command": "collect", "description": "آیا همه‌چیز ضبط می‌شود؟"},
         {"command": "status", "description": "سلامتِ موتور و وضعیت"},
+        {"command": "gaps", "description": "آیا حتی یک کندلِ ۵ دقیقه‌ای هم جا افتاده؟"},
         {"command": "chart", "description": "آزمونِ قانون‌ها روی قیمتِ خودِ پلی‌مارکت"},
         {"command": "whales", "description": "معامله‌گرهای بزرگ — آیا مهارتشان پایدار است؟"},
         {"command": "edge", "description": "لبهٔ ما در برابرِ قیمتِ بازار"},
@@ -3866,6 +3867,107 @@ class BreakoutMonitor:
         return "\n".join(L)
 
     @staticmethod
+    def gaps_report(days=30, show=12):
+        """
+        Exactly which 5-minute windows of the last `days` are missing.
+
+        Asked for before any analysis, and rightly: a rolling extreme or a
+        volatility ratio taken across a hole is not a measurement of the rule,
+        it is a measurement of the hole. Coverage has to be established first
+        and stated as a count, not as an impression.
+
+        Two different kinds of missing are separated, because they need
+        different fixes: a window never collected at all (/oddsfill can fetch
+        it) and a window collected but never settled, so it has prices to trade
+        on but no beat/final to score against (/oddsfill also repairs those, by
+        a different path). A summary that merged them would send you to the
+        wrong repair.
+        """
+        rows, _ = BreakoutMonitor.odds_rows()
+        now = int(time.time()) // GRANULARITY * GRANULARITY
+        start = now - days * 86400
+        want = list(range(start, now, GRANULARITY))
+        have = set(rows)
+
+        def settled(t):
+            r = rows.get(t) or {}
+            try:
+                return float(r.get("beat") or 0) > 0 and float(r.get("final") or 0) > 0
+            except (TypeError, ValueError):
+                return False
+
+        missing = [t for t in want if t not in have]
+        unsettled = [t for t in want if t in have and not settled(t)]
+        good = [t for t in want if t in have and settled(t)]
+
+        L = [f"🔍 <b>بازرسیِ پوششِ {days} روزِ گذشته</b>",
+             f"<i>هر پنجرهٔ ۵ دقیقه‌ای، از "
+             f"{datetime.fromtimestamp(start, TEHRAN):%m-%d %H:%M} تا حالا</i>", ""]
+        L.append(f"انتظار: <b>{len(want):,}</b> پنجره")
+        L.append(f"با قیمتِ تسویه: <b>{len(good):,}</b> "
+                 f"({len(good)/len(want)*100:.1f}%)")
+        L.append(f"اصلاً جمع نشده: <b>{len(missing):,}</b>")
+        L.append(f"جمع شده ولی تسویه‌اش نیامده: <b>{len(unsettled):,}</b>")
+
+        # Longest usable run — the only number that decides whether the rules
+        # can be scored at all.
+        best = run = 0
+        for t in want:
+            run = run + 1 if t in have and settled(t) else 0
+            best = max(best, run)
+        L.append(f"\nبلندترین رشتهٔ پیوسته و تسویه‌شده: <b>{best:,}</b> پنجره "
+                 f"({best * GRANULARITY / 3600:.1f} ساعت)")
+        L.append("✅ برای آزمونِ قانون‌ها کافی است."
+                 if best >= 140 else
+                 "❌ برای آزمونِ قانون‌ها کم است (≥۱۴۰ لازم).")
+
+        if missing:
+            runs, s, p = [], missing[0], missing[0]
+            for t in missing[1:]:
+                if t - p == GRANULARITY:
+                    p = t
+                else:
+                    runs.append((s, p)); s = p = t
+            runs.append((s, p))
+            runs.sort(key=lambda r: r[1] - r[0], reverse=True)
+            # Listed separately because they are different faults with different
+            # causes: a long block is an outage, and a scatter of single windows
+            # is the collector losing individual races. A list sorted purely by
+            # size buries the first under a hundred of the second.
+            big = [r for r in runs if (r[1] - r[0]) // GRANULARITY + 1 >= 3]
+            small = len(runs) - len(big)
+            L.append(f"\n<b>شکاف‌ها</b> — {len(runs)} تا در کل")
+            if big:
+                L.append(f"<i>بلند (۳ پنجره یا بیشتر):</i>")
+                for a, b in big[:show]:
+                    n = (b - a) // GRANULARITY + 1
+                    L.append(f"  {datetime.fromtimestamp(a, TEHRAN):%m-%d %H:%M} → "
+                             f"{datetime.fromtimestamp(b + GRANULARITY, TEHRAN):%H:%M}"
+                             f"  ({n} پنجره · {n*GRANULARITY/3600:.1f} ساعت)")
+                if len(big) > show:
+                    L.append(f"  <i>… و {len(big) - show} شکافِ بلندِ دیگر</i>")
+            if small:
+                in_big = sum((b - a) // GRANULARITY + 1 for a, b in big)
+                L.append(f"<i>کوتاه (۱ تا ۲ پنجره): {small} مورد، "
+                         f"جمعاً {len(missing) - in_big} پنجره</i>")
+
+        by_day = {}
+        for t in want:
+            k = datetime.fromtimestamp(t, TEHRAN).strftime("%m-%d")
+            d = by_day.setdefault(k, [0, 0])
+            d[0] += 1
+            d[1] += t in have and settled(t)
+        L.append("\n<b>پوشش به تفکیکِ روز</b>")
+        for k in sorted(by_day)[-days:]:
+            n, g = by_day[k]
+            pct = g / n * 100
+            bar = "█" * round(pct / 10) + "·" * (10 - round(pct / 10))
+            L.append(f"<code>{k}  {bar} {g:>3}/{n:<3} {pct:>3.0f}%</code>")
+        L.append(f"\n<i>برای پر کردن: /oddsfill 168 — هر بار حداکثر ۲۰۰ پنجره، "
+                 f"پس چند بار تکرارش کن.</i>")
+        return "\n".join(L)
+
+    @staticmethod
     def chart_report(min_run=140):
         """
         Re-measure every rule on POLYMARKET'S OWN prices instead of ours.
@@ -5089,6 +5191,7 @@ def command_listener(monitor: Monitor):
                         "/oddscollect — روشن/خاموش کردنِ جمع‌آوری\n"
                         "/edge — لبهٔ ما در برابرِ قیمتِ بازار\n"
                         "/whales — معامله‌گرهای بزرگ\n"
+                        "/gaps 30 — بازرسیِ شکاف‌های دادهٔ ۳۰ روز\n"
                         "/chart — قانون‌ها روی قیمتِ خودِ پلی‌مارکت\n"
                         "/oddstest — آیا جمع‌آوری سالم است\n"
                         "/oddsdebug — چرا جمع نمی‌کند\n"
@@ -5327,6 +5430,12 @@ def command_listener(monitor: Monitor):
                     bm = globals().get("BREAKOUT_MONITOR")
                     send_chunked(chat_id, bm.collect_report() if bm else
                                  "موتورِ سیگنال روشن نیست.")
+                elif text.startswith("/gaps"):
+                    bm = globals().get("BREAKOUT_MONITOR")
+                    parts = text.split()
+                    d = int(parts[1]) if len(parts) > 1 and parts[1].isdigit() else 30
+                    send_chunked(chat_id, bm.gaps_report(days=max(1, min(90, d)))
+                                 if bm else "موتورِ سیگنال روشن نیست.")
                 elif text.startswith("/chart"):
                     bm = globals().get("BREAKOUT_MONITOR")
                     send_chunked(chat_id, bm.chart_report() if bm else
