@@ -1238,6 +1238,7 @@ def set_bot_commands():
         {"command": "missed", "description": "سیگنال‌هایی که به دستت نرسید"},
         {"command": "collect", "description": "آیا همه‌چیز ضبط می‌شود؟"},
         {"command": "status", "description": "سلامتِ موتور و وضعیت"},
+        {"command": "chart", "description": "آزمونِ قانون‌ها روی قیمتِ خودِ پلی‌مارکت"},
         {"command": "whales", "description": "معامله‌گرهای بزرگ — آیا مهارتشان پایدار است؟"},
         {"command": "edge", "description": "لبهٔ ما در برابرِ قیمتِ بازار"},
         {"command": "odds", "description": "گزارشِ بالا/پایین — بعدش عدد بزن: /odds 1"},
@@ -3864,6 +3865,97 @@ class BreakoutMonitor:
                       "⚠️ همبستگیِ منفی — یعنی نویزِ محض."))
         return "\n".join(L)
 
+    @staticmethod
+    def chart_report(min_run=140):
+        """
+        Re-measure every rule on POLYMARKET'S OWN prices instead of ours.
+
+        Every accuracy figure in this project was computed on a Binance or
+        Chainlink series. The market settles on neither: it compares its own
+        "price to beat" at the window's open against its own "final price" at
+        the close, and those two numbers are published for every window. They
+        are the only series that actually pays, and the odds store has been
+        collecting them all along without anyone reading them as a chart.
+
+        Rules are scored only on runs of CONSECUTIVE windows. A rolling extreme
+        or a volatility ratio computed across a hole is not the rule, it is an
+        artefact — the same reason the live engine throws its series away after
+        a gap rather than stitching across one.
+        """
+        rows, _ = BreakoutMonitor.odds_rows()
+        pts = []
+        for t, r in sorted(rows.items()):
+            try:
+                beat, final = float(r["beat"]), float(r["final"])
+            except (KeyError, TypeError, ValueError):
+                continue
+            if beat > 0 and final > 0:
+                pts.append((t, beat, final))
+        if not pts:
+            return ("هیچ پنجره‌ای با قیمتِ تسویهٔ پلی‌مارکت ذخیره نشده.\n"
+                    "<i>این قیمت‌ها بعد از تسویه پر می‌شوند — "
+                    "/oddsfill 24 بزن و بعد دوباره امتحان کن.</i>")
+
+        runs, cur = [], [pts[0]]
+        for prev, p in zip(pts, pts[1:]):
+            (cur.append(p) if p[0] - prev[0] == GRANULARITY
+             else (runs.append(cur), cur.__init__([p])))
+        runs.append(cur)
+        runs.sort(key=len, reverse=True)
+        usable = [r for r in runs if len(r) >= min_run]
+        span_h = (pts[-1][0] - pts[0][0]) / 3600
+
+        L = [f"📈 <b>چارتِ خودِ پلی‌مارکت</b>",
+             f"<i>{len(pts):,} پنجره با قیمتِ تسویه · "
+             f"{span_h/24:.1f} روز · بلندترین رشتهٔ پیوسته "
+             f"{len(runs[0])} پنجره</i>", ""]
+        if not usable:
+            L.append(f"برای آزمونِ قانون‌ها به یک رشتهٔ پیوستهٔ ≥{min_run} "
+                     f"پنجره‌ای نیاز است و بلندترین رشته {len(runs[0])} است.")
+            L.append("<i>هر شکاف رشته را می‌شکند — قانون‌ها روی سریِ "
+                     "سوراخ‌دار بی‌معنی‌اند.</i>")
+            return "\n".join(L)
+
+        tested = won = 0
+        per = {}
+        for run in usable:
+            closes = [p[2] for p in run]          # final price = the close
+            for i in range(BREAKOUT_FULL_HISTORY + RULE8_MA, len(run) - 1):
+                hits = BreakoutMonitor.evaluate(closes[:i + 1])
+                if not hits:
+                    continue
+                bets = {h[2] for h in hits}
+                if len(bets) != 1:
+                    continue
+                bet = bets.pop()
+                # Settled the way the market settles it: this window's own
+                # reference against its own final, not close-to-close.
+                nb, nf = run[i + 1][1], run[i + 1][2]
+                if nf == nb:
+                    continue
+                hit = (bet == "up") == (nf > nb)
+                tested += 1
+                won += hit
+                for name in hits:
+                    d = per.setdefault(name[0], [0, 0])
+                    d[0] += 1
+                    d[1] += hit
+        if not tested:
+            L.append("رشته‌ها هستند ولی هیچ سیگنالی در آن‌ها شلیک نکرد.")
+            return "\n".join(L)
+        lo, hi = _wilson(won, tested)
+        L.append(f"<b>روی قیمتِ خودِ پلی‌مارکت:</b>")
+        L.append(f"  {won}/{tested} = <b>{won/tested*100:.1f}%</b>  "
+                 f"[{lo*100:.0f}–{hi*100:.0f}]")
+        L.append("")
+        for name, (n, w) in sorted(per.items(), key=lambda kv: -kv[1][0]):
+            if n >= 20:
+                L.append(f"  {name[:22]:<24} {w}/{n} = {w/n*100:.0f}%")
+        L.append(f"\n<i>تسویه دقیقاً مثلِ بازار: قیمتِ مرجعِ هر پنجره در برابرِ "
+                 f"قیمتِ نهاییِ خودش. اگر این عدد با کارنامهٔ زنده خیلی فرق "
+                 f"داشت، اختلافِ فید است نه اشتباهِ قانون‌ها.</i>")
+        return "\n".join(L)
+
     def edge_report(self):
         """
         Does our accuracy depend on what the market was charging for our side?
@@ -4997,6 +5089,7 @@ def command_listener(monitor: Monitor):
                         "/oddscollect — روشن/خاموش کردنِ جمع‌آوری\n"
                         "/edge — لبهٔ ما در برابرِ قیمتِ بازار\n"
                         "/whales — معامله‌گرهای بزرگ\n"
+                        "/chart — قانون‌ها روی قیمتِ خودِ پلی‌مارکت\n"
                         "/oddstest — آیا جمع‌آوری سالم است\n"
                         "/oddsdebug — چرا جمع نمی‌کند\n"
                         "/oddsfill 24 — بازیابیِ پنجره‌های جاافتاده\n\n"
@@ -5233,6 +5326,10 @@ def command_listener(monitor: Monitor):
                 elif text.startswith("/collect") or text == MENU_COLLECT:
                     bm = globals().get("BREAKOUT_MONITOR")
                     send_chunked(chat_id, bm.collect_report() if bm else
+                                 "موتورِ سیگنال روشن نیست.")
+                elif text.startswith("/chart"):
+                    bm = globals().get("BREAKOUT_MONITOR")
+                    send_chunked(chat_id, bm.chart_report() if bm else
                                  "موتورِ سیگنال روشن نیست.")
                 elif text.startswith("/whales"):
                     bm = globals().get("BREAKOUT_MONITOR")
