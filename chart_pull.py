@@ -24,6 +24,8 @@ import os
 import re
 import sys
 import time
+
+import requests
 from datetime import datetime, timezone
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -54,32 +56,32 @@ def load_existing():
     return have
 
 
-def fetch_range(lo, hi, seen_keys=[]):
-    """Every market whose window ENDS in [lo, hi), paged until exhausted."""
-    out, offset = [], 0
-    while True:
+# Asking a date range meant sifting 2,100 markets to find our 72, hitting the
+# paging cap before the end and losing a third of every chunk. Now that the slug
+# is known exactly — "<asset>-updown-5m-<window epoch>" — the windows can simply
+# be named. Gamma takes a repeated slug parameter, so they are named in batches.
+BATCH = int(os.environ.get("BATCH", "60"))
+HTTP_TIMEOUT = int(os.environ.get("HTTP_TIMEOUT", "30"))
+
+
+def fetch_slugs(slugs, tries=3):
+    """The markets for these exact slugs. Missing ones simply do not come back."""
+    out = []
+    for attempt in range(tries):
         try:
-            # closed=true is not optional: without it this range returns 100
-            # markets and none of ours, because every past window is closed.
-            rows = pmc.get(f"{pmc.GAMMA}/markets", limit=PAGE, offset=offset,
-                           order="endDate", ascending="true", closed="true",
-                           end_date_min=pmc._iso(lo), end_date_max=pmc._iso(hi))
+            r = requests.get(f"{pmc.GAMMA}/markets",
+                             params={"slug": slugs, "limit": len(slugs)},
+                             timeout=HTTP_TIMEOUT,
+                             headers={"User-Agent": "btc-chart-pull/1.0"})
+            r.raise_for_status()
+            rows = r.json()
+            return rows if isinstance(rows, list) else []
         except Exception as exc:
-            print(f"    ! request failed at offset {offset}: {exc}")
-            return out
-        if not rows:
-            break
-        if not seen_keys:
-            # Printed once so a renamed field is caught by evidence rather than
-            # discovered as a month of empty rows.
-            seen_keys.append(1)
-            print(f"    (market fields: {sorted(rows[0])[:12]} …)")
-        out.extend(rows)
-        if len(rows) < PAGE:
-            break
-        offset += PAGE
-        if offset > 20 * PAGE:            # a range this dense is not ours
-            break
+            if attempt == tries - 1:
+                print(f"    ! batch failed after {tries} tries: "
+                      f"{type(exc).__name__}")
+                return out
+            time.sleep(2 * (attempt + 1))
     return out
 
 
@@ -139,15 +141,13 @@ def main():
     if new:
         w.writeheader()
 
-    added = skipped = 0
-    shown = []
-    chunks = list(range(start, now, CHUNK))
-    for i, lo in enumerate(chunks, 1):
-        hi = min(lo + CHUNK, now)
-        if all(t in have for t in range(lo, hi, GRAN)):
-            skipped += 1
-            continue
-        rows = fetch_range(lo, hi + GRAN)
+    added = 0
+    todo = [t for t in want if t not in have]
+    batches = [todo[i:i + BATCH] for i in range(0, len(todo), BATCH)]
+    print(f"missing : {len(todo):,} · asking in {len(batches)} batches of {BATCH}\n")
+    probed = []
+    for i, batch in enumerate(batches, 1):
+        rows = fetch_slugs([f"{ASSET}-updown-5m-{t}" for t in batch])
         got = 0
         for m in rows:
             p = parse_market(m)
@@ -168,25 +168,30 @@ def main():
             got += 1
             added += 1
         f.flush()
-        if rows and not got and not shown:
-            # A chunk with markets but no matches means the shape moved again.
-            # Print the evidence once, here, rather than making someone run the
-            # whole thing a second time to find out why it produced nothing.
-            shown.append(1)
-            print(f"    ! nothing matched ASSET={ASSET!r}. what came back:")
-            seen = {}
-            for m in rows:
-                hit = _SLUG.match((m.get("slug") or "").lower())
-                if hit:
-                    seen[hit.group(1)] = seen.get(hit.group(1), 0) + 1
-            print(f"      5m up/down assets present: {seen or 'none at all'}")
-            for m in rows[:2]:
-                print(f"      e.g. slug={m.get('slug')!r}")
-        print(f"[{i:>3}/{len(chunks)}] "
-              f"{datetime.fromtimestamp(lo, timezone.utc):%m-%d %H:%M}  "
-              f"{len(rows):>4} markets → {got:>3} windows   (total {added:,})")
+        if rows and not got and not probed:
+            probed.append(1)
+            print("    ! markets came back but none parsed. first one:")
+            m = rows[0]
+            print(f"      slug={m.get('slug')!r} "
+                  f"outcomes={m.get('outcomes')!r} "
+                  f"outcomePrices={m.get('outcomePrices')!r}")
+        if not rows and not probed:
+            probed.append(1)
+            # Two very different causes, and the message must not pick one:
+            # these markets may simply not exist (a real outage on Polymarket's
+            # side), or the repeated-slug parameter may not be supported at all.
+            # Blaming the API when a re-run is merely retrying known-missing
+            # windows would send someone to debug a working request.
+            print(f"    ! nothing came back for this batch. either these "
+                  f"windows do not exist on Polymarket, or the batched slug "
+                  f"query is unsupported.")
+            print(f"      check by hand: {pmc.GAMMA}/markets?slug="
+                  f"{ASSET}-updown-5m-{batch[0]}")
+        print(f"[{i:>4}/{len(batches)}] "
+              f"{datetime.fromtimestamp(batch[0], timezone.utc):%m-%d %H:%M}  "
+              f"{len(rows):>3} back → {got:>3} kept   (total {added:,})")
     f.close()
-    print(f"\ndone: {added:,} new windows, {skipped} chunks already complete")
+    print(f"\ndone: {added:,} new windows")
     report(want, load_existing())
 
 
