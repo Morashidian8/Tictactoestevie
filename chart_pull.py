@@ -205,4 +205,73 @@ def report(want, have):
 
 
 if __name__ == "__main__":
-    main()
+    if "--probe" in sys.argv:
+        probe()
+    else:
+        main()
+
+
+def probe():
+    """
+    Ask one known window four different ways and report which answers.
+
+    Written because two rounds of guessing produced two rounds of zeros. The
+    bulk range query returns markets — wildly varying counts of them — but none
+    of ours, and from the outside there is no way to tell whether the range
+    filter excludes closed markets, whether it means something other than the
+    settlement time, or whether the title test is at fault. Each hypothesis is
+    one request, so all of them get asked at once.
+    """
+    import json
+    w = int(time.time()) // GRAN * GRAN - 2 * 86400
+    end = w + GRAN
+    slug = pmc._slug_for(w)
+    print(f"probe window : {datetime.fromtimestamp(w, timezone.utc):%Y-%m-%d %H:%M} UTC")
+    print(f"expected slug: {slug}\n")
+
+    tries = [
+        ("A  slug exact",
+         dict(slug=slug)),
+        ("B  narrow range (what the live collector uses)",
+         dict(limit=100, order="endDate", ascending="true",
+              end_date_min=pmc._iso(end - 90), end_date_max=pmc._iso(end + 90))),
+        ("C  narrow range + closed=true",
+         dict(limit=100, order="endDate", ascending="true", closed="true",
+              end_date_min=pmc._iso(end - 90), end_date_max=pmc._iso(end + 90))),
+        ("D  six-hour range (what the bulk pull uses)",
+         dict(limit=100, order="endDate", ascending="true",
+              end_date_min=pmc._iso(end), end_date_max=pmc._iso(end + 6 * 3600))),
+        ("E  six-hour range + closed=true",
+         dict(limit=100, order="endDate", ascending="true", closed="true",
+              end_date_min=pmc._iso(end), end_date_max=pmc._iso(end + 6 * 3600))),
+    ]
+    for label, params in tries:
+        try:
+            rows = pmc.get(f"{pmc.GAMMA}/markets", **params)
+        except Exception as exc:
+            print(f"{label}: request failed — {exc}")
+            continue
+        rows = rows if isinstance(rows, list) else []
+        ours = [m for m in rows if window_of(m) is not None]
+        print(f"{label}: {len(rows)} markets, {len(ours)} of ours")
+        if rows and not ours:
+            m = rows[0]
+            print(f"      e.g. slug={m.get('slug')!r}")
+            print(f"           title={(m.get('question') or m.get('title'))!r}")
+            print(f"           endDate={m.get('endDate')!r} "
+                  f"startPrice={m.get('startPrice')!r} endPrice={m.get('endPrice')!r}")
+        if ours:
+            m = ours[0]
+            print(f"      ✅ {m.get('slug')}  "
+                  f"start={m.get('startPrice')} end={m.get('endPrice')}")
+
+    # And the one the live path actually uses, end to end.
+    m = pmc.market_for(w)
+    print(f"\nF  pmc.market_for(): {'found' if m else 'nothing'}")
+    if m:
+        print(f"      slug={m.get('slug')!r}")
+        print(f"      title={(m.get('question') or '')!r}")
+        print(f"      endDate={m.get('endDate')!r}")
+        print(f"      startPrice={m.get('startPrice')!r} endPrice={m.get('endPrice')!r}")
+        print(f"      window_of() -> {window_of(m)}  (expected {w})")
+        print(f"      all keys: {sorted(m)}")
