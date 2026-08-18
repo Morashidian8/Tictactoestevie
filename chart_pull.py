@@ -204,11 +204,6 @@ def report(want, have):
     print("\nRe-run this script to retry the gaps; nothing already saved is refetched.")
 
 
-if __name__ == "__main__":
-    if "--probe" in sys.argv:
-        probe()
-    else:
-        main()
 
 
 def probe():
@@ -275,3 +270,10 @@ def probe():
         print(f"      startPrice={m.get('startPrice')!r} endPrice={m.get('endPrice')!r}")
         print(f"      window_of() -> {window_of(m)}  (expected {w})")
         print(f"      all keys: {sorted(m)}")
+
+
+if __name__ == "__main__":
+    if "--probe" in sys.argv:
+        probe()
+    else:
+        main()
