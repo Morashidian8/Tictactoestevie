@@ -6,10 +6,12 @@ which is right for keeping up with the present and hopeless for a month: 8,640
 windows is 8,640 round trips. Gamma will answer a date RANGE in one request,
 so a month comes back in a couple of hundred calls instead.
 
-What it writes is the series the market actually settles on — each window's own
-`startPrice` (the "price to beat") and `endPrice` (the "final price"). Every
-accuracy figure in this project so far was computed on Binance or Chainlink
-data; this is the only series that pays.
+What it writes is the OUTCOME of every window — which side Polymarket actually
+paid. It no longer publishes the settlement prices themselves (`startPrice` and
+`endPrice` came back empty on every market checked), so the price series still
+has to come from an exchange feed. The outcome is the more valuable half
+anyway: it is the ground truth any rule can be scored against, straight from
+the venue that paid.
 
     python chart_pull.py 30           # last 30 days
     python chart_pull.py 30 --check   # report coverage, fetch nothing
@@ -19,6 +21,7 @@ Safe to interrupt and re-run: windows already in the file are never re-fetched.
 
 import csv
 import os
+import re
 import sys
 import time
 from datetime import datetime, timezone
@@ -27,7 +30,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import polymarket_collector as pmc
 
 OUT = os.environ.get("CHART_FILE", "polymarket_chart.csv")
-COLS = ("window_epoch", "utc", "et", "beat", "final", "moved", "slug")
+COLS = ("window_epoch", "utc", "et", "winner", "asset", "slug", "question")
 GRAN = pmc.GRAN
 # Six hours is 72 of our markets. Small enough that paging rarely goes past the
 # first page, large enough that a month is a couple of hundred requests.
@@ -56,8 +59,10 @@ def fetch_range(lo, hi, seen_keys=[]):
     out, offset = [], 0
     while True:
         try:
+            # closed=true is not optional: without it this range returns 100
+            # markets and none of ours, because every past window is closed.
             rows = pmc.get(f"{pmc.GAMMA}/markets", limit=PAGE, offset=offset,
-                           order="endDate", ascending="true",
+                           order="endDate", ascending="true", closed="true",
                            end_date_min=pmc._iso(lo), end_date_max=pmc._iso(hi))
         except Exception as exc:
             print(f"    ! request failed at offset {offset}: {exc}")
@@ -78,31 +83,38 @@ def fetch_range(lo, hi, seen_keys=[]):
     return out
 
 
-def window_of(m):
-    """
-    The five-minute window this market belongs to, or None.
+_SLUG = re.compile(r"^([a-z0-9]+)-updown-5m-(\d{9,11})$")
+ASSET = os.environ.get("ASSET", "btc").lower()
 
-    Decided by the market's TITLE, which names both ends of the window
-    ("4:15PM-4:20PM ET") and so cannot be confused with the 15-minute market
-    finishing at the same instant. This is the collector's own test, already
-    proven against the live API.
 
-    The first version rebuilt Polymarket's slug and demanded an exact match.
-    That matched nothing at all — 100 markets a chunk, zero accepted — because
-    a slug format is a presentation detail and it had moved. The title carries
-    the actual claim, so it is what gets read.
+def parse_market(m):
     """
-    end = m.get("endDate") or m.get("end_date_iso")
-    if not end:
+    (window_start, asset, winner) for a 5-minute up/down market, else None.
+
+    Polymarket renamed these: the slug is now "<asset>-updown-5m-<epoch>" and
+    the epoch IS the window's opening second, which makes the alignment exact
+    and the old title-parsing unnecessary. Confirmed against a live market —
+    slug hype-updown-5m-1786901700 carries the title "1:35PM-1:40PM ET", and
+    1786901700 is 1:35PM ET to the second.
+
+    The winner comes from outcomePrices, which settles to ["1","0"] or ["0","1"]
+    once resolved. An unresolved market has neither and is skipped rather than
+    guessed at.
+    """
+    hit = _SLUG.match((m.get("slug") or "").lower())
+    if not hit:
         return None
+    asset, epoch = hit.group(1), int(hit.group(2))
+    if epoch % GRAN:
+        return None
+    outs = [str(o).lower() for o in pmc._jload(m.get("outcomes"), [])]
     try:
-        ts = datetime.fromisoformat(str(end).replace("Z", "+00:00")).timestamp()
-    except (ValueError, TypeError):
+        prices = [float(p) for p in pmc._jload(m.get("outcomePrices"), [])]
+    except (TypeError, ValueError):
         return None
-    if int(ts) % GRAN:
-        return None                      # not on a five-minute boundary
-    w = int(ts) - GRAN
-    return w if pmc._is_five_minute(m, w) else None
+    if len(prices) != len(outs) or not prices or max(prices) < 0.99:
+        return None                       # not resolved yet
+    return epoch, asset, outs[prices.index(max(prices))]
 
 
 def main():
@@ -135,18 +147,14 @@ def main():
         if all(t in have for t in range(lo, hi, GRAN)):
             skipped += 1
             continue
-        rows = fetch_range(lo + GRAN, hi + GRAN)   # ranges are on END times
+        rows = fetch_range(lo, hi + GRAN)
         got = 0
         for m in rows:
-            t = window_of(m)
-            if t is None or t in have or not (start <= t < now):
+            p = parse_market(m)
+            if not p:
                 continue
-            beat, final = m.get("startPrice"), m.get("endPrice")
-            try:
-                b, fl = float(beat), float(final)
-            except (TypeError, ValueError):
-                continue
-            if b <= 0 or fl <= 0:
+            t, asset, winner = p
+            if asset != ASSET or t in have or not (start <= t < now):
                 continue
             have[t] = 1
             w.writerow({"window_epoch": t,
@@ -154,8 +162,9 @@ def main():
                                        .strftime("%Y-%m-%d %H:%M"),
                         "et": datetime.fromtimestamp(t, pmc.ET)
                                       .strftime("%Y-%m-%d %I:%M%p"),
-                        "beat": f"{b:.2f}", "final": f"{fl:.2f}",
-                        "moved": f"{fl - b:+.2f}", "slug": m.get("slug", "")[:60]})
+                        "winner": winner, "asset": asset,
+                        "slug": (m.get("slug") or "")[:40],
+                        "question": (m.get("question") or "")[:70]})
             got += 1
             added += 1
         f.flush()
@@ -164,12 +173,15 @@ def main():
             # Print the evidence once, here, rather than making someone run the
             # whole thing a second time to find out why it produced nothing.
             shown.append(1)
-            print("    ! no window matched. sample of what came back:")
-            for m in rows[:3]:
-                print(f"      slug : {m.get('slug')}")
-                print(f"      title: {m.get('question') or m.get('title')}")
-                print(f"      end  : {m.get('endDate')}  "
-                      f"start={m.get('startPrice')} end={m.get('endPrice')}")
+            print(f"    ! nothing matched ASSET={ASSET!r}. what came back:")
+            seen = {}
+            for m in rows:
+                hit = _SLUG.match((m.get("slug") or "").lower())
+                if hit:
+                    seen[hit.group(1)] = seen.get(hit.group(1), 0) + 1
+            print(f"      5m up/down assets present: {seen or 'none at all'}")
+            for m in rows[:2]:
+                print(f"      e.g. slug={m.get('slug')!r}")
         print(f"[{i:>3}/{len(chunks)}] "
               f"{datetime.fromtimestamp(lo, timezone.utc):%m-%d %H:%M}  "
               f"{len(rows):>4} markets → {got:>3} windows   (total {added:,})")
