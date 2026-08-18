@@ -56,32 +56,51 @@ def load_existing():
     return have
 
 
-# Asking a date range meant sifting 2,100 markets to find our 72, hitting the
-# paging cap before the end and losing a third of every chunk. Now that the slug
-# is known exactly — "<asset>-updown-5m-<window epoch>" — the windows can simply
-# be named. Gamma takes a repeated slug parameter, so they are named in batches.
-BATCH = int(os.environ.get("BATCH", "60"))
+# Querying by slug is dead: /markets?slug=btc-updown-5m-<t> returns nothing even
+# for a market the same endpoint just listed, one slug or sixty. So the date
+# range it is — with the two faults that made it lose a third of every chunk
+# fixed rather than worked around.
+#
+# The range returns every market on Polymarket ending in that span, about 2,100
+# per six hours, of which 96 are the eight 5-minute assets. That is the price of
+# admission: roughly 2,500 requests for a month, twenty to forty minutes. It is
+# slow and it is correct, which beats fast and empty.
+MAX_PAGES = int(os.environ.get("MAX_PAGES", "60"))
 HTTP_TIMEOUT = int(os.environ.get("HTTP_TIMEOUT", "30"))
 
 
-def fetch_slugs(slugs, tries=3):
-    """The markets for these exact slugs. Missing ones simply do not come back."""
-    out = []
-    for attempt in range(tries):
-        try:
-            r = requests.get(f"{pmc.GAMMA}/markets",
-                             params={"slug": slugs, "limit": len(slugs)},
-                             timeout=HTTP_TIMEOUT,
-                             headers={"User-Agent": "btc-chart-pull/1.0"})
-            r.raise_for_status()
-            rows = r.json()
-            return rows if isinstance(rows, list) else []
-        except Exception as exc:
-            if attempt == tries - 1:
-                print(f"    ! batch failed after {tries} tries: "
-                      f"{type(exc).__name__}")
-                return out
-            time.sleep(2 * (attempt + 1))
+def fetch_range(lo, hi):
+    """
+    Every market ending in [lo, hi), paged to exhaustion.
+
+    The cap used to be 20 pages and a six-hour span needs 21, so the last page —
+    and with it a slice of every chunk — was silently dropped. Paging now stops
+    only when a short page proves the end was reached.
+    """
+    out, offset = [], 0
+    while offset < MAX_PAGES * PAGE:
+        rows = None
+        for attempt in range(3):
+            try:
+                rows = requests.get(
+                    f"{pmc.GAMMA}/markets", timeout=HTTP_TIMEOUT,
+                    headers={"User-Agent": "btc-chart-pull/1.0"},
+                    params={"limit": PAGE, "offset": offset, "closed": "true",
+                            "order": "endDate", "ascending": "true",
+                            "end_date_min": pmc._iso(lo),
+                            "end_date_max": pmc._iso(hi)}).json()
+                break
+            except Exception as exc:
+                if attempt == 2:
+                    print(f"    ! page at offset {offset} failed: "
+                          f"{type(exc).__name__}")
+                time.sleep(2 * (attempt + 1))
+        if not isinstance(rows, list) or not rows:
+            break
+        out.extend(rows)
+        if len(rows) < PAGE:
+            break
+        offset += PAGE
     return out
 
 
@@ -192,13 +211,19 @@ def main():
     if new:
         w.writeheader()
 
-    added = 0
-    todo = [t for t in want if t not in have]
-    batches = [todo[i:i + BATCH] for i in range(0, len(todo), BATCH)]
-    print(f"missing : {len(todo):,} · asking in {len(batches)} batches of {BATCH}\n")
+    added = skipped = 0
     probed = []
-    for i, batch in enumerate(batches, 1):
-        rows = fetch_slugs([f"{ASSET}-updown-5m-{t}" for t in batch])
+    chunks = list(range(start, now, CHUNK))
+    print(f"chunks  : {len(chunks)} of six hours "
+          f"(~{MAX_PAGES} pages each at worst)\n")
+    for i, lo in enumerate(chunks, 1):
+        hi = min(lo + CHUNK, now)
+        # A chunk whose every window is already saved needs no request at all,
+        # which is what makes a re-run cheap after an interruption.
+        if all(t in have for t in range(lo, hi, GRAN)):
+            skipped += 1
+            continue
+        rows = fetch_range(lo + GRAN, hi + GRAN)
         got = 0
         for m in rows:
             p = parse_market(m)
@@ -221,28 +246,18 @@ def main():
         f.flush()
         if rows and not got and not probed:
             probed.append(1)
-            print("    ! markets came back but none parsed. first one:")
-            m = rows[0]
-            print(f"      slug={m.get('slug')!r} "
-                  f"outcomes={m.get('outcomes')!r} "
-                  f"outcomePrices={m.get('outcomePrices')!r}")
-        if not rows and not probed:
-            probed.append(1)
-            # Two very different causes, and the message must not pick one:
-            # these markets may simply not exist (a real outage on Polymarket's
-            # side), or the repeated-slug parameter may not be supported at all.
-            # Blaming the API when a re-run is merely retrying known-missing
-            # windows would send someone to debug a working request.
-            print(f"    ! nothing came back for this batch. either these "
-                  f"windows do not exist on Polymarket, or the batched slug "
-                  f"query is unsupported.")
-            print(f"      check by hand: {pmc.GAMMA}/markets?slug="
-                  f"{ASSET}-updown-5m-{batch[0]}")
-        print(f"[{i:>4}/{len(batches)}] "
-              f"{datetime.fromtimestamp(batch[0], timezone.utc):%m-%d %H:%M}  "
-              f"{len(rows):>3} back → {got:>3} kept   (total {added:,})")
+            seen = {}
+            for m in rows:
+                hit = _SLUG.match((m.get("slug") or "").lower())
+                if hit:
+                    seen[hit.group(1)] = seen.get(hit.group(1), 0) + 1
+            print(f"    ! nothing matched ASSET={ASSET!r}. "
+                  f"5m assets in this chunk: {seen or 'none'}")
+        print(f"[{i:>4}/{len(chunks)}] "
+              f"{datetime.fromtimestamp(lo, timezone.utc):%m-%d %H:%M}  "
+              f"{len(rows):>5} markets → {got:>3} kept   (total {added:,})")
     f.close()
-    print(f"\ndone: {added:,} new windows")
+    print(f"\ndone: {added:,} new windows, {skipped} chunks already complete")
     report(want, load_existing())
 
 
