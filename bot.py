@@ -2709,12 +2709,35 @@ class BreakoutMonitor:
         # the martingale on the wrong rung.
         mine = all(h[0][0] in MINE_RULES for h in hits)
         golden = any(h[0].startswith("🏆") for h in hits)
+        # Why this is NOT a golden entry, when it nearly was. Four rules
+        # agreeing looks exactly like a golden entry from the outside, and the
+        # message gave no hint that a second gate exists at all — so a perfectly
+        # correct decision read as a missed one. The tier needs the 4-candle
+        # stretch as well, at 9x against rule 5's own 5.7x, and that number is
+        # the only thing standing between the two.
+        near_gold = ""
+        strong = [h for h in hits
+                  if not any(h[0].startswith(x) for x in MINE_RULES)
+                  and not h[0].startswith("🏆")]
+        if not golden and len(strong) >= GOLDEN_RULES and bet:
+            try:
+                ref = sorted(abs(x) for x in _moves(self.closes[-101:]))
+                med = ref[len(ref) // 2]
+                if med > 0:
+                    t = abs(self.closes[-1]
+                            - self.closes[-1 - RULE5_SPAN]) / med
+                    near_gold = (f"\n<i>نزدیکِ طلایی: {len(strong)} قانونِ "
+                                 f"هم‌نظر ✅ ولی کشیدگی {t:.1f}× از "
+                                 f"{GOLDEN_MULT:.0f}× لازم است.</i>\n")
+            except Exception:  # noqa: BLE001 - a hint must never block an alert
+                near_gold = ""
         prev = self._prev_result_line(window_start)
         text = (
             prev
             + ("🏆 <b>ورودِ طلایی (۵۸٪)</b>\n" if golden else "")
-            + f"🎯 {head}{agree}\n\n"
-            f"{lines}\n\n"
+            + f"🎯 {head}{agree}\n"
+            + near_gold
+            + f"\n{lines}\n\n"
             f"⏱ <b>{o_et:%I:%M}-{e_et:%I:%M%p} ET</b>  ({o_et:%b %d})  ·  "
             f"+{lag:.0f}s\n"
             f"💵 ${price:,.2f}\n"
@@ -4008,6 +4031,21 @@ class BreakoutMonitor:
             L.append(f"\n<b>۸) فاصله از میانگینِ {RULE8_MA} کندلی</b>")
             L.append(f"  ${abs(cl[-1] - avg):,.2f} = <b>{t:.1f}×</b> "
                      f"از {RULE8_MULT:.1f}× لازم")
+        # The golden tier has a second gate nobody could see: rules agreeing is
+        # necessary but not sufficient, and the stretch it also demands is 9x
+        # against rule 5's own 5.7x. Without this line, "why was that not
+        # golden" had no answer short of reading the source.
+        if n >= 101 + RULE5_SPAN:
+            ref = sorted(abs(x) for x in _moves(cl[-101:]))
+            med = ref[len(ref) // 2]
+            if med > 0:
+                t = abs(cl[-1] - cl[-1 - RULE5_SPAN]) / med
+                L.append(f"\n<b>🏆 ورودِ طلایی</b>")
+                L.append(f"  دو شرط لازم است: ≥{GOLDEN_RULES} قانونِ هم‌نظر، "
+                         f"و کشیدگیِ ۴ کندلی ≥{GOLDEN_MULT:.0f}×")
+                L.append(f"  کشیدگیِ فعلی: <b>{t:.1f}×</b> از {GOLDEN_MULT:.0f}× "
+                         f"{'✅' if t >= GOLDEN_MULT else ''}")
+
         hits = self.evaluate(cl)
         # Kept out of the f-string: a newline inside an f-string expression is
         # only legal from Python 3.12, and Termux ships whatever it ships.
