@@ -119,6 +119,57 @@ def parse_market(m):
     return epoch, asset, outs[prices.index(max(prices))]
 
 
+def assets():
+    """
+    Which 5-minute up/down assets exist, and does a batched slug query work.
+
+    Two unknowns are blocking everything and both are one request each. The
+    asset prefix was assumed to be "btc" on the strength of having seen "bnb"
+    and "hype" — an assumption, never an observation. And every batch came back
+    empty, which either means the windows are named something else or that
+    Gamma ignores a repeated slug parameter.
+    """
+    now = int(time.time()) // GRAN * GRAN
+    end = now - 3600                      # an hour ago: certainly resolved
+    print(f"looking at windows ending near "
+          f"{datetime.fromtimestamp(end, timezone.utc):%Y-%m-%d %H:%M} UTC\n")
+    try:
+        rows = pmc.get(f"{pmc.GAMMA}/markets", limit=100, order="endDate",
+                       ascending="true", closed="true",
+                       end_date_min=pmc._iso(end - 300),
+                       end_date_max=pmc._iso(end + 300))
+    except Exception as exc:
+        print(f"listing failed: {exc}")
+        return
+    seen = {}
+    for m in rows:
+        hit = _SLUG.match((m.get("slug") or "").lower())
+        if hit:
+            seen.setdefault(hit.group(1), m)
+    print(f"{len(rows)} markets back · {len(seen)} five-minute assets:")
+    for a, m in sorted(seen.items()):
+        print(f"  {a:<10} {m.get('slug'):<34} {(m.get('question') or '')[:44]}")
+    btc = [a for a, m in seen.items()
+           if "bitcoin" in (m.get("question") or "").lower()
+           or "btc" in (m.get("question") or "").lower()]
+    print(f"\nBitcoin's prefix: {btc or 'NOT FOUND in this window'}")
+
+    if not seen:
+        return
+    picks = [m.get("slug") for m in list(seen.values())[:2]]
+    print(f"\nbatched slug test with {picks}")
+    for label, params in (("one slug ", {"slug": picks[0]}),
+                          ("two slugs", {"slug": picks})):
+        try:
+            got = requests.get(f"{pmc.GAMMA}/markets", params=params,
+                               timeout=HTTP_TIMEOUT).json()
+            got = got if isinstance(got, list) else []
+            print(f"  {label}: {len(got)} back "
+                  f"{[g.get('slug') for g in got[:3]]}")
+        except Exception as exc:
+            print(f"  {label}: failed — {type(exc).__name__}")
+
+
 def main():
     days = int(sys.argv[1]) if len(sys.argv) > 1 and sys.argv[1].isdigit() else 30
     check_only = "--check" in sys.argv
@@ -317,7 +368,9 @@ def probe():
 
 
 if __name__ == "__main__":
-    if "--probe" in sys.argv:
+    if "--assets" in sys.argv:
+        assets()
+    elif "--probe" in sys.argv:
         probe()
     else:
         main()
