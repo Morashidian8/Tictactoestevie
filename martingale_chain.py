@@ -32,6 +32,7 @@ import os
 import re
 import sys
 from collections import defaultdict
+from datetime import datetime, timedelta, timezone
 
 IN = os.environ.get("SIGNALS_FILE", "signals_month.csv")
 OUT = os.environ.get("CHAIN_FILE", "martingale_chain.csv")
@@ -45,35 +46,76 @@ FA = str.maketrans("۰۱۲۳۴۵۶۷۸۹", "0123456789")
 # --------------------------------------------------------------------------- #
 # reading the month
 # --------------------------------------------------------------------------- #
-def codes(rules):
+def codes(rules, bare=False):
     """
     Rule numbers in a row, plus 'G' for the golden tier.
 
-    Found by regex, not by splitting on ' + ': rule 7 is named
-    "باندِ بولینگر + RSI" and carries that separator inside its own name, so
-    splitting turns '1+7' into '1+7+RSI'.
+    Two shapes exist. The live bot writes full rule names, and there the digit
+    must be anchored to its bracket — rule 7 is named "باندِ بولینگر + RSI",
+    and a loose digit scan would also pick up the ۲۰ inside "شکستِ ۲۰ کندلی"
+    and invent rules 2 and 0. The research export writes bare digits joined by
+    Arabic commas, where there is no bracket to anchor to and every digit
+    present is a rule.
     """
-    out = {"G"} if "🏆" in (rules or "") else set()
-    out |= {d.translate(FA) for d in re.findall(r"([۰-۹])\)", rules or "")}
+    text = rules or ""
+    out = {"G"} if "🏆" in text else set()
+    pattern = r"([۰-۹])" if bare else r"([۰-۹])\)"
+    out |= {d.translate(FA) for d in re.findall(pattern, text)}
     return out
 
 
+TEHRAN = timezone(timedelta(hours=3, minutes=30))   # Iran dropped DST in 2022
+
+
+def _from_replay(r):
+    """A row written by replay_month.py — graded against Polymarket payouts."""
+    return {"t": int(r["window_epoch"]), "bet": r["bet"],
+            "tehran": r.get("tehran", ""), "rules": r.get("rules", ""),
+            "result": r["result"]}
+
+
+def _from_research(r):
+    """
+    A row from docs/research/csv/8-last2months-signals.csv.
+
+    Persian throughout, and the window is a Tehran wall-clock date and time
+    rather than an epoch. The rule list is comma-separated bare digits here,
+    not the numbered names the live bot writes, so the codes come out of it
+    differently.
+    """
+    dt = datetime.strptime(f"{r['تاریخ تهران']} {r['ساعت تهران']}",
+                           "%Y-%m-%d %H:%M").replace(tzinfo=TEHRAN)
+    return {"t": int(dt.timestamp()),
+            "bet": "up" if r["جهت"] == "بالا" else "down",
+            "tehran": f"{r['تاریخ تهران'][5:]} {r['ساعت تهران']}",
+            "rules": r["قانون‌ها"],
+            "result": "WIN" if r["نتیجه"] == "برد" else "LOSS"}
+
+
 def load():
-    rows = []
     with open(IN, encoding="utf-8-sig", newline="") as f:
-        for r in csv.DictReader(f):
-            try:
-                r["t"] = int(r["window_epoch"])
-            except (KeyError, TypeError, ValueError):
-                continue
-            if r.get("result") not in ("WIN", "LOSS"):
-                continue
-            r["codes"] = codes(r.get("rules"))
-            r["nrules"] = len(r["codes"] - {"G"})
-            r["short"] = ("G+" if "G" in r["codes"] else "") + "+".join(
-                sorted(r["codes"] - {"G"}))
-            rows.append(r)
+        raw = list(csv.DictReader(f))
+    if not raw:
+        return []
+    research = "تاریخ تهران" in raw[0]
+    conv = _from_research if research else _from_replay
+    rows = []
+    for r in raw:
+        try:
+            row = conv(r)
+        except (KeyError, TypeError, ValueError):
+            continue
+        if row["result"] not in ("WIN", "LOSS"):
+            continue
+        row["codes"] = codes(row["rules"], research)
+        row["nrules"] = len(row["codes"] - {"G"})
+        row["short"] = ("G+" if "G" in row["codes"] else "") + "+".join(
+            sorted(row["codes"] - {"G"}))
+        rows.append(row)
     rows.sort(key=lambda r: r["t"])
+    if rows:
+        print(f"[{'research' if research else 'replay'} format, "
+              f"graded on {'close-to-close' if research else 'Polymarket payouts'}]")
     return rows
 
 
@@ -106,6 +148,44 @@ def wilson(w, n, z=1.96):
 def payout(stake, price):
     """Profit on a winning binary bought at `price`. A loss costs the stake."""
     return stake * (1 - price) / price
+
+
+def warn_forced(rows):
+    """
+    Say so, loudly, if the file records BETS rather than SIGNALS.
+
+    A record of signals is blind to the previous result: whatever fraction of
+    windows fire after a win should fire after a loss too. A file produced by a
+    martingale is not blind — the ladder re-bets the next window after every
+    loss, so a row almost always exists there, and it repeats the losing call
+    rather than being a fresh read of the market. On such a file "the next
+    window also fired" is not a fact about the market, and rung 2 is a forced
+    re-bet, not a signal.
+    """
+    nxt = {r["t"] for r in rows}
+    aw = [r for r in rows if r["result"] == "WIN"]
+    al = [r for r in rows if r["result"] == "LOSS"]
+    if not aw or not al:
+        return
+    fw = sum(1 for r in aw if r["t"] + GRAN in nxt) / len(aw)
+    fl = sum(1 for r in al if r["t"] + GRAN in nxt) / len(al)
+    pairs = [(a, b) for a, b in zip(rows, rows[1:]) if b["t"] == a["t"] + GRAN]
+    lost = [(a, b) for a, b in pairs if a["result"] == "LOSS"]
+    same = (sum(1 for a, b in lost if a["bet"] == b["bet"]) / len(lost)
+            if lost else 0.0)
+    if fl - fw < 0.25 and same < 0.9:
+        return
+    print(f"\n  !!  WARNING — this file records BETS, not SIGNALS.")
+    print(f"      the next window has a row {fl * 100:.0f}% of the time after a "
+          f"LOSS, but only {fw * 100:.0f}% after a WIN,")
+    print(f"      and {same * 100:.0f}% of the rows after a loss repeat the "
+          f"losing direction.")
+    print(f"      That is an old martingale re-betting, not the market firing.")
+    print(f"      Rung 1 below is still a real fresh signal — the ladder resets "
+          f"after a win.")
+    print(f"      Rung 2 is NOT: it is a forced same-direction re-bet, so its "
+          f"win rate")
+    print(f"      answers a different question than the one asked.")
 
 
 # --------------------------------------------------------------------------- #
@@ -198,7 +278,9 @@ def main():
     span = (max(r["t"] for r in rows) - min(r["t"] for r in rows)) / 86400
     print(f"{len(rows):,} graded signals over {span:.1f} days in {IN}")
     print(f"base stake ${STAKE:,.0f}  ·  rung 2 is ${2 * STAKE:,.0f}  ·  "
-          f"sequences {'MAY overlap' if overlap else 'do not overlap'}\n")
+          f"sequences {'MAY overlap' if overlap else 'do not overlap'}")
+    warn_forced(rows)
+    print()
 
     # ---- every reading of the trigger, side by side ---------------------- #
     print("=" * 78)
@@ -282,17 +364,47 @@ def main():
 
     pnls = [book(s, HEAD) for s in seqs]
     tot = sum(pnls)
-    mean = tot / len(pnls)
-    var = sum((x - mean) ** 2 for x in pnls) / max(1, len(pnls) - 1)
-    se = (var / len(pnls)) ** 0.5
-    z = mean / se if se else 0.0
+
+    def zof(xs):
+        if len(xs) < 2:
+            return 0.0, 0.0, 0.0
+        m = sum(xs) / len(xs)
+        v = sum((x - m) ** 2 for x in xs) / (len(xs) - 1)
+        s = (v / len(xs)) ** 0.5
+        return m, s, (m / s if s else 0.0)
+
+    mean, se, z = zof(pnls)
     print(f"\nat {HEAD * 100:.0f} cents: ${mean:+,.2f} per sequence, "
           f"standard error ${se:,.2f}  ->  z = {z:+.2f}")
-    print("a real result needs |z| >= 1.96; anything under that is one month "
-          "of luck,")
-    print("in either direction.")
+    print("a real result needs |z| >= 1.96; anything under that is luck, in "
+          "either direction.")
     lo95, hi95 = tot - 1.96 * se * len(pnls), tot + 1.96 * se * len(pnls)
-    print(f"month P&L 95% range: ${lo95:+,.0f} to ${hi95:+,.0f}")
+    print(f"P&L 95% range over this span: ${lo95:+,.0f} to ${hi95:+,.0f}")
+
+    # ---- does it survive being cut in half? -------------------------------- #
+    # The single most useful check there is. Every number above was measured on
+    # the same data the strategy was described against, and a shape that only
+    # holds in one half of the span is a shape the data suggested, not one the
+    # market has.
+    half = len(pnls) // 2
+    cut = seqs[half]["s1"]["tehran"][:5]
+    (m1, _, z1), (m2, _, z2) = zof(pnls[:half]), zof(pnls[half:])
+    print(f"\n{'-' * 78}")
+    print(f"CUT IN HALF at {cut} — the same ladder, measured twice")
+    print(f"{'-' * 78}")
+    print(f"{'half':<22}{'seq':>6}{'P&L':>10}{'per seq':>10}{'z':>8}")
+    print(f"{'first (proposes)':<22}{half:>6}{sum(pnls[:half]):>+9,.0f}"
+          f"{m1:>+10.2f}{z1:>+8.2f}")
+    print(f"{'second (checks)':<22}{len(pnls) - half:>6}"
+          f"{sum(pnls[half:]):>+9,.0f}{m2:>+10.2f}{z2:>+8.2f}")
+    if m1 * m2 <= 0:
+        print("\n  ** the two halves DISAGREE IN SIGN. One month made the money,")
+        print("     the other gave it back. That is what noise looks like.")
+    elif abs(z2) < 1.96:
+        print("\n  ** the second half points the same way but is not significant")
+        print("     on its own. Suggestive, not established.")
+    else:
+        print("\n  ** both halves agree and the second one stands on its own.")
 
     # ---- flat betting, for comparison ------------------------------------- #
     flat = sum(payout(STAKE, HEAD) if r["result"] == "WIN" else -STAKE
