@@ -191,7 +191,7 @@ def main():
     if not rows:
         print("no signal in this span could be graded.")
         return
-    with open(OUT, "w", newline="") as f:
+    with open(OUT, "w", newline="", encoding="utf-8-sig") as f:
         w = csv.DictWriter(f, fieldnames=COLS)
         w.writeheader()
         w.writerows(rows)

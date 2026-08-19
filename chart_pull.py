@@ -241,7 +241,7 @@ def main():
             print(f"note: {OUT} had the previous column layout — moved to "
                   f"{os.path.basename(bak)} and starting fresh.")
             have, new = {}, True
-    f = open(OUT, "a", newline="")
+    f = open(OUT, "a", newline="", encoding="utf-8-sig")
     w = csv.DictWriter(f, fieldnames=COLS, extrasaction="ignore")
     if new:
         w.writeheader()
