@@ -123,10 +123,13 @@ def _by_date(boundary):
     want = boundary + GRAN
     params = dict(limit=LIMIT, order="endDate", ascending="true",
                   end_date_min=_iso(want - 90), end_date_max=_iso(want + 90))
-    # Only filter to open markets when the window is still ahead of us. For a
-    # backfill the market has long since closed and closed=false hides it.
-    if want > time.time():
-        params["closed"] = "false"
+    # Open markets for a window still ahead; closed ones for a backfill. Leaving
+    # the parameter off for a past window used to be the fix, and it stopped
+    # working: the same range that returns nothing without it returns the
+    # market with closed=true. Measured directly — a two-day-old window gave
+    # 0 markets bare and 100 (6 of them 5-minute) with the flag. That is why
+    # /oddsfill had quietly stopped recovering anything.
+    params["closed"] = "false" if want > time.time() else "true"
     return get(f"{GAMMA}/markets", **params)
 
 
