@@ -229,6 +229,18 @@ def main():
         return
 
     new = not os.path.exists(OUT) or os.path.getsize(OUT) == 0
+    if not new:
+        # Appending new columns under an old header produced a file whose
+        # header described only its first few thousand rows. Rotate instead:
+        # the old rows are still on disk under a clear name if ever wanted.
+        with open(OUT, newline="") as fh:
+            head = next(csv.reader(fh), [])
+        if head and tuple(head) != COLS:
+            bak = OUT + ".oldformat"
+            os.replace(OUT, bak)
+            print(f"note: {OUT} had the previous column layout — moved to "
+                  f"{os.path.basename(bak)} and starting fresh.")
+            have, new = {}, True
     f = open(OUT, "a", newline="")
     w = csv.DictWriter(f, fieldnames=COLS, extrasaction="ignore")
     if new:

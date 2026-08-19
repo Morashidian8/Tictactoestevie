@@ -37,16 +37,27 @@ def wilson(w, n, z=1.96):
 
 
 def load():
+    """
+    Read by shape, not by header.
+
+    The file was written by two versions of the puller: the first stored prices
+    (beat/final/moved), the second stores the winner — and because rows were
+    appended, the header on line 1 describes only the first. DictReader then
+    handed back the wrong keys and every row looked empty.
+
+    A row is unambiguous without its header: the first cell is the window epoch,
+    and exactly one cell reads "up" or "down". Matching on that costs nothing
+    and survives the next rename too.
+    """
     rows = {}
     with open(IN, newline="") as f:
-        for r in csv.DictReader(f):
-            try:
-                t = int(r["window_epoch"])
-                w = (r["winner"] or "").strip().lower()
-            except (KeyError, TypeError, ValueError):
-                continue
-            if w in ("up", "down"):
-                rows[t] = w
+        for cells in csv.reader(f):
+            if not cells or not cells[0].strip().isdigit():
+                continue                      # header, or a price-only row
+            w = next((c.strip().lower() for c in cells[1:]
+                      if c.strip().lower() in ("up", "down")), None)
+            if w:
+                rows[int(cells[0])] = w
     return rows
 
 
