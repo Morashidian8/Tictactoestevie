@@ -36,7 +36,11 @@ COLS = ("window_epoch", "utc", "et", "winner", "asset", "slug", "question")
 GRAN = pmc.GRAN
 # Six hours is 72 of our markets. Small enough that paging rarely goes past the
 # first page, large enough that a month is a couple of hundred requests.
-CHUNK = 6 * 3600
+# One hour. The venue lists roughly a thousand markets an hour, which is eleven
+# pages — comfortably inside Gamma's offset-2000 wall, so no request is wasted
+# discovering a truncation. Six hours needed splitting every single time and
+# spent a third of its requests finding that out.
+CHUNK = 3600
 # Gamma caps a page at 100 whatever you ask for. Requesting 500 and then
 # stopping because "fewer than 500 came back" meant the first page was always
 # also the last: every chunk silently returned at most 100 of its markets.
@@ -65,20 +69,23 @@ def load_existing():
 # per six hours, of which 96 are the eight 5-minute assets. That is the price of
 # admission: roughly 2,500 requests for a month, twenty to forty minutes. It is
 # slow and it is correct, which beats fast and empty.
-MAX_PAGES = int(os.environ.get("MAX_PAGES", "60"))
+# Gamma stops answering past this offset, whatever limit is asked for.
+MAX_OFFSET = int(os.environ.get("MAX_OFFSET", "2000"))
 HTTP_TIMEOUT = int(os.environ.get("HTTP_TIMEOUT", "30"))
 
 
 def fetch_range(lo, hi):
     """
-    Every market ending in [lo, hi), paged to exhaustion.
+    Markets ending in [lo, hi). Returns (rows, truncated).
 
-    The cap used to be 20 pages and a six-hour span needs 21, so the last page —
-    and with it a slice of every chunk — was silently dropped. Paging now stops
-    only when a short page proves the end was reached.
+    Gamma refuses to page past offset 2000, so a range holding more than 2,100
+    markets silently returns only its earliest 2,100 — which is why a six-hour
+    chunk kept yielding 25 of its 72 windows: we were seeing the first two hours
+    of it and calling that the answer. `truncated` says the wall was hit, so the
+    caller can split the range instead of accepting a short answer.
     """
     out, offset = [], 0
-    while offset < MAX_PAGES * PAGE:
+    while offset < MAX_OFFSET:
         rows = None
         for attempt in range(3):
             try:
@@ -90,18 +97,34 @@ def fetch_range(lo, hi):
                             "end_date_min": pmc._iso(lo),
                             "end_date_max": pmc._iso(hi)}).json()
                 break
-            except Exception as exc:
+            except Exception:
                 if attempt == 2:
-                    print(f"    ! page at offset {offset} failed: "
-                          f"{type(exc).__name__}")
+                    return out, True          # unknown: assume more is there
                 time.sleep(2 * (attempt + 1))
         if not isinstance(rows, list) or not rows:
-            break
+            return out, False
         out.extend(rows)
         if len(rows) < PAGE:
-            break
+            return out, False                 # a short page is the real end
         offset += PAGE
-    return out
+    return out, True                          # stopped at the wall, not the end
+
+
+def collect_span(lo, hi, depth=0):
+    """
+    Every market in [lo, hi), splitting the span whenever Gamma truncates it.
+
+    Halving on truncation costs one wasted request per split and adapts to
+    however dense the venue happens to be that week — which a fixed chunk size
+    cannot, and which is what turned a month into a third of a month.
+    """
+    rows, cut = fetch_range(lo, hi)
+    if not cut or hi - lo <= 2 * GRAN or depth >= 8:
+        return rows
+    mid = lo + (hi - lo) // 2 // GRAN * GRAN
+    if mid <= lo or mid >= hi:
+        return rows
+    return collect_span(lo, mid, depth + 1) + collect_span(mid, hi, depth + 1)
 
 
 _SLUG = re.compile(r"^([a-z0-9]+)-updown-5m-(\d{9,11})$")
@@ -214,8 +237,7 @@ def main():
     added = skipped = 0
     probed = []
     chunks = list(range(start, now, CHUNK))
-    print(f"chunks  : {len(chunks)} of six hours "
-          f"(~{MAX_PAGES} pages each at worst)\n")
+    print(f"chunks  : {len(chunks)} of one hour, split further if truncated\n")
     for i, lo in enumerate(chunks, 1):
         hi = min(lo + CHUNK, now)
         # A chunk whose every window is already saved needs no request at all,
@@ -223,7 +245,7 @@ def main():
         if all(t in have for t in range(lo, hi, GRAN)):
             skipped += 1
             continue
-        rows = fetch_range(lo + GRAN, hi + GRAN)
+        rows = collect_span(lo + GRAN, hi + GRAN)
         got = 0
         for m in rows:
             p = parse_market(m)
