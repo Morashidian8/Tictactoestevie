@@ -31,3 +31,15 @@ override intuition and must not be re-litigated from scratch:
   previous candle, i.e. against the edge.
 - **The 50% baseline is statistical, not a market price.** No Polymarket
   order-book data has ever been collected; the edge dies above ~55c.
+
+### Entry price — settled, do not raise again
+
+**Price every calculation at 50c and stop there.** A win pays the stake, a loss
+costs it. This is the owner's standing instruction, given 2026-08-20 after the
+point had been made to them repeatedly and in detail; it is a decision, not an
+oversight, and it is not to be reopened.
+
+That means: no 52c/55c comparison columns, no "but at the real price…" footnote
+appended to a result, and no proposal to lower `ENTRY_MAX_PRICE`. Scripts take a
+price parameter so an explicit request can still be served, but the default is
+0.50 and the default output shows that one number only. Do not ask about it.

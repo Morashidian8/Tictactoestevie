@@ -305,20 +305,15 @@ def main():
         print(f"    -> the gap is ORDER, not sizing.")
         h = len(follow) // 2
         for lbl, sel in (("first half", follow[:h]), ("second half", follow[h:])):
-            for pr in (0.50, 0.52):
-                p2, d2, _ = simulate(sel, stake, pr, rungs)
-                print(f"    {lbl:<12} @{pr * 100:.0f}c  {p2:>+11,.0f}   "
-                      f"worst dip {d2:>+11,.0f}")
-        p2, _, _ = simulate(follow, stake, 0.52, rungs)
-        print(f"    whole span   @52c  {p2:>+11,.0f}   <- the price it really pays")
+            p2, d2, _ = simulate(sel, stake, 0.50, rungs)
+            print(f"    {lbl:<12} {p2:>+11,.0f}   worst dip {d2:>+11,.0f}")
 
     print(f"\n{'=' * 76}")
     print("  For INDEPENDENT bets every ladder's break-even is exactly 50%: a")
     print("  deeper rung makes the rare bust bigger and the frequent win no")
     print("  bigger, so it moves variance, never sign. These bets are not quite")
     print("  independent, which is the only reason section 6 is interesting —")
-    print("  and section 6 shows what that is worth once the span is split and")
-    print("  the real price is paid.")
+    print("  and section 6 shows what that is worth once the span is split.")
     print("=" * 76)
 
 

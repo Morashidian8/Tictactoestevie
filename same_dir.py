@@ -139,8 +139,7 @@ def report(sigs, title):
     print(f"  share of signals that agree with the previous candle: "
           f"{len(agree) / len(sigs) * 100:.1f}%")
 
-    print(f"\n  break-even: 50.00% at 50c   ·   52.00% at 52c   ·   "
-          f"55.00% at 55c")
+    print(f"\n  break-even: 50.00%")
 
     # per rule, because the rules are not one thing
     print(f"\n  {'-' * 74}")

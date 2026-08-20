@@ -38,8 +38,11 @@ IN = os.environ.get("SIGNALS_FILE", "signals_month.csv")
 OUT = os.environ.get("CHAIN_FILE", "martingale_chain.csv")
 GRAN = 300
 STAKE = float(os.environ.get("STAKE_BASE", "20"))
-PRICES = (0.50, 0.52, 0.55)
-HEAD = float(os.environ.get("ENTRY_PRICE", "0.52"))
+# Every calculation is priced at 50c: a win pays the stake, a loss costs it.
+# The owner settled this — see CLAUDE.md. The parameter stays so an explicit
+# request can be served, but nothing here offers another price unasked.
+HEAD = float(os.environ.get("ENTRY_PRICE", "0.50"))
+PRICES = (HEAD,)
 FA = str.maketrans("۰۱۲۳۴۵۶۷۸۹", "0123456789")
 
 
@@ -287,7 +290,7 @@ def main():
     print("THE TRIGGER, READ FOUR WAYS")
     print("=" * 78)
     print(f"{'':2} {'definition':<34}{'fired':>7}{'won':>6}"
-          f"{'seq':>6}{'rung1':>13}{'P&L @52c':>12}")
+          f"{'seq':>6}{'rung1':>13}{'P&L':>12}")
     for key in ("A", "B", "C", "D"):
         label, ok = VARIANTS[key]
         fired = [r for r in rows if ok(r)]
@@ -343,7 +346,7 @@ def main():
 
     # ---- what it pays, and at what price ---------------------------------- #
     print(f"\n{'=' * 78}")
-    print("MONEY — the same sequences, priced three ways")
+    print(f"MONEY — at {HEAD * 100:.0f}c")
     print("=" * 78)
     print(f"{'entry price':<14}{'staked':>11}{'returned':>11}{'P&L':>11}"
           f"{'per seq':>10}{'worst dip':>12}")
