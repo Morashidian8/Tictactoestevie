@@ -720,10 +720,11 @@ def main():
     say()
     say("A close-cross is *by construction* a bar that moved: `close` ended on "
         "the far side of a level the previous close was on the near side of, so "
-        "the cross direction is always `sign(close[i]-close[i-1])`. Both columns "
-        "below therefore run the identical bet — **fade the last move** — and "
-        "differ only in whether a pivot happened to sit in the way. Bars are "
-        "bucketed by `|move| / median100|move|` using TRAIN quantiles.")
+        "the cross direction is always `sign(close[i]-close[i-1])`. Every column "
+        "below therefore runs the identical bet — **fade the last move** — and "
+        "they differ only in whether some level happened to sit in the way. Bars "
+        "are bucketed by `|move| / median100|move|` using TRAIN quantiles; the "
+        "reference column is bars that no grid, real or fake, flagged.")
     say()
     ref = ("h4", "classic", "ANY", "close_cross", None)
     marks = []
@@ -887,8 +888,10 @@ def main():
         "reproduces the result. Section 3b shows the same variant scoring the "
         "same on fake levels as on real ones.")
     say("3. Section 5b explains why: a close-cross is arithmetically a bar that "
-        "moved, and once bars are matched on size the cross adds ~nothing. The "
-        "level is a proxy for the bar, not a cause.")
+        "moved. Matching on bar size removes most of the apparent lift, and in "
+        "the largest-bar bucket — where nearly all of the remaining lift lives — "
+        "a real pivot and a level shifted $451 give the *same* lift. The level "
+        "is a proxy for the bar, not a cause of anything.")
     say("4. `wick_reject` — the version of the user's intuition that is genuinely "
         "*about* the level ('price touched the pivot and bounced') — is the one "
         "cross definition that is flat-to-negative on TEST. The 'reaction' is not "

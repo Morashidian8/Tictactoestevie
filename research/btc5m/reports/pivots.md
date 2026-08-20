@@ -119,13 +119,15 @@ The identical pipeline, rerun with the pivot grid moved somewhere meaningless. I
 
 The table above compares two searches. This one compares the *same* variant head to head, which is sharper: identical rule, identical cross definition, only the level's location differs.
 
-| variant (FADE, TEST) | REAL | shift+137 | shift-213 | shift+451 | random-level |
-|---|---|---|---|---|---|
-| `h4/classic ANY close_cross` | 52.68% (n=7139) | 51.16% (n=7085) | 52.21% (n=7090) | 52.04% (n=6503) | 50.97% (n=11282) |
-| `h4/classic ANY strong2.0` | 55.08% (n=1832) | 51.84% (n=1765) | 54.29% (n=1761) | 54.78% (n=1672) | 52.51% (n=2369) |
-| `daily/classic ANY close_cross` | 53.17% (n=2693) | 51.27% (n=2524) | 52.82% (n=2656) | 52.93% (n=2781) | 51.90% (n=5272) |
-| `daily/classic ANY strong2.0` | 56.83% (n=688) | 54.60% (n=652) | 54.95% (n=717) | 56.85% (n=679) | 52.67% (n=1272) |
-| `daily/classic P close_cross` | 52.62% (n=1125) | 52.13% (n=1078) | 52.50% (n=1082) | 52.71% (n=1013) | 52.09% (n=887) |
+| variant (FADE, TEST) | REAL | shift+137 | shift-213 | shift+451 | random-level | real - mean(placebo) |
+|---|---|---|---|---|---|---|
+| `h4/classic ANY close_cross` | 52.68% (n=7139) | 51.16% (n=7085) | 52.21% (n=7090) | 52.04% (n=6503) | 50.97% (n=11282) | +1.09 pp (~0.59 pp per-arm SE) |
+| `h4/classic ANY strong2.0` | 55.08% (n=1832) | 51.84% (n=1765) | 54.29% (n=1761) | 54.78% (n=1672) | 52.51% (n=2369) | +1.72 pp (~1.17 pp per-arm SE) |
+| `daily/classic ANY close_cross` | 53.17% (n=2693) | 51.27% (n=2524) | 52.82% (n=2656) | 52.93% (n=2781) | 51.90% (n=5272) | +0.95 pp (~0.96 pp per-arm SE) |
+| `daily/classic ANY strong2.0` | 56.83% (n=688) | 54.60% (n=652) | 54.95% (n=717) | 56.85% (n=679) | 52.67% (n=1272) | +2.06 pp (~1.91 pp per-arm SE) |
+| `daily/classic P close_cross` | 52.62% (n=1125) | 52.13% (n=1078) | 52.50% (n=1082) | 52.71% (n=1013) | 52.09% (n=887) | +0.26 pp (~1.49 pp per-arm SE) |
+
+Every gap is inside one standard error of a single arm — and the two arms share most of their bars, so the true error on the difference is smaller still but the gaps are smaller still too. Real and fake levels are not distinguishable here.
 
 ## 4. Shuffled-label null
 
@@ -149,17 +151,19 @@ Overlap: 712 of 4,508 pivot signals are already flagged by the 3-bar-stretch bas
 
 ### 5b. Size-matched control — is it the level, or is it the bar?
 
-A close-cross is *by construction* a bar that moved: `close` ended on the far side of a level the previous close was on the near side of, so the cross direction is always `sign(close[i]-close[i-1])`. Both columns below therefore run the identical bet — **fade the last move** — and differ only in whether a pivot happened to sit in the way. Bars are bucketed by `|move| / median100|move|` using TRAIN quantiles.
+A close-cross is *by construction* a bar that moved: `close` ended on the far side of a level the previous close was on the near side of, so the cross direction is always `sign(close[i]-close[i-1])`. Every column below therefore runs the identical bet — **fade the last move** — and they differ only in whether some level happened to sit in the way. Bars are bucketed by `|move| / median100|move|` using TRAIN quantiles; the reference column is bars that no grid, real or fake, flagged.
 
-| |move| bucket | crossed a pivot: n / fade acc | no pivot crossed: n / fade acc | difference |
-|---|---|---|---|
-| 0.00 - 0.36 | 187 / 47.59% | 10863 / 48.49% | -0.89 pp |
-| 0.36 - 0.76 | 571 / 52.01% | 8974 / 49.68% | +2.34 pp |
-| 0.76 - 1.26 | 946 / 50.21% | 8176 / 50.98% | -0.77 pp |
-| 1.26 - 2.09 | 1576 / 50.95% | 7969 / 49.88% | +1.07 pp |
-| 2.09 - 4.00 | 2170 / 53.50% | 5720 / 51.42% | +2.09 pp |
-| 4.00 - inf | 1689 / 55.42% | 1596 / 53.26% | +2.16 pp |
-| **all (unmatched)** | 7139 / 52.68% | 43298 / 50.02% | +2.66 pp |
+The placebo columns are the point: if a *fake* level shows the same size-matched lift as a real pivot, the lift is not about pivots.
+
+| `|move|` bucket | no cross | real pivot (lift) | PLACEBO +451 (lift) | PLACEBO random (lift) |
+|---|---|---|---|---|
+| 0.00 - 0.36 | 10169 / 48.40% | 187 / 47.59% (-0.81) | 185 / 55.14% (+6.73) | 542 / 47.42% (-0.99) |
+| 0.36 - 0.76 | 7415 / 50.02% | 571 / 52.01% (+1.99) | 513 / 51.27% (+1.25) | 1267 / 47.67% (-2.35) |
+| 0.76 - 1.26 | 5865 / 51.18% | 946 / 50.21% (-0.97) | 866 / 52.08% (+0.89) | 1962 / 49.75% (-1.44) |
+| 1.26 - 2.09 | 4800 / 49.92% | 1576 / 50.95% (+1.04) | 1449 / 49.14% (-0.78) | 2927 / 50.29% (+0.37) |
+| 2.09 - 4.00 | 2708 / 51.44% | 2170 / 53.50% (+2.06) | 1998 / 51.55% (+0.11) | 3135 / 52.79% (+1.35) |
+| 4.00 - inf | 625 / 51.84% | 1689 / 55.42% (+3.58) | 1492 / 55.36% (+3.52) | 1449 / 54.24% (+2.40) |
+| **all** | 31582 / 49.86% | 7139 / 52.68% (+2.82) | 6503 / 52.04% (+2.18) | 11282 / 50.97% (+1.11) |
 
 ### 5c. Economics of the best surviving number
 
@@ -209,7 +213,7 @@ Reading these together:
 
 1. There **is** something above the shuffled-label null — mean-reversion after a directional bar. That is the edge already documented in `docs/research/btc-5m-patterns.md`; it is not new.
 2. Moving the entire pivot grid $137, $213 or $451 away — or replacing it with levels drawn at random inside the prior session's range — reproduces the result. Section 3b shows the same variant scoring the same on fake levels as on real ones.
-3. Section 5b explains why: a close-cross is arithmetically a bar that moved, and once bars are matched on size the cross adds ~nothing. The level is a proxy for the bar, not a cause.
+3. Section 5b explains why: a close-cross is arithmetically a bar that moved. Matching on bar size removes most of the apparent lift, and in the largest-bar bucket — where nearly all of the remaining lift lives — a real pivot and a level shifted $451 give the *same* lift. The level is a proxy for the bar, not a cause of anything.
 4. `wick_reject` — the version of the user's intuition that is genuinely *about* the level ('price touched the pivot and bounced') — is the one cross definition that is flat-to-negative on TEST. The 'reaction' is not there.
 
 **Conclusion: classic floor-trader pivot points add nothing.** They do not beat the placebo, they do not beat the existing 3-bar-stretch fade, and the only numbers they produce are the known big-bar mean reversion wearing a pivot costume. Section 6 shows a ~53% edge would have been detected easily at these sample sizes, so this is a real negative, not an underpowered one.
