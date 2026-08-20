@@ -169,14 +169,13 @@ The placebo columns are the point: if a *fake* level shows the same size-matched
 
 Best test result with n >= 1000: `h4/classic ANY close_cross` FADE = **52.68%** (n=7,139, 95% CI [51.5, 53.8]).
 
+Priced at 50c throughout, per the owner's standing instruction (see `CLAUDE.md`): a win pays the stake, a loss costs it, so break-even is 50%.
+
 | entry price | break-even | EV per $100 at this win rate |
 |---|---|---|
 | 0.50 | 50% | +5.36$ |
-| 0.52 | 52% | +1.31$ |
-| 0.53 | 53% | -0.60$ |
-| 0.55 | 55% | -4.21$ |
 
-Polymarket realistically pays ~52c. The lower bound of the CI (51.5%) is at or below that break-even, and this number is a *post-hoc maximum over 354 tests* on top of that.
+At 50c this clears break-even. That is not the reason to reject it — sections 3, 3b and 5b are. The same 52.68% is produced by levels shifted $451 and by levels drawn at random, and the level-free `bigbar2` fade gets 52.51% on n=12,031 without any pivot involved. Whatever this number is, it is not payment for knowing where a pivot sits. It is also a *post-hoc maximum over 354 tests*.
 
 ## 6. What was detectable at these sample sizes
 
@@ -192,7 +191,7 @@ Minimum win rate detectable at Bonferroni alpha = 0.05/354 with 80% power:
 | 10,000 | 52.24% |
 | 20,000 | 51.58% |
 
-So an edge of ~53% (the smallest thing worth trading at a 52c entry) would have been detected on any signal family with n >= ~10,000 test occurrences. The ANY/close_cross families all clear that by a wide margin, so this is a real negative, not an underpowered one.
+So an edge of ~53% would have been detected on any signal family with n >= ~10,000 test occurrences. The ANY/close_cross families all clear that by a wide margin, so this is a real negative, not an underpowered one.
 
 ## 7. Harness self-check
 

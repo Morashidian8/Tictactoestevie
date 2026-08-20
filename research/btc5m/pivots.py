@@ -784,15 +784,23 @@ def main():
             f"{'FADE' if bestp['fade'] else 'FOLLOW'} = **{100*p:.2f}%** "
             f"(n={bestp['nte']:,}, 95% CI [{100*lo:.1f}, {100*hi:.1f}]).")
         say()
+        # Priced at 50c only. The owner settled this — see CLAUDE.md — and a
+        # comparison column at another price is exactly what was asked not to
+        # appear. It changes nothing here: the reason to reject pivots is the
+        # placebo, not the price.
+        say("Priced at 50c throughout, per the owner's standing instruction "
+            "(see `CLAUDE.md`): a win pays the stake, a loss costs it, so "
+            "break-even is 50%.")
+        say()
         say("| entry price | break-even | EV per $100 at this win rate |")
         say("|---|---|---|")
-        for q in (0.50, 0.52, 0.53, 0.55):
-            say("| %.2f | %.0f%% | %+.2f$ |" % (q, 100 * q, 100 * (p / q - 1)))
+        say("| 0.50 | 50%% | %+.2f$ |" % (100 * (p / 0.50 - 1)))
         say()
-        say(f"Polymarket realistically pays ~52c. The lower bound of the CI "
-            f"({100*lo:.1f}%) is {'above' if lo > 0.52 else 'at or below'} that "
-            f"break-even, and this number is a *post-hoc maximum over "
-            f"{real['K']} tests* on top of that.")
+        say(f"At 50c this clears break-even. That is not the reason to reject "
+            f"it — sections 3, 3b and 5b are. The same {100*p:.2f}% is produced "
+            f"by shifted and by randomly drawn levels, and the level-free "
+            f"`bigbar2` fade scores comparably with no pivot involved. It is "
+            f"also a *post-hoc maximum over {real['K']} tests*.")
     say()
 
     # -- 6. detectability -----------------------------------------------------
@@ -806,7 +814,7 @@ def main():
     for nn in (200, 500, 1000, 2000, 5000, 10000, 20000):
         say("| %s | %.2f%% |" % (f"{nn:,}", 100 * mde(nn, real["K"])))
     say()
-    say("So an edge of ~53% (the smallest thing worth trading at a 52c entry) "
+    say("So an edge of ~53% "
         f"would have been detected on any signal family with n >= ~"
         f"{next(nn for nn in (200,500,1000,2000,5000,10000,20000) if mde(nn, real['K']) < 0.53):,}"
         " test occurrences. The ANY/close_cross families all clear that by a wide "
