@@ -215,7 +215,14 @@ RULE7_RSI_LO = float(os.environ.get("RULE7_RSI_LO", "20"))
 #
 # The edge is THIN — 52.4% against a 50% break-even. It survives every control
 # but it has half the margin of rule 6, and a two-cent fill cost erases it.
-RULE8_ENABLED = os.environ.get("RULE8", "1").strip() not in ("0", "false", "no")
+#
+# OFF by default since 2026-08-20, at the user's instruction, after the last 30
+# days were measured: rule 8 fired 1,779 times — 47% of every signal the system
+# produced — and settled 49.58%, which is below its own break-even. Flat $20 at
+# 50c, it lost $300 while the other seven rules together made $740. The thin
+# margin the comment above describes is exactly the margin a bad month erases,
+# and this was that month. Set RULE8=1 to bring it back.
+RULE8_ENABLED = os.environ.get("RULE8", "0").strip() not in ("0", "false", "no")
 RULE8_MA = int(os.environ.get("RULE8_MA", "20"))
 RULE8_MULT = float(os.environ.get("RULE8_MULT", "3.5"))
 RULE5_ENABLED = os.environ.get("RULE5", "1").strip() not in ("0", "false", "no")
@@ -4290,11 +4297,18 @@ class BreakoutMonitor:
                          f"({missed} پنجره از دست رفت، "
                          f"{datetime.fromtimestamp(when, TEHRAN):%m-%d %H:%M})\n"
                          "تاریخچه دور ریخته و از نو ساخته شد — کارنامه دست‌نخورده ماند.")
-        active = ["۱", "۲" if RULE2_ENABLED else "", "۳" if RULE3_ENABLED else "",
-                  "۴" if RULE4_ENABLED else "", "۵" if RULE5_ENABLED else "",
-                  "۶" if RULE6_ENABLED else "", "۷" if RULE7_ENABLED else ""]
-        lines.append("قانون‌های فعال: <b>" + "، ".join(a for a in active if a) + "</b>"
-                     + ("" if RULE4_ENABLED else "  (۴ خاموش است)"))
+        # One table feeds both halves of the line. The previous version listed
+        # rules 1-7 and named only rule 4 when it was off, so rule 8 could be
+        # switched either way and nothing here would say which — there was no
+        # way to tell from the bot whether a change had landed.
+        flags = (("۱", True), ("۲", RULE2_ENABLED), ("۳", RULE3_ENABLED),
+                 ("۴", RULE4_ENABLED), ("۵", RULE5_ENABLED),
+                 ("۶", RULE6_ENABLED), ("۷", RULE7_ENABLED),
+                 ("۸", RULE8_ENABLED))
+        off = [n for n, ok in flags if not ok]
+        lines.append("قانون‌های فعال: <b>"
+                     + "، ".join(n for n, ok in flags if ok) + "</b>"
+                     + (f"  ({'، '.join(off)} خاموش)" if off else ""))
         if self.untold():
             lines.append(f"📡 <b>{len(self.untold())}</b> سیگنالِ گزارش‌نشده در صف — /missed")
         if self.err_count:
