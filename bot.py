@@ -262,6 +262,17 @@ NEAR_VOID = os.environ.get("NEAR_VOID", "0").strip() not in ("0", "false", "no")
 # the message reports a raw losing streak — "پلهٔ ۵" on a three-rung ladder,
 # which is not a rung at all, it is two busts and a fresh start.
 LADDER_RUNGS = int(os.environ.get("LADDER_RUNGS", "3"))
+# COOLDOWN — advisory only. After this many losses in a row the next few
+# signals carry a "hold off" banner; nothing is suppressed, nothing is dropped
+# from the message, and the decision stays with the user.
+#
+# Measured over 590 days: sitting out 6 signals after 4 straight losses cut the
+# worst run from 14 to 9 and cost 9% of the profit. That number assumes the
+# signals are actually skipped — a banner that gets overridden every time
+# changes nothing, which is exactly why the state is also printed in /status
+# rather than only whispered at alert time.
+COOLDOWN_LOSSES = int(os.environ.get("COOLDOWN_LOSSES", "4"))
+COOLDOWN_SKIP = int(os.environ.get("COOLDOWN_SKIP", "6"))
 # Polymarket up/down watcher: how early to read the quote, and how long after
 # the close to wait for the market to publish its resolution.
 ODDS_LEAD = int(os.environ.get("ODDS_LEAD", "15"))
@@ -2749,8 +2760,11 @@ class BreakoutMonitor:
             except Exception:  # noqa: BLE001 - a hint must never block an alert
                 near_gold = ""
         prev = self._prev_result_line(window_start)
+        # The banner goes above the signal, not below it: by the time the eye
+        # reaches the stake line the decision is already half made.
         text = (
             prev
+            + self.cooldown_note()
             + ("🏆 <b>ورودِ طلایی (۵۸٪)</b>\n" if golden else "")
             + f"🎯 {head}{agree}\n"
             + near_gold
@@ -3273,6 +3287,48 @@ class BreakoutMonitor:
                 break
             k += 1
         return k
+
+    def cooldown_left(self):
+        """
+        How many more signals fall inside the cooldown window, 0 if none.
+
+        Replayed forward from the stored history rather than kept as a counter,
+        so a restart cannot lose the state — the scorecard is rebuilt from the
+        ledger at boot and this is rebuilt with it.
+
+        A loss inside the window RE-ARMS it. That differs on purpose from the
+        way the rule was backtested, where the sat-out signals do not exist and
+        so cannot arm anything. Here they do exist — the user still sees them
+        and may still take them — and the first version of this went quiet at
+        losses 11 and 12 of a twelve-loss run, which is precisely the moment a
+        warning is worth having. Advisory and skipping are not the same
+        machine, and the honest consequence is that this one warns more often
+        than the measured version did.
+        """
+        if COOLDOWN_LOSSES <= 0 or COOLDOWN_SKIP <= 0:
+            return 0
+        loss = wait = 0
+        for h in self.history:
+            loss = 0 if h["won"] else loss + 1
+            if loss >= COOLDOWN_LOSSES:
+                wait = COOLDOWN_SKIP
+            elif wait > 0:
+                wait -= 1
+        return wait
+
+    def cooldown_note(self):
+        """The banner an alert carries while the cooldown window is open."""
+        left = self.cooldown_left()
+        if not left:
+            return ""
+        run = self.loss_streak()
+        why = (f"{run} باختِ پیاپی" if run >= COOLDOWN_LOSSES
+               else f"تازه {COOLDOWN_LOSSES} باختِ پیاپی خورده‌ایم")
+        return (f"\n⏸ <b>خنک‌کننده فعال — دست نگه دار</b>\n"
+                f"<i>{why}. این سیگنال و {left - 1} تای بعدی داخلِ بازهٔ "
+                f"خنک‌کننده‌اند.\n"
+                f"هیچ سیگنالی حذف نشده و چیزی از پیام کم نشده — تصمیم با "
+                f"شماست.</i>\n")
 
     def history_line(self, mine=None):
         """
@@ -4330,6 +4386,14 @@ class BreakoutMonitor:
                          f"حالت ${STAKE_BASE * (2 ** LADDER_RUNGS - 1):,.0f} "
                          "می‌بُرد، با حجمِ ثابت "
                          f"${STAKE_BASE * 12:,.0f}.")
+        if COOLDOWN_LOSSES > 0 and COOLDOWN_SKIP > 0:
+            left = self.cooldown_left()
+            lines.append(
+                f"خنک‌کننده: <b>{COOLDOWN_LOSSES} باخت → {COOLDOWN_SKIP} "
+                f"سیگنال هشدار</b>  ·  "
+                + (f"⏸ فعال، {left} سیگنالِ دیگر" if left
+                   else "آرام، الان فعال نیست")
+                + "  <i>(فقط هشدار — چیزی حذف نمی‌شود)</i>")
         if self.untold():
             lines.append(f"📡 <b>{len(self.untold())}</b> سیگنالِ گزارش‌نشده در صف — /missed")
         if self.err_count:
