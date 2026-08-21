@@ -275,7 +275,15 @@ ODDS_GRACE = int(os.environ.get("ODDS_GRACE", "40"))
 # because on the low-frequency streams it returned more profit per dollar of
 # drawdown (rule 6: 10.6 against 8.1) and recovers from a bad run in half the
 # bets.
-STAKE_BASE = float(os.environ.get("STAKE_BASE", "20"))
+#
+# Raised to 50 and pinned to flat on 2026-08-20, at the user's instruction,
+# after a 12-loss run emptied the account the day before. The run itself was
+# ordinary — 12 and 14 both occur in a single month, and a fade rule in a
+# one-way pump is exactly where they occur — so the ladder, not the streak, is
+# what turned a bad afternoon into a wipeout. Measured over the same signals in
+# the same order at 50c: flat +$440 against martingale -$160, and the worst
+# hole 960 against 2,940.
+STAKE_BASE = float(os.environ.get("STAKE_BASE", "50"))
 STAKE_MODE = os.environ.get("STAKE_MODE", "flat").strip().lower()
 # A Chainlink round older than this at sample time is not the close of the
 # window that just ended — it is an older price being re-served. Grading a
@@ -4309,6 +4317,19 @@ class BreakoutMonitor:
         lines.append("قانون‌های فعال: <b>"
                      + "، ".join(n for n, ok in flags if ok) + "</b>"
                      + (f"  ({'، '.join(off)} خاموش)" if off else ""))
+        # The stake settings, and where they came from. A value set in .env
+        # silently beats the default in this file, so "I changed the code" and
+        # "the bot is doing it" are different claims — this line is what makes
+        # the second one checkable.
+        src = ("از .env" if os.environ.get("STAKE_MODE") or
+               os.environ.get("STAKE_BASE") else "پیش‌فرضِ کد")
+        lines.append(f"مبلغِ هر سیگنال: <b>${STAKE_BASE:,.0f}</b> — "
+                     f"{_stake_label()}  <i>({src})</i>")
+        if STAKE_MODE == "martingale":
+            lines.append("⚠️ مارتینگل روشن است. رشتهٔ ۱۲ باختِ ۱۹ اوت با این "
+                         f"حالت ${STAKE_BASE * (2 ** LADDER_RUNGS - 1):,.0f} "
+                         "می‌بُرد، با حجمِ ثابت "
+                         f"${STAKE_BASE * 12:,.0f}.")
         if self.untold():
             lines.append(f"📡 <b>{len(self.untold())}</b> سیگنالِ گزارش‌نشده در صف — /missed")
         if self.err_count:
