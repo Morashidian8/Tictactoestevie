@@ -250,20 +250,42 @@ def doctor(windows=24):
           f"with ${MIN_SIZE:,.0f}+ behind it\n")
     hist, best = defaultdict(int), 0
     checked = 0
+    fire_at = []          # seconds into the window when the bar was first met
     for k in range(1, windows + 1):
         wb = b - k * GRAN
         mk = pmc.market_for(wb, deadline=time.time() + 15)
         if not mk:
             continue
         cid = mk.get("conditionId") or mk.get("condition_id") or ""
-        toks = mk.get("clobTokenIds")
-        if isinstance(toks, str):
+        rows = fills(cid, None)
+        # Replay the window in the order the fills actually arrived. The count
+        # at the end says whether the bar is reachable; WHEN it was first
+        # reached says whether reaching it is any use, and those are different
+        # questions. A consensus that only forms at +290s is a post-mortem.
+        rows.sort(key=lambda t: int(t.get("timestamp") or 0))
+        run_net = defaultdict(float)
+        first = None
+        for t in rows:
+            w = str(t.get("proxyWallet", "")).lower()
+            if w not in follow:
+                continue
             try:
-                import json as _j
-                toks = _j.loads(toks)
-            except Exception:  # noqa: BLE001
-                toks = None
-        net, cost, _ = positions(fills(cid, toks), follow)
+                sz, pr = float(t.get("size") or 0), float(t.get("price") or 0)
+            except (TypeError, ValueError):
+                continue
+            if sz <= 0 or not 0 < pr < 1:
+                continue
+            out = str(t.get("outcome", "")).lower()
+            sgn = -1.0 if str(t.get("side", "")).upper() == "SELL" else 1.0
+            run_net[(w, out)] += sgn * sz
+            if first is None:
+                side_ct = defaultdict(int)
+                for (w2, o2), sh in run_net.items():
+                    if sh > 1e-6:
+                        side_ct[o2] += 1
+                if max(side_ct.values(), default=0) >= MIN_AGREE:
+                    first = int(t.get("timestamp") or 0) - wb
+        net, cost, _ = positions(rows, follow)
         sides = defaultdict(list)
         for (w, out), sh in net.items():
             if sh > 1e-6:
@@ -271,28 +293,42 @@ def doctor(windows=24):
         top = max((len(v) for v in sides.values()), default=0)
         hist[top] += 1
         best = max(best, top)
+        if first is not None:
+            fire_at.append(first)
         checked += 1
-        print(f"  {datetime.fromtimestamp(wb, TEHRAN):%H:%M}  "
-              + "  ".join(f"{k2}:{len(v)} (${sum(v):,.0f})"
-                          for k2, v in sides.items()) or "  nobody", end="\r")
-    print(" " * 70, end="\r")
+        print(f"  reading {checked}/{windows} …", end="\r")
+    print(" " * 40, end="\r")
     if not checked:
         print("  could not read any past window.")
         return
     print(f"  windows read: {checked}")
     print(f"  {'followed wallets on the busiest side':<44}{'windows':>9}")
     for n in sorted(hist):
-        bar = "#" * min(40, hist[n] * 2)
-        print(f"  {n:<44}{hist[n]:>9}  {bar}")
+        print(f"  {n:<44}{hist[n]:>9}  {'#' * min(40, hist[n] * 2)}")
     print(f"\n  most that ever agreed in one window: {best}")
     if best < MIN_AGREE:
         print(f"  -> THIS is why it is silent. The bar is {MIN_AGREE} and the")
-        print(f"     busiest window in the last {checked} reached {best}.")
+        print(f"     busiest of {checked} windows reached {best}.")
         print(f"     Lower it: FOLLOW_MIN_AGREE={max(2, best)} in .env")
         ok = False
     else:
-        print(f"  -> the bar is reachable; it simply has not been reached yet")
-        print(f"     in a window while the watcher was running.")
+        print(f"  -> the bar is reachable in {len(fire_at)} of {checked} "
+              f"windows ({len(fire_at) / checked * 100:.0f}%)")
+
+    if fire_at:
+        fire_at.sort()
+        q = lambda f: fire_at[min(len(fire_at) - 1, int(len(fire_at) * f))]
+        print(f"\n  WHEN the bar is first met, in seconds into the 300s window:")
+        print(f"    earliest {fire_at[0]}   25% {q(.25)}   median {q(.5)}   "
+              f"75% {q(.75)}   latest {fire_at[-1]}")
+        usable = sum(1 for x in fire_at if x <= 240)
+        print(f"    with 60s or more still left: {usable}/{len(fire_at)} "
+              f"({usable / len(fire_at) * 100:.0f}%)")
+        if usable / len(fire_at) < 0.3:
+            print("    -> mostly too late to act on. This is a record of what")
+            print("       they did, not a signal you can follow.")
+        else:
+            print("    -> often early enough to act on.")
 
     print("\n" + "=" * 70)
     print("5. is the watcher actually running?")
