@@ -804,6 +804,7 @@ def backtest(cutoff):
     net = defaultdict(float)
     cost = defaultdict(float)
     shares = defaultdict(float)
+    no_ts = 0
     with open(TRADES_FILE, newline="", encoding="utf-8") as f:
         for r in csv.DictReader(f):
             w = (r.get("wallet") or "").lower()
@@ -816,7 +817,15 @@ def backtest(cutoff):
                 continue
             if sz <= 0 or not 0 < pr < 1 or cid not in when:
                 continue
-            if ts and ts - when[cid] > cutoff:
+            # A row whose timestamp is missing is a row we cannot place in
+            # the window, and "cannot place" must mean EXCLUDED, not included.
+            # Keeping it would let settlement fills — priced at 0.99 because
+            # the answer is already known — sit inside a cutoff meant to hold
+            # only what was visible early.
+            if not ts:
+                no_ts += 1
+                continue
+            if ts - when[cid] > cutoff:
                 continue          # too late to have been actionable
             sgn = -1.0 if r["side"] == "SELL" else 1.0
             net[(cid, w, r["outcome"])] += sgn * sz
@@ -854,6 +863,9 @@ def backtest(cutoff):
     print(f"DOES THE EARLY LEAN PREDICT? — fills within {cutoff}s of the open")
     print("=" * 78)
     print(f"  {len(rows):,} markets with followed-wallet activity that early")
+    if no_ts:
+        print(f"  {no_ts:,} fills had no timestamp and were EXCLUDED — they "
+              f"cannot be placed in the window")
     print(f"  train {cut:,} · test {len(rows) - cut:,} (chronological)\n")
     print(f"  {'lean (wallets ahead)':<20}{'n':>6}{'rate':>8}{'they paid':>11}"
           f"{'break-even':>12}{'edge':>8}{'$100 bet':>10}")
