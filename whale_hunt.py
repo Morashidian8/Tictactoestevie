@@ -59,6 +59,9 @@ MARKETS_FILE = os.environ.get("WHALE_MARKETS", "whale_markets.csv")
 TRADES_FILE = os.environ.get("WHALE_TRADES", "whale_trades.csv")
 FOLLOW_FILE = os.environ.get("FOLLOW_FILE", "whale_follow.csv")
 ASSET = os.environ.get("WHALE_ASSET", "btc")
+# Seconds after the lean is visible in which a follower could realistically
+# get filled. Their price is not available to anyone but them.
+FOLLOW_LAG = int(os.environ.get("FOLLOW_LAG", "30"))
 GRAN = 300
 MCOLS = ("window_epoch", "condition_id", "slug", "winner", "tokens")
 TCOLS = ("window_epoch", "condition_id", "wallet", "name", "outcome",
@@ -884,6 +887,11 @@ def backtest(cutoff):
     cost = defaultdict(float)
     shares = defaultdict(float)
     no_ts = 0
+    # Every fill in the window, by anyone, kept so the price a FOLLOWER would
+    # actually have got can be measured instead of assumed. Their own entry
+    # price is not available to anyone arriving after them — their buying is
+    # what moves it.
+    tape = defaultdict(list)
     with open(TRADES_FILE, newline="", encoding="utf-8") as f:
         for r in csv.DictReader(f):
             w = (r.get("wallet") or "").lower()
@@ -913,6 +921,22 @@ def backtest(cutoff):
             cost[(cid, r["outcome"])] += sgn * sz * pr
             shares[(cid, r["outcome"])] += sgn * sz
 
+    # second pass: the public tape, for the follower's price
+    with open(TRADES_FILE, newline="", encoding="utf-8") as f:
+        for r in csv.DictReader(f):
+            cid = r["condition_id"]
+            if cid not in when or when[cid] < mid:
+                continue
+            try:
+                ts, sz, pr = int(r["ts"] or 0), float(r["size"]), float(r["price"])
+            except (TypeError, ValueError):
+                continue
+            if not ts or sz <= 0 or not 0 < pr < 1 or r["side"] == "SELL":
+                continue
+            off = ts - when[cid]
+            if cutoff < off <= cutoff + FOLLOW_LAG:
+                tape[(cid, r["outcome"])].append((sz, pr))
+
     per = defaultdict(lambda: defaultdict(int))
     for (cid, w, out), sh in net.items():
         if sh > 1e-6:
@@ -933,8 +957,13 @@ def backtest(cutoff):
         # time at 0.94 LOSES money.
         sh = shares[(cid, top)]
         px = (cost[(cid, top)] / sh) if sh > 1e-9 else 0.0
+        # what the same side actually traded at in the seconds AFTER the lean
+        # was visible — that, not their price, is what a follower pays
+        later = tape.get((cid, top)) or []
+        fsh = sum(x for x, _ in later)
+        fpx = (sum(x * y for x, y in later) / fsh) if fsh > 1e-9 else 0.0
         rows.append((when[cid], lean, money, sides[top] + other,
-                     winner[cid] == top, px))
+                     winner[cid] == top, px, fpx))
     if not rows:
         print("no markets had followed-wallet activity inside the cutoff.")
         return
@@ -948,8 +977,10 @@ def backtest(cutoff):
         print(f"  {no_ts:,} fills had no timestamp and were EXCLUDED — they "
               f"cannot be placed in the window")
     print(f"  all {len(rows):,} are out of sample\n")
-    print(f"  {'lean (wallets ahead)':<20}{'n':>6}{'rate':>8}{'they paid':>11}"
-          f"{'break-even':>12}{'edge':>8}{'$100 bet':>10}")
+    print(f"  {'':<18}{'--- THEM (unreachable) ---':>28}  |"
+          f"{'--- YOU, {FOLLOW_LAG}s later ---'.replace('{FOLLOW_LAG}', str(FOLLOW_LAG)):>30}")
+    print(f"  {'lean':<18}{'n':>5}{'rate':>7}{'paid':>8}{'$100':>8}  |"
+          f"{'n':>5}{'you pay':>8}{'$100':>8}")
 
     def line(label, sel):
         if len(sel) < 20:
@@ -958,17 +989,22 @@ def backtest(cutoff):
         rate = w / len(sel)
         px = sum(r[5] for r in sel if r[5] > 0) / max(
             1, sum(1 for r in sel if r[5] > 0))
+        fol = [r for r in sel if r[6] > 0]
+        fpx = sum(r[6] for r in fol) / len(fol) if fol else 0.0
+        frate = (sum(1 for r in fol if r[4]) / len(fol)) if fol else 0.0
         ev = (rate / px - 1) * 100 if px > 0 else 0.0
-        print(f"  {label:<20}{len(sel):>6,}{rate * 100:>7.1f}%{px:>11.3f}"
-              f"{px * 100:>11.1f}%{(rate - px) * 100:>+8.1f}{ev:>+9.1f}%")
+        fev = (frate / fpx - 1) * 100 if fpx > 0 else 0.0
+        print(f"  {label:<18}{len(sel):>5,}{rate * 100:>7.1f}%{px:>8.3f}"
+              f"{ev:>+8.1f}%  |{len(fol):>5,}{fpx:>8.3f}{fev:>+8.1f}%")
 
     for lo, hi in ((1, 2), (2, 4), (4, 7), (7, 99)):
         line(f"{lo} to {hi - 1}", [r for r in rows[cut:] if lo <= r[1] < hi])
     line("every market (test)", rows[cut:])
-    print(f"\n  'they paid' is the average price the leaning side was bought")
-    print(f"  at. THAT is the break-even, not 50%: a share bought at 0.94 has")
-    print(f"  to win 94% of the time just to stand still. The last column is")
-    print(f"  what $100 following them actually returns.")
+    print(f"\n  LEFT is their own entry — nobody arriving later can have it.")
+    print(f"  RIGHT is what the same side actually traded at in the {FOLLOW_LAG}s")
+    print(f"  AFTER the lean was visible, which is what you would pay. If the")
+    print(f"  right-hand $100 column is near zero, their buying has already")
+    print(f"  taken the edge and there is nothing left to follow.")
 
 
 def main():
