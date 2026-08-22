@@ -57,6 +57,7 @@ DATA = "https://data-api.polymarket.com"
 UA = {"User-Agent": "btc-whale-hunt/1.0"}
 MARKETS_FILE = os.environ.get("WHALE_MARKETS", "whale_markets.csv")
 TRADES_FILE = os.environ.get("WHALE_TRADES", "whale_trades.csv")
+FOLLOW_FILE = os.environ.get("FOLLOW_FILE", "whale_follow.csv")
 ASSET = os.environ.get("WHALE_ASSET", "btc")
 GRAN = 300
 MCOLS = ("window_epoch", "condition_id", "slug", "winner", "tokens")
@@ -675,6 +676,21 @@ def analyse(min_markets):
               f"Full addresses, best first:")
         for pnl, w, s, wr, px in keep[:15]:
             print(f"    {w}  {names.get(w, '')}")
+        # Written out so whale_watch.py can follow them live. Every wallet that
+        # cleared, not just the fifteen printed — the screen is the judgement,
+        # the print limit is only a screen.
+        with open(FOLLOW_FILE, "w", newline="", encoding="utf-8") as f:
+            wr_ = csv.writer(f)
+            wr_.writerow(["wallet", "name", "calls", "win_rate", "paid",
+                          "staked", "pnl", "roi", "first", "second"])
+            for pnl, w, s, wrate, px in keep:
+                wr_.writerow([w, names.get(w, ""), s["held"],
+                              f"{wrate * 100:.1f}%", f"{px:.3f}",
+                              f"{s['stake']:.0f}", f"{pnl:.0f}",
+                              f"{pnl / s['stake'] * 100:.1f}%" if s["stake"] else "",
+                              f"{s['first']:.0f}", f"{s['second']:.0f}"])
+        print(f"\n  {len(keep)} wallets written to {FOLLOW_FILE} — "
+              f"`python whale_watch.py` now follows them live.")
 
 
 def probe_deeper():
