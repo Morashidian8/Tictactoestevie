@@ -576,29 +576,122 @@ def analyse(min_markets):
               f"{wr * 100:>6.1f}%{px:>7.3f}{(wr - px) * 100:>+6.1f}"
               f"{z:>+8.2f}{roi:>+6.1f}%   {' · '.join(flags)}")
 
-    # the only wallets worth following: real risk at a fair price, and winning
+    # ---- the only ones worth following ----------------------------------- #
+    # Two things the first run of this got wrong, both visible in its own
+    # output. A wallet showing "paid 0.002" with a 97.6% win rate and a NEGATIVE
+    # 40% return is not a prodigy, it is an average computed over a handful of
+    # token-dust buys while the wallet's real activity was selling; so a
+    # minimum staked amount is required before the price means anything. And
+    # the list was ranked by z, which put a wallet that made EIGHT DOLLARS over
+    # 511 markets above one that made $9,555 over 948. Money is the point, so
+    # money is the sort.
+    MIN_STAKE = float(os.environ.get("WHALE_MIN_STAKE", "5000"))
     print(f"\n{'-' * 104}")
-    print("THE ONLY ONES WORTH FOLLOWING — entry under 0.60, beat their price,")
-    print("and made money in BOTH halves")
+    print("THE ONLY ONES WORTH FOLLOWING")
     print(f"{'-' * 104}")
-    keep = [(z, w, s, wr, px) for z, w, s, wr, px in ranked
+    print(f"  entry under 0.60 · beat the price they paid · profitable in BOTH")
+    print(f"  halves · at least ${MIN_STAKE:,.0f} actually staked, so the")
+    print(f"  average price is measured on real volume and not on dust.")
+    keep = [(s["pnl"], w, s, wr, px) for z, w, s, wr, px in ranked
             if px < 0.60 and z >= bar and s["pnl"] > 0
-            and s["first"] > 0 and s["second"] > 0]
+            and s["first"] > 0 and s["second"] > 0 and s["stake"] >= MIN_STAKE]
+    keep.sort(reverse=True)
     if not keep:
-        print("  none. Every wallet that clears the bar does it by buying a")
-        print("  market that was already decided, which is not a thing you can")
-        print("  copy — by the time they buy, the answer is in the price.")
+        print("\n  none. Every wallet clearing the bar does it either on dust")
+        print("  or by buying a market that was already decided — and neither")
+        print("  is a thing you can copy.")
     else:
-        print(f"  {'wallet':<13}{'name':<16}{'calls':>6}{'win%':>7}{'paid':>7}"
-              f"{'ROI':>7}{'1st':>10}{'2nd':>10}")
-        for z, w, s, wr, px in keep[:15]:
-            roi = s["pnl"] / s["stake"] * 100 if s["stake"] > 0 else 0
+        print(f"\n  {'wallet':<13}{'name':<16}{'calls':>6}{'win%':>7}{'paid':>7}"
+              f"{'staked':>10}{'P&L':>9}{'ROI':>7}{'1st':>9}{'2nd':>9}")
+        for pnl, w, s, wr, px in keep[:15]:
+            roi = pnl / s["stake"] * 100 if s["stake"] > 0 else 0
             print(f"  {w[:11]:<13}{names.get(w, '')[:14]:<16}{s['held']:>6}"
-                  f"{wr * 100:>6.1f}%{px:>7.3f}{roi:>+6.1f}%"
-                  f"{s['first']:>+10,.0f}{s['second']:>+10,.0f}")
-        print(f"\n  {len(keep)} of {K:,} wallets. Full addresses:")
-        for z, w, s, wr, px in keep[:15]:
+                  f"{wr * 100:>6.1f}%{px:>7.3f}{s['stake']:>10,.0f}"
+                  f"{pnl:>+9,.0f}{roi:>+6.1f}%"
+                  f"{s['first']:>+9,.0f}{s['second']:>+9,.0f}")
+        print(f"\n  {len(keep)} of {K:,} wallets cleared every test. "
+              f"Full addresses, best first:")
+        for pnl, w, s, wr, px in keep[:15]:
             print(f"    {w}  {names.get(w, '')}")
+
+
+def probe_deeper():
+    """
+    Ways round the 1,000-fill wall, tested rather than assumed.
+
+    `offset` is ignored by this endpoint, so a busy market returns one slice and
+    no way to ask for the next — 92% of the markets collected hit that wall.
+    Two escapes are plausible and neither costs anything to check: a time
+    filter, which would let a window be cut into pieces, and querying by TOKEN
+    instead of by market, since every market has two token ids and a cap that
+    is per-query rather than per-market would double the take by itself.
+    """
+    now = int(time.time()) // GRAN * GRAN
+    rows, _ = CP.fetch_range(now - 7200, now - 600)
+    m = None
+    for x in rows:
+        hit = CP._SLUG.match((x.get("slug") or "").lower())
+        if hit and hit.group(1) == ASSET:
+            m = x
+            break
+    if not m:
+        print("no market found to test against.")
+        return
+    cid = m.get("conditionId") or m.get("condition_id")
+    w0 = int(CP._SLUG.match(m["slug"].lower()).group(2))
+    print(f"testing against {m.get('slug')}\n  {cid}\n")
+
+    base = get(f"{DATA}/trades", market=cid, limit=1000)
+    if isinstance(base, dict):
+        base = base.get("data") or []
+    ts = sorted(int(t.get("timestamp", 0)) for t in base if t.get("timestamp"))
+    print(f"A. plain limit=1000 -> {len(base)} fills")
+    if ts:
+        print(f"   first fill {ts[0] - w0:+,}s from the window open, "
+              f"last {ts[-1] - w0:+,}s")
+        print(f"   so this slice is the {'START' if ts[0] - w0 < 60 else 'END'} "
+              f"of the market")
+
+    print("\nB. does a TIME filter exist?")
+    for a, b in (("from", "to"), ("startTs", "endTs"), ("after", "before"),
+                 ("min_timestamp", "max_timestamp"), ("start", "end")):
+        try:
+            r = get(f"{DATA}/trades", market=cid, limit=1000,
+                    **{a: w0, b: w0 + 150})
+            if isinstance(r, dict):
+                r = r.get("data") or []
+            note = "IGNORED" if len(r) == len(base) else "WORKS — use this"
+            print(f"   {a}/{b:<14} -> {len(r):>5} fills   {note}")
+        except Exception as exc:  # noqa: BLE001
+            print(f"   {a}/{b:<14} -> {type(exc).__name__}")
+
+    print("\nC. per-TOKEN instead of per-market?")
+    try:
+        toks = m.get("clobTokenIds")
+        if isinstance(toks, str):
+            toks = json.loads(toks)
+    except Exception:  # noqa: BLE001
+        toks = None
+    if not toks:
+        print("   no clobTokenIds on the market.")
+        return
+    total = 0
+    for i, tok in enumerate(toks):
+        for key in ("asset", "token_id", "tokenId", "market"):
+            try:
+                r = get(f"{DATA}/trades", **{key: tok}, limit=1000)
+                if isinstance(r, dict):
+                    r = r.get("data") or []
+                if r:
+                    print(f"   {key}=token[{i}] -> {len(r)} fills")
+                    total += len(r)
+                    break
+            except Exception:
+                continue
+        else:
+            print(f"   token[{i}] -> no parameter name worked")
+    print(f"\n   per-token {total} against per-market {len(base)} — "
+          f"{'BETTER' if total > len(base) else 'no gain'}")
 
 
 def main():
