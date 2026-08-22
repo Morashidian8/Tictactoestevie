@@ -326,9 +326,13 @@ def fills(market, tokens, report=False):
     on a market minutes old. Either the `asset` filter is honoured or it is not;
     verifying costs one comparison per row and removes the question.
     """
+    # `asset` is ignored by this endpoint — measured, not guessed: a live
+    # window returned 2,000 rows of which 2,000 belonged to other markets. It
+    # simply serves the most recent fills on the whole exchange. `market` is
+    # honoured, so `market` is what is asked, and the conditionId check below
+    # stays as the thing that would catch this the next time it changes.
     rows, seen, foreign = [], set(), 0
-    targets = [("asset", t) for t in (tokens or [])] or [("market", market)]
-    for key, val in targets:
+    for key, val in (("market", market),):
         try:
             r = requests.get(f"{DATA}/trades", timeout=15, headers=UA,
                              params={key: val, "limit": 1000}).json()

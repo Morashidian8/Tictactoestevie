@@ -321,10 +321,19 @@ def collect(days):
     print(f"  {sum(1 for v in tokens.values() if v):,} markets carry token ids")
     print(f"  {len(todo):,} markets still need their fills")
 
-    def slice_fills(token, lo, hi, depth=0):
-        """Fills for one token in [lo, hi), halving while the cap is hit."""
+    def slice_fills(cid, lo, hi, depth=0):
+        """
+        Fills for one MARKET in [lo, hi), halving while the cap is hit.
+
+        Not by token. `asset` looked like it doubled the take in the probe —
+        two queries, 1,000 each — but a live check showed every one of those
+        2,000 rows belonged to a different market: the parameter is ignored and
+        the endpoint just returns the most recent fills exchange-wide. `market`
+        is honoured, and `start`/`end` are honoured with it, so slicing time is
+        what gets past the cap.
+        """
         try:
-            rows = get(f"{DATA}/trades", asset=token, limit=1000,
+            rows = get(f"{DATA}/trades", market=cid, limit=1000,
                        start=lo, end=hi)
         except Exception:
             time.sleep(1)
@@ -334,28 +343,19 @@ def collect(days):
         rows = rows or []
         if len(rows) >= 1000 and depth < 4 and hi - lo > 20:
             mid = (lo + hi) // 2
-            return slice_fills(token, lo, mid, depth + 1) + \
-                   slice_fills(token, mid, hi, depth + 1)
+            return slice_fills(cid, lo, mid, depth + 1) + \
+                   slice_fills(cid, mid, hi, depth + 1)
         return rows
 
     batch, done, capped = [], 0, 0
     for r in todo:
         cid, w0 = r["condition_id"], int(r["window_epoch"])
-        toks = tokens.get(cid) or []
         seen_tx = set()
-        rows = []
-        if toks:
-            for tok in toks:
-                # a market is listed well before its window, so reach back
-                rows += slice_fills(tok, w0 - 86400, w0 + 900)
-        else:
-            try:
-                got = get(f"{DATA}/trades", market=cid, limit=1000)
-                rows = got.get("data") if isinstance(got, dict) else got
-            except Exception:
-                rows = []
-            if rows and len(rows) >= 1000:
-                capped += 1
+        # a market is listed well before its window opens, so reach back
+        rows = slice_fills(cid, w0 - 86400, w0 + 900)
+        # and drop anything the endpoint threw in that is not ours
+        rows = [t for t in rows
+                if not t.get("conditionId") or str(t["conditionId"]) == cid]
         for tr in rows or []:
             tx = str(pick(tr, "transactionHash", default="")) + \
                  str(pick(tr, "timestamp", default="")) + \
