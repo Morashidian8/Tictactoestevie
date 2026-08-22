@@ -415,6 +415,54 @@ def analyse(min_markets):
             continue
         cash[(w, cid)] += sh * (1.0 if winner.get(cid, "") == out else 0.0)
 
+    # ---- data quality, before any conclusion is drawn from it ------------- #
+    # 91% of markets hit the 1,000-fill ceiling on the first collection and the
+    # API ignores `offset`, so what we hold is a SLICE of each busy market, not
+    # all of it. Which slice decides whether the numbers below mean anything:
+    # if the fills cluster at the end of the window at prices near 1.0, we are
+    # looking at people cashing out a decided market and every entry is missing.
+    span, px, per = defaultdict(list), [], defaultdict(int)
+    with open(TRADES_FILE, newline="", encoding="utf-8") as f:
+        for r in csv.DictReader(f):
+            if not r["wallet"]:
+                continue
+            cid = r["condition_id"]
+            per[cid] += 1
+            try:
+                ts, pr = int(r["ts"]), float(r["price"])
+            except (TypeError, ValueError):
+                continue
+            if ts and cid in when:
+                span[cid].append(ts - when[cid])
+            px.append(pr)
+    capped = sum(1 for c, n in per.items() if n >= 1000)
+    print(f"\n{'=' * 104}")
+    print("DATA QUALITY — is what we collected usable?")
+    print("=" * 104)
+    print(f"  markets with fills: {len(per):,}   at the 1,000 ceiling: "
+          f"{capped:,} ({capped / max(len(per), 1) * 100:.0f}%)")
+    if px:
+        px.sort()
+        buckets = [(0.0, 0.1), (0.1, 0.3), (0.3, 0.7), (0.7, 0.9), (0.9, 1.01)]
+        print(f"  fill prices:", end=" ")
+        for lo_, hi_ in buckets:
+            k = sum(1 for x in px if lo_ <= x < hi_)
+            print(f"{lo_:.1f}-{hi_:.1f}: {k / len(px) * 100:.0f}%", end="  ")
+        print()
+    offs = [o for v in span.values() for o in v]
+    if offs:
+        offs.sort()
+        q = lambda f: offs[int(len(offs) * f)]
+        print(f"  seconds into the 300s window: min {offs[0]}  "
+              f"25% {q(.25)}  median {q(.5)}  75% {q(.75)}  max {offs[-1]}")
+        early = sum(1 for o in offs if o < 150) / len(offs) * 100
+        print(f"  fills in the FIRST half of the window: {early:.0f}%")
+        if early < 20:
+            print("  !! almost nothing from the first half — these are exits,")
+            print("     not entries, and the P&L below cannot be trusted.")
+        else:
+            print("  entries are present; the slice is usable.")
+
     mid = sorted(when.values())[len(when) // 2]
     S = defaultdict(lambda: {"mk": 0, "pnl": 0.0, "stake": 0.0, "both": 0,
                              "held": 0, "won": 0, "first": 0.0, "second": 0.0,
