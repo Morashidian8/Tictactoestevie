@@ -663,6 +663,12 @@ def main():
     elif "--analyze" in argv or "--analyse" in argv:
         m = int(argv[argv.index("--min") + 1]) if "--min" in argv else 20
         analyse(m)
+    elif os.path.exists(TRADES_FILE) and os.path.getsize(TRADES_FILE) > 0:
+        # Bare invocation with data already on disk: run the analysis. Printing
+        # usage instead has now wasted two round-trips on a phone keyboard,
+        # where a trailing flag is the easiest thing in the world to lose.
+        print(f"(no flag given — {TRADES_FILE} exists, so: --analyze)\n")
+        analyse(20)
     else:
         print("whale_hunt — who actually wins the BTC 5-minute market\n")
         print("  python whale_hunt.py --probe              what the API serves")
