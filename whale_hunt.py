@@ -60,8 +60,8 @@ TRADES_FILE = os.environ.get("WHALE_TRADES", "whale_trades.csv")
 ASSET = os.environ.get("WHALE_ASSET", "btc")
 GRAN = 300
 MCOLS = ("window_epoch", "condition_id", "slug", "winner")
-TCOLS = ("window_epoch", "condition_id", "wallet", "outcome", "side",
-         "price", "size", "ts")
+TCOLS = ("window_epoch", "condition_id", "wallet", "name", "outcome",
+         "side", "price", "size", "ts")
 
 
 def get(url, **params):
@@ -287,7 +287,7 @@ def collect(days):
             if r["condition_id"] not in have_t:
                 todo.append(r)
     print(f"  {len(todo):,} markets still need their fills")
-    batch, done = [], 0
+    batch, done, capped = [], 0, 0
     for r in todo:
         cid = r["condition_id"]
         try:
@@ -297,6 +297,8 @@ def collect(days):
             continue
         if isinstance(rows, dict):
             rows = rows.get("data") or rows.get("trades") or []
+        if rows and len(rows) >= 1000:
+            capped += 1          # offset is ignored by this API: 1000 is a wall
         for tr in rows or []:
             try:
                 size = float(pick(tr, "size", "amount", "shares", default=0) or 0)
@@ -309,6 +311,7 @@ def collect(days):
                 "window_epoch": r["window_epoch"], "condition_id": cid,
                 "wallet": str(pick(tr, "proxyWallet", "maker", "user", "wallet",
                                    default=""))[:44].lower(),
+                "name": str(pick(tr, "pseudonym", "name", default=""))[:28],
                 "outcome": str(pick(tr, "outcome", "outcomeIndex",
                                     default=""))[:8].lower(),
                 "side": str(pick(tr, "side", default=""))[:4].upper(),
@@ -318,8 +321,9 @@ def collect(days):
         # is re-fetched on every run for ever.
         if not rows:
             batch.append({"window_epoch": r["window_epoch"],
-                          "condition_id": cid, "wallet": "", "outcome": "",
-                          "side": "", "price": "0", "size": "0", "ts": 0})
+                          "condition_id": cid, "wallet": "", "name": "",
+                          "outcome": "", "side": "", "price": "0",
+                          "size": "0", "ts": 0})
         done += 1
         if len(batch) >= 400:
             _append(TRADES_FILE, TCOLS, batch)
@@ -328,7 +332,7 @@ def collect(days):
             print(f"  fills {done:,}/{len(todo):,}", end="\r")
     if batch:
         _append(TRADES_FILE, TCOLS, batch)
-    print(f"\n  done. run --analyze")
+    print(f"\n  done ({capped:,} markets hit the 1,000-fill ceiling). run --analyze")
 
 
 # --------------------------------------------------------------------------- #
@@ -345,6 +349,20 @@ def wilson(w, n, z=1.96):
 
 
 def analyse(min_markets):
+    """
+    Score every wallet by CASH, not by position.
+
+    The probe settled why this matters: the very first fill it returned was a
+    SELL at 0.999 — someone taking their money out once the outcome was no
+    longer in doubt. An accounting built on the position left at resolution
+    calls that wallet flat and drops it, which would discard precisely the
+    traders who are good enough to leave early.
+
+    So every fill is a cash movement: a buy pays out, a sell takes in, and
+    whatever is still held when the market resolves pays 1.0 a share if it won
+    and nothing if it did not. That is the whole profit and loss, and it is the
+    same arithmetic whether the wallet held to the end or traded out.
+    """
     if not os.path.exists(TRADES_FILE):
         print(f"{TRADES_FILE} not found — run --collect first.")
         return
@@ -353,84 +371,100 @@ def analyse(min_markets):
         for r in csv.DictReader(f):
             winner[r["condition_id"]] = r["winner"]
             when[r["condition_id"]] = int(r["window_epoch"])
+    if not when:
+        print("no markets on disk.")
+        return
 
-    # net shares per (wallet, market, outcome): a SELL is a negative buy, so a
-    # wallet that bought then sold out is flat and must not be counted as a bet.
-    pos = defaultdict(float)
-    cost = defaultdict(float)
+    cash = defaultdict(float)      # (wallet, market) -> net cash from trading
+    held = defaultdict(float)      # (wallet, market, outcome) -> shares left
+    bought = defaultdict(float)    # (wallet, market) -> gross bought, for size
+    sides = defaultdict(set)
+    took = defaultdict(set)        # outcomes actually BOUGHT — the call itself
+    buy_px = defaultdict(float)
+    buy_sh = defaultdict(float)
+    names = {}
     with open(TRADES_FILE, newline="", encoding="utf-8") as f:
         for r in csv.DictReader(f):
-            if not r["wallet"]:
+            w = r["wallet"]
+            if not w:
                 continue
             try:
                 sz, pr = float(r["size"]), float(r["price"])
             except (TypeError, ValueError):
                 continue
-            sgn = -1.0 if r["side"] == "SELL" else 1.0
-            k = (r["wallet"], r["condition_id"], r["outcome"])
-            pos[k] += sgn * sz
-            cost[k] += sgn * sz * pr
+            if sz <= 0 or not 0 < pr <= 1:
+                continue
+            cid, out = r["condition_id"], r["outcome"]
+            if r.get("name") and w not in names:
+                names[w] = r["name"]
+            if r["side"] == "SELL":
+                cash[(w, cid)] += sz * pr
+                held[(w, cid, out)] -= sz
+            else:
+                cash[(w, cid)] -= sz * pr
+                held[(w, cid, out)] += sz
+                bought[(w, cid)] += sz * pr
+                buy_px[(w, cid)] += sz * pr
+                buy_sh[(w, cid)] += sz
+                took[(w, cid)].add(out)
+            sides[(w, cid)].add(out)
 
-    # per wallet per market
-    by_wm = defaultdict(dict)
-    for (w, cid, out), sh in pos.items():
-        if abs(sh) < 1e-6:
+    # settle whatever is still held when the market resolved
+    for (w, cid, out), sh in held.items():
+        if abs(sh) < 1e-9:
             continue
-        by_wm[(w, cid)][out] = (sh, cost[(w, cid, out)])
+        cash[(w, cid)] += sh * (1.0 if winner.get(cid, "") == out else 0.0)
 
-    stats = defaultdict(lambda: {"mk": 0, "dir": 0, "both": 0, "won": 0,
-                                 "pnl": 0.0, "stake": 0.0, "shares": 0.0,
-                                 "first": 0.0, "second": 0.0})
-    if not when:
-        print("no markets on disk.")
-        return
     mid = sorted(when.values())[len(when) // 2]
-    for (w, cid), outs in by_wm.items():
-        s = stats[w]
+    S = defaultdict(lambda: {"mk": 0, "pnl": 0.0, "stake": 0.0, "both": 0,
+                             "held": 0, "won": 0, "first": 0.0, "second": 0.0,
+                             "px": 0.0, "sh": 0.0, "out": 0})
+    for (w, cid), c in cash.items():
+        s = S[w]
         s["mk"] += 1
-        live = {o: v for o, v in outs.items() if v[0] > 0}
-        if len(live) != 1:
-            s["both"] += 1                      # hedged or flat — never scored
-            continue
-        s["dir"] += 1
-        out, (sh, cst) = next(iter(live.items()))
-        won = winner.get(cid, "") == out
-        s["won"] += 1 if won else 0
-        pnl = sh - cst if won else -cst          # a winning share pays 1.0
-        s["pnl"] += pnl
-        s["stake"] += cst
-        s["shares"] += sh
-        if when.get(cid, 0) < mid:
-            s["first"] += pnl
-        else:
-            s["second"] += pnl
+        s["pnl"] += c
+        s["stake"] += bought[(w, cid)]
+        if len(sides[(w, cid)]) > 1:
+            s["both"] += 1
+        # The call: one side bought and no other. Whether they then sold it
+        # back at 0.99 or carried it to resolution is a question about exits,
+        # not about whether they were right.
+        if len(took[(w, cid)]) == 1:
+            s["held"] += 1
+            o = next(iter(took[(w, cid)]))
+            s["won"] += 1 if winner.get(cid, "") == o else 0
+            s["sh"] += buy_sh[(w, cid)]
+            s["px"] += buy_px[(w, cid)]
+        if abs(sum(held[(w, cid, o)] for o in sides[(w, cid)])) < 1e-9:
+            s["out"] += 1
+        (s.__setitem__("first", s["first"] + c) if when.get(cid, 0) < mid
+         else s.__setitem__("second", s["second"] + c))
 
-    rows = [(w, s) for w, s in stats.items() if s["dir"] >= min_markets]
+    rows = [(w, s) for w, s in S.items() if s["mk"] >= min_markets]
     if not rows:
-        print(f"no wallet has {min_markets}+ directional markets yet. "
-              f"Collect more days.")
+        print(f"no wallet has {min_markets}+ markets yet — collect more days.")
         return
     K = len(rows)
-    print(f"\n{'=' * 96}")
-    print(f"{len(stats):,} wallets seen · {K:,} with {min_markets}+ directional "
-          f"markets · {len(winner):,} resolved markets")
-    print("=" * 96)
+    print(f"\n{'=' * 104}")
+    print(f"{len(S):,} wallets · {K:,} with {min_markets}+ markets · "
+          f"{len(winner):,} resolved markets · priced as cash in minus cash out")
+    print("=" * 104)
     rows.sort(key=lambda r: -r[1]["pnl"])
-    print(f"  {'wallet':<14}{'mkts':>6}{'dir':>6}{'both':>6}{'win%':>7}"
-          f"{'avg px':>8}{'staked':>10}{'P&L':>10}{'ROI':>7}{'1st half':>10}"
-          f"{'2nd half':>10}")
+    print(f"  {'wallet':<13}{'name':<16}{'mkts':>6}{'both':>6}{'calls':>6}"
+          f"{'win%':>7}{'avg px':>8}{'staked':>11}{'P&L':>10}{'ROI':>7}"
+          f"{'1st':>9}{'2nd':>9}")
     for w, s in rows[:30]:
-        avg = s["stake"] / s["shares"] if s["shares"] else 0
-        roi = s["pnl"] / s["stake"] * 100 if s["stake"] else 0
-        print(f"  {w[:12]:<14}{s['mk']:>6}{s['dir']:>6}{s['both']:>6}"
-              f"{s['won'] / s['dir'] * 100:>6.1f}%{avg:>8.3f}"
-              f"{s['stake']:>10,.0f}{s['pnl']:>+10,.0f}{roi:>+6.1f}%"
-              f"{s['first']:>+10,.0f}{s['second']:>+10,.0f}")
+        avg = s["px"] / s["sh"] if s["sh"] else 0
+        roi = s["pnl"] / s["stake"] * 100 if s["stake"] > 0 else 0
+        wr = s["won"] / s["held"] * 100 if s["held"] else 0
+        print(f"  {w[:11]:<13}{names.get(w, '')[:14]:<16}{s['mk']:>6}"
+              f"{s['both']:>6}{s['held']:>6}{wr:>6.1f}%{avg:>8.3f}"
+              f"{s['stake']:>11,.0f}{s['pnl']:>+10,.0f}{roi:>+6.1f}%"
+              f"{s['first']:>+9,.0f}{s['second']:>+9,.0f}")
 
-    # ---- the tests that matter -------------------------------------------- #
-    print(f"\n{'-' * 96}")
+    print(f"\n{'-' * 104}")
     print("DOES THE FIRST HALF PREDICT THE SECOND?")
-    print(f"{'-' * 96}")
+    print(f"{'-' * 104}")
     a = [s["first"] for _, s in rows]
     b = [s["second"] for _, s in rows]
     n = len(a)
@@ -439,27 +473,44 @@ def analyse(min_markets):
     vb = sum((x - mb) ** 2 for x in b) / n
     cov = sum((x - ma) * (y - mb) for x, y in zip(a, b)) / n
     r = cov / ((va * vb) ** 0.5) if va > 0 and vb > 0 else 0.0
-    print(f"  correlation of per-wallet P&L across the two halves: r = {r:+.3f}")
+    print(f"  correlation of per-wallet P&L across the halves: r = {r:+.3f}")
     top = sorted(rows, key=lambda x: -x[1]["first"])[:max(3, n // 10)]
-    tot2 = sum(s["second"] for _, s in top)
-    print(f"  the top {len(top)} of the first half earned "
-          f"${tot2:+,.0f} in the second half")
-    print("  skill persists across halves; luck does not. If r is near zero and")
-    print("  the top of half one is average in half two, the leaderboard is a")
-    print("  list of lucky people and following it buys nothing.")
+    print(f"  the top {len(top)} of half one earned "
+          f"${sum(s['second'] for _, s in top):+,.0f} in half two")
+    print("  skill persists across halves; luck does not — and that answer is")
+    print("  worth as much, because it ends the search.")
 
     from statistics import NormalDist
     bar = NormalDist().inv_cdf(1 - 0.05 / (2 * K))
-    print(f"\n  with K={K:,} wallets screened, a wallet must clear "
-          f"|z| >= {bar:.2f} to mean anything.")
-    print(f"  {'wallet':<14}{'dir':>6}{'win%':>7}{'z vs 50%':>10}   verdict")
+    print(f"\n  with K={K:,} wallets screened, |z| must reach {bar:.2f}.")
+    print(f"  {'wallet':<13}{'name':<16}{'held':>6}{'win%':>7}{'z':>8}   verdict")
     for w, s in rows[:12]:
-        z = (s["won"] / s["dir"] - 0.5) / (0.25 / s["dir"]) ** 0.5
-        lo, hi = wilson(s["won"], s["dir"])
-        flag = "SURVIVES" if abs(z) >= bar else ""
-        hedge = " · hedges" if s["both"] > s["dir"] * 0.3 else ""
-        print(f"  {w[:12]:<14}{s['dir']:>6}{s['won'] / s['dir'] * 100:>6.1f}%"
-              f"{z:>+10.2f}   [{lo * 100:.0f}-{hi * 100:.0f}] {flag}{hedge}")
+        if not s["held"]:
+            continue
+        z = (s["won"] / s["held"] - 0.5) / (0.25 / s["held"]) ** 0.5
+        flags = []
+        if z >= bar and s["pnl"] > 0:
+            flags.append("SURVIVES")
+        elif z >= bar:
+            # The trap this whole script exists to catch: calls the direction
+            # right and still loses, because the entry price ate the edge. A
+            # leaderboard sorted by win rate puts this wallet at the top.
+            flags.append(f"wins {s['won'] / s['held'] * 100:.0f}% and STILL "
+                         f"LOSES — pays {s['px'] / s['sh']:.2f}")
+        elif z <= -bar:
+            flags.append("reliably WRONG — fade them")
+        if s["both"] > s["mk"] * 0.3:
+            flags.append("hedges")
+        if s["mk"] and s["out"] / s["mk"] > 0.6:
+            flags.append("trades out early")
+        avg = s["px"] / s["sh"] if s["sh"] else 0
+        # A maker quotes BOTH sides. Average price alone is not the tell —
+        # a directional trader buying coin-flips also averages 0.50.
+        if s["both"] > s["mk"] * 0.5 and 0.4 < avg < 0.6:
+            flags.append("maker?")
+        print(f"  {w[:11]:<13}{names.get(w, '')[:14]:<16}{s['held']:>6}"
+              f"{s['won'] / s['held'] * 100:>6.1f}%{z:>+8.2f}   "
+              f"{' · '.join(flags)}")
 
 
 def main():
