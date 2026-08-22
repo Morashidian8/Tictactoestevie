@@ -772,6 +772,77 @@ def probe_deeper():
           f"{'BETTER' if total > len(base) else 'no gain'}")
 
 
+def screen_wallets(upto, winner, when, min_markets=20, min_stake=5000):
+    """
+    Run the whole wallet screen using ONLY markets that closed before `upto`.
+
+    This exists because the honest version of the backtest cannot use
+    whale_follow.csv: that file was written from all seven days, so testing its
+    wallets on any part of those seven days asks whether people chosen for
+    winning did in fact win. The answer to that is always yes and it means
+    nothing.
+    """
+    cash, held, bought, took, buy_px, buy_sh = (defaultdict(float),
+                                                defaultdict(float),
+                                                defaultdict(float),
+                                                defaultdict(set),
+                                                defaultdict(float),
+                                                defaultdict(float))
+    with open(TRADES_FILE, newline="", encoding="utf-8") as f:
+        for r in csv.DictReader(f):
+            w = (r.get("wallet") or "").lower()
+            cid = r["condition_id"]
+            if not w or cid not in when or when[cid] >= upto:
+                continue
+            try:
+                sz, pr = float(r["size"]), float(r["price"])
+            except (TypeError, ValueError):
+                continue
+            if sz <= 0 or not 0 < pr <= 1:
+                continue
+            out = r["outcome"]
+            if r["side"] == "SELL":
+                cash[(w, cid)] += sz * pr
+                held[(w, cid, out)] -= sz
+            else:
+                cash[(w, cid)] -= sz * pr
+                held[(w, cid, out)] += sz
+                bought[(w, cid)] += sz * pr
+                buy_px[(w, cid)] += sz * pr
+                buy_sh[(w, cid)] += sz
+                took[(w, cid)].add(out)
+    for (w, cid, out), sh in held.items():
+        if abs(sh) > 1e-9:
+            cash[(w, cid)] += sh * (1.0 if winner.get(cid, "") == out else 0.0)
+
+    S = defaultdict(lambda: {"mk": 0, "pnl": 0.0, "stake": 0.0, "held": 0,
+                             "won": 0, "px": 0.0, "sh": 0.0})
+    for (w, cid), c in cash.items():
+        st = S[w]
+        st["mk"] += 1
+        st["pnl"] += c
+        st["stake"] += bought[(w, cid)]
+        if len(took[(w, cid)]) == 1:
+            st["held"] += 1
+            o = next(iter(took[(w, cid)]))
+            st["won"] += 1 if winner.get(cid, "") == o else 0
+            st["sh"] += buy_sh[(w, cid)]
+            st["px"] += buy_px[(w, cid)]
+    keep = set()
+    for w, st in S.items():
+        if st["mk"] < min_markets or st["stake"] < min_stake or st["pnl"] <= 0:
+            continue
+        if not st["held"] or not st["sh"]:
+            continue
+        px = st["px"] / st["sh"]
+        if px >= 0.60:
+            continue                 # buys near-certainty; not followable
+        if st["won"] / st["held"] <= px:
+            continue                 # did not beat the price it paid
+        keep.add(w)
+    return keep
+
+
 def backtest(cutoff):
     """
     Does the followed wallets' EARLY imbalance predict the winner?
@@ -787,19 +858,27 @@ def backtest(cutoff):
     trade. The split is chronological: the first two thirds propose, the last
     third judges.
     """
-    if not os.path.exists(FOLLOW_FILE):
-        print(f"{FOLLOW_FILE} not found — run --analyze first.")
-        return
-    follow = set()
-    with open(FOLLOW_FILE, newline="", encoding="utf-8") as f:
-        for r in csv.DictReader(f):
-            if r.get("wallet"):
-                follow.add(r["wallet"].lower())
     winner, when = {}, {}
     with open(MARKETS_FILE, newline="", encoding="utf-8") as f:
         for r in csv.DictReader(f):
             winner[r["condition_id"]] = r["winner"]
             when[r["condition_id"]] = int(r["window_epoch"])
+    if not when:
+        print("no markets on disk.")
+        return
+    # The wallets are chosen from the FIRST HALF and judged on the second. Using
+    # whale_follow.csv here instead would be circular: it was written from all
+    # seven days, so every wallet in it is one that won during the period it is
+    # about to be tested on.
+    mid = sorted(when.values())[len(when) // 2]
+    follow = screen_wallets(mid, winner, when)
+    print(f"\n  {len(follow)} wallets chosen from markets before "
+          f"{datetime.fromtimestamp(mid, timezone.utc):%m-%d %H:%M} UTC")
+    print(f"  and judged only on markets after it — they were picked without")
+    print(f"  the test period being visible.")
+    if not follow:
+        print("  no wallet survived the screen on the first half alone.")
+        return
 
     net = defaultdict(float)
     cost = defaultdict(float)
@@ -817,6 +896,8 @@ def backtest(cutoff):
                 continue
             if sz <= 0 or not 0 < pr < 1 or cid not in when:
                 continue
+            if when[cid] < mid:
+                continue          # first half was used to choose the wallets
             # A row whose timestamp is missing is a row we cannot place in
             # the window, and "cannot place" must mean EXCLUDED, not included.
             # Keeping it would let settlement fills — priced at 0.99 because
@@ -858,7 +939,7 @@ def backtest(cutoff):
         print("no markets had followed-wallet activity inside the cutoff.")
         return
     rows.sort()
-    cut = len(rows) * 2 // 3
+    cut = 0                       # every row here is already out of sample
     print(f"\n{'=' * 78}")
     print(f"DOES THE EARLY LEAN PREDICT? — fills within {cutoff}s of the open")
     print("=" * 78)
@@ -866,7 +947,7 @@ def backtest(cutoff):
     if no_ts:
         print(f"  {no_ts:,} fills had no timestamp and were EXCLUDED — they "
               f"cannot be placed in the window")
-    print(f"  train {cut:,} · test {len(rows) - cut:,} (chronological)\n")
+    print(f"  all {len(rows):,} are out of sample\n")
     print(f"  {'lean (wallets ahead)':<20}{'n':>6}{'rate':>8}{'they paid':>11}"
           f"{'break-even':>12}{'edge':>8}{'$100 bet':>10}")
 
