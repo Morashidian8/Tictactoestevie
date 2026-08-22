@@ -59,7 +59,7 @@ MARKETS_FILE = os.environ.get("WHALE_MARKETS", "whale_markets.csv")
 TRADES_FILE = os.environ.get("WHALE_TRADES", "whale_trades.csv")
 ASSET = os.environ.get("WHALE_ASSET", "btc")
 GRAN = 300
-MCOLS = ("window_epoch", "condition_id", "slug", "winner")
+MCOLS = ("window_epoch", "condition_id", "slug", "winner", "tokens")
 TCOLS = ("window_epoch", "condition_id", "wallet", "name", "outcome",
          "side", "price", "size", "ts")
 
@@ -230,6 +230,18 @@ def collect(days):
     """
     now = int(time.time()) // GRAN * GRAN
     start = now - days * 86400
+    if os.path.exists(MARKETS_FILE):
+        with open(MARKETS_FILE, newline="", encoding="utf-8") as f:
+            head = next(csv.reader(f), [])
+        if tuple(head) != MCOLS:
+            bak = MARKETS_FILE + ".bak"
+            os.replace(MARKETS_FILE, bak)
+            print(f"  markets file predates the token column -> kept as {bak}, "
+                  f"re-fetching (fast)")
+            if os.path.exists(TRADES_FILE):
+                tb = TRADES_FILE + ".bak"
+                os.replace(TRADES_FILE, tb)
+                print(f"  and the old truncated fills -> {tb}")
     have_m = _seen(MARKETS_FILE, "condition_id")
     have_t = _seen(TRADES_FILE, "condition_id")
     print(f"{len(have_m):,} markets and {len(have_t):,} traded markets already "
@@ -268,8 +280,15 @@ def collect(days):
                 winner = ""
             if not winner:
                 continue              # unresolved: nothing to score against
+            toks = m.get("clobTokenIds")
+            if isinstance(toks, str):
+                try:
+                    toks = json.loads(toks)
+                except Exception:  # noqa: BLE001
+                    toks = None
             fresh.append({"window_epoch": t, "condition_id": cid,
-                          "slug": hit.group(0), "winner": winner})
+                          "slug": hit.group(0), "winner": winner,
+                          "tokens": "|".join(toks) if toks else ""})
             have_m.add(cid)
         if fresh:
             _append(MARKETS_FILE, MCOLS, fresh)
@@ -281,25 +300,69 @@ def collect(days):
     print(f"\n  {len(have_m):,} resolved {ASSET} markets on disk")
 
     # --- trades ----------------------------------------------------------- #
-    todo = []
+    # Two facts the deeper probe established, both used here:
+    #   * `offset` is ignored but `start`/`end` are honoured, so a window can be
+    #     cut into pieces and each piece asked for separately;
+    #   * asking by TOKEN returns 1,000 per side instead of 1,000 per market,
+    #     which doubles the take before any slicing.
+    # Together they replace a 92%-truncated harvest with a complete one. A slice
+    # that still comes back at the cap is halved, the same way chart_pull deals
+    # with Gamma's offset wall — a short answer that looks full is the failure
+    # mode worth engineering against.
+    todo, tokens = [], {}
     with open(MARKETS_FILE, newline="", encoding="utf-8") as f:
         for r in csv.DictReader(f):
+            if r.get("tokens"):
+                tokens[r["condition_id"]] = [t for t in r["tokens"].split("|")
+                                             if t]
             if r["condition_id"] not in have_t:
                 todo.append(r)
+    print(f"  {sum(1 for v in tokens.values() if v):,} markets carry token ids")
     print(f"  {len(todo):,} markets still need their fills")
-    batch, done, capped = [], 0, 0
-    for r in todo:
-        cid = r["condition_id"]
+
+    def slice_fills(token, lo, hi, depth=0):
+        """Fills for one token in [lo, hi), halving while the cap is hit."""
         try:
-            rows = get(f"{DATA}/trades", market=cid, limit=1000)
+            rows = get(f"{DATA}/trades", asset=token, limit=1000,
+                       start=lo, end=hi)
         except Exception:
             time.sleep(1)
-            continue
+            return []
         if isinstance(rows, dict):
             rows = rows.get("data") or rows.get("trades") or []
-        if rows and len(rows) >= 1000:
-            capped += 1          # offset is ignored by this API: 1000 is a wall
+        rows = rows or []
+        if len(rows) >= 1000 and depth < 4 and hi - lo > 20:
+            mid = (lo + hi) // 2
+            return slice_fills(token, lo, mid, depth + 1) + \
+                   slice_fills(token, mid, hi, depth + 1)
+        return rows
+
+    batch, done, capped = [], 0, 0
+    for r in todo:
+        cid, w0 = r["condition_id"], int(r["window_epoch"])
+        toks = tokens.get(cid) or []
+        seen_tx = set()
+        rows = []
+        if toks:
+            for tok in toks:
+                # a market is listed well before its window, so reach back
+                rows += slice_fills(tok, w0 - 86400, w0 + 900)
+        else:
+            try:
+                got = get(f"{DATA}/trades", market=cid, limit=1000)
+                rows = got.get("data") if isinstance(got, dict) else got
+            except Exception:
+                rows = []
+            if rows and len(rows) >= 1000:
+                capped += 1
         for tr in rows or []:
+            tx = str(pick(tr, "transactionHash", default="")) + \
+                 str(pick(tr, "timestamp", default="")) + \
+                 str(pick(tr, "proxyWallet", default="")) + \
+                 str(pick(tr, "size", default=""))
+            if tx in seen_tx:
+                continue          # the two token queries can overlap
+            seen_tx.add(tx)
             try:
                 size = float(pick(tr, "size", "amount", "shares", default=0) or 0)
                 price = float(pick(tr, "price", "avgPrice", default=0) or 0)
@@ -317,8 +380,6 @@ def collect(days):
                 "side": str(pick(tr, "side", default=""))[:4].upper(),
                 "price": f"{price:.4f}", "size": f"{size:.2f}",
                 "ts": int(pick(tr, "timestamp", "matchtime", default=0) or 0)})
-        # Mark the market done even when it had no fills, or every empty market
-        # is re-fetched on every run for ever.
         if not rows:
             batch.append({"window_epoch": r["window_epoch"],
                           "condition_id": cid, "wallet": "", "name": "",
@@ -328,11 +389,12 @@ def collect(days):
         if len(batch) >= 400:
             _append(TRADES_FILE, TCOLS, batch)
             batch = []
-        if done % 20 == 0:
+        if done % 10 == 0:
             print(f"  fills {done:,}/{len(todo):,}", end="\r")
     if batch:
         _append(TRADES_FILE, TCOLS, batch)
-    print(f"\n  done ({capped:,} markets hit the 1,000-fill ceiling). run --analyze")
+    print(f"\n  done ({capped:,} markets fell back to the per-market cap). "
+          f"run --analyze")
 
 
 # --------------------------------------------------------------------------- #
