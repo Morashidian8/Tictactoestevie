@@ -772,8 +772,105 @@ def probe_deeper():
           f"{'BETTER' if total > len(base) else 'no gain'}")
 
 
+def backtest(cutoff):
+    """
+    Does the followed wallets' EARLY imbalance predict the winner?
+
+    The live check answered a different question and answered it badly: three
+    of the forty-two land on one side in every window without exception, so a
+    bar of three fires 288 times a day and says nothing. What might say
+    something is the LEAN — how lopsided they are — and whether a lean measured
+    while there is still time to act on it is followed by that side winning.
+
+    Only fills timestamped within `cutoff` seconds of the window opening are
+    counted, because a lean that only exists at +290s is not a thing anyone can
+    trade. The split is chronological: the first two thirds propose, the last
+    third judges.
+    """
+    if not os.path.exists(FOLLOW_FILE):
+        print(f"{FOLLOW_FILE} not found — run --analyze first.")
+        return
+    follow = set()
+    with open(FOLLOW_FILE, newline="", encoding="utf-8") as f:
+        for r in csv.DictReader(f):
+            if r.get("wallet"):
+                follow.add(r["wallet"].lower())
+    winner, when = {}, {}
+    with open(MARKETS_FILE, newline="", encoding="utf-8") as f:
+        for r in csv.DictReader(f):
+            winner[r["condition_id"]] = r["winner"]
+            when[r["condition_id"]] = int(r["window_epoch"])
+
+    net = defaultdict(float)
+    cost = defaultdict(float)
+    with open(TRADES_FILE, newline="", encoding="utf-8") as f:
+        for r in csv.DictReader(f):
+            w = (r.get("wallet") or "").lower()
+            if w not in follow:
+                continue
+            cid = r["condition_id"]
+            try:
+                ts, sz, pr = int(r["ts"] or 0), float(r["size"]), float(r["price"])
+            except (TypeError, ValueError):
+                continue
+            if sz <= 0 or not 0 < pr < 1 or cid not in when:
+                continue
+            if ts and ts - when[cid] > cutoff:
+                continue          # too late to have been actionable
+            sgn = -1.0 if r["side"] == "SELL" else 1.0
+            net[(cid, w, r["outcome"])] += sgn * sz
+            cost[(cid, r["outcome"])] += sgn * sz * pr
+
+    per = defaultdict(lambda: defaultdict(int))
+    for (cid, w, out), sh in net.items():
+        if sh > 1e-6:
+            per[cid][out] += 1
+
+    rows = []
+    for cid, sides in per.items():
+        if len(sides) < 1 or cid not in winner:
+            continue
+        top = max(sides, key=lambda o: sides[o])
+        other = sum(v for o, v in sides.items() if o != top)
+        lean = sides[top] - other
+        money = cost[(cid, top)] - sum(cost[(cid, o)] for o in sides if o != top)
+        rows.append((when[cid], lean, money, sides[top] + other,
+                     winner[cid] == top))
+    if not rows:
+        print("no markets had followed-wallet activity inside the cutoff.")
+        return
+    rows.sort()
+    cut = len(rows) * 2 // 3
+    print(f"\n{'=' * 78}")
+    print(f"DOES THE EARLY LEAN PREDICT? — fills within {cutoff}s of the open")
+    print("=" * 78)
+    print(f"  {len(rows):,} markets with followed-wallet activity that early")
+    print(f"  train {cut:,} · test {len(rows) - cut:,} (chronological)\n")
+    print(f"  {'lean (wallets ahead)':<24}{'n':>7}{'correct':>9}{'rate':>8}"
+          f"{'95% CI':>16}")
+    for lo, hi in ((1, 2), (2, 4), (4, 7), (7, 99)):
+        sel = [r for r in rows[cut:] if lo <= r[1] < hi]
+        if len(sel) < 20:
+            continue
+        w = sum(1 for r in sel if r[4])
+        a, b = wilson(w, len(sel))
+        print(f"  {f'{lo} to {hi - 1}':<24}{len(sel):>7,}{w:>9,}"
+              f"{w / len(sel) * 100:>7.1f}%   [{a * 100:>4.1f}–{b * 100:<4.1f}]")
+    te = rows[cut:]
+    w = sum(1 for r in te if r[4])
+    a, b = wilson(w, len(te))
+    print(f"  {'every market (test)':<24}{len(te):>7,}{w:>9,}"
+          f"{w / len(te) * 100:>7.1f}%   [{a * 100:>4.1f}–{b * 100:<4.1f}]")
+    print(f"\n  break-even is 50%. A lean that predicts is worth following;")
+    print(f"  one that does not is a crowd, not a signal.")
+
+
 def main():
     argv = sys.argv[1:]
+    if "--backtest" in argv:
+        c = int(argv[argv.index("--cutoff") + 1]) if "--cutoff" in argv else 120
+        backtest(c)
+        return
     if "--probe2" in argv:
         probe_deeper()
     elif "--probe" in argv:
