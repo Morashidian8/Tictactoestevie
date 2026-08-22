@@ -315,15 +315,18 @@ def seen_add(key):
         f.write(key + "\n")
 
 
-def fills(market, tokens):
+def fills(market, tokens, report=False):
     """
-    Every published fill for the live market.
+    Every published fill FOR THIS MARKET, and nothing else.
 
-    Per token when the ids are known — the cap is per query, so two queries
-    return twice as much and split the sides for free. Falls back to the market
-    id, which is all the older records carry.
+    The conditionId of every returned row is checked against the market asked
+    for, rather than trusted. The first live alert this tool produced showed six
+    wallets paying 0.83 four seconds into a fresh window — a price that cannot
+    exist there — and both token queries had come back at exactly the 1,000 cap
+    on a market minutes old. Either the `asset` filter is honoured or it is not;
+    verifying costs one comparison per row and removes the question.
     """
-    rows, seen = [], set()
+    rows, seen, foreign = [], set(), 0
     targets = [("asset", t) for t in (tokens or [])] or [("market", market)]
     for key, val in targets:
         try:
@@ -334,12 +337,24 @@ def fills(market, tokens):
         if isinstance(r, dict):
             r = r.get("data") or r.get("trades") or []
         for t in r or []:
+            cid = str(t.get("conditionId", ""))
+            if market and cid and cid != market:
+                foreign += 1
+                continue           # belongs to a different market: not ours
             k = (str(t.get("transactionHash", "")) + str(t.get("timestamp", ""))
                  + str(t.get("proxyWallet", "")) + str(t.get("size", "")))
             if k in seen:
                 continue
             seen.add(k)
             rows.append(t)
+    if report:
+        total = len(rows) + foreign
+        print(f"  {total:,} rows returned · {foreign:,} belonged to OTHER "
+              f"markets and were dropped")
+        if foreign and total:
+            print(f"  -> the `asset` filter is NOT honoured "
+                  f"({foreign / total * 100:.0f}% foreign). Filtering by "
+                  f"conditionId is what makes this correct.")
     return rows
 
 
@@ -383,7 +398,7 @@ def check(boundary, follow, quiet=False):
             toks = json.loads(toks)
         except Exception:  # noqa: BLE001
             toks = None
-    rows = fills(cid, toks)
+    rows = fills(cid, toks, report=not quiet)
     net, cost, names = positions(rows, follow)
 
     by_side = defaultdict(list)
