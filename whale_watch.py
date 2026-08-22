@@ -39,7 +39,11 @@ from datetime import datetime, timedelta, timezone
 import requests
 
 os.environ.setdefault("TELEGRAM_TOKEN", "x")
+import logging
+
 import polymarket_collector as pmc
+
+logging.getLogger().setLevel(logging.WARNING)
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 FOLLOW_FILE = os.environ.get("FOLLOW_FILE", "whale_follow.csv")
@@ -52,8 +56,11 @@ TEHRAN = timezone(timedelta(hours=3, minutes=30))
 
 # How many followed wallets must land on one side before this is worth a noise.
 MIN_AGREE = int(os.environ.get("FOLLOW_MIN_AGREE", "3"))
-# And how much they must have put behind it, in dollars of cost.
-MIN_SIZE = float(os.environ.get("FOLLOW_MIN_SIZE", "200"))
+# And how much they must have put behind it, in dollars of cost. The first
+# window the doctor ever read had SIX followed wallets on one side with $182
+# between them — a clear consensus that a $200 floor would have swallowed. The
+# floor exists to drop dust, not to outrank agreement, so it sits below that.
+MIN_SIZE = float(os.environ.get("FOLLOW_MIN_SIZE", "100"))
 # Seconds between polls inside a window. The window is 300s and they arrive
 # late, so this is the difference between an alert and a post-mortem.
 POLL = int(os.environ.get("FOLLOW_POLL", "20"))
@@ -61,7 +68,16 @@ NTFY = os.environ.get("NTFY_TOPIC", "").strip()
 
 
 def cred(name):
-    """From the environment, else from .env — without executing .env."""
+    """
+    From the environment, else from .env, else from the file the bot keeps.
+
+    That last fallback is the one that matters. The bot does not require
+    TELEGRAM_CHAT_ID to be configured at all — it learns the id from the first
+    /start and writes it to .chat_id — so a working installation can have a
+    token in .env and no chat id anywhere near it. Reading only .env reported
+    "chat id: MISSING" on a phone that had been receiving the bot's messages
+    all day.
+    """
     v = os.environ.get(name, "").strip()
     if v and v != "x":
         return v
@@ -69,9 +85,20 @@ def cred(name):
         with open(os.path.join(HERE, ".env")) as f:
             for line in f:
                 if line.startswith(f"{name}="):
-                    return line.split("=", 1)[1].strip().strip("'\"")
+                    got = line.split("=", 1)[1].strip().strip("'\"")
+                    if got:
+                        return got
     except OSError:
         pass
+    if name == "TELEGRAM_CHAT_ID":
+        for path in (os.environ.get("CHAT_ID_FILE", ".chat_id"), ".chat_id"):
+            try:
+                with open(os.path.join(HERE, path)) as f:
+                    got = f.read().strip()
+                if got:
+                    return got
+            except OSError:
+                continue
     return ""
 
 
