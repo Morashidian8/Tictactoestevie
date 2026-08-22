@@ -12,6 +12,7 @@ raises an alarm.
     python whale_watch.py --test          # replay a past window: proves the
                                           # whole path works without waiting
     python whale_watch.py --list          # who is being followed, and why
+    python whale_watch.py --status        # is it running? has it ever fired?
 
 Reads whale_follow.csv, which `whale_hunt.py --analyze` writes. Sends to the
 same Telegram chat and the same ntfy topic the bot uses, and touches neither
@@ -42,6 +43,7 @@ import polymarket_collector as pmc
 HERE = os.path.dirname(os.path.abspath(__file__))
 FOLLOW_FILE = os.environ.get("FOLLOW_FILE", "whale_follow.csv")
 SEEN_FILE = os.environ.get("FOLLOW_SEEN", ".whale_watch_seen")
+BEAT_FILE = os.environ.get("FOLLOW_BEAT", ".whale_watch_beat")
 DATA = "https://data-api.polymarket.com"
 UA = {"User-Agent": "btc-whale-watch/1.0"}
 GRAN = 300
@@ -118,6 +120,46 @@ def load_follow():
             if w:
                 out[w] = r
     return out
+
+
+def beat(note):
+    """
+    Leave a mark every pass, so "is it running?" has an answer that does not
+    depend on asking. Silence from this watcher is the normal state — whales
+    rarely agree — and a silent process and a dead one look identical from the
+    outside without this.
+    """
+    try:
+        with open(os.path.join(HERE, BEAT_FILE), "w") as f:
+            f.write(f"{int(time.time())}\n{note}\n")
+    except OSError:
+        pass
+
+
+def status():
+    follow = load_follow()
+    print(f"followed wallets : {len(follow) or 'NONE — run whale_hunt.py --analyze'}")
+    try:
+        with open(os.path.join(HERE, BEAT_FILE)) as f:
+            ts = int(f.readline().strip())
+            note = f.readline().strip()
+        age = int(time.time()) - ts
+        alive = age < 120
+        print(f"last check       : {age}s ago  "
+              f"({datetime.fromtimestamp(ts, TEHRAN):%H:%M:%S} تهران)")
+        print(f"                   {note}")
+        verdict = "RUNNING" if alive else "STOPPED — nothing is watching"
+        print(f"watcher          : {verdict}")
+    except (OSError, ValueError):
+        print("last check       : never — the watcher has not been started")
+        print("watcher          : STOPPED")
+    fired = seen_load()
+    print(f"alerts sent      : {len(fired)}")
+    if fired:
+        for k in sorted(fired)[-5:]:
+            b, side = k.split(":")
+            print(f"                   "
+                  f"{datetime.fromtimestamp(int(b), TEHRAN):%m-%d %H:%M} {side}")
 
 
 def seen_load():
@@ -255,6 +297,9 @@ def check(boundary, follow, quiet=False):
 
 def main():
     argv = sys.argv[1:]
+    if "--status" in argv:
+        status()
+        return
     follow = load_follow()
     if "--list" in argv:
         if not follow:
@@ -295,10 +340,13 @@ def main():
         b = now // GRAN * GRAN
         left = b + GRAN - now
         print(f"\n{datetime.fromtimestamp(b, TEHRAN):%H:%M} · {left}s left")
+        beat(f"window {datetime.fromtimestamp(b, TEHRAN):%H:%M}")
         # They arrive late, so look repeatedly rather than once at the open.
         while int(time.time()) < b + GRAN - 5:
             if check(b, follow, quiet=False):
                 break
+            beat(f"window {datetime.fromtimestamp(b, TEHRAN):%H:%M}, "
+                 f"{b + GRAN - int(time.time())}s left")
             time.sleep(POLL)
         if once:
             return
