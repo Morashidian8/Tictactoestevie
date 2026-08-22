@@ -979,8 +979,8 @@ def backtest(cutoff):
     print(f"  all {len(rows):,} are out of sample\n")
     print(f"  {'':<18}{'--- THEM (unreachable) ---':>28}  |"
           f"{'--- YOU, {FOLLOW_LAG}s later ---'.replace('{FOLLOW_LAG}', str(FOLLOW_LAG)):>30}")
-    print(f"  {'lean':<18}{'n':>5}{'rate':>7}{'paid':>8}{'$100':>8}  |"
-          f"{'n':>5}{'you pay':>8}{'$100':>8}")
+    print(f"  {'lean':<16}{'n':>5}{'rate':>7}{'paid':>8}{'$100':>8}  |"
+          f"{'n':>5}{'you pay':>8}{'$100':>8}{'z':>7}")
 
     def line(label, sel):
         if len(sel) < 20:
@@ -994,8 +994,18 @@ def backtest(cutoff):
         frate = (sum(1 for r in fol if r[4]) / len(fol)) if fol else 0.0
         ev = (rate / px - 1) * 100 if px > 0 else 0.0
         fev = (frate / fpx - 1) * 100 if fpx > 0 else 0.0
-        print(f"  {label:<18}{len(sel):>5,}{rate * 100:>7.1f}%{px:>8.3f}"
-              f"{ev:>+8.1f}%  |{len(fol):>5,}{fpx:>8.3f}{fev:>+8.1f}%")
+        # Significance at the price a follower pays: the null is that the side
+        # wins exactly as often as its price says, which is what an efficient
+        # market means. Anything under |z| = 2 is a suggestion, not a finding —
+        # and several cutoffs and lean buckets have been looked at, so even
+        # that bar is generous here.
+        z = 0.0
+        if fol and 0 < fpx < 1:
+            se = (fpx * (1 - fpx) / len(fol)) ** 0.5
+            z = (frate - fpx) / se if se > 0 else 0.0
+        print(f"  {label:<16}{len(sel):>5,}{rate * 100:>7.1f}%{px:>8.3f}"
+              f"{ev:>+8.1f}%  |{len(fol):>5,}{fpx:>8.3f}{fev:>+8.1f}%"
+              f"{z:>+7.2f}")
 
     for lo, hi in ((1, 2), (2, 4), (4, 7), (7, 99)):
         line(f"{lo} to {hi - 1}", [r for r in rows[cut:] if lo <= r[1] < hi])
@@ -1005,6 +1015,10 @@ def backtest(cutoff):
     print(f"  AFTER the lean was visible, which is what you would pay. If the")
     print(f"  right-hand $100 column is near zero, their buying has already")
     print(f"  taken the edge and there is nothing left to follow.")
+    print(f"\n  z is measured against the price YOU pay: the null is that a")
+    print(f"  side priced 0.71 wins 71% of the time, which is what an")
+    print(f"  efficient market means. Try FOLLOW_LAG=60 and 90 — 30 seconds")
+    print(f"  assumes you act faster than a Telegram message arrives.")
 
 
 def main():
