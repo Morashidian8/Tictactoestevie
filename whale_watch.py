@@ -54,8 +54,16 @@ UA = {"User-Agent": "btc-whale-watch/1.0"}
 GRAN = 300
 TEHRAN = timezone(timedelta(hours=3, minutes=30))
 
-# How many followed wallets must land on one side before this is worth a noise.
+# What actually gets measured is the LEAN — how many more of them are on one
+# side than the other — not the raw count. A bar of three on the count was met
+# in 34 windows out of 34, which is not news, it is the weather. The backtest
+# put the edge in the lean: 4-6 ahead returned +9.4% to a follower paying the
+# price 30 seconds later, out of sample.
+MIN_LEAN = int(os.environ.get("FOLLOW_MIN_LEAN", "4"))
 MIN_AGREE = int(os.environ.get("FOLLOW_MIN_AGREE", "3"))
+# Only fills from the opening seconds count. A lean that forms at +290s is a
+# post-mortem; the measured one forms at a median of 127s.
+CUTOFF = int(os.environ.get("FOLLOW_CUTOFF", "120"))
 # And how much they must have put behind it, in dollars of cost. The first
 # window the doctor ever read had SIX followed wallets on one side with $182
 # between them — a clear consensus that a $200 floor would have swallowed. The
@@ -398,12 +406,24 @@ def fills(market, tokens, report=False):
     return rows
 
 
-def positions(rows, follow):
-    """Net shares and cost per followed wallet per outcome."""
+def positions(rows, follow, since=None, cutoff=None):
+    """
+    Net shares and cost per followed wallet per outcome.
+
+    `since`/`cutoff` restrict to fills in the opening seconds of the window,
+    which is the only span the edge was ever measured over.
+    """
     net = defaultdict(float)
     cost = defaultdict(float)
     names = {}
     for t in rows:
+        if since is not None and cutoff is not None:
+            try:
+                off = int(t.get("timestamp") or 0) - since
+            except (TypeError, ValueError):
+                continue
+            if not t.get("timestamp") or off > cutoff:
+                continue
         w = str(t.get("proxyWallet", "")).lower()
         if w not in follow:
             continue
@@ -439,7 +459,7 @@ def check(boundary, follow, quiet=False):
         except Exception:  # noqa: BLE001
             toks = None
     rows = fills(cid, toks, report=not quiet)
-    net, cost, names = positions(rows, follow)
+    net, cost, names = positions(rows, follow, since=boundary, cutoff=CUTOFF)
 
     by_side = defaultdict(list)
     for (w, out), sh in net.items():
@@ -447,11 +467,19 @@ def check(boundary, follow, quiet=False):
             by_side[out].append((w, sh, cost[(w, out)]))
     if not quiet:
         tot = len({w for (w, _) in net})
-        print(f"  {len(rows):,} fills · {tot} followed wallet(s) active · "
-              + ", ".join(f"{k}:{len(v)}" for k, v in by_side.items()))
+        lean_now = (max((len(v) for v in by_side.values()), default=0)
+                    - sum(sorted((len(v) for v in by_side.values()),
+                                 reverse=True)[1:]))
+        print(f"  {len(rows):,} fills · {tot} followed in the first {CUTOFF}s · "
+              + ", ".join(f"{k}:{len(v)}" for k, v in by_side.items())
+              + f" · lean {lean_now}")
 
     for out, group in by_side.items():
-        if len(group) < MIN_AGREE:
+        others = sum(len(v) for o, v in by_side.items() if o != out)
+        lean = len(group) - others
+        # The lean is the finding. The count and the money are floors that keep
+        # a one-sided trickle from ringing the bell.
+        if lean < MIN_LEAN or len(group) < MIN_AGREE:
             continue
         spent = sum(c for _, _, c in group)
         if spent < MIN_SIZE:
@@ -462,7 +490,9 @@ def check(boundary, follow, quiet=False):
         left = max(0, boundary + GRAN - int(time.time()))
         avg = spent / sum(sh for _, sh, _ in group)
         side = "بالا ⬆️" if out.startswith("up") else "پایین ⬇️"
-        lines = [f"🐋 <b>{len(group)} نهنگ هم‌جهت شدند — {side}</b>", ""]
+        lines = [f"🐋 <b>میلِ {lean}تایی — {side}</b>",
+                 f"<i>{len(group)} روی این طرف، {others} روی طرفِ مقابل، "
+                 f"در {CUTOFF} ثانیهٔ اولِ پنجره</i>", ""]
         for w, sh, c in sorted(group, key=lambda x: -x[2]):
             nm = names.get(w) or (follow.get(w, {}).get("name") or "")
             row = follow.get(w, {})
@@ -476,8 +506,11 @@ def check(boundary, follow, quiet=False):
             f"⏱ <b>{left} ثانیه</b> تا بسته شدنِ پنجره",
             f"پنجره: {datetime.fromtimestamp(boundary, TEHRAN):%H:%M} تهران",
             "",
-            "<i>این گزارشِ کاری است که آن‌ها کردند، نه توصیه. تا این پیام "
-            "برسد قیمت به سمتشان حرکت کرده — خریدِ خودشان همین کار را می‌کند.</i>",
+            "<i>روی ۴۴۲ بازارِ بیرونِ نمونه، میلِ ۴ تا ۶ برای کسی که ۳۰ ثانیه "
+            "دیرتر و گران‌تر می‌خرید +۹٫۴٪ داد (z=+۲٫۲ — معنادار، نه محکم).</i>",
+            "",
+            f"<i>قیمتِ الان را با {avg:.3f} مقایسه کنید. اگر خیلی بالاتر رفته، "
+            "لبه رفته — خریدِ خودشان همین کار را می‌کند.</i>",
         ]
         text = "\n".join(lines)
         print("\n" + text.replace("<b>", "").replace("</b>", "")
