@@ -561,9 +561,93 @@ def analyse(min_markets):
               f"{' · '.join(flags)}")
 
 
+def probe_deeper():
+    """
+    Ways round the 1,000-fill wall, tested rather than assumed.
+
+    `offset` is ignored by this endpoint, so a busy market returns one slice and
+    no way to ask for the next. Two escapes are plausible and neither costs
+    anything to check: a time filter, which would let a window be cut into
+    pieces, and querying by TOKEN instead of by market — every market has two
+    token ids, one per side, so if the cap is per-query rather than per-market
+    that alone doubles the take and splits it by side into the bargain.
+    """
+    now = int(time.time()) // GRAN * GRAN
+    rows, _ = CP.fetch_range(now - 7200, now - 600)
+    m = next((x for x in rows
+              if (CP._SLUG.match((x.get("slug") or "").lower()) or
+                  type("", (), {"group": lambda *_: ""})()).group(1) == ASSET),
+             None)
+    if not m:
+        print("no market found to test against.")
+        return
+    cid = m.get("conditionId") or m.get("condition_id")
+    print(f"testing against {m.get('slug')}\n  {cid}\n")
+
+    base = get(f"{DATA}/trades", market=cid, limit=1000)
+    if isinstance(base, dict):
+        base = base.get("data") or []
+    ts = sorted(int(t.get("timestamp", 0)) for t in base if t.get("timestamp"))
+    print(f"A. plain limit=1000 -> {len(base)} fills")
+    if ts:
+        print(f"   timestamps span {ts[0]} .. {ts[-1]}  "
+              f"({ts[-1] - ts[0]}s of a 300s window)")
+        print(f"   which end of the market is this? first fill is "
+              f"{ts[0] - int(CP._SLUG.match(m['slug'].lower()).group(2))}s "
+              f"after the window opened")
+
+    print("\nB. does a TIME filter exist?")
+    w0 = int(CP._SLUG.match(m["slug"].lower()).group(2))
+    for pair in (("from", "to"), ("startTs", "endTs"), ("after", "before"),
+                 ("min_timestamp", "max_timestamp"), ("start", "end")):
+        try:
+            r = get(f"{DATA}/trades", market=cid, limit=1000,
+                    **{pair[0]: w0, pair[1]: w0 + 150})
+            if isinstance(r, dict):
+                r = r.get("data") or []
+            got = sorted(int(t.get("timestamp", 0)) for t in r
+                         if t.get("timestamp"))
+            note = "IGNORED (same as unfiltered)" if len(r) == len(base) else "WORKS?"
+            print(f"   {pair[0]}/{pair[1]:<14} -> {len(r):>5} fills   {note}")
+            if got and len(r) != len(base):
+                print(f"      span {got[0] - w0}s .. {got[-1] - w0}s into the window")
+        except Exception as exc:  # noqa: BLE001
+            print(f"   {pair[0]}/{pair[1]:<14} -> {type(exc).__name__}")
+
+    print("\nC. per-TOKEN instead of per-market?")
+    try:
+        toks = m.get("clobTokenIds")
+        if isinstance(toks, str):
+            toks = json.loads(toks)
+    except Exception:  # noqa: BLE001
+        toks = None
+    if not toks:
+        print("   no clobTokenIds on the market.")
+        return
+    total = 0
+    for i, tok in enumerate(toks):
+        for key in ("asset", "token_id", "tokenId"):
+            try:
+                r = get(f"{DATA}/trades", **{key: tok}, limit=1000)
+                if isinstance(r, dict):
+                    r = r.get("data") or []
+                if r:
+                    print(f"   {key}=token[{i}] -> {len(r)} fills")
+                    total += len(r)
+                    break
+            except Exception:
+                continue
+        else:
+            print(f"   token[{i}] -> no parameter name worked")
+    print(f"\n   per-token total {total} against {len(base)} per-market."
+          f"  {'BETTER' if total > len(base) else 'no gain'}")
+
+
 def main():
     argv = sys.argv[1:]
-    if "--probe" in argv:
+    if "--probe2" in argv:
+        probe_deeper()
+    elif "--probe" in argv:
         probe()
     elif "--collect" in argv:
         days = int(argv[argv.index("--days") + 1]) if "--days" in argv else 7
