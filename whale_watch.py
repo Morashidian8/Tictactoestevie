@@ -13,6 +13,7 @@ raises an alarm.
                                           # whole path works without waiting
     python whale_watch.py --list          # who is being followed, and why
     python whale_watch.py --status        # is it running? has it ever fired?
+    python whale_watch.py --doctor        # WHY is it silent? checks every link
 
 Reads whale_follow.csv, which `whale_hunt.py --analyze` writes. Sends to the
 same Telegram chat and the same ntfy topic the bot uses, and touches neither
@@ -162,6 +163,118 @@ def status():
                   f"{datetime.fromtimestamp(int(b), TEHRAN):%m-%d %H:%M} {side}")
 
 
+def doctor(windows=24):
+    """
+    Why no message arrived, answered link by link.
+
+    Silence has many causes and they look identical from a phone: no follow
+    list, no credentials, a blocked network, a watcher that was never started,
+    or a threshold nothing ever reaches. Each is checked separately and a real
+    test message is SENT, because "the credentials are present" and "Telegram
+    accepted it" are different claims and only the second one matters.
+    """
+    ok = True
+    print("=" * 70)
+    print("1. the follow list")
+    print("=" * 70)
+    follow = load_follow()
+    if not follow:
+        print(f"  FAIL  {FOLLOW_FILE} missing or empty")
+        print(f"        -> python whale_hunt.py --analyze")
+        return
+    print(f"  PASS  {len(follow)} wallets")
+
+    print("\n" + "=" * 70)
+    print("2. credentials, and whether Telegram actually accepts a message")
+    print("=" * 70)
+    tok, chat = cred("TELEGRAM_TOKEN"), cred("TELEGRAM_CHAT_ID")
+    print(f"  token  : {'present' if tok else 'MISSING'}")
+    print(f"  chat id: {'present' if chat else 'MISSING'}")
+    if not tok or not chat:
+        print("  FAIL  put TELEGRAM_TOKEN and TELEGRAM_CHAT_ID in .env")
+        ok = False
+    else:
+        sent = tg("🩺 <b>تستِ دیده‌بانِ نهنگ</b>\n"
+                  "اگر این را می‌بینید، مسیرِ تلگرام سالم است.")
+        print(f"  {'PASS  test message sent — check Telegram now' if sent else 'FAIL  Telegram refused it (reason above)'}")
+        ok = ok and sent
+    topic = NTFY or cred("NTFY_TOPIC")
+    print(f"  ntfy   : {topic or 'not configured (optional)'}")
+
+    print("\n" + "=" * 70)
+    print("3. can we reach Polymarket, and find the live market?")
+    print("=" * 70)
+    b = int(time.time()) // GRAN * GRAN
+    try:
+        m = pmc.market_for(b, deadline=time.time() + 25)
+    except Exception as exc:  # noqa: BLE001
+        m = None
+        print(f"  FAIL  {type(exc).__name__}: {exc}")
+    if not m:
+        print("  FAIL  no live market found — VPN down, or the slug changed")
+        ok = False
+    else:
+        print(f"  PASS  {m.get('slug')}")
+
+    print("\n" + "=" * 70)
+    print(f"4. is the threshold reachable? — last {windows} windows")
+    print("=" * 70)
+    print(f"  alert needs {MIN_AGREE}+ followed wallets on one side "
+          f"with ${MIN_SIZE:,.0f}+ behind it\n")
+    hist, best = defaultdict(int), 0
+    checked = 0
+    for k in range(1, windows + 1):
+        wb = b - k * GRAN
+        mk = pmc.market_for(wb, deadline=time.time() + 15)
+        if not mk:
+            continue
+        cid = mk.get("conditionId") or mk.get("condition_id") or ""
+        toks = mk.get("clobTokenIds")
+        if isinstance(toks, str):
+            try:
+                import json as _j
+                toks = _j.loads(toks)
+            except Exception:  # noqa: BLE001
+                toks = None
+        net, cost, _ = positions(fills(cid, toks), follow)
+        sides = defaultdict(list)
+        for (w, out), sh in net.items():
+            if sh > 1e-6:
+                sides[out].append(cost[(w, out)])
+        top = max((len(v) for v in sides.values()), default=0)
+        hist[top] += 1
+        best = max(best, top)
+        checked += 1
+        print(f"  {datetime.fromtimestamp(wb, TEHRAN):%H:%M}  "
+              + "  ".join(f"{k2}:{len(v)} (${sum(v):,.0f})"
+                          for k2, v in sides.items()) or "  nobody", end="\r")
+    print(" " * 70, end="\r")
+    if not checked:
+        print("  could not read any past window.")
+        return
+    print(f"  windows read: {checked}")
+    print(f"  {'followed wallets on the busiest side':<44}{'windows':>9}")
+    for n in sorted(hist):
+        bar = "#" * min(40, hist[n] * 2)
+        print(f"  {n:<44}{hist[n]:>9}  {bar}")
+    print(f"\n  most that ever agreed in one window: {best}")
+    if best < MIN_AGREE:
+        print(f"  -> THIS is why it is silent. The bar is {MIN_AGREE} and the")
+        print(f"     busiest window in the last {checked} reached {best}.")
+        print(f"     Lower it: FOLLOW_MIN_AGREE={max(2, best)} in .env")
+        ok = False
+    else:
+        print(f"  -> the bar is reachable; it simply has not been reached yet")
+        print(f"     in a window while the watcher was running.")
+
+    print("\n" + "=" * 70)
+    print("5. is the watcher actually running?")
+    print("=" * 70)
+    status()
+    print("\n" + ("everything checks out." if ok else
+                  "fix the FAIL above and re-run --doctor."))
+
+
 def seen_load():
     try:
         with open(os.path.join(HERE, SEEN_FILE)) as f:
@@ -299,6 +412,10 @@ def main():
     argv = sys.argv[1:]
     if "--status" in argv:
         status()
+        return
+    if "--doctor" in argv:
+        n = int(argv[argv.index("--windows") + 1]) if "--windows" in argv else 24
+        doctor(n)
         return
     follow = load_follow()
     if "--list" in argv:
