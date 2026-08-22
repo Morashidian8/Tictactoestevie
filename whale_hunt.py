@@ -375,6 +375,8 @@ def analyse(min_markets):
         print("no markets on disk.")
         return
 
+    print(f"reading {TRADES_FILE} … (a week of fills is ~2M rows, "
+          f"give it a minute)")
     cash = defaultdict(float)      # (wallet, market) -> net cash from trading
     held = defaultdict(float)      # (wallet, market, outcome) -> shares left
     bought = defaultdict(float)    # (wallet, market) -> gross bought, for size
@@ -383,6 +385,7 @@ def analyse(min_markets):
     buy_px = defaultdict(float)
     buy_sh = defaultdict(float)
     names = {}
+    nrows = 0
     with open(TRADES_FILE, newline="", encoding="utf-8") as f:
         for r in csv.DictReader(f):
             w = r["wallet"]
@@ -397,6 +400,9 @@ def analyse(min_markets):
             cid, out = r["condition_id"], r["outcome"]
             if r.get("name") and w not in names:
                 names[w] = r["name"]
+            nrows += 1
+            if nrows % 250000 == 0:
+                print(f"  {nrows:,} fills read", end="\r")
             if r["side"] == "SELL":
                 cash[(w, cid)] += sz * pr
                 held[(w, cid, out)] -= sz
@@ -408,6 +414,8 @@ def analyse(min_markets):
                 buy_sh[(w, cid)] += sz
                 took[(w, cid)].add(out)
             sides[(w, cid)].add(out)
+
+    print(f"  {nrows:,} fills read from {len({k[0] for k in cash}):,} wallets")
 
     # settle whatever is still held when the market resolved
     for (w, cid, out), sh in held.items():
@@ -656,7 +664,14 @@ def main():
         m = int(argv[argv.index("--min") + 1]) if "--min" in argv else 20
         analyse(m)
     else:
-        print(__doc__)
+        print("whale_hunt — who actually wins the BTC 5-minute market\n")
+        print("  python whale_hunt.py --probe              what the API serves")
+        print("  python whale_hunt.py --probe2             ways past the "
+              "1,000-fill wall")
+        print("  python whale_hunt.py --collect --days 7   harvest (slow, "
+              "resumable)")
+        print("  python whale_hunt.py --analyze --min 20   the verdict\n")
+        print("Read the top of this file for what the analysis is for.")
 
 
 if __name__ == "__main__":
