@@ -803,6 +803,7 @@ def backtest(cutoff):
 
     net = defaultdict(float)
     cost = defaultdict(float)
+    shares = defaultdict(float)
     with open(TRADES_FILE, newline="", encoding="utf-8") as f:
         for r in csv.DictReader(f):
             w = (r.get("wallet") or "").lower()
@@ -820,6 +821,7 @@ def backtest(cutoff):
             sgn = -1.0 if r["side"] == "SELL" else 1.0
             net[(cid, w, r["outcome"])] += sgn * sz
             cost[(cid, r["outcome"])] += sgn * sz * pr
+            shares[(cid, r["outcome"])] += sgn * sz
 
     per = defaultdict(lambda: defaultdict(int))
     for (cid, w, out), sh in net.items():
@@ -834,8 +836,15 @@ def backtest(cutoff):
         other = sum(v for o, v in sides.items() if o != top)
         lean = sides[top] - other
         money = cost[(cid, top)] - sum(cost[(cid, o)] for o in sides if o != top)
+        # The price the leaning side was being bought at is the whole story
+        # and it was missing. At +120s a market that has already moved is
+        # quoted at 0.95, the wallets pile into it, and it duly wins — which
+        # is not prediction, it is reading the tape. Being right 91% of the
+        # time at 0.94 LOSES money.
+        sh = shares[(cid, top)]
+        px = (cost[(cid, top)] / sh) if sh > 1e-9 else 0.0
         rows.append((when[cid], lean, money, sides[top] + other,
-                     winner[cid] == top))
+                     winner[cid] == top, px))
     if not rows:
         print("no markets had followed-wallet activity inside the cutoff.")
         return
@@ -846,23 +855,27 @@ def backtest(cutoff):
     print("=" * 78)
     print(f"  {len(rows):,} markets with followed-wallet activity that early")
     print(f"  train {cut:,} · test {len(rows) - cut:,} (chronological)\n")
-    print(f"  {'lean (wallets ahead)':<24}{'n':>7}{'correct':>9}{'rate':>8}"
-          f"{'95% CI':>16}")
-    for lo, hi in ((1, 2), (2, 4), (4, 7), (7, 99)):
-        sel = [r for r in rows[cut:] if lo <= r[1] < hi]
+    print(f"  {'lean (wallets ahead)':<20}{'n':>6}{'rate':>8}{'they paid':>11}"
+          f"{'break-even':>12}{'edge':>8}{'$100 bet':>10}")
+
+    def line(label, sel):
         if len(sel) < 20:
-            continue
+            return
         w = sum(1 for r in sel if r[4])
-        a, b = wilson(w, len(sel))
-        print(f"  {f'{lo} to {hi - 1}':<24}{len(sel):>7,}{w:>9,}"
-              f"{w / len(sel) * 100:>7.1f}%   [{a * 100:>4.1f}–{b * 100:<4.1f}]")
-    te = rows[cut:]
-    w = sum(1 for r in te if r[4])
-    a, b = wilson(w, len(te))
-    print(f"  {'every market (test)':<24}{len(te):>7,}{w:>9,}"
-          f"{w / len(te) * 100:>7.1f}%   [{a * 100:>4.1f}–{b * 100:<4.1f}]")
-    print(f"\n  break-even is 50%. A lean that predicts is worth following;")
-    print(f"  one that does not is a crowd, not a signal.")
+        rate = w / len(sel)
+        px = sum(r[5] for r in sel if r[5] > 0) / max(
+            1, sum(1 for r in sel if r[5] > 0))
+        ev = (rate / px - 1) * 100 if px > 0 else 0.0
+        print(f"  {label:<20}{len(sel):>6,}{rate * 100:>7.1f}%{px:>11.3f}"
+              f"{px * 100:>11.1f}%{(rate - px) * 100:>+8.1f}{ev:>+9.1f}%")
+
+    for lo, hi in ((1, 2), (2, 4), (4, 7), (7, 99)):
+        line(f"{lo} to {hi - 1}", [r for r in rows[cut:] if lo <= r[1] < hi])
+    line("every market (test)", rows[cut:])
+    print(f"\n  'they paid' is the average price the leaning side was bought")
+    print(f"  at. THAT is the break-even, not 50%: a share bought at 0.94 has")
+    print(f"  to win 94% of the time just to stand still. The last column is")
+    print(f"  what $100 following them actually returns.")
 
 
 def main():
