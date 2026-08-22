@@ -49,12 +49,15 @@ from datetime import datetime, timezone
 
 import requests
 
+os.environ.setdefault("TELEGRAM_TOKEN", "x")
+import chart_pull as CP          # the paging that is already proven correct
+
 GAMMA = "https://gamma-api.polymarket.com"
 DATA = "https://data-api.polymarket.com"
 UA = {"User-Agent": "btc-whale-hunt/1.0"}
 MARKETS_FILE = os.environ.get("WHALE_MARKETS", "whale_markets.csv")
 TRADES_FILE = os.environ.get("WHALE_TRADES", "whale_trades.csv")
-ASSET = os.environ.get("WHALE_ASSET", "bitcoin")
+ASSET = os.environ.get("WHALE_ASSET", "btc")
 GRAN = 300
 MCOLS = ("window_epoch", "condition_id", "slug", "winner")
 TCOLS = ("window_epoch", "condition_id", "wallet", "outcome", "side",
@@ -93,28 +96,33 @@ def probe():
     print("\n" + "=" * 74)
     print("B. one recent 5-minute market — what fields does it carry?")
     print("=" * 74)
+    # NOT by slug. /markets?slug=... returns nothing even for a market the same
+    # endpoint just listed — established earlier in this project and written
+    # down at the top of chart_pull.py. The date range is slow and correct.
     now = int(time.time()) // GRAN * GRAN
+    rows, truncated = CP.fetch_range(now - 7200, now)
+    print(f"  markets ending in the last 2 hours: {len(rows):,}"
+          f"{'  (TRUNCATED at the offset wall)' if truncated else ''}")
     found = None
-    for back in range(2, 60):
-        slug = f"{ASSET}-updown-5m-{now - back * GRAN}"
-        try:
-            rows = get(f"{GAMMA}/markets", slug=slug)
-        except Exception:
-            continue
-        if rows:
-            found = rows[0]
+    for m in rows:
+        hit = CP._SLUG.match((m.get("slug") or "").lower())
+        if hit and hit.group(1) == ASSET:
+            found = m
             break
     if not found:
-        print("  no market found by slug — the slug format may have changed.")
-        print(f"  tried {ASSET}-updown-5m-<epoch> for the last 60 windows.")
+        seen = sorted({CP._SLUG.match((m.get("slug") or "").lower()).group(1)
+                       for m in rows
+                       if CP._SLUG.match((m.get("slug") or "").lower())})
+        print(f"  no '{ASSET}' market in that window.")
+        print(f"  5-minute assets actually present: {', '.join(seen) or 'none'}")
+        print(f"  set WHALE_ASSET to one of those and re-run.")
         return
     print(f"  slug: {found.get('slug')}")
     print(f"  keys: {', '.join(sorted(found)[:26])}")
     for k in ("conditionId", "condition_id", "id", "outcomes", "outcomePrices",
               "closed", "volume", "clobTokenIds"):
         if k in found:
-            v = str(found[k])
-            print(f"    {k:<16} {v[:70]}")
+            print(f"    {k:<16} {str(found[k])[:70]}")
     cid = found.get("conditionId") or found.get("condition_id")
 
     print("\n" + "=" * 74)
@@ -228,50 +236,49 @@ def collect(days):
           f"on disk")
 
     # --- markets ---------------------------------------------------------- #
-    fresh, misses = [], 0
-    for t in range(start, now, GRAN):
-        slug = f"{ASSET}-updown-5m-{t}"
-        try:
-            rows = get(f"{GAMMA}/markets", slug=slug)
-        except Exception:
-            time.sleep(1)
-            continue
-        if not rows:
-            misses += 1
-            continue
-        m = rows[0]
-        cid = str(pick(m, "conditionId", "condition_id", default=""))
-        if not cid or cid in have_m:
-            continue
-        try:
-            prices = m.get("outcomePrices")
-            if isinstance(prices, str):
-                prices = json.loads(prices)
-            outs = m.get("outcomes")
-            if isinstance(outs, str):
-                outs = json.loads(outs)
-            winner = ""
-            if prices and outs and len(prices) == len(outs):
-                for o, p in zip(outs, prices):
-                    if float(p) > 0.9:
-                        winner = str(o).lower()
-        except Exception:  # noqa: BLE001
-            winner = ""
-        if not winner:
-            continue                      # unresolved: nothing to score against
-        fresh.append({"window_epoch": t, "condition_id": cid,
-                      "slug": slug, "winner": winner})
-        have_m.add(cid)
-        if len(fresh) % 25 == 0:
+    # Ranged and halved exactly as chart_pull does it: Gamma stops answering
+    # past offset 2000, so a span holding more than ~2,100 markets silently
+    # returns only its earliest ones. Asking by slug does not work at all.
+    fresh, span = [], 3600
+    cur = start
+    while cur < now:
+        hi = min(cur + span, now)
+        rows = CP.collect_span(cur, hi)
+        for m in rows:
+            hit = CP._SLUG.match((m.get("slug") or "").lower())
+            if not hit or hit.group(1) != ASSET:
+                continue
+            t = int(hit.group(2))
+            cid = str(pick(m, "conditionId", "condition_id", default=""))
+            if not cid or cid in have_m:
+                continue
+            try:
+                prices = m.get("outcomePrices")
+                if isinstance(prices, str):
+                    prices = json.loads(prices)
+                outs = m.get("outcomes")
+                if isinstance(outs, str):
+                    outs = json.loads(outs)
+                winner = ""
+                if prices and outs and len(prices) == len(outs):
+                    for o, p in zip(outs, prices):
+                        if float(p) > 0.9:
+                            winner = str(o).lower()
+            except Exception:  # noqa: BLE001
+                winner = ""
+            if not winner:
+                continue              # unresolved: nothing to score against
+            fresh.append({"window_epoch": t, "condition_id": cid,
+                          "slug": hit.group(0), "winner": winner})
+            have_m.add(cid)
+        if fresh:
             _append(MARKETS_FILE, MCOLS, fresh)
-            print(f"  markets {len(have_m):,}  "
-                  f"{datetime.fromtimestamp(t, timezone.utc):%m-%d %H:%M}",
-                  end="\r")
             fresh = []
-    if fresh:
-        _append(MARKETS_FILE, MCOLS, fresh)
-    print(f"\n  {len(have_m):,} resolved markets on disk ({misses:,} windows "
-          f"returned nothing)")
+        print(f"  markets {len(have_m):,}  "
+              f"{datetime.fromtimestamp(cur, timezone.utc):%m-%d %H:%M}",
+              end="\r")
+        cur = hi
+    print(f"\n  {len(have_m):,} resolved {ASSET} markets on disk")
 
     # --- trades ----------------------------------------------------------- #
     todo = []
