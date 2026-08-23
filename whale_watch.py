@@ -490,27 +490,37 @@ def check(boundary, follow, quiet=False):
         left = max(0, boundary + GRAN - int(time.time()))
         avg = spent / sum(sh for _, sh, _ in group)
         side = "بالا ⬆️" if out.startswith("up") else "پایین ⬇️"
-        lines = [f"🐋 <b>میلِ {lean}تایی — {side}</b>",
-                 f"<i>{len(group)} روی این طرف، {others} روی طرفِ مقابل، "
-                 f"در {CUTOFF} ثانیهٔ اولِ پنجره</i>", ""]
-        for w, sh, c in sorted(group, key=lambda x: -x[2]):
-            nm = names.get(w) or (follow.get(w, {}).get("name") or "")
+        # Short on purpose. The first three lines are the decision; everything
+        # else is provenance. Eight wallets listed in full pushed the numbers
+        # that matter off a phone screen, which on a 76-second clock is not a
+        # cosmetic problem.
+        top3 = sorted(group, key=lambda x: -x[2])[:3]
+        o_t = datetime.fromtimestamp(boundary, TEHRAN)
+        c_t = datetime.fromtimestamp(boundary + GRAN, TEHRAN)
+        o_e = datetime.fromtimestamp(boundary, pmc.ET)
+        c_e = datetime.fromtimestamp(boundary + GRAN, pmc.ET)
+        lines = [
+            f"🐋 <b>میلِ {lean} — {side}</b>",
+            f"<b>{o_t:%H:%M}–{c_t:%H:%M}</b> تهران  ·  "
+            f"{o_e:%I:%M}–{c_e:%I:%M%p} ET",
+            f"⏱ <b>{left}s</b> مانده  ·  آن‌ها در <b>{avg:.3f}</b>  ·  "
+            f"${spent:,.0f}",
+            "",
+            f"<i>{len(group)} روی این طرف، {others} مقابل، در {CUTOFF}s اول</i>",
+        ]
+        for w, sh, c in top3:
+            nm = names.get(w) or (follow.get(w, {}).get("name") or w[:10])
             row = follow.get(w, {})
-            hist = (f" · سابقه {row.get('win_rate', '?')} در "
-                    f"{row.get('paid', '?')}" if row.get("win_rate") else "")
-            lines.append(f"  {nm or w[:10]} — ${c:,.0f} در {c / sh:.3f}{hist}")
+            hist = f" ({row.get('win_rate', '?')}@{row.get('paid', '?')})" \
+                if row.get("win_rate") else ""
+            lines.append(f"  {nm[:20]} ${c:,.0f}@{c / sh:.3f}{hist}")
+        if len(group) > 3:
+            lines.append(f"  + {len(group) - 3} نفرِ دیگر")
         lines += [
             "",
-            f"میانگینِ قیمتِ ورودشان: <b>{avg:.3f}</b>",
-            f"جمعِ پولشان: <b>${spent:,.0f}</b>",
-            f"⏱ <b>{left} ثانیه</b> تا بسته شدنِ پنجره",
-            f"پنجره: {datetime.fromtimestamp(boundary, TEHRAN):%H:%M} تهران",
-            "",
-            "<i>روی ۴۴۲ بازارِ بیرونِ نمونه، میلِ ۴ تا ۶ برای کسی که ۳۰ ثانیه "
-            "دیرتر و گران‌تر می‌خرید +۹٫۴٪ داد (z=+۲٫۲ — معنادار، نه محکم).</i>",
-            "",
-            f"<i>قیمتِ الان را با {avg:.3f} مقایسه کنید. اگر خیلی بالاتر رفته، "
-            "لبه رفته — خریدِ خودشان همین کار را می‌کند.</i>",
+            f"<i>بیرونِ نمونه: میلِ ۴+ برای دنبال‌کننده +۶٪ داد (z=+۲٫۱). "
+            f"قیمتِ الان را با {avg:.3f} بسنجید — اگر خیلی بالاتر است، لبه "
+            f"رفته.</i>",
         ]
         text = "\n".join(lines)
         print("\n" + text.replace("<b>", "").replace("</b>", "")
