@@ -216,13 +216,12 @@ RULE7_RSI_LO = float(os.environ.get("RULE7_RSI_LO", "20"))
 # The edge is THIN — 52.4% against a 50% break-even. It survives every control
 # but it has half the margin of rule 6, and a two-cent fill cost erases it.
 #
-# OFF by default since 2026-08-20, at the user's instruction, after the last 30
-# days were measured: rule 8 fired 1,779 times — 47% of every signal the system
-# produced — and settled 49.58%, which is below its own break-even. Flat $20 at
-# 50c, it lost $300 while the other seven rules together made $740. The thin
-# margin the comment above describes is exactly the margin a bad month erases,
-# and this was that month. Set RULE8=1 to bring it back.
-RULE8_ENABLED = os.environ.get("RULE8", "0").strip() not in ("0", "false", "no")
+# Switched off 2026-08-20 after a bad month, back on 2026-08-23 at the user's
+# instruction — but on its own books this time. It fires only when rules 1-7 are
+# silent, so every rule-8 signal is pure rule 8 and the separation is exact: its
+# scorecard, its recent-signals list and its losing streak are all its own, and
+# nothing of it touches the statistical book. Two bots in one process.
+RULE8_ENABLED = os.environ.get("RULE8", "1").strip() not in ("0", "false", "no")
 RULE8_MA = int(os.environ.get("RULE8_MA", "20"))
 RULE8_MULT = float(os.environ.get("RULE8_MULT", "3.5"))
 RULE5_ENABLED = os.environ.get("RULE5", "1").strip() not in ("0", "false", "no")
@@ -563,6 +562,11 @@ MISSED_SHOW = int(os.environ.get("MISSED_SHOW", "15"))
 # in separate blocks so a 49% rule can never quietly drag down — or be flattered
 # by — the average of the rules that do work.
 MINE_RULES = ("۴",)
+# Rules that keep an entirely separate set of books — own win rate, own recent
+# list, own losing streak — as if they were a different bot. Rule 8 speaks only
+# when every other rule is silent, so its signals never mix with theirs and the
+# split needs no arbitration.
+SOLO_RULES = ("۸",)
 # Price feed for the breakout rule:
 #   "chainlink" - Chainlink BTC/USD via a public Polygon RPC (what Polymarket
 #                 settles on; matches the market exactly)
@@ -2594,7 +2598,8 @@ class BreakoutMonitor:
                     d = score["rules"].setdefault(name, {"n": 0, "wins": 0})
                     d["n"] += 1
                     d["wins"] += won
-                history.append({"won": won, "bet": row["bet"], "mine": mine})
+                history.append({"won": won, "bet": row["bet"], "mine": mine,
+                                "track": self._track_of(rules)})
             signals.append(row)
         if score["n"] < self.score.get("n", 0):
             # The state file knows about settled signals the ledger does not —
@@ -2736,6 +2741,7 @@ class BreakoutMonitor:
         # cadence, so showing the statistical rules' streak next to it would put
         # the martingale on the wrong rung.
         mine = all(h[0][0] in MINE_RULES for h in hits)
+        track = self._track_of([h[0] for h in hits])
         golden = any(h[0].startswith("🏆") for h in hits)
         # Why this is NOT a golden entry, when it nearly was. Four rules
         # agreeing looks exactly like a golden entry from the outside, and the
@@ -2772,10 +2778,10 @@ class BreakoutMonitor:
             f"⏱ <b>{o_et:%I:%M}-{e_et:%I:%M%p} ET</b>  ({o_et:%b %d})  ·  "
             f"+{lag:.0f}s\n"
             f"💵 ${price:,.2f}\n"
-            f"💰 مبلغ: <b>${self.suggested_stake(mine):,.0f}</b> ({_stake_label()})\n"
+            f"💰 مبلغ: <b>${self.suggested_stake(track):,.0f}</b> ({_stake_label()})\n"
             f"⚡️ زیرِ ۵۵ سنت وارد شو، وگرنه رد کن."
             f"{warn}"
-            + self.history_line(mine)
+            + self.history_line(track)
         )
         log.info("ALERT: %s", " | ".join(f"{n}->{b}" for n, _, b, _ in hits))
         # Before the send, not after: the phone can make a noise whether or not
@@ -2798,7 +2804,7 @@ class BreakoutMonitor:
         if bet:
             play_alert("golden" if golden else "signal", bet,
                        rules=[h[0] for h in hits],
-                       rung=(self.loss_streak(mine) % LADDER_RUNGS + 1
+                       rung=(self.loss_streak(track) % LADDER_RUNGS + 1
                              if LADDER_RUNGS else None))
         ok = send_message(self.chat_id, text)
         # Mark the just-logged signal as delivered — or leave it queued, so a
@@ -2813,11 +2819,11 @@ class BreakoutMonitor:
     def _side_label(side):
         return "🟢 بالا" if side == "up" else "🔴 پایین"
 
-    def suggested_stake(self, mine=None):
+    def suggested_stake(self, track=None):
         """What to bet on this signal, given the staking mode in force."""
         if STAKE_MODE != "martingale":
             return STAKE_BASE
-        rung = self.loss_streak(mine) % LADDER_RUNGS if LADDER_RUNGS else 0
+        rung = self.loss_streak(track) % LADDER_RUNGS if LADDER_RUNGS else 0
         return STAKE_BASE * 2 ** rung
 
     def check_report(self, count=10):
@@ -2980,7 +2986,8 @@ class BreakoutMonitor:
                 row["ref"], row["settle"] = ref, price
                 ledger_append(ledger_row(row, "win" if won else "loss"))
                 break
-        self.history.append({"won": won, "bet": p["bet"], "mine": mine})
+        self.history.append({"won": won, "bet": p["bet"], "mine": mine,
+                             "track": self._track_of(p.get("rules") or [])})
         self.history = self.history[-HISTORY_KEEP:]
         for name in p.get("rules", []):
             r = self.score["rules"].setdefault(name, {"n": 0, "wins": 0})
@@ -2999,6 +3006,24 @@ class BreakoutMonitor:
         """True when every rule behind a signal is one of the user's own."""
         return (all(any(r.startswith(m) for m in MINE_RULES) for r in rules)
                 if rules else False)
+
+    @staticmethod
+    def _track_of(rules):
+        """
+        Which book a signal belongs in: 'mine', 'solo', or 'stat'.
+
+        Membership is by unanimity, not majority — a signal counts as rule 8's
+        only if rule 8 is the whole of it. That is automatic here, because rule
+        8 is wired to fire only into silence, but stating it means a future
+        change to that wiring cannot quietly start mixing the books.
+        """
+        if not rules:
+            return "stat"
+        if all(any(r.startswith(m) for m in MINE_RULES) for r in rules):
+            return "mine"
+        if all(any(r.startswith(m) for m in SOLO_RULES) for r in rules):
+            return "solo"
+        return "stat"
 
     # -- the signal log: what fired, what it did, and whether you were told ----
     @staticmethod
@@ -3247,32 +3272,68 @@ class BreakoutMonitor:
         return True
 
     def missed_report(self, count=HISTORY_SHOW):
-        """/missed — the last signals with times and outcomes, always available."""
-        rows = self.signals[-count:]
-        if not rows:
+        """
+        /missed — the last signals with times and outcomes, per book.
+
+        Split by book because the books are split. Rule 8 fires several times
+        an hour and the statistical rules a few times a day, so one merged list
+        of the last twenty is twenty rule-8 signals with the others buried
+        underneath — which is precisely the mixing the separation exists to
+        prevent. Each book gets its own last-N and its own tally.
+        """
+        if not self.signals:
             return send_message(self.chat_id,
                                 "📋 <b>سابقهٔ سیگنال‌ها</b>\n\nهنوز سیگنالی ثبت نشده.")
-        n = sum(1 for r in rows if r["won"] is not None)
-        w = sum(1 for r in rows if r["won"])
+        books = (("📈 آماری (۱، ۲، ۳، ۵، ۶، ۷)", "stat"),
+                 ("🎲 قانون ۸ — دفترِ جدا", "solo"),
+                 ("🧪 خودت (AABA)", "mine"))
         never = sum(1 for r in self.signals if not r.get("told"))
-        head = (f"📋 <b>{len(rows)} سیگنالِ اخیر</b> (قدیمی → جدید)\n"
-                + (f"{w}/{n} برد\n" if n else "") + "\n")
-        foot = (("\n\n📡 در بالا یعنی پیامش به تلگرام نرسیده بود "
-                 f"({never} مورد)." if never else "")
-                + "\n<i>ساعت‌ها ET، شروعِ همان پنجره.</i>")
-        # Mark the ones that never reached Telegram, so "did I miss anything?"
-        # has a visible answer instead of needing to be asked again.
-        marked = [dict(r, bet=r["bet"]) for r in rows]
-        for r in marked:
-            if not r.get("told"):
-                r["rules"] = list(r.get("rules") or []) + ["📡 پیامش نرسیده بود"]
-        return self._send_rows(head, marked, foot)
+        sent_any = False
+        for title, track in books:
+            rows = [r for r in self.signals
+                    if self._track_of(r.get("rules") or []) == track][-count:]
+            if not rows:
+                continue
+            sent_any = True
+            n = sum(1 for r in rows if r["won"] is not None)
+            w = sum(1 for r in rows if r["won"])
+            head = (f"<b>{title}</b>\n"
+                    f"📋 {len(rows)} سیگنالِ اخیر (قدیمی → جدید)\n"
+                    + (f"{w}/{n} برد\n" if n else "") + "\n")
+            # Mark the ones that never reached Telegram, so "did I miss
+            # anything?" has a visible answer instead of needing to be asked.
+            marked = [dict(r, bet=r["bet"]) for r in rows]
+            for r in marked:
+                if not r.get("told"):
+                    r["rules"] = list(r.get("rules") or []) + \
+                        ["📡 پیامش نرسیده بود"]
+            self._send_rows(head, marked, "")
+        if not sent_any:
+            return send_message(self.chat_id,
+                                "📋 <b>سابقهٔ سیگنال‌ها</b>\n\nهنوز سیگنالی ثبت نشده.")
+        return send_message(
+            self.chat_id,
+            (f"📡 در بالا یعنی پیامش به تلگرام نرسیده بود ({never} مورد).\n"
+             if never else "")
+            + "<i>ساعت‌ها ET، شروعِ همان پنجره. هر دفتر جداگانه شمرده شده.</i>")
 
-    def _track(self, mine):
-        """History for one track: the user's AABA rule, or the statistical ones."""
-        return [h for h in self.history if h.get("mine", False) == mine]
+    def _track(self, track):
+        """
+        History for one book.
 
-    def loss_streak(self, mine=None):
+        Rows written before the split carry only the old `mine` boolean; they
+        fall back to 'mine'/'stat', which is right for everything except the
+        handful of rule-8 signals that predate the separation. Those stay in
+        the statistical book rather than being invented into rule 8's — a
+        record cannot be re-labelled after the fact just because it would be
+        tidier.
+        """
+        if isinstance(track, bool):
+            track = "mine" if track else "stat"
+        return [h for h in self.history
+                if h.get("track", "mine" if h.get("mine") else "stat") == track]
+
+    def loss_streak(self, track=None):
         """
         Losses at the tail — i.e. which martingale rung the next entry sits on.
 
@@ -3280,7 +3341,7 @@ class BreakoutMonitor:
         rule says nothing about the stake for a rule-1 signal, so mixing them
         would put you on the wrong rung.
         """
-        hist = self.history if mine is None else self._track(mine)
+        hist = self.history if track is None else self._track(track)
         k = 0
         for h in reversed(hist):
             if h["won"]:
@@ -3330,14 +3391,14 @@ class BreakoutMonitor:
                 f"هیچ سیگنالی حذف نشده و چیزی از پیام کم نشده — تصمیم با "
                 f"شماست.</i>\n")
 
-    def history_line(self, mine=None):
+    def history_line(self, track=None):
         """
         Recent outcomes for the track this alert belongs to, oldest first.
 
         The tail streak is spelled out because that — not the overall hit rate —
         is what sets the next stake under any martingale.
         """
-        hist = self.history if mine is None else self._track(mine)
+        hist = self.history if track is None else self._track(track)
         if not hist:
             return ""
         recent = hist[-HISTORY_SHOW:]
@@ -3346,10 +3407,12 @@ class BreakoutMonitor:
         # Totals come from the signal log, which keeps far more rows than the
         # ✅❌ strip — the old "کل" was quietly capped at 40 and read as lifetime.
         pool = [r for r in self.signals if r["won"] is not None
-                and (mine is None or r.get("mine", False) == mine)] or hist
+                and (track is None
+                     or self._track_of(r.get("rules") or []) == track)] or hist
         tot = len(pool)
         won = sum(1 for r in pool if r["won"])
-        label = ("AABA" if mine else "آماری") if mine is not None else "همه"
+        label = {"mine": "AABA", "solo": "قانون ۸", "stat": "آماری"}.get(
+            track, "همه")
         # Both ends are labelled: a bare run of 20 ticks gives no clue which end
         # is the oldest, and reading it backwards inverts the streak that decides
         # the next stake. Chunked in fives so the eye can count them.
@@ -3358,7 +3421,7 @@ class BreakoutMonitor:
                f"قدیمی‌ترین ⬅️ {seq} ➡️ آخرین\n"
                f"<b>{w}</b>/{len(recent)}  ·  کل: {won}/{tot} "
                f"({won / tot * 100:.0f}%)")
-        k = self.loss_streak(mine)
+        k = self.loss_streak(track)
         # Report the rung on the ladder actually being played, plus how many
         # busts that streak already contains — a run of 7 losses is not "rung 8",
         # it is two blown cycles and a rung 2.
@@ -4423,6 +4486,28 @@ class BreakoutMonitor:
         se = (acc * (100 - acc) / n) ** 0.5
         lo, hi = max(0.0, acc - 1.96 * se), min(100.0, acc + 1.96 * se)
 
+        def recent_for(track):
+            """
+            The last few outcomes of ONE book, and its own losing streak.
+
+            Kept per book on purpose: a mixed list answers a question nobody
+            asked. Rule 8 fires several times an hour and the statistical rules
+            a few times a day, so a shared list is mostly rule 8 wearing
+            everyone's name.
+            """
+            hist = self._track(track)
+            if not hist:
+                return ["  <i>هنوز سیگنالی نداشته</i>"]
+            recent = hist[-HISTORY_SHOW:]
+            seq = "".join("✅" if h["won"] else "❌" for h in recent)
+            out = [f"  {len(recent)} تای آخر (قدیمی → جدید):",
+                   "  " + "\n  ".join(seq[i:i + 10]
+                                      for i in range(0, len(seq), 10))]
+            k = self.loss_streak(track)
+            if k:
+                out.append(f"  🔴 رشتهٔ باختِ فعلی: <b>{k}</b>")
+            return out
+
         def block(title, rules, note):
             """One scoreboard for a set of rules, with its own confidence band."""
             tot = sum(r["n"] for k, r in s["rules"].items()
@@ -4466,19 +4551,18 @@ class BreakoutMonitor:
                          "پنجره‌های قطعی است (نتیجه واقعی، ولی پیامش را نگرفتی)")
         if s["rules"]:
             others = tuple(k[0] for k in s["rules"] if not any(
-                k.startswith(m) for m in MINE_RULES))
+                k.startswith(m) for m in MINE_RULES + SOLO_RULES))
             lines += block("📈 استراتژی‌های آماری (۱، ۲، ۳، ۵، ۶، ۷)",
                            tuple(set(others)) or ("۱", "۲", "۳", "۵"), None)
+            lines += recent_for("stat")
             lines += block("🧪 استراتژیِ خودت (AABA)", MINE_RULES,
                            "  <i>روی ۱۹٬۶۵۶ موقعیتِ تاریخی ۴۸٫۸٪ اندازه‌گیری شد</i>")
-        if self.history:
-            recent = self.history[-HISTORY_SHOW:]
-            seq = "".join("✅" if h["won"] else "❌" for h in recent)
-            lines.append(f"\n<b>{len(recent)} سیگنالِ اخیر</b> (قدیمی → جدید):\n"
-                         + "\n".join(seq[i:i + 10] for i in range(0, len(seq), 10)))
-            k = self.loss_streak()
-            if k:
-                lines.append(f"🔴 رشتهٔ باختِ فعلی: <b>{k}</b>")
+            lines += recent_for("mine")
+            lines += block("🎲 قانون ۸ — دفترِ جدا", SOLO_RULES,
+                           "  <i>فقط وقتی بقیه ساکت‌اند شلیک می‌کند. روی "
+                           "۱۹٬۶۱۰ نمونه ۵۲٫۴٪، سربه‌سر ۵۰٪ — لبه‌اش نازک است "
+                           "و آمارش کاملاً از بالا جداست.</i>")
+            lines += recent_for("solo")
         if s["since"]:
             lines.append(f"\nاز {datetime.fromtimestamp(s['since'], TEHRAN):%Y-%m-%d %H:%M} "
                          "به وقتِ تهران")
