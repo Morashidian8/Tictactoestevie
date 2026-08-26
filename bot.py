@@ -567,6 +567,13 @@ MINE_RULES = ("۴",)
 # when every other rule is silent, so its signals never mix with theirs and the
 # split needs no arbitration.
 SOLO_RULES = ("۸",)
+# Plan B is a separate book, so it gets separate MARKS. Sharing the green tick
+# and red cross with the statistical rules makes two scoreboards look like one
+# at a glance, which is the confusion the split was made to end. Blue and
+# orange squares read as "different thing", not "same thing, other outcome" —
+# and they stay distinguishable to a red-green colourblind eye, which a tick
+# and a cross in those two colours do not.
+SOLO_WIN, SOLO_LOSS = "🟦", "🟧"
 # Price feed for the breakout rule:
 #   "chainlink" - Chainlink BTC/USD via a public Polygon RPC (what Polymarket
 #                 settles on; matches the market exactly)
@@ -3049,6 +3056,8 @@ class BreakoutMonitor:
                 mark = "📡 نرسیده"
             elif r["won"] is None:
                 mark = "⏳ باز"
+            elif BreakoutMonitor._track_of(r.get("rules") or []) == "solo":
+                mark = f"{SOLO_WIN} برد" if r["won"] else f"{SOLO_LOSS} باخت"
             else:
                 mark = "✅ برد" if r["won"] else "❌ باخت"
             side = "🟢 بالا" if r["bet"] == "up" else "🔴 پایین"
@@ -3285,7 +3294,7 @@ class BreakoutMonitor:
             return send_message(self.chat_id,
                                 "📋 <b>سابقهٔ سیگنال‌ها</b>\n\nهنوز سیگنالی ثبت نشده.")
         books = (("📈 آماری (۱، ۲، ۳، ۵، ۶، ۷)", "stat"),
-                 ("🎲 قانون ۸ — دفترِ جدا", "solo"),
+                 ("🅱️ پلن بی — دفترِ جدا", "solo"),
                  ("🧪 خودت (AABA)", "mine"))
         never = sum(1 for r in self.signals if not r.get("told"))
         sent_any = False
@@ -3411,7 +3420,7 @@ class BreakoutMonitor:
                      or self._track_of(r.get("rules") or []) == track)] or hist
         tot = len(pool)
         won = sum(1 for r in pool if r["won"])
-        label = {"mine": "AABA", "solo": "قانون ۸", "stat": "آماری"}.get(
+        label = {"mine": "AABA", "solo": "پلن بی", "stat": "آماری"}.get(
             track, "همه")
         # Both ends are labelled: a bare run of 20 ticks gives no clue which end
         # is the oldest, and reading it backwards inverts the streak that decides
@@ -4356,7 +4365,7 @@ class BreakoutMonitor:
             ref = sorted(abs(m) for m in _moves(cl[-101:]))
             med = ref[len(ref) // 2]
             t = abs(cl[-1] - avg) / med if med > 0 else 0
-            L.append(f"\n<b>۸) فاصله از میانگینِ {RULE8_MA} کندلی</b>")
+            L.append(f"\n<b>۸) پلن بی — فاصله از میانگینِ {RULE8_MA} کندلی</b>")
             L.append(f"  ${abs(cl[-1] - avg):,.2f} = <b>{t:.1f}×</b> "
                      f"از {RULE8_MULT:.1f}× لازم")
         # The golden tier has a second gate nobody could see: rules agreeing is
@@ -4499,7 +4508,9 @@ class BreakoutMonitor:
             if not hist:
                 return ["  <i>هنوز سیگنالی نداشته</i>"]
             recent = hist[-HISTORY_SHOW:]
-            seq = "".join("✅" if h["won"] else "❌" for h in recent)
+            win, loss = ((SOLO_WIN, SOLO_LOSS) if track == "solo"
+                         else ("✅", "❌"))
+            seq = "".join(win if h["won"] else loss for h in recent)
             out = [f"  {len(recent)} تای آخر (قدیمی → جدید):",
                    "  " + "\n  ".join(seq[i:i + 10]
                                       for i in range(0, len(seq), 10))]
@@ -4558,7 +4569,7 @@ class BreakoutMonitor:
             lines += block("🧪 استراتژیِ خودت (AABA)", MINE_RULES,
                            "  <i>روی ۱۹٬۶۵۶ موقعیتِ تاریخی ۴۸٫۸٪ اندازه‌گیری شد</i>")
             lines += recent_for("mine")
-            lines += block("🎲 قانون ۸ — دفترِ جدا", SOLO_RULES,
+            lines += block("🅱️ پلن بی — دفترِ جدا", SOLO_RULES,
                            "  <i>فقط وقتی بقیه ساکت‌اند شلیک می‌کند. روی "
                            "۱۹٬۶۱۰ نمونه ۵۲٫۴٪، سربه‌سر ۵۰٪ — لبه‌اش نازک است "
                            "و آمارش کاملاً از بالا جداست.</i>")
@@ -4631,7 +4642,7 @@ class BreakoutMonitor:
         if RULE8_ENABLED and not hits:
             s8 = rule8_signal(closes)
             if s8:
-                hits.append(("۸) کشیدگی از میانگینِ ۲۰ کندلی", "۵۲٪", s8["bet"],
+                hits.append(("۸) پلن بی", "۵۲٪", s8["bet"],
                              f"قیمت ${abs(s8['gap']):,.0f} از میانگینِ ۲۰ کندلی "
                              f"(${s8['avg']:,.2f}) فاصله دارد = "
                              f"{s8['times']:.1f}× حرکتِ معمول"
