@@ -3420,7 +3420,12 @@ class BreakoutMonitor:
         if not hist:
             return ""
         recent = hist[-HISTORY_SHOW:]
-        seq = "".join("✅" if h["won"] else "❌" for h in recent)
+        # This strip is the one that appears inside the live alert. It is a
+        # different code path from the scorecard's, and changing only that one
+        # left Plan B still wearing the statistical book's ticks here.
+        win, loss_m = ((SOLO_WIN, SOLO_LOSS) if track == "solo"
+                       else ("✅", "❌"))
+        seq = "".join(win if h["won"] else loss_m for h in recent)
         w = sum(1 for h in recent if h["won"])
         # Totals come from the signal log, which keeps far more rows than the
         # ✅❌ strip — the old "کل" was quietly capped at 40 and read as lifetime.
@@ -3445,7 +3450,12 @@ class BreakoutMonitor:
         # it is two blown cycles and a rung 2.
         rung = k % LADDER_RUNGS + 1 if LADDER_RUNGS else k + 1
         busts = k // LADDER_RUNGS if LADDER_RUNGS else 0
-        dot = "🔴" if rung >= LADDER_RUNGS else "🟡" if rung > 1 else "🟢"
+        # Squares for Plan B: its result strip is circles, and a circle on the
+        # very next line would read as one more result rather than a state.
+        if track == "solo":
+            dot = "🟥" if rung >= LADDER_RUNGS else "🟨" if rung > 1 else "🟩"
+        else:
+            dot = "🔴" if rung >= LADDER_RUNGS else "🟡" if rung > 1 else "🟢"
         out += f"\n{dot} پلهٔ <b>{rung}</b> از {LADDER_RUNGS}"
         if busts:
             out += (f"  ·  ⚠️ {busts} بار سقفِ پله خورده "
