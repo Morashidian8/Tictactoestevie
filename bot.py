@@ -567,13 +567,17 @@ MINE_RULES = ("۴",)
 # when every other rule is silent, so its signals never mix with theirs and the
 # split needs no arbitration.
 SOLO_RULES = ("۸",)
-# Plan B is a separate book, so it gets separate MARKS. Sharing the green tick
-# and red cross with the statistical rules makes two scoreboards look like one
-# at a glance, which is the confusion the split was made to end. Blue and
-# orange squares read as "different thing", not "same thing, other outcome" —
-# and they stay distinguishable to a red-green colourblind eye, which a tick
-# and a cross in those two colours do not.
-SOLO_WIN, SOLO_LOSS = "🟦", "🟧"
+# Plan B is a separate book, so it gets separate MARKS: solid circles instead
+# of the tick and cross, keeping the same red/green sense so nothing has to be
+# relearned.
+#
+# That collides with the direction marker, which is already a green or red
+# circle — "🟢 برد · 🟢 بالا" in one line asks the reader to hold two meanings
+# for one shape. So inside Plan B's rows the direction is an arrow instead.
+# Only Plan B changes; the statistical book keeps the circles for direction it
+# has always had.
+SOLO_WIN, SOLO_LOSS = "🟢", "🔴"
+SOLO_UP, SOLO_DOWN = "⬆️", "⬇️"
 # Price feed for the breakout rule:
 #   "chainlink" - Chainlink BTC/USD via a public Polygon RPC (what Polymarket
 #                 settles on; matches the market exactly)
@@ -3060,7 +3064,12 @@ class BreakoutMonitor:
                 mark = f"{SOLO_WIN} برد" if r["won"] else f"{SOLO_LOSS} باخت"
             else:
                 mark = "✅ برد" if r["won"] else "❌ باخت"
-            side = "🟢 بالا" if r["bet"] == "up" else "🔴 پایین"
+            solo = BreakoutMonitor._track_of(r.get("rules") or []) == "solo"
+            if solo:
+                side = (f"{SOLO_UP} بالا" if r["bet"] == "up"
+                        else f"{SOLO_DOWN} پایین")
+            else:
+                side = "🟢 بالا" if r["bet"] == "up" else "🔴 پایین"
             names = r.get("rules") or []
             out.append(f"{mark}  ·  <b>{et_time(r['t']):%I:%M%p}</b>  ·  {side}"
                        f"{r.get('live_tag', '')}\n"
