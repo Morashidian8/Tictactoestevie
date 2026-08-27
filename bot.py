@@ -2352,6 +2352,7 @@ class BreakoutMonitor:
         self.windows_seen = 0
         self.pre_done = set()     # (boundary, stage) pre-alerts already sent
         self.pre_bet = {}         # boundary -> side promised by the last stage
+        self.pre_book = {}        # boundary -> which book promised it
         self.gap_note = None      # (windows missed, when) after an outage
         # An outage whose backfill has not succeeded yet. Persisted, because the
         # retry may only work several restarts later and _seed() destroys the
@@ -2719,7 +2720,8 @@ class BreakoutMonitor:
         except Exception as exc:  # noqa: BLE001 - seeding is best-effort
             log.warning("Breakout: seeding failed: %s", exc)
 
-    def _alert(self, hits, price, window_start, lag=0.0, settled=None):
+    def _alert(self, hits, price, window_start, lag=0.0, settled=None,
+               promised=None):
         """
         hits: list of (rule_name, accuracy_label, bet, detail_line).
 
@@ -2777,10 +2779,21 @@ class BreakoutMonitor:
             except Exception:  # noqa: BLE001 - a hint must never block an alert
                 near_gold = ""
         prev = self._prev_result_line(window_start)
+        # If a pre-alert promised the other side for THIS window, the alert has
+        # to carry that. Reading only this message, the two are indistinguishable
+        # from two contradictory signals for one window.
+        # Passed in, not read from self.pre_bet: the close pops that entry
+        # before this runs, so looking it up here would always find nothing and
+        # the line would never appear — a fix that silently does nothing.
+        flip = ""
+        if promised and promised != bet:
+            flip = (f"🔄 <i>پیش‌هشدار {self._side_label(promised)} بود — "
+                    f"این سیگنال جایگزینش است.</i>\n")
         # The banner goes above the signal, not below it: by the time the eye
         # reaches the stake line the decision is already half made.
         text = (
             prev
+            + flip
             + self.cooldown_note()
             + ("🏆 <b>ورودِ طلایی (۵۸٪)</b>\n" if golden else "")
             + f"🎯 {head}{agree}\n"
@@ -4718,6 +4731,7 @@ class BreakoutMonitor:
             return
 
         self.pre_bet[boundary] = bet
+        self.pre_book[boundary] = self._track_of([h[0] for h in hits])
         o_et = et_time(boundary)
         arrow = "🟢 <b>بالا</b>" if bet == "up" else "🔴 <b>پایین</b>"
         names = "\n".join(f"• {n} <i>({acc})</i>" for n, acc, _, _ in hits)
@@ -4768,11 +4782,42 @@ class BreakoutMonitor:
         # seconds the user was left holding "go to your account now" with no
         # follow-up. The bot's own measurement says this happens to about 13% of
         # early signals, so silence is the wrong answer often enough to matter.
+        promised = None
         if not replay:
             promised = self.pre_bet.pop(window_start + GRANULARITY, None)
+            pre_book = self.pre_book.pop(window_start + GRANULARITY, None)
             if promised:
                 sides = {h[2] for h in hits} if hits else set()
                 actual = sides.pop() if len(sides) == 1 else None
+                if actual is not None and actual != promised:
+                    # The gap this closes: the stages only compared themselves
+                    # with each other, so a pre-alert could say CONFIRMED and
+                    # the close could then say the opposite with nothing
+                    # admitting it. The reader was left believing the confirmed
+                    # side was the bet, and every later "won"/"lost" line about
+                    # that window then read as wrong — which is exactly what it
+                    # looked like from the outside.
+                    book = self._track_of([h[0] for h in hits])
+                    names = {"solo": "پلن بی", "mine": "AABA",
+                             "stat": "آماری"}
+                    moved = (f"\nو از دفترِ <b>{names.get(pre_book, '؟')}</b> "
+                             f"به <b>{names.get(book, '؟')}</b> رفت."
+                             if pre_book and pre_book != book else "")
+                    log.info("PRE-ALERT %s flipped to %s at the close.",
+                             promised, actual)
+                    send_message(
+                        self.chat_id,
+                        f"🔄 <b>جهت عوض شد سرِ بسته‌شدنِ کندل</b>\n"
+                        f"پیش‌هشدار {self._side_label(promised)} بود، "
+                        f"سیگنالِ نهایی {self._side_label(actual)} است."
+                        f"{moved}\n"
+                        "<i>سیگنالِ نهایی معتبر است — همین که در ادامه می‌آید. "
+                        "پیش‌هشدار روی کندلِ ناتمام حساب می‌شود و آخرین ثانیه‌ها "
+                        "می‌توانند عوضش کنند.</i>")
+                    play_alert("cancel", promised)
+                    push_ntfy("🔄 جهت عوض شد",
+                              f"پیش‌هشدار {promised} بود، نهایی {actual} است.",
+                              priority=4, tags=["repeat"])
                 if actual is None:
                     log.info("PRE-ALERT %s did not survive the close.", promised)
                     send_message(
@@ -4812,7 +4857,8 @@ class BreakoutMonitor:
                 ledger_append(ledger_row(self.signals[-1], "issued"))
                 self.signals = self.signals[-SIGNALS_KEEP:]
             if not replay:
-                self._alert(hits, price, window_start + GRANULARITY, lag, settled)
+                self._alert(hits, price, window_start + GRANULARITY, lag,
+                            settled, promised)
         self._save()
         # `settled` is the outcome of the PREVIOUS window's signal, which is what
         # the caller needs when replaying a run of windows in order.
