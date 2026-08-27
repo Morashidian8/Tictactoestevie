@@ -202,19 +202,56 @@ def main():
               f"{mark:>13}")
         behind += -loss_of(bet)
 
+    # ---- the whole archive, month by month --------------------------------- #
+    # Two months is one weather report, not a climate. The same rule is run
+    # over every month there is data for, so "how much a month" can be
+    # answered with a spread instead of a single flattering number. The months
+    # before the test window are the ones the rule was chosen on, and they are
+    # labelled, because in-sample months are not evidence.
+    allrows = pick(sigs)
     print(f"\n{'-' * 88}")
-    print("  MONTH BY MONTH, FLAT")
+    print("  EVERY MONTH IN THE ARCHIVE — the same rule, start to finish")
     print("-" * 88)
+    print(f"  {'month':<10}{'picks':>7}{'won':>6}{'rate':>8}"
+          f"{'flat':>10}{'2 rungs':>10}   which")
     per = defaultdict(lambda: [0, 0])
-    for r in rows:
+    for r in allrows:
         k = f"{r['d']:%Y-%m}"
         per[k][0] += 1
         per[k][1] += 1 if r["won"] else 0
+    money = {0: defaultdict(float), 2: defaultdict(float)}
+    for rungs in (0, 2):
+        rung = 0
+        for r in allrows:
+            bet = base * 2 ** rung
+            k = f"{r['d']:%Y-%m}"
+            if r["won"]:
+                money[rungs][k] += win_of(bet)
+                rung = 0
+            else:
+                money[rungs][k] += loss_of(bet)
+                rung = 0 if not rungs or rung + 1 >= rungs else rung + 1
+    cutk = f"{datetime.fromtimestamp(cut + GRAN, TEHRAN):%Y-%m}"
+    keep = {0: [], 2: []}
     for k in sorted(per):
         t, kw = per[k]
-        pnl = kw * win_of(base) + (t - kw) * loss_of(base)
-        print(f"  {k}   {kw:>3}/{t:<3} = {kw / t * 100:>6.2f}%"
-              f"   ${pnl:>+9,.0f}")
+        if t < 8:
+            continue
+        which = "TEST" if k > cutk else "train"
+        for rungs in (0, 2):
+            keep[rungs].append(money[rungs][k])
+        print(f"  {k:<10}{t:>7}{kw:>6}{kw / t * 100:>7.1f}%"
+              f"${money[0][k]:>+9,.0f}${money[2][k]:>+9,.0f}   {which}")
+    for rungs, lbl in ((0, "حجم ثابت"), (2, "مارتینگل ۲ پله")):
+        v = sorted(keep[rungs])
+        m = sum(v) / len(v)
+        sd = (sum((x - m) ** 2 for x in v) / (len(v) - 1)) ** 0.5
+        print(f"\n  {lbl}: average ${m:+,.0f} a month · median "
+              f"${v[len(v) // 2]:+,.0f} · worst ${v[0]:+,.0f} · best "
+              f"${v[-1]:+,.0f}")
+        print(f"  {'':<{len(lbl)}}  {sum(1 for x in v if x > 0)} of {len(v)}"
+              f" months positive · a typical month lands between "
+              f"${m - sd:+,.0f} and ${m + sd:+,.0f}")
 
     print(f"\n{'=' * 88}")
     print(f"  Break-even is {BREAKEVEN * 100:.2f}% for every row above. The")
