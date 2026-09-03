@@ -1,0 +1,80 @@
+# APK امضاشده برای انتشار در کافه‌بازار.
+# دستی اجرا می‌شود (Actions → Run workflow) و خروجی فقط به‌صورت artifact
+# خصوصیِ همین اجرا بالا می‌رود — چون اپ پولی است و APK نباید عمومی شود.
+#
+# قبل از اولین اجرا این چهار Secret را در Settings → Secrets → Actions بساز:
+#   MABHAS17_KEYSTORE_BASE64   محتوای فایل .jks به‌صورت base64
+#   MABHAS17_KEYSTORE_PASSWORD رمز فایل keystore
+#   MABHAS17_KEY_ALIAS         نام کلید (alias)
+#   MABHAS17_KEY_PASSWORD      رمز خودِ کلید
+name: Build Mabhas17 signed release
+
+on:
+  workflow_dispatch:
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Secrets must be set
+        env:
+          KS: ${{ secrets.MABHAS17_KEYSTORE_BASE64 }}
+        run: |
+          if [ -z "$KS" ]; then
+            echo "::error::MABHAS17_KEYSTORE_BASE64 تعریف نشده — راهنما: mabhas17/docs/publish-paid-app.md"
+            exit 1
+          fi
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Web assets must match the bundled copy
+        run: |
+          for f in index.html manifest.webmanifest service-worker.js icon.svg; do
+            diff -q "mabhas17/web/$f" \
+                    "mabhas17/android/app/src/main/assets/pwa/$f"
+          done
+
+      - name: Restore keystore
+        env:
+          KS: ${{ secrets.MABHAS17_KEYSTORE_BASE64 }}
+        run: |
+          umask 077
+          printf '%s' "$KS" | base64 -d > "$RUNNER_TEMP/mabhas17.jks"
+
+      - name: Build signed release APK
+        working-directory: mabhas17/android
+        env:
+          MABHAS17_KEYSTORE: ${{ runner.temp }}/mabhas17.jks
+          MABHAS17_KEYSTORE_PASSWORD: ${{ secrets.MABHAS17_KEYSTORE_PASSWORD }}
+          MABHAS17_KEY_ALIAS: ${{ secrets.MABHAS17_KEY_ALIAS }}
+          MABHAS17_KEY_PASSWORD: ${{ secrets.MABHAS17_KEY_PASSWORD }}
+        run: |
+          chmod +x ./gradlew
+          ./gradlew assembleRelease --no-daemon --stacktrace
+
+      - name: Refuse to ship an unsigned APK
+        run: |
+          apk=mabhas17/android/app/build/outputs/apk/release/app-release.apk
+          test -f "$apk" || { echo "::error::APK امضاشده ساخته نشد"; exit 1; }
+          "$ANDROID_HOME"/build-tools/*/apksigner verify --print-certs "$apk"
+
+      - name: Upload signed APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: mabhas17-release-apk
+          path: mabhas17/android/app/build/outputs/apk/release/app-release.apk
+          retention-days: 7
+
+      - name: Shred the keystore
+        if: always()
+        run: rm -f "$RUNNER_TEMP/mabhas17.jks"

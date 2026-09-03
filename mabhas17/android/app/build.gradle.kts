@@ -3,6 +3,15 @@ plugins {
     id("org.jetbrains.kotlin.android")
 }
 
+// امضای نسخهٔ release از متغیرهای محیطی خوانده می‌شود، نه از داخل مخزن.
+// اگر keystore در دسترس نباشد، assembleRelease یک APK امضانشده می‌سازد
+// (برای تست خوب است، برای انتشار در بازار قابل استفاده نیست).
+val keystorePath: String? = System.getenv("MABHAS17_KEYSTORE")
+val keystorePassword: String? = System.getenv("MABHAS17_KEYSTORE_PASSWORD")
+val keystoreAlias: String? = System.getenv("MABHAS17_KEY_ALIAS")
+val keystoreKeyPassword: String? = System.getenv("MABHAS17_KEY_PASSWORD")
+val canSignRelease = !keystorePath.isNullOrBlank() && file(keystorePath).exists()
+
 android {
     namespace = "ir.codenull.mabhas17"
     compileSdk = 34
@@ -15,8 +24,22 @@ android {
         versionName = "1.0"
     }
 
+    signingConfigs {
+        if (canSignRelease) {
+            create("release") {
+                storeFile = file(keystorePath!!)
+                storePassword = keystorePassword
+                keyAlias = keystoreAlias
+                keyPassword = keystoreKeyPassword
+            }
+        }
+    }
+
     buildTypes {
         release {
+            if (canSignRelease) {
+                signingConfig = signingConfigs.getByName("release")
+            }
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
