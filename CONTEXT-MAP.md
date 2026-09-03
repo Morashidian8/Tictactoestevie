@@ -15,6 +15,7 @@ the entries below are seeded as placeholders and may not all exist yet.
 | Manhole PWA | `manhole_pwa/` | Progressive web app for manhole inspection. |
 | PWA | `pwa/` | Shared / generic PWA assets. |
 | Wallet tracker | `wallet_tracker/` | Standalone PWA + FastAPI backend that reports a Polymarket wallet's USDC cash balance and the FIFO-accurate realized PnL of its trades over a chosen time window. No dependency on `polybot`. |
+| Mabhas 17 gas app | `mabhas17/` | Offline Persian calculator + reference for **مبحث ۱۷** (natural-gas piping, Iranian National Building Code, 5th ed.): pipe sizing, air supply, vents, meters, leak tests, inspection checklist. One self-contained `web/index.html`, wrapped in a WebView APK (`android/`, `ir.codenull.mabhas17`). |
 | PolyBot | `polybot_web/` | Self-contained browser strategy simulator/backtester for Polymarket's 5-minute BTC up/down markets (`follow1`..`follow15`, day×hour scanner). Published to Pages under `/polybot/`. |
 | Trading research | `docs/research/`, `research/btc5m/` | Empirical findings on BTC 5-minute candle predictability, with the frozen dataset and reproduction scripts. See `docs/research/btc-5m-patterns.md` and the `btc-patterns` skill. |
 
