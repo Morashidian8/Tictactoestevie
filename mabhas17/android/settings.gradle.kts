@@ -16,6 +16,8 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
+        // Poolakey (کتابخانهٔ پرداخت کافه‌بازار) فقط از JitPack منتشر می‌شود.
+        maven { url = uri("https://jitpack.io") }
     }
 }
 

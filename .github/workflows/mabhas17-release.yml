@@ -51,6 +51,12 @@ jobs:
           umask 077
           printf '%s' "$KS" | base64 -d > "$RUNNER_TEMP/mabhas17.jks"
 
+      - name: Unit tests (منطق گیت)
+        working-directory: mabhas17/android
+        run: |
+          chmod +x ./gradlew
+          ./gradlew :app:testDebugUnitTest --no-daemon
+
       - name: Build signed release APK
         working-directory: mabhas17/android
         env:

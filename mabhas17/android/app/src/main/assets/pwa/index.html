@@ -578,13 +578,48 @@ const routes = {
   appendix:{title:"پیوست‌ها",render:()=>renderRefList(DATA.appendix)},
   about:{title:"درباره و راهنما",render:renderAbout}
 };
+/* =================== دسترسی =================== */
+/* بخش‌های پولی. برای عوض‌کردنِ تقسیمِ رایگان/پولی فقط همین فهرست را ویرایش کن. */
+const PAID = new Set([
+  'air','pipe','demand','pdrop','test','vent','meter','clear',
+  'checklist','medium','commissioning','equip','insulation','cathodic'
+]);
+
+/* پلِ اپ اندروید. در مرورگر وجود ندارد، پس نسخهٔ وب باز می‌ماند. */
+const NATIVE = (typeof MabhasNative !== 'undefined') ? MabhasNative : null;
+function entitled(){ return NATIVE ? NATIVE.isEntitled() : true; }
+function graceDaysLeft(){ return NATIVE ? NATIVE.graceDaysLeft() : 0; }
+function isLocked(r){ return PAID.has(r) && !entitled(); }
+
+function renderLocked(name){
+  const box = el(`<div class="card">
+    <h3>🔒 ${name}</h3>
+    <p>این بخش با اشتراک باز می‌شود. جداول مرجع، تعاریف، مصالح و مبدل واحد
+    همیشه رایگان‌اند.</p>
+  </div>`);
+  const btn = el(`<div class="chip sel" style="display:inline-block">باز کردن دسترسی</div>`);
+  btn.onclick = ()=> NATIVE ? NATIVE.openPaywall() : null;
+  box.appendChild(btn);
+  app.appendChild(box);
+}
+
+function renderGraceNotice(){
+  const d = graceDaysLeft();
+  if (!d) return;
+  app.appendChild(el(`<div class="card"><p>⚠️ اشتراک شما بررسی نشده است.
+  دسترسی تا <b>${d} روز</b> دیگر باز می‌ماند؛ یک‌بار به اینترنت وصل شوید.</p></div>`));
+}
+
 function go(r){ location.hash = r; }
 function route(){
   const r = (location.hash.replace('#','')) || 'home';
   const def = routes[r] || routes.home;
   titleEl.textContent = def.title;
   backBtn.style.display = (r==='home')? 'none':'block';
-  app.innerHTML=''; def.render(); window.scrollTo(0,0);
+  app.innerHTML='';
+  renderGraceNotice();
+  if (isLocked(r)) renderLocked(def.title); else def.render();
+  window.scrollTo(0,0);
 }
 backBtn.onclick = ()=> history.length>1? history.back() : go('home');
 window.addEventListener('hashchange', route);

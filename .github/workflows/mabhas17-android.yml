@@ -38,6 +38,12 @@ jobs:
           diff -q mabhas17/web/icon.svg \
                   mabhas17/android/app/src/main/assets/pwa/icon.svg
 
+      - name: Unit tests (منطق گیت)
+        working-directory: mabhas17/android
+        run: |
+          chmod +x ./gradlew
+          ./gradlew :app:testDebugUnitTest --no-daemon
+
       - name: Build debug APK
         working-directory: mabhas17/android
         run: |

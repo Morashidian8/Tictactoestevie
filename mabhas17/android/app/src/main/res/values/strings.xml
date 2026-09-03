@@ -1,4 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">محاسبات گاز - مبحث ۱۷</string>
+
+    <string name="paywall_title">دسترسی کامل</string>
+    <string name="paywall_body">جداول مرجع، تعاریف و مبدل واحد همیشه رایگان‌اند. ویزاردهای محاسبه — سایز لوله، تأمین هوا، دودکش، کنتور، آزمایش نشتی و چک‌لیست بازرسی — با اشتراک باز می‌شوند.</string>
+    <string name="paywall_trial">%1$d روز اول رایگان است.</string>
+    <string name="paywall_buy_monthly">اشتراک ماهانه</string>
+    <string name="paywall_buy_lifetime">خرید دائمی (یک‌بار)</string>
+    <string name="paywall_restore">قبلاً خریده‌ام</string>
+
+    <string name="paywall_checking">در حال بررسی…</string>
+    <string name="paywall_canceled">خرید لغو شد.</string>
+    <string name="paywall_failed">خرید انجام نشد. دوباره تلاش کنید.</string>
+    <string name="paywall_not_active_yet">پرداخت ثبت شد ولی هنوز فعال نشده. چند لحظه بعد «قبلاً خریده‌ام» را بزنید.</string>
+    <string name="paywall_nothing_to_restore">با این حساب بازار، اشتراک یا خرید فعالی پیدا نشد.</string>
+    <string name="paywall_bazaar_unreachable">اپ بازار در دسترس نیست. مطمئن شوید نصب است و به اینترنت وصل‌اید.</string>
+    <string name="paywall_note">پرداخت، تمدید و لغو همه از طریق کافه‌بازار انجام می‌شود. برای لغو اشتراک به اپ بازار مراجعه کنید.</string>
 </resources>

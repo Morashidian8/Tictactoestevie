@@ -19,6 +19,12 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <activity
+            android:name=".PaywallActivity"
+            android:exported="false"
+            android:label="@string/paywall_title"
+            android:theme="@style/Theme.Mabhas17" />
+
     </application>
 
 </manifest>
