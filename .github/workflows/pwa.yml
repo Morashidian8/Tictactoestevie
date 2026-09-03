@@ -81,6 +81,11 @@ jobs:
           cp -r wallet_tracker/webui site/wallet
           # شبیه‌ساز استراتژی PolyBot (کندلِ واقعی، کاملاً مرورگری) را زیر /polybot/ منتشر کن.
           cp -r polybot_web site/polybot
+          # سیاست حریم خصوصیِ اپ مبحث ۱۷ زیر /mabhas17/ منتشر می‌شود؛ صفحهٔ
+          # فروشگاه کافه‌بازار به یک URL عمومی برای آن نیاز دارد. خودِ اپ
+          # این‌جا نیست — در مخزن خصوصی Morashidian8/mabhas17 است.
+          mkdir -p site/mabhas17
+          cp mabhas17/privacy.html site/mabhas17/index.html
           # اگر داده‌ی بیت‌کوین در این اجرا ساخته نشد (مثلاً push اپ HSE)، پوسته‌ی
           # ثابت اپ بیت‌کوین را در ریشه قرار بده و آخرین data.json منتشرشده را از
           # سایت زنده بگیر تا اپ ریشه سالم بماند بدون نیاز به بیلد مجدد.
