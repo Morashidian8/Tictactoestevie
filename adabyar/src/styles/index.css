@@ -1,0 +1,210 @@
+@import "tailwindcss";
+
+@import "@fontsource-variable/vazirmatn/index.css";
+@import "@fontsource/lalezar/arabic-400.css";
+@import "@fontsource/noto-nastaliq-urdu/arabic-400.css";
+
+/* ================================================================
+   ادب‌یار — سیستم طراحی
+   الهام از نگارگری و تذهیب ایرانی: لاجورد، زر، فیروزه، شنگرف
+   ================================================================ */
+
+@theme {
+  --font-sans: "Vazirmatn Variable", "Vazirmatn", system-ui, sans-serif;
+  --font-display: "Lalezar", "Vazirmatn Variable", system-ui, sans-serif;
+  --font-nastaliq: "Noto Nastaliq Urdu", "Vazirmatn Variable", serif;
+
+  --color-lajvard-50: #eef2ff;
+  --color-lajvard-100: #e0e7ff;
+  --color-lajvard-200: #c7d2fe;
+  --color-lajvard-300: #a5b4fc;
+  --color-lajvard-400: #818cf8;
+  --color-lajvard-500: #6366f1;
+  --color-lajvard-600: #4f46e5;
+  --color-lajvard-700: #4338ca;
+  --color-lajvard-800: #3730a3;
+  --color-lajvard-900: #262163;
+  --color-lajvard-950: #171442;
+
+  --color-zar-50: #fdf8ed;
+  --color-zar-100: #f9edcf;
+  --color-zar-200: #f2d99c;
+  --color-zar-300: #e9c069;
+  --color-zar-400: #e2a944;
+  --color-zar-500: #d4902b;
+  --color-zar-600: #b87123;
+  --color-zar-700: #955420;
+  --color-zar-800: #7a4421;
+  --color-zar-900: #67391f;
+
+  --color-firooze-300: #6ee7dc;
+  --color-firooze-400: #2dd4c4;
+  --color-firooze-500: #14b8a6;
+  --color-firooze-600: #0d9488;
+
+  --color-shangarf-400: #fb7185;
+  --color-shangarf-500: #f43f5e;
+  --color-shangarf-600: #e11d48;
+
+  --radius-xl2: 1.375rem;
+  --radius-xl3: 1.75rem;
+}
+
+/* ---------- توکن‌های تم ---------- */
+:root {
+  color-scheme: light;
+  --bg: #f6f2ea;
+  --bg-2: #efe8dc;
+  --surface: #fffdf9;
+  --surface-2: #f7f1e6;
+  --border: #e3d8c6;
+  --text: #21201d;
+  --text-2: #57534e;
+  --text-3: #8b8378;
+  --accent: #4f46e5;
+  --accent-soft: #e0e7ff;
+  --gold: #b87123;
+  --shadow-color: 30 25 15;
+  --paper: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)' opacity='.035'/%3E%3C/svg%3E");
+}
+
+html[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0b0f22;
+  --bg-2: #0f1430;
+  --surface: #151a38;
+  --surface-2: #1c2246;
+  --border: #2b3160;
+  --text: #f0eeff;
+  --text-2: #b6b3d8;
+  --text-3: #7c799e;
+  --accent: #818cf8;
+  --accent-soft: #262163;
+  --gold: #e2a944;
+  --shadow-color: 0 0 0;
+  --paper: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)' opacity='.05'/%3E%3C/svg%3E");
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-bg2: var(--bg-2);
+  --color-surface: var(--surface);
+  --color-surface2: var(--surface-2);
+  --color-line: var(--border);
+  --color-ink: var(--text);
+  --color-ink2: var(--text-2);
+  --color-ink3: var(--text-3);
+  --color-accent: var(--accent);
+  --color-accentsoft: var(--accent-soft);
+  --color-gold: var(--gold);
+}
+
+/* ---------- پایه ---------- */
+* { -webkit-tap-highlight-color: transparent; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  background-color: var(--bg);
+  background-image: var(--paper);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-feature-settings: "ss01", "ss02";
+  overscroll-behavior-y: none;
+  min-height: 100dvh;
+}
+
+::selection { background: var(--accent); color: #fff; }
+
+/* اندازهٔ فونت مطالعه (قابل تنظیم توسط کاربر) */
+:root { --reader-scale: 1; }
+
+.reader-text { font-size: calc(1.0625rem * var(--reader-scale)); line-height: 2.15; }
+.reader-verse { font-size: calc(1.1875rem * var(--reader-scale)); line-height: 2.1; }
+
+.font-nastaliq-on .reader-verse {
+  font-family: var(--font-nastaliq);
+  line-height: 2.9;
+  font-size: calc(1.125rem * var(--reader-scale));
+}
+
+/* ---------- اسکرول‌بار ---------- */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 99px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-3); }
+
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* ---------- اجزای پرکاربرد ---------- */
+@utility card {
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl2);
+}
+
+@utility glass {
+  background-color: color-mix(in oklab, var(--surface) 78%, transparent);
+  backdrop-filter: blur(16px) saturate(1.4);
+  -webkit-backdrop-filter: blur(16px) saturate(1.4);
+}
+
+@utility press {
+  transition: transform 140ms cubic-bezier(.2,.8,.3,1), box-shadow 140ms;
+}
+.press:active { transform: scale(.965); }
+
+/* گرادیان‌های پایه‌ای */
+.grade-7  { --g1:#6366f1; --g2:#8b5cf6; }
+.grade-8  { --g1:#0ea5e9; --g2:#22d3ee; }
+.grade-9  { --g1:#14b8a6; --g2:#4ade80; }
+.grade-10 { --g1:#f59e0b; --g2:#f97316; }
+.grade-11 { --g1:#f43f5e; --g2:#fb7185; }
+.grade-12 { --g1:#a855f7; --g2:#ec4899; }
+
+.grade-grad { background-image: linear-gradient(135deg, var(--g1), var(--g2)); }
+.grade-text { background-image: linear-gradient(135deg, var(--g1), var(--g2)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.grade-ring { box-shadow: 0 0 0 1px color-mix(in oklab, var(--g1) 35%, transparent), 0 12px 30px -12px color-mix(in oklab, var(--g1) 60%, transparent); }
+
+/* هالهٔ نور پس‌زمینه */
+.aurora::before {
+  content: "";
+  position: fixed;
+  inset-block-start: -30vh;
+  inset-inline: -10vw;
+  height: 70vh;
+  pointer-events: none;
+  z-index: 0;
+  background:
+    radial-gradient(45% 55% at 20% 40%, color-mix(in oklab, var(--accent) 28%, transparent), transparent 70%),
+    radial-gradient(40% 50% at 80% 30%, color-mix(in oklab, var(--gold) 22%, transparent), transparent 70%);
+  filter: blur(30px);
+  opacity: .55;
+}
+
+/* ---------- انیمیشن‌ها ---------- */
+@keyframes shimmer { 100% { transform: translateX(-200%); } }
+.shimmer::after {
+  content: ""; position: absolute; inset: 0;
+  background: linear-gradient(90deg, transparent, color-mix(in oklab, #fff 25%, transparent), transparent);
+  transform: translateX(200%);
+  animation: shimmer 2.4s infinite;
+}
+
+@keyframes pop { 0% { transform: scale(.8); opacity: 0 } 60% { transform: scale(1.06) } 100% { transform: scale(1); opacity: 1 } }
+.pop { animation: pop .34s cubic-bezier(.2,.9,.3,1.2) both; }
+
+@keyframes shake { 10%,90%{transform:translateX(-2px)} 20%,80%{transform:translateX(4px)} 30%,50%,70%{transform:translateX(-6px)} 40%,60%{transform:translateX(6px)} }
+.shake { animation: shake .5s both; }
+
+@keyframes floaty { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-6px)} }
+.floaty { animation: floaty 4s ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; }
+}
+
+/* ---------- ایمنی ناحیهٔ امن موبایل ---------- */
+.safe-b { padding-bottom: calc(env(safe-area-inset-bottom) + 0px); }
+.safe-t { padding-top: env(safe-area-inset-top); }
