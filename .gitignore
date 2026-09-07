@@ -29,3 +29,6 @@ last_signal.txt
 polymarket_trades.csv
 polymarket_chart.csv
 signals_month.csv
+
+# One-minute source data for twap_grade.py: ~50MB, regenerable with --fetch
+btc1m.csv
