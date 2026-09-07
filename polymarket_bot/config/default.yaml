@@ -1,0 +1,66 @@
+# Central configuration. Every number the strategy could be sensitive to lives
+# here rather than in code, because the whole point of the later phases is to
+# re-run the same code under different assumptions and see what survives.
+#
+# Environment variables override these; see config/settings.py for the mapping
+# and .env.example for the list. Secrets are never stored in this file.
+
+mode: record            # record | backtest | paper | live  (only `record` exists in Phase 1)
+
+exchanges:
+  binance:
+    enabled: true
+    host: wss://data-stream.binance.vision   # market-data-only host; no key needed
+    symbols: [BTCUSDT]
+    depth_levels: 20          # 5, 10 or 20 - the only values the venue accepts
+    depth_speed_ms: 100       # 100 or 1000
+    time_unit: MICROSECOND    # MICROSECOND | MILLISECOND
+    stale_after_s: 10
+    weight: 0.5               # contribution to the cross-exchange reference price
+  okx:
+    enabled: true
+    url: wss://ws.okx.com:8443/ws/v5/public
+    inst_ids: [BTC-USDT]
+    channels: [books5, trades]
+    stale_after_s: 10
+    weight: 0.3
+  coinbase:
+    enabled: true
+    url: wss://ws-feed.exchange.coinbase.com
+    product_ids: [BTC-USD]
+    # level2/level2_batch need authentication on this feed; ticker carries the
+    # top of book and needs none. Do not add depth channels until a real
+    # connection has been seen delivering them.
+    channels: [ticker, matches]
+    stale_after_s: 15
+    weight: 0.2
+
+polymarket:
+  enabled: true
+  ws_url: wss://ws-subscriptions-clob.polymarket.com/ws/market
+  gamma_url: https://gamma-api.polymarket.com
+  clob_url: https://clob.polymarket.com
+  window_seconds: [300, 900]   # the 5m and 15m Up/Down markets
+  discovery_refresh_s: 20
+  http_timeout_s: 6
+  stale_after_s: 120           # a thin book legitimately goes quiet
+  keepalive_interval_s: 30
+
+reference_price:
+  # Guard against one venue printing a bad price and dragging the reference
+  # with it. Phase 3 implements the divergence handling; the knobs live here.
+  max_divergence_bps: 25
+  divergence_grace_s: 2.0
+  min_sources: 2
+
+bus:
+  queue_maxsize: 100000        # per subscriber; a full queue drops, loudly
+
+recorder:                      # Phase 2
+  enabled: false
+  root: data/raw
+  flush_interval_s: 5
+  partition_by: [date, venue]
+
+logging:
+  level: INFO

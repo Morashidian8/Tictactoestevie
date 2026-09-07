@@ -21,3 +21,8 @@ breakout_closes.json
 # Intermediate research pickles: regenerable by the task_*.py scripts and
 # rewritten on every run, so they are handoff data between agents, not history.
 research/btc5m/out/
+
+# Recorded market data (Phase 2 onward): high-volume, regenerable only by
+# re-recording, and far too large for git.
+polymarket_bot/data/*
+!polymarket_bot/data/.gitkeep

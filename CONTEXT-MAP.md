@@ -16,6 +16,7 @@ the entries below are seeded as placeholders and may not all exist yet.
 | PWA | `pwa/` | Shared / generic PWA assets. |
 | Wallet tracker | `wallet_tracker/` | Standalone PWA + FastAPI backend that reports a Polymarket wallet's USDC cash balance and the FIFO-accurate realized PnL of its trades over a chosen time window. No dependency on `polybot`. |
 | Mabhas 17 gas app | `mabhas17/privacy.html` only | Offline Persian calculator for **مبحث ۱۷** (natural-gas piping, Iranian National Building Code). Sold on Cafe Bazaar, so the source lives in the **private** repo `Morashidian8/mabhas17`. Only the privacy policy stays here — the store listing needs a public URL for it, served by Pages at `/mabhas17/`. |
+| Polymarket bot | `polymarket_bot/` | Staged research system for Polymarket's BTC 5m/15m Up/Down markets: real order-book collectors (Binance, OKX, Coinbase, Polymarket CLOB) feeding a recorder, replay backtester, paper trader and — only if an edge survives all of that — an executor. Phase 1 (collectors) only. Self-contained; no dependency on `polybot` or `bot.py`. |
 | PolyBot | `polybot_web/` | Self-contained browser strategy simulator/backtester for Polymarket's 5-minute BTC up/down markets (`follow1`..`follow15`, day×hour scanner). Published to Pages under `/polybot/`. |
 | Trading research | `docs/research/`, `research/btc5m/` | Empirical findings on BTC 5-minute candle predictability, with the frozen dataset and reproduction scripts. See `docs/research/btc-5m-patterns.md` and the `btc-patterns` skill. |
 
