@@ -20,6 +20,9 @@ function present(childId: string, time = '08:05'): Attendance {
     droppedByGuardianId: null,
     arrivalCondition: 'normal',
     arrivalPhotoUrl: null,
+    pickedUpById: null,
+    pickupMethod: null,
+    lateMinutes: 0,
   }
 }
 

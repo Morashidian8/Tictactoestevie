@@ -21,6 +21,9 @@ import {
 } from '../../core/data/index.ts'
 import type { Guardian } from '../../core/data/index.ts'
 import { ArrivalSheet, type ArrivalResult } from './ArrivalSheet.tsx'
+import { CheckOutSheet } from './CheckOutSheet.tsx'
+import { IncidentSheet } from './IncidentSheet.tsx'
+import fab from './IncidentSheet.module.css'
 import styles from './TodayPage.module.css'
 
 /**
@@ -51,6 +54,10 @@ export function TodayPage({
   // کودکی که شیت استثناهایش باز است، به‌علاوه سرپرستانش که با باز شدن
   // شیت خوانده می‌شوند نه پیش از آن.
   const [sheetFor, setSheetFor] = useState<{ childId: string; guardians: Guardian[] } | null>(null)
+  // کودکی که شیت خروجش باز است — بخش ۵.۸.
+  const [checkOutFor, setCheckOutFor] = useState<string | null>(null)
+  // بخش ۱۳.۱: دکمه شناور ثبت رویداد، در همه تب‌ها.
+  const [incidentOpen, setIncidentOpen] = useState(false)
 
   // ساعت جاری در حالت نگه داشته می‌شود چون مرز ۹:۰۰ ستون سوم نوار خلاصه
   // را عوض می‌کند و صفحه باید بدون نوسازی دستی رد شود.
@@ -115,9 +122,11 @@ export function TodayPage({
           state,
           caption: checkIn ? formatTime(checkIn) : undefined,
           actionLabel:
-            state === 'present' || state === 'left'
-              ? `${child.firstName}، گزینه‌ها`
-              : `ثبت ورود ${child.firstName}`,
+            state === 'present'
+              ? `ثبت خروج ${child.firstName}`
+              : state === 'left'
+                ? `${child.firstName}، رفته`
+                : `ثبت ورود ${child.firstName}`,
         }
       }),
     [day, attendance, absences, now],
@@ -125,9 +134,13 @@ export function TodayPage({
 
   const checkIn = (childId: string) => {
     const state = resolveState(childId, attendance, absences, now)
-    // کودکی که وارد شده، ضربه دوم دوباره ثبتش نمی‌کند. خروج مسیر جداگانه
-    // دارد که این جلسه ساخته نشده.
-    if (state === 'present' || state === 'left') return
+    // بخش ۵.۸: کودکی که حاضر است، ضربه بعدی خروجش را می‌گیرد. یک ضربه
+    // برای ورود، یک ضربه برای خروج، همان‌طور که سند می‌خواهد.
+    if (state === 'present') {
+      setCheckOutFor(childId)
+      return
+    }
+    if (state === 'left') return
 
     void queue
       .submit('text', () => data.checkIn({ childId, at: new Date() }))
@@ -174,6 +187,7 @@ export function TodayPage({
   }
 
   const sheetChild = day?.children.find((c) => c.id === sheetFor?.childId) ?? null
+  const checkOutChild = day?.children.find((c) => c.id === checkOutFor) ?? null
 
   const pendingMedication = (day?.medications ?? []).filter((m) => !m.givenAt)
   const activeClass = classes.find((c) => c.id === classId)
@@ -298,7 +312,7 @@ export function TodayPage({
       </div>
 
       <p className={`${styles.footerNote} t-caption`}>
-        ضربه: ثبت ورود · نگه‌داشتن: آورنده، وضعیت، دارو
+        ضربه: ورود و خروج · نگه‌داشتن: آورنده، وضعیت، دارو
       </p>
 
       {/*
@@ -310,8 +324,30 @@ export function TodayPage({
         بستن روز
       </button>
 
+      {/*
+        بخش ۱۳.۱: «دکمه شناور ثابت: ثبت رویداد (در همه تب‌ها)». آجری است
+        چون بخش ۱۲.۲ آجر را برای ایمنی و رویداد نگه داشته، و این تنها
+        جایی است در پنل مربی که آجر معنا دارد.
+      */}
+      <button type="button" className={fab.fab} onClick={() => setIncidentOpen(true)}>
+        <AlertIcon size={18} />
+        ثبت رویداد
+      </button>
+
       {/* کنش اصلی این صفحه، طبق وایرفریم بخش ۱۳.۱ */}
       <QuickAction onClick={onOpenBulk}>ثبت گروهی امروز</QuickAction>
+
+      {incidentOpen ? (
+        <IncidentSheet children={day?.children ?? []} onClose={() => setIncidentOpen(false)} />
+      ) : null}
+
+      {checkOutFor && checkOutChild ? (
+        <CheckOutSheet
+          child={checkOutChild}
+          onClose={() => setCheckOutFor(null)}
+          onDone={() => void load()}
+        />
+      ) : null}
 
       {sheetFor && sheetChild ? (
         <ArrivalSheet

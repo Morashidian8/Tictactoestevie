@@ -45,6 +45,11 @@ export type Attendance = {
   droppedByGuardianId: string | null
   arrivalCondition: ArrivalCondition
   arrivalPhotoUrl: string | null
+  /** چه کسی تحویل گرفت. برای روش code خالی است و نامش در کد ثبت شده. */
+  pickedUpById: string | null
+  pickupMethod: PickupMethod | null
+  /** بخش ۵.۸: دقایق تأخیر پس از ساعت پایان مهد، خودکار. */
+  lateMinutes: number
 }
 
 export type AbsenceNotice = {
@@ -98,6 +103,8 @@ export type ClassDay = {
   absences: AbsenceNotice[]
   medications: MedicationLog[]
   reports: DailyReport[]
+  incidents: Incident[]
+  photos: Photo[]
 }
 
 export type MealAmount = 'all' | 'most' | 'little' | 'none'
@@ -148,6 +155,76 @@ export type DaySummary = {
   sentAt: string | null
 }
 
+/** کسی که مجاز است کودک را تحویل بگیرد — بخش ۵.۸. */
+export type PickupOption = {
+  id: string
+  fullName: string
+  relation: string | null
+  photoUrl: string | null
+  /** سرپرست یا تحویل‌گیرنده مجاز. روش ثبت خروج از همین می‌آید. */
+  kind: 'guardian' | 'authorized'
+}
+
+export type CheckOutInput = {
+  childId: string
+  at: Date
+  method: PickupMethod
+  /** برای روش guardian و authorized. */
+  personId?: string | null
+  /** برای روش code. */
+  code?: string | null
+}
+
+/** نتیجه بررسی کد تحویل — بخش ۵.۸. */
+export type PickupCodeCheck = {
+  valid: boolean
+  bearerName: string | null
+  photoUrl: string | null
+  /** چرا رد شد. برای پیامی که به مربی نشان داده می‌شود. */
+  reason: 'ok' | 'unknown' | 'used' | 'wrong_day' | 'other_child'
+}
+
+export type IncidentType = 'fall' | 'conflict' | 'bite' | 'fever' | 'vomit' | 'other'
+export type IncidentSeverity = 'minor' | 'notify_parent' | 'medical_attention'
+export type IncidentLocation = 'classroom' | 'yard' | 'kitchen' | 'restroom' | 'stairs' | 'other'
+export type MinorCategory = 'fall_no_injury' | 'surface_scratch' | 'verbal_dispute' | 'food_spill'
+
+export type IncidentInput = {
+  childId: string
+  occurredAt: Date
+  type: IncidentType
+  severity: IncidentSeverity
+  location: IncidentLocation
+  minorCategory?: MinorCategory | null
+  description: string
+  actionTaken: string
+  hasPhoto?: boolean
+  headOrFace?: boolean
+  otherChildId?: string | null
+}
+
+export type Incident = {
+  id: string
+  childId: string
+  occurredAt: string
+  type: IncidentType
+  severity: IncidentSeverity
+  location: IncidentLocation
+  description: string
+  /** اگر شدت خودکار بالا رفته، دلیلش. */
+  escalationReason: 'photo_attached' | 'head_or_face' | 'repeated_7d' | null
+  requiresApproval: boolean
+}
+
+/** عکسی که به کودکان تگ خورده — بخش ۵.۵ و ۶.۶. */
+export type Photo = {
+  id: string
+  date: string
+  previewUrl: string
+  childIds: string[]
+  published: boolean
+}
+
 /** دارویی که سرپرست صبح تحویل داده — بخش ۵.۳. */
 export type MedicationInput = {
   childId: string
@@ -177,6 +254,28 @@ export interface DataAccess {
 
   /** استثنای یک کودک. پس از این، ثبت گروهی رویش نمی‌نشیند. */
   saveChildReport(childId: string, date: string, patch: ReportPatch): Promise<DailyReport>
+
+  /** کسانی که مجازند این کودک را تحویل بگیرند — بخش ۵.۸. */
+  listPickupOptions(childId: string): Promise<PickupOption[]>
+
+  /** بررسی کد تحویل. نام و عکس آورنده را می‌دهد تا مربی چهره را تطبیق دهد. */
+  checkPickupCode(childId: string, code: string, date: string): Promise<PickupCodeCheck>
+
+  /**
+   * ثبت خروج — بخش ۵.۸.
+   * اگر فرد در فهرست مجاز نباشد و کد هم نداشته باشد، رد می‌شود. این یک
+   * هشدار قابل رد شدن نیست.
+   */
+  checkOut(input: CheckOutInput): Promise<Attendance>
+
+  /** ثبت رویداد — بخش ۵.۶. شدت ممکن است خودکار بالا برود. */
+  createIncident(input: IncidentInput): Promise<Incident>
+
+  /** افزودن عکس با تگ کودکان — بخش ۵.۵. عکس بدون تگ منتشر نمی‌شود. */
+  addPhoto(date: string, previewUrl: string, childIds: string[]): Promise<Photo>
+
+  /** تگ‌های یک عکس را عوض می‌کند. */
+  setPhotoTags(photoId: string, childIds: string[]): Promise<Photo>
 
   /** خلاصه پایان روز — بخش ۵.۹. */
   getDaySummary(classId: string, date: string): Promise<DaySummary>

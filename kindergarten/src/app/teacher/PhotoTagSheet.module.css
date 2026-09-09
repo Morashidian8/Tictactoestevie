@@ -1,0 +1,66 @@
+.preview {
+  inline-size: 100%; max-block-size: 42dvh; object-fit: contain;
+  border-radius: var(--r-photo); background: var(--neutral-fill);
+}
+
+.legend { color: var(--ink-muted); font-weight: var(--weight-medium); }
+
+.children { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-4) var(--space-2); }
+.cell {
+  min-block-size: var(--touch-teacher);
+  display: flex; flex-direction: column; align-items: center; gap: var(--space-1);
+  border-radius: var(--r-card); padding-block: var(--space-1);
+}
+.cell[aria-pressed='true'] { background: var(--turquoise-tint); }
+.face { position: relative; inline-size: var(--avatar-md); block-size: var(--avatar-md);
+  border-radius: var(--r-chip); overflow: visible; }
+.faceInner { inline-size: 100%; block-size: 100%; border-radius: var(--r-chip); overflow: hidden; }
+.tick {
+  position: absolute; inset-block-end: -2px; inset-inline-end: -2px;
+  inline-size: 22px; block-size: 22px; border-radius: var(--r-chip);
+  background: var(--turquoise-dark); color: var(--surface);
+  display: grid; place-items: center; border: 2px solid var(--surface);
+}
+.name { color: var(--ink); font-weight: var(--weight-medium); }
+
+/* بخش ۵.۵: عکس بدون تگ منتشر نمی‌شود. */
+.rule {
+  display: flex; align-items: flex-start; gap: var(--space-2);
+  background: var(--saffron-tint); color: var(--ink);
+  padding: var(--space-3) var(--space-4); border-radius: var(--r-input);
+}
+.ruleIcon { flex: none; margin-block-start: 2px; }
+
+.primary {
+  flex: 1; min-block-size: var(--touch-teacher); border-radius: var(--r-input);
+  background: var(--turquoise-dark); color: var(--surface); font-weight: var(--weight-bold);
+}
+.primary:disabled { background: var(--disabled-bg); color: var(--disabled-fg); }
+.secondary {
+  min-block-size: var(--touch-teacher); padding-inline: var(--space-5);
+  border: 1px solid var(--border); border-radius: var(--r-input);
+  color: var(--ink); font-weight: var(--weight-medium);
+}
+
+/* نوار عکس‌های امروز در صفحه ثبت گروهی */
+.strip { display: flex; gap: var(--space-2); overflow-x: auto; padding-block: var(--space-1); }
+.stripItem { position: relative; flex: none; }
+.stripImg {
+  inline-size: 84px; block-size: 84px; object-fit: cover;
+  border-radius: var(--r-photo); border: 1px solid var(--border);
+}
+.stripBadge {
+  position: absolute; inset-block-end: 4px; inset-inline-end: 4px;
+  padding: 1px 7px; border-radius: var(--r-chip);
+  background: var(--surface); color: var(--ink);
+  border: 1px solid var(--border);
+}
+.stripBadgeWarn { background: var(--saffron-tint); }
+
+.addPhoto {
+  min-block-size: var(--touch-teacher);
+  inline-size: 100%;
+  border: 1px dashed var(--border); border-radius: var(--r-input);
+  color: var(--ink); font-weight: var(--weight-medium);
+}
+.hiddenInput { display: none; }

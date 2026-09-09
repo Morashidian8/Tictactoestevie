@@ -12,8 +12,14 @@ import type {
   ClassDay,
   DataAccess,
   BulkValues,
+  CheckOutInput,
   DailyReport,
   DaySummary,
+  Incident,
+  IncidentInput,
+  Photo,
+  PickupCodeCheck,
+  PickupOption,
   Guardian,
   MedicationInput,
   MedicationLog,
@@ -21,10 +27,13 @@ import type {
 } from '../types.ts'
 import { isInCurrentWeek } from '../../../i18n/week.ts'
 import {
+  AUTHORIZED,
   CENTER_ID,
   CHILDREN,
   CLASSES,
   GUARDIANS,
+  PICKUP_CODES,
+  seedPickupCodes,
   seedAbsences,
   seedAttendance,
   seedMedications,
@@ -35,6 +44,8 @@ type DayState = {
   absences: AbsenceNotice[]
   medications: MedicationLog[]
   reports: Map<string, DailyReport>
+  incidents: Incident[]
+  photos: Photo[]
   /** زمان ارسال گزارش‌های روز. پس از این، گزارش‌ها قفل‌اند. */
   sentAt: string | null
 }
@@ -44,11 +55,14 @@ const days = new Map<string, DayState>()
 function dayState(date: string): DayState {
   let state = days.get(date)
   if (!state) {
+    seedPickupCodes(date)
     state = {
       attendance: new Map(seedAttendance(date).map((row) => [row.childId, row])),
       absences: seedAbsences(date),
       medications: seedMedications(date),
       reports: new Map(),
+      incidents: [],
+      photos: [],
       sentAt: null,
     }
     days.set(date, state)
@@ -97,6 +111,8 @@ export function createLocalDataAccess(scope: AccessScope): DataAccess {
         absences: state.absences.filter((a) => ids.has(a.childId)),
         medications: state.medications.filter((m) => ids.has(m.childId)),
         reports: [...state.reports.values()].filter((r) => ids.has(r.childId)),
+        incidents: state.incidents.filter((i) => ids.has(i.childId)),
+        photos: state.photos,
       }
     },
 
@@ -123,6 +139,9 @@ export function createLocalDataAccess(scope: AccessScope): DataAccess {
           input.droppedByGuardianId ?? GUARDIANS[input.childId]?.[0]?.id ?? null,
         arrivalCondition: input.arrivalCondition ?? 'normal',
         arrivalPhotoUrl: input.arrivalPhotoUrl ?? null,
+        pickedUpById: null,
+        pickupMethod: null,
+        lateMinutes: 0,
       }
       state.attendance.set(input.childId, row)
 
@@ -195,6 +214,150 @@ export function createLocalDataAccess(scope: AccessScope): DataAccess {
       return next
     },
 
+    async listPickupOptions(childId): Promise<PickupOption[]> {
+      const child = CHILDREN.find((c) => c.id === childId)
+      if (!child?.classId) return []
+      assertVisible(child.classId)
+
+      // بخش ۶.۵: سرپرست محدودشده در فهرست تحویل‌گیرنده دیده نمی‌شود.
+      // شِما هم همین را می‌بندد؛ اینجا آینه همان است.
+      const guardians = (GUARDIANS[childId] ?? [])
+        .filter((g) => g.canPickup)
+        .map((g): PickupOption => ({
+          id: g.id,
+          fullName: g.fullName,
+          relation: g.relation,
+          photoUrl: null,
+          kind: 'guardian',
+        }))
+
+      const authorized = (AUTHORIZED[childId] ?? []).map((a): PickupOption => ({
+        ...a,
+        kind: 'authorized',
+      }))
+
+      return [...guardians, ...authorized]
+    },
+
+    async checkPickupCode(childId, code, date): Promise<PickupCodeCheck> {
+      const child = CHILDREN.find((c) => c.id === childId)
+      if (!child?.classId) throw new Error('کودک پیدا نشد')
+      assertVisible(child.classId)
+
+      const entry = PICKUP_CODES.find((c) => c.code === code.trim())
+      if (!entry) return { valid: false, bearerName: null, photoUrl: null, reason: 'unknown' }
+      if (entry.childId !== childId) {
+        return { valid: false, bearerName: entry.bearerName, photoUrl: null, reason: 'other_child' }
+      }
+      // بخش ۵.۸: کد یکبارمصرف و محدود به همان روز.
+      if (entry.usedAt) {
+        return { valid: false, bearerName: entry.bearerName, photoUrl: null, reason: 'used' }
+      }
+      if (entry.date !== date) {
+        return { valid: false, bearerName: entry.bearerName, photoUrl: null, reason: 'wrong_day' }
+      }
+
+      return {
+        valid: true,
+        bearerName: entry.bearerName,
+        photoUrl: entry.photoUrl,
+        reason: 'ok',
+      }
+    },
+
+    async checkOut(input: CheckOutInput): Promise<Attendance> {
+      const child = CHILDREN.find((c) => c.id === input.childId)
+      if (!child?.classId) throw new Error('کودک پیدا نشد')
+      assertVisible(child.classId)
+
+      const date = toLocalIsoDate(input.at)
+      const state = dayState(date)
+      const row = state.attendance.get(input.childId)
+      if (!row?.checkInAt) throw new Error('ورود این کودک هنوز ثبت نشده است.')
+      if (row.checkOutAt) throw new Error('خروجش قبلاً ثبت شده است.')
+
+      // بخش ۵.۸، قاعده سفت: فرد باید یا در فهرست مجاز باشد یا کد داشته
+      // باشد. وگرنه ثبت نمی‌شود و به مدیر ارجاع می‌رود.
+      if (input.method === 'code') {
+        const entry = PICKUP_CODES.find((c) => c.code === input.code?.trim())
+        if (!entry || entry.childId !== input.childId || entry.usedAt || entry.date !== date) {
+          throw new Error('این کد معتبر نیست. به مدیر ارجاع دهید.')
+        }
+        entry.usedAt = input.at.toISOString()
+      } else {
+        const allowed = (GUARDIANS[input.childId] ?? [])
+          .filter((g) => g.canPickup)
+          .map((g) => g.id)
+          .concat((AUTHORIZED[input.childId] ?? []).map((a) => a.id))
+        if (!input.personId || !allowed.includes(input.personId)) {
+          throw new Error('این فرد در فهرست مجاز این کودک نیست. به مدیر ارجاع دهید.')
+        }
+      }
+
+      const next: Attendance = {
+        ...row,
+        checkOutAt: input.at.toISOString(),
+        pickupMethod: input.method,
+        pickedUpById: input.personId ?? null,
+        // بخش ۵.۸: پس از ساعت پایان مهد، دقایق تأخیر خودکار ثبت می‌شود.
+        lateMinutes: lateMinutesAfter(input.at),
+      }
+      state.attendance.set(input.childId, next)
+      return next
+    },
+
+    async createIncident(input: IncidentInput): Promise<Incident> {
+      const child = CHILDREN.find((c) => c.id === input.childId)
+      if (!child?.classId) throw new Error('کودک پیدا نشد')
+      assertVisible(child.classId)
+
+      const date = toLocalIsoDate(input.occurredAt)
+      const state = dayState(date)
+
+      const { severity, escalationReason } = escalate(input, state.incidents)
+
+      const row: Incident = {
+        id: `inc-${Math.random().toString(36).slice(2, 10)}`,
+        childId: input.childId,
+        occurredAt: input.occurredAt.toISOString(),
+        type: input.type,
+        severity,
+        location: input.location,
+        description: input.description,
+        escalationReason,
+        // بخش ۳.۳: رویداد متوسط یا بالا بدون تأیید مدیر به سرپرست نمی‌رسد.
+        requiresApproval: severity !== 'minor',
+      }
+      state.incidents.push(row)
+      return row
+    },
+
+    async addPhoto(date, previewUrl, childIds): Promise<Photo> {
+      const state = dayState(date)
+      const row: Photo = {
+        id: `pho-${Math.random().toString(36).slice(2, 10)}`,
+        date,
+        previewUrl,
+        childIds,
+        // بخش ۵.۵: عکس بدون تگ منتشر نمی‌شود.
+        published: childIds.length > 0,
+      }
+      state.photos.push(row)
+      return row
+    },
+
+    async setPhotoTags(photoId, childIds): Promise<Photo> {
+      for (const state of days.values()) {
+        const photo = state.photos.find((p) => p.id === photoId)
+        if (photo) {
+          photo.childIds = childIds
+          photo.published = childIds.length > 0
+          return photo
+        }
+      }
+      throw new Error('عکس پیدا نشد')
+    },
+
     async getDaySummary(classId, date): Promise<DaySummary> {
       assertVisible(classId)
       const state = dayState(date)
@@ -224,7 +387,7 @@ export function createLocalDataAccess(scope: AccessScope): DataAccess {
         complete,
         incomplete,
         // تگ عکس هنوز ساخته نشده؛ وقتی استوریج وصل شد از photo_tag می‌آید.
-        untaggedPhotos: 0,
+        untaggedPhotos: state.photos.filter((p) => p.childIds.length === 0).length,
         withoutNoteThisWeek: children.filter((c) => !noted.has(c.id)).map((c) => c.id),
         sentAt: state.sentAt,
       }
@@ -289,6 +452,49 @@ export function currentMoodBand(now: Date = new Date()): MoodBand {
   if (hour < 12) return 'morning'
   if (hour < 15) return 'noon'
   return 'afternoon'
+}
+
+/**
+ * بخش ۵.۸: پس از ساعت پایان مهد، شمارنده فعال و دقایق تأخیر خودکار ثبت
+ * و به صورتحساب اضافه می‌شود. ساعت پایان از تنظیمات مرکز می‌آید؛ تا وصل
+ * شدن آن، پیش‌فرض سند به کار می‌رود.
+ */
+const WORK_END_HOUR = 16
+const WORK_END_MINUTE = 30
+
+function lateMinutesAfter(at: Date): number {
+  const end = new Date(at)
+  end.setHours(WORK_END_HOUR, WORK_END_MINUTE, 0, 0)
+  return Math.max(0, Math.round((at.getTime() - end.getTime()) / 60000))
+}
+
+/**
+ * ارتقای خودکار شدت — بخش ۵.۶.
+ * سه حالت: عکس ضمیمه، ناحیه سر یا صورت، و بیش از دو رویداد جزئی در ۷ روز
+ * گذشته برای همان کودک. همان منطقی که تریگر دیتابیس هم اجرا می‌کند.
+ */
+function escalate(
+  input: IncidentInput,
+  todayIncidents: Incident[],
+): { severity: Incident['severity']; escalationReason: Incident['escalationReason'] } {
+  if (input.severity !== 'minor') {
+    return { severity: input.severity, escalationReason: null }
+  }
+  if (input.hasPhoto) return { severity: 'notify_parent', escalationReason: 'photo_attached' }
+  if (input.headOrFace) return { severity: 'notify_parent', escalationReason: 'head_or_face' }
+
+  const cutoff = input.occurredAt.getTime() - 7 * 86_400_000
+  let recent = 0
+  for (const state of days.values()) {
+    for (const past of state.incidents) {
+      if (past.childId !== input.childId || past.severity !== 'minor') continue
+      if (new Date(past.occurredAt).getTime() >= cutoff) recent += 1
+    }
+  }
+  void todayIncidents
+  if (recent > 2) return { severity: 'notify_parent', escalationReason: 'repeated_7d' }
+
+  return { severity: 'minor', escalationReason: null }
 }
 
 function toLocalIsoDate(date: Date): string {

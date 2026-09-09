@@ -1,0 +1,95 @@
+.step { display: flex; flex-direction: column; gap: var(--space-3); }
+.legend { color: var(--ink-muted); font-weight: var(--weight-medium); }
+
+.progress { color: var(--ink-muted); }
+
+.grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--space-2); }
+
+.option {
+  min-block-size: var(--touch-teacher);
+  padding-inline: var(--space-3);
+  border: 1px solid var(--border); border-radius: var(--r-input);
+  background: var(--surface); color: var(--ink);
+  font-weight: var(--weight-medium);
+}
+.option[aria-pressed='true'] {
+  background: var(--turquoise-tint); border-color: var(--turquoise);
+  font-weight: var(--weight-bold);
+}
+
+.children { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-4) var(--space-2); }
+.childCell {
+  min-block-size: var(--touch-teacher);
+  display: flex; flex-direction: column; align-items: center; gap: var(--space-1);
+  border-radius: var(--r-card); padding-block: var(--space-1);
+}
+.childCell[aria-pressed='true'] { background: var(--turquoise-tint); }
+.childFace { inline-size: var(--avatar-md); block-size: var(--avatar-md);
+  border-radius: var(--r-chip); overflow: hidden; }
+.childName { color: var(--ink); font-weight: var(--weight-medium); }
+
+/* شدت: پیامد هر گزینه همان‌جا نوشته می‌شود — بخش ۱۳.۱ */
+.severity {
+  display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-1);
+  min-block-size: var(--touch-teacher);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--border); border-radius: var(--r-input);
+  background: var(--surface); text-align: start; inline-size: 100%;
+}
+.severity[aria-pressed='true'] { background: var(--turquoise-tint); border-color: var(--turquoise); }
+.severityName { color: var(--ink); font-weight: var(--weight-bold); }
+.severityWhat { color: var(--ink-muted); }
+
+.field {
+  min-block-size: var(--touch-teacher); inline-size: 100%;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--border); border-radius: var(--r-input);
+  background: var(--surface); color: var(--ink);
+  font-family: inherit; font-size: var(--text-body-lg);
+  line-height: var(--text-body-lg-line); resize: vertical;
+}
+.field:focus { border-color: var(--turquoise); }
+
+.escalated {
+  display: flex; align-items: flex-start; gap: var(--space-2);
+  background: var(--saffron-tint); color: var(--ink);
+  padding: var(--space-3) var(--space-4); border-radius: var(--r-input);
+}
+.escalatedIcon { flex: none; margin-block-start: 2px; }
+
+.done {
+  display: flex; flex-direction: column; gap: var(--space-2);
+  padding: var(--space-5) var(--space-4); text-align: center;
+}
+.doneTitle { color: var(--ink); font-weight: var(--weight-bold); }
+.doneWhat { color: var(--ink-muted); }
+
+.primary {
+  flex: 1; min-block-size: var(--touch-teacher); border-radius: var(--r-input);
+  background: var(--turquoise-dark); color: var(--surface); font-weight: var(--weight-bold);
+}
+.primary:active:not(:disabled) { filter: brightness(0.9); }
+.primary:disabled { background: var(--disabled-bg); color: var(--disabled-fg); }
+
+.secondary {
+  min-block-size: var(--touch-teacher); padding-inline: var(--space-5);
+  border: 1px solid var(--border); border-radius: var(--r-input);
+  color: var(--ink); font-weight: var(--weight-medium);
+}
+
+/* دکمه شناور، در همه تب‌ها — بخش ۱۳.۱ */
+.fab {
+  position: fixed;
+  inset-block-end: calc(var(--sticky-bar-height) + var(--space-4) + env(safe-area-inset-bottom));
+  inset-inline-start: var(--space-4);
+  z-index: 20;
+  min-block-size: var(--touch-teacher);
+  padding-inline: var(--space-4);
+  border-radius: var(--r-chip);
+  background: var(--brick);
+  color: var(--surface);
+  font-weight: var(--weight-bold);
+  box-shadow: var(--shadow-2);
+  display: inline-flex; align-items: center; gap: var(--space-2);
+}
+.fab:active { filter: brightness(0.92); }

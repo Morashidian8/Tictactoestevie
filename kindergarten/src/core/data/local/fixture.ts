@@ -8,7 +8,15 @@
  *
  * هیچ‌کدام از این‌ها در ساخت تولید بارگذاری نمی‌شود.
  */
-import type { AbsenceNotice, Attendance, Child, ClassRoom, Guardian, MedicationLog } from '../types.ts'
+import type {
+  AbsenceNotice,
+  Attendance,
+  Child,
+  ClassRoom,
+  Guardian,
+  MedicationLog,
+  PickupOption,
+} from '../types.ts'
 
 export const CENTER_ID = 'centre-aftab'
 
@@ -51,6 +59,45 @@ export const GUARDIANS: Record<string, Guardian[]> = Object.fromEntries(
   ]),
 )
 
+/**
+ * تحویل‌گیرندگان مجاز، غیر از سرپرستان — بخش ۵.۸.
+ * فقط برای چند کودک تعریف شده تا هر دو حالت آزمودنی باشد: کودکی که
+ * فهرستش فقط سرپرست دارد، و کودکی که فرد سوم هم دارد.
+ */
+export const AUTHORIZED: Record<string, Omit<PickupOption, 'kind'>[]> = {
+  'child-1': [
+    { id: 'auth-1', fullName: 'زهرا احمدی', relation: 'مادربزرگ', photoUrl: null },
+  ],
+  'child-4': [
+    { id: 'auth-2', fullName: 'حسن توکلی', relation: 'عمو', photoUrl: null },
+  ],
+}
+
+/**
+ * کدهای تحویل امروز — بخش ۵.۸.
+ * سرپرست از اپ خودش کد می‌گیرد و به فرد می‌دهد. اینجا دو نمونه هست تا
+ * مسیر درست و مسیر رد شدن هر دو آزمودنی باشد.
+ */
+export type PickupCodeEntry = {
+  code: string
+  childId: string
+  date: string
+  bearerName: string
+  photoUrl: string | null
+  usedAt: string | null
+}
+
+export const PICKUP_CODES: PickupCodeEntry[] = []
+
+/** کدهای نمونه برای همان روزی که اپ باز می‌شود. */
+export function seedPickupCodes(date: string): void {
+  if (PICKUP_CODES.some((c) => c.date === date)) return
+  PICKUP_CODES.push(
+    { code: '4729', childId: 'child-2', date, bearerName: 'راننده سرویس، آقای رستمی', photoUrl: null, usedAt: null },
+    { code: '8315', childId: 'child-6', date, bearerName: 'خاله، مریم صادقی', photoUrl: null, usedAt: null },
+  )
+}
+
 /** وضعیت شروع روز: چند کودک آمده‌اند، چند نفر غیبتشان اعلام شده. */
 export function seedAttendance(date: string): Attendance[] {
   const arrived: [string, string][] = [
@@ -66,6 +113,9 @@ export function seedAttendance(date: string): Attendance[] {
     droppedByGuardianId: `${childId}-g1`,
     arrivalCondition: 'normal' as const,
     arrivalPhotoUrl: null,
+    pickedUpById: null,
+    pickupMethod: null,
+    lateMinutes: 0,
   }))
 }
 

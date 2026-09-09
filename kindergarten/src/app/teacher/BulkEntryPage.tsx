@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   AvatarFace,
   CheckIcon,
@@ -19,6 +19,9 @@ import {
   type Mood,
 } from '../../core/data/index.ts'
 import { ChildReportSheet, LUNCH_LABEL, MOOD_LABEL } from './ChildReportSheet.tsx'
+import { PhotoTagSheet } from './PhotoTagSheet.tsx'
+import photoStyles from './PhotoTagSheet.module.css'
+import { compressImage } from '../../core/media/index.ts'
 import styles from './BulkEntryPage.module.css'
 
 /**
@@ -56,6 +59,10 @@ export function BulkEntryPage({ onBack }: Props) {
   const [napStart, setNapStart] = useState('')
   const [appliedAt, setAppliedAt] = useState<number | null>(null)
   const [sheetFor, setSheetFor] = useState<string | null>(null)
+  // عکسی که تازه انتخاب شده و هنوز تگ نخورده — بخش ۵.۵.
+  const [pendingPhoto, setPendingPhoto] = useState<string | null>(null)
+  const [retagging, setRetagging] = useState<string | null>(null)
+  const photoInput = useRef<HTMLInputElement>(null)
   const [error, setError] = useState<string | null>(null)
   const [pending, setPending] = useState(0)
 
@@ -115,6 +122,18 @@ export function BulkEntryPage({ onBack }: Props) {
   const suggestedNames = children.filter((c) => suggested.has(c.id)).map((c) => c.firstName)
 
   const sheetChild = children.find((c) => c.id === sheetFor) ?? null
+  const photos = day?.photos ?? []
+  const retagPhoto = photos.find((p) => p.id === retagging) ?? null
+
+  const pickPhoto = async (file: File | undefined) => {
+    if (!file) return
+    try {
+      const compressed = await compressImage(file)
+      setPendingPhoto(compressed.previewUrl)
+    } catch {
+      setError('این عکس خوانده نشد. دوباره انتخاب کنید.')
+    }
+  }
   const nothingChosen = !lunch && !mood && !napStart.trim()
 
   return (
@@ -223,6 +242,60 @@ export function BulkEntryPage({ onBack }: Props) {
           </section>
         ) : null}
 
+        {/*
+          بخش ۵.۵: عکس در همین پنجره طلایی از گالری انتخاب و تگ می‌شود.
+          صف عکس از صف متن جداست (بخش ۱۴.۲)، پس آپلود سنگین ثبت روز را
+          عقب نمی‌اندازد.
+        */}
+        <section className={styles.bulk} aria-label="عکس‌های امروز">
+          <span className={`${styles.rowLabel} t-caption`}>
+            عکس‌های امروز {photos.length > 0 ? `(${formatCount(photos.length)})` : ''}
+          </span>
+
+          {photos.length > 0 ? (
+            <div className={photoStyles.strip}>
+              {photos.map((photo) => (
+                <button
+                  key={photo.id}
+                  type="button"
+                  className={photoStyles.stripItem}
+                  onClick={() => setRetagging(photo.id)}
+                  aria-label={`تگ‌های عکس، ${formatCount(photo.childIds.length)} کودک`}
+                >
+                  <img className={photoStyles.stripImg} src={photo.previewUrl} alt="" />
+                  <span
+                    className={`${photoStyles.stripBadge} ${
+                      photo.childIds.length === 0 ? photoStyles.stripBadgeWarn : ''
+                    } t-caption`}
+                  >
+                    {photo.childIds.length === 0
+                      ? 'بدون تگ'
+                      : formatCount(photo.childIds.length)}
+                  </span>
+                </button>
+              ))}
+            </div>
+          ) : null}
+
+          <button
+            type="button"
+            className={`${photoStyles.addPhoto} t-body-lg`}
+            onClick={() => photoInput.current?.click()}
+          >
+            افزودن عکس از گالری
+          </button>
+          <input
+            ref={photoInput}
+            className={photoStyles.hiddenInput}
+            type="file"
+            accept="image/*"
+            onChange={(event) => {
+              void pickPhoto(event.target.files?.[0])
+              event.target.value = ''
+            }}
+          />
+        </section>
+
         {/* ── پایین: فهرست کودکان ── */}
         <div className={styles.listHead}>
           <span className={`${styles.listTitle} t-h2`}>کودکان</span>
@@ -257,6 +330,31 @@ export function BulkEntryPage({ onBack }: Props) {
       <QuickAction onClick={applyToAll} disabled={nothingChosen}>
         اعمال روی همه
       </QuickAction>
+
+      {pendingPhoto ? (
+        <PhotoTagSheet
+          previewUrl={pendingPhoto}
+          children={children}
+          onClose={() => setPendingPhoto(null)}
+          onSave={async (childIds) => {
+            await queue.submit('photo', () => data.addPhoto(date, pendingPhoto, childIds))
+            await load()
+          }}
+        />
+      ) : null}
+
+      {retagPhoto ? (
+        <PhotoTagSheet
+          previewUrl={retagPhoto.previewUrl}
+          children={children}
+          initialTags={retagPhoto.childIds}
+          onClose={() => setRetagging(null)}
+          onSave={async (childIds) => {
+            await queue.submit('photo', () => data.setPhotoTags(retagPhoto.id, childIds))
+            await load()
+          }}
+        />
+      ) : null}
 
       {sheetChild ? (
         <ChildReportSheet

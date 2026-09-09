@@ -7,6 +7,7 @@
  * این تست همان چیزی را می‌آزماید که تست واحد نمی‌تواند: اینکه ورود،
  * انتخاب حساب، ثبت ورود و جابه‌جایی حساب واقعاً به هم وصل‌اند.
  */
+import { writeFileSync } from 'node:fs'
 import { chromium } from 'playwright'
 
 const BASE = process.env.BASE_URL ?? 'http://127.0.0.1:5199'
@@ -74,11 +75,107 @@ const [p1] = digits(before)
 const [p2] = digits(after)
 check(p1 !== p2, `شمار حاضران از ${p1} به ${p2} رفت`)
 
-console.log('▸ ضربه دوم روی کودک حاضر دوباره ثبتش نمی‌کند')
-const presentLabel = await page.locator('button[aria-label$="، گزینه‌ها"] >> nth=0').getAttribute('aria-label')
-await page.click(`button[aria-label="${presentLabel}"]`)
+console.log('▸ ضربه دوم روی کودک حاضر، خروجش را می‌گیرد نه ورود دوباره')
+const presentChild = await page
+  .locator('button[aria-label^="ثبت خروج"] >> nth=0')
+  .getAttribute('aria-label')
+await page.click(`button[aria-label="${presentChild}"]`)
+await page.waitForSelector('[role="dialog"]')
+check(true, `ضربه دوم شیت خروج را باز کرد: ${presentChild}`)
+check((await tallyText()) === after, 'و ورود دوباره ثبت نشد')
+await page.click('[role="dialog"] button[aria-label="بستن"]')
+await page.waitForTimeout(300)
+
+console.log('▸ بخش ۵.۸: خروج و تحویل')
+const D = '[role="dialog"] '
+const present = await page.locator('button[aria-label^="ثبت خروج"] >> nth=0').getAttribute('aria-label')
+await page.click(`button[aria-label="${present}"]`)
+await page.waitForSelector('[role="dialog"]')
+check(true, 'ضربه روی کودک حاضر، شیت خروج را باز می‌کند')
+check(
+  (await page.locator(D + '[class*="personName"]').count()) >= 2,
+  'فهرست مجاز تحویل‌گیرندگان نشان داده می‌شود',
+)
+check(
+  (await page.locator('text=/اگر نه در این فهرست است و نه کد دارد/').count()) === 1,
+  'قاعده سفت به مربی گفته می‌شود: بدون فهرست و بدون کد، خروج ثبت نمی‌شود',
+)
+
+await page.click(D + 'button:has-text("کسی غیر از این‌ها آمده")')
+await page.fill('input[aria-label="کد تحویل"]', '9999')
 await page.waitForTimeout(400)
-check((await tallyText()) === after, 'نوار خلاصه پس از ضربه دوم عوض نشد')
+check(
+  await page.locator(D + '[class*="primary"]').first().isDisabled(),
+  'کد ناموجود، ثبت خروج را باز نمی‌کند',
+)
+check(
+  (await page.locator('text=/چنین کدی وجود ندارد/').count()) === 1,
+  'پیام می‌گوید چه شد و چه باید کرد',
+)
+
+await page.click(D + 'button:has-text("بازگشت به فهرست مجاز")')
+await page.click(D + '[class*="person"] >> nth=0')
+check(
+  await page.locator(D + '[class*="primary"]').first().isEnabled(),
+  'با انتخاب فرد مجاز، ثبت خروج باز می‌شود',
+)
+const outLabel = await page.locator(D + '[class*="primary"]').first().innerText()
+check(/\d|[۰-۹]/.test(outLabel), `دکمه ساعت تحویل را نشان می‌دهد: ${outLabel}`)
+await page.click(D + '[class*="primary"]')
+await page.waitForTimeout(700)
+check(
+  (await page.locator(`button[aria-label="${present.replace('ثبت خروج ', '')}، رفته"]`).count()) === 1,
+  'کودک به حالت «رفته» رفت',
+)
+
+console.log('▸ بخش ۵.۶: ثبت رویداد از دکمه شناور')
+await page.click('button:has-text("ثبت رویداد")')
+await page.waitForSelector('[role="dialog"]')
+check(true, 'دکمه شناور رویداد از صفحه امروز در دسترس است')
+await page.click(D + '[class*="childCell"] >> nth=0')
+await page.click(D + 'button:has-text("درگیری")')
+await page.waitForTimeout(250)
+const sev = await page.locator(D + '[class*="severityName"]').allInnerTexts()
+check(!sev.includes('جزئی'), 'برای درگیری، گزینه «جزئی» اصلاً نمایش داده نمی‌شود')
+check(
+  (await page.locator('text=/درگیری بین دو کودک هرگز جزئی/').count()) === 1,
+  'دلیلش به مربی گفته می‌شود',
+)
+await page.click(D + 'button[aria-label="بستن"]')
+await page.waitForTimeout(300)
+
+await page.click('button:has-text("ثبت رویداد")')
+await page.click(D + '[class*="childCell"] >> nth=1')
+await page.click(D + 'button:has-text("زمین خوردن")')
+await page.waitForTimeout(200)
+check(
+  (await page.locator('text=/مستقیم به خانواده اطلاع داده می‌شود/').count()) === 1,
+  'پیامد هر شدت همان‌جا نوشته شده',
+)
+await page.click(D + '[class*="severity"]:has-text("جزئی")')
+await page.waitForTimeout(200)
+check(
+  (await page.locator(D + 'button:has-text("خراش سطحی")').count()) === 1,
+  'دسته‌های رویداد جزئی بسته و از پیش تعریف‌شده‌اند',
+)
+await page.click(D + 'button:has-text("خراش سطحی")')
+await page.click(D + '[class*="primary"]:has-text("ادامه")')
+await page.click(D + 'button:has-text("کلاس")')
+await page.fill('textarea[aria-label="توضیح رویداد"]', 'به لبه میز خورد.')
+await page.click(D + 'button:has-text("ناحیه سر یا صورت بود")')
+await page.waitForTimeout(250)
+check(
+  (await page.locator('text=/شدت خودکار بالا می‌رود/').count()) === 1,
+  'پیش از ثبت، ارتقای خودکار شدت هشدار داده می‌شود',
+)
+await page.click(D + '[class*="primary"]:has-text("ثبت رویداد")')
+await page.waitForSelector('[class*="doneTitle"]')
+check(
+  (await page.locator('[class*="doneTitle"]').innerText()) === 'برای مدیر فرستاده شد',
+  'رویداد ارتقایافته اول برای مدیر می‌رود، نه خانواده',
+)
+await page.click(D + '[class*="primary"]:has-text("بستن")')
+await page.waitForTimeout(300)
 
 console.log('▸ بخش ۵.۳: شیت استثناهای ورود')
 const hold = async (label) => {
@@ -197,6 +294,49 @@ await page.fill('textarea[aria-label="یادداشت مربی"]', 'دو بار �
 await page.waitForTimeout(250)
 check((await warned()) === 0, 'متن مشاهده‌ای هشدار نمی‌گیرد')
 await page.click('[role="dialog"] button:has-text("انصراف")')
+
+console.log('▸ بخش ۵.۵: عکس با تگ')
+const dataUrl = await page.evaluate(() => {
+  const c = document.createElement('canvas')
+  c.width = 800; c.height = 600
+  const x = c.getContext('2d')
+  x.fillStyle = '#E4F2F0'; x.fillRect(0, 0, 800, 600)
+  x.fillStyle = '#0F8C86'; x.beginPath(); x.arc(400, 300, 150, 0, Math.PI * 2); x.fill()
+  return c.toDataURL('image/png')
+})
+writeFileSync('/tmp/kg-sample.png', Buffer.from(dataUrl.split(',')[1], 'base64'))
+
+await page.setInputFiles('input[type="file"]', '/tmp/kg-sample.png')
+await page.waitForSelector('[role="dialog"]', { timeout: 10000 })
+check(true, 'عکس انتخاب و فشرده شد، شیت تگ باز شد')
+check(
+  await page.locator(D + '[class*="primary"]').first().isDisabled(),
+  'عکس بدون تگ ثبت نمی‌شود',
+)
+check(
+  (await page.locator('text=/عکس بدون تگ برای هیچ خانواده‌ای فرستاده نمی‌شود/').count()) === 1,
+  'دلیلش به مربی گفته می‌شود',
+)
+await page.click(D + '[class*="cell"] >> nth=0')
+await page.click(D + '[class*="cell"] >> nth=1')
+check(
+  await page.locator(D + '[class*="primary"]').first().isEnabled(),
+  'با تگ خوردن، ثبت باز می‌شود',
+)
+await page.click(D + '[class*="primary"]')
+await page.waitForTimeout(800)
+check(
+  (await page.locator('[class*="stripBadge"]').count()) === 1,
+  'عکس در نوار عکس‌های امروز نشست',
+)
+await page.click('[class*="stripItem"]')
+await page.waitForSelector('[role="dialog"]')
+check(
+  (await page.locator(D + '[aria-pressed="true"]').count()) === 2,
+  'باز کردن دوباره، تگ‌های قبلی را نگه می‌دارد',
+)
+await page.click(D + 'button:has-text("انصراف")')
+await page.waitForTimeout(300)
 
 await page.click('[aria-label="بازگشت به امروز"]')
 await page.waitForSelector('text=ثبت گروهی امروز')

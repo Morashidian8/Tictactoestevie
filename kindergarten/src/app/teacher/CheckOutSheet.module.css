@@ -1,0 +1,75 @@
+.section { display: flex; flex-direction: column; gap: var(--space-3); }
+.legend { color: var(--ink-muted); font-weight: var(--weight-medium); }
+.options { display: flex; flex-direction: column; gap: var(--space-2); }
+
+.person {
+  min-block-size: var(--touch-teacher);
+  display: flex; align-items: center; gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border); border-radius: var(--r-input);
+  background: var(--surface); color: var(--ink); text-align: start;
+}
+.person[aria-pressed='true'] { background: var(--turquoise-tint); border-color: var(--turquoise); }
+
+.personFace { inline-size: var(--avatar-sm); block-size: var(--avatar-sm);
+  border-radius: var(--r-chip); background: var(--neutral-fill); flex: none;
+  display: grid; place-items: center; color: var(--ink-muted); overflow: hidden; }
+.personMain { flex: 1; min-inline-size: 0; display: flex; flex-direction: column; }
+.personName { font-weight: var(--weight-medium); }
+.personRelation { color: var(--ink-muted); }
+
+.codeToggle {
+  min-block-size: var(--touch-teacher);
+  border: 1px dashed var(--border); border-radius: var(--r-input);
+  color: var(--ink); font-weight: var(--weight-medium);
+}
+
+.codeInput {
+  min-block-size: var(--touch-teacher); inline-size: 100%;
+  padding-inline: var(--space-4);
+  border: 1px solid var(--border); border-radius: var(--r-input);
+  background: var(--surface); color: var(--ink);
+  font-family: inherit; font-size: var(--text-h2);
+  direction: ltr; text-align: center; letter-spacing: 0.4em;
+  font-variant-numeric: tabular-nums;
+}
+.codeInput:focus { border-color: var(--turquoise); }
+
+/* تأیید چهره. بخش ۵.۸: مربی نام و عکس را می‌بیند و تطبیق می‌دهد. */
+.match {
+  display: flex; align-items: center; gap: var(--space-3);
+  background: var(--turquoise-tint); border-radius: var(--r-card);
+  padding: var(--space-4);
+}
+.matchFace { inline-size: var(--avatar-lg); block-size: var(--avatar-lg);
+  border-radius: var(--r-chip); background: var(--surface); flex: none;
+  display: grid; place-items: center; color: var(--ink-muted); overflow: hidden; }
+.matchMain { flex: 1; display: flex; flex-direction: column; gap: var(--space-1); }
+.matchName { color: var(--ink); font-weight: var(--weight-bold); }
+.matchAsk { color: var(--ink-muted); }
+
+.late {
+  display: flex; align-items: center; gap: var(--space-2);
+  background: var(--saffron-tint); color: var(--ink);
+  padding: var(--space-3) var(--space-4); border-radius: var(--r-input);
+}
+
+.blocked {
+  display: flex; align-items: flex-start; gap: var(--space-2);
+  background: var(--brick-tint); color: var(--ink);
+  padding: var(--space-3) var(--space-4); border-radius: var(--r-input);
+}
+.blockedIcon { color: var(--brick); flex: none; margin-block-start: 2px; }
+
+.primary {
+  flex: 1; min-block-size: var(--touch-teacher); border-radius: var(--r-input);
+  background: var(--turquoise-dark); color: var(--surface); font-weight: var(--weight-bold);
+}
+.primary:active:not(:disabled) { filter: brightness(0.9); }
+.primary:disabled { background: var(--disabled-bg); color: var(--disabled-fg); }
+
+.secondary {
+  min-block-size: var(--touch-teacher); padding-inline: var(--space-5);
+  border: 1px solid var(--border); border-radius: var(--r-input);
+  color: var(--ink); font-weight: var(--weight-medium);
+}
