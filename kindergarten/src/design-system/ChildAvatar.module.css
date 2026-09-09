@@ -13,6 +13,9 @@
   display: grid;
   place-items: center;
   flex: none;
+  /* حلقه وضعیت به‌جای border کشیده می‌شود تا اندازه آواتار را جابه‌جا
+     نکند و لبه چهره را نبُرد. */
+  box-shadow: 0 0 0 2px var(--neutral-fill-strong);
 }
 
 .sm {
@@ -35,11 +38,10 @@
   object-fit: cover;
 }
 
-/* وقتی عکس نیست، حرف اول نام. هرگز «کودک شماره ...» — بخش ۱۲.۸ */
-.initial {
-  color: var(--ink-muted);
-  font-weight: var(--weight-bold);
-  user-select: none;
+/* چهره جایگزین عکس، هم‌اندازه قاب */
+.frame > svg {
+  inline-size: 100%;
+  block-size: 100%;
 }
 
 /*
@@ -50,29 +52,28 @@
 
 /* نیامده: خنثی، بدون رنگ */
 .notArrived {
-  border: 2px solid var(--neutral-fill-strong);
+  box-shadow: 0 0 0 2px var(--neutral-fill-strong);
 }
 
 /* غیبت اعلام‌شده: حالت مورد انتظار است، نه هشدار، پس رنگ نمی‌گیرد */
 .absenceDeclared {
-  border: 2px solid var(--neutral-fill-strong);
+  box-shadow: 0 0 0 2px var(--neutral-fill-strong);
 }
 
 /* حاضر: تنها رنگ فعال شبکه */
 .present {
-  border: 2px solid var(--turquoise);
-  background: var(--turquoise-tint);
+  box-shadow: 0 0 0 2px var(--turquoise);
 }
 
 /* رفته: کم‌رنگ */
 .left {
-  border: 2px solid var(--neutral-fill-strong);
-  opacity: 0.6;
+  box-shadow: 0 0 0 2px var(--neutral-fill-strong);
+  opacity: 0.55;
 }
 
 /* بی‌خبر پس از ۹: مثل نیامده، به‌علاوه نقطه آجری */
 .unaccounted {
-  border: 2px solid var(--neutral-fill-strong);
+  box-shadow: 0 0 0 2px var(--neutral-fill-strong);
 }
 
 /* نشان وضعیت روی گوشه آواتار */

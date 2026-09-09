@@ -1,0 +1,123 @@
+/**
+ * چهره جای عکس.
+ *
+ * صفحه «امروز» حول شبکه عکس طراحی شده (بخش ۱۲.۶). تا وقتی مهد عکس کودکان
+ * را نداده، چیزی باید جای عکس بنشیند. حرف اول اسم روی دایره خاکستری،
+ * شبکه را به فهرستی از حروف تبدیل می‌کند که مربی نمی‌تواند در یک نگاه
+ * بخواند؛ و خواندن در یک نگاه کل هدف این صفحه است.
+ *
+ * پس یک چهره ساده کشیده می‌شود. سه قاعده در انتخابش رعایت شده:
+ *
+ * ۱. چهره از شناسه کودک ساخته می‌شود، نه تصادفی، تا هر بار یکی بماند و
+ *    مربی به آن عادت کند.
+ * ۲. هیچ ویژگی‌ای از داده واقعی کودک نمی‌آید. نه جنسیت، نه سن، نه هیچ
+ *    چیز دیگر. بخش ۱۰.۱ می‌گوید هیچ برچسبی روی کودک نمی‌خورد، و تصویری
+ *    که از روی جنسیت ساخته شود یک برچسب بصری است.
+ * ۳. رنگ پس‌زمینه از پالت بخش ۱۲ می‌آید، نه از رنگ دلخواه.
+ */
+
+/**
+ * درهم‌ساز کوچک و پایدار. برای امنیت نیست، برای ثبات ظاهر است.
+ * ضرب در عدد اول و چرخش، تا شناسه‌های پشت‌سرهم مثل child-1 و child-2 در
+ * یک سطل نیفتند و شبکه یکنواخت به نظر نرسد.
+ */
+function hashOf(seed: string): number {
+  let hash = 2166136261
+  for (let i = 0; i < seed.length; i += 1) {
+    hash ^= seed.charCodeAt(i)
+    hash = Math.imul(hash, 16777619)
+  }
+  return hash >>> 0
+}
+
+/** بیت‌های مستقل از یک درهم، تا انتخاب‌ها با هم همبسته نشوند. */
+function pick<T>(hash: number, shift: number, list: readonly T[]): T {
+  return list[((hash >>> shift) ^ (hash >>> (shift + 11))) % list.length]!
+}
+
+/**
+ * رنگ پوست و مو عمداً متنوع‌اند. مهد ایرانی یکدست نیست و شبکه‌ای که همه
+ * چهره‌هایش یک رنگ باشد، هم نادرست است هم برای تشخیص بی‌فایده.
+ */
+const SKIN = ['#F4D2AE', '#E7B78C', '#D19A6C', '#B0764B', '#8D5A38'] as const
+const HAIR = ['#2B2724', '#43301F', '#6B4A2E', '#141312', '#8A5A33'] as const
+const WEAR = ['#0F8C86', '#4C8B6B', '#DDA02C', '#B0402C', '#5A6E76'] as const
+
+/** پس‌زمینه از رنگ‌های ملایم بخش ۱۲، تا شبکه یکدست بماند. */
+const BACKDROP = [
+  'var(--turquoise-tint)',
+  'var(--saffron-tint)',
+  'var(--sage-tint)',
+  'var(--brick-tint)',
+  'var(--neutral-fill)',
+] as const
+
+type Props = {
+  /** شناسه کودک. چهره از همین ساخته می‌شود و ثابت می‌ماند. */
+  seed: string
+}
+
+export function AvatarFace({ seed }: Props) {
+  const hash = hashOf(seed)
+  const skin = pick(hash, 0, SKIN)
+  const hair = pick(hash, 5, HAIR)
+  const wear = pick(hash, 13, WEAR)
+  const backdrop = pick(hash, 19, BACKDROP)
+  const longHair = ((hash >>> 25) & 1) === 1
+  const clipId = `av-${hash.toString(36)}`
+
+  return (
+    <svg
+      viewBox="0 0 64 64"
+      width="100%"
+      height="100%"
+      aria-hidden
+      style={{ display: 'block', borderRadius: 'inherit' }}
+    >
+      <defs>
+        <clipPath id={clipId}>
+          <circle cx="32" cy="32" r="32" />
+        </clipPath>
+      </defs>
+
+      <g clipPath={`url(#${clipId})`}>
+        <rect width="64" height="64" fill={backdrop} />
+
+        {/* شانه‌ها. از پایین قاب بریده می‌شوند، پس بدن کامل کشیده نمی‌شود. */}
+        <path d="M8 64c0-11 10-18 24-18s24 7 24 18z" fill={wear} />
+
+        {/* موی بلند پشت سر، پیش از صورت کشیده می‌شود */}
+        {longHair ? (
+          <path d="M16 32c0-11 7-17 16-17s16 6 16 17v18c0 3-3 4-5 2-1-8-3-13-11-13s-10 5-11 13c-2 2-5 1-5-2z" fill={hair} />
+        ) : null}
+
+        {/* گوش‌ها */}
+        <circle cx="19.6" cy="31" r="3" fill={skin} />
+        <circle cx="44.4" cy="31" r="3" fill={skin} />
+
+        {/* سر */}
+        <ellipse cx="32" cy="29.5" rx="12.4" ry="13.4" fill={skin} />
+
+        {/* گردن، زیر چانه و بالای شانه */}
+        <path d="M27 40h10v6c0 2-10 2-10 0z" fill={skin} />
+
+        {/* موی جلو، فقط بالای سر را قاب می‌گیرد */}
+        <path
+          d="M20 30c-.6-9 4.4-15 12-15s12.6 6 12 15c-1.2-5-2.6-7.6-5-8.4-2.6 2.4-11.4 2.8-14.6.6-2.4 1.2-3.6 3.8-4.4 7.8z"
+          fill={hair}
+        />
+
+        {/* چشم و لبخند */}
+        <circle cx="27.6" cy="30.6" r="1.55" fill="#332924" />
+        <circle cx="36.4" cy="30.6" r="1.55" fill="#332924" />
+        <path
+          d="M28.9 35.4c1.6 1.5 4.6 1.5 6.2 0"
+          stroke="#332924"
+          strokeWidth="1.5"
+          strokeLinecap="round"
+          fill="none"
+        />
+      </g>
+    </svg>
+  )
+}

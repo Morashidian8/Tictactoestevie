@@ -90,6 +90,7 @@ function GridCell({
       aria-label={item.actionLabel}
     >
       <ChildAvatar
+        id={item.id}
         firstName={item.firstName}
         photoUrl={item.photoUrl}
         state={item.state}

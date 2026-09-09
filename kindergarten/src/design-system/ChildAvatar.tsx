@@ -1,3 +1,4 @@
+import { AvatarFace } from './AvatarFace.tsx'
 import { CheckIcon, CrossIcon } from './icons.tsx'
 import styles from './ChildAvatar.module.css'
 
@@ -37,6 +38,8 @@ const STATE_LABEL_FULL: Record<AttendanceState, string> = {
 }
 
 type Props = {
+  /** شناسه کودک. چهره جایگزین عکس از همین ساخته می‌شود. */
+  id: string
   firstName: string
   photoUrl?: string | null
   state: AttendanceState
@@ -46,6 +49,7 @@ type Props = {
 }
 
 export function ChildAvatar({
+  id,
   firstName,
   photoUrl,
   state,
@@ -58,9 +62,7 @@ export function ChildAvatar({
         {photoUrl ? (
           <img className={styles.photo} src={photoUrl} alt="" />
         ) : (
-          <span className={styles.initial} aria-hidden>
-            {firstName.slice(0, 1)}
-          </span>
+          <AvatarFace seed={id} />
         )}
         <StateBadge state={state} />
       </span>

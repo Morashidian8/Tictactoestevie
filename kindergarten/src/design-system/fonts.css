@@ -1,35 +1,28 @@
 /*
  * فونت — بخش ۱۲.۳ سند.
  *
- * فایل‌های woff2 استعداد و مربع هنوز نرسیده‌اند. وقتی برسند، در
- * public/fonts/ می‌نشینند و اعلان‌های زیر از حالت توضیح درمی‌آیند، و در
- * typography.css وزن تیتر از --weight-display-fallback به ۷۰۰ برمی‌گردد.
+ * سند سه فونت نام می‌برد: استعداد برای بدنه، مربع برای تیتر، و وزیرمتن
+ * به‌عنوان جایگزین. فایل‌های استعداد و مربع هنوز نرسیده‌اند، پس همان
+ * جایگزینی که خود سند مجاز کرده نشسته است.
  *
- * تا آن موقع زنجیره جایگزین در --font-display و --font-body کار می‌کند و
- * هیچ اندازه یا فاصله‌ای بر اساس فونت جایگزین تنظیم نشده.
+ * خودمیزبان، نه از سرویس بیرونی. دو دلیل: بند ۱۰.۲ می‌گوید داده و
+ * سرویس داخل کشور بماند، و بند ۱۴.۲ کارکرد کامل آفلاین می‌خواهد. فونتی
+ * که از اینترنت می‌آید، در مهدی که اینترنتش قطع است نمی‌آید.
  *
- * @font-face {
- *   font-family: 'Estedad';
- *   src: url('/fonts/Estedad-Regular.woff2') format('woff2');
- *   font-weight: 400;
- *   font-display: swap;
- * }
- * @font-face {
- *   font-family: 'Estedad';
- *   src: url('/fonts/Estedad-Medium.woff2') format('woff2');
- *   font-weight: 500;
- *   font-display: swap;
- * }
- * @font-face {
- *   font-family: 'Estedad';
- *   src: url('/fonts/Estedad-Bold.woff2') format('woff2');
- *   font-weight: 700;
- *   font-display: swap;
- * }
- * @font-face {
- *   font-family: 'Morabba';
- *   src: url('/fonts/Morabba-Bold.woff2') format('woff2');
- *   font-weight: 700;
- *   font-display: swap;
- * }
+ * یک فایل متغیر به‌جای چهار فایل ثابت: ۱۰۹ کیلوبایت در برابر ۱۹۹، و همه
+ * وزن‌های میانی را هم می‌دهد.
+ *
+ * پروانه: SIL Open Font License 1.1، متنش در public/fonts/OFL-Vazirmatn.txt
+ *
+ * وقتی استعداد و مربع رسیدند، همین‌جا دو اعلان اضافه می‌شود و در
+ * tokens.css نام‌ها جلوی وزیرمتن قرار می‌گیرند. هیچ اندازه و فاصله‌ای
+ * عوض نمی‌شود، چون هیچ‌کدام بر اساس فونت جایگزین تنظیم نشده‌اند.
  */
+
+@font-face {
+  font-family: 'Vazirmatn';
+  src: url('/fonts/Vazirmatn-Variable.woff2') format('woff2-variations');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
