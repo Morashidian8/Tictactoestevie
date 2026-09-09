@@ -42,5 +42,7 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'node',
+    // e2e با مرورگر واقعی و با npm run test:e2e اجرا می‌شود، نه اینجا.
+    include: ['src/**/*.test.ts'],
   },
 })
