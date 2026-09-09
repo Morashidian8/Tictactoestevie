@@ -32,7 +32,7 @@ import styles from './TodayPage.module.css'
  * نگه‌داشتن انگشت = شیت استثناها. شیت هنوز ساخته نشده و این جلسه در دامنه
  * نبود، پس فعلاً فقط اعلام می‌کند که کجاست.
  */
-export function TodayPage() {
+export function TodayPage({ onOpenBulk }: { onOpenBulk: () => void }) {
   const data = useData()
   const { queue, session, signOut, selectAccount } = useAuth()
 
@@ -295,15 +295,8 @@ export function TodayPage() {
         ضربه: ثبت ورود · نگه‌داشتن: آورنده، وضعیت، دارو
       </p>
 
-      {/*
-        کنش اصلی این صفحه طبق وایرفریم بخش ۱۳.۱ «ثبت گروهی امروز» است.
-        آن صفحه در دامنه این جلسه نبود، پس دکمه هست ولی غیرفعال است. جای
-        کنش اصلی با چیز دیگری پر نمی‌شود، چون بخش ۱۲.۲ می‌گوید فیروزه‌ای
-        فقط برای کنش اصلی هر صفحه است.
-      */}
-      <QuickAction onClick={() => undefined} disabled>
-        ثبت گروهی امروز
-      </QuickAction>
+      {/* کنش اصلی این صفحه، طبق وایرفریم بخش ۱۳.۱ */}
+      <QuickAction onClick={onOpenBulk}>ثبت گروهی امروز</QuickAction>
 
       {sheetFor && sheetChild ? (
         <ArrivalSheet

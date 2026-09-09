@@ -11,9 +11,12 @@ import type {
   CheckInInput,
   ClassDay,
   DataAccess,
+  BulkValues,
+  DailyReport,
   Guardian,
   MedicationInput,
   MedicationLog,
+  ReportPatch,
 } from '../types.ts'
 import {
   CENTER_ID,
@@ -29,6 +32,7 @@ type DayState = {
   attendance: Map<string, Attendance>
   absences: AbsenceNotice[]
   medications: MedicationLog[]
+  reports: Map<string, DailyReport>
 }
 
 const days = new Map<string, DayState>()
@@ -40,6 +44,7 @@ function dayState(date: string): DayState {
       attendance: new Map(seedAttendance(date).map((row) => [row.childId, row])),
       absences: seedAbsences(date),
       medications: seedMedications(date),
+      reports: new Map(),
     }
     days.set(date, state)
   }
@@ -86,6 +91,7 @@ export function createLocalDataAccess(scope: AccessScope): DataAccess {
         attendance: [...state.attendance.values()].filter((a) => ids.has(a.childId)),
         absences: state.absences.filter((a) => ids.has(a.childId)),
         medications: state.medications.filter((m) => ids.has(m.childId)),
+        reports: [...state.reports.values()].filter((r) => ids.has(r.childId)),
       }
     },
 
@@ -137,7 +143,86 @@ export function createLocalDataAccess(scope: AccessScope): DataAccess {
       dayState(input.date).medications.push(row)
       return row
     },
+
+    async applyBulk(classId, date, values: BulkValues): Promise<DailyReport[]> {
+      assertVisible(classId)
+      const state = dayState(date)
+      const written: DailyReport[] = []
+
+      for (const child of CHILDREN.filter((c) => c.classId === classId)) {
+        const current = state.reports.get(child.id)
+        // بخش ۵.۵: کودکی که مربی جدا دست زده، مقدار گروهی نمی‌گیرد.
+        if (current?.touched) continue
+
+        const next: DailyReport = {
+          ...blank(child.id, date),
+          ...current,
+          lunch: values.lunch ?? current?.lunch ?? null,
+          napStart: values.napStart ?? current?.napStart ?? null,
+          ...moodPatch(values.mood, current),
+          touched: false,
+        }
+        state.reports.set(child.id, next)
+        written.push(next)
+      }
+
+      return written
+    },
+
+    async saveChildReport(childId, date, patch: ReportPatch): Promise<DailyReport> {
+      const child = CHILDREN.find((c) => c.id === childId)
+      if (!child?.classId) throw new Error('کودک پیدا نشد')
+      assertVisible(child.classId)
+
+      const state = dayState(date)
+      const next: DailyReport = {
+        ...blank(childId, date),
+        ...state.reports.get(childId),
+        ...patch,
+        touched: true,
+      }
+      state.reports.set(childId, next)
+      return next
+    },
   }
+}
+
+function blank(childId: string, date: string): DailyReport {
+  return {
+    childId,
+    date,
+    lunch: null,
+    napStart: null,
+    moodMorning: null,
+    moodNoon: null,
+    moodAfternoon: null,
+    teacherNote: null,
+    touched: false,
+  }
+}
+
+/**
+ * نوار گروهی یک انتخاب خلق دارد ولی گزارش سه بازه (بخش ۱۱.۳). انتخاب
+ * روی بازه‌ای می‌نشیند که ساعت جاری در آن است، چون «خلق عمومی کلاس»
+ * یعنی حال کلاس همین حالا. مرزهای بازه در سند نیامده و اینجا فرض شده.
+ */
+function moodPatch(mood: DailyReport['moodNoon'], current: DailyReport | undefined) {
+  if (!mood) return {}
+  const band = currentMoodBand()
+  return {
+    moodMorning:   band === 'morning'   ? mood : current?.moodMorning   ?? null,
+    moodNoon:      band === 'noon'      ? mood : current?.moodNoon      ?? null,
+    moodAfternoon: band === 'afternoon' ? mood : current?.moodAfternoon ?? null,
+  }
+}
+
+export type MoodBand = 'morning' | 'noon' | 'afternoon'
+
+export function currentMoodBand(now: Date = new Date()): MoodBand {
+  const hour = now.getHours()
+  if (hour < 12) return 'morning'
+  if (hour < 15) return 'noon'
+  return 'afternoon'
 }
 
 function toLocalIsoDate(date: Date): string {

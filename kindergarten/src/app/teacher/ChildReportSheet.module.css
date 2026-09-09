@@ -1,0 +1,76 @@
+.section { display: flex; flex-direction: column; gap: var(--space-3); }
+.legend { color: var(--ink-muted); font-weight: var(--weight-medium); }
+.choices { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+
+.choice {
+  min-block-size: var(--touch-teacher);
+  flex: 1 1 auto;
+  padding-inline: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--r-input);
+  background: var(--surface);
+  color: var(--ink);
+  font-weight: var(--weight-medium);
+}
+
+.choice[aria-pressed='true'] {
+  background: var(--turquoise-tint);
+  border-color: var(--turquoise);
+  font-weight: var(--weight-bold);
+}
+
+.note {
+  min-block-size: 5.5rem;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--r-input);
+  background: var(--surface);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: var(--text-body-lg);
+  line-height: var(--text-body-lg-line);
+  resize: vertical;
+}
+
+.note:focus { border-color: var(--turquoise); }
+
+.hint { color: var(--ink-muted); }
+
+.suggestBanner {
+  background: var(--turquoise-tint);
+  color: var(--ink);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--r-input);
+}
+
+/* هشدار واژگان ممنوع، پیوست ب. هشدار است نه مانع. */
+.warning {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  background: var(--saffron-tint);
+  color: var(--ink);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--r-input);
+}
+
+.warningIcon { color: var(--ink); flex: none; margin-block-start: 2px; }
+
+.primary {
+  flex: 1;
+  min-block-size: var(--touch-teacher);
+  border-radius: var(--r-input);
+  background: var(--turquoise-dark);
+  color: var(--surface);
+  font-weight: var(--weight-bold);
+}
+.primary:active { filter: brightness(0.9); }
+
+.secondary {
+  min-block-size: var(--touch-teacher);
+  padding-inline: var(--space-5);
+  border: 1px solid var(--border);
+  border-radius: var(--r-input);
+  color: var(--ink);
+  font-weight: var(--weight-medium);
+}

@@ -3,7 +3,7 @@ import './design-system/index.ts'
 import { AuthProvider, createLocalAuthAdapter, useAuth } from './core/auth/index.ts'
 import { AccountPicker } from './app/auth/AccountPicker.tsx'
 import { SignIn } from './app/auth/SignIn.tsx'
-import { TodayPage } from './app/teacher/TodayPage.tsx'
+import { TeacherApp } from './app/teacher/TeacherApp.tsx'
 
 /**
  * پوسته اپ.
@@ -34,7 +34,7 @@ function Routes() {
   switch (session.active.role) {
     case 'teacher':
     case 'assistant':
-      return <TodayPage />
+      return <TeacherApp />
     default:
       return <NotBuiltYet role={session.active.role} />
   }

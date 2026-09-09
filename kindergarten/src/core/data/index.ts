@@ -16,6 +16,8 @@ export function createDataAccess(scope: AccessScope): DataAccess {
 }
 
 export * from './types.ts'
+export { NOTES_PER_DAY, suggestNoteTargets } from './noteRotation.ts'
+export { currentMoodBand, type MoodBand } from './local/localDataAccess.ts'
 export {
   indexAbsences,
   indexAttendance,

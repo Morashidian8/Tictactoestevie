@@ -140,6 +140,68 @@ await page.click('button:has-text("رفتن به حساب مدیر")')
 await page.waitForSelector('text=/پنل این نقش/')
 check(true, 'حساب عوض شد بدون درخواست دوباره کد')
 
+console.log('▸ بخش ۵.۵: ثبت گروهی، مهم‌ترین صفحه سامانه')
+// بخش پیش، حساب را به مدیر برد. برای پنل مربی دوباره وارد می‌شویم.
+await signIn('09120000001')
+await page.waitForSelector('text=ثبت گروهی امروز')
+await page.click('button:has-text("ثبت گروهی امروز")')
+await page.waitForSelector('text=اعمال روی همه')
+check(true, 'صفحه ثبت گروهی از دکمه کنش اصلی «امروز» باز می‌شود')
+
+const suggested = await page.locator('[class*="suggestNames"]').innerText()
+check(suggested.split('·').length === 3, `سه کودک برای یادداشت پیشنهاد شد: ${suggested}`)
+
+let taps = 0
+const tap = async (selector) => { await page.click(selector); taps += 1 }
+
+await tap('[aria-label="ثبت یکجا برای کل کلاس"] button:has-text("بیشترش")')
+await tap('[aria-label="ثبت یکجا برای کل کلاس"] button:has-text("خوب")')
+await page.fill('input[aria-label="ساعت شروع خواب"]', '13:00'); taps += 1
+await tap('[class*="bar"] button:has-text("اعمال روی همه")')
+await page.waitForSelector('text=/اعمال شد/')
+
+for (const name of ['امیر', 'آوا', 'کیان', 'هستی']) {
+  await tap(`button:has([class*="itemName"]:text-is("${name}"))`)
+  await page.waitForSelector('[role="dialog"]')
+  await tap('[role="dialog"] button:has-text("کمی")')
+  await tap('[role="dialog"] button:has-text("ذخیره استثنا")')
+  await page.waitForSelector('[role="dialog"]', { state: 'detached' })
+}
+
+check(
+  (await page.locator('[class*="listCount"]').innerText()).includes('۴'),
+  `چهار استثنا ثبت شد، کل مسیر ${taps} ضربه`,
+)
+
+console.log('▸ استثنا برنده است، نه آخرین نوشته')
+await tap('[aria-label="ثبت یکجا برای کل کلاس"] button:has-text("همه")')
+await tap('[class*="bar"] button:has-text("اعمال روی همه")')
+await page.waitForTimeout(500)
+const amir = await page.locator('button:has([class*="itemName"]:text-is("امیر"))').innerText()
+check(amir.includes('کمی'), 'ثبت گروهی دوم استثنای امیر را پاک نکرد')
+const sara = await page.locator('button:has([class*="itemName"]:text-is("سارا"))').innerText()
+check(sara.includes('همه'), 'ولی کودک دست‌نخورده مقدار تازه گروهی را گرفت')
+
+console.log('▸ پیوست ب: هشدار واژگان ممنوع روی متن مربی')
+await page.click('button:has([class*="itemName"]:text-is("سارا"))')
+await page.waitForSelector('[role="dialog"]')
+await page.fill('textarea[aria-label="یادداشت مربی"]', 'امروز خیلی پرخاشگر بود')
+await page.waitForTimeout(250)
+const warned = () => page.locator('text=/برچسب است، نه مشاهده/').count()
+check((await warned()) === 1, 'واژه برچسب‌زننده هشدار می‌گیرد')
+check(
+  (await page.locator('[role="dialog"] button:has-text("ذخیره استثنا")').isEnabled()),
+  'ولی جلوی ثبتش گرفته نمی‌شود، چون سند هشدار خواسته نه مانع',
+)
+await page.fill('textarea[aria-label="یادداشت مربی"]', 'دو بار اسباب‌بازی را از دیگری گرفت.')
+await page.waitForTimeout(250)
+check((await warned()) === 0, 'متن مشاهده‌ای هشدار نمی‌گیرد')
+await page.click('[role="dialog"] button:has-text("انصراف")')
+
+await page.click('[aria-label="بازگشت به امروز"]')
+await page.waitForSelector('text=ثبت گروهی امروز')
+check(true, 'پیکان سرصفحه به «امروز» برمی‌گردد')
+
 console.log('▸ بخش ۱۲.۷: کف کیفیت')
 await signIn('09120000001')
 await page.waitForSelector('text=ثبت گروهی امروز')

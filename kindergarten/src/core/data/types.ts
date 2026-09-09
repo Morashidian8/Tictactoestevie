@@ -97,7 +97,39 @@ export type ClassDay = {
   attendance: Attendance[]
   absences: AbsenceNotice[]
   medications: MedicationLog[]
+  reports: DailyReport[]
 }
+
+export type MealAmount = 'all' | 'most' | 'little' | 'none'
+
+/** گزارش روزانه یک کودک — بخش ۱۱.۳. */
+export type DailyReport = {
+  childId: string
+  date: string
+  lunch: MealAmount | null
+  napStart: string | null
+  moodMorning: Mood | null
+  moodNoon: Mood | null
+  moodAfternoon: Mood | null
+  teacherNote: string | null
+  /**
+   * مربی این کودک را جدا دست زده است، پس ثبت گروهی رویش نمی‌نشیند.
+   * بخش ۵.۵: «هر کودکی که دست‌نخورده بماند، مقدار گروهی برایش ثبت می‌شود.»
+   */
+  touched: boolean
+}
+
+/** مقادیری که ثبت گروهی روی کل کلاس می‌نشاند — بخش ۵.۵. */
+export type BulkValues = {
+  lunch: MealAmount | null
+  mood: Mood | null
+  napStart: string | null
+}
+
+/** تغییری که روی یک کودک به‌تنهایی اعمال می‌شود. */
+export type ReportPatch = Partial<
+  Pick<DailyReport, 'lunch' | 'napStart' | 'moodMorning' | 'moodNoon' | 'moodAfternoon' | 'teacherNote'>
+>
 
 /** دارویی که سرپرست صبح تحویل داده — بخش ۵.۳. */
 export type MedicationInput = {
@@ -118,4 +150,14 @@ export interface DataAccess {
   checkIn(input: CheckInInput): Promise<Attendance>
   /** ثبت داروی امروز. تا خورانده نشدنش، مربی یادآور می‌بیند. */
   addMedication(input: MedicationInput): Promise<MedicationLog>
+
+  /**
+   * ثبت گروهی — بخش ۵.۵.
+   * روی هر کودکی می‌نشیند که جدا دست‌نخورده باشد. کودکی که مربی استثنایش
+   * کرده، دست‌نخورده نمی‌ماند و مقدار گروهی رویش نمی‌رود.
+   */
+  applyBulk(classId: string, date: string, values: BulkValues): Promise<DailyReport[]>
+
+  /** استثنای یک کودک. پس از این، ثبت گروهی رویش نمی‌نشیند. */
+  saveChildReport(childId: string, date: string, patch: ReportPatch): Promise<DailyReport>
 }
