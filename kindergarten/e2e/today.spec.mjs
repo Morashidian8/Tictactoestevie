@@ -80,6 +80,59 @@ await page.click(`button[aria-label="${presentLabel}"]`)
 await page.waitForTimeout(400)
 check((await tallyText()) === after, 'نوار خلاصه پس از ضربه دوم عوض نشد')
 
+console.log('▸ بخش ۵.۳: شیت استثناهای ورود')
+const hold = async (label) => {
+  const box = await page.locator(`button[aria-label="${label}"]`).boundingBox()
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
+  await page.mouse.down()
+  await page.waitForTimeout(650)
+  await page.mouse.up()
+}
+
+const target = await page.locator('button[aria-label^="ثبت ورود"] >> nth=0').getAttribute('aria-label')
+await hold(target)
+await page.waitForSelector('[role="dialog"]')
+const sections = await page.locator('[role="dialog"] h3').allInnerTexts()
+check(sections.length === 3, `شیت سه بخش دارد: ${sections.join(' · ')}`)
+
+check(
+  (await page.locator('button:has-text("افزودن عکس")').count()) === 0,
+  'با وضعیت عادی، دکمه عکس دیده نمی‌شود',
+)
+await page.click('[role="dialog"] button:has-text("خراش یا کبودی")')
+check(
+  (await page.locator('button:has-text("افزودن عکس")').count()) === 1,
+  'با وضعیت غیرعادی، دکمه عکس ظاهر می‌شود',
+)
+
+check(
+  (await page.locator('input[aria-label="ساعت مصرف"]').count()) === 0,
+  'تا نام دارو نوشته نشده، مقدار و ساعت پرسیده نمی‌شود',
+)
+await page.fill('input[aria-label="نام دارو"]', 'شربت سرماخوردگی')
+check(
+  (await page.locator('input[aria-label="ساعت مصرف"]').count()) === 1,
+  'با نوشتن نام دارو، مقدار و ساعت ظاهر می‌شود',
+)
+
+const medsBefore = await page.locator('text=/دارو هنوز داده نشده/').count()
+const tallyBefore = await tallyText()
+await page.click('[role="dialog"] button:has-text("ثبت ورود")')
+await page.waitForTimeout(700)
+check((await page.locator('[role="dialog"]').count()) === 0, 'شیت پس از ثبت بسته می‌شود')
+check((await tallyText()) !== tallyBefore, 'ورود از داخل شیت ثبت شد')
+check(
+  medsBefore === 0 || (await page.locator('text=/دارو هنوز داده نشده/').count()) === 1,
+  'یادآور داروی خورانده‌نشده روی صفحه می‌آید',
+)
+
+console.log('▸ شیت با کلید Escape بسته می‌شود')
+await hold(await page.locator('button[aria-label^="ثبت ورود"] >> nth=0').getAttribute('aria-label'))
+await page.waitForSelector('[role="dialog"]')
+await page.keyboard.press('Escape')
+await page.waitForTimeout(300)
+check((await page.locator('[role="dialog"]').count()) === 0, 'Escape شیت را می‌بندد')
+
 console.log('▸ بخش ۳.۲: جابه‌جایی حساب بدون خروج و ورود مجدد')
 await page.click('header [class*="accountButton"]')
 await page.waitForSelector('text=رفتن به حساب مدیر')

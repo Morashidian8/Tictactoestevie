@@ -99,6 +99,16 @@ export type ClassDay = {
   medications: MedicationLog[]
 }
 
+/** دارویی که سرپرست صبح تحویل داده — بخش ۵.۳. */
+export type MedicationInput = {
+  childId: string
+  date: string
+  name: string
+  dose?: string | null
+  scheduledTime?: string | null
+  handedByGuardianId?: string | null
+}
+
 export interface DataAccess {
   readonly scope: AccessScope
   /** کلاس‌هایی که این حساب می‌بیند. */
@@ -106,4 +116,6 @@ export interface DataAccess {
   getClassDay(classId: string, date: string): Promise<ClassDay>
   listGuardians(childId: string): Promise<Guardian[]>
   checkIn(input: CheckInInput): Promise<Attendance>
+  /** ثبت داروی امروز. تا خورانده نشدنش، مربی یادآور می‌بیند. */
+  addMedication(input: MedicationInput): Promise<MedicationLog>
 }

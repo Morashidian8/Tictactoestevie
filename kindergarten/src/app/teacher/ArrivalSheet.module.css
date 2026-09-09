@@ -1,0 +1,108 @@
+.section { display: flex; flex-direction: column; gap: var(--space-3); }
+
+.legend {
+  color: var(--ink-muted);
+  font-weight: var(--weight-medium);
+}
+
+/* گزینه‌های بزرگ، چون مربی ایستاده و با یک دست کار می‌کند */
+.options { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+
+.option {
+  min-block-size: var(--touch-teacher);
+  padding-inline: var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--r-input);
+  background: var(--surface);
+  color: var(--ink);
+  font-weight: var(--weight-medium);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* حالت انتخاب‌شده با رنگ و متن و نشان، نه فقط رنگ — بخش ۱۲.۲ */
+.option[aria-pressed='true'] {
+  background: var(--turquoise-tint);
+  border-color: var(--turquoise);
+  font-weight: var(--weight-bold);
+}
+
+.tick { color: var(--turquoise-dark); display: inline-grid; place-items: center; }
+
+.photoRow { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; }
+
+.photoBtn {
+  min-block-size: var(--touch-teacher);
+  padding-inline: var(--space-4);
+  border: 1px dashed var(--border);
+  border-radius: var(--r-input);
+  color: var(--ink);
+  font-weight: var(--weight-medium);
+}
+
+.thumb {
+  inline-size: 56px;
+  block-size: 56px;
+  border-radius: var(--r-photo);
+  object-fit: cover;
+  border: 1px solid var(--border);
+}
+
+.drop { display: none; }
+
+.medFields { display: flex; flex-direction: column; gap: var(--space-2); }
+
+.input {
+  min-block-size: var(--touch-teacher);
+  padding-inline: var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--r-input);
+  background: var(--surface);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: var(--text-body-lg);
+}
+
+.input:focus { border-color: var(--turquoise); }
+
+.time {
+  /* بخش ۱۲.۴: ارقام لاتین در فیلد ورودی عددی */
+  direction: ltr;
+  text-align: start;
+  font-variant-numeric: tabular-nums;
+}
+
+.primary {
+  flex: 1;
+  min-block-size: var(--touch-teacher);
+  border-radius: var(--r-input);
+  background: var(--turquoise-dark);
+  color: var(--surface);
+  font-weight: var(--weight-bold);
+}
+
+.primary:active { filter: brightness(0.9); }
+
+.secondary {
+  min-block-size: var(--touch-teacher);
+  padding-inline: var(--space-5);
+  border: 1px solid var(--border);
+  border-radius: var(--r-input);
+  color: var(--ink);
+  font-weight: var(--weight-medium);
+}
+
+.note {
+  color: var(--ink-muted);
+  background: var(--neutral-fill);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--r-input);
+}
+
+.error {
+  color: var(--brick);
+  background: var(--brick-tint);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--r-input);
+}

@@ -19,6 +19,8 @@ import {
   type ClassDay,
   type ClassRoom,
 } from '../../core/data/index.ts'
+import type { Guardian } from '../../core/data/index.ts'
+import { ArrivalSheet, type ArrivalResult } from './ArrivalSheet.tsx'
 import styles from './TodayPage.module.css'
 
 /**
@@ -40,6 +42,9 @@ export function TodayPage() {
   const [error, setError] = useState<string | null>(null)
   const [pending, setPending] = useState(0)
   const [menuOpen, setMenuOpen] = useState(false)
+  // کودکی که شیت استثناهایش باز است، به‌علاوه سرپرستانش که با باز شدن
+  // شیت خوانده می‌شوند نه پیش از آن.
+  const [sheetFor, setSheetFor] = useState<{ childId: string; guardians: Guardian[] } | null>(null)
 
   // ساعت جاری در حالت نگه داشته می‌شود چون مرز ۹:۰۰ ستون سوم نوار خلاصه
   // را عوض می‌کند و صفحه باید بدون نوسازی دستی رد شود.
@@ -123,6 +128,46 @@ export function TodayPage() {
       .then(() => load())
       .catch((cause: unknown) => setError(messageOf(cause)))
   }
+
+  const openSheet = (childId: string) => {
+    data
+      .listGuardians(childId)
+      .then((guardians) => setSheetFor({ childId, guardians }))
+      .catch((cause: unknown) => setError(messageOf(cause)))
+  }
+
+  const submitSheet = async (result: ArrivalResult) => {
+    if (!sheetFor) return
+    const { childId } = sheetFor
+    await queue.submit('text', async () => {
+      await data.checkIn({
+        childId,
+        at: new Date(),
+        droppedByGuardianId: result.droppedByGuardianId,
+        arrivalCondition: result.arrivalCondition,
+      })
+      if (result.medication) {
+        await data.addMedication({
+          childId,
+          date,
+          name: result.medication.name,
+          dose: result.medication.dose || null,
+          scheduledTime: result.medication.scheduledTime || null,
+          handedByGuardianId: result.droppedByGuardianId,
+        })
+      }
+    })
+    // بخش ۱۴.۲: صف عکس از صف متن جداست، تا آپلود سنگین ثبت متنی را عقب
+    // نیندازد. عکس پس از ثبت متن و با اولویت پایین‌تر می‌رود.
+    if (result.photo) {
+      void queue.submit('photo', async () => {
+        // آپلود واقعی وقتی استوریج وصل شود. صف مسیرش را نگه می‌دارد.
+      })
+    }
+    await load()
+  }
+
+  const sheetChild = day?.children.find((c) => c.id === sheetFor?.childId) ?? null
 
   const pendingMedication = (day?.medications ?? []).filter((m) => !m.givenAt)
   const activeClass = classes.find((c) => c.id === classId)
@@ -239,15 +284,15 @@ export function TodayPage() {
         ) : counts.present === 0 && !counts.isAfterNine ? (
           <>
             <EmptyState text="هنوز کسی وارد نشده. با ضربه روی عکس هر کودک، ورودش را ثبت کنید." />
-            <ChildGrid items={items} onSelect={checkIn} />
+            <ChildGrid items={items} onSelect={checkIn} onHold={openSheet} />
           </>
         ) : (
-          <ChildGrid items={items} onSelect={checkIn} />
+          <ChildGrid items={items} onSelect={checkIn} onHold={openSheet} />
         )}
       </div>
 
       <p className={`${styles.footerNote} t-caption`}>
-        ضربه: ثبت ورود · نگه‌داشتن: گزینه‌ها
+        ضربه: ثبت ورود · نگه‌داشتن: آورنده، وضعیت، دارو
       </p>
 
       {/*
@@ -259,6 +304,16 @@ export function TodayPage() {
       <QuickAction onClick={() => undefined} disabled>
         ثبت گروهی امروز
       </QuickAction>
+
+      {sheetFor && sheetChild ? (
+        <ArrivalSheet
+          child={sheetChild}
+          guardians={sheetFor.guardians}
+          existing={attendance.get(sheetFor.childId) ?? null}
+          onClose={() => setSheetFor(null)}
+          onSubmit={submitSheet}
+        />
+      ) : null}
     </div>
   )
 }

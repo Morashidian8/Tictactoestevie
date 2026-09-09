@@ -12,6 +12,7 @@ import type {
   ClassDay,
   DataAccess,
   Guardian,
+  MedicationInput,
   MedicationLog,
 } from '../types.ts'
 import {
@@ -116,6 +117,24 @@ export function createLocalDataAccess(scope: AccessScope): DataAccess {
 
       // ثبت ورود، اعلام غیبت همان روز را باطل می‌کند.
       state.absences = state.absences.filter((a) => a.childId !== input.childId)
+      return row
+    },
+
+    async addMedication(input: MedicationInput): Promise<MedicationLog> {
+      const child = CHILDREN.find((c) => c.id === input.childId)
+      if (!child?.classId) throw new Error('کودک پیدا نشد')
+      assertVisible(child.classId)
+
+      const row: MedicationLog = {
+        id: `med-${Math.random().toString(36).slice(2, 10)}`,
+        childId: input.childId,
+        date: input.date,
+        name: input.name,
+        dose: input.dose ?? null,
+        scheduledTime: input.scheduledTime ?? null,
+        givenAt: null,
+      }
+      dayState(input.date).medications.push(row)
       return row
     },
   }

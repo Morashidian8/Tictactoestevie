@@ -1,0 +1,88 @@
+/*
+ * شیت پایین‌رونده — بخش ۱۲.۹ سند.
+ *
+ * برای استثناها، بدون خروج از صفحه. لایه شناور است، پس تنها جایی است که
+ * به‌علاوه نوار چسبیده اجازه سایه دارد (بخش ۱۲.۵).
+ */
+
+.scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: rgba(19, 39, 47, 0.42);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.sheet {
+  inline-size: 100%;
+  max-inline-size: 34rem;
+  max-block-size: 88dvh;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border-start-start-radius: var(--r-card);
+  border-start-end-radius: var(--r-card);
+  box-shadow: var(--shadow-2);
+  /* بخش ۱۲.۸: باز شدن شیت پاسخ کنش کاربر است، پس حرکت مجاز است. */
+  animation: rise var(--motion-page) var(--easing);
+}
+
+@keyframes rise {
+  from { transform: translateY(12px); opacity: 0; }
+  to   { transform: none;             opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sheet { animation: none; }
+}
+
+.grip {
+  inline-size: 36px;
+  block-size: 4px;
+  border-radius: var(--r-chip);
+  background: var(--neutral-fill-strong);
+  margin: var(--space-2) auto 0;
+  flex: none;
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4) var(--space-2);
+  flex: none;
+}
+
+.title {
+  color: var(--ink);
+  font-weight: var(--weight-bold);
+}
+
+.close {
+  min-inline-size: var(--touch-teacher);
+  min-block-size: var(--touch-teacher);
+  border-radius: var(--r-input);
+  color: var(--ink-muted);
+  display: grid;
+  place-items: center;
+}
+
+.body {
+  overflow-y: auto;
+  padding: 0 var(--space-4) var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.foot {
+  flex: none;
+  padding: var(--space-3) var(--space-4);
+  padding-block-end: calc(var(--space-3) + env(safe-area-inset-bottom));
+  border-block-start: 1px solid var(--border);
+  display: flex;
+  gap: var(--space-3);
+}
