@@ -13,11 +13,13 @@ import type {
   DataAccess,
   BulkValues,
   DailyReport,
+  DaySummary,
   Guardian,
   MedicationInput,
   MedicationLog,
   ReportPatch,
 } from '../types.ts'
+import { isInCurrentWeek } from '../../../i18n/week.ts'
 import {
   CENTER_ID,
   CHILDREN,
@@ -33,6 +35,8 @@ type DayState = {
   absences: AbsenceNotice[]
   medications: MedicationLog[]
   reports: Map<string, DailyReport>
+  /** زمان ارسال گزارش‌های روز. پس از این، گزارش‌ها قفل‌اند. */
+  sentAt: string | null
 }
 
 const days = new Map<string, DayState>()
@@ -45,6 +49,7 @@ function dayState(date: string): DayState {
       absences: seedAbsences(date),
       medications: seedMedications(date),
       reports: new Map(),
+      sentAt: null,
     }
     days.set(date, state)
   }
@@ -175,6 +180,11 @@ export function createLocalDataAccess(scope: AccessScope): DataAccess {
       assertVisible(child.classId)
 
       const state = dayState(date)
+      // بخش ۵.۹: پس از ارسال، گزارش قفل است و فقط اصلاحیه می‌پذیرد.
+      // همان قاعده‌ای که تریگر دیتابیس هم می‌بندد.
+      if (state.sentAt) {
+        throw new Error('گزارش‌های امروز فرستاده شده‌اند. تغییر فقط به شکل اصلاحیه ثبت می‌شود.')
+      }
       const next: DailyReport = {
         ...blank(childId, date),
         ...state.reports.get(childId),
@@ -184,7 +194,63 @@ export function createLocalDataAccess(scope: AccessScope): DataAccess {
       state.reports.set(childId, next)
       return next
     },
+
+    async getDaySummary(classId, date): Promise<DaySummary> {
+      assertVisible(classId)
+      const state = dayState(date)
+      const children = CHILDREN.filter((c) => c.classId === classId)
+
+      const complete: string[] = []
+      const incomplete: DaySummary['incomplete'] = []
+
+      for (const child of children) {
+        const report = state.reports.get(child.id)
+        const missing = missingParts(report)
+        if (missing.length === 0) complete.push(child.id)
+        else incomplete.push({ childId: child.id, missing })
+      }
+
+      // بخش ۵.۹: کودکان بدون یادداشت در این هفته. هفته از شنبه شروع
+      // می‌شود، پس روزهای پیشین هم خوانده می‌شوند نه فقط امروز.
+      const noted = new Set<string>()
+      for (const [day, past] of days) {
+        if (!isInCurrentWeek(day)) continue
+        for (const report of past.reports.values()) {
+          if (report.teacherNote?.trim()) noted.add(report.childId)
+        }
+      }
+
+      return {
+        complete,
+        incomplete,
+        // تگ عکس هنوز ساخته نشده؛ وقتی استوریج وصل شد از photo_tag می‌آید.
+        untaggedPhotos: 0,
+        withoutNoteThisWeek: children.filter((c) => !noted.has(c.id)).map((c) => c.id),
+        sentAt: state.sentAt,
+      }
+    },
+
+    async sendReports(classId, date): Promise<number> {
+      assertVisible(classId)
+      const state = dayState(date)
+      if (state.sentAt) throw new Error('گزارش‌های امروز قبلاً فرستاده شده‌اند.')
+
+      state.sentAt = new Date().toISOString()
+      return CHILDREN.filter((c) => c.classId === classId).length
+    },
   }
+}
+
+/**
+ * بخش ۵.۹: «کامل» یعنی غذا و خواب و هر سه بازه خلق پر شده باشند.
+ * همان تعریفی که تریگر دیتابیس هم به کار می‌برد.
+ */
+function missingParts(report: DailyReport | undefined): string[] {
+  const missing: string[] = []
+  if (!report?.lunch) missing.push('ناهار')
+  if (!report?.napStart) missing.push('خواب')
+  if (!report?.moodMorning || !report?.moodNoon || !report?.moodAfternoon) missing.push('خلق')
+  return missing
 }
 
 function blank(childId: string, date: string): DailyReport {

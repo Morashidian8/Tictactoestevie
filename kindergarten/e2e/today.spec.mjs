@@ -202,6 +202,41 @@ await page.click('[aria-label="بازگشت به امروز"]')
 await page.waitForSelector('text=ثبت گروهی امروز')
 check(true, 'پیکان سرصفحه به «امروز» برمی‌گردد')
 
+console.log('▸ بخش ۵.۹: بستن روز')
+await page.click('button:has-text("بستن روز")')
+await page.waitForSelector('text=ارسال گزارش‌های امروز')
+const lines = () => page.locator('[class*="lineText"]').allInnerTexts()
+check((await lines()).some((t) => t.includes('کامل')), 'شمار گزارش کامل نشان داده می‌شود')
+check((await lines()).some((t) => t.includes('ناقص')), 'شمار گزارش ناقص نشان داده می‌شود')
+check(
+  (await lines()).some((t) => t.includes('بدون یادداشت این هفته')),
+  'کودکان بدون یادداشت این هفته شمرده می‌شوند',
+)
+check(
+  (await page.locator('text=/خودکار فرستاده می‌شود/').count()) === 1,
+  'ساعت ارسال خودکار به مربی گفته می‌شود',
+)
+
+console.log('▸ ارسال، و قفل پس از آن')
+await page.click('[class*="bar"] button:has-text("ارسال گزارش‌های امروز")')
+await page.waitForSelector('[class*="sentTitle"]')
+check(true, 'گزارش‌ها فرستاده شدند')
+check(
+  await page.locator('[class*="bar"] button').isDisabled(),
+  'دکمه ارسال پس از فرستادن غیرفعال می‌شود',
+)
+check(
+  (await page.locator('button:has-text("تکمیل")').count()) === 0,
+  'پس از ارسال، راه تکمیل بسته می‌شود چون گزارش قفل است',
+)
+check(
+  (await page.locator('text=/اصلاحیه/').count()) >= 1,
+  'به مربی گفته می‌شود از این پس فقط اصلاحیه ثبت می‌شود',
+)
+
+await page.click('[aria-label="بازگشت به امروز"]')
+await page.waitForSelector('text=ثبت گروهی امروز')
+
 console.log('▸ بخش ۱۲.۷: کف کیفیت')
 await signIn('09120000001')
 await page.waitForSelector('text=ثبت گروهی امروز')

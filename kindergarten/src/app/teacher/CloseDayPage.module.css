@@ -1,0 +1,44 @@
+.page { min-block-size: 100dvh; display: flex; flex-direction: column; background: var(--paper); }
+
+.header {
+  display: flex; align-items: center; gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: var(--surface); border-block-end: 1px solid var(--border);
+  position: sticky; inset-block-start: 0; z-index: 5;
+}
+.back { min-inline-size: var(--touch-teacher); min-block-size: var(--touch-teacher);
+  border-radius: var(--r-input); display: grid; place-items: center; color: var(--ink); }
+.title { color: var(--ink); font-weight: var(--weight-bold); flex: 1; }
+
+.body { flex: 1; display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-4); }
+
+/* هر سطر یک وضعیت. آیکون و متن و رنگ، هر سه — بخش ۱۲.۶ */
+.line {
+  display: flex; align-items: center; gap: var(--space-3);
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r-card); padding: var(--space-4);
+}
+.lineIcon { flex: none; display: grid; place-items: center; }
+.lineText { flex: 1; color: var(--ink); }
+.ok      { color: var(--sage); }
+.warn    { color: var(--saffron); }
+
+.lineAction {
+  min-block-size: var(--touch-teacher); padding-inline: var(--space-4);
+  border: 1px solid var(--border); border-radius: var(--r-input);
+  color: var(--ink); font-weight: var(--weight-medium); flex: none;
+}
+
+.names { color: var(--ink-muted); padding-inline: var(--space-1); }
+
+.autoSend { color: var(--ink-muted); text-align: center; padding-block: var(--space-2); }
+
+.sent {
+  display: flex; flex-direction: column; gap: var(--space-2);
+  background: var(--sage-tint); color: var(--ink);
+  border-radius: var(--r-card); padding: var(--space-4);
+}
+.sentTitle { font-weight: var(--weight-bold); }
+
+.error { color: var(--brick); background: var(--brick-tint);
+  padding: var(--space-3) var(--space-4); border-radius: var(--r-input); }

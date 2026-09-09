@@ -9,6 +9,7 @@ import {
 import { formatCount, formatJalali, toIsoDate, toLatinDigits } from '../../i18n/index.ts'
 import { useAuth, useData } from '../../core/auth/index.ts'
 import {
+  currentMoodBand,
   suggestNoteTargets,
   type BulkValues,
   type Child,
@@ -39,6 +40,8 @@ const LUNCH: MealAmount[] = ['all', 'most', 'little', 'none']
  * می‌شود، چون هرگز حالت غالب یک کلاس نیست.
  */
 const BULK_MOOD: Mood[] = ['good', 'normal', 'restless']
+
+const BAND_LABEL = { morning: 'صبح', noon: 'ظهر', afternoon: 'عصر' } as const
 
 type Props = { onBack: () => void }
 
@@ -163,8 +166,17 @@ export function BulkEntryPage({ onBack }: Props) {
             </div>
           </div>
 
+          {/*
+            گزارش سه بازه خلق دارد (بخش ۱۱.۳) و نوار گروهی یک انتخاب.
+            انتخاب روی بازه ساعت جاری می‌نشیند، چون بخش ۵.۲ سه پنجره
+            فرصت در روز تعریف کرده و مربی در هرکدام یک بار سر می‌زند.
+            نام بازه نوشته می‌شود، وگرنه مربی نمی‌داند دارد کدام را پر
+            می‌کند.
+          */}
           <div className={styles.row}>
-            <span className={`${styles.rowLabel} t-caption`}>خلق</span>
+            <span className={`${styles.rowLabel} t-caption`}>
+              خلق {BAND_LABEL[currentMoodBand()]}
+            </span>
             <div className={styles.choices}>
               {BULK_MOOD.map((value) => (
                 <button

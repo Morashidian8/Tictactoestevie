@@ -131,6 +131,23 @@ export type ReportPatch = Partial<
   Pick<DailyReport, 'lunch' | 'napStart' | 'moodMorning' | 'moodNoon' | 'moodAfternoon' | 'teacherNote'>
 >
 
+/**
+ * خلاصه پایان روز — بخش ۵.۹ سند.
+ *
+ * «تعداد گزارش‌های کامل و ناقص، با فهرست ناقص‌ها؛ عکس‌های بدون تگ؛
+ * کودکان بدون یادداشت در این هفته.»
+ */
+export type DaySummary = {
+  complete: string[]
+  /** ناقص، به‌علاوه اینکه چه چیزی کم دارد. */
+  incomplete: { childId: string; missing: string[] }[]
+  untaggedPhotos: number
+  /** کودکانی که این هفته هیچ یادداشتی نگرفته‌اند. */
+  withoutNoteThisWeek: string[]
+  /** اگر گزارش‌های امروز فرستاده شده‌اند، زمانش. */
+  sentAt: string | null
+}
+
 /** دارویی که سرپرست صبح تحویل داده — بخش ۵.۳. */
 export type MedicationInput = {
   childId: string
@@ -160,4 +177,13 @@ export interface DataAccess {
 
   /** استثنای یک کودک. پس از این، ثبت گروهی رویش نمی‌نشیند. */
   saveChildReport(childId: string, date: string, patch: ReportPatch): Promise<DailyReport>
+
+  /** خلاصه پایان روز — بخش ۵.۹. */
+  getDaySummary(classId: string, date: string): Promise<DaySummary>
+
+  /**
+   * ارسال گزارش‌های روز — بخش ۵.۹.
+   * پس از ارسال، گزارش‌ها قفل می‌شوند و تغییر بعدی فقط اصلاحیه است.
+   */
+  sendReports(classId: string, date: string): Promise<number>
 }

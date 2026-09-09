@@ -32,7 +32,13 @@ import styles from './TodayPage.module.css'
  * نگه‌داشتن انگشت = شیت استثناها. شیت هنوز ساخته نشده و این جلسه در دامنه
  * نبود، پس فعلاً فقط اعلام می‌کند که کجاست.
  */
-export function TodayPage({ onOpenBulk }: { onOpenBulk: () => void }) {
+export function TodayPage({
+  onOpenBulk,
+  onCloseDay,
+}: {
+  onOpenBulk: () => void
+  onCloseDay: () => void
+}) {
   const data = useData()
   const { queue, session, signOut, selectAccount } = useAuth()
 
@@ -294,6 +300,15 @@ export function TodayPage({ onOpenBulk }: { onOpenBulk: () => void }) {
       <p className={`${styles.footerNote} t-caption`}>
         ضربه: ثبت ورود · نگه‌داشتن: آورنده، وضعیت، دارو
       </p>
+
+      {/*
+        بخش ۵.۹: ساعت ۱۶:۳۰ صفحه بستن روز. پیش از آن هم در دسترس است،
+        چون مربی ممکن است زودتر کارش تمام شود، ولی جای کنش اصلی را
+        نمی‌گیرد.
+      */}
+      <button type="button" className={styles.closeDay} onClick={onCloseDay}>
+        بستن روز
+      </button>
 
       {/* کنش اصلی این صفحه، طبق وایرفریم بخش ۱۳.۱ */}
       <QuickAction onClick={onOpenBulk}>ثبت گروهی امروز</QuickAction>

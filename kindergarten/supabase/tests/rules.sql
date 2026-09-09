@@ -280,3 +280,40 @@ end $$;
 
 \echo ''
 \echo 'همه قواعد سفت پاس شدند.'
+
+\echo ''
+\echo '── بخش ۵.۹: ارسال خودکار ──'
+do $$
+declare
+  rid uuid;
+  sent integer;
+begin
+  update center set auto_send_report_at = '17:30'
+  where id = '11111111-1111-1111-1111-111111111111';
+
+  insert into daily_report (center_id, child_id, date, teacher_note)
+  values ('11111111-1111-1111-1111-111111111111', 'd1111111-1111-1111-1111-111111111111',
+          (now() at time zone 'Asia/Tehran')::date, 'گزارش ناقص امروز')
+  returning id into rid;
+
+  -- پیش از ساعت مقرر، چیزی فرستاده نمی‌شود.
+  select coalesce(sum(s.sent), 0) into sent
+  from app.auto_send_due_reports(
+    ((now() at time zone 'Asia/Tehran')::date + time '09:00') at time zone 'Asia/Tehran'
+  ) s;
+  perform assert(sent = 0, 'پیش از ساعت تنظیم‌شده، ارسال خودکار کاری نمی‌کند');
+
+  -- پس از ساعت مقرر، ناقص هم فرستاده می‌شود.
+  select coalesce(sum(s.sent), 0) into sent
+  from app.auto_send_due_reports(
+    ((now() at time zone 'Asia/Tehran')::date + time '17:35') at time zone 'Asia/Tehran'
+  ) s;
+  perform assert(sent >= 1, 'پس از ساعت تنظیم‌شده، گزارش ناقص هم فرستاده می‌شود');
+
+  perform assert((select locked_at from daily_report where id = rid) is not null,
+                 'ارسال خودکار گزارش را قفل هم می‌کند');
+
+  perform assert_rejects(
+    format('update daily_report set teacher_note = ''ویرایش'' where id = %L', rid),
+    'گزارشِ خودکار فرستاده‌شده هم فقط اصلاحیه می‌پذیرد');
+end $$;
