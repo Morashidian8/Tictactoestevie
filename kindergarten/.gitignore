@@ -8,3 +8,6 @@ dev-dist
 !.env.example
 .DS_Store
 *.tsbuildinfo
+
+# اسکرین‌شات‌های موقت آزمایش
+*-check.png

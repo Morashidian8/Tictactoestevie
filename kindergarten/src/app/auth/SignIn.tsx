@@ -127,11 +127,11 @@ export function SignIn() {
 }
 
 /**
- * فقط در اجرای محلی دیده می‌شود. وقتی Supabase و پنل پیامک وصل شوند، کد
- * واقعاً پیامک می‌شود و این کادر حذف می‌شود.
+ * فقط در اجرای محلی و در نسخه نمایشی دیده می‌شود. وقتی Supabase و پنل
+ * پیامک وصل شوند، کد واقعاً پیامک می‌شود و این کادر حذف می‌شود.
  */
 function DevNote() {
-  if (!import.meta.env.DEV) return null
+  if (!import.meta.env.DEV && import.meta.env.VITE_DEMO !== '1') return null
   return (
     <aside className={`${styles.devNote} t-caption`}>
       <strong>اجرای محلی، بدون سرور</strong>
