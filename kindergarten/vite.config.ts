@@ -6,6 +6,9 @@ import { VitePWA } from 'vite-plugin-pwa'
 // بخش ۱۴.۱ سند: PWA با React. توزیع مستقل از فروشگاه.
 // بخش ۱۴.۲: کارکرد کامل در ۴ ساعت آفلاین، پس پوسته اپ باید پیش‌ذخیره شود.
 export default defineConfig({
+  // زیر زیرپوشه سایت منتشر می‌شود (مثلاً /Tictactoestevie/kindergarten/)،
+  // پس همه نشانی‌ها باید با همان پیشوند ساخته شوند. محلی همان ریشه است.
+  base: process.env.BASE_PATH ?? '/',
   plugins: [
     react(),
     VitePWA({
@@ -17,12 +20,12 @@ export default defineConfig({
         description: 'گزارش روزانه، حضور و غیاب و پرونده کودک',
         lang: 'fa',
         dir: 'rtl',
-        start_url: '/',
+        start_url: '.',
         display: 'standalone',
         background_color: '#F5F7F4', // --paper، بخش ۱۲.۲
         theme_color: '#0F8C86', // --turquoise، بخش ۱۲.۲
         icons: [
-          { src: '/icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' },
+          { src: 'icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' },
         ],
       },
       workbox: {

@@ -14,6 +14,9 @@
  *
  * پروانه: SIL Open Font License 1.1، متنش در public/fonts/OFL-Vazirmatn.txt
  *
+ * فایل در src نشسته نه public، تا Vite مسیرش را با base بازنویسی کند؛
+ * مسیر مطلق زیر زیرپوشه سایت می‌شکند.
+ *
  * وقتی استعداد و مربع رسیدند، همین‌جا دو اعلان اضافه می‌شود و در
  * tokens.css نام‌ها جلوی وزیرمتن قرار می‌گیرند. هیچ اندازه و فاصله‌ای
  * عوض نمی‌شود، چون هیچ‌کدام بر اساس فونت جایگزین تنظیم نشده‌اند.
@@ -21,7 +24,7 @@
 
 @font-face {
   font-family: 'Vazirmatn';
-  src: url('/fonts/Vazirmatn-Variable.woff2') format('woff2-variations');
+  src: url('./fonts/Vazirmatn-Variable.woff2') format('woff2-variations');
   font-weight: 100 900;
   font-style: normal;
   font-display: swap;

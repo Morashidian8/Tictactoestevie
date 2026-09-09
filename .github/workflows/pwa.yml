@@ -4,13 +4,17 @@ name: Build & Deploy PWA
 # data.json, bundles the PWA shell) and publishes it to GitHub Pages.
 on:
   push:
-    branches: [main]
+    # شاخه مهدکودک هم اینجاست تا نسخه زنده با هر پوش به‌روز شود. کل سایت
+    # از همان شاخه‌ای ساخته می‌شود که پوش شده، پس شاخه نباید از main عقب
+    # بماند، وگرنه اپ‌های دیگر به نسخه قدیمی برمی‌گردند.
+    branches: [main, claude/kindergarten-management-system-gelsww]
     paths:
       - "hse_pwa/**"
       - "manhole_pwa/**"
       - "pwa/**"
       - "polybot_web/**"
       - "wallet_tracker/webui/**"
+      - "kindergarten/**"
       - "build_pwa.py"
       - ".github/workflows/pwa.yml"
   schedule:
@@ -99,6 +103,26 @@ jobs:
             echo '<meta http-equiv="refresh" content="0; url=./hse/"></head>' >> site/index.html
             echo '<body>در حال انتقال به اپ بازدید ایمنی... <a href="./hse/">ورود</a></body></html>' >> site/index.html
           fi
+      # ── سامانه مدیریت مهدکودک، زیر /kindergarten/ ──────────────────
+      # نسخه نمایشی است: لایه داده محلی با یک کلاس نمونه، بدون سرور.
+      # میزبانی واقعی محصول طبق بند ۱۰.۲ سند باید داخل کشور باشد؛ این
+      # نشانی فقط برای بازبینی است.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: kindergarten/package-lock.json
+      - name: Build kindergarten PWA
+        env:
+          BASE_PATH: /Tictactoestevie/kindergarten/
+          VITE_DEMO: "1"
+        run: |
+          cd kindergarten
+          npm ci
+          npm run build
+          mkdir -p ../site/kindergarten
+          cp -r dist/* ../site/kindergarten/
+
       - uses: actions/configure-pages@v5
         with:
           enablement: true
