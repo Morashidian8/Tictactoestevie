@@ -1,0 +1,37 @@
+/*
+ * کنش اصلی صفحه، چسبیده به پایین — بخش ۱۲.۹ و لحن پنل مربی در ۱۲.۱.
+ * سایه فقط در دو حالت مجاز است و نوار چسبیده یکی از آن‌هاست.
+ */
+.bar {
+  position: sticky;
+  inset-block-end: 0;
+  z-index: 10;
+  padding: var(--space-3) var(--space-4);
+  padding-block-end: calc(var(--space-3) + env(safe-area-inset-bottom));
+  background: var(--surface);
+  border-block-start: 1px solid var(--border);
+  box-shadow: var(--shadow-2);
+}
+
+.button {
+  inline-size: 100%;
+  min-block-size: var(--touch-teacher);
+  border-radius: var(--r-input);
+  background: var(--turquoise-dark);
+  color: var(--surface);
+  font-weight: var(--weight-bold);
+  transition: background var(--motion-feedback) var(--easing);
+}
+
+/*
+ * بازخورد لمس. رنگ فشرده‌تری از --turquoise-dark در پالت نیست، پس حالت
+ * فشرده با تیره‌تر شدن خودِ همان رنگ ساخته می‌شود، نه با رنگ تازه.
+ */
+.button:active:not(:disabled) {
+  filter: brightness(0.9);
+}
+
+.button:disabled {
+  background: var(--disabled-bg);
+  color: var(--disabled-fg);
+}

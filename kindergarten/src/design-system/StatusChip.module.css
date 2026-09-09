@@ -1,0 +1,56 @@
+/*
+ * تراشه وضعیت — بخش ۱۲.۹.
+ *
+ * قاعده بخش ۱۲.۲: رنگ هرگز تنها حامل معنا نیست. پس آیکون و متن همیشه
+ * همراهند و لحن رنگی را پس‌زمینه و آیکون حمل می‌کنند.
+ *
+ * متن همه لحن‌ها --ink است، نه رنگ لحن. دلیل: بخش ۱۲.۷ کف کنتراست ۴.۵:۱
+ * برای متن می‌خواهد و --sage روی --sage-tint فقط ۳.۴۳ می‌دهد. پالت
+ * نسخه تیره‌ای از زعفران، آجر و مریم‌گلی ندارد (فیروزه‌ای دارد). تا وقتی
+ * آن سه توکن به سند اضافه شوند، متن ink است و آیکون رنگ لحن را دارد،
+ * که برای عنصر غیرمتنی کف ۳:۱ کافی است.
+ */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding-block: var(--space-1);
+  padding-inline: var(--space-3);
+  border-radius: var(--r-chip);
+  font-weight: var(--weight-medium);
+  white-space: nowrap;
+  color: var(--ink);
+}
+
+.neutral {
+  background: var(--neutral-fill);
+  --chip-icon: var(--ink-muted);
+}
+.turquoise {
+  background: var(--turquoise-tint);
+  --chip-icon: var(--turquoise-dark);
+}
+/*
+ * زعفران زرد روشن است و روی --saffron-tint فقط ۲.۰۳ می‌دهد، زیر کف ۳:۱
+ * عناصر رابط. تا افزوده شدن --saffron-dark به پالت، آیکون این لحن ink
+ * است و لحن را پس‌زمینه حمل می‌کند.
+ */
+.saffron {
+  background: var(--saffron-tint);
+  --chip-icon: var(--ink);
+}
+.brick {
+  background: var(--brick-tint);
+  --chip-icon: var(--brick);
+}
+.sage {
+  background: var(--sage-tint);
+  --chip-icon: var(--sage);
+}
+
+.icon {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  color: var(--chip-icon);
+}

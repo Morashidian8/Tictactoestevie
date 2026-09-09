@@ -1,0 +1,112 @@
+.root {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  inline-size: 100%;
+}
+
+.frame {
+  position: relative;
+  border-radius: var(--r-chip); /* آواتار گرد است، بخش ۱۲.۵ */
+  background: var(--neutral-fill);
+  display: grid;
+  place-items: center;
+  flex: none;
+}
+
+.sm {
+  inline-size: var(--avatar-sm);
+  block-size: var(--avatar-sm);
+}
+.md {
+  inline-size: var(--avatar-md);
+  block-size: var(--avatar-md);
+}
+.lg {
+  inline-size: var(--avatar-lg);
+  block-size: var(--avatar-lg);
+}
+
+.photo {
+  inline-size: 100%;
+  block-size: 100%;
+  border-radius: inherit;
+  object-fit: cover;
+}
+
+/* وقتی عکس نیست، حرف اول نام. هرگز «کودک شماره ...» — بخش ۱۲.۸ */
+.initial {
+  color: var(--ink-muted);
+  font-weight: var(--weight-bold);
+  user-select: none;
+}
+
+/*
+ * پنج حالت، بخش ۱۳.۱ سند به‌علاوه تصمیم مالک محصول.
+ * فقط یک رنگ فعال در کل شبکه به کار می‌رود (فیروزه‌ای برای حاضر)، پس
+ * قاعده «حداکثر دو رنگ فعال در هر صفحه» نمی‌شکند.
+ */
+
+/* نیامده: خنثی، بدون رنگ */
+.notArrived {
+  border: 2px solid var(--neutral-fill-strong);
+}
+
+/* غیبت اعلام‌شده: حالت مورد انتظار است، نه هشدار، پس رنگ نمی‌گیرد */
+.absenceDeclared {
+  border: 2px solid var(--neutral-fill-strong);
+}
+
+/* حاضر: تنها رنگ فعال شبکه */
+.present {
+  border: 2px solid var(--turquoise);
+  background: var(--turquoise-tint);
+}
+
+/* رفته: کم‌رنگ */
+.left {
+  border: 2px solid var(--neutral-fill-strong);
+  opacity: 0.6;
+}
+
+/* بی‌خبر پس از ۹: مثل نیامده، به‌علاوه نقطه آجری */
+.unaccounted {
+  border: 2px solid var(--neutral-fill-strong);
+}
+
+/* نشان وضعیت روی گوشه آواتار */
+.badge {
+  position: absolute;
+  inset-block-end: -2px;
+  inset-inline-end: -2px;
+  inline-size: 20px;
+  block-size: 20px;
+  border-radius: var(--r-chip);
+  display: grid;
+  place-items: center;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  color: var(--ink-muted);
+}
+
+.badgeDot {
+  inline-size: 12px;
+  block-size: 12px;
+  background: var(--brick);
+  border-color: var(--surface);
+}
+
+.name {
+  color: var(--ink);
+  font-weight: var(--weight-medium);
+  text-align: center;
+  max-inline-size: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.caption {
+  color: var(--ink-muted);
+}

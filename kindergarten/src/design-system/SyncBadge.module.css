@@ -1,0 +1,25 @@
+/* بخش ۱۴.۲: نشانگر همگام‌سازی فقط وقتی صف پر است دیده می‌شود. */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--ink-muted);
+}
+
+.spin {
+  display: inline-grid;
+  place-items: center;
+  animation: spin 1.2s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spin {
+    animation: none;
+  }
+}

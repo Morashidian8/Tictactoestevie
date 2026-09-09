@@ -1,0 +1,106 @@
+/*
+ * لایه پایه — بخش ۱۲.۳، ۱۲.۶ و ۱۲.۷ سند.
+ *
+ * قاعده RTL: از خصوصیات منطقی استفاده می‌شود (`margin-inline-start`)، نه
+ * چپ و راست. در flex و grid هم start و end، نه left و right.
+ */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  /* پایه ۱۶ که مقیاس تایپ بخش ۱۲.۳ روی آن سوار است */
+  font-size: 16px;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--text-body);
+  line-height: var(--text-body-line);
+  font-weight: var(--weight-regular);
+  /* بخش ۱۲.۷: پنل مربی باید در نور شدید حیاط خوانا باشد */
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3,
+p,
+figure {
+  margin: 0;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: default;
+  color: var(--disabled-fg);
+  background: var(--disabled-bg);
+}
+
+img {
+  max-width: 100%;
+  display: block;
+}
+
+ul,
+ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/*
+ * فوکوس صفحه‌کلید همیشه دیده می‌شود — بخش ۱۲.۷.
+ * فقط :focus-visible، تا ضربه انگشت حلقه فوکوس نیندازد.
+ */
+:focus-visible {
+  outline: var(--focus-width) solid var(--focus);
+  outline-offset: var(--focus-offset);
+  border-radius: var(--r-input);
+}
+
+/*
+ * جزیره LTR برای عدد و شماره تلفن درون متن فارسی — بخش ۱۲.۶.
+ * ارقام لاتین در فیلد ورودی عددی و شماره تلفن، طبق بخش ۱۲.۴.
+ */
+.ltr {
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
+/* ارقام جدولی برای ستون‌های عددی — بخش ۱۲.۳ */
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* آیکون جهت‌دار قرینه می‌شود، آیکون غیرجهت‌دار نه — بخش ۱۲.۶ */
+[dir='rtl'] .mirror {
+  transform: scaleX(-1);
+}
+
+/* متن فقط برای صفحه‌خوان */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

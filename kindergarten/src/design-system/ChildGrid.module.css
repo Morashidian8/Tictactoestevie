@@ -1,0 +1,38 @@
+/*
+ * شبکه کودکان — بخش ۱۲.۶ و ۱۳.۱ سند.
+ *
+ * چهار ستون در وایرفریم بخش ۱۳.۱. زیر ۳۶۰px به سه ستون می‌افتد تا هدف
+ * لمسی زیر ۵۶ نرود. بخش ۱۲.۷: واکنش‌گرا تا عرض ۳۲۰px.
+ */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-5) var(--space-3);
+  padding: var(--space-5) var(--space-4);
+}
+
+@media (max-width: 360px) {
+  .grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.cell {
+  /* هدف لمسی پنل مربی، بدون استثنا — بخش ۱۲.۷ */
+  min-block-size: var(--touch-teacher);
+  min-inline-size: var(--touch-teacher);
+  display: flex;
+  border-radius: var(--r-card);
+  /* تنها انیمیشن مجاز: بازخورد لمس — بخش ۱۲.۸ */
+  transition: transform var(--motion-feedback) var(--easing);
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+.cell:active {
+  transform: scale(0.96);
+}
+
+.cell:disabled {
+  background: none;
+}

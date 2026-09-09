@@ -1,0 +1,58 @@
+/*
+ * مقیاس تایپ — بخش ۱۲.۳ سند.
+ *
+ * تأکید فقط با وزن فونت، نه با رنگ روی یک کلمه.
+ * برچسب تمام‌بزرگ لاتین استفاده نمی‌شود.
+ */
+
+.t-display,
+.t-h1 {
+  font-family: var(--font-display);
+  /*
+   * وزن ۷۰۰ وقتی مربع برسد. تا آن موقع استعداد وزن ۸۰۰ نقش تیتر را
+   * بازی می‌کند. این خط با رسیدن فایل‌ها به ۷۰۰ برمی‌گردد.
+   */
+  font-weight: var(--weight-display-fallback);
+}
+
+.t-display {
+  font-size: var(--text-display);
+  line-height: var(--text-display-line);
+}
+
+.t-h1 {
+  font-size: var(--text-h1);
+  line-height: var(--text-h1-line);
+}
+
+.t-h2 {
+  font-size: var(--text-h2);
+  line-height: var(--text-h2-line);
+  font-weight: var(--weight-bold);
+}
+
+.t-body-lg {
+  font-size: var(--text-body-lg);
+  line-height: var(--text-body-lg-line);
+}
+
+.t-body {
+  font-size: var(--text-body);
+  line-height: var(--text-body-line);
+}
+
+.t-body-sm {
+  font-size: var(--text-body-sm);
+  line-height: var(--text-body-sm-line);
+}
+
+.t-caption {
+  font-size: var(--text-caption);
+  line-height: var(--text-caption-line);
+  font-weight: var(--weight-medium);
+}
+
+/* متن پیوسته از این حد پهن‌تر نمی‌شود — بخش ۱۲.۳ */
+.t-prose {
+  max-inline-size: var(--measure);
+}

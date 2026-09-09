@@ -1,0 +1,35 @@
+/*
+ * فونت — بخش ۱۲.۳ سند.
+ *
+ * فایل‌های woff2 استعداد و مربع هنوز نرسیده‌اند. وقتی برسند، در
+ * public/fonts/ می‌نشینند و اعلان‌های زیر از حالت توضیح درمی‌آیند، و در
+ * typography.css وزن تیتر از --weight-display-fallback به ۷۰۰ برمی‌گردد.
+ *
+ * تا آن موقع زنجیره جایگزین در --font-display و --font-body کار می‌کند و
+ * هیچ اندازه یا فاصله‌ای بر اساس فونت جایگزین تنظیم نشده.
+ *
+ * @font-face {
+ *   font-family: 'Estedad';
+ *   src: url('/fonts/Estedad-Regular.woff2') format('woff2');
+ *   font-weight: 400;
+ *   font-display: swap;
+ * }
+ * @font-face {
+ *   font-family: 'Estedad';
+ *   src: url('/fonts/Estedad-Medium.woff2') format('woff2');
+ *   font-weight: 500;
+ *   font-display: swap;
+ * }
+ * @font-face {
+ *   font-family: 'Estedad';
+ *   src: url('/fonts/Estedad-Bold.woff2') format('woff2');
+ *   font-weight: 700;
+ *   font-display: swap;
+ * }
+ * @font-face {
+ *   font-family: 'Morabba';
+ *   src: url('/fonts/Morabba-Bold.woff2') format('woff2');
+ *   font-weight: 700;
+ *   font-display: swap;
+ * }
+ */
