@@ -16,13 +16,24 @@ export type AttendanceState =
 
 export type AvatarSize = 'sm' | 'md' | 'lg'
 
-/** متن وضعیت. رنگ تنها حامل معنا نیست، پس هر حالت متن هم دارد. */
+/**
+ * متن وضعیت. رنگ تنها حامل معنا نیست، پس هر حالت متن هم دارد.
+ *
+ * دو نسخه لازم است. زیر آواتار جا برای یک کلمه است و دو خط شدن، سطرهای
+ * شبکه را ناهم‌تراز می‌کند؛ مربی باید شبکه را در یک نگاه بخواند. عبارت
+ * کامل به صفحه‌خوان می‌رود و در نوار خلاصه بالای صفحه هم دیده می‌شود.
+ */
 const STATE_LABEL: Record<AttendanceState, string> = {
   notArrived: 'نیامده',
-  absenceDeclared: 'غیبت اعلام‌شده',
+  absenceDeclared: 'غایب',
   present: 'حاضر',
   left: 'رفته',
   unaccounted: 'بی‌خبر',
+}
+
+const STATE_LABEL_FULL: Record<AttendanceState, string> = {
+  ...STATE_LABEL,
+  absenceDeclared: 'غیبت اعلام‌شده',
 }
 
 type Props = {
@@ -58,7 +69,7 @@ export function ChildAvatar({
       <span className={`${styles.caption} t-caption tabular`}>
         {caption ?? STATE_LABEL[state]}
       </span>
-      <span className="sr-only">{STATE_LABEL[state]}</span>
+      <span className="sr-only">{STATE_LABEL_FULL[state]}</span>
     </span>
   )
 }

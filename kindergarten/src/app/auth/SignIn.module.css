@@ -1,0 +1,122 @@
+.screen {
+  min-block-size: 100dvh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--space-5);
+  padding: var(--space-6) var(--space-5);
+  max-inline-size: 30rem;
+  margin-inline: auto;
+}
+
+.title {
+  color: var(--ink);
+}
+
+.hint {
+  color: var(--ink-muted);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.label {
+  color: var(--ink-muted);
+}
+
+.input {
+  min-block-size: var(--touch-teacher);
+  padding-inline: var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--r-input);
+  background: var(--surface);
+  color: var(--ink);
+  /* بخش ۱۲.۴: ارقام لاتین در فیلد ورودی عددی و شماره تلفن */
+  direction: ltr;
+  text-align: start;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.08em;
+}
+
+.input:focus {
+  border-color: var(--turquoise);
+}
+
+.submit {
+  min-block-size: var(--touch-teacher);
+  border-radius: var(--r-input);
+  background: var(--turquoise-dark);
+  color: var(--surface);
+  font-weight: var(--weight-bold);
+}
+
+.submit:disabled {
+  background: var(--disabled-bg);
+  color: var(--disabled-fg);
+}
+
+.error {
+  color: var(--brick);
+  background: var(--brick-tint);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--r-input);
+}
+
+.devNote {
+  border: 1px dashed var(--border);
+  border-radius: var(--r-card);
+  padding: var(--space-4);
+  color: var(--ink-muted);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.devPhone {
+  direction: ltr;
+  text-align: start;
+  font-variant-numeric: tabular-nums;
+}
+
+.accountList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.account {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+  min-block-size: var(--touch-teacher);
+  padding: var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  background: var(--surface);
+  text-align: start;
+  inline-size: 100%;
+}
+
+.account:active {
+  border-color: var(--turquoise);
+}
+
+.accountName {
+  color: var(--ink);
+  font-weight: var(--weight-medium);
+}
+
+.accountMeta {
+  color: var(--ink-muted);
+}
+
+.link {
+  color: var(--turquoise-dark);
+  font-weight: var(--weight-medium);
+  align-self: flex-start;
+  min-block-size: var(--touch-teacher);
+}

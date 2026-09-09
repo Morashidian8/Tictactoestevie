@@ -109,4 +109,5 @@
 
 .caption {
   color: var(--ink-muted);
+  text-align: center;
 }

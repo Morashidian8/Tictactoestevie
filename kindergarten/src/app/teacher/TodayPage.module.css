@@ -1,0 +1,159 @@
+.page {
+  min-block-size: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background: var(--paper);
+}
+
+/* سرصفحه: نام کلاس، تاریخ جلالی، نشانگر همگام‌سازی */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background: var(--surface);
+  border-block-end: 1px solid var(--border);
+  position: sticky;
+  inset-block-start: 0;
+  z-index: 5;
+}
+
+.headerStart {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-inline-size: 0;
+}
+
+.className {
+  color: var(--ink);
+  font-weight: var(--weight-bold);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* کلید تعویض کلاس. اگر مربی یک کلاس داشته باشد نمایش داده نمی‌شود. */
+.classSwitch {
+  min-block-size: var(--touch-teacher);
+  padding-inline: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--r-input);
+  background: var(--surface);
+  color: var(--ink);
+  font-weight: var(--weight-medium);
+}
+
+.date {
+  color: var(--ink-muted);
+  white-space: nowrap;
+}
+
+/* نوار خلاصه، همیشه دیده می‌شود */
+.tally {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  padding: var(--space-3) var(--space-4);
+  background: var(--surface);
+  border-block-end: 1px solid var(--border);
+}
+
+.banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin: var(--space-4);
+  padding: var(--space-4);
+  border-radius: var(--r-card);
+  background: var(--brick-tint);
+  color: var(--ink);
+}
+
+.bannerIcon {
+  color: var(--brick);
+  flex: none;
+}
+
+.bannerText {
+  flex: 1;
+}
+
+.medication {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0 var(--space-4) var(--space-4);
+  padding: var(--space-4);
+  border-radius: var(--r-card);
+  background: var(--saffron-tint);
+  color: var(--ink);
+}
+
+.medicationIcon {
+  color: var(--ink);
+  flex: none;
+}
+
+.grid {
+  flex: 1;
+}
+
+.footerNote {
+  padding: 0 var(--space-4) var(--space-4);
+  color: var(--ink-muted);
+  text-align: center;
+}
+
+/* کنترل حساب فعال و جابه‌جایی — بخش ۳.۲ */
+.account {
+  position: relative;
+  flex: none;
+}
+
+.accountButton {
+  min-block-size: var(--touch-teacher);
+  min-inline-size: var(--touch-teacher);
+  padding-inline: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--r-chip);
+  background: var(--surface);
+  color: var(--ink-muted);
+  font-weight: var(--weight-medium);
+}
+
+.menu {
+  position: absolute;
+  inset-block-start: calc(100% + var(--space-2));
+  inset-inline-end: 0;
+  min-inline-size: 14rem;
+  padding: var(--space-2);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  box-shadow: var(--shadow-2);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  z-index: 20;
+}
+
+.menuName {
+  color: var(--ink-muted);
+  padding: var(--space-2) var(--space-3);
+}
+
+.menuItem {
+  min-block-size: var(--touch-teacher);
+  padding-inline: var(--space-3);
+  border-radius: var(--r-input);
+  text-align: start;
+  color: var(--ink);
+}
+
+.menuItem:active {
+  background: var(--turquoise-tint);
+}
