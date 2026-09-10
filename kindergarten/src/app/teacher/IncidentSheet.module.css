@@ -87,22 +87,33 @@
  *    کودکان می‌افتد، و این دکمه تمام روز روی صفحه است.
  * ۲. پس‌زمینه --ink است نه آجری. بخش ۱۲.۲ آجر را برای خطر و ایمنی نگه
  *    داشته؛ دکمه‌ای که تمام روز روی صفحه است، آجر را از معنا می‌اندازد.
- * ۳. فقط آیکون، بدون برچسب متنی، تا کمترین جا را بگیرد. نام کنش برای
- *    صفحه‌خوان در aria-label می‌ماند.
+ * ۳. آیکون به‌علاوه برچسب «ثبت رویداد». آیکون تنها، مربی را وادار می‌کند
+ *    حدس بزند این دکمه چه می‌کند؛ بخش ۱۲.۱۰ می‌گوید دکمه دقیقاً بگوید چه
+ *    اتفاقی می‌افتد.
  */
 .fab {
-  inline-size: var(--touch-teacher);
-  block-size: var(--touch-teacher);
+  min-block-size: var(--touch-teacher);
+  padding-inline: var(--space-4);
   border-radius: var(--r-chip);
   background: var(--ink);
+  color: var(--surface);
+  font-weight: var(--weight-bold);
+  font-size: var(--text-body-lg);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
   /*
    * آیکون از خانواده آجر است ولی خودِ --brick روی --ink فقط ۲.۶۶ کنتراست
    * می‌دهد، زیر کف ۳:۱ عناصر رابط. --brick-tint همان لحن گرم را دارد و
-   * روی زمینه تیره خوانا است.
+   * روی زمینه تیره خوانا است. متن سفید می‌ماند.
    */
-  color: var(--brick-tint);
   box-shadow: var(--shadow-2);
-  display: grid;
+}
+
+.fabIcon {
+  color: var(--brick-tint);
+  display: inline-grid;
   place-items: center;
+  flex: none;
 }
 .fab:active { filter: brightness(1.25); }

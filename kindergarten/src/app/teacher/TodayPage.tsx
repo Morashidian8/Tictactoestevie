@@ -133,23 +133,21 @@ export function TodayPage({
     [day, attendance, absences, now],
   )
 
-  const checkIn = (childId: string) => {
+  /**
+   * ضربه روی کودک.
+   *
+   * بخش ۵.۳ ورود را «یک ضربه» تعریف کرده بود، ولی آن ثبت هیچ‌وقت
+   * نمی‌پرسید چه کسی آورد، حال کودک چطور بود، و دارو آورده‌اند یا نه.
+   * حالا ضربه همان شیتی را باز می‌کند که خروج باز می‌کند، با همه
+   * پیش‌فرض‌ها از قبل انتخاب‌شده. مربی فقط تأیید می‌کند، پس معیار
+   * «زیر ۳ ثانیه» بخش ۱۷ هم می‌ماند: دو ضربه، نه یک فرم خالی.
+   */
+  const openChild = (childId: string) => {
     const state = resolveState(childId, attendance, absences, now)
-    // بخش ۵.۸: کودکی که حاضر است، ضربه بعدی خروجش را می‌گیرد. یک ضربه
-    // برای ورود، یک ضربه برای خروج، همان‌طور که سند می‌خواهد.
-    if (state === 'present') {
-      setCheckOutFor(childId)
-      return
-    }
     if (state === 'left') return
-
-    void queue
-      .submit('text', () => data.checkIn({ childId, at: new Date() }))
-      .then(() => load())
-      .catch((cause: unknown) => setError(messageOf(cause)))
+    if (state === 'present') setCheckOutFor(childId)
+    else setSheetFor(childId)
   }
-
-  const openSheet = (childId: string) => setSheetFor(childId)
 
   const submitSheet = async (result: ArrivalResult) => {
     if (!sheetFor) return
@@ -320,15 +318,15 @@ export function TodayPage({
         ) : counts.present === 0 && !counts.isAfterNine ? (
           <>
             <EmptyState text="هنوز کسی وارد نشده. با ضربه روی عکس هر کودک، ورودش را ثبت کنید." />
-            <ChildGrid items={items} onSelect={checkIn} onHold={openSheet} />
+            <ChildGrid items={items} onSelect={openChild} />
           </>
         ) : (
-          <ChildGrid items={items} onSelect={checkIn} onHold={openSheet} />
+          <ChildGrid items={items} onSelect={openChild} />
         )}
       </div>
 
       <p className={`${styles.footerNote} t-caption`}>
-        ضربه: ورود و خروج · نگه‌داشتن: آورنده، وضعیت، دارو
+        با ضربه روی هر کودک، ورود یا خروجش را ثبت کنید
       </p>
 
       {/*
@@ -349,13 +347,11 @@ export function TodayPage({
       <QuickAction
         onClick={onOpenBulk}
         aside={
-          <button
-            type="button"
-            className={fab.fab}
-            onClick={() => setIncidentOpen(true)}
-            aria-label="ثبت رویداد"
-          >
-            <AlertIcon size={24} />
+          <button type="button" className={fab.fab} onClick={() => setIncidentOpen(true)}>
+            <span className={fab.fabIcon} aria-hidden>
+              <AlertIcon size={20} />
+            </span>
+            ثبت رویداد
           </button>
         }
       >

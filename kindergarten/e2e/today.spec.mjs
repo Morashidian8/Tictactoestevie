@@ -62,17 +62,40 @@ check(
 await page.click('button:has-text("مریم رضایی") >> nth=0')
 await page.waitForSelector('text=ثبت گروهی امروز')
 
-console.log('▸ بخش ۵.۳: ثبت ورود با یک ضربه')
+console.log('▸ بخش ۵.۳: ورود هم مثل خروج پرسیده می‌شود')
 const tallyText = () => page.locator('[class*="tally"]').first().innerText()
 const before = await tallyText()
 await page.click('button[aria-label^="ثبت ورود"] >> nth=0')
-await page.waitForTimeout(400)
-const after = await tallyText()
-check(before !== after, 'ضربه روی عکس، نوار خلاصه را عوض می‌کند')
+await page.waitForSelector('[role="dialog"]')
+check(true, 'ضربه روی کودک نیامده، شیت ورود را باز می‌کند')
+check((await tallyText()) === before, 'و ورود هنوز ثبت نشده است')
 
-const digits = (text) => [...text.matchAll(/[۰-۹]+/g)].map((m) => m[0])
-const [p1] = digits(before)
-const [p2] = digits(after)
+const sheetSections = await page.locator('[role="dialog"] h3').allInnerTexts()
+check(
+  sheetSections.some((t) => t.includes('چه کسی آورد')),
+  'می‌پرسد چه کسی آورد',
+)
+check(
+  sheetSections.some((t) => t.includes('وضعیت هنگام ورود')),
+  'می‌پرسد علائمی داشت یا نه',
+)
+check(
+  sheetSections.some((t) => t.includes('دارو')),
+  'می‌پرسد دارو آورده‌اند یا نه',
+)
+
+// پیش‌فرض هوشمند: همه‌چیز از پیش انتخاب شده تا تأیید یک ضربه بماند.
+const preset = await page.locator('[role="dialog"] [aria-pressed="true"]').count()
+check(preset >= 2, `آورنده و وضعیت از پیش انتخاب‌اند (${preset} گزینه)`)
+const confirmLabel = await page.locator('[role="dialog"] [class*="primary"]').first().innerText()
+check(/ساعت/.test(confirmLabel), `دکمه ساعت ثبت را می‌گوید: ${confirmLabel}`)
+
+await page.click('[role="dialog"] [class*="primary"]')
+await page.waitForTimeout(700)
+const after = await tallyText()
+check(after !== before, 'پس از تأیید، نوار خلاصه عوض شد')
+const [p1] = [...before.matchAll(/[۰-۹]+/g)].map((m) => m[0])
+const [p2] = [...after.matchAll(/[۰-۹]+/g)].map((m) => m[0])
 check(p1 !== p2, `شمار حاضران از ${p1} به ${p2} رفت`)
 
 console.log('▸ ضربه دوم روی کودک حاضر، خروجش را می‌گیرد نه ورود دوباره')
@@ -132,7 +155,9 @@ console.log('▸ دکمه ثبت رویداد هرگز روی آخرین ردی�
 await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight))
 await page.waitForTimeout(300)
 const covered = await page.evaluate(() => {
-  const fab = document.querySelector('[aria-label="ثبت رویداد"]').getBoundingClientRect()
+  const fab = [...document.querySelectorAll('button')]
+    .find((b) => b.textContent.trim() === 'ثبت رویداد')
+    .getBoundingClientRect()
   return [...document.querySelectorAll('ul li button')].filter((c) => {
     const r = c.getBoundingClientRect()
     return !(r.right < fab.left || r.left > fab.right || r.bottom < fab.top || r.top > fab.bottom)
@@ -140,21 +165,23 @@ const covered = await page.evaluate(() => {
 })
 check(covered === 0, 'در انتهای اسکرول، هیچ کودکی زیر دکمه پنهان نیست')
 const shape = await page.evaluate(() => {
-  const el = document.querySelector('[aria-label="ثبت رویداد"]')
+  const el = [...document.querySelectorAll('button')].find(
+    (b) => b.textContent.trim() === 'ثبت رویداد',
+  )
   const main = [...document.querySelectorAll('button')].find((b) =>
     b.textContent.includes('ثبت گروهی امروز'),
   )
   const f = el.getBoundingClientRect()
   const m = main.getBoundingClientRect()
   return {
-    square: Math.abs(f.width - f.height) < 2,
-    gap: Math.round(m.top - f.bottom),
     text: el.textContent.trim(),
+    hasIcon: el.querySelector('svg') !== null,
+    gap: Math.round(m.top - f.bottom),
     bg: getComputedStyle(el).backgroundColor,
   }
 })
-check(shape.square, 'دکمه گرد فقط-آیکون است، بدون برچسب متنی')
-check(shape.text === '', 'برچسب متنی حذف شده و نامش در aria-label است')
+check(shape.text === 'ثبت رویداد', 'برچسب فارسی کنار آیکون نوشته شده')
+check(shape.hasIcon, 'آیکون هم دارد، پس دکمه خالی نیست')
 check(shape.gap === 16, `فاصله ۱۶ تا کنش اصلی دارد (${shape.gap})`)
 check(shape.bg === 'rgb(19, 39, 47)', 'پس‌زمینه --ink است، نه آجری')
 await page.evaluate(() => window.scrollTo(0, 0))
@@ -176,7 +203,7 @@ check(
 )
 
 console.log('▸ بخش ۵.۶: ثبت رویداد از دکمه شناور')
-await page.click('[aria-label="ثبت رویداد"]')
+await page.click('button:has-text("ثبت رویداد")')
 await page.waitForSelector('[role="dialog"]')
 check(true, 'دکمه ثبت رویداد از صفحه امروز در دسترس است')
 await page.click(D + '[class*="childCell"] >> nth=0')
@@ -191,7 +218,7 @@ check(
 await page.click(D + 'button[aria-label="بستن"]')
 await page.waitForTimeout(300)
 
-await page.click('[aria-label="ثبت رویداد"]')
+await page.click('button:has-text("ثبت رویداد")')
 await page.click(D + '[class*="childCell"] >> nth=1')
 await page.click(D + 'button:has-text("زمین خوردن")')
 await page.waitForTimeout(200)
@@ -224,20 +251,9 @@ check(
 await page.click(D + '[class*="primary"]:has-text("بستن")')
 await page.waitForTimeout(300)
 
-console.log('▸ بخش ۵.۳: شیت استثناهای ورود')
-const hold = async (label) => {
-  const box = await page.locator(`button[aria-label="${label}"]`).boundingBox()
-  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
-  await page.mouse.down()
-  await page.waitForTimeout(650)
-  await page.mouse.up()
-}
-
-const target = await page.locator('button[aria-label^="ثبت ورود"] >> nth=0').getAttribute('aria-label')
-await hold(target)
+console.log('▸ استثناهای ورود: عکس و دارو')
+await page.click('button[aria-label^="ثبت ورود"] >> nth=0')
 await page.waitForSelector('[role="dialog"]')
-const sections = await page.locator('[role="dialog"] h3').allInnerTexts()
-check(sections.length === 3, `شیت سه بخش دارد: ${sections.join(' · ')}`)
 
 // عکس همیشه در دسترس است؛ همان عکس، اگر خانواده بعداً ادعای آسیب‌دیدگی
 // کرد، سند دفاعی مهد است. با وضعیت غیرعادی برجسته می‌شود.
@@ -264,17 +280,17 @@ check(
 
 const medsBefore = await page.locator('text=/دارو هنوز داده نشده/').count()
 const tallyBefore = await tallyText()
-await page.click('[role="dialog"] button:has-text("ثبت ورود")')
+await page.click('[role="dialog"] [class*="primary"]')
 await page.waitForTimeout(700)
 check((await page.locator('[role="dialog"]').count()) === 0, 'شیت پس از ثبت بسته می‌شود')
-check((await tallyText()) !== tallyBefore, 'ورود از داخل شیت ثبت شد')
+check((await tallyText()) !== tallyBefore, 'ورود با داروی ثبت‌شده انجام شد')
 check(
   medsBefore === 0 || (await page.locator('text=/دارو هنوز داده نشده/').count()) === 1,
   'یادآور داروی خورانده‌نشده روی صفحه می‌آید',
 )
 
 console.log('▸ شیت با کلید Escape بسته می‌شود')
-await hold(await page.locator('button[aria-label^="ثبت ورود"] >> nth=0').getAttribute('aria-label'))
+await page.click('button[aria-label^="ثبت ورود"] >> nth=0')
 await page.waitForSelector('[role="dialog"]')
 await page.keyboard.press('Escape')
 await page.waitForTimeout(300)

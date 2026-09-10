@@ -75,6 +75,8 @@ export function ArrivalSheet({ child, existing, onClose, onSubmit }: Props) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const fileInput = useRef<HTMLInputElement>(null)
+  // ساعتی که روی دکمه نوشته می‌شود همان ساعتی است که ثبت خواهد شد.
+  const [now] = useState(() => new Date())
 
   // نشانی پیش‌نمایش را آزاد کن، وگرنه حافظه در طول روز پر می‌شود.
   useEffect(() => () => { if (photo) URL.revokeObjectURL(photo.url) }, [photo])
@@ -122,8 +124,13 @@ export function ArrivalSheet({ child, existing, onClose, onSubmit }: Props) {
       onClose={onClose}
       footer={
         <>
-          <button type="button" className={`${styles.primary} t-body-lg`} onClick={() => void submit()} disabled={busy}>
-            {alreadyIn ? 'ذخیره تغییرها' : 'ثبت ورود'}
+          <button
+            type="button"
+            className={`${styles.primary} t-body-lg`}
+            onClick={() => void submit()}
+            disabled={busy}
+          >
+            {alreadyIn ? 'ذخیره تغییرها' : `ثبت ورود ساعت ${formatTime(now)}`}
           </button>
           <button type="button" className={`${styles.secondary} t-body-lg`} onClick={onClose}>
             انصراف
@@ -135,7 +142,11 @@ export function ArrivalSheet({ child, existing, onClose, onSubmit }: Props) {
         <p className={`${styles.note} t-body`}>
           ورودش ساعت {formatTime(new Date(existing.checkInAt))} ثبت شده.
         </p>
-      ) : null}
+      ) : (
+        <p className={`${styles.note} t-body`}>
+          همه‌چیز از پیش پر است. اگر استثنایی نبود، فقط دکمه پایین را بزنید.
+        </p>
+      )}
 
       {/* ۱ — آورنده. پیش‌فرض انتخاب‌شده است و مربی فقط استثنا را دست می‌زند. */}
       <section className={styles.section}>
