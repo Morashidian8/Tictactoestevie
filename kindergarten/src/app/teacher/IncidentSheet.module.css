@@ -77,19 +77,32 @@
   color: var(--ink); font-weight: var(--weight-medium);
 }
 
-/* دکمه شناور، در همه تب‌ها — بخش ۱۳.۱ */
+/*
+ * دکمه شناور ثبت رویداد — بخش ۱۳.۱، «در همه تب‌ها».
+ *
+ * سه تصمیم:
+ *
+ * ۱. داخل نوار چسبیده می‌نشیند، یک ردیف بالای کنش اصلی با فاصله ۱۶.
+ *    شناور نیست: دکمه شناور در هر موقعیت اسکرول روی نام یا عکس یکی از
+ *    کودکان می‌افتد، و این دکمه تمام روز روی صفحه است.
+ * ۲. پس‌زمینه --ink است نه آجری. بخش ۱۲.۲ آجر را برای خطر و ایمنی نگه
+ *    داشته؛ دکمه‌ای که تمام روز روی صفحه است، آجر را از معنا می‌اندازد.
+ * ۳. فقط آیکون، بدون برچسب متنی، تا کمترین جا را بگیرد. نام کنش برای
+ *    صفحه‌خوان در aria-label می‌ماند.
+ */
 .fab {
-  position: fixed;
-  inset-block-end: calc(var(--sticky-bar-height) + var(--space-4) + env(safe-area-inset-bottom));
-  inset-inline-start: var(--space-4);
-  z-index: 20;
-  min-block-size: var(--touch-teacher);
-  padding-inline: var(--space-4);
+  inline-size: var(--touch-teacher);
+  block-size: var(--touch-teacher);
   border-radius: var(--r-chip);
-  background: var(--brick);
-  color: var(--surface);
-  font-weight: var(--weight-bold);
+  background: var(--ink);
+  /*
+   * آیکون از خانواده آجر است ولی خودِ --brick روی --ink فقط ۲.۶۶ کنتراست
+   * می‌دهد، زیر کف ۳:۱ عناصر رابط. --brick-tint همان لحن گرم را دارد و
+   * روی زمینه تیره خوانا است.
+   */
+  color: var(--brick-tint);
   box-shadow: var(--shadow-2);
-  display: inline-flex; align-items: center; gap: var(--space-2);
+  display: grid;
+  place-items: center;
 }
-.fab:active { filter: brightness(0.92); }
+.fab:active { filter: brightness(1.25); }

@@ -21,12 +21,23 @@ describe('چهره جایگزین عکس', () => {
     }
   })
 
-  it('هیچ رنگ دلخواهی بیرون از پالت بخش ۱۲ ندارد', () => {
-    // رنگ پوست و مو و لباس تصویری‌اند و در پالت رابط نیستند؛ بقیه باید
-    // از توکن بیایند. اینجا فقط پس‌زمینه بررسی می‌شود که پشت رابط است.
-    const backdrop = source.match(/const BACKDROP = \[[\s\S]*?\] as const/)?.[0] ?? ''
+  it('پس‌زمینه از توکن می‌آید، نه رنگ دلخواه', () => {
+    // رنگ پوست و مو و لباس تصویری‌اند و در پالت رابط نیستند؛ پس‌زمینه
+    // که پشت رابط است باید از توکن بیاید.
+    const backdrop = source.match(/const BACKDROP = .*/)?.[0] ?? ''
     expect(backdrop).not.toMatch(/#[0-9a-fA-F]{3,6}/)
-    expect(backdrop).toContain('var(--')
+    expect(backdrop).toContain('var(--neutral-fill)')
+  })
+
+  it('پس‌زمینه همه چهره‌ها یکی است', async () => {
+    // رنگ‌های متفاوت با حلقه وضعیت رقابت می‌کردند: پس‌زمینه صورتی هم روی
+    // «غایب» می‌افتاد هم روی «بی‌خبر» و از فاصله تفکیک‌ناپذیر بودند.
+    const { AvatarFace } = await import('./AvatarFace.tsx')
+    const fills = Array.from({ length: 25 }, (_, i) => {
+      const svg = JSON.stringify(AvatarFace({ seed: `child-${i + 1}` }))
+      return svg.match(/"fill":"var\(--neutral-fill\)"/g)?.length ?? 0
+    })
+    expect(fills.every((n) => n === 1)).toBe(true)
   })
 
   it('برای یک شناسه همیشه یک خروجی می‌دهد', async () => {

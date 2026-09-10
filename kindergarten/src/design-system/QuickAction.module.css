@@ -13,6 +13,13 @@
   box-shadow: var(--shadow-2);
 }
 
+/* ردیف کنش ثانویه، یک فاصله ۱۶ بالای کنش اصلی */
+.aside {
+  display: flex;
+  justify-content: flex-start;
+  margin-block-end: var(--space-4);
+}
+
 .button {
   inline-size: 100%;
   min-block-size: var(--touch-teacher);

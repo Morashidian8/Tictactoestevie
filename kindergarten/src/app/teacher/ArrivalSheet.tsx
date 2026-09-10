@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 import { BottomSheet, CheckIcon } from '../../design-system/index.ts'
 import { compressImage } from '../../core/media/index.ts'
 import { formatTime, toIsoDate, toLatinDigits } from '../../i18n/index.ts'
-import type { ArrivalCondition, Attendance, Child, Guardian } from '../../core/data/index.ts'
+import { useData } from '../../core/auth/index.ts'
+import type { ArrivalCondition, Attendance, Child, PickupOption } from '../../core/data/index.ts'
 import styles from './ArrivalSheet.module.css'
 
 /**
@@ -27,23 +28,42 @@ export type ArrivalResult = {
   droppedByGuardianId: string | null
   arrivalCondition: ArrivalCondition
   photo: Blob | null
-  medication: { name: string; dose: string; scheduledTime: string } | null
+  medication: {
+    name: string
+    dose: string
+    scheduledTime: string
+    /** چه کسی دارو را تحویل داد. پیش‌فرض همان آورنده است. */
+    handedById: string | null
+  } | null
 }
 
 type Props = {
   child: Child
-  guardians: Guardian[]
   /** ردیف امروز، اگر کودک قبلاً وارد شده باشد. */
   existing: Attendance | null
   onClose: () => void
   onSubmit: (result: ArrivalResult) => Promise<void>
 }
 
-export function ArrivalSheet({ child, guardians, existing, onClose, onSubmit }: Props) {
-  const allowed = guardians.filter((g) => g.canPickup)
+export function ArrivalSheet({ child, existing, onClose, onSubmit }: Props) {
+  const data = useData()
+  // بخش ۵.۳: «فهرست سرپرستان». عملاً هر کسی که مجاز است کودک را بیاورد،
+  // یعنی سرپرستان به‌علاوه تحویل‌گیرندگان ثبت‌شده. مادربزرگی که صبح‌ها
+  // کودک را می‌آورد باید در همین فهرست باشد.
+  const [allowed, setAllowed] = useState<PickupOption[]>([])
   const [guardianId, setGuardianId] = useState<string | null>(
-    existing?.droppedByGuardianId ?? allowed[0]?.id ?? null,
+    existing?.droppedByGuardianId ?? null,
   )
+
+  useEffect(() => {
+    data
+      .listPickupOptions(child.id)
+      .then((options) => {
+        setAllowed(options)
+        setGuardianId((current) => current ?? options[0]?.id ?? null)
+      })
+      .catch(() => setError('فهرست آورندگان خوانده نشد.'))
+  }, [data, child.id])
   const [condition, setCondition] = useState<ArrivalCondition>(
     existing?.arrivalCondition ?? 'normal',
   )
@@ -51,6 +71,7 @@ export function ArrivalSheet({ child, guardians, existing, onClose, onSubmit }: 
   const [medName, setMedName] = useState('')
   const [medDose, setMedDose] = useState('')
   const [medTime, setMedTime] = useState('')
+  const [medHandedBy, setMedHandedBy] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const fileInput = useRef<HTMLInputElement>(null)
@@ -84,6 +105,7 @@ export function ArrivalSheet({ child, guardians, existing, onClose, onSubmit }: 
               name: medName.trim(),
               dose: medDose.trim(),
               scheduledTime: toLatinDigits(medTime.trim()),
+              handedById: medHandedBy ?? guardianId,
             }
           : null,
       })
@@ -130,7 +152,7 @@ export function ArrivalSheet({ child, guardians, existing, onClose, onSubmit }: 
                 onClick={() => setGuardianId(guardian.id)}
               >
                 {on ? <span className={styles.tick} aria-hidden><CheckIcon size={16} /></span> : null}
-                {guardian.relation ?? guardian.fullName}
+                {guardian.relation ? `${guardian.relation}` : guardian.fullName}
               </button>
             )
           })}
@@ -158,11 +180,18 @@ export function ArrivalSheet({ child, guardians, existing, onClose, onSubmit }: 
           })}
         </div>
 
-        {condition !== 'normal' ? (
-          <div className={styles.photoRow}>
+        {/*
+          دکمه عکس همیشه هست، ولی با وضعیت غیرعادی برجسته می‌شود. بخش ۵.۳
+          عکس را اختیاری می‌داند؛ ولی همین عکس، اگر خانواده بعداً ادعای
+          آسیب‌دیدگی کرد، سند دفاعی مهد است. پس پنهانش نمی‌کنیم و وقتی
+          واقعاً به کار می‌آید جلب توجه می‌کند.
+        */}
+        <div className={styles.photoRow}>
             <button
               type="button"
-              className={`${styles.photoBtn} t-body-lg`}
+              className={`${styles.photoBtn} ${
+                condition !== 'normal' ? styles.photoBtnUrgent : ''
+              } t-body-lg`}
               onClick={() => fileInput.current?.click()}
             >
               {photo ? 'عکس دیگر' : 'افزودن عکس'}
@@ -176,8 +205,7 @@ export function ArrivalSheet({ child, guardians, existing, onClose, onSubmit }: 
               capture="environment"
               onChange={(event) => void pickPhoto(event.target.files?.[0])}
             />
-          </div>
-        ) : null}
+        </div>
       </section>
 
       {/* ۳ — دارو. */}
@@ -202,12 +230,35 @@ export function ArrivalSheet({ child, guardians, existing, onClose, onSubmit }: 
               />
               <input
                 className={`${styles.input} ${styles.time}`}
-                placeholder="12:00"
+                placeholder="۱۲:۰۰"
                 inputMode="numeric"
                 value={medTime}
                 onChange={(event) => setMedTime(event.target.value)}
                 aria-label="ساعت مصرف"
               />
+
+              <span className={`${styles.legend} t-caption`}>چه کسی تحویل داد؟</span>
+              <div className={styles.options}>
+                {allowed.map((person) => {
+                  const on = (medHandedBy ?? guardianId) === person.id
+                  return (
+                    <button
+                      key={person.id}
+                      type="button"
+                      className={`${styles.option} t-body-lg`}
+                      aria-pressed={on}
+                      onClick={() => setMedHandedBy(person.id)}
+                    >
+                      {on ? (
+                        <span className={styles.tick} aria-hidden>
+                          <CheckIcon size={16} />
+                        </span>
+                      ) : null}
+                      {person.relation ?? person.fullName}
+                    </button>
+                  )
+                })}
+              </div>
             </>
           ) : null}
         </div>

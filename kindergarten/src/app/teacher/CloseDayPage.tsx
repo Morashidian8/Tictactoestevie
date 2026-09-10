@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { AlertIcon, CheckIcon, QuickAction } from '../../design-system/index.ts'
-import { formatCount, formatJalali, formatTime, toIsoDate } from '../../i18n/index.ts'
+import { formatClock, formatCount, formatJalali, formatTime, toIsoDate } from '../../i18n/index.ts'
 import { useAuth, useData } from '../../core/auth/index.ts'
 import type { Child, DaySummary } from '../../core/data/index.ts'
 import styles from './CloseDayPage.module.css'
@@ -153,7 +153,7 @@ export function CloseDayPage({ onBack, onFixReports }: Props) {
 
         {!sentAt ? (
           <p className={`${styles.autoSend} t-caption`}>
-            اگر نزنید، ساعت {AUTO_SEND_AT.replace(/\d/g, (d) => '۰۱۲۳۴۵۶۷۸۹'[Number(d)]!)} خودکار فرستاده می‌شود.
+            اگر نزنید، ساعت {formatClock(AUTO_SEND_AT)} خودکار فرستاده می‌شود.
           </p>
         ) : null}
       </div>

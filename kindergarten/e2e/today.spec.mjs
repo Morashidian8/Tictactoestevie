@@ -63,7 +63,7 @@ await page.click('button:has-text("مریم رضایی") >> nth=0')
 await page.waitForSelector('text=ثبت گروهی امروز')
 
 console.log('▸ بخش ۵.۳: ثبت ورود با یک ضربه')
-const tallyText = () => page.locator('[class*="tally"]').innerText()
+const tallyText = () => page.locator('[class*="tally"]').first().innerText()
 const before = await tallyText()
 await page.click('button[aria-label^="ثبت ورود"] >> nth=0')
 await page.waitForTimeout(400)
@@ -128,10 +128,57 @@ check(
   'کودک به حالت «رفته» رفت',
 )
 
+console.log('▸ دکمه ثبت رویداد هرگز روی آخرین ردیف کودکان نمی‌افتد')
+await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight))
+await page.waitForTimeout(300)
+const covered = await page.evaluate(() => {
+  const fab = document.querySelector('[aria-label="ثبت رویداد"]').getBoundingClientRect()
+  return [...document.querySelectorAll('ul li button')].filter((c) => {
+    const r = c.getBoundingClientRect()
+    return !(r.right < fab.left || r.left > fab.right || r.bottom < fab.top || r.top > fab.bottom)
+  }).length
+})
+check(covered === 0, 'در انتهای اسکرول، هیچ کودکی زیر دکمه پنهان نیست')
+const shape = await page.evaluate(() => {
+  const el = document.querySelector('[aria-label="ثبت رویداد"]')
+  const main = [...document.querySelectorAll('button')].find((b) =>
+    b.textContent.includes('ثبت گروهی امروز'),
+  )
+  const f = el.getBoundingClientRect()
+  const m = main.getBoundingClientRect()
+  return {
+    square: Math.abs(f.width - f.height) < 2,
+    gap: Math.round(m.top - f.bottom),
+    text: el.textContent.trim(),
+    bg: getComputedStyle(el).backgroundColor,
+  }
+})
+check(shape.square, 'دکمه گرد فقط-آیکون است، بدون برچسب متنی')
+check(shape.text === '', 'برچسب متنی حذف شده و نامش در aria-label است')
+check(shape.gap === 16, `فاصله ۱۶ تا کنش اصلی دارد (${shape.gap})`)
+check(shape.bg === 'rgb(19, 39, 47)', 'پس‌زمینه --ink است، نه آجری')
+await page.evaluate(() => window.scrollTo(0, 0))
+
+console.log('▸ تراشه «بی‌خبر» فهرست را باز می‌کند، بنر تکراری حذف شده')
+check(
+  (await page.locator('text=/کودک بدون اطلاع نیامده‌اند/').count()) === 0,
+  'بنر قرمز تکراری حذف شد',
+)
+check(
+  (await page.locator('text=/دارو هنوز داده نشده/').count()) === 1,
+  'بنر دارو سر جایش ماند',
+)
+await page.click('[class*="tallyAction"]:not(:disabled)')
+await page.waitForTimeout(300)
+check(
+  (await page.locator('[class*="outstandingNames"]').count()) === 1,
+  'تراشه فهرست همان کودکان را باز می‌کند',
+)
+
 console.log('▸ بخش ۵.۶: ثبت رویداد از دکمه شناور')
-await page.click('button:has-text("ثبت رویداد")')
+await page.click('[aria-label="ثبت رویداد"]')
 await page.waitForSelector('[role="dialog"]')
-check(true, 'دکمه شناور رویداد از صفحه امروز در دسترس است')
+check(true, 'دکمه ثبت رویداد از صفحه امروز در دسترس است')
 await page.click(D + '[class*="childCell"] >> nth=0')
 await page.click(D + 'button:has-text("درگیری")')
 await page.waitForTimeout(250)
@@ -144,7 +191,7 @@ check(
 await page.click(D + 'button[aria-label="بستن"]')
 await page.waitForTimeout(300)
 
-await page.click('button:has-text("ثبت رویداد")')
+await page.click('[aria-label="ثبت رویداد"]')
 await page.click(D + '[class*="childCell"] >> nth=1')
 await page.click(D + 'button:has-text("زمین خوردن")')
 await page.waitForTimeout(200)
@@ -192,15 +239,18 @@ await page.waitForSelector('[role="dialog"]')
 const sections = await page.locator('[role="dialog"] h3').allInnerTexts()
 check(sections.length === 3, `شیت سه بخش دارد: ${sections.join(' · ')}`)
 
-check(
-  (await page.locator('button:has-text("افزودن عکس")').count()) === 0,
-  'با وضعیت عادی، دکمه عکس دیده نمی‌شود',
-)
-await page.click('[role="dialog"] button:has-text("خراش یا کبودی")')
+// عکس همیشه در دسترس است؛ همان عکس، اگر خانواده بعداً ادعای آسیب‌دیدگی
+// کرد، سند دفاعی مهد است. با وضعیت غیرعادی برجسته می‌شود.
+const photoStyle = async () =>
+  page.locator('button:has-text("افزودن عکس")').evaluate((el) => getComputedStyle(el).borderStyle)
 check(
   (await page.locator('button:has-text("افزودن عکس")').count()) === 1,
-  'با وضعیت غیرعادی، دکمه عکس ظاهر می‌شود',
+  'دکمه عکس همیشه در دسترس است',
 )
+check((await photoStyle()) === 'dashed', 'با وضعیت عادی، ساده است')
+await page.click('[role="dialog"] button:has-text("خراش یا کبودی")')
+await page.waitForTimeout(200)
+check((await photoStyle()) === 'solid', 'با وضعیت غیرعادی، برجسته می‌شود')
 
 check(
   (await page.locator('input[aria-label="ساعت مصرف"]').count()) === 0,
@@ -245,6 +295,15 @@ await page.click('button:has-text("ثبت گروهی امروز")')
 await page.waitForSelector('text=اعمال روی همه')
 check(true, 'صفحه ثبت گروهی از دکمه کنش اصلی «امروز» باز می‌شود')
 
+check(
+  (await page.locator('[class*="bar"] button').innerText()) === 'ذخیره و بازگشت',
+  'نوار چسبیده فقط پایان کار است',
+)
+check(
+  (await page.locator('[class*="applyWhy"]').count()) === 1,
+  'دکمه غیرفعال دلیلش را می‌نویسد',
+)
+
 const suggested = await page.locator('[class*="suggestNames"]').innerText()
 check(suggested.split('·').length === 3, `سه کودک برای یادداشت پیشنهاد شد: ${suggested}`)
 
@@ -254,7 +313,7 @@ const tap = async (selector) => { await page.click(selector); taps += 1 }
 await tap('[aria-label="ثبت یکجا برای کل کلاس"] button:has-text("بیشترش")')
 await tap('[aria-label="ثبت یکجا برای کل کلاس"] button:has-text("خوب")')
 await page.fill('input[aria-label="ساعت شروع خواب"]', '13:00'); taps += 1
-await tap('[class*="bar"] button:has-text("اعمال روی همه")')
+await tap('[class*="applyInline"]')
 await page.waitForSelector('text=/اعمال شد/')
 
 for (const name of ['امیر', 'آوا', 'کیان', 'هستی']) {
@@ -270,9 +329,15 @@ check(
   `چهار استثنا ثبت شد، کل مسیر ${taps} ضربه`,
 )
 
+console.log('▸ خلق عمومی هر سه بازه را پر می‌کند')
+check(
+  (await page.locator('[class*="rowLabel"]').nth(1).innerText()) === 'خلق عمومی امروز',
+  'نوار گروهی یک کنترل خلق دارد، نه بازه جاری',
+)
+
 console.log('▸ استثنا برنده است، نه آخرین نوشته')
 await tap('[aria-label="ثبت یکجا برای کل کلاس"] button:has-text("همه")')
-await tap('[class*="bar"] button:has-text("اعمال روی همه")')
+await tap('[class*="applyInline"]')
 await page.waitForTimeout(500)
 const amir = await page.locator('button:has([class*="itemName"]:text-is("امیر"))').innerText()
 check(amir.includes('کمی'), 'ثبت گروهی دوم استثنای امیر را پاک نکرد')
@@ -347,7 +412,13 @@ await page.click('button:has-text("بستن روز")')
 await page.waitForSelector('text=ارسال گزارش‌های امروز')
 const lines = () => page.locator('[class*="lineText"]').allInnerTexts()
 check((await lines()).some((t) => t.includes('کامل')), 'شمار گزارش کامل نشان داده می‌شود')
-check((await lines()).some((t) => t.includes('ناقص')), 'شمار گزارش ناقص نشان داده می‌شود')
+// یک بار ثبت گروهی، هر سه بازه خلق را پر می‌کند، پس گزارشی ناقص
+// نمی‌ماند. پیش‌تر نوار فقط بازه جاری را می‌گرفت و همه ناقص می‌ماندند.
+check(
+  (await lines()).some((t) => t.includes('کامل')) &&
+    !(await lines()).some((t) => t.includes('ناقص')),
+  'پس از ثبت گروهی، گزارشی ناقص نمی‌ماند',
+)
 check(
   (await lines()).some((t) => t.includes('بدون یادداشت این هفته')),
   'کودکان بدون یادداشت این هفته شمرده می‌شوند',

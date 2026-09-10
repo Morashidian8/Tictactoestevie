@@ -6,10 +6,9 @@ import {
   StatusChip,
   SyncBadge,
 } from '../../design-system/index.ts'
-import { formatCount, formatJalali, toIsoDate, toLatinDigits } from '../../i18n/index.ts'
+import { formatClock, formatCount, formatJalali, toIsoDate, toLatinDigits } from '../../i18n/index.ts'
 import { useAuth, useData } from '../../core/auth/index.ts'
 import {
-  currentMoodBand,
   suggestNoteTargets,
   type BulkValues,
   type Child,
@@ -43,8 +42,6 @@ const LUNCH: MealAmount[] = ['all', 'most', 'little', 'none']
  * می‌شود، چون هرگز حالت غالب یک کلاس نیست.
  */
 const BULK_MOOD: Mood[] = ['good', 'normal', 'restless']
-
-const BAND_LABEL = { morning: 'صبح', noon: 'ظهر', afternoon: 'عصر' } as const
 
 type Props = { onBack: () => void }
 
@@ -186,16 +183,13 @@ export function BulkEntryPage({ onBack }: Props) {
           </div>
 
           {/*
-            گزارش سه بازه خلق دارد (بخش ۱۱.۳) و نوار گروهی یک انتخاب.
-            انتخاب روی بازه ساعت جاری می‌نشیند، چون بخش ۵.۲ سه پنجره
-            فرصت در روز تعریف کرده و مربی در هرکدام یک بار سر می‌زند.
-            نام بازه نوشته می‌شود، وگرنه مربی نمی‌داند دارد کدام را پر
-            می‌کند.
+            یک کنترل واحد که هر سه بازه را پر می‌کند. پیش‌تر فقط بازه
+            ساعت جاری را می‌گرفت، که یعنی گزارش هیچ‌وقت از این صفحه کامل
+            نمی‌شد و مربی باید سه بار سر می‌زد. تغییر تک‌تک بازه‌ها همچنان
+            در شیت استثنای هر کودک ممکن است.
           */}
           <div className={styles.row}>
-            <span className={`${styles.rowLabel} t-caption`}>
-              خلق {BAND_LABEL[currentMoodBand()]}
-            </span>
+            <span className={`${styles.rowLabel} t-caption`}>خلق عمومی امروز</span>
             <div className={styles.choices}>
               {BULK_MOOD.map((value) => (
                 <button
@@ -216,12 +210,27 @@ export function BulkEntryPage({ onBack }: Props) {
             <input
               className={styles.napInput}
               inputMode="numeric"
-              placeholder="13:00"
+              placeholder="۱۳:۰۰"
               value={napStart}
               onChange={(event) => setNapStart(event.target.value)}
               aria-label="ساعت شروع خواب"
             />
           </div>
+
+          <button
+            type="button"
+            className={`${styles.applyInline} t-body-lg`}
+            onClick={applyToAll}
+            disabled={nothingChosen}
+          >
+            اعمال روی همه
+          </button>
+
+          {nothingChosen ? (
+            <p className={`${styles.applyWhy} t-caption`}>
+              اول یکی از گزینه‌های بالا را انتخاب کنید.
+            </p>
+          ) : null}
 
           {appliedAt ? (
             <p className={`${styles.applied} t-caption`}>
@@ -232,6 +241,26 @@ export function BulkEntryPage({ onBack }: Props) {
             </p>
           ) : null}
         </section>
+
+        {/* ── پایین: فهرست کودکان ── */}
+        <div className={styles.listHead}>
+          <span className={`${styles.listTitle} t-h2`}>کودکان</span>
+          <span className={`${styles.listCount} t-caption`}>
+            {formatCount(exceptions)} استثنا از {formatCount(children.length)}
+          </span>
+        </div>
+
+        <div className={styles.list}>
+          {children.map((child) => (
+            <ChildRow
+              key={child.id}
+              child={child}
+              report={reports.get(child.id)}
+              suggested={suggested.has(child.id)}
+              onOpen={() => setSheetFor(child.id)}
+            />
+          ))}
+        </div>
 
         {suggestedNames.length > 0 ? (
           <section className={styles.suggest}>
@@ -296,40 +325,15 @@ export function BulkEntryPage({ onBack }: Props) {
           />
         </section>
 
-        {/* ── پایین: فهرست کودکان ── */}
-        <div className={styles.listHead}>
-          <span className={`${styles.listTitle} t-h2`}>کودکان</span>
-          <span className={`${styles.listCount} t-caption`}>
-            {formatCount(exceptions)} استثنا از {formatCount(children.length)}
-          </span>
-        </div>
-
-        <div className={styles.list}>
-          {children.map((child) => (
-            <ChildRow
-              key={child.id}
-              child={child}
-              report={reports.get(child.id)}
-              suggested={suggested.has(child.id)}
-              onOpen={() => setSheetFor(child.id)}
-            />
-          ))}
-        </div>
-
         {error ? <p className={`${styles.error} t-body`}>{error}</p> : null}
       </div>
 
       {/*
-        کنش اصلی این صفحه «اعمال روی همه» است، نه بازگشت. بخش ۱۲.۲
-        می‌گوید فیروزه‌ای فقط برای کنش اصلی است.
-        بخش ۵.۵ این دکمه را در کارت بالا نشان می‌دهد، ولی وایرفریم بخش
-        ۱۳.۱ کنش پایانی را در نوار پایین می‌گذارد. اینجا نوار پایین
-        انتخاب شد، چون فهرست ۲۵ نفره بلند است و مربی نباید برای زدن
-        دکمه به بالای صفحه برگردد. بازگشت با پیکان سرصفحه است.
+        «اعمال روی همه» به کارت خودش برگشت، جایی که بخش ۵.۵ می‌گذاردش:
+        بلافاصله زیر گزینه‌هایی که اعمال می‌شوند. نوار چسبیده فقط پایان
+        کار است.
       */}
-      <QuickAction onClick={applyToAll} disabled={nothingChosen}>
-        اعمال روی همه
-      </QuickAction>
+      <QuickAction onClick={onBack}>ذخیره و بازگشت</QuickAction>
 
       {pendingPhoto ? (
         <PhotoTagSheet
@@ -387,6 +391,7 @@ function ChildRow({
   if (report?.lunch) parts.push(`ناهار: ${LUNCH_LABEL[report.lunch]}`)
   const mood = report?.moodAfternoon ?? report?.moodNoon ?? report?.moodMorning
   if (mood) parts.push(`خلق: ${MOOD_LABEL[mood]}`)
+  if (report?.napStart) parts.push(`خواب: ${formatClock(report.napStart)}`)
   if (report?.teacherNote) parts.push('یادداشت دارد')
 
   return (

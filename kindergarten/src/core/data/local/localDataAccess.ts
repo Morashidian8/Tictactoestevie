@@ -431,27 +431,18 @@ function blank(childId: string, date: string): DailyReport {
 }
 
 /**
- * نوار گروهی یک انتخاب خلق دارد ولی گزارش سه بازه (بخش ۱۱.۳). انتخاب
- * روی بازه‌ای می‌نشیند که ساعت جاری در آن است، چون «خلق عمومی کلاس»
- * یعنی حال کلاس همین حالا. مرزهای بازه در سند نیامده و اینجا فرض شده.
+ * «خلق عمومی امروز» هر سه بازه را پر می‌کند.
+ *
+ * گزارش سه بازه دارد (بخش ۱۱.۳) و بخش ۵.۹ گزارش را وقتی کامل می‌داند که
+ * هر سه پر باشند. اگر نوار گروهی فقط یک بازه را بگیرد، گزارش هیچ‌وقت از
+ * این صفحه کامل نمی‌شود و صفحه بستن روز همیشه همه را ناقص می‌شمارد.
+ *
+ * تفکیک بازه‌ها جای خودش را دارد: شیت استثنای هر کودک، جایی که مربی
+ * می‌گوید این کودک صبح خوب بود و عصر بی‌قرار.
  */
-function moodPatch(mood: DailyReport['moodNoon'], current: DailyReport | undefined) {
+function moodPatch(mood: DailyReport['moodNoon'], _current: DailyReport | undefined) {
   if (!mood) return {}
-  const band = currentMoodBand()
-  return {
-    moodMorning:   band === 'morning'   ? mood : current?.moodMorning   ?? null,
-    moodNoon:      band === 'noon'      ? mood : current?.moodNoon      ?? null,
-    moodAfternoon: band === 'afternoon' ? mood : current?.moodAfternoon ?? null,
-  }
-}
-
-export type MoodBand = 'morning' | 'noon' | 'afternoon'
-
-export function currentMoodBand(now: Date = new Date()): MoodBand {
-  const hour = now.getHours()
-  if (hour < 12) return 'morning'
-  if (hour < 15) return 'noon'
-  return 'afternoon'
+  return { moodMorning: mood, moodNoon: mood, moodAfternoon: mood }
 }
 
 /**

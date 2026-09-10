@@ -32,25 +32,35 @@ describe('شمارش کامل و ناقص', () => {
     expect(summary.incomplete[0]?.missing).toEqual(['ناهار', 'خواب', 'خلق'])
   })
 
-  it('ثبت گروهی به‌تنهایی گزارش را کامل نمی‌کند', async () => {
+  it('یک بار ثبت گروهی، کل کلاس را کامل می‌کند', async () => {
+    // «خلق عمومی امروز» هر سه بازه را پر می‌کند. اگر فقط یک بازه را پر
+    // می‌کرد، گزارش هیچ‌وقت از صفحه ثبت گروهی کامل نمی‌شد و صفحه بستن
+    // روز همیشه همه را ناقص می‌شمرد.
     const date = '2026-04-02'
     await data.applyBulk(CLASS, date, { lunch: 'most', mood: 'good', napStart: '13:00' })
     const summary = await data.getDaySummary(CLASS, date)
-    // نوار گروهی فقط یک بازه خلق را پر می‌کند؛ دو بازه دیگر می‌ماند.
-    expect(summary.complete).toHaveLength(0)
-    expect(summary.incomplete[0]?.missing).toEqual(['خلق'])
+    expect(summary.incomplete).toHaveLength(0)
+    expect(summary.complete.length).toBeGreaterThan(0)
   })
 
-  it('با پر شدن هر سه بازه خلق، کامل می‌شود', async () => {
+  it('ثبت گروهی بدون خواب، گزارش را ناقص می‌گذارد', async () => {
     const date = '2026-04-03'
-    await data.applyBulk(CLASS, date, { lunch: 'most', mood: 'good', napStart: '13:00' })
-    await data.saveChildReport('child-1', date, {
-      moodMorning: 'good',
-      moodNoon: 'good',
-      moodAfternoon: 'normal',
-    })
+    await data.applyBulk(CLASS, date, { lunch: 'most', mood: 'good', napStart: null })
     const summary = await data.getDaySummary(CLASS, date)
-    expect(summary.complete).toContain('child-1')
+    expect(summary.incomplete[0]?.missing).toEqual(['خواب'])
+  })
+
+  it('تفکیک بازه‌های خلق در استثنای هر کودک ممکن می‌ماند', async () => {
+    const date = '2026-04-04'
+    await data.applyBulk(CLASS, date, { lunch: 'most', mood: 'good', napStart: '13:00' })
+    await data.saveChildReport('child-1', date, { moodAfternoon: 'restless' })
+
+    const day = await data.getClassDay(CLASS, date)
+    const report = day.reports.find((r) => r.childId === 'child-1')
+    expect(report?.moodMorning).toBe('good')
+    expect(report?.moodAfternoon).toBe('restless')
+    // و همچنان کامل می‌ماند
+    expect((await data.getDaySummary(CLASS, date)).complete).toContain('child-1')
   })
 })
 

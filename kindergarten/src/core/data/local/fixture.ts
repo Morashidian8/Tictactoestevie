@@ -68,8 +68,15 @@ export const AUTHORIZED: Record<string, Omit<PickupOption, 'kind'>[]> = {
   'child-1': [
     { id: 'auth-1', fullName: 'زهرا احمدی', relation: 'مادربزرگ', photoUrl: null },
   ],
+  'child-3': [
+    { id: 'auth-3', fullName: 'فاطمه پارسا', relation: 'مادربزرگ', photoUrl: null },
+    { id: 'auth-4', fullName: 'رضا پارسا', relation: 'دایی', photoUrl: null },
+  ],
   'child-4': [
     { id: 'auth-2', fullName: 'حسن توکلی', relation: 'عمو', photoUrl: null },
+  ],
+  'child-6': [
+    { id: 'auth-5', fullName: 'سمیرا حسینی', relation: 'خاله', photoUrl: null },
   ],
 }
 

@@ -41,6 +41,14 @@
   font-weight: var(--weight-medium);
 }
 
+/* وقتی وضعیت غیرعادی است، عکس واقعاً مهم می‌شود. */
+.photoBtnUrgent {
+  border-style: solid;
+  border-color: var(--saffron);
+  background: var(--saffron-tint);
+  font-weight: var(--weight-bold);
+}
+
 .thumb {
   inline-size: 56px;
   block-size: 56px;

@@ -20,6 +20,8 @@ export function toIsoDate(date: Date): string {
   return `${y}-${m}-${d}`
 }
 
+import { toPersianDigits } from './digits.ts'
+
 const CALENDAR = 'fa-IR-u-ca-persian'
 
 /** `۱۴ دی ۱۴۰۴` — قالب کامل، وقتی سال مهم است. */
@@ -65,6 +67,20 @@ export function formatJalali(date: Date, format: JalaliFormat = 'short'): string
 /** ساعت با ارقام فارسی و بدون ثانیه. */
 export function formatTime(date: Date): string {
   return clock.format(date)
+}
+
+/**
+ * ساعتِ ذخیره‌شده به شکل `HH:MM` را برای نمایش آماده می‌کند.
+ *
+ * لایه داده ساعت را به‌صورت رشته لاتین نگه می‌دارد (`13:00`)، ولی بخش
+ * ۱۲.۴ می‌گوید ارقام در رابط فارسی‌اند. هر جای رابط که ساعتی نمایش
+ * می‌دهد باید از همین‌جا رد شود، نه با تبدیل دستی؛ تبدیل دستی همان جایی
+ * است که یک صفحه از قلم می‌افتد و ارقام لاتین بیرون می‌زند.
+ */
+export function formatClock(hhmm: string): string {
+  const match = /^(\d{1,2}):(\d{2})/.exec(hhmm.trim())
+  if (!match) return toPersianDigits(hhmm)
+  return toPersianDigits(`${Number(match[1])}:${match[2]}`)
 }
 
 /**

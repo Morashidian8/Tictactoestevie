@@ -61,6 +61,33 @@
   border-block-end: 1px solid var(--border);
 }
 
+/* تراشه‌ای که فهرست را باز می‌کند. هدف لمسی کامل می‌گیرد. */
+.tallyAction {
+  min-block-size: var(--touch-teacher);
+  display: inline-flex;
+  align-items: center;
+  border-radius: var(--r-chip);
+}
+
+.tallyAction:disabled {
+  background: none;
+  cursor: default;
+}
+
+.outstanding {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: var(--space-4) var(--space-4) 0;
+  padding: var(--space-4);
+  border-radius: var(--r-card);
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+
+.outstandingLabel { color: var(--ink-muted); }
+.outstandingNames { color: var(--ink); font-weight: var(--weight-medium); }
+
 .banner {
   display: flex;
   align-items: center;

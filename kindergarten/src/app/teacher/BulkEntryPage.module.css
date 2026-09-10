@@ -77,6 +77,37 @@
   font-variant-numeric: tabular-nums;
 }
 
+/*
+ * کنش اصلی کارت گروهی. رنگ پرشده می‌گیرد تا از دکمه‌های انتخاب بالایش
+ * جدا باشد.
+ *
+ * چرا --turquoise-dark و نه --turquoise: بخش ۱۲.۷ کف کنتراست ۴.۵:۱ برای
+ * متن می‌خواهد. سفید روی --turquoise فقط ۴.۱۰ می‌دهد و --ink روی همان
+ * ۳.۷۶؛ هیچ‌کدام کافی نیست. --turquoise-dark با سفید ۶.۳۵ می‌دهد و از
+ * همان خانواده رنگی است.
+ */
+.applyInline {
+  min-block-size: var(--touch-teacher);
+  border-radius: var(--r-input);
+  background: var(--turquoise-dark);
+  color: var(--surface);
+  font-weight: var(--weight-bold);
+  font-size: var(--text-body-lg);
+}
+
+.applyInline:active:not(:disabled) { filter: brightness(0.9); }
+
+.applyInline:disabled {
+  background: var(--disabled-bg);
+  color: var(--disabled-fg);
+}
+
+/* وقتی دکمه غیرفعال است، دلیلش نوشته می‌شود — بخش ۱۲.۱۰. */
+.applyWhy {
+  color: var(--ink-muted);
+  text-align: center;
+}
+
 .applied {
   color: var(--ink-muted);
   text-align: center;

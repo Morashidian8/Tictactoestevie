@@ -70,3 +70,23 @@ describe('لایه داده', () => {
     expect(toIsoDate(day)).toBe('2026-01-04')
   })
 })
+
+describe('ساعت ذخیره‌شده برای نمایش', () => {
+  it('رشته لاتین لایه داده را فارسی می‌کند', async () => {
+    const { formatClock } = await import('./index.ts')
+    expect(formatClock('13:00')).toBe('۱۳:۰۰')
+    expect(formatClock('08:05')).toBe('۸:۰۵')
+    expect(formatClock('17:30')).toBe('۱۷:۳۰')
+  })
+
+  it('صفر ابتدای ساعت را می‌اندازد، مثل قالب بخش ۱۲.۴', async () => {
+    const { formatClock } = await import('./index.ts')
+    expect(formatClock('09:07')).toBe('۹:۰۷')
+  })
+
+  it('ورودی نامنتظر را هم بدون رقم لاتین برمی‌گرداند', async () => {
+    const { formatClock } = await import('./index.ts')
+    expect(formatClock('13')).not.toMatch(/[0-9]/)
+    expect(formatClock('')).toBe('')
+  })
+})

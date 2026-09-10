@@ -12,11 +12,20 @@ type Props = {
   children: ReactNode
   onClick: () => void
   disabled?: boolean
+  /**
+   * کنش ثانویه که یک ردیف بالای کنش اصلی می‌نشیند، داخل همان نوار.
+   *
+   * دلیل اینکه داخل نوار است نه شناور روی صفحه: دکمه‌ای که تمام روز روی
+   * صفحه است، در هر موقعیت اسکرول روی نام یا عکس یکی از کودکان می‌افتد.
+   * داخل نوار، جای خودش را در جریان صفحه می‌گیرد و هرگز چیزی را نمی‌پوشاند.
+   */
+  aside?: ReactNode
 }
 
-export function QuickAction({ children, onClick, disabled }: Props) {
+export function QuickAction({ children, onClick, disabled, aside }: Props) {
   return (
     <div className={styles.bar}>
+      {aside ? <div className={styles.aside}>{aside}</div> : null}
       <button
         type="button"
         className={`${styles.button} t-body-lg`}

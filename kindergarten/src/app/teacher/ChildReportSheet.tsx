@@ -142,7 +142,7 @@ export function ChildReportSheet({ child, report, suggested, onClose, onSave }: 
           className={`${styles.choice} t-body-lg`}
           style={{ direction: 'ltr', textAlign: 'start', maxInlineSize: '8rem' }}
           inputMode="numeric"
-          placeholder="13:00"
+          placeholder="۱۳:۰۰"
           value={nap}
           onChange={(event) => setNap(event.target.value)}
           aria-label="ساعت شروع خواب"

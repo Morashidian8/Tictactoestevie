@@ -19,7 +19,6 @@ import {
   type ClassDay,
   type ClassRoom,
 } from '../../core/data/index.ts'
-import type { Guardian } from '../../core/data/index.ts'
 import { ArrivalSheet, type ArrivalResult } from './ArrivalSheet.tsx'
 import { CheckOutSheet } from './CheckOutSheet.tsx'
 import { IncidentSheet } from './IncidentSheet.tsx'
@@ -53,11 +52,13 @@ export function TodayPage({
   const [menuOpen, setMenuOpen] = useState(false)
   // کودکی که شیت استثناهایش باز است، به‌علاوه سرپرستانش که با باز شدن
   // شیت خوانده می‌شوند نه پیش از آن.
-  const [sheetFor, setSheetFor] = useState<{ childId: string; guardians: Guardian[] } | null>(null)
+  const [sheetFor, setSheetFor] = useState<string | null>(null)
   // کودکی که شیت خروجش باز است — بخش ۵.۸.
   const [checkOutFor, setCheckOutFor] = useState<string | null>(null)
   // بخش ۱۳.۱: دکمه شناور ثبت رویداد، در همه تب‌ها.
   const [incidentOpen, setIncidentOpen] = useState(false)
+  // فهرست کودکانی که نیامده‌اند، وقتی مربی روی تراشه بزند.
+  const [showOutstanding, setShowOutstanding] = useState(false)
 
   // ساعت جاری در حالت نگه داشته می‌شود چون مرز ۹:۰۰ ستون سوم نوار خلاصه
   // را عوض می‌کند و صفحه باید بدون نوسازی دستی رد شود.
@@ -148,16 +149,11 @@ export function TodayPage({
       .catch((cause: unknown) => setError(messageOf(cause)))
   }
 
-  const openSheet = (childId: string) => {
-    data
-      .listGuardians(childId)
-      .then((guardians) => setSheetFor({ childId, guardians }))
-      .catch((cause: unknown) => setError(messageOf(cause)))
-  }
+  const openSheet = (childId: string) => setSheetFor(childId)
 
   const submitSheet = async (result: ArrivalResult) => {
     if (!sheetFor) return
-    const { childId } = sheetFor
+    const childId = sheetFor
     await queue.submit('text', async () => {
       await data.checkIn({
         childId,
@@ -172,7 +168,7 @@ export function TodayPage({
           name: result.medication.name,
           dose: result.medication.dose || null,
           scheduledTime: result.medication.scheduledTime || null,
-          handedByGuardianId: result.droppedByGuardianId,
+          handedByGuardianId: result.medication.handedById,
         })
       }
     })
@@ -186,8 +182,15 @@ export function TodayPage({
     await load()
   }
 
-  const sheetChild = day?.children.find((c) => c.id === sheetFor?.childId) ?? null
+  const sheetChild = day?.children.find((c) => c.id === sheetFor) ?? null
   const checkOutChild = day?.children.find((c) => c.id === checkOutFor) ?? null
+
+  const outstandingNames = (day?.children ?? [])
+    .filter((child) => {
+      const state = resolveState(child.id, attendance, absences, now)
+      return state === 'notArrived' || state === 'unaccounted'
+    })
+    .map((child) => child.firstName)
 
   const pendingMedication = (day?.medications ?? []).filter((m) => !m.givenAt)
   const activeClass = classes.find((c) => c.id === classId)
@@ -261,22 +264,35 @@ export function TodayPage({
         <StatusChip tone="neutral">
           {formatCount(counts.absenceDeclared)} غیبت اعلام‌شده
         </StatusChip>
-        <StatusChip
-          tone={counts.isAfterNine && counts.outstanding > 0 ? 'brick' : 'neutral'}
-          icon={counts.isAfterNine && counts.outstanding > 0 ? <AlertIcon size={14} /> : undefined}
+        {/*
+          بخش ۵.۳: ساعت ۹:۰۰ فهرست غایبان بی‌خبر نشان داده می‌شود.
+          پیش‌تر همین را یک بنر قرمز جداگانه هم می‌گفت؛ تکرار همان جمله
+          بود و جای شبکه کودکان را می‌گرفت. حالا خودِ تراشه لمسی است و
+          فهرست را باز می‌کند.
+        */}
+        <button
+          type="button"
+          className={styles.tallyAction}
+          onClick={() => setShowOutstanding((open) => !open)}
+          disabled={counts.outstanding === 0}
+          aria-expanded={showOutstanding}
         >
-          {formatCount(counts.outstanding)} {counts.isAfterNine ? 'بی‌خبر' : 'نیامده'}
-        </StatusChip>
+          <StatusChip
+            tone={counts.isAfterNine && counts.outstanding > 0 ? 'brick' : 'neutral'}
+            icon={counts.isAfterNine && counts.outstanding > 0 ? <AlertIcon size={14} /> : undefined}
+          >
+            {formatCount(counts.outstanding)} {counts.isAfterNine ? 'بی‌خبر' : 'نیامده'}
+          </StatusChip>
+        </button>
       </div>
 
-      {/* بخش ۵.۳: ساعت ۹:۰۰ فهرست غایبان بی‌خبر نشان داده می‌شود. */}
-      {counts.isAfterNine && counts.outstanding > 0 ? (
-        <div className={styles.banner}>
-          <span className={styles.bannerIcon} aria-hidden>
-            <AlertIcon size={20} />
+      {showOutstanding && outstandingNames.length > 0 ? (
+        <div className={styles.outstanding}>
+          <span className={`${styles.outstandingLabel} t-caption`}>
+            {counts.isAfterNine ? 'بدون اطلاع نیامده‌اند' : 'هنوز نیامده‌اند'}
           </span>
-          <span className={`${styles.bannerText} t-body-lg`}>
-            {formatCount(counts.outstanding)} کودک بدون اطلاع نیامده‌اند.
+          <span className={`${styles.outstandingNames} t-body-lg`}>
+            {outstandingNames.join(' · ')}
           </span>
         </div>
       ) : null}
@@ -329,13 +345,22 @@ export function TodayPage({
         چون بخش ۱۲.۲ آجر را برای ایمنی و رویداد نگه داشته، و این تنها
         جایی است در پنل مربی که آجر معنا دارد.
       */}
-      <button type="button" className={fab.fab} onClick={() => setIncidentOpen(true)}>
-        <AlertIcon size={18} />
-        ثبت رویداد
-      </button>
-
       {/* کنش اصلی این صفحه، طبق وایرفریم بخش ۱۳.۱ */}
-      <QuickAction onClick={onOpenBulk}>ثبت گروهی امروز</QuickAction>
+      <QuickAction
+        onClick={onOpenBulk}
+        aside={
+          <button
+            type="button"
+            className={fab.fab}
+            onClick={() => setIncidentOpen(true)}
+            aria-label="ثبت رویداد"
+          >
+            <AlertIcon size={24} />
+          </button>
+        }
+      >
+        ثبت گروهی امروز
+      </QuickAction>
 
       {incidentOpen ? (
         <IncidentSheet children={day?.children ?? []} onClose={() => setIncidentOpen(false)} />
@@ -352,8 +377,7 @@ export function TodayPage({
       {sheetFor && sheetChild ? (
         <ArrivalSheet
           child={sheetChild}
-          guardians={sheetFor.guardians}
-          existing={attendance.get(sheetFor.childId) ?? null}
+          existing={attendance.get(sheetFor) ?? null}
           onClose={() => setSheetFor(null)}
           onSubmit={submitSheet}
         />

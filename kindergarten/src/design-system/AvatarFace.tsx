@@ -43,14 +43,15 @@ const SKIN = ['#F4D2AE', '#E7B78C', '#D19A6C', '#B0764B', '#8D5A38'] as const
 const HAIR = ['#2B2724', '#43301F', '#6B4A2E', '#141312', '#8A5A33'] as const
 const WEAR = ['#0F8C86', '#4C8B6B', '#DDA02C', '#B0402C', '#5A6E76'] as const
 
-/** پس‌زمینه از رنگ‌های ملایم بخش ۱۲، تا شبکه یکدست بماند. */
-const BACKDROP = [
-  'var(--turquoise-tint)',
-  'var(--saffron-tint)',
-  'var(--sage-tint)',
-  'var(--brick-tint)',
-  'var(--neutral-fill)',
-] as const
+/**
+ * پس‌زمینه همه چهره‌ها یکی است و خنثی.
+ *
+ * پیش‌تر پنج رنگ ملایم می‌چرخید و شبکه رنگی‌تر به نظر می‌رسید، ولی آن
+ * رنگ‌ها با حلقه وضعیت رقابت می‌کردند: پس‌زمینه صورتی هم روی «غایب»
+ * می‌افتاد هم روی «بی‌خبر»، و مربی از فاصله نمی‌توانست تفکیکشان کند.
+ * تنوع چهره از پوست و مو و لباس می‌آید؛ پس‌زمینه فقط بوم است.
+ */
+const BACKDROP = 'var(--neutral-fill)'
 
 type Props = {
   /** شناسه کودک. چهره از همین ساخته می‌شود و ثابت می‌ماند. */
@@ -62,7 +63,6 @@ export function AvatarFace({ seed }: Props) {
   const skin = pick(hash, 0, SKIN)
   const hair = pick(hash, 5, HAIR)
   const wear = pick(hash, 13, WEAR)
-  const backdrop = pick(hash, 19, BACKDROP)
   const longHair = ((hash >>> 25) & 1) === 1
   const clipId = `av-${hash.toString(36)}`
 
@@ -81,7 +81,7 @@ export function AvatarFace({ seed }: Props) {
       </defs>
 
       <g clipPath={`url(#${clipId})`}>
-        <rect width="64" height="64" fill={backdrop} />
+        <rect width="64" height="64" fill={BACKDROP} />
 
         {/* شانه‌ها. از پایین قاب بریده می‌شوند، پس بدن کامل کشیده نمی‌شود. */}
         <path d="M8 64c0-11 10-18 24-18s24 7 24 18z" fill={wear} />

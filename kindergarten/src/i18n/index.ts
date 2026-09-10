@@ -9,6 +9,7 @@ export {
   toIsoDate,
   formatJalali,
   formatTime,
+  formatClock,
   jalaliParts,
   jalaliYearMonth,
   type JalaliFormat,
