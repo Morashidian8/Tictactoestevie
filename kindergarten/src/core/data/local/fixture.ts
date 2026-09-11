@@ -49,12 +49,30 @@ CHILDREN.push(
   { id: 'child-27', classId: 'class-setareha', firstName: 'باران', lastName: 'کریمی', photoUrl: null },
 )
 
+/**
+ * سرپرستان هر کودک. نام واقعی می‌گیرند، نه «مادر» و «پدر»: در پرونده
+ * کودک نام و نسبت کنار هم می‌نشینند و «مادر مادر» خوانده نمی‌شود.
+ * نام خانوادگی از خود کودک می‌آید تا خانواده یکدست به نظر برسد.
+ */
+const MOTHER_NAMES = ['مریم', 'زهرا', 'فاطمه', 'سمیرا', 'نرگس', 'الهام', 'شیوا']
+const FATHER_NAMES = ['علی', 'محمد', 'حسین', 'رضا', 'امیر', 'سعید', 'بهرام']
+
 export const GUARDIANS: Record<string, Guardian[]> = Object.fromEntries(
-  CHILDREN.map((child) => [
+  CHILDREN.map((child, index) => [
     child.id,
     [
-      { id: `${child.id}-g1`, fullName: 'مادر', relation: 'مادر', canPickup: true },
-      { id: `${child.id}-g2`, fullName: 'پدر', relation: 'پدر', canPickup: true },
+      {
+        id: `${child.id}-g1`,
+        fullName: `${MOTHER_NAMES[index % MOTHER_NAMES.length]} ${child.lastName}`,
+        relation: 'مادر',
+        canPickup: true,
+      },
+      {
+        id: `${child.id}-g2`,
+        fullName: `${FATHER_NAMES[index % FATHER_NAMES.length]} ${child.lastName}`,
+        relation: 'پدر',
+        canPickup: true,
+      },
     ],
   ]),
 )

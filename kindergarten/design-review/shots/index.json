@@ -286,5 +286,59 @@
     "caption": "گزارش ارسال",
     "group": "مدیر",
     "full": true
+  },
+  {
+    "file": "50-finance-empty.png",
+    "caption": "مالی پیش از صدور: شهریه‌ها و حالت خالی — ماژول M5",
+    "group": "مدیر — مالی",
+    "full": true
+  },
+  {
+    "file": "51-finance-issued.png",
+    "caption": "پس از صدور گروهی: وصولی در برابر مانده، و فهرست تسویه‌نشده‌ها",
+    "group": "مدیر — مالی",
+    "full": true
+  },
+  {
+    "file": "52-payment-sheet.png",
+    "caption": "ثبت پرداخت دستی و رسید. درگاه آنلاین فاز ۳ است",
+    "group": "مدیر — مالی",
+    "full": false
+  },
+  {
+    "file": "53-children-list.png",
+    "caption": "فهرست کودکان با جست‌وجوی نام",
+    "group": "مدیر — پرونده",
+    "full": true
+  },
+  {
+    "file": "54-child-profile.png",
+    "caption": "پرونده کودک: آلرژی اول از همه، چون بخش ۷.۱ آن را موضوع ایمنی نامیده",
+    "group": "مدیر — پرونده",
+    "full": true
+  },
+  {
+    "file": "55-parent-more.png",
+    "caption": "«بیشتر» خانواده: اعلام غیبت بالای فهرست — بخش ۶.۴",
+    "group": "والد — بیشتر",
+    "full": true
+  },
+  {
+    "file": "56-parent-messages.png",
+    "caption": "پیام به مربی، با ساعت کاری نوشته‌شده — بخش ۶.۶",
+    "group": "والد — بیشتر",
+    "full": true
+  },
+  {
+    "file": "57-parent-absence.png",
+    "caption": "اعلام غیبت برای امروز یا فردا. نوشتن علت اختیاری است",
+    "group": "والد — بیشتر",
+    "full": true
+  },
+  {
+    "file": "58-parent-finance.png",
+    "caption": "مالی خانواده: فقط سرپرست پرداخت‌کننده — بخش ۶.۵",
+    "group": "والد — بیشتر",
+    "full": true
   }
 ]
