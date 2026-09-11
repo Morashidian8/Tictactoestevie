@@ -147,3 +147,18 @@ export function seedMedications(date: string): MedicationLog[] {
     },
   ]
 }
+
+
+/**
+ * شماره سرپرست هر کودک — بخش ۱۵.
+ *
+ * پنل پیامک بدون شماره کار نمی‌کند، پس مهم است که سامانه بتواند نشان
+ * دهد شماره کدام خانواده‌ها را ندارد. عمداً دو کودک بدون شماره مانده‌اند
+ * تا آن حالت هم دیده شود؛ در مهد واقعی هم همیشه چند خانواده جا می‌مانند.
+ */
+export const GUARDIAN_PHONES: Record<string, string> = Object.fromEntries(
+  CHILDREN.filter((c) => c.id !== 'child-5' && c.id !== 'child-11').map((child, index) => [
+    child.id,
+    `0912${String(1000000 + index * 37).slice(0, 7)}`,
+  ]),
+)

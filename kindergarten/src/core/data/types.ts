@@ -272,6 +272,108 @@ export type MedicationInput = {
   handedByGuardianId?: string | null
 }
 
+/* ── برنامه فردا — بخش ۵.۸ و ۶.۴ ───────────────────────────── */
+
+/** «چه کسی می‌آورد» و «چه کسی می‌برد» دو تصمیم جدایند. */
+export type PlanDirection = 'drop_off' | 'pickup'
+
+/**
+ * اعلام خانواده برای یک روز.
+ *
+ * دو حالت دارد و فقط دو حالت:
+ *   فرد در فهرست مجاز است  → یک تیک، بدون کد. مربی همان را می‌بیند.
+ *   فرد در فهرست نیست      → مشخصاتش نوشته می‌شود و سامانه کد می‌سازد.
+ *
+ * بخش ۵.۸ قاعده سفت دارد: بدون فهرست مجاز و بدون کد، ثبت نمی‌شود. این
+ * اعلام آن قاعده را شل نمی‌کند؛ فقط راه دومش را از قبل آماده می‌کند.
+ */
+export type PickupPlan = {
+  id: string
+  childId: string
+  date: string
+  direction: PlanDirection
+  personName: string
+  /** اگر فرد مجاز بود، شناسه‌اش. برای فرد ناشناس خالی است. */
+  personId: string | null
+  photoUrl: string | null
+  /** کد یکبارمصرف، فقط برای فرد بیرون از فهرست مجاز. */
+  code: string | null
+  note: string | null
+}
+
+export type PickupPlanInput = {
+  childId: string
+  date: string
+  direction: PlanDirection
+  /** یکی از این دو: فرد مجاز، یا مشخصات فرد تازه. */
+  personId?: string | null
+  newPerson?: { fullName: string; phone: string } | null
+  note?: string | null
+}
+
+/* ── اطلاع‌رسانی مهد — بخش ۱۵.۳ ─────────────────────────────── */
+
+export type NoticeKind = 'announcement' | 'closure' | 'delayed_opening'
+
+export type ClosureReason =
+  | 'weather'
+  | 'air_quality'
+  | 'official_holiday'
+  | 'utility_outage'
+  | 'health'
+  | 'other'
+
+export type NoticeInput = {
+  kind: NoticeKind
+  /** خالی یعنی کل مهد. */
+  classId?: string | null
+  title: string
+  body: string
+  reason?: ClosureReason | null
+  /** فقط در «تأخیر در بازگشایی». */
+  reopenAt?: string | null
+  date?: string | null
+  /** بخش ۱۵.۲: در شرایط اضطراری پیامک مسیر اصلی است، نه پشتیبان. */
+  sendSms: boolean
+}
+
+export type Notice = {
+  id: string
+  kind: NoticeKind
+  classId: string | null
+  title: string
+  body: string
+  publishedAt: string | null
+  smsSentCount: number
+  seenInAppCount: number
+}
+
+/** پیش از ارسال، مدیر باید بداند به چند نفر می‌رود و سهمیه چقدر مانده. */
+export type NoticeAudience = {
+  families: number
+  staff: number
+  /** خانواده‌هایی که شماره ثبت‌شده ندارند و پیامک به آن‌ها نمی‌رسد. */
+  withoutPhone: { childId: string; childName: string; guardianName: string }[]
+  smsRemaining: number
+  smsNeeded: number
+}
+
+/* ── داشبورد مدیر — بخش ۱۳.۳ ────────────────────────────────── */
+
+export type ManagerDashboard = {
+  date: string
+  present: number
+  enrolled: number
+  unaccounted: { childId: string; name: string; guardianPhone: string | null }[]
+  /** رویدادهایی که منتظر تصمیم مدیرند — بخش ۳.۳. */
+  pendingIncidents: (Incident & { childName: string })[]
+  /** وضعیت ثبت هر کلاس: کامل، ناقص، یا دست‌نخورده. */
+  classes: { classId: string; name: string; complete: number; total: number; sent: boolean }[]
+  smsRemaining: number
+}
+
+export type IncidentDecision = 'send_to_family' | 'call_then_send' | 'archive'
+
 /**
  * موجودیت‌های حساسی که خواندنشان هم رد پا می‌گذارد — بند ۱۱.۹.
  * نوشتن روی دوازده جدول با تریگر پایگاه داده لاگ می‌شود (مهاجرت ۰۰۱۱)؛
@@ -336,6 +438,44 @@ export interface DataAccess {
 
   /** تیک زدن «انجام شد» روی درخواست از خانه — بخش ۶.۳. */
   setNeedDone(childId: string, date: string, needId: string, done: boolean): Promise<void>
+
+  /* ── درخواست از خانه، سمت مربی — بخش ۵.۹ بند ۶ ─────────────── */
+
+  /**
+   * درخواست‌های از خانه را برای یک کلاس می‌نویسد.
+   *
+   * روی گزارش همان روز می‌نشیند و خانواده آن را در گزارش امشب می‌بیند،
+   * یعنی وقتی هنوز فرصت آماده کردن فردا را دارد.
+   */
+  setClassNeeds(classId: string, date: string, texts: string[]): Promise<number>
+
+  /* ── برنامه فردا — بخش ۵.۸ و ۶.۴ ──────────────────────────── */
+
+  /** اعلام‌های یک کلاس برای یک روز. مربی می‌بیند، نمی‌سازد. */
+  listPlans(classId: string, date: string): Promise<PickupPlan[]>
+
+  /** اعلام خانواده. اگر فرد مجاز نباشد، کد ساخته می‌شود. */
+  savePlan(input: PickupPlanInput): Promise<PickupPlan>
+
+  /** برداشتن اعلام؛ یعنی فردا مثل همیشه است. */
+  clearPlan(childId: string, date: string, direction: PlanDirection): Promise<void>
+
+  /** اعلام‌های خانواده برای یک کودک در یک روز. */
+  getChildPlans(childId: string, date: string): Promise<PickupPlan[]>
+
+  /* ── مدیر — بخش ۱۳.۳ ──────────────────────────────────────── */
+
+  getManagerDashboard(date: string): Promise<ManagerDashboard>
+
+  /** تصمیم مدیر درباره رویداد در انتظار — بخش ۳.۳. */
+  decideIncident(incidentId: string, decision: IncidentDecision): Promise<void>
+
+  /** پیش از ارسال: چند گیرنده، چند پیامک، و چه کسانی شماره ندارند. */
+  previewNotice(input: NoticeInput): Promise<NoticeAudience>
+
+  publishNotice(input: NoticeInput): Promise<Notice>
+
+  listNotices(limit: number): Promise<Notice[]>
 
   /**
    * ارسال گزارش‌های روز — بخش ۵.۹.

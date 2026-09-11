@@ -24,7 +24,15 @@ import type {
   IncidentInput,
   MedicationInput,
   MedicationLog,
+  Notice,
+  NoticeAudience,
+  NoticeInput,
   ParentDay,
+  PickupPlan,
+  PickupPlanInput,
+  PlanDirection,
+  ManagerDashboard,
+  IncidentDecision,
   Photo,
   PickupCodeCheck,
   PickupOption,
@@ -114,6 +122,39 @@ const asMedication = (r: Row): MedicationLog => ({
 const toTime = (value: string | null | undefined): string | null =>
   value && value.length > 0 ? value : null
 
+
+const asPlan = (r: Row): PickupPlan => {
+  const guardian = r.guardian as Row | null
+  const authorized = r.authorized as Row | null
+  const code = r.code as Row | null
+  return {
+    id: r.id as string,
+    childId: r.child_id as string,
+    date: r.date as string,
+    direction: r.direction as PickupPlan['direction'],
+    personName:
+      (guardian?.full_name as string | undefined) ??
+      (authorized?.full_name as string | undefined) ??
+      (code?.bearer_name as string | undefined) ??
+      '—',
+    personId: (r.guardian_id as string | null) ?? (r.authorized_id as string | null) ?? null,
+    photoUrl: (authorized?.photo_url as string | null) ?? null,
+    code: (code?.code as string | null) ?? null,
+    note: (r.note as string | null) ?? null,
+  }
+}
+
+const asNotice = (r: Row, kind: Notice['kind']): Notice => ({
+  id: r.id as string,
+  kind,
+  classId: (r.class_id as string | null) ?? null,
+  title: r.title as string,
+  body: r.body as string,
+  publishedAt: (r.published_at as string | null) ?? null,
+  smsSentCount: (r.sms_sent_count as number | null) ?? 0,
+  seenInAppCount: (r.delivered_count as number | null) ?? 0,
+})
+
 export function createSupabaseDataAccess(scope: AccessScope): DataAccess {
   const db = supabase()
 
@@ -132,6 +173,20 @@ export function createSupabaseDataAccess(scope: AccessScope): DataAccess {
     if (!(await visibleClassIds()).includes(classId)) {
       throw new Error('این کلاس به حساب فعال تخصیص نیافته است')
     }
+  }
+
+
+  /** بخش ۱۵.۴: باقی‌مانده سهمیه ماه جاری. */
+  const smsRemaining = async (): Promise<number> => {
+    const period = new Date().toISOString().slice(0, 7)
+    const rows = orThrow(await from('sms_quota').eq('period', period)) as Row[]
+    const row = rows[0]
+    if (!row) return 0
+    return (
+      ((row.allocated as number) ?? 0) +
+      ((row.extra_purchased as number) ?? 0) -
+      ((row.used as number) ?? 0)
+    )
   }
 
   async function listClasses(): Promise<ClassRoom[]> {
@@ -624,6 +679,346 @@ export function createSupabaseDataAccess(scope: AccessScope): DataAccess {
           .eq('id', row.id as string)
           .select('id'),
       )
+    },
+
+
+    /* ── درخواست از خانه، سمت مربی — بخش ۵.۹ بند ۶ ───────────── */
+
+    async setClassNeeds(classId, date, texts) {
+      await assertVisible(classId)
+      const children = await childrenOf(classId)
+      const clean = texts.map((t) => t.trim()).filter((t) => t.length > 0)
+      const existing = orThrow(
+        await from('daily_report').eq('date', date).in('child_id', children.map((c) => c.id)),
+      ) as Row[]
+
+      for (const child of children) {
+        const row = existing.find((r) => r.child_id === child.id)
+        if (row?.locked_at) continue
+        const before =
+          ((row?.needs_from_home_json as { id: string; text: string; done: boolean }[] | null) ?? [])
+        orThrow(
+          await db
+            .from('daily_report')
+            .upsert(
+              {
+                center_id: scope.centerId,
+                child_id: child.id,
+                date,
+                // تیک خانواده حفظ می‌شود: متن یکسان یعنی همان درخواست.
+                needs_from_home_json: clean.map((text, index) => ({
+                  id: `need-${index + 1}`,
+                  text,
+                  done: before.find((n) => n.text === text)?.done ?? false,
+                })),
+              },
+              { onConflict: 'child_id,date' },
+            )
+            .select('id'),
+        )
+      }
+      return children.length
+    },
+
+    /* ── برنامه فردا — بخش ۵.۸ و ۶.۴ ───────────────────────── */
+
+    async listPlans(classId, date) {
+      await assertVisible(classId)
+      const children = await childrenOf(classId)
+      if (children.length === 0) return []
+      const rows = orThrow(
+        await db
+          .from('pickup_plan')
+          .select('*, guardian:guardian_id(full_name), authorized:authorized_id(full_name, photo_url), code:pickup_code_id(code, bearer_name)')
+          .eq('center_id', scope.centerId)
+          .eq('date', date)
+          .in('child_id', children.map((c) => c.id)),
+      ) as Row[]
+      return rows.map(asPlan)
+    },
+
+    async getChildPlans(childId, date) {
+      const rows = orThrow(
+        await db
+          .from('pickup_plan')
+          .select('*, guardian:guardian_id(full_name), authorized:authorized_id(full_name, photo_url), code:pickup_code_id(code, bearer_name)')
+          .eq('center_id', scope.centerId)
+          .eq('child_id', childId)
+          .eq('date', date),
+      ) as Row[]
+      return rows.map(asPlan)
+    },
+
+    async savePlan(input: PickupPlanInput) {
+      const options = await this.listPickupOptions(input.childId)
+      const known = input.personId ? options.find((o) => o.id === input.personId) : null
+      if (input.personId && !known) throw new Error('این فرد در فهرست مجاز این کودک نیست.')
+      if (!known && !input.newPerson?.fullName.trim()) throw new Error('نام فرد را بنویسید.')
+
+      let codeId: string | null = null
+      if (!known) {
+        // بخش ۵.۸: کد یکبارمصرف و محدود به همان روز.
+        const code = String(1000 + Math.floor(Math.random() * 9000))
+        const made = orThrow(
+          await db
+            .from('pickup_code')
+            .insert({
+              center_id: scope.centerId,
+              child_id: input.childId,
+              date: input.date,
+              code,
+              bearer_name: input.newPerson!.fullName.trim(),
+              bearer_phone: input.newPerson!.phone.trim() || null,
+              created_by: scope.accountId,
+              expires_at: `${input.date}T23:59:59`,
+            })
+            .select()
+            .single(),
+        ) as Row
+        codeId = made.id as string
+      }
+
+      const saved = orThrow(
+        await db
+          .from('pickup_plan')
+          .upsert(
+            {
+              center_id: scope.centerId,
+              child_id: input.childId,
+              date: input.date,
+              direction: input.direction,
+              guardian_id: known?.kind === 'guardian' ? known.id : null,
+              authorized_id: known?.kind === 'authorized' ? known.id : null,
+              pickup_code_id: codeId,
+              note: input.note?.trim() || null,
+              created_by: scope.accountId,
+            },
+            { onConflict: 'child_id,date,direction' },
+          )
+          .select('*, guardian:guardian_id(full_name), authorized:authorized_id(full_name, photo_url), code:pickup_code_id(code, bearer_name)')
+          .single(),
+      ) as Row
+      return asPlan(saved)
+    },
+
+    async clearPlan(childId, date, direction: PlanDirection) {
+      orThrow(
+        await db
+          .from('pickup_plan')
+          .delete()
+          .eq('center_id', scope.centerId)
+          .eq('child_id', childId)
+          .eq('date', date)
+          .eq('direction', direction)
+          .select('id'),
+      )
+    },
+
+    /* ── مدیر — بخش ۱۳.۳ ────────────────────────────────────── */
+
+    async getManagerDashboard(date): Promise<ManagerDashboard> {
+      const classes = await listClasses()
+      const perClass = await Promise.all(
+        classes.map(async (room) => {
+          const day = await this.getClassDay(room.id, date)
+          const reports = new Map(day.reports.map((r) => [r.childId, r]))
+          const complete = day.children.filter((c) => {
+            const r = reports.get(c.id)
+            return (
+              r?.lunch && r?.napStart && r?.moodMorning && r?.moodNoon && r?.moodAfternoon
+            )
+          }).length
+          return { room, day, complete }
+        }),
+      )
+
+      const now = new Date()
+      const unaccounted: ManagerDashboard['unaccounted'] = []
+      const pending: ManagerDashboard['pendingIncidents'] = []
+      let present = 0
+      let enrolled = 0
+
+      for (const { day } of perClass) {
+        enrolled += day.children.length
+        const absent = new Set(day.absences.map((a) => a.childId))
+        const byChild = new Map(day.attendance.map((a) => [a.childId, a]))
+        for (const child of day.children) {
+          const row = byChild.get(child.id)
+          if (row?.checkInAt && !row.checkOutAt) present += 1
+          if (!row?.checkInAt && !absent.has(child.id)) {
+            unaccounted.push({
+              childId: child.id,
+              name: `${child.firstName} ${child.lastName}`,
+              guardianPhone: null,
+            })
+          }
+        }
+        for (const incident of day.incidents) {
+          if (!incident.requiresApproval) continue
+          const child = day.children.find((c) => c.id === incident.childId)
+          pending.push({
+            ...incident,
+            childName: child ? `${child.firstName} ${child.lastName}` : '—',
+          })
+        }
+      }
+
+      const phones = orThrow(
+        await db
+          .from('child_guardian')
+          .select('child_id, guardian:guardian_id(phone)')
+          .eq('center_id', scope.centerId),
+      ) as Row[]
+      for (const row of unaccounted) {
+        const match = phones.find((p) => p.child_id === row.childId)
+        row.guardianPhone = ((match?.guardian as Row | null)?.phone as string | null) ?? null
+      }
+
+      return {
+        date,
+        present,
+        enrolled,
+        // پیش از ساعت نُه، «نیامده» هنوز «بی‌خبر» نیست — بخش ۵.۱.
+        unaccounted: now.getHours() >= 9 ? unaccounted : [],
+        pendingIncidents: pending,
+        classes: perClass.map(({ room, day, complete }) => ({
+          classId: room.id,
+          name: room.name,
+          complete,
+          total: day.children.length,
+          sent: day.reports.some((r) => r.touched) && complete === day.children.length,
+        })),
+        smsRemaining: await smsRemaining(),
+      }
+    },
+
+    async decideIncident(incidentId, decision: IncidentDecision) {
+      // بخش ۳.۳: تصمیم مدیر مسیر رویداد را تعیین می‌کند. متن اولیه مربی
+      // در هیچ حالتی عوض نمی‌شود — تریگر دیتابیس نگهش می‌دارد.
+      orThrow(
+        await db
+          .from('incident')
+          .update({
+            manager_decision: decision,
+            approved_by: scope.accountId,
+            approved_at: decision === 'archive' ? null : new Date().toISOString(),
+          })
+          .eq('center_id', scope.centerId)
+          .eq('id', incidentId)
+          .select('id'),
+      )
+    },
+
+    async previewNotice(input: NoticeInput): Promise<NoticeAudience> {
+      const rows = orThrow(
+        await db
+          .from('child_guardian')
+          .select('child_id, guardian:guardian_id(full_name, phone), child:child_id(first_name, last_name, class_id)')
+          .eq('center_id', scope.centerId),
+      ) as Row[]
+      const scoped = input.classId
+        ? rows.filter((r) => (r.child as Row).class_id === input.classId)
+        : rows
+
+      const families = new Set(scoped.map((r) => r.child_id as string))
+      const withoutPhone: NoticeAudience['withoutPhone'] = []
+      for (const childId of families) {
+        const forChild = scoped.filter((r) => r.child_id === childId)
+        if (forChild.some((r) => (r.guardian as Row).phone)) continue
+        const child = forChild[0]?.child as Row | undefined
+        withoutPhone.push({
+          childId,
+          childName: `${child?.first_name ?? ''} ${child?.last_name ?? ''}`.trim(),
+          guardianName: ((forChild[0]?.guardian as Row | undefined)?.full_name as string) ?? '—',
+        })
+      }
+
+      const staff = (orThrow(await from('staff').eq('active', true)) as Row[]).length
+      const reachable = families.size - withoutPhone.length
+      return {
+        families: families.size,
+        staff,
+        withoutPhone,
+        smsRemaining: await smsRemaining(),
+        smsNeeded: input.sendSms ? reachable + staff : 0,
+      }
+    },
+
+    async publishNotice(input: NoticeInput): Promise<Notice> {
+      const audience = await this.previewNotice(input)
+      // بخش ۱۵.۴: سهمیه هرگز نامحدود نیست، پس ارسالی که از سهمیه بگذرد
+      // اصلاً شروع نمی‌شود.
+      if (input.sendSms && audience.smsNeeded > audience.smsRemaining) {
+        throw new Error(
+          `سهمیه پیامک کافی نیست: ${audience.smsNeeded} لازم است و ${audience.smsRemaining} مانده.`,
+        )
+      }
+
+      if (input.kind !== 'announcement') {
+        orThrow(
+          await db
+            .from('closure')
+            .insert({
+              center_id: scope.centerId,
+              class_id: input.classId ?? null,
+              date: input.date ?? new Date().toISOString().slice(0, 10),
+              type: input.kind === 'closure' ? 'full_closure' : 'delayed_opening',
+              reason: input.reason ?? 'other',
+              message_text: input.body,
+              reopen_at: input.reopenAt ?? null,
+              sms_sent_count: audience.smsNeeded,
+              created_by: scope.accountId,
+            })
+            .select('id'),
+        )
+      }
+
+      const row = orThrow(
+        await db
+          .from('announcement')
+          .insert({
+            center_id: scope.centerId,
+            class_id: input.classId ?? null,
+            title: input.title.trim(),
+            body: input.body.trim(),
+            audience: input.classId ? 'class' : 'center',
+            published_at: new Date().toISOString(),
+            published_by: scope.accountId,
+            send_sms: input.sendSms,
+            sms_sent_count: audience.smsNeeded,
+          })
+          .select()
+          .single(),
+      ) as Row
+
+      if (input.sendSms && audience.smsNeeded > 0) {
+        const period = new Date().toISOString().slice(0, 7)
+        const quota = orThrow(
+          await from('sms_quota').eq('period', period),
+        ) as Row[]
+        const used = ((quota[0]?.used as number | undefined) ?? 0) + audience.smsNeeded
+        orThrow(
+          await db
+            .from('sms_quota')
+            .upsert(
+              { center_id: scope.centerId, period, allocated: (quota[0]?.allocated as number) ?? 0, used },
+              { onConflict: 'center_id,period' },
+            )
+            .select('period'),
+        )
+      }
+
+      return asNotice(row, input.kind)
+    },
+
+    async listNotices(limit) {
+      const rows = orThrow(
+        await from('announcement')
+          .not('published_at', 'is', null)
+          .order('published_at', { ascending: false })
+          .limit(limit),
+      ) as Row[]
+      return rows.map((r) => asNotice(r, 'announcement'))
     },
 
     /** بخش ۵.۹: ارسال، و قفل شدن. پس از این فقط اصلاحیه. */

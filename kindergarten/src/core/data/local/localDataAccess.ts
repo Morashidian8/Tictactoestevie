@@ -8,6 +8,8 @@ import type {
   AbsenceNotice,
   AccessScope,
   ReadAuditSink,
+  Notice,
+  PickupPlan,
   Attendance,
   CheckInInput,
   Child,
@@ -37,10 +39,12 @@ import {
   GUARDIANS,
   PICKUP_CODES,
   seedPickupCodes,
+  GUARDIAN_PHONES,
   seedAbsences,
   seedAttendance,
   seedMedications,
 } from './fixture.ts'
+import { UNACCOUNTED_AFTER_HOUR } from '../attendanceState.ts'
 
 type DayState = {
   attendance: Map<string, Attendance>
@@ -164,6 +168,35 @@ const GUARDIAN_CHILDREN: Record<string, string[]> = {
   'acc-parent': ['child-1', 'child-9'],
 }
 
+
+/* ── حالت‌های تازه برای برنامه فردا و اطلاع‌رسانی ─────────────── */
+
+/** اعلام‌های خانواده. در داده واقعی جدول pickup_plan است. */
+const PLANS: PickupPlan[] = []
+
+/** اطلاعیه‌های منتشرشده. در داده واقعی جدول announcement است. */
+const NOTICES: Notice[] = []
+
+/** بخش ۱۵.۴: سهمیه پیامک هرگز نامحدود نیست. */
+const SMS_ALLOCATED = 500
+let smsUsed = 0
+const smsRemaining = () => SMS_ALLOCATED - smsUsed
+
+/** تعداد پرسنلی که پیامک تعطیلی به آن‌ها هم می‌رود — بخش ۱۵.۳. */
+const STAFF_COUNT = 12
+
+/**
+ * کد چهاررقمی، بدون صفر ابتدایی تا خواندن و گفتنش تلفنی ساده بماند.
+ * تکراری بودن در همان روز بررسی می‌شود چون کلید یکتا (مرکز، روز، کد) است.
+ */
+function makeCode(): string {
+  for (let tries = 0; tries < 50; tries += 1) {
+    const code = String(1000 + Math.floor(Math.random() * 9000))
+    if (!PICKUP_CODES.some((c) => c.code === code)) return code
+  }
+  throw new Error('ساخت کد ممکن نشد.')
+}
+
 export function createLocalDataAccess(scope: AccessScope): DataAccess {
   if (scope.centerId !== CENTER_ID) {
     throw new Error('داده محلی فقط برای همان یک مرکز نمونه است')
@@ -178,6 +211,27 @@ export function createLocalDataAccess(scope: AccessScope): DataAccess {
   const assertVisible = (classId: string) => {
     if (!visibleClassIds().includes(classId)) {
       throw new Error('این کلاس به حساب فعال تخصیص نیافته است')
+    }
+  }
+
+  const assertManager = () => {
+    if (scope.role !== 'manager') {
+      throw new Error('این کار فقط از حساب مدیر ممکن است')
+    }
+  }
+
+  /** سرپرست فقط برای کودک خودش تصمیم می‌گیرد — بخش ۶.۵. */
+  const assertOwnChild = (childId: string) => {
+    if (scope.role === 'manager') return
+    if (scope.role === 'guardian') {
+      if (!(GUARDIAN_CHILDREN[scope.accountId] ?? []).includes(childId)) {
+        throw new Error('این کودک به حساب شما وصل نیست')
+      }
+      return
+    }
+    const child = CHILDREN.find((c) => c.id === childId)
+    if (!child?.classId || !visibleClassIds().includes(child.classId)) {
+      throw new Error('این کودک در کلاس‌های شما نیست')
     }
   }
 
@@ -558,6 +612,241 @@ export function createLocalDataAccess(scope: AccessScope): DataAccess {
         withoutNoteThisWeek: children.filter((c) => !noted.has(c.id)).map((c) => c.id),
         sentAt: state.sentAt,
       }
+    },
+
+
+    /* ── درخواست از خانه، سمت مربی — بخش ۵.۹ بند ۶ ───────────── */
+
+    async setClassNeeds(classId, date, texts) {
+      assertVisible(classId)
+      const state = dayState(date)
+      if (state.sentAt) {
+        throw new Error('گزارش‌های امروز فرستاده شده‌اند؛ از این پس فقط اصلاحیه.')
+      }
+      const clean = texts.map((t) => t.trim()).filter((t) => t.length > 0)
+      const children = CHILDREN.filter((c) => c.classId === classId)
+      for (const child of children) {
+        const key = `${child.id}|${date}`
+        const before = needsFor(child.id, date)
+        // تیک‌هایی که خانواده قبلاً زده از بین نمی‌رود: متن یکسان یعنی
+        // همان درخواست، نه درخواست تازه.
+        NEEDS.set(
+          key,
+          clean.map((text, index) => ({
+            id: `need-${index + 1}`,
+            text,
+            done: before.find((n) => n.text === text)?.done ?? false,
+          })),
+        )
+      }
+      save()
+      return children.length
+    },
+
+    /* ── برنامه فردا — بخش ۵.۸ و ۶.۴ ───────────────────────── */
+
+    async listPlans(classId, date) {
+      assertVisible(classId)
+      const ids = new Set(CHILDREN.filter((c) => c.classId === classId).map((c) => c.id))
+      return PLANS.filter((p) => p.date === date && ids.has(p.childId))
+    },
+
+    async getChildPlans(childId, date) {
+      assertOwnChild(childId)
+      return PLANS.filter((p) => p.childId === childId && p.date === date)
+    },
+
+    async savePlan(input) {
+      assertOwnChild(input.childId)
+      const options = await this.listPickupOptions(input.childId)
+      const known = input.personId ? options.find((o) => o.id === input.personId) : null
+
+      if (input.personId && !known) {
+        throw new Error('این فرد در فهرست مجاز این کودک نیست.')
+      }
+      if (!known && !input.newPerson?.fullName.trim()) {
+        throw new Error('نام فرد را بنویسید.')
+      }
+
+      const plan: PickupPlan = known
+        ? {
+            id: `plan-${input.childId}-${input.date}-${input.direction}`,
+            childId: input.childId,
+            date: input.date,
+            direction: input.direction,
+            personName: known.fullName,
+            personId: known.id,
+            photoUrl: known.photoUrl,
+            // فرد مجاز کد لازم ندارد؛ بخش ۵.۸ کد را برای کسی گذاشته که
+            // در فهرست نیست.
+            code: null,
+            note: input.note?.trim() || null,
+          }
+        : {
+            id: `plan-${input.childId}-${input.date}-${input.direction}`,
+            childId: input.childId,
+            date: input.date,
+            direction: input.direction,
+            personName: input.newPerson!.fullName.trim(),
+            personId: null,
+            photoUrl: null,
+            code: makeCode(),
+            note: input.note?.trim() || null,
+          }
+
+      const at = PLANS.findIndex(
+        (p) => p.childId === input.childId && p.date === input.date && p.direction === input.direction,
+      )
+      if (at >= 0) PLANS.splice(at, 1, plan)
+      else PLANS.push(plan)
+
+      // کد ساخته‌شده باید از همان مسیری قابل بررسی باشد که مربی می‌شناسد.
+      if (plan.code) {
+        PICKUP_CODES.push({
+          code: plan.code,
+          childId: plan.childId,
+          date: plan.date,
+          bearerName: plan.personName,
+          photoUrl: null,
+          usedAt: null,
+        })
+      }
+      save()
+      return plan
+    },
+
+    async clearPlan(childId, date, direction) {
+      assertOwnChild(childId)
+      const at = PLANS.findIndex(
+        (p) => p.childId === childId && p.date === date && p.direction === direction,
+      )
+      if (at < 0) return
+      const [gone] = PLANS.splice(at, 1)
+      if (gone?.code) {
+        const codeAt = PICKUP_CODES.findIndex((c) => c.code === gone.code && c.date === date)
+        if (codeAt >= 0) PICKUP_CODES.splice(codeAt, 1)
+      }
+      save()
+    },
+
+    /* ── مدیر — بخش ۱۳.۳ ────────────────────────────────────── */
+
+    async getManagerDashboard(date) {
+      assertManager()
+      const state = dayState(date)
+      const now = new Date()
+      const present = [...state.attendance.values()].filter(
+        (a) => a.checkInAt && !a.checkOutAt,
+      ).length
+
+      const absent = new Set(state.absences.map((a) => a.childId))
+      const unaccounted = CHILDREN.filter(
+        (c) => !state.attendance.get(c.id)?.checkInAt && !absent.has(c.id),
+      ).map((c) => ({
+        childId: c.id,
+        name: `${c.firstName} ${c.lastName}`,
+        guardianPhone: GUARDIAN_PHONES[c.id] ?? null,
+      }))
+
+      const nameOf = (childId: string) => {
+        const child = CHILDREN.find((c) => c.id === childId)
+        return child ? `${child.firstName} ${child.lastName}` : '—'
+      }
+
+      return {
+        date,
+        present,
+        enrolled: CHILDREN.length,
+        // پیش از ساعت نُه، «نیامده» هنوز «بی‌خبر» نیست — بخش ۵.۱.
+        unaccounted: now.getHours() >= UNACCOUNTED_AFTER_HOUR ? unaccounted : [],
+        pendingIncidents: state.incidents
+          .filter((i) => i.requiresApproval)
+          .map((i) => ({ ...i, childName: nameOf(i.childId) })),
+        classes: CLASSES.map((room) => {
+          const kids = CHILDREN.filter((c) => c.classId === room.id)
+          const complete = kids.filter(
+            (c) => missingParts(state.reports.get(c.id)).length === 0,
+          ).length
+          return {
+            classId: room.id,
+            name: room.name,
+            complete,
+            total: kids.length,
+            sent: state.sentAt !== null,
+          }
+        }),
+        smsRemaining: smsRemaining(),
+      }
+    },
+
+    async decideIncident(incidentId, decision) {
+      assertManager()
+      for (const state of days.values()) {
+        const incident = state.incidents.find((i) => i.id === incidentId)
+        if (!incident) continue
+        // بخش ۳.۳: تصمیم مدیر یا رویداد را به خانواده می‌رساند یا
+        // بایگانی‌اش می‌کند. متن اولیه مربی در هیچ حالتی عوض نمی‌شود.
+        if (decision === 'archive') {
+          state.incidents = state.incidents.filter((i) => i.id !== incidentId)
+        } else {
+          incident.requiresApproval = false
+        }
+        save()
+        return
+      }
+      throw new Error('رویداد پیدا نشد.')
+    },
+
+    async previewNotice(input) {
+      assertManager()
+      const children = input.classId
+        ? CHILDREN.filter((c) => c.classId === input.classId)
+        : CHILDREN
+      const withoutPhone = children
+        .filter((c) => !GUARDIAN_PHONES[c.id])
+        .map((c) => ({
+          childId: c.id,
+          childName: `${c.firstName} ${c.lastName}`,
+          guardianName: GUARDIANS[c.id]?.[0]?.fullName ?? '—',
+        }))
+      const reachable = children.length - withoutPhone.length
+      return {
+        families: children.length,
+        staff: STAFF_COUNT,
+        withoutPhone,
+        smsRemaining: smsRemaining(),
+        // بخش ۱۵.۳: پیامک مربی‌ها متن جداگانه دارد، پس جدا شمرده می‌شود.
+        smsNeeded: input.sendSms ? reachable + STAFF_COUNT : 0,
+      }
+    },
+
+    async publishNotice(input) {
+      assertManager()
+      const audience = await this.previewNotice(input)
+      if (input.sendSms && audience.smsNeeded > audience.smsRemaining) {
+        throw new Error(
+          `سهمیه پیامک کافی نیست: ${audience.smsNeeded} لازم است و ${audience.smsRemaining} مانده.`,
+        )
+      }
+      if (input.sendSms) smsUsed += audience.smsNeeded
+
+      const notice: Notice = {
+        id: `notice-${NOTICES.length + 1}`,
+        kind: input.kind,
+        classId: input.classId ?? null,
+        title: input.title.trim(),
+        body: input.body.trim(),
+        publishedAt: new Date().toISOString(),
+        smsSentCount: input.sendSms ? audience.smsNeeded : 0,
+        seenInAppCount: 0,
+      }
+      NOTICES.unshift(notice)
+      save()
+      return notice
+    },
+
+    async listNotices(limit) {
+      return NOTICES.slice(0, limit)
     },
 
     async sendReports(classId, date): Promise<number> {
