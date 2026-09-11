@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { AlertIcon, CheckIcon, EmptyState } from '../../design-system/index.ts'
 import { formatCount, formatRial, jalaliYearMonth, toIsoDate, toLatinDigits, toPersianDigits } from '../../i18n/index.ts'
 import { useData } from '../../core/auth/index.ts'
-import type { FinanceOverview, Invoice } from '../../core/data/index.ts'
+import type { FinanceOverview, Invoice, PaymentClaim } from '../../core/data/index.ts'
 import styles from './FinancePage.module.css'
 
 /**
@@ -27,6 +27,11 @@ export function FinancePage({ onBack }: { onBack: () => void }) {
   const data = useData()
   const [period] = useState(() => jalaliYearMonth(new Date()))
   const [view, setView] = useState<FinanceOverview | null>(null)
+  /** اعلام‌های پرداخت خانواده‌ها، در انتظار تصمیم — بخش ۸. */
+  const [claims, setClaims] = useState<PaymentClaim[]>([])
+  const [rejecting, setRejecting] = useState<PaymentClaim | null>(null)
+  const [rejectReason, setRejectReason] = useState('')
+  const [zoom, setZoom] = useState<string | null>(null)
   const [paying, setPaying] = useState<Invoice | null>(null)
   const [busy, setBusy] = useState(false)
   const [note, setNote] = useState<string | null>(null)
@@ -34,7 +39,12 @@ export function FinancePage({ onBack }: { onBack: () => void }) {
 
   const load = useCallback(async () => {
     try {
-      setView(await data.getFinance(period))
+      const [overview, pending] = await Promise.all([
+        data.getFinance(period),
+        data.listPaymentClaims('pending'),
+      ])
+      setView(overview)
+      setClaims(pending)
       setError(null)
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'خوانده نشد.')
@@ -60,6 +70,20 @@ export function FinancePage({ onBack }: { onBack: () => void }) {
       await load()
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'صادر نشد.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const decideClaim = async (claimId: string, approve: boolean, reason?: string) => {
+    setBusy(true)
+    try {
+      await data.decidePaymentClaim(claimId, approve, reason)
+      setNote(approve ? 'پرداخت تأیید و ثبت شد.' : 'اعلام رد شد و دلیلش برای خانواده رفت.')
+      setRejecting(null)
+      await load()
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'ثبت نشد.')
     } finally {
       setBusy(false)
     }
@@ -103,6 +127,67 @@ export function FinancePage({ onBack }: { onBack: () => void }) {
               <Tile label="وصول‌شده" value={view.collected} tone="ok" />
               <Tile label="مانده" value={view.outstanding} tone={view.outstanding > 0 ? 'warn' : 'plain'} />
             </div>
+
+            {/*
+              اعلام‌های خانواده بالاتر از همه‌چیز، چون تنها بخش این صفحه
+              است که کس دیگری منتظر تصمیم مدیر مانده.
+            */}
+            {claims.length > 0 ? (
+              <section className={`${styles.card} ${styles.claims}`} aria-label="اعلام‌های پرداخت">
+                <p className={`${styles.warnHead} t-body`}>
+                  <AlertIcon size={20} />
+                  {formatCount(claims.length)} اعلام پرداخت در انتظار تأیید
+                </p>
+                {claims.map((claim) => (
+                  <article key={claim.id} className={styles.claim}>
+                    <p className={`${styles.claimTop} t-body`}>
+                      <b>{claim.childName}</b>
+                      <span className={styles.muted}>{toPersianDigits(claim.period)}</span>
+                      <b className={styles.amount}>{formatRial(claim.amount)}</b>
+                    </p>
+                    {claim.note ? (
+                      <p className={`${styles.muted} t-caption`}>{claim.note}</p>
+                    ) : null}
+
+                    {claim.receiptUrl ? (
+                      <button
+                        type="button"
+                        className={styles.receiptThumb}
+                        onClick={() => setZoom(claim.receiptUrl)}
+                        aria-label="بزرگ‌نمایی رسید"
+                      >
+                        <img src={claim.receiptUrl} alt="" />
+                        <span className={`${styles.muted} t-caption`}>رسید — برای بزرگ‌نمایی بزنید</span>
+                      </button>
+                    ) : (
+                      <p className={`${styles.noReceipt} t-caption`}>رسیدی پیوست نشده.</p>
+                    )}
+
+                    <div className={styles.claimActions}>
+                      <button
+                        type="button"
+                        className={`${styles.decide} ${styles.decidePrimary} t-body`}
+                        disabled={busy}
+                        onClick={() => void decideClaim(claim.id, true)}
+                      >
+                        تأیید و ثبت پرداخت
+                      </button>
+                      <button
+                        type="button"
+                        className={`${styles.decide} t-body`}
+                        disabled={busy}
+                        onClick={() => {
+                          setRejecting(claim)
+                          setRejectReason('')
+                        }}
+                      >
+                        رد
+                      </button>
+                    </div>
+                  </article>
+                ))}
+              </section>
+            ) : null}
 
             {note ? (
               <p className={`${styles.note} t-body`}>
@@ -163,6 +248,49 @@ export function FinancePage({ onBack }: { onBack: () => void }) {
 
         {error ? <p className={`${styles.error} t-body`}>{error}</p> : null}
       </div>
+
+      {zoom ? (
+        <button
+          type="button"
+          className={styles.zoomBackdrop}
+          onClick={() => setZoom(null)}
+          aria-label="بستن رسید"
+        >
+          <img className={styles.zoomImage} src={zoom} alt="رسید پرداخت" />
+        </button>
+      ) : null}
+
+      {rejecting ? (
+        <div className={styles.sheetBackdrop} role="dialog" aria-label="رد اعلام پرداخت">
+          <div className={styles.sheet}>
+            <p className={`${styles.sheetTitle} t-h2`}>رد اعلام {rejecting.childName}</p>
+            {/* رد بدون دلیل، خانواده را سردرگم می‌گذارد. */}
+            <label className={`${styles.field} t-caption`}>
+              دلیل، تا خانواده بداند چه شد
+              <input
+                className={styles.input}
+                value={rejectReason}
+                aria-label="دلیل رد"
+                placeholder="مثلاً: رسید مربوط به این دوره نیست."
+                onChange={(event) => setRejectReason(event.target.value)}
+              />
+            </label>
+            <div className={styles.sheetActions}>
+              <button type="button" className={styles.secondary} onClick={() => setRejecting(null)}>
+                انصراف
+              </button>
+              <button
+                type="button"
+                className={`${styles.primary} t-body-lg`}
+                disabled={rejectReason.trim().length === 0 || busy}
+                onClick={() => void decideClaim(rejecting.id, false, rejectReason)}
+              >
+                رد اعلام
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {paying ? (
         <PaymentSheet

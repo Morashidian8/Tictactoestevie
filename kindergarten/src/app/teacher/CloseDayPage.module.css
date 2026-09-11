@@ -42,3 +42,109 @@
 
 .error { color: var(--brick); background: var(--brick-tint);
   padding: var(--space-3) var(--space-4); border-radius: var(--r-input); }
+
+/*
+ * اصلاحیه پس از قفل شدن — بخش ۵.۹.
+ *
+ * داخل همان کارت «فرستاده شد» می‌نشیند، چون تنها جایی است که معنا
+ * دارد. پیش‌تر این راه اصلاً ساخته نشده بود و مربی پس از یک ارسال تا
+ * پایان روز هیچ کاری نمی‌توانست بکند.
+ */
+.amendOpen {
+  min-block-size: var(--touch-teacher);
+  margin-block-start: var(--space-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-input);
+  background: var(--surface);
+  color: var(--turquoise-dark);
+  font-family: inherit;
+  font-weight: var(--weight-medium);
+}
+
+.amend {
+  margin-block-start: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.amendLabel { color: var(--ink-muted); }
+
+.amendChildren {
+  display: flex;
+  gap: var(--space-2);
+  overflow-x: auto;
+  padding-block-end: var(--space-1);
+}
+
+.amendChild {
+  flex: none;
+  min-block-size: var(--touch-teacher);
+  padding-inline: var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--r-chip);
+  background: var(--surface);
+  color: var(--ink);
+  font-family: inherit;
+}
+
+.amendChild[aria-pressed='true'] {
+  background: var(--turquoise-tint);
+  border-color: var(--turquoise);
+  font-weight: var(--weight-medium);
+}
+
+.amendText {
+  padding: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--r-input);
+  background: var(--surface);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: var(--text-body-lg);
+  line-height: var(--text-body-lg-line);
+  resize: vertical;
+}
+
+.amendText:focus { border-color: var(--turquoise); outline: none; }
+
+.amendActions { display: flex; gap: var(--space-2); }
+
+.amendSave {
+  flex: 2;
+  min-block-size: var(--touch-teacher);
+  border: none;
+  border-radius: var(--r-input);
+  background: var(--turquoise-dark);
+  color: var(--surface);
+  font-family: inherit;
+  font-weight: var(--weight-bold);
+}
+
+.amendSave:disabled { background: var(--disabled-bg); color: var(--disabled-fg); }
+
+.amendCancel {
+  flex: 1;
+  min-block-size: var(--touch-teacher);
+  border: 1px solid var(--border);
+  border-radius: var(--r-input);
+  background: var(--surface);
+  color: var(--ink);
+  font-family: inherit;
+}
+
+.amendList {
+  margin-block-start: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.amendItem {
+  margin: 0;
+  display: flex;
+  gap: var(--space-2);
+  padding-block-start: var(--space-2);
+  border-block-start: 1px solid var(--border);
+  color: var(--ink);
+}

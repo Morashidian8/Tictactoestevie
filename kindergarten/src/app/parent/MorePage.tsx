@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { AlertIcon, CheckIcon, EmptyState } from '../../design-system/index.ts'
-import { formatJalali, formatRial, formatTime, toIsoDate, toPersianDigits } from '../../i18n/index.ts'
+import { formatJalali, formatRial, formatTime, toIsoDate, toLatinDigits, toPersianDigits } from '../../i18n/index.ts'
 import { useData } from '../../core/auth/index.ts'
-import type { MessageThread, Notice, ParentFinance } from '../../core/data/index.ts'
+import type { Invoice, MessageThread, Notice, ParentFinance } from '../../core/data/index.ts'
+import { compressImage } from '../../core/media/compress.ts'
 import styles from './MorePage.module.css'
 
 /**
@@ -153,10 +154,19 @@ const STATUS_TEXT: Record<string, string> = {
 function FinanceTab({ childId, onBack }: { childId: string; onBack: () => void }) {
   const data = useData()
   const [finance, setFinance] = useState<ParentFinance | null>(null)
+  const [declaring, setDeclaring] = useState<Invoice | null>(null)
+
+  const load = useCallback(async () => {
+    try {
+      setFinance(await data.getParentFinance(childId))
+    } catch {
+      setFinance(null)
+    }
+  }, [data, childId])
 
   useEffect(() => {
-    data.getParentFinance(childId).then(setFinance).catch(() => setFinance(null))
-  }, [data, childId])
+    void load()
+  }, [load])
 
   if (!finance) return <Shell title="مالی" onBack={onBack}><EmptyState text="در حال خواندن…" /></Shell>
 
@@ -185,17 +195,60 @@ function FinanceTab({ childId, onBack }: { childId: string; onBack: () => void }
         {finance.invoices.length === 0 ? (
           <p className={`${styles.hint} t-body`}>هنوز صورتحسابی صادر نشده.</p>
         ) : (
-          finance.invoices.map((invoice) => (
-            <p key={invoice.id} className={`${styles.row} t-body`}>
-              <span>{toPersianDigits(invoice.period)}</span>
-              <span className={`${styles.hint} t-caption`}>{STATUS_TEXT[invoice.status]}</span>
-              <b className={styles.amount}>
-                {formatRial(invoice.amount - invoice.discount + invoice.lateFee)}
-              </b>
-            </p>
-          ))
+          finance.invoices.map((invoice) => {
+            const claim = finance.claims.find(
+              (c) => c.invoiceId === invoice.id && c.status !== 'rejected',
+            )
+            const settled = invoice.status === 'paid' || invoice.status === 'cancelled'
+            return (
+              <div key={invoice.id} className={styles.invoice}>
+                <p className={`${styles.row} t-body`}>
+                  <span>{toPersianDigits(invoice.period)}</span>
+                  <span className={`${styles.hint} t-caption`}>{STATUS_TEXT[invoice.status]}</span>
+                  <b className={styles.amount}>
+                    {formatRial(invoice.amount - invoice.discount + invoice.lateFee)}
+                  </b>
+                </p>
+
+                {/*
+                  بخش ۸: خانواده کارت‌به‌کارت می‌کند و باید بتواند همین‌جا
+                  خبر دهد. این هنوز پرداخت نیست؛ تا مدیر رسید را ندیده،
+                  هیچ ریالی در دفتر مالی ثبت نمی‌شود.
+                */}
+                {settled ? null : claim ? (
+                  <p className={`${styles.claimState} t-caption`}>
+                    {claim.status === 'pending'
+                      ? 'اعلام پرداخت شما ثبت شد و منتظر تأیید مهد است.'
+                      : 'مهد پرداخت شما را تأیید کرد.'}
+                  </p>
+                ) : (
+                  <button
+                    type="button"
+                    className={`${styles.declare} t-body`}
+                    onClick={() => setDeclaring(invoice)}
+                  >
+                    پرداخت کردم
+                  </button>
+                )}
+              </div>
+            )
+          })
         )}
       </section>
+
+      {finance.claims.some((c) => c.status === 'rejected') ? (
+        <section className={`${styles.card} ${styles.rejected}`} aria-label="اعلام‌های رد شده">
+          <span className={`${styles.cardLabel} t-caption`}>اعلام رد شده</span>
+          {finance.claims
+            .filter((c) => c.status === 'rejected')
+            .map((claim) => (
+              <p key={claim.id} className={`${styles.hint} t-body`}>
+                {toPersianDigits(claim.period)} · {formatRial(claim.amount)} —{' '}
+                {claim.rejectReason}
+              </p>
+            ))}
+        </section>
+      ) : null}
 
       {finance.payments.length > 0 ? (
         <section className={styles.card} aria-label="پرداخت‌ها">
@@ -211,7 +264,142 @@ function FinanceTab({ childId, onBack }: { childId: string; onBack: () => void }
           ))}
         </section>
       ) : null}
+
+      {declaring ? (
+        <DeclareSheet
+          invoice={declaring}
+          onClose={() => setDeclaring(null)}
+          onDone={async () => {
+            setDeclaring(null)
+            await load()
+          }}
+        />
+      ) : null}
     </Shell>
+  )
+}
+
+/** اعلام پرداخت با عکس رسید — بخش ۸. */
+function DeclareSheet({
+  invoice,
+  onClose,
+  onDone,
+}: {
+  invoice: Invoice
+  onClose: () => void
+  onDone: () => Promise<void>
+}) {
+  const data = useData()
+  const remaining = invoice.amount - invoice.discount + invoice.lateFee - invoice.paid
+  const [amount, setAmount] = useState(String(Math.round(remaining / 10)))
+  const [receipt, setReceipt] = useState<string | null>(null)
+  const [note, setNote] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const fileInput = useRef<HTMLInputElement>(null)
+
+  const pick = async (file: File | undefined) => {
+    if (!file) return
+    try {
+      // همان فشرده‌سازی عکس‌های کلاس. رسید هم عکس موبایل است و خام
+      // فرستادنش آپلود را روی اینترنت خانه کند می‌کند.
+      const image = await compressImage(file)
+      setReceipt(image.previewUrl)
+    } catch {
+      setError('عکس خوانده نشد.')
+    }
+  }
+
+  const submit = async () => {
+    setBusy(true)
+    setError(null)
+    try {
+      await data.declarePayment({
+        invoiceId: invoice.id,
+        amount: Number(toLatinDigits(amount).replace(/\D/g, '')) * 10,
+        receiptUrl: receipt,
+        note,
+      })
+      await onDone()
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'ثبت نشد.')
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className={styles.sheetBackdrop} role="dialog" aria-label="اعلام پرداخت">
+      <div className={styles.sheet}>
+        <p className={`${styles.sheetTitle} t-h2`}>پرداخت کردم</p>
+        <p className={`${styles.hint} t-body`}>
+          {toPersianDigits(invoice.period)} · باقی‌مانده{' '}
+          <b className={styles.amount}>{formatRial(remaining)}</b>
+        </p>
+
+        <label className={`${styles.field} t-caption`}>
+          مبلغی که پرداخت کردید، به تومان
+          <input
+            className={styles.input}
+            value={amount}
+            inputMode="numeric"
+            aria-label="مبلغ پرداختی"
+            onChange={(event) => setAmount(event.target.value)}
+          />
+        </label>
+
+        {receipt ? (
+          <img className={styles.receipt} src={receipt} alt="رسید پرداخت" />
+        ) : null}
+
+        <button
+          type="button"
+          className={`${styles.pickReceipt} ${receipt ? styles.pickReceiptDone : ''} t-body`}
+          onClick={() => fileInput.current?.click()}
+        >
+          {receipt ? 'عکس دیگری انتخاب کنید' : 'عکس رسید را بگذارید'}
+        </button>
+        <input
+          ref={fileInput}
+          className={styles.hiddenInput}
+          type="file"
+          accept="image/*"
+          aria-label="عکس رسید"
+          onChange={(event) => {
+            void pick(event.target.files?.[0])
+            event.target.value = ''
+          }}
+        />
+        <p className={`${styles.hint} t-caption`}>
+          بدون رسید هم می‌توانید اعلام کنید، ولی با رسید زودتر تأیید می‌شود.
+        </p>
+
+        <label className={`${styles.field} t-caption`}>
+          توضیح، اگر لازم است
+          <input
+            className={styles.input}
+            value={note}
+            aria-label="توضیح پرداخت"
+            onChange={(event) => setNote(event.target.value)}
+          />
+        </label>
+
+        {error ? <p className={`${styles.error} t-body`}>{error}</p> : null}
+
+        <div className={styles.sheetActions}>
+          <button type="button" className={styles.secondary} onClick={onClose}>
+            انصراف
+          </button>
+          <button
+            type="button"
+            className={`${styles.primary} t-body`}
+            disabled={busy}
+            onClick={() => void submit()}
+          >
+            اعلام به مهد
+          </button>
+        </div>
+      </div>
+    </div>
   )
 }
 

@@ -141,3 +141,101 @@
 
 .composer { display: flex; flex-direction: column; gap: var(--space-2); }
 .error { margin: 0; color: var(--brick); }
+
+/* ── اعلام پرداخت — بخش ۸ ───────────────────────────────────── */
+
+.invoice { display: flex; flex-direction: column; gap: var(--space-2); }
+.invoice + .invoice { border-block-start: 1px solid var(--border); padding-block-start: var(--space-2); }
+
+.declare {
+  min-block-size: var(--touch-parent);
+  border: 1px solid var(--turquoise);
+  border-radius: var(--r-input);
+  background: var(--surface);
+  color: var(--turquoise-dark);
+  font-family: inherit;
+  font-size: var(--text-body);
+  font-weight: var(--weight-medium);
+}
+
+/*
+ * لحن انتظار، نه موفقیت: تا مدیر تأیید نکرده، پرداخت ثبت نشده. سبز
+ * گفتن «تمام شد» در حالی که هنوز تمام نشده، بدترین کاری است که این
+ * صفحه می‌تواند بکند.
+ */
+.claimState {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--r-input);
+  background: var(--saffron-tint);
+  color: var(--ink);
+}
+
+.rejected { background: var(--brick-tint); border-color: transparent; }
+
+.sheetBackdrop {
+  position: fixed; inset: 0; z-index: 30;
+  background: rgba(19, 39, 47, .45);
+  display: flex; align-items: flex-end;
+}
+
+.sheet {
+  inline-size: 100%;
+  background: var(--surface);
+  border-start-start-radius: var(--r-card);
+  border-start-end-radius: var(--r-card);
+  box-shadow: var(--shadow-2);
+  padding: var(--space-5) var(--space-4) var(--space-6);
+  display: flex; flex-direction: column; gap: var(--space-3);
+  max-block-size: 90dvh; overflow-y: auto;
+}
+
+.sheetTitle { margin: 0; font-family: var(--font-display); font-weight: var(--weight-display-fallback); }
+
+.input {
+  min-block-size: var(--touch-parent);
+  padding-inline: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--r-input);
+  background: var(--surface);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: var(--text-body);
+  font-variant-numeric: tabular-nums;
+}
+.input:focus { border-color: var(--turquoise); outline: none; }
+
+.receipt {
+  inline-size: 100%;
+  max-block-size: 240px;
+  object-fit: contain;
+  border-radius: var(--r-photo);
+  background: var(--neutral-fill);
+}
+
+.pickReceipt {
+  min-block-size: var(--touch-parent);
+  border: 1px dashed var(--border);
+  border-radius: var(--r-input);
+  background: var(--surface);
+  color: var(--ink);
+  font-family: inherit;
+}
+
+/* با انتخاب عکس، خط‌چین به خط پیوسته تبدیل می‌شود. */
+.pickReceiptDone { border-style: solid; border-color: var(--turquoise); }
+
+.hiddenInput {
+  position: absolute; inline-size: 1px; block-size: 1px;
+  padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%);
+}
+
+.sheetActions { display: flex; gap: var(--space-2); margin-block-start: var(--space-2); }
+
+.secondary {
+  flex: 1; min-block-size: var(--touch-parent);
+  border: 1px solid var(--border); border-radius: var(--r-input);
+  background: var(--surface); color: var(--ink); font-family: inherit;
+}
+
+.sheetActions .primary { flex: 2; }

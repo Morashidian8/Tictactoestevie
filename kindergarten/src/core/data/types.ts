@@ -166,6 +166,8 @@ export type ParentDay = {
   moodAfternoon: Mood | null
   teacherNote: string | null
   needsFromHome: { id: string; text: string; done: boolean }[]
+  /** اصلاحیه‌های پس از ارسال — بخش ۵.۹. جدا از متن اصلی. */
+  amendments: Amendment[]
   /** فقط عکس‌هایی که این کودک در آن‌ها تگ خورده — بخش ۶.۶. */
   photos: Photo[]
   /**
@@ -272,6 +274,52 @@ export type MedicationInput = {
   handedByGuardianId?: string | null
 }
 
+/* ── اعلام پرداخت خانواده — بخش ۸ ───────────────────────────── */
+
+export type ClaimStatus = 'pending' | 'approved' | 'rejected'
+
+/**
+ * خانواده می‌گوید «پرداخت کردم» و رسید می‌گذارد. این هنوز پرداخت نیست.
+ *
+ * تا مدیر رسید را ندیده و تأیید نکرده، هیچ ریالی در دفتر مالی ثبت
+ * نمی‌شود؛ وگرنه هر خانواده‌ای می‌توانست بدهی خودش را صفر کند.
+ */
+export type PaymentClaim = {
+  id: string
+  invoiceId: string
+  childId: string
+  childName: string
+  period: string
+  amount: number
+  receiptUrl: string | null
+  note: string | null
+  status: ClaimStatus
+  declaredAt: string
+  rejectReason: string | null
+}
+
+export type PaymentClaimInput = {
+  invoiceId: string
+  amount: number
+  /** عکس رسید. تا وصل شدن استوریج، نشانی محلی مرورگر است. */
+  receiptUrl?: string | null
+  note?: string | null
+}
+
+/* ── اصلاحیه پس از قفل شدن گزارش — بخش ۵.۹ ──────────────────── */
+
+/**
+ * پس از ارسال، گزارش قفل است و تغییر فقط به شکل اصلاحیه ثبت می‌شود.
+ * سرپرست اصلاحیه را جدا می‌بیند، نه به‌جای متن اصلی.
+ */
+export type Amendment = {
+  id: string
+  childId: string
+  date: string
+  text: string
+  createdAt: string
+}
+
 /* ── مالی — بخش ۸ و ماژول M5 ────────────────────────────────── */
 
 export type FeePeriod = 'monthly' | 'termly' | 'yearly'
@@ -339,6 +387,8 @@ export type ParentFinance = {
   isPayer: boolean
   invoices: Invoice[]
   payments: Payment[]
+  /** اعلام‌های خودش، تا بداند کدامشان هنوز منتظر تأیید مدیر است. */
+  claims: PaymentClaim[]
   outstanding: number
 }
 
@@ -498,6 +548,8 @@ export type ManagerDashboard = {
   pendingIncidents: (Incident & { childName: string })[]
   /** وضعیت ثبت هر کلاس: کامل، ناقص، یا دست‌نخورده. */
   classes: { classId: string; name: string; complete: number; total: number; sent: boolean }[]
+  /** اعلام‌های پرداخت که منتظر تصمیم مدیرند — بخش ۸. */
+  pendingClaims: number
   smsRemaining: number
 }
 
@@ -642,6 +694,35 @@ export interface DataAccess {
   getThread(childId: string): Promise<MessageThread>
 
   sendMessage(childId: string, body: string): Promise<Message>
+
+  /* ── دارو — بخش ۵.۳ ───────────────────────────────────────── */
+
+  /** علامت زدن اینکه دارو خورانده شد. پس از این یادآور می‌رود. */
+  markMedicationGiven(medicationId: string): Promise<void>
+
+  /* ── اصلاحیه — بخش ۵.۹ ────────────────────────────────────── */
+
+  /**
+   * ثبت اصلاحیه روی گزارشِ قفل‌شده.
+   * تنها راه تغییر پس از ارسال؛ متن اصلی دست‌نخورده می‌ماند.
+   */
+  addAmendment(childId: string, date: string, text: string): Promise<Amendment>
+
+  listAmendments(classId: string, date: string): Promise<Amendment[]>
+
+  /* ── اعلام پرداخت — بخش ۸ ─────────────────────────────────── */
+
+  /** خانواده اعلام می‌کند پرداخت کرده و رسید می‌گذارد. */
+  declarePayment(input: PaymentClaimInput): Promise<PaymentClaim>
+
+  /** اعلام‌های در انتظار تصمیم مدیر. */
+  listPaymentClaims(status: ClaimStatus): Promise<PaymentClaim[]>
+
+  /**
+   * تصمیم مدیر. تأیید، پرداخت واقعی را می‌سازد و صورتحساب را به‌روز
+   * می‌کند؛ رد، دلیل می‌خواهد تا خانواده بداند چه شد.
+   */
+  decidePaymentClaim(claimId: string, approve: boolean, reason?: string): Promise<void>
 
   /**
    * ارسال گزارش‌های روز — بخش ۵.۹.

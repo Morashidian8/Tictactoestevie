@@ -9,6 +9,8 @@ import type {
   AccessScope,
   ReadAuditSink,
   Notice,
+  Amendment,
+  PaymentClaim,
   Invoice,
   InvoiceStatus,
   Message,
@@ -115,6 +117,8 @@ function save(): void {
       invoices: INVOICES,
       payments: PAYMENTS,
       messages: MESSAGES,
+      amendments: AMENDMENTS,
+      claims: CLAIMS,
       smsUsed,
     }
     localStorage.setItem(STORE_KEY, JSON.stringify(payload))
@@ -138,6 +142,8 @@ function hydrate(): void {
       invoices?: InvoiceRow[]
       payments?: Payment[]
       messages?: Message[]
+      amendments?: Amendment[]
+      claims?: PaymentClaim[]
       smsUsed?: number
     }
     for (const [date, stored] of Object.entries(payload.days ?? {})) {
@@ -166,6 +172,8 @@ function hydrate(): void {
     restore(INVOICES, payload.invoices)
     restore(PAYMENTS, payload.payments)
     restore(MESSAGES, payload.messages)
+    restore(AMENDMENTS, payload.amendments)
+    restore(CLAIMS, payload.claims)
     if (typeof payload.smsUsed === 'number') smsUsed = payload.smsUsed
   } catch {
     // داده ذخیره‌شده خراب بود. از نمونه تازه شروع می‌کنیم.
@@ -263,6 +271,8 @@ type InvoiceRow = {
 const INVOICES: InvoiceRow[] = []
 const PAYMENTS: Payment[] = []
 const MESSAGES: Message[] = []
+const AMENDMENTS: Amendment[] = []
+const CLAIMS: PaymentClaim[] = []
 const ABSENCES_DECLARED: { childId: string; date: string; reason: string | null }[] = []
 
 const childName = (childId: string): string => {
@@ -674,6 +684,8 @@ export function createLocalDataAccess(scope: AccessScope): DataAccess {
         moodAfternoon: sent ? report?.moodAfternoon ?? null : null,
         teacherNote: sent ? report?.teacherNote ?? null : null,
         needsFromHome: sent ? (needsFor(childId, date) ?? []) : [],
+        // بخش ۵.۹: اصلاحیه جدا از متن اصلی دیده می‌شود، نه به‌جای آن.
+        amendments: AMENDMENTS.filter((a) => a.childId === childId && a.date === date),
         // بخش ۶.۶: فقط عکسی که این کودک در آن تگ خورده، و فقط پس از انتشار.
         photos: state.photos.filter((p) => p.published && p.childIds.includes(childId)),
         // بخش ۳.۳: رویداد متوسط یا بالا بدون تأیید مدیر به سرپرست نمی‌رسد.
@@ -886,6 +898,7 @@ export function createLocalDataAccess(scope: AccessScope): DataAccess {
             sent: state.sentAt !== null,
           }
         }),
+        pendingClaims: CLAIMS.filter((c) => c.status === 'pending').length,
         smsRemaining: smsRemaining(),
       }
     },
@@ -1055,7 +1068,9 @@ export function createLocalDataAccess(scope: AccessScope): DataAccess {
       const mine = (GUARDIAN_CHILDREN[scope.accountId] ?? []).includes(childId)
       // در داده نمونه، سرپرست اولِ هر کودک پرداخت‌کننده است.
       const isPayer = scope.role === 'manager' || (mine && payerGuardianId !== undefined)
-      if (!isPayer) return { isPayer: false, invoices: [], payments: [], outstanding: 0 }
+      if (!isPayer) {
+        return { isPayer: false, invoices: [], payments: [], claims: [], outstanding: 0 }
+      }
 
       const invoices = INVOICES.filter((r) => r.childId === childId).map(invoiceOf)
       const ids = new Set(invoices.map((i) => i.id))
@@ -1066,6 +1081,7 @@ export function createLocalDataAccess(scope: AccessScope): DataAccess {
         isPayer: true,
         invoices,
         payments: PAYMENTS.filter((p) => ids.has(p.invoiceId)),
+        claims: CLAIMS.filter((c) => c.childId === childId),
         outstanding,
       }
     },
@@ -1179,6 +1195,118 @@ export function createLocalDataAccess(scope: AccessScope): DataAccess {
       MESSAGES.push(message)
       save()
       return message
+    },
+
+
+    /* ── دارو — بخش ۵.۳ ───────────────────────────────────────── */
+
+    async markMedicationGiven(medicationId) {
+      for (const state of days.values()) {
+        const row = state.medications.find((m) => m.id === medicationId)
+        if (!row) continue
+        if (row.childId) assertOwnChild(row.childId)
+        row.givenAt = new Date().toISOString()
+        save()
+        return
+      }
+      throw new Error('دارو پیدا نشد.')
+    },
+
+    /* ── اصلاحیه — بخش ۵.۹ ────────────────────────────────────── */
+
+    async addAmendment(childId, date, text) {
+      assertOwnChild(childId)
+      const clean = text.trim()
+      if (!clean) throw new Error('متن اصلاحیه خالی است.')
+      const state = dayState(date)
+      // اصلاحیه فقط روی گزارشِ فرستاده‌شده معنا دارد؛ پیش از ارسال،
+      // مربی خودِ گزارش را ویرایش می‌کند.
+      if (!state.sentAt) {
+        throw new Error('گزارش این روز هنوز فرستاده نشده؛ خودش را ویرایش کنید.')
+      }
+      const amendment: Amendment = {
+        id: `amend-${AMENDMENTS.length + 1}`,
+        childId,
+        date,
+        text: clean,
+        createdAt: new Date().toISOString(),
+      }
+      AMENDMENTS.push(amendment)
+      save()
+      return amendment
+    },
+
+    async listAmendments(classId, date) {
+      assertVisible(classId)
+      const ids = new Set(CHILDREN.filter((c) => c.classId === classId).map((c) => c.id))
+      return AMENDMENTS.filter((a) => a.date === date && ids.has(a.childId))
+    },
+
+    /* ── اعلام پرداخت — بخش ۸ ─────────────────────────────────── */
+
+    async declarePayment(input) {
+      const row = INVOICES.find((r) => r.id === input.invoiceId)
+      if (!row) throw new Error('صورتحساب پیدا نشد.')
+      assertOwnChild(row.childId)
+      if (input.amount <= 0) throw new Error('مبلغ باید بیشتر از صفر باشد.')
+
+      const remaining = row.amount - row.discount + row.lateFee - paidFor(row.id)
+      const alreadyClaimed = CLAIMS.filter(
+        (c) => c.invoiceId === row.id && c.status === 'pending',
+      ).reduce((sum, c) => sum + c.amount, 0)
+      if (input.amount > remaining - alreadyClaimed) {
+        throw new Error('مبلغ از باقی‌مانده صورتحساب بیشتر است.')
+      }
+
+      const claim: PaymentClaim = {
+        id: `claim-${CLAIMS.length + 1}`,
+        invoiceId: row.id,
+        childId: row.childId,
+        childName: childName(row.childId),
+        period: row.period,
+        amount: input.amount,
+        receiptUrl: input.receiptUrl ?? null,
+        note: input.note?.trim() || null,
+        status: 'pending',
+        declaredAt: new Date().toISOString(),
+        rejectReason: null,
+      }
+      CLAIMS.push(claim)
+      save()
+      return claim
+    },
+
+    async listPaymentClaims(status) {
+      assertManager()
+      return CLAIMS.filter((c) => c.status === status)
+    },
+
+    async decidePaymentClaim(claimId, approve, reason) {
+      assertManager()
+      const claim = CLAIMS.find((c) => c.id === claimId)
+      if (!claim) throw new Error('اعلام پیدا نشد.')
+      if (claim.status !== 'pending') throw new Error('این اعلام قبلاً بررسی شده.')
+
+      if (!approve) {
+        // رد بدون دلیل، خانواده را سردرگم می‌گذارد.
+        if (!reason?.trim()) throw new Error('دلیل رد را بنویسید.')
+        claim.status = 'rejected'
+        claim.rejectReason = reason.trim()
+        save()
+        return
+      }
+
+      // تأیید، پرداخت واقعی را می‌سازد. تا این لحظه هیچ ریالی ثبت نشده.
+      PAYMENTS.push({
+        id: `pay-${PAYMENTS.length + 1}`,
+        invoiceId: claim.invoiceId,
+        amount: claim.amount,
+        paidAt: new Date().toISOString(),
+        method: 'اعلام خانواده',
+        receiptNo: null,
+      })
+      claim.status = 'approved'
+      save()
     },
 
     async sendReports(classId, date): Promise<number> {

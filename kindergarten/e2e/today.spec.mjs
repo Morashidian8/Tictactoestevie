@@ -833,6 +833,128 @@ const parentMoney = await page.evaluate(() => document.body.innerText)
 check(/تسویه/.test(parentMoney), 'خانواده همان صورتحسابی را می‌بیند که مدیر صادر کرد')
 check(/پرداخت‌های ثبت‌شده/.test(parentMoney), 'و پرداختی را که مدیر ثبت کرد')
 
+console.log('▸ بخش ۵.۳: یادآور دارو ساعت را می‌گوید و باز می‌شود')
+await signIn('09120000001')
+await page.waitForSelector('text=ثبت گروهی امروز')
+await holdFirstNotArrived()
+await page.fill('input[aria-label="نام دارو"]', 'شربت سرماخوردگی')
+await page.fill('input[aria-label="ساعت مصرف"]', '11:30')
+await page.click('[role="dialog"] [class*="primary"]')
+await page.waitForTimeout(800)
+
+const medBar = await page.locator('[class*="medicationBar"]').innerText()
+check(/دارو هنوز داده نشده/.test(medBar), 'یادآور دارو روی صفحه است')
+check(/نزدیک‌ترین ۱۱:۳۰/.test(medBar), `نزدیک‌ترین ساعت روی نوار نوشته شده: ${medBar.split('·')[1]?.trim()}`)
+
+await page.click('[class*="medicationBar"]')
+await page.waitForTimeout(400)
+const medList = await page.locator('[class*="medicationList"]').innerText()
+check(/۱۱:۳۰/.test(medList), 'جزئیات ساعت هر دارو را می‌گوید')
+check(/شربت سرماخوردگی/.test(medList), 'و نام دارو را')
+check(
+  (await page.locator('[class*="medicationChild"]').count()) >= 1,
+  'و نام کودک را، پس مربی می‌داند برای کیست',
+)
+
+const beforeGiven = await page.locator('[class*="medicationItem"]').count()
+await page.locator('[class*="medicationDone"]').first().click()
+await page.waitForTimeout(800)
+const afterGiven = await page.locator('[class*="medicationItem"]').count()
+check(afterGiven === beforeGiven - 1, 'با «داده شد»، دارو از یادآور می‌رود')
+
+console.log('▸ بخش ۵.۹: پس از ارسال، راه اصلاحیه باز است')
+await page.click('button:has-text("بستن روز")')
+await page.waitForSelector('text=ارسال گزارش‌های امروز')
+await page.click('[class*="bar"] button:has-text("ارسال گزارش‌های امروز")')
+await page.waitForSelector('[class*="sentTitle"]')
+check(
+  (await page.locator('button:has-text("ثبت اصلاحیه")').count()) === 1,
+  'پس از قفل شدن، دکمه اصلاحیه هست — پیش‌تر مربی تا پایان روز گیر می‌کرد',
+)
+
+await page.click('button:has-text("ثبت اصلاحیه")')
+await page.waitForTimeout(400)
+await page.fill('textarea[aria-label="متن اصلاحیه"]', 'ناهار را اشتباه ثبت کرده بودم؛ همه‌اش را خورد.')
+await page.locator('[class*="amendSave"]').click()
+await page.waitForTimeout(900)
+check(
+  (await page.locator('[class*="amendList"]').count()) === 1,
+  'اصلاحیه ثبت شد و در همان صفحه فهرست می‌شود',
+)
+
+console.log('▸ بخش ۸: اعلام پرداخت خانواده، تا تأیید مدیر')
+await signIn('09120000002')
+await page.waitForSelector('text=با کدام حساب وارد می‌شوید؟')
+await page.locator('button:has-text("مریم رضایی")').nth(1).click()
+await page.waitForSelector('text=وضعیت ثبت', { timeout: 10000 })
+
+const navBox = await page.locator('[class*="navItem"]').first().boundingBox()
+check(navBox.height >= 56, `دکمه‌های مالی و کودکان درشت‌اند (${Math.round(navBox.height)})`)
+check(
+  (await page.locator('[class*="navItem"]').first().evaluate((el) => getComputedStyle(el).fontWeight)) === '700',
+  'و پررنگ',
+)
+
+await page.click('button:has-text("مالی")')
+await page.waitForSelector('text=شهریه‌ها')
+await page.click('button:has-text("صدور گروهی")')
+await page.waitForSelector('text=/صورتحساب صادر شد/')
+
+await page.locator('[aria-label="بازگشت به داشبورد"]').click()
+await page.waitForSelector('text=وضعیت ثبت')
+await signOutAny()
+await signIn('09120000003', { fresh: false })
+await page.waitForSelector('[class*="dateLine"]', { timeout: 8000 })
+await page.click('button:has-text("بیشتر")')
+await page.click('button:has-text("مالی")')
+await page.waitForSelector('text=مانده')
+await page.click('button:has-text("پرداخت کردم")')
+await page.waitForSelector('[role="dialog"]')
+check(
+  (await page.locator('button:has-text("عکس رسید را بگذارید")').count()) === 1,
+  'خانواده می‌تواند عکس رسید بگذارد',
+)
+await page.fill('input[aria-label="توضیح پرداخت"]', 'کارت‌به‌کارت از حساب پدر')
+await page.click('button:has-text("اعلام به مهد")')
+await page.waitForTimeout(900)
+
+const afterClaim = await page.evaluate(() => document.body.innerText)
+check(/منتظر تأیید مهد/.test(afterClaim), 'به خانواده گفته می‌شود که هنوز تأیید نشده')
+check(
+  /پرداخت نشده/.test(afterClaim),
+  'و وضعیت صورتحساب هنوز پرداخت‌نشده است — اعلام خانواده خودش پرداخت نیست',
+)
+
+await page.locator('[aria-label="بازگشت"]').click()
+await page.waitForTimeout(400)
+await page.locator('[aria-label="بازگشت"]').click()
+await page.waitForTimeout(600)
+await signOutAny()
+await signIn('09120000002', { fresh: false })
+await page.waitForTimeout(1500)
+if (await page.locator('button:has-text("مریم رضایی")').count()) {
+  await page.locator('button:has-text("مریم رضایی")').nth(1).click()
+}
+await page.waitForSelector('text=وضعیت ثبت', { timeout: 10000 })
+check(
+  (await page.locator('[class*="navBadge"]').count()) === 1,
+  'شمار اعلام‌های در انتظار روی دکمه مالی دیده می‌شود',
+)
+
+await page.click('button:has-text("مالی")')
+await page.waitForSelector('text=/اعلام پرداخت در انتظار تأیید/')
+const queue = await page.locator('[aria-label="اعلام‌های پرداخت"]').innerText()
+check(/کارت‌به‌کارت از حساب پدر/.test(queue), 'توضیح خانواده به مدیر می‌رسد')
+
+await page.click('button:has-text("تأیید و ثبت پرداخت")')
+await page.waitForSelector('text=پرداخت تأیید و ثبت شد')
+const afterApprove = await page.evaluate(() => document.body.innerText)
+check(/وصول‌شده/.test(afterApprove), 'پس از تأیید، وصولی مدیر به‌روز شد')
+check(
+  (await page.locator('text=/اعلام پرداخت در انتظار تأیید/').count()) === 0,
+  'و اعلام از صف رفت',
+)
+
 console.log('▸ بخش ۱۲.۷: کف کیفیت')
 await signIn('09120000001')
 await page.waitForSelector('text=ثبت گروهی امروز')

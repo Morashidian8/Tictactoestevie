@@ -109,15 +109,76 @@
   flex: 1;
 }
 
+/*
+ * یادآور دارو — بخش ۵.۳. زعفرانی است چون «در انتظار» است، نه خطر.
+ * خودِ نوار دکمه است تا جزئیات با یک ضربه باز شود.
+ */
 .medication {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
   margin: 0 var(--space-4) var(--space-4);
-  padding: var(--space-4);
   border-radius: var(--r-card);
   background: var(--saffron-tint);
   color: var(--ink);
+  overflow: hidden;
+}
+
+.medicationBar {
+  inline-size: 100%;
+  min-block-size: var(--touch-teacher);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border: none;
+  background: none;
+  color: var(--ink);
+  font-family: inherit;
+  text-align: start;
+}
+
+.medicationMore {
+  margin-inline-start: auto;
+  color: var(--turquoise-dark);
+  font-weight: var(--weight-medium);
+  flex: none;
+}
+
+.medicationList {
+  list-style: none;
+  margin: 0;
+  padding: 0 var(--space-4) var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.medicationItem {
+  min-block-size: var(--touch-teacher);
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding-block-start: var(--space-2);
+  border-block-start: 1px solid rgba(19, 39, 47, .1);
+}
+
+.medicationChild { font-weight: var(--weight-bold); flex: none; }
+.medicationName { flex: 1; min-inline-size: 0; color: var(--ink-muted); }
+
+.medicationTime {
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--weight-medium);
+  flex: none;
+}
+
+.medicationDone {
+  flex: none;
+  min-block-size: var(--touch-teacher);
+  padding-inline: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--r-chip);
+  background: var(--surface);
+  color: var(--turquoise-dark);
+  font-family: inherit;
+  font-weight: var(--weight-medium);
 }
 
 .medicationIcon {

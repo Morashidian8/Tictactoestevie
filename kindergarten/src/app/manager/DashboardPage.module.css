@@ -215,16 +215,42 @@
   text-align: start;
 }
 
-/* دو مقصد ثانویه، داخل همان نوار چسبیده تا روی محتوا نیفتند. */
+/*
+ * دو مقصد اصلی پنل مدیر، داخل همان نوار چسبیده تا روی محتوا نیفتند.
+ *
+ * پیش‌تر دو دکمه کوچک و کم‌رنگ بودند و گم می‌شدند. حالا آیکون دارند،
+ * درشت و پررنگ‌اند، و هدف لمسی مربی (۵۶) می‌گیرند نه مدیر (۴۴):
+ * این‌ها ناوبری همیشگی‌اند، نه یک کنترل در میان فرم.
+ */
 .nav { display: flex; gap: var(--space-2); }
 
 .navItem {
   flex: 1;
-  min-block-size: var(--touch-manager);
+  min-block-size: var(--touch-teacher);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
   border: 1px solid var(--border);
   border-radius: var(--r-input);
   background: var(--surface);
   color: var(--ink);
   font-family: inherit;
-  font-size: var(--text-body-sm);
+  font-size: var(--text-body-lg);
+  font-weight: var(--weight-bold);
+}
+
+.navItem svg { color: var(--turquoise-dark); flex: none; }
+
+/* شمار اعلام‌های پرداختِ در انتظار. عدد روی دکمه، نه در ته صفحه. */
+.navBadge {
+  min-inline-size: 22px;
+  padding-inline: var(--space-1);
+  border-radius: var(--r-chip);
+  background: var(--brick);
+  color: var(--surface);
+  font-size: var(--text-caption);
+  line-height: 22px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
 }

@@ -34,6 +34,10 @@ import type {
   ManagerDashboard,
   IncidentDecision,
   AbsenceInput,
+  Amendment,
+  ClaimStatus,
+  PaymentClaim,
+  PaymentClaimInput,
   ChildProfile,
   ConsentType,
   FinanceOverview,
@@ -205,6 +209,24 @@ const asInvoice = (r: Row): Invoice => {
     status,
   }
 }
+
+
+const asClaim = (
+  r: Row,
+  invoice: { childId: string; childName: string; period: string },
+): PaymentClaim => ({
+  id: r.id as string,
+  invoiceId: r.invoice_id as string,
+  childId: invoice.childId,
+  childName: invoice.childName,
+  period: invoice.period,
+  amount: r.amount as number,
+  receiptUrl: (r.receipt_url as string | null) ?? null,
+  note: (r.note as string | null) ?? null,
+  status: r.status as PaymentClaim['status'],
+  declaredAt: r.declared_at as string,
+  rejectReason: (r.reject_reason as string | null) ?? null,
+})
 
 /** آغاز ساعت کاری روز بعد، به شکل ISO. */
 function nextMorningIso(from: Date, start: string): string {
@@ -719,6 +741,18 @@ export function createSupabaseDataAccess(scope: AccessScope): DataAccess {
         needsFromHome: sent
           ? ((report?.needs_from_home_json as ParentDay['needsFromHome'] | null) ?? [])
           : [],
+        // بخش ۵.۹: اصلاحیه جدا از متن اصلی دیده می‌شود، نه به‌جای آن.
+        amendments: sent && report
+          ? ((orThrow(
+              await from('daily_report_amendment').eq('daily_report_id', report.id as string),
+            ) as Row[]).map((a): Amendment => ({
+              id: a.id as string,
+              childId,
+              date,
+              text: a.text as string,
+              createdAt: a.created_at as string,
+            })))
+          : [],
         photos: (orThrow(photoRows) as Row[]).map(asPhoto),
         incidents: (orThrow(incidentRows) as Row[]).map(asIncident).filter((i) => !i.requiresApproval),
       }
@@ -950,6 +984,9 @@ export function createSupabaseDataAccess(scope: AccessScope): DataAccess {
           total: day.children.length,
           sent: day.reports.some((r) => r.touched) && complete === day.children.length,
         })),
+        pendingClaims: (
+          orThrow(await from('payment_claim').eq('status', 'pending')) as Row[]
+        ).length,
         smsRemaining: await smsRemaining(),
       }
     },
@@ -1251,7 +1288,9 @@ export function createSupabaseDataAccess(scope: AccessScope): DataAccess {
           .eq('child_id', childId),
       ) as Row[]
       const isPayer = scope.role === 'manager' || link.some((r) => r.is_payer)
-      if (!isPayer) return { isPayer: false, invoices: [], payments: [], outstanding: 0 }
+      if (!isPayer) {
+        return { isPayer: false, invoices: [], payments: [], claims: [], outstanding: 0 }
+      }
 
       const rows = orThrow(
         await db
@@ -1273,10 +1312,25 @@ export function createSupabaseDataAccess(scope: AccessScope): DataAccess {
           receiptNo: (p.receipt_no as string | null) ?? null,
         })),
       )
+      const claims = (orThrow(
+        await db
+          .from('payment_claim')
+          .select('*, invoice:invoice_id(period, child_id)')
+          .eq('center_id', scope.centerId)
+          .in('invoice_id', invoices.map((i) => i.id)),
+      ) as Row[]).map((r) =>
+        asClaim(r, {
+          childId,
+          childName: invoices[0]?.childName ?? '—',
+          period: ((r.invoice as Row | null)?.period as string) ?? '',
+        }),
+      )
+
       return {
         isPayer: true,
         invoices,
         payments,
+        claims,
         outstanding: invoices
           .filter((i) => i.status !== 'paid' && i.status !== 'cancelled')
           .reduce((sum, i) => sum + (i.amount - i.discount + i.lateFee - i.paid), 0),
@@ -1454,6 +1508,188 @@ export function createSupabaseDataAccess(scope: AccessScope): DataAccess {
         sentAt: (row.sent_at as string | null) ?? null,
         queuedUntil,
       }
+    },
+
+
+    /* ── دارو — بخش ۵.۳ ───────────────────────────────────────── */
+
+    async markMedicationGiven(medicationId) {
+      orThrow(
+        await db
+          .from('medication_log')
+          .update({ given_at: new Date().toISOString(), given_by: scope.accountId })
+          .eq('center_id', scope.centerId)
+          .eq('id', medicationId)
+          .select('id'),
+      )
+    },
+
+    /* ── اصلاحیه — بخش ۵.۹ ────────────────────────────────────── */
+
+    async addAmendment(childId, date, text): Promise<Amendment> {
+      const clean = text.trim()
+      if (!clean) throw new Error('متن اصلاحیه خالی است.')
+      const reports = orThrow(
+        await from('daily_report').eq('child_id', childId).eq('date', date),
+      ) as Row[]
+      const report = reports[0]
+      // اصلاحیه فقط روی گزارشِ قفل‌شده معنا دارد؛ پیش از آن مربی خودِ
+      // گزارش را ویرایش می‌کند. تریگر دیتابیس هم همین را می‌بندد.
+      if (!report?.locked_at) {
+        throw new Error('گزارش این روز هنوز فرستاده نشده؛ خودش را ویرایش کنید.')
+      }
+      const row = orThrow(
+        await db
+          .from('daily_report_amendment')
+          .insert({
+            center_id: scope.centerId,
+            daily_report_id: report.id as string,
+            text: clean,
+            created_by: scope.accountId,
+          })
+          .select()
+          .single(),
+      ) as Row
+      return {
+        id: row.id as string,
+        childId,
+        date,
+        text: clean,
+        createdAt: row.created_at as string,
+      }
+    },
+
+    async listAmendments(classId, date) {
+      await assertVisible(classId)
+      const children = await childrenOf(classId)
+      if (children.length === 0) return []
+      const rows = orThrow(
+        await db
+          .from('daily_report_amendment')
+          .select('*, report:daily_report_id(child_id, date)')
+          .eq('center_id', scope.centerId),
+      ) as Row[]
+      const ids = new Set(children.map((c) => c.id))
+      return rows
+        .filter((r) => {
+          const report = r.report as Row | null
+          return report?.date === date && ids.has(report.child_id as string)
+        })
+        .map((r): Amendment => ({
+          id: r.id as string,
+          childId: (r.report as Row).child_id as string,
+          date,
+          text: r.text as string,
+          createdAt: r.created_at as string,
+        }))
+    },
+
+    /* ── اعلام پرداخت — بخش ۸ ─────────────────────────────────── */
+
+    async declarePayment(input: PaymentClaimInput): Promise<PaymentClaim> {
+      if (input.amount <= 0) throw new Error('مبلغ باید بیشتر از صفر باشد.')
+      const invoice = asInvoice(
+        orThrow(
+          await db
+            .from('invoice')
+            .select('*, child:child_id(first_name, last_name), payment(amount)')
+            .eq('center_id', scope.centerId)
+            .eq('id', input.invoiceId)
+            .single(),
+        ) as Row,
+      )
+      const pending = (orThrow(
+        await from('payment_claim').eq('invoice_id', input.invoiceId).eq('status', 'pending'),
+      ) as Row[]).reduce((sum, r) => sum + ((r.amount as number) ?? 0), 0)
+      const remaining = invoice.amount - invoice.discount + invoice.lateFee - invoice.paid - pending
+      if (input.amount > remaining) throw new Error('مبلغ از باقی‌مانده صورتحساب بیشتر است.')
+
+      const row = orThrow(
+        await db
+          .from('payment_claim')
+          .insert({
+            center_id: scope.centerId,
+            invoice_id: input.invoiceId,
+            amount: input.amount,
+            receipt_url: input.receiptUrl ?? null,
+            note: input.note?.trim() || null,
+            declared_by: scope.accountId,
+          })
+          .select()
+          .single(),
+      ) as Row
+      return asClaim(row, invoice)
+    },
+
+    async listPaymentClaims(status: ClaimStatus) {
+      const rows = orThrow(
+        await db
+          .from('payment_claim')
+          .select('*, invoice:invoice_id(period, child_id, child:child_id(first_name, last_name))')
+          .eq('center_id', scope.centerId)
+          .eq('status', status)
+          .order('declared_at'),
+      ) as Row[]
+      return rows.map((r) => {
+        const invoice = r.invoice as Row
+        const child = invoice.child as Row | null
+        return asClaim(r, {
+          childId: invoice.child_id as string,
+          childName: `${child?.first_name ?? ''} ${child?.last_name ?? ''}`.trim() || '—',
+          period: invoice.period as string,
+        })
+      })
+    },
+
+    async decidePaymentClaim(claimId, approve, reason) {
+      const claim = orThrow(
+        await db
+          .from('payment_claim')
+          .select('*')
+          .eq('center_id', scope.centerId)
+          .eq('id', claimId)
+          .single(),
+      ) as Row
+      if (claim.status !== 'pending') throw new Error('این اعلام قبلاً بررسی شده.')
+
+      if (!approve) {
+        // رد بدون دلیل، خانواده را سردرگم می‌گذارد.
+        if (!reason?.trim()) throw new Error('دلیل رد را بنویسید.')
+        orThrow(
+          await db
+            .from('payment_claim')
+            .update({
+              status: 'rejected',
+              reject_reason: reason.trim(),
+              reviewed_by: scope.accountId,
+              reviewed_at: new Date().toISOString(),
+            })
+            .eq('center_id', scope.centerId)
+            .eq('id', claimId)
+            .select('id'),
+        )
+        return
+      }
+
+      // تأیید، پرداخت واقعی را می‌سازد. تا این لحظه هیچ ریالی ثبت نشده.
+      const payment = await this.recordPayment({
+        invoiceId: claim.invoice_id as string,
+        amount: claim.amount as number,
+        method: 'اعلام خانواده',
+      })
+      orThrow(
+        await db
+          .from('payment_claim')
+          .update({
+            status: 'approved',
+            payment_id: payment.id,
+            reviewed_by: scope.accountId,
+            reviewed_at: new Date().toISOString(),
+          })
+          .eq('center_id', scope.centerId)
+          .eq('id', claimId)
+          .select('id'),
+      )
     },
 
     /** بخش ۵.۹: ارسال، و قفل شدن. پس از این فقط اصلاحیه. */

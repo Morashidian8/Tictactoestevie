@@ -237,10 +237,15 @@ export function DashboardPage({ onGo }: { onGo: (page: ManagerPage) => void }) {
         aside={
           <div className={styles.nav}>
             <button type="button" className={styles.navItem} onClick={() => onGo('finance')}>
-              مالی
+              <WalletIcon />
+              <span>مالی</span>
+              {board && board.pendingClaims > 0 ? (
+                <span className={styles.navBadge}>{formatCount(board.pendingClaims)}</span>
+              ) : null}
             </button>
             <button type="button" className={styles.navItem} onClick={() => onGo('children')}>
-              کودکان
+              <PeopleIcon />
+              <span>کودکان</span>
             </button>
           </div>
         }
@@ -257,5 +262,29 @@ function Tile({ big, small, tone }: { big: string; small: string; tone?: 'alert'
       <span className={styles.tileBig}>{big}</span>
       <span className={`${styles.tileSmall} t-caption`}>{small}</span>
     </div>
+  )
+}
+
+/* آیکون‌های دو مقصد. غیرجهت‌دارند، پس قرینه نمی‌شوند — بخش ۱۲.۶. */
+function WalletIcon() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M3 8a2 2 0 0 1 2-2h13a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z" />
+      <path d="M3 10h18" />
+      <circle cx="16.5" cy="14.5" r="1.2" />
+    </svg>
+  )
+}
+
+function PeopleIcon() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <circle cx="9" cy="8" r="3.2" />
+      <path d="M3.5 19a5.5 5.5 0 0 1 11 0" />
+      <path d="M16 5.5a3 3 0 0 1 0 5.6" />
+      <path d="M17.5 19a5.4 5.4 0 0 0-2.2-4.3" />
+    </svg>
   )
 }

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { AlertIcon, CheckIcon, QuickAction } from '../../design-system/index.ts'
 import { formatClock, formatCount, formatJalali, formatTime, toIsoDate } from '../../i18n/index.ts'
 import { useAuth, useData } from '../../core/auth/index.ts'
-import type { Child, DaySummary } from '../../core/data/index.ts'
+import type { Amendment, Child, DaySummary } from '../../core/data/index.ts'
 import styles from './CloseDayPage.module.css'
 
 /**
@@ -32,6 +32,14 @@ export function CloseDayPage({ onBack, onFixReports }: Props) {
   const [summary, setSummary] = useState<DaySummary | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  /*
+   * بخش ۵.۹: پس از ارسال، گزارش قفل است و تنها راه تغییر، اصلاحیه است.
+   * پیش‌تر این راه ساخته نشده بود، پس مربی پس از یک ارسال تا پایان روز
+   * گیر می‌کرد و دکمه «مرده» به نظر می‌رسید.
+   */
+  const [amendFor, setAmendFor] = useState<string | null>(null)
+  const [amendText, setAmendText] = useState('')
+  const [amendments, setAmendments] = useState<Amendment[]>([])
 
   const date = useMemo(() => toIsoDate(new Date()), [])
 
@@ -45,12 +53,14 @@ export function CloseDayPage({ onBack, onFixReports }: Props) {
   const load = useCallback(async () => {
     if (!classId) return
     try {
-      const [day, next] = await Promise.all([
+      const [day, next, filed] = await Promise.all([
         data.getClassDay(classId, date),
         data.getDaySummary(classId, date),
+        data.listAmendments(classId, date),
       ])
       setChildren(day.children)
       setSummary(next)
+      setAmendments(filed)
     } catch (cause) {
       setError(messageOf(cause))
     }
@@ -99,6 +109,91 @@ export function CloseDayPage({ onBack, onFixReports }: Props) {
             <span className="t-body">
               از این پس تغییر فقط به شکل اصلاحیه ثبت می‌شود، و سرپرست اصلاحیه را می‌بیند.
             </span>
+
+            {amendFor === null ? (
+              <button
+                type="button"
+                className={`${styles.amendOpen} t-body-lg`}
+                onClick={() => setAmendFor(children[0]?.id ?? null)}
+              >
+                ثبت اصلاحیه
+              </button>
+            ) : (
+              <div className={styles.amend}>
+                <span className={`${styles.amendLabel} t-caption`}>برای کدام کودک</span>
+                <div className={styles.amendChildren}>
+                  {children.map((child) => (
+                    <button
+                      key={child.id}
+                      type="button"
+                      className={`${styles.amendChild} t-body`}
+                      aria-pressed={amendFor === child.id}
+                      onClick={() => setAmendFor(child.id)}
+                    >
+                      {child.firstName}
+                    </button>
+                  ))}
+                </div>
+
+                <textarea
+                  className={styles.amendText}
+                  rows={3}
+                  value={amendText}
+                  aria-label="متن اصلاحیه"
+                  placeholder="مثلاً: ناهار را اشتباه «کمی» ثبت کرده بودم؛ همه‌اش را خورد."
+                  onChange={(event) => setAmendText(event.target.value)}
+                />
+
+                <div className={styles.amendActions}>
+                  <button
+                    type="button"
+                    className={styles.amendCancel}
+                    onClick={() => {
+                      setAmendFor(null)
+                      setAmendText('')
+                    }}
+                  >
+                    انصراف
+                  </button>
+                  <button
+                    type="button"
+                    className={`${styles.amendSave} t-body-lg`}
+                    disabled={!amendFor || amendText.trim().length === 0 || busy}
+                    onClick={() => {
+                      if (!amendFor) return
+                      setBusy(true)
+                      void queue
+                        .submit('text', () => data.addAmendment(amendFor, date, amendText))
+                        .then(async () => {
+                          setAmendText('')
+                          setAmendFor(null)
+                          await load()
+                        })
+                        .catch((cause: unknown) => setError(messageOf(cause)))
+                        .finally(() => setBusy(false))
+                    }}
+                  >
+                    ثبت اصلاحیه
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {amendments.length > 0 ? (
+              <div className={styles.amendList}>
+                <span className={`${styles.amendLabel} t-caption`}>
+                  اصلاحیه‌های امروز ({formatCount(amendments.length)})
+                </span>
+                {amendments.map((amendment) => (
+                  <p key={amendment.id} className={`${styles.amendItem} t-body`}>
+                    <b>
+                      {children.find((c) => c.id === amendment.childId)?.firstName ?? '—'}
+                    </b>
+                    <span>{amendment.text}</span>
+                  </p>
+                ))}
+              </div>
+            ) : null}
           </div>
         ) : null}
 

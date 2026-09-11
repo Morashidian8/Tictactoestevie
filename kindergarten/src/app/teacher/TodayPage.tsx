@@ -10,7 +10,7 @@ import {
   SyncBadge,
   type ChildGridItem,
 } from '../../design-system/index.ts'
-import { formatCount, formatJalali, formatTime, toIsoDate } from '../../i18n/index.ts'
+import { formatClock, formatCount, formatJalali, formatTime, toIsoDate } from '../../i18n/index.ts'
 import { ROLE_LABEL, useAuth, useData } from '../../core/auth/index.ts'
 import type { PickupPlan } from '../../core/data/index.ts'
 import {
@@ -67,6 +67,8 @@ export function TodayPage({
    * وقتی فرد دم در ایستاده.
    */
   const [plans, setPlans] = useState<PickupPlan[]>([])
+  /** یادآور دارو باز شده است یا نه — بخش ۵.۳. */
+  const [medsOpen, setMedsOpen] = useState(false)
   // بخش ۱۳.۱: دکمه شناور ثبت رویداد، در همه تب‌ها.
   const [incidentOpen, setIncidentOpen] = useState(false)
   // فهرست کودکانی که نیامده‌اند، وقتی مربی روی تراشه بزند.
@@ -246,7 +248,11 @@ export function TodayPage({
     })
     .map((child) => child.firstName)
 
-  const pendingMedication = (day?.medications ?? []).filter((m) => !m.givenAt)
+  // مرتب بر اساس ساعت مصرف. داروی بی‌ساعت ته فهرست می‌رود، نه اولش.
+  const pendingMedication = (day?.medications ?? [])
+    .filter((m) => !m.givenAt)
+    .sort((a, b) => (a.scheduledTime ?? '99:99').localeCompare(b.scheduledTime ?? '99:99'))
+  const nextMedicationTime = pendingMedication.find((m) => m.scheduledTime)?.scheduledTime ?? null
   const activeClass = classes.find((c) => c.id === classId)
 
   return (
@@ -376,14 +382,62 @@ export function TodayPage({
         </div>
       ) : null}
 
+      {/*
+        بخش ۵.۳: یادآور دارو باید بگوید چه ساعتی، نه فقط چند تا. نزدیک‌ترین
+        ساعت روی خود نوار می‌آید و بقیه با یک ضربه باز می‌شوند؛ مربی وسط
+        صبح وقت خواندن فهرست ندارد ولی باید بداند ساعت بعدی کی است.
+      */}
       {pendingMedication.length > 0 ? (
         <div className={styles.medication}>
-          <span className={styles.medicationIcon} aria-hidden>
-            <PillIcon size={20} />
-          </span>
-          <span className="t-body-lg">
-            {formatCount(pendingMedication.length)} دارو هنوز داده نشده.
-          </span>
+          <button
+            type="button"
+            className={styles.medicationBar}
+            aria-expanded={medsOpen}
+            onClick={() => setMedsOpen((open) => !open)}
+          >
+            <span className={styles.medicationIcon} aria-hidden>
+              <PillIcon size={20} />
+            </span>
+            <span className="t-body-lg">
+              {formatCount(pendingMedication.length)} دارو هنوز داده نشده
+              {nextMedicationTime ? ` · نزدیک‌ترین ${formatClock(nextMedicationTime)}` : ''}
+            </span>
+            <span className={`${styles.medicationMore} t-caption`}>
+              {medsOpen ? 'بستن' : 'جزئیات'}
+            </span>
+          </button>
+
+          {medsOpen ? (
+            <ul className={styles.medicationList}>
+              {pendingMedication.map((med) => {
+                const child = day?.children.find((c) => c.id === med.childId)
+                return (
+                  <li key={med.id} className={styles.medicationItem}>
+                    <span className={styles.medicationChild}>{child?.firstName ?? '—'}</span>
+                    <span className={`${styles.medicationName} t-body`}>
+                      {med.name}
+                      {med.dose ? ` · ${med.dose}` : ''}
+                    </span>
+                    <span className={styles.medicationTime}>
+                      {med.scheduledTime ? formatClock(med.scheduledTime) : 'بدون ساعت'}
+                    </span>
+                    <button
+                      type="button"
+                      className={`${styles.medicationDone} t-caption`}
+                      onClick={() => {
+                        void queue
+                          .submit('text', () => data.markMedicationGiven(med.id))
+                          .then(() => load())
+                          .catch((cause: unknown) => setError(messageOf(cause)))
+                      }}
+                    >
+                      داده شد
+                    </button>
+                  </li>
+                )
+              })}
+            </ul>
+          ) : null}
         </div>
       ) : null}
 
