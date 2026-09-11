@@ -317,3 +317,88 @@ begin
     format('update daily_report set teacher_note = ''ویرایش'' where id = %L', rid),
     'گزارشِ خودکار فرستاده‌شده هم فقط اصلاحیه می‌پذیرد');
 end $$;
+
+\echo ''
+\echo '── بند ۱۰.۲: عکس منتشرشده از راه درج مستقیم ──'
+do $$
+declare
+  pid uuid;
+begin
+  perform assert_rejects($x$
+    insert into photo (center_id, date, url, status, published_at)
+    values ('11111111-1111-1111-1111-111111111111', current_date,
+            'https://x/1.jpg', 'published', now())
+  $x$, 'درج مستقیم عکس published رد می‌شود');
+
+  -- مسیر درست: درج draft، تگ، سپس انتشار.
+  insert into photo (center_id, date, url)
+  values ('11111111-1111-1111-1111-111111111111', current_date, 'https://x/2.jpg')
+  returning id into pid;
+  perform assert((select status from photo where id = pid) = 'draft',
+                 'درج عکس در حالت draft می‌نشیند');
+
+  perform assert_rejects(
+    format('update photo set status = ''published'', published_at = now() where id = %L', pid),
+    'همان عکس بدون تگ منتشر نمی‌شود');
+
+  insert into photo_tag (photo_id, child_id, center_id)
+  values (pid, 'd1111111-1111-1111-1111-111111111111',
+          '11111111-1111-1111-1111-111111111111');
+  update photo set status = 'published', published_at = now() where id = pid;
+  perform assert((select status from photo where id = pid) = 'published',
+                 'با تگ، انتشار از راه به‌روزرسانی انجام می‌شود');
+end $$;
+
+\echo ''
+\echo '── بند ۱۱.۹: رد پای نوشتن روی داده کودک ──'
+do $$
+declare
+  before_count bigint;
+  cid uuid;
+  rows_now bigint;
+  missing text;
+begin
+  select count(*) into before_count from audit_log;
+
+  insert into child (center_id, class_id, first_name, last_name)
+  values ('11111111-1111-1111-1111-111111111111',
+          'c1111111-1111-1111-1111-111111111111', 'ردپا', 'ت.')
+  returning id into cid;
+
+  select count(*) into rows_now
+  from audit_log where entity = 'child' and entity_id = cid and action = 'insert';
+  perform assert(rows_now = 1, 'درج کودک رد پا می‌گذارد');
+
+  update child set first_name = 'ردپای دو' where id = cid;
+  select count(*) into rows_now
+  from audit_log where entity = 'child' and entity_id = cid and action = 'update';
+  perform assert(rows_now = 1, 'ویرایش کودک رد پا می‌گذارد');
+
+  perform assert(
+    (select count(*) from audit_log
+      where entity = 'child' and entity_id = cid and center_id is null) = 0,
+    'هر ردیف رد پا center_id پر دارد');
+
+  delete from child where id = cid;
+  select count(*) into rows_now
+  from audit_log where entity = 'child' and entity_id = cid and action = 'delete';
+  perform assert(rows_now = 1, 'حذف کودک رد پا می‌گذارد');
+
+  perform assert((select count(*) from audit_log) > before_count,
+                 'رد پا فقط افزوده می‌شود');
+
+  -- هر دوازده جدول حساس باید تریگر داشته باشند، وگرنه یکی جا افتاده.
+  select string_agg(t, '، ') into missing
+  from unnest(array[
+    'child', 'guardian', 'child_guardian', 'authorized_pickup',
+    'medical_profile', 'attendance', 'daily_report', 'photo',
+    'photo_tag', 'incident', 'medication_log', 'consent'
+  ]) t
+  where not exists (
+    select 1 from pg_trigger g
+    join pg_class c on c.oid = g.tgrelid
+    where c.relname = t and g.tgname = 'audit_' || t and not g.tgisinternal
+  );
+  perform assert(missing is null,
+                 coalesce('جدول بدون رد پا: ' || missing, 'هر دوازده جدول حساس تریگر رد پا دارند'));
+end $$;

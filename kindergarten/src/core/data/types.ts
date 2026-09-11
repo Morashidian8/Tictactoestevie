@@ -272,6 +272,17 @@ export type MedicationInput = {
   handedByGuardianId?: string | null
 }
 
+/**
+ * موجودیت‌های حساسی که خواندنشان هم رد پا می‌گذارد — بند ۱۱.۹.
+ * نوشتن روی دوازده جدول با تریگر پایگاه داده لاگ می‌شود (مهاجرت ۰۰۱۱)؛
+ * خواندن تریگر ندارد و فقط این سه مورد ارزش لاگ شدن دارند.
+ */
+export type ReadAuditEntity = 'medical_profile' | 'photo' | 'incident'
+
+export interface ReadAuditSink {
+  readOccurred(entity: ReadAuditEntity, ids: string[]): Promise<void>
+}
+
 export interface DataAccess {
   readonly scope: AccessScope
   /** کلاس‌هایی که این حساب می‌بیند. */

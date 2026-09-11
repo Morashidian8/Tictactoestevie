@@ -74,15 +74,32 @@ export function AuthProvider({
     setSession(null)
   }, [adapter])
 
-  const data = useMemo(() => {
-    if (!session?.active) return null
-    const scope: AccessScope = {
-      accountId: session.active.id,
-      centerId: session.active.centerId,
-      role: session.active.role,
-      classIds: session.active.classIds,
+  /*
+   * مخزن با import پویا ساخته می‌شود تا پیاده‌سازی انتخاب‌نشده وارد بیلد
+   * نشود، پس ساختنش ناهمگام است. تا آماده شدنش، data برابر null است و
+   * همان مسیری را می‌رود که «حساب فعال نیست».
+   */
+  const [data, setData] = useState<DataAccess | null>(null)
+
+  useEffect(() => {
+    const active = session?.active
+    if (!active) {
+      setData(null)
+      return
     }
-    return createDataAccess(scope)
+    let cancelled = false
+    const scope: AccessScope = {
+      accountId: active.id,
+      centerId: active.centerId,
+      role: active.role,
+      classIds: active.classIds,
+    }
+    void createDataAccess(scope).then((repo) => {
+      if (!cancelled) setData(repo)
+    })
+    return () => {
+      cancelled = true
+    }
   }, [session])
 
   const value = useMemo(

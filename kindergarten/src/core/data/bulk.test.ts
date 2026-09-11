@@ -17,8 +17,8 @@ const scope: AccessScope = {
 const DATE = '2026-03-11'
 let data: DataAccess
 
-beforeEach(() => {
-  data = createDataAccess(scope)
+beforeEach(async () => {
+  data = await createDataAccess(scope)
 })
 
 async function reportFor(childId: string, date: string) {

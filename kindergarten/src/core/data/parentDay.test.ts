@@ -36,10 +36,10 @@ const teacher: AccessScope = {
 let asParent: DataAccess
 let asTeacher: DataAccess
 
-beforeEach(() => {
+beforeEach(async () => {
   localStorage.clear()
-  asParent = createDataAccess(parent)
-  asTeacher = createDataAccess(teacher)
+  asParent = await createDataAccess(parent)
+  asTeacher = await createDataAccess(teacher)
 })
 
 describe('سرپرست فقط کودک خودش را می‌بیند', () => {

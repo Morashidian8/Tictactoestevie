@@ -20,8 +20,8 @@ const scope: AccessScope = {
 const CLASS = 'class-golha'
 let data: DataAccess
 
-beforeEach(() => {
-  data = createDataAccess(scope)
+beforeEach(async () => {
+  data = await createDataAccess(scope)
 })
 
 describe('شمارش کامل و ناقص', () => {

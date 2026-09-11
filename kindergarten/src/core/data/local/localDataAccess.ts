@@ -7,6 +7,7 @@
 import type {
   AbsenceNotice,
   AccessScope,
+  ReadAuditSink,
   Attendance,
   CheckInInput,
   Child,
@@ -699,4 +700,21 @@ function toLocalIsoDate(date: Date): string {
   const m = String(date.getMonth() + 1).padStart(2, '0')
   const d = String(date.getDate()).padStart(2, '0')
   return `${y}-${m}-${d}`
+}
+
+/**
+ * رد پای خواندن در حالت محلی — بند ۱۱.۹.
+ *
+ * سروری نیست که در audit_log بنویسد، پس ردیف‌ها در حافظه می‌مانند تا
+ * تست بتواند بسنجد که روکش واقعاً صدا زده می‌شود. در حالت Supabase
+ * همین رابط در جدول audit_log می‌نویسد.
+ */
+export const localAuditRows: { entity: string; ids: string[]; accountId: string }[] = []
+
+export function createLocalAuditSink(scope: AccessScope): ReadAuditSink {
+  return {
+    async readOccurred(entity, ids) {
+      localAuditRows.push({ entity, ids, accountId: scope.accountId })
+    },
+  }
 }

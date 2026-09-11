@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { toLatinDigits, toPersianDigits } from '../../i18n/index.ts'
-import { DEV_CODE, DEV_PHONES, useAuth } from '../../core/auth/index.ts'
+import { useAuth } from '../../core/auth/index.ts'
 import styles from './SignIn.module.css'
 
 /**
@@ -129,23 +129,44 @@ export function SignIn() {
 /**
  * فقط در اجرای محلی و در نسخه نمایشی دیده می‌شود. وقتی Supabase و پنل
  * پیامک وصل شوند، کد واقعاً پیامک می‌شود و این کادر حذف می‌شود.
+ *
+ * شماره‌ها با import پویا می‌آیند، نه import ثابت: وگرنه همین کادرِ
+ * نمایش‌داده‌نشده، داده نمونه را به بیلد تولید می‌کشاند.
  */
+const IS_DEMO = import.meta.env.DEV || import.meta.env.VITE_DEMO === '1'
+
 function DevNote() {
-  if (!import.meta.env.DEV && import.meta.env.VITE_DEMO !== '1') return null
+  const [demo, setDemo] = useState<{
+    phones: Record<string, string>
+    code: string
+  } | null>(null)
+
+  useEffect(() => {
+    if (!IS_DEMO) return
+    let cancelled = false
+    void import('../../core/auth/localAuthAdapter.ts').then((mod) => {
+      if (!cancelled) setDemo({ phones: mod.DEV_PHONES, code: mod.DEV_CODE })
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  if (!IS_DEMO || !demo) return null
   return (
     <aside className={`${styles.devNote} t-caption`}>
       <strong>اجرای محلی، بدون سرور</strong>
       <span>
-        مربی: <span className={styles.devPhone}>{DEV_PHONES.teacher}</span>
+        مربی: <span className={styles.devPhone}>{demo.phones.teacher}</span>
       </span>
       <span>
-        مربی و مدیر: <span className={styles.devPhone}>{DEV_PHONES.teacherAndManager}</span>
+        مربی و مدیر: <span className={styles.devPhone}>{demo.phones.teacherAndManager}</span>
       </span>
       <span>
-        سرپرست: <span className={styles.devPhone}>{DEV_PHONES.guardian}</span>
+        سرپرست: <span className={styles.devPhone}>{demo.phones.guardian}</span>
       </span>
       <span>
-        کد: <span className={styles.devPhone}>{DEV_CODE}</span>
+        کد: <span className={styles.devPhone}>{demo.code}</span>
       </span>
     </aside>
   )
