@@ -464,6 +464,91 @@ check(
 await page.click('[aria-label="بازگشت به امروز"]')
 await page.waitForSelector('text=ثبت گروهی امروز')
 
+console.log('▸ بخش ۶.۳: صفحه «امروز» پنل والد')
+// سرپرست نمونه، سرپرستِ «سارا» است. پس همان کودک باید یادداشت و رویداد
+// داشته باشد، وگرنه تست چیزی را می‌سنجد که به این خانواده ربط ندارد.
+await page.click('button:has-text("ثبت رویداد")')
+await page.click(D + '[class*="childCell"]:has-text("سارا")')
+await page.click(D + 'button:has-text("زمین خوردن")')
+await page.click(D + '[class*="severity"]:has-text("جزئی")')
+await page.click(D + 'button:has-text("خراش سطحی")')
+await page.click(D + '[class*="primary"]:has-text("ادامه")')
+await page.click(D + 'button:has-text("حیاط")')
+await page.fill('textarea[aria-label="توضیح رویداد"]', 'هنگام دویدن زمین خورد.')
+await page.click(D + '[class*="primary"]:has-text("ثبت رویداد")')
+await page.waitForSelector('[class*="doneTitle"]')
+check(
+  (await page.locator('[class*="doneTitle"]').innerText()) === 'به خانواده اطلاع داده شد',
+  'رویداد جزئی مستقیم به خانواده می‌رود',
+)
+await page.click(D + '[class*="primary"]:has-text("بستن")')
+await page.waitForTimeout(300)
+
+// از حساب مربی بیرون می‌رویم بدون پاک کردن داده، تا همان روزی که تازه
+// ارسال شد از دید خانواده دیده شود.
+await page.click('header [class*="accountButton"]')
+await page.click('button:has-text("خروج")')
+await page.waitForSelector('#phone')
+await page.fill('#phone', '09120000003')
+await page.click('button:has-text("فرستادن کد")')
+await page.waitForSelector('#code')
+await page.fill('#code', '11111')
+await page.click('button:has-text("ورود")')
+await page.waitForSelector('[class*="dateLine"]', { timeout: 8000 })
+check(true, 'سرپرست با حساب خودش وارد شد')
+
+const parentBody = () => page.evaluate(() => document.body.innerText)
+
+check(
+  (await page.locator('img[class*="photo"]').count()) >= 1,
+  'عکس امروز بالای صفحه است',
+)
+check(
+  (await page.locator('[class*="pending"]').count()) === 0,
+  'چون گزارش فرستاده شده، «هنوز آماده نیست» دیده نمی‌شود',
+)
+
+const seen = await parentBody()
+for (const [label, key] of [
+  ['ورود و ساعتش', 'ورود'],
+  ['ناهار', 'ناهار'],
+  ['خواب به دقیقه', 'دقیقه'],
+  ['خلق سه بازه روز', 'عصر'],
+  ['رویداد جزئی', 'زمین خوردن'],
+  ['درخواست از خانه', 'از خانه'],
+]) {
+  check(seen.includes(key), label)
+}
+
+// غذا به زبان ساده نوشته می‌شود، نه با مقدار خام — بخش ۶.۳
+check(
+  /همه‌اش را خورد|بیشترش را خورد|کمی خورد|چیزی نخورد/.test(seen),
+  'ناهار به زبان ساده نوشته شده، نه با عدد',
+)
+
+// بخش ۶.۳ و بند ۱۰.۱: هیچ درصد، نمودار یا مقایسه‌ای با کودکان دیگر.
+check(!/[٪%]/.test(seen), 'هیچ درصدی روی صفحه نیست')
+check(
+  !/میانگین|کلاس|بهتر از|بدتر از|رتبه|امتیاز/.test(seen),
+  'هیچ مقایسه‌ای با کودکان دیگر نیست',
+)
+
+console.log('▸ درخواست از خانه، تیک «انجام شد»')
+const needRow = page.locator('button[class*="need_"]').first()
+check((await needRow.getAttribute('aria-pressed')) === 'false', 'در آغاز تیک نخورده')
+await needRow.click()
+await page.waitForTimeout(500)
+check((await needRow.getAttribute('aria-pressed')) === 'true', 'با ضربه، انجام‌شده می‌شود')
+await needRow.click()
+await page.waitForTimeout(500)
+check((await needRow.getAttribute('aria-pressed')) === 'false', 'و دوباره برمی‌گردد')
+
+console.log('▸ بخش ۳.۳: رویداد تأییدنشده به خانواده نمی‌رسد')
+check(
+  !seen.includes('تب') || seen.includes('زمین خوردن'),
+  'فقط رویداد جزئی که مستقیم می‌رود دیده می‌شود',
+)
+
 console.log('▸ بخش ۱۲.۷: کف کیفیت')
 await signIn('09120000001')
 await page.waitForSelector('text=ثبت گروهی امروز')

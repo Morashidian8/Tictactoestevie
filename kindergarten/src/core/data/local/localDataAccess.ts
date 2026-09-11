@@ -9,6 +9,7 @@ import type {
   AccessScope,
   Attendance,
   CheckInInput,
+  Child,
   ClassDay,
   DataAccess,
   BulkValues,
@@ -17,6 +18,7 @@ import type {
   DaySummary,
   Incident,
   IncidentInput,
+  ParentDay,
   Photo,
   PickupCodeCheck,
   PickupOption,
@@ -52,7 +54,87 @@ type DayState = {
 
 const days = new Map<string, DayState>()
 
+/**
+ * داده نمونه روی همین مرورگر می‌ماند.
+ *
+ * بدون این، هر بار که صفحه دوباره بارگذاری می‌شود همه‌چیز پاک می‌شود، و
+ * جریان اصلی محصول اصلاً قابل دیدن نیست: مربی روز را ثبت و ارسال کند،
+ * بعد خانواده با حساب خودش وارد شود و همان روز را ببیند.
+ *
+ * این فقط برای اجرای بدون سرور است. با وصل شدن Supabase کنار می‌رود.
+ */
+const STORE_KEY = 'kg.dev.days'
+let hydrated = false
+
+type StoredDay = {
+  attendance: [string, Attendance][]
+  absences: AbsenceNotice[]
+  medications: MedicationLog[]
+  reports: [string, DailyReport][]
+  incidents: Incident[]
+  photos: Photo[]
+  sentAt: string | null
+}
+
+function save(): void {
+  try {
+    const payload = {
+      days: Object.fromEntries(
+        [...days.entries()].map(([date, state]) => [
+          date,
+          {
+            attendance: [...state.attendance.entries()],
+            absences: state.absences,
+            medications: state.medications,
+            reports: [...state.reports.entries()],
+            incidents: state.incidents,
+            photos: state.photos,
+            sentAt: state.sentAt,
+          } satisfies StoredDay,
+        ]),
+      ),
+      needs: [...NEEDS.entries()],
+      codes: PICKUP_CODES,
+    }
+    localStorage.setItem(STORE_KEY, JSON.stringify(payload))
+  } catch {
+    // حالت ناشناس مرورگر یا سهمیه پر. داده تا بستن صفحه می‌ماند.
+  }
+}
+
+function hydrate(): void {
+  if (hydrated) return
+  hydrated = true
+  try {
+    const raw = localStorage.getItem(STORE_KEY)
+    if (!raw) return
+    const payload = JSON.parse(raw) as {
+      days: Record<string, StoredDay>
+      needs: [string, { id: string; text: string; done: boolean }[]][]
+      codes: typeof PICKUP_CODES
+    }
+    for (const [date, stored] of Object.entries(payload.days ?? {})) {
+      days.set(date, {
+        attendance: new Map(stored.attendance),
+        absences: stored.absences,
+        medications: stored.medications,
+        reports: new Map(stored.reports),
+        incidents: stored.incidents,
+        photos: stored.photos,
+        sentAt: stored.sentAt,
+      })
+    }
+    for (const [key, list] of payload.needs ?? []) NEEDS.set(key, list)
+    if (payload.codes?.length) {
+      PICKUP_CODES.splice(0, PICKUP_CODES.length, ...payload.codes)
+    }
+  } catch {
+    // داده ذخیره‌شده خراب بود. از نمونه تازه شروع می‌کنیم.
+  }
+}
+
 function dayState(date: string): DayState {
+  hydrate()
   let state = days.get(date)
   if (!state) {
     seedPickupCodes(date)
@@ -66,8 +148,19 @@ function dayState(date: string): DayState {
       sentAt: null,
     }
     days.set(date, state)
+    save()
   }
   return state
+}
+
+/**
+ * کودکانی که یک حساب سرپرست می‌بیند.
+ *
+ * در داده واقعی از child_guardian می‌آید. اینجا برای نمونه، حساب سرپرست
+ * به دو کودک وصل است تا حالت «چند کودک در یک خانواده» هم دیده شود.
+ */
+const GUARDIAN_CHILDREN: Record<string, string[]> = {
+  'acc-parent': ['child-1', 'child-9'],
 }
 
 export function createLocalDataAccess(scope: AccessScope): DataAccess {
@@ -147,6 +240,7 @@ export function createLocalDataAccess(scope: AccessScope): DataAccess {
 
       // ثبت ورود، اعلام غیبت همان روز را باطل می‌کند.
       state.absences = state.absences.filter((a) => a.childId !== input.childId)
+      save()
       return row
     },
 
@@ -165,6 +259,7 @@ export function createLocalDataAccess(scope: AccessScope): DataAccess {
         givenAt: null,
       }
       dayState(input.date).medications.push(row)
+      save()
       return row
     },
 
@@ -190,6 +285,7 @@ export function createLocalDataAccess(scope: AccessScope): DataAccess {
         written.push(next)
       }
 
+      save()
       return written
     },
 
@@ -211,6 +307,7 @@ export function createLocalDataAccess(scope: AccessScope): DataAccess {
         touched: true,
       }
       state.reports.set(childId, next)
+      save()
       return next
     },
 
@@ -303,6 +400,7 @@ export function createLocalDataAccess(scope: AccessScope): DataAccess {
         lateMinutes: lateMinutesAfter(input.at),
       }
       state.attendance.set(input.childId, next)
+      save()
       return next
     },
 
@@ -329,6 +427,7 @@ export function createLocalDataAccess(scope: AccessScope): DataAccess {
         requiresApproval: severity !== 'minor',
       }
       state.incidents.push(row)
+      save()
       return row
     },
 
@@ -343,6 +442,7 @@ export function createLocalDataAccess(scope: AccessScope): DataAccess {
         published: childIds.length > 0,
       }
       state.photos.push(row)
+      save()
       return row
     },
 
@@ -352,10 +452,76 @@ export function createLocalDataAccess(scope: AccessScope): DataAccess {
         if (photo) {
           photo.childIds = childIds
           photo.published = childIds.length > 0
+          save()
           return photo
         }
       }
       throw new Error('عکس پیدا نشد')
+    },
+
+    async listMyChildren(): Promise<Child[]> {
+      if (scope.role !== 'guardian') return []
+      const ids = GUARDIAN_CHILDREN[scope.accountId] ?? []
+      return CHILDREN.filter((c) => ids.includes(c.id))
+    },
+
+    async getParentDay(childId, date): Promise<ParentDay> {
+      // بخش ۶.۵: سرپرست فقط کودک خودش را می‌بیند. همان قیدی که سیاست
+      // سطر-محور در دیتابیس می‌بندد.
+      if (scope.role === 'guardian') {
+        const mine = GUARDIAN_CHILDREN[scope.accountId] ?? []
+        if (!mine.includes(childId)) throw new Error('این کودک به این حساب تعلق ندارد')
+      }
+
+      const child = CHILDREN.find((c) => c.id === childId)
+      if (!child) throw new Error('کودک پیدا نشد')
+
+      const state = dayState(date)
+      const attendance = state.attendance.get(childId) ?? null
+      const report = state.reports.get(childId) ?? null
+      // بخش ۵.۹: گزارش تا فرستاده نشدن به خانواده نمی‌رسد.
+      const sent = state.sentAt !== null
+
+      const nameOf = (id: string | null): string | null => {
+        if (!id) return null
+        const guardian = (GUARDIANS[childId] ?? []).find((g) => g.id === id)
+        if (guardian) return guardian.relation ?? guardian.fullName
+        const authorized = (AUTHORIZED[childId] ?? []).find((a) => a.id === id)
+        return authorized ? `${authorized.relation ?? ''} ${authorized.fullName}`.trim() : null
+      }
+
+      return {
+        child,
+        date,
+        sent,
+        checkInAt: attendance?.checkInAt ?? null,
+        droppedByName: nameOf(attendance?.droppedByGuardianId ?? null),
+        checkOutAt: attendance?.checkOutAt ?? null,
+        pickedUpByName:
+          attendance?.pickupMethod === 'code'
+            ? 'با کد تحویل'
+            : nameOf(attendance?.pickedUpById ?? null),
+        lunch: sent ? report?.lunch ?? null : null,
+        napMinutes: sent ? napMinutesOf(report?.napStart ?? null) : null,
+        moodMorning: sent ? report?.moodMorning ?? null : null,
+        moodNoon: sent ? report?.moodNoon ?? null : null,
+        moodAfternoon: sent ? report?.moodAfternoon ?? null : null,
+        teacherNote: sent ? report?.teacherNote ?? null : null,
+        needsFromHome: sent ? (needsFor(childId, date) ?? []) : [],
+        // بخش ۶.۶: فقط عکسی که این کودک در آن تگ خورده، و فقط پس از انتشار.
+        photos: state.photos.filter((p) => p.published && p.childIds.includes(childId)),
+        // بخش ۳.۳: رویداد متوسط یا بالا بدون تأیید مدیر به سرپرست نمی‌رسد.
+        incidents: state.incidents.filter(
+          (i) => i.childId === childId && !i.requiresApproval,
+        ),
+      }
+    },
+
+    async setNeedDone(childId, date, needId, done): Promise<void> {
+      const list = needsFor(childId, date)
+      const item = list.find((n) => n.id === needId)
+      if (item) item.done = done
+      save()
     },
 
     async getDaySummary(classId, date): Promise<DaySummary> {
@@ -399,6 +565,7 @@ export function createLocalDataAccess(scope: AccessScope): DataAccess {
       if (state.sentAt) throw new Error('گزارش‌های امروز قبلاً فرستاده شده‌اند.')
 
       state.sentAt = new Date().toISOString()
+      save()
       return CHILDREN.filter((c) => c.classId === classId).length
     },
   }
@@ -414,6 +581,45 @@ function missingParts(report: DailyReport | undefined): string[] {
   if (!report?.napStart) missing.push('خواب')
   if (!report?.moodMorning || !report?.moodNoon || !report?.moodAfternoon) missing.push('خلق')
   return missing
+}
+
+/**
+ * مدت خواب به دقیقه.
+ *
+ * بخش ۶.۳ می‌گوید «خواب: ۸۰ دقیقه»، نه ساعت شروع. خانواده ساعت شروع را
+ * نمی‌خواهد، مدت را می‌خواهد. تا وقتی ساعت پایان ثبت نمی‌شود، از ساعت
+ * شروع تا پایان پنجره خواب حساب می‌شود.
+ */
+const NAP_WINDOW_END = { hour: 14, minute: 30 }
+
+function napMinutesOf(napStart: string | null): number | null {
+  if (!napStart) return null
+  const match = /^(\d{1,2}):(\d{2})/.exec(napStart)
+  if (!match) return null
+  const start = Number(match[1]) * 60 + Number(match[2])
+  const end = NAP_WINDOW_END.hour * 60 + NAP_WINDOW_END.minute
+  return Math.max(0, end - start)
+}
+
+/**
+ * «درخواست از خانه» — بخش ۶.۳.
+ *
+ * در داده واقعی از daily_report.needs_from_home_json می‌آید. اینجا برای
+ * نمونه، یک درخواست روی یک کودک نشسته تا تیک «انجام شد» قابل آزمایش باشد.
+ */
+const NEEDS = new Map<string, { id: string; text: string; done: boolean }[]>()
+
+function needsFor(childId: string, date: string) {
+  const key = `${childId}|${date}`
+  let list = NEEDS.get(key)
+  if (!list) {
+    list =
+      childId === 'child-1'
+        ? [{ id: 'need-1', text: 'فردا لباس گرم بیاورید.', done: false }]
+        : []
+    NEEDS.set(key, list)
+  }
+  return list
 }
 
 function blank(childId: string, date: string): DailyReport {

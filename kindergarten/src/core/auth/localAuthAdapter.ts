@@ -28,6 +28,17 @@ const ACCOUNTS: Record<string, AccountOption[]> = {
       classIds: ['class-golha'],
     },
   ],
+  // سرپرست. بخش ۶.۵: همه سرپرستان تأییدشده گزارش و عکس را می‌بینند.
+  '09120000003': [
+    {
+      id: 'acc-parent',
+      centerId: CENTER_ID,
+      centerName: CENTER_NAME,
+      role: 'guardian',
+      displayName: 'مادر سارا',
+      classIds: [],
+    },
+  ],
   '09120000002': [
     {
       id: 'acc-teacher-both',
@@ -51,7 +62,17 @@ const ACCOUNTS: Record<string, AccountOption[]> = {
 /** کد نمونه. در جریان واقعی، کد تصادفی است و با پیامک می‌رود. */
 export const DEV_CODE = '11111'
 
-export const DEV_PHONES = Object.keys(ACCOUNTS)
+/**
+ * شماره‌های نمونه، با نام نه با شماره ردیف.
+ *
+ * پیش‌تر صفحه ورود با اندیس از فهرست می‌خواند و افزودن یک حساب تازه
+ * برچسب‌ها را جابه‌جا می‌کرد.
+ */
+export const DEV_PHONES = {
+  teacher: '09120000001',
+  teacherAndManager: '09120000002',
+  guardian: '09120000003',
+} as const
 
 export function createLocalAuthAdapter(): AuthAdapter {
   let pendingPhone: string | null = null

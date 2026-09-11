@@ -3,6 +3,7 @@ import './design-system/index.ts'
 import { AuthProvider, createLocalAuthAdapter, useAuth } from './core/auth/index.ts'
 import { AccountPicker } from './app/auth/AccountPicker.tsx'
 import { SignIn } from './app/auth/SignIn.tsx'
+import { ParentTodayPage } from './app/parent/TodayPage.tsx'
 import { TeacherApp } from './app/teacher/TeacherApp.tsx'
 
 /**
@@ -35,6 +36,8 @@ function Routes() {
     case 'teacher':
     case 'assistant':
       return <TeacherApp />
+    case 'guardian':
+      return <ParentTodayPage />
     default:
       return <NotBuiltYet role={session.active.role} />
   }

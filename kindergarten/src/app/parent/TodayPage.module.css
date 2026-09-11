@@ -1,0 +1,185 @@
+/*
+ * پنل والد — «دفترچه روزانه» (بخش ۱۲.۱).
+ *
+ * لحن اینجا عمداً با پنل مربی فرق دارد: عکس‌محور، فضای سفید زیاد، تراکم
+ * پایین. مربی ایستاده و عجله دارد؛ والد شب روی مبل نشسته.
+ *
+ * هدف لمسی ۴۸ و متن پایه ۱۶، طبق جدول بخش ۱۲.۷.
+ */
+.page {
+  min-block-size: 100dvh;
+  background: var(--paper);
+  display: flex;
+  flex-direction: column;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background: var(--surface);
+  border-block-end: 1px solid var(--border);
+}
+
+.childName { color: var(--ink); font-weight: var(--weight-bold); }
+
+.account {
+  min-block-size: var(--touch-parent);
+  min-inline-size: var(--touch-parent);
+  padding-inline: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--r-chip);
+  color: var(--ink-muted);
+  font-weight: var(--weight-medium);
+}
+
+/* کلید تعویض کودک، وقتی خانواده بیش از یک کودک در مهد دارد */
+.switcher { display: flex; gap: var(--space-2); padding: var(--space-3) var(--space-4) 0; }
+.switchItem {
+  min-block-size: var(--touch-parent);
+  padding-inline: var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--r-chip);
+  background: var(--surface);
+  color: var(--ink);
+  font-weight: var(--weight-medium);
+}
+.switchItem[aria-pressed='true'] {
+  background: var(--turquoise-tint);
+  border-color: var(--turquoise);
+  font-weight: var(--weight-bold);
+}
+
+/* کارت روز. یک صفحه دفترچه. */
+.card {
+  margin: var(--space-4);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  box-shadow: var(--shadow-1);
+  overflow: hidden;
+}
+
+.dateLine {
+  padding: var(--space-5) var(--space-5) var(--space-4);
+  text-align: center;
+  color: var(--ink);
+  /* تاریخ روز با فونت نمایشی — بخش ۱۲.۶ */
+  font-family: var(--font-display);
+  font-weight: var(--weight-display-fallback);
+  font-size: var(--text-h1);
+  line-height: var(--text-h1-line);
+}
+
+/* ۱ — عکس‌های امروز، بالای صفحه، بدون استثنا */
+.photos { display: grid; gap: var(--space-2); padding: 0 var(--space-4); }
+.photosOne { grid-template-columns: 1fr; }
+.photosMany { grid-template-columns: repeat(2, 1fr); }
+.photo {
+  inline-size: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  border-radius: var(--r-photo);
+  background: var(--neutral-fill);
+}
+
+.noPhotos {
+  margin: 0 var(--space-4);
+  padding: var(--space-6) var(--space-4);
+  text-align: center;
+  color: var(--ink-muted);
+  background: var(--paper);
+  border-radius: var(--r-photo);
+}
+
+.rows { padding: var(--space-5); display: flex; flex-direction: column; gap: var(--space-5); }
+
+.rule { block-size: 1px; background: var(--border); margin-inline: var(--space-5); }
+
+/* ۲ — ورود و خروج */
+.gate { display: flex; flex-direction: column; gap: var(--space-3); }
+.gateRow { display: flex; align-items: baseline; gap: var(--space-3); }
+.gateIcon { color: var(--ink-muted); flex: none; align-self: center; }
+.gateTime {
+  color: var(--ink);
+  font-weight: var(--weight-bold);
+  font-variant-numeric: tabular-nums;
+  min-inline-size: 3.5rem;
+}
+.gateWho { color: var(--ink-muted); }
+
+/* ۳ و ۴ — غذا، خواب، خلق */
+.fact { display: flex; align-items: center; gap: var(--space-3); }
+.factIcon { color: var(--ink-muted); flex: none; }
+.factLabel { color: var(--ink-muted); min-inline-size: 3.5rem; }
+.factValue { color: var(--ink); font-weight: var(--weight-medium); }
+
+.moods { display: flex; align-items: center; gap: var(--space-4); flex-wrap: wrap; }
+.mood { display: flex; align-items: center; gap: var(--space-2); }
+.moodDot {
+  inline-size: 12px; block-size: 12px; border-radius: var(--r-chip);
+  background: var(--neutral-fill-strong);
+}
+.moodGood { background: var(--sage); }
+.moodNormal { background: var(--turquoise); }
+.moodRestless { background: var(--saffron); }
+.moodSad { background: var(--brick); }
+.moodBand { color: var(--ink-muted); }
+
+/* ۵ — یادداشت مربی */
+.note {
+  background: var(--turquoise-tint);
+  border-radius: var(--r-card);
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.noteLabel { color: var(--ink-muted); }
+.noteText { color: var(--ink); line-height: var(--text-body-line); }
+
+/* ۶ — درخواست از خانه */
+.needs { display: flex; flex-direction: column; gap: var(--space-2); }
+.need {
+  display: flex; align-items: center; gap: var(--space-3);
+  min-block-size: var(--touch-parent);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--r-input);
+  background: var(--surface);
+  text-align: start;
+  inline-size: 100%;
+}
+.needBox {
+  inline-size: 24px; block-size: 24px; border-radius: 6px;
+  border: 2px solid var(--neutral-fill-strong);
+  display: grid; place-items: center; flex: none; color: var(--surface);
+}
+.needBoxDone { background: var(--sage); border-color: var(--sage); }
+.needText { flex: 1; color: var(--ink); }
+.needTextDone { color: var(--ink-muted); text-decoration: line-through; }
+
+/* رویداد. فقط آنچه خانواده حق دیدنش را دارد. */
+.incident {
+  display: flex; gap: var(--space-3);
+  background: var(--saffron-tint);
+  border-radius: var(--r-card);
+  padding: var(--space-4);
+}
+.incidentIcon { color: var(--ink); flex: none; margin-block-start: 2px; }
+.incidentBody { display: flex; flex-direction: column; gap: var(--space-1); }
+.incidentTitle { color: var(--ink); font-weight: var(--weight-bold); }
+.incidentText { color: var(--ink); }
+
+/* پیش از ارسال گزارش */
+.pending {
+  margin: var(--space-4);
+  padding: var(--space-6) var(--space-5);
+  text-align: center;
+  color: var(--ink-muted);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+}

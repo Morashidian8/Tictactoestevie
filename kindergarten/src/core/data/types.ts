@@ -139,6 +139,43 @@ export type ReportPatch = Partial<
 >
 
 /**
+ * روز کودک، همان‌طور که خانواده می‌بیند — بخش ۶.۳ سند.
+ *
+ * ترتیب فیلدها ترتیب اهمیت در صفحه است، و آن ترتیب تصادفی نیست: «عکس‌های
+ * امروز، تنها چیزی است که والد واقعاً برایش می‌آید».
+ *
+ * آنچه عمداً اینجا نیست: فهرست فعالیت‌ها، درصد، نمودار، و هر مقایسه‌ای با
+ * کودکان دیگر. بند ۱۰.۱ مقایسه در خروجی خانواده را ممنوع کرده.
+ */
+export type ParentDay = {
+  child: Child
+  date: string
+  /**
+   * گزارش تا وقتی فرستاده نشده به خانواده نمی‌رسد — بخش ۵.۹.
+   * تا آن موقع خانواده فقط ورود و خروج را می‌بیند.
+   */
+  sent: boolean
+  checkInAt: string | null
+  droppedByName: string | null
+  checkOutAt: string | null
+  pickedUpByName: string | null
+  lunch: MealAmount | null
+  napMinutes: number | null
+  moodMorning: Mood | null
+  moodNoon: Mood | null
+  moodAfternoon: Mood | null
+  teacherNote: string | null
+  needsFromHome: { id: string; text: string; done: boolean }[]
+  /** فقط عکس‌هایی که این کودک در آن‌ها تگ خورده — بخش ۶.۶. */
+  photos: Photo[]
+  /**
+   * رویدادهایی که خانواده حق دیدنشان را دارد: جزئی مستقیم، و متوسط یا
+   * بالا فقط پس از تأیید مدیر — بخش ۳.۳ قاعده دوم.
+   */
+  incidents: Incident[]
+}
+
+/**
  * خلاصه پایان روز — بخش ۵.۹ سند.
  *
  * «تعداد گزارش‌های کامل و ناقص، با فهرست ناقص‌ها؛ عکس‌های بدون تگ؛
@@ -279,6 +316,15 @@ export interface DataAccess {
 
   /** خلاصه پایان روز — بخش ۵.۹. */
   getDaySummary(classId: string, date: string): Promise<DaySummary>
+
+  /** کودکانی که این حساب سرپرستشان است — بخش ۶.۵. */
+  listMyChildren(): Promise<Child[]>
+
+  /** روز کودک از دید خانواده — بخش ۶.۳. */
+  getParentDay(childId: string, date: string): Promise<ParentDay>
+
+  /** تیک زدن «انجام شد» روی درخواست از خانه — بخش ۶.۳. */
+  setNeedDone(childId: string, date: string, needId: string, done: boolean): Promise<void>
 
   /**
    * ارسال گزارش‌های روز — بخش ۵.۹.

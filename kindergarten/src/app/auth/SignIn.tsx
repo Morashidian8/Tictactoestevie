@@ -136,10 +136,13 @@ function DevNote() {
     <aside className={`${styles.devNote} t-caption`}>
       <strong>اجرای محلی، بدون سرور</strong>
       <span>
-        شماره یک‌حسابه: <span className={styles.devPhone}>{DEV_PHONES[0]}</span>
+        مربی: <span className={styles.devPhone}>{DEV_PHONES.teacher}</span>
       </span>
       <span>
-        شماره دوحسابه: <span className={styles.devPhone}>{DEV_PHONES[1]}</span>
+        مربی و مدیر: <span className={styles.devPhone}>{DEV_PHONES.teacherAndManager}</span>
+      </span>
+      <span>
+        سرپرست: <span className={styles.devPhone}>{DEV_PHONES.guardian}</span>
       </span>
       <span>
         کد: <span className={styles.devPhone}>{DEV_CODE}</span>
