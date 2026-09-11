@@ -222,12 +222,6 @@
     "full": true
   },
   {
-    "file": "38-manager-placeholder.png",
-    "caption": "پنل مدیر هنوز ساخته نشده — صف تأیید رویداد، مالی و اعلام تعطیلی باقی مانده",
-    "group": "مدیر",
-    "full": true
-  },
-  {
     "file": "39-narrow-320.png",
     "caption": "باریک‌ترین حالت پشتیبانی‌شده، ۳۲۰ پیکسل: بدون لغزش افقی — بخش ۱۲.۷",
     "group": "کف کیفیت",
@@ -237,6 +231,60 @@
     "file": "40-tablet-820.png",
     "caption": "تبلت ۸۲۰ پیکسل",
     "group": "کف کیفیت",
+    "full": true
+  },
+  {
+    "file": "41-needs-editor.png",
+    "caption": "درخواست از خانه: مربی برای کل کلاس می‌نویسد و در گزارش امشب می‌رود — بخش ۵.۹",
+    "group": "مربی — ثبت گروهی",
+    "full": true
+  },
+  {
+    "file": "42-parent-tomorrow.png",
+    "caption": "والد: درخواست‌های از خانه و کارت «فردا» با دو تصمیم جدا",
+    "group": "والد",
+    "full": true
+  },
+  {
+    "file": "43-parent-picker.png",
+    "caption": "فهرست مجاز همان کودک. کسی بیرون از فهرست، راه دوم است",
+    "group": "والد",
+    "full": true
+  },
+  {
+    "file": "44-parent-code.png",
+    "caption": "فرد بیرون از فهرست: کد یکبارمصرف چهاررقمی، فقط برای فردا — بخش ۵.۸",
+    "group": "والد",
+    "full": true
+  },
+  {
+    "file": "45-teacher-plans.png",
+    "caption": "اعلام خانواده برای امروز، بالای شبکه. مربی می‌بیند، نمی‌سازد — بخش ۵.۸",
+    "group": "مربی — امروز",
+    "full": false
+  },
+  {
+    "file": "46-manager-dashboard.png",
+    "caption": "داشبورد صبح مدیر: صف رویداد بالاتر از همه‌چیز — بخش ۱۳.۳",
+    "group": "مدیر",
+    "full": true
+  },
+  {
+    "file": "47-notice-write.png",
+    "caption": "اطلاع‌رسانی: متن خودکار از قالب، با امکان ویرایش — بخش ۱۵.۳",
+    "group": "مدیر",
+    "full": true
+  },
+  {
+    "file": "48-notice-confirm.png",
+    "caption": "تأیید دو مرحله‌ای: گیرنده، سهمیه پیامک، و نام خانواده‌های بدون شماره",
+    "group": "مدیر",
+    "full": true
+  },
+  {
+    "file": "49-notice-sent.png",
+    "caption": "گزارش ارسال",
+    "group": "مدیر",
     "full": true
   }
 ]
