@@ -54,6 +54,16 @@ function jsFiles(dir: string): string[] {
 }
 
 describe('بیلد تولید', () => {
+  it('هیچ عکس کودک نمونه‌ای ندارد', () => {
+    // کد داده نمونه حذف می‌شود ولی Vite خود فایل‌های تصویر را یتیم در
+    // dist جا می‌گذاشت. بیست عکس کودک در بیلد تولید، حتی بدون ارجاع،
+    // چیزی است که نباید منتشر شود.
+    rmSync(dist, { recursive: true, force: true })
+    buildOnce()
+    const faces = readdirSync(join(dist, 'assets')).filter((f) => f.endsWith('.webp'))
+    expect(faces).toEqual([])
+  }, 180_000)
+
   it('هیچ ردی از داده نمونه ندارد', () => {
     rmSync(dist, { recursive: true, force: true })
     buildOnce()

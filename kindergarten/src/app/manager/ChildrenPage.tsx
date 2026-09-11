@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { AlertIcon, AvatarFace, EmptyState } from '../../design-system/index.ts'
+import { AlertIcon, ChildFace, EmptyState } from '../../design-system/index.ts'
 import { formatCount, toPersianDigits } from '../../i18n/index.ts'
 import { useData } from '../../core/auth/index.ts'
 import type { Child, ChildProfile, ConsentType } from '../../core/data/index.ts'
@@ -99,7 +99,7 @@ export function ChildrenPage({ onBack }: { onBack: () => void }) {
               <li key={child.id}>
                 <button type="button" className={styles.item} onClick={() => void open(child.id)}>
                   <span className={styles.avatar}>
-                    <AvatarFace seed={child.id} />
+                    <ChildFace id={child.id} photoUrl={child.photoUrl} />
                   </span>
                   <span className={styles.itemName}>
                     {child.firstName} {child.lastName}

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
-  AvatarFace,
+  ChildFace,
   CrossIcon,
   CheckIcon,
   QuickAction,
@@ -469,7 +469,7 @@ function ChildRow({
   return (
     <button type="button" className={styles.item} onClick={onOpen}>
       <span className={styles.avatar}>
-        <AvatarFace seed={child.id} />
+        <ChildFace id={child.id} photoUrl={child.photoUrl} />
       </span>
 
       <span className={styles.itemMain}>

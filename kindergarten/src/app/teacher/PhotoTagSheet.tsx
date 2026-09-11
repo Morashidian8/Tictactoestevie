@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { AlertIcon, AvatarFace, BottomSheet, CheckIcon } from '../../design-system/index.ts'
+import { AlertIcon, ChildFace, BottomSheet, CheckIcon } from '../../design-system/index.ts'
 import { formatCount } from '../../i18n/index.ts'
 import type { Child } from '../../core/data/index.ts'
 import styles from './PhotoTagSheet.module.css'
@@ -83,7 +83,7 @@ export function PhotoTagSheet({ previewUrl, children, initialTags, onClose, onSa
             >
               <span className={styles.face}>
                 <span className={styles.faceInner}>
-                  <AvatarFace seed={child.id} />
+                  <ChildFace id={child.id} photoUrl={child.photoUrl} />
                 </span>
                 {on ? (
                   <span className={styles.tick} aria-hidden>

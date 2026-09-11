@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { AlertIcon, AvatarFace, BottomSheet } from '../../design-system/index.ts'
+import { AlertIcon, ChildFace, BottomSheet } from '../../design-system/index.ts'
 import { useData } from '../../core/auth/index.ts'
 import type {
   Child,
@@ -146,7 +146,7 @@ export function IncidentSheet({ children, onClose }: Props) {
                 }}
               >
                 <span className={styles.childFace}>
-                  <AvatarFace seed={item.id} />
+                  <ChildFace id={item.id} photoUrl={item.photoUrl} />
                 </span>
                 <span className={`${styles.childName} t-caption`}>{item.firstName}</span>
               </button>
