@@ -1,0 +1,129 @@
+/*
+ * «فردا» — لحن دفترچه، مثل بقیه پنل خانواده (بخش ۱۲.۱).
+ * هدف لمسی ۴۸ که توکن پنل والد است، نه ۵۶ مربی.
+ */
+.card {
+  margin: var(--space-4);
+  padding: var(--space-5);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  box-shadow: var(--shadow-1);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.head { display: flex; align-items: baseline; gap: var(--space-3); }
+.title { font-family: var(--font-display); font-weight: var(--weight-display-fallback); }
+.date { color: var(--ink-muted); }
+
+.row { display: flex; flex-direction: column; gap: var(--space-2); }
+.rowLabel { color: var(--ink-muted); }
+
+.asUsual {
+  min-block-size: var(--touch-parent);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding-inline: var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--r-input);
+  background: var(--surface);
+  color: var(--ink);
+  text-align: start;
+}
+
+.chosen {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  border: 1px solid var(--turquoise);
+  border-radius: var(--r-input);
+  background: var(--turquoise-tint);
+}
+
+.person { font-weight: var(--weight-medium); }
+.relation { color: var(--ink-muted); }
+
+.codeLine { margin: 0; display: flex; flex-direction: column; gap: var(--space-1); }
+
+/*
+ * کد باید از آن سوی اتاق خوانده شود و تلفنی گفته شود، پس بزرگ و با
+ * ارقام جدولی. رنگش --ink است نه فیروزه‌ای: عدد است، نه کنش.
+ */
+.code {
+  font-size: var(--text-display);
+  line-height: var(--text-display-line);
+  font-family: var(--font-display);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: .08em;
+  color: var(--ink);
+}
+
+.codeHint { color: var(--ink-muted); }
+
+.actions { display: flex; align-items: center; gap: var(--space-4); flex-wrap: wrap; }
+
+.link {
+  min-block-size: var(--touch-parent);
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--turquoise-dark);
+  font-family: inherit;
+  font-size: var(--text-body);
+  font-weight: var(--weight-medium);
+}
+
+.picker { display: flex; flex-direction: column; gap: var(--space-2); }
+.pickerNote { color: var(--ink-muted); }
+
+.option {
+  min-block-size: var(--touch-parent);
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding-inline: var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--r-input);
+  background: var(--surface);
+  color: var(--ink);
+  text-align: start;
+}
+
+.option:active { background: var(--turquoise-tint); border-color: var(--turquoise); }
+.option svg { inline-size: 18px; block-size: 18px; color: var(--ink-muted); flex: none; }
+
+.field { display: flex; flex-direction: column; gap: var(--space-1); color: var(--ink-muted); }
+
+.input {
+  min-block-size: var(--touch-parent);
+  padding-inline: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--r-input);
+  background: var(--surface);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: var(--text-body);
+}
+
+.input:focus { border-color: var(--turquoise); outline: none; }
+
+.primary {
+  min-block-size: var(--touch-parent);
+  padding-inline: var(--space-5);
+  border: none;
+  border-radius: var(--r-input);
+  background: var(--turquoise-dark);
+  color: var(--surface);
+  font-family: inherit;
+  font-size: var(--text-body);
+  font-weight: var(--weight-bold);
+}
+
+.primary:disabled { background: var(--disabled-bg); color: var(--disabled-fg); }
+
+.error { margin: 0; color: var(--brick); }

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   AvatarFace,
+  CrossIcon,
   CheckIcon,
   QuickAction,
   StatusChip,
@@ -62,6 +63,15 @@ export function BulkEntryPage({ onBack }: Props) {
   const photoInput = useRef<HTMLInputElement>(null)
   const [error, setError] = useState<string | null>(null)
   const [pending, setPending] = useState(0)
+  /*
+   * درخواست از خانه — بخش ۵.۹ بند ۶.
+   *
+   * روی گزارش امشب می‌نشیند، یعنی وقتی خانواده هنوز فرصت آماده کردن
+   * فردا را دارد. برای کل کلاس نوشته می‌شود چون حالت غالب همین است:
+   * «فردا روز رنگ است، پیش‌بند بیاورید» به همه می‌خورد، نه به یکی.
+   */
+  const [needs, setNeeds] = useState<string[]>([''])
+  const [needsSaved, setNeedsSaved] = useState(false)
 
   const date = useMemo(() => toIsoDate(new Date()), [])
 
@@ -323,6 +333,68 @@ export function BulkEntryPage({ onBack }: Props) {
               event.target.value = ''
             }}
           />
+        </section>
+
+        <section className={styles.bulk} aria-label="درخواست از خانه برای فردا">
+          <span className={`${styles.rowLabel} t-caption`}>درخواست از خانه، برای فردا</span>
+          <p className={`${styles.needsHint} t-caption`}>
+            در گزارش امشب به همه خانواده‌های این کلاس می‌رسد و هر خانواده
+            می‌تواند تیک «انجام شد» بزند.
+          </p>
+
+          {needs.map((text, index) => (
+            <div key={index} className={styles.needRow}>
+              <input
+                className={styles.needInput}
+                value={text}
+                placeholder="مثلاً: فردا لباس گرم بیاورید."
+                aria-label={`درخواست ${formatCount(index + 1)}`}
+                onChange={(event) => {
+                  const next = [...needs]
+                  next[index] = event.target.value
+                  setNeeds(next)
+                  setNeedsSaved(false)
+                }}
+              />
+              {needs.length > 1 ? (
+                <button
+                  type="button"
+                  className={styles.needRemove}
+                  aria-label="حذف این درخواست"
+                  onClick={() => {
+                    setNeeds(needs.filter((_, at) => at !== index))
+                    setNeedsSaved(false)
+                  }}
+                >
+                  <CrossIcon size={18} />
+                </button>
+              ) : null}
+            </div>
+          ))}
+
+          <div className={styles.needActions}>
+            <button
+              type="button"
+              className={styles.needAdd}
+              onClick={() => setNeeds([...needs, ''])}
+            >
+              درخواست دیگر
+            </button>
+            <button
+              type="button"
+              className={`${styles.needsSave} t-body-lg`}
+              disabled={needs.every((t) => t.trim().length === 0) || needsSaved}
+              onClick={() => {
+                if (!classId) return
+                void queue
+                  .submit('text', () => data.setClassNeeds(classId, date, needs))
+                  .then(() => setNeedsSaved(true))
+                  .catch((cause: unknown) => setError(messageOf(cause)))
+              }}
+            >
+              {needsSaved ? 'برای کل کلاس ثبت شد' : 'ثبت برای کل کلاس'}
+            </button>
+          </div>
         </section>
 
         {error ? <p className={`${styles.error} t-body`}>{error}</p> : null}

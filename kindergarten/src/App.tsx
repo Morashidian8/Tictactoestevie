@@ -4,6 +4,7 @@ import { AuthProvider, createAuthAdapter, useAuth } from './core/auth/index.ts'
 import type { AuthAdapter } from './core/auth/index.ts'
 import { AccountPicker } from './app/auth/AccountPicker.tsx'
 import { SignIn } from './app/auth/SignIn.tsx'
+import { ManagerApp } from './app/manager/ManagerApp.tsx'
 import { ParentTodayPage } from './app/parent/TodayPage.tsx'
 import { TeacherApp } from './app/teacher/TeacherApp.tsx'
 
@@ -14,7 +15,8 @@ import { TeacherApp } from './app/teacher/TeacherApp.tsx'
  * می‌گوید دسترسی‌ها هرگز ترکیب نمی‌شوند، پس مسیر نباید بتواند کاربر را
  * به پنلی ببرد که نقشش اجازه‌اش را ندارد.
  *
- * فقط پنل مربی ساخته شده. نقش‌های دیگر عمداً صفحه‌ای ندارند.
+ * پنل مربی، خانواده و مدیر ساخته شده. کمک‌مربی همان پنل مربی را
+ * می‌بیند؛ پشتیبانی محصول صفحه‌ای ندارد.
  */
 export function App() {
   /*
@@ -54,6 +56,8 @@ function Routes() {
     case 'teacher':
     case 'assistant':
       return <TeacherApp />
+    case 'manager':
+      return <ManagerApp />
     case 'guardian':
       return <ParentTodayPage />
     default:

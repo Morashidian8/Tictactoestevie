@@ -183,3 +183,78 @@
   padding: var(--space-3) var(--space-4);
   border-radius: var(--r-input);
 }
+
+/*
+ * درخواست از خانه — بخش ۵.۹ بند ۶.
+ *
+ * هم‌شکل بقیه کارت‌های این صفحه است و کنش خودش را دارد، چون جدا از ثبت
+ * گروهی ذخیره می‌شود: مربی ممکن است روز را ثبت کرده باشد و درخواست را
+ * بعداً یادش بیاید.
+ */
+.needsHint { color: var(--ink-muted); }
+
+.needRow { display: flex; align-items: center; gap: var(--space-2); }
+
+.needInput {
+  flex: 1;
+  min-inline-size: 0;
+  min-block-size: var(--touch-teacher);
+  padding-inline: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--r-input);
+  background: var(--surface);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: var(--text-body-lg);
+}
+
+.needInput:focus { border-color: var(--turquoise); outline: none; }
+
+.needRemove {
+  flex: none;
+  inline-size: var(--touch-teacher);
+  min-block-size: var(--touch-teacher);
+  display: grid;
+  place-items: center;
+  border: none;
+  background: none;
+  color: var(--ink-muted);
+  border-radius: var(--r-input);
+}
+
+.needActions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.needAdd {
+  min-block-size: var(--touch-teacher);
+  padding-inline: var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--r-input);
+  background: var(--surface);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: var(--text-body-lg);
+}
+
+/*
+ * ظاهرش همان کنش ثبت گروهی است ولی کلاسش جداست و composes نمی‌کند:
+ * با composes هر دو نام کلاس روی عنصر می‌نشیند و دو دکمه دوباره یکی
+ * به نظر می‌رسند، برای هر انتخابگری که دنبال کنش اصلی می‌گردد.
+ */
+.needsSave {
+  flex: 1;
+  min-inline-size: 12ch;
+  min-block-size: var(--touch-teacher);
+  border: none;
+  border-radius: var(--r-input);
+  background: var(--turquoise-dark);
+  color: var(--surface);
+  font-family: inherit;
+  font-weight: var(--weight-bold);
+}
+
+.needsSave:disabled { background: var(--disabled-bg); color: var(--disabled-fg); }

@@ -3,6 +3,7 @@ import { AlertIcon, CheckIcon } from '../../design-system/index.ts'
 import { formatCount, formatJalali, formatTime, toIsoDate } from '../../i18n/index.ts'
 import { ROLE_LABEL, useAuth, useData } from '../../core/auth/index.ts'
 import type { Child, MealAmount, Mood, ParentDay } from '../../core/data/index.ts'
+import { TomorrowCard } from './TomorrowCard.tsx'
 import styles from './TodayPage.module.css'
 
 /**
@@ -311,6 +312,14 @@ export function ParentTodayPage() {
           </>
         ) : null}
       </article>
+
+      {/*
+        «فردا» بعد از گزارش امروز می‌آید، چون بخش ۶.۳ می‌گوید والد برای
+        دیدن امروز می‌آید. تصمیم فردا کار دوم است، نه اول.
+      */}
+      {childId && day ? (
+        <TomorrowCard childId={childId} childName={day.child.firstName} />
+      ) : null}
 
       {error ? (
         <p className={`${styles.loadError} t-body`}>

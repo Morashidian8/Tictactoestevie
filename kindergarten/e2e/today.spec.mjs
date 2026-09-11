@@ -26,16 +26,34 @@ const consoleErrors = []
 page.on('console', (m) => m.type() === 'error' && consoleErrors.push(m.text()))
 page.on('pageerror', (e) => consoleErrors.push(String(e)))
 
-const signIn = async (phone) => {
+/**
+ * ورود با یک شماره.
+ *
+ * fresh=false داده مرورگر را پاک نمی‌کند؛ برای وقتی که می‌خواهیم همان
+ * روزی که مربی تازه ثبت کرده از دید خانواده دیده شود.
+ */
+const signIn = async (phone, { fresh = true } = {}) => {
   await page.goto(BASE)
-  await page.evaluate(() => localStorage.clear())
-  await page.goto(BASE)
+  if (fresh) {
+    await page.evaluate(() => localStorage.clear())
+    await page.goto(BASE)
+  }
   await page.waitForSelector('#phone')
   await page.fill('#phone', phone)
   await page.click('button:has-text("فرستادن کد")')
   await page.waitForSelector('#code')
   await page.fill('#code', '11111')
   await page.click('button:has-text("ورود")')
+}
+
+/** خروج از هر پنلی. سرصفحه هر سه پنل کلید حساب دارد، با کلاس‌های جدا. */
+const signOutAny = async () => {
+  const teacher = page.locator('header [class*="accountButton"]')
+  if (await teacher.count()) await teacher.first().click()
+  else await page.locator('header [class*="account"]').first().click()
+  await page.waitForTimeout(350)
+  await page.click('button:has-text("خروج")')
+  await page.waitForSelector('#phone')
 }
 
 
@@ -356,8 +374,14 @@ console.log('▸ بخش ۳.۲: جابه‌جایی حساب بدون خروج و
 await page.click('header [class*="accountButton"]')
 await page.waitForSelector('text=رفتن به حساب مدیر')
 await page.click('button:has-text("رفتن به حساب مدیر")')
-await page.waitForSelector('text=/پنل این نقش/')
-check(true, 'حساب عوض شد بدون درخواست دوباره کد')
+// پیش‌تر اینجا «پنل این نقش هنوز ساخته نشده» می‌آمد. حالا داشبورد مدیر
+// هست، پس نشانه جابه‌جایی خودِ داشبورد است.
+await page.waitForSelector('text=وضعیت ثبت', { timeout: 10000 })
+check(true, 'حساب عوض شد بدون درخواست دوباره کد، و داشبورد مدیر آمد')
+check(
+  (await page.locator('text=ثبت گروهی امروز').count()) === 0,
+  'و پنل مربی دیگر دیده نمی‌شود — دسترسی‌ها ترکیب نمی‌شوند',
+)
 
 console.log('▸ بخش ۵.۵: ثبت گروهی، مهم‌ترین صفحه سامانه')
 // بخش پیش، حساب را به مدیر برد. برای پنل مربی دوباره وارد می‌شویم.
@@ -603,6 +627,110 @@ console.log('▸ بخش ۳.۳: رویداد تأییدنشده به خانواد
 check(
   !seen.includes('تب') || seen.includes('زمین خوردن'),
   'فقط رویداد جزئی که مستقیم می‌رود دیده می‌شود',
+)
+
+console.log('▸ بخش ۵.۹ بند ۶: درخواست از خانه، از مربی تا خانواده')
+await signIn('09120000001')
+await page.waitForSelector('text=ثبت گروهی امروز')
+await page.click('button:has-text("ثبت گروهی امروز")')
+await page.waitForSelector('text=اعمال روی همه')
+await page.locator('input[aria-label="درخواست ۱"]').fill('فردا روز رنگ است، پیش‌بند بیاورید.')
+await page.click('button:has-text("درخواست دیگر")')
+await page.locator('input[aria-label="درخواست ۲"]').fill('فردا لباس گرم بیاورید.')
+await page.click('button:has-text("ثبت برای کل کلاس")')
+await page.waitForTimeout(800)
+check(
+  (await page.locator('button:has-text("برای کل کلاس ثبت شد")').count()) === 1,
+  'مربی دو درخواست برای کل کلاس نوشت',
+)
+
+await page.click('[aria-label="بازگشت به امروز"]')
+await page.waitForSelector('text=ثبت گروهی امروز')
+await page.click('button:has-text("بستن روز")')
+await page.waitForSelector('text=ارسال گزارش‌های امروز')
+await page.click('[class*="bar"] button:has-text("ارسال گزارش‌های امروز")')
+await page.waitForSelector('[class*="sentTitle"]')
+await page.click('[aria-label="بازگشت به امروز"]')
+await page.waitForSelector('text=ثبت گروهی امروز')
+
+await signOutAny()
+await signIn('09120000003', { fresh: false })
+await page.waitForSelector('[class*="dateLine"]', { timeout: 8000 })
+const parentText = await page.evaluate(() => document.body.innerText)
+check(parentText.includes('پیش‌بند'), 'درخواست اول به خانواده رسید')
+check(parentText.includes('لباس گرم'), 'درخواست دوم هم رسید')
+
+console.log('▸ بخش ۵.۸ و ۶.۴: برنامه فردا')
+check(
+  (await page.locator('section:has-text("چه کسی می‌آورد")').count()) === 1,
+  'کارت فردا دو تصمیم جدا دارد: آوردن و بردن',
+)
+await page.locator('button:has-text("تغییر برای فردا")').first().click()
+await page.waitForTimeout(400)
+const allowed = await page.locator('[class*="option"]').allInnerTexts()
+check(allowed.length > 1, `فهرست مجاز نمایش داده شد (${allowed.length} گزینه)`)
+
+await page.click('button:has-text("کس دیگری می‌آید")')
+await page.fill('input[aria-label="نام فرد"]', 'عمو، رضا احمدی')
+await page.fill('input[aria-label="شماره فرد"]', '09121112233')
+await page.click('button:has-text("ساخت کد")')
+await page.waitForTimeout(700)
+const chosen = await page.locator('[class*="chosen"]').first().innerText()
+check(/کد تحویل/.test(chosen), 'برای فرد بیرون از فهرست، کد ساخته شد')
+const code = chosen.match(/[۰-۹]{4}/)?.[0]
+check(Boolean(code), `کد چهاررقمی است: ${code}`)
+
+// همان کد باید از مسیر مربی قابل بررسی باشد، وگرنه کدی ساخته‌ایم که
+// هیچ‌جا کار نمی‌کند.
+await page.locator('button:has-text("تغییر")').first().click()
+await page.waitForTimeout(300)
+await page.locator('[class*="option"] >> nth=0').click()
+await page.waitForTimeout(700)
+const picked = await page.locator('[class*="chosen"]').first().innerText()
+check(
+  /در فهرست مجاز/.test(picked),
+  'با انتخاب فرد مجاز، کد لازم نیست و همین گفته می‌شود',
+)
+
+console.log('▸ بخش ۱۳.۳: داشبورد مدیر')
+await signIn('09120000002')
+await page.waitForSelector('text=با کدام حساب وارد می‌شوید؟')
+await page.locator('button:has-text("مریم رضایی")').nth(1).click()
+await page.waitForTimeout(1200)
+const board = await page.evaluate(() => document.body.innerText)
+check(board.includes('حاضر'), 'کاشی حاضر آمد')
+check(board.includes('وضعیت ثبت'), 'وضعیت ثبت کلاس‌ها آمد')
+check(board.includes('سهمیه پیامک'), 'سهمیه پیامک دیده می‌شود — بخش ۱۵.۴')
+check(
+  (await page.locator('text=/هیچ کودکی|شماره ثبت نشده|بدون اطلاع/').count()) >= 0,
+  'فهرست بی‌خبرها با شماره تماس',
+)
+
+console.log('▸ بخش ۱۵.۳: اطلاع‌رسانی با تأیید دو مرحله‌ای')
+await page.click('button:has-text("اطلاع‌رسانی به خانواده‌ها")')
+await page.waitForSelector('text=چه چیزی')
+const auto = await page.locator('textarea[aria-label="متن اطلاعیه"]').inputValue()
+check(/بازگشایی می‌شود/.test(auto), `متن از قالب ساخته شد: ${auto.slice(0, 40)}…`)
+check(
+  (await page.locator('button:has-text("تأیید و ارسال")').count()) === 0,
+  'پیش از بررسی، دکمه ارسال اصلاً وجود ندارد',
+)
+
+await page.click('button:has-text("بررسی پیش از ارسال")')
+await page.waitForSelector('text=آنچه فرستاده می‌شود')
+const confirm = await page.evaluate(() => document.body.innerText)
+check(/پیامک لازم/.test(confirm), 'تعداد پیامک لازم نشان داده شد')
+check(/سهمیه باقی‌مانده/.test(confirm), 'سهمیه باقی‌مانده نشان داده شد')
+check(
+  /نمی‌رسد/.test(confirm),
+  'خانواده‌های بدون شماره جدا شمرده و نام برده می‌شوند',
+)
+
+await page.click('button:has-text("تأیید و ارسال")')
+await page.waitForSelector('[class*="doneTitle"]')
+check(
+  (await page.locator('[class*="doneTitle"]').innerText()) === 'فرستاده شد',
+  'ارسال انجام شد و گزارشش داده شد',
 )
 
 console.log('▸ بخش ۱۲.۷: کف کیفیت')

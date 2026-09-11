@@ -1,0 +1,206 @@
+/* لحن دفتر کل، مثل داشبورد — بخش ۱۲.۱. هدف لمسی ۴۴. */
+.page {
+  min-block-size: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background: var(--paper);
+  padding-block-end: var(--sticky-bar-height);
+}
+
+.header {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: var(--surface);
+  border-block-end: 1px solid var(--border);
+}
+
+.back {
+  min-inline-size: var(--touch-manager);
+  min-block-size: var(--touch-manager);
+  display: grid;
+  place-items: center;
+  border: none;
+  background: none;
+  color: var(--ink);
+}
+
+.title { font-family: var(--font-display); font-weight: var(--weight-display-fallback); }
+
+.body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+}
+
+.section { display: flex; flex-direction: column; gap: var(--space-2); }
+.sectionLabel { color: var(--ink-muted); }
+
+.choices { display: flex; gap: var(--space-2); flex-wrap: wrap; }
+
+.choice {
+  min-block-size: var(--touch-manager);
+  padding-inline: var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--r-input);
+  background: var(--surface);
+  color: var(--ink);
+  font-family: inherit;
+}
+
+.choice[aria-pressed='true'] {
+  background: var(--turquoise-tint);
+  border-color: var(--turquoise);
+  font-weight: var(--weight-medium);
+}
+
+.input, .time {
+  min-block-size: var(--touch-manager);
+  padding-inline: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--r-input);
+  background: var(--surface);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: var(--text-body-sm);
+}
+
+.time { inline-size: 12ch; font-variant-numeric: tabular-nums; }
+
+.text {
+  padding: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--r-input);
+  background: var(--surface);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: var(--text-body-sm);
+  line-height: var(--text-body-line);
+  resize: vertical;
+}
+
+.input:focus, .text:focus, .time:focus { border-color: var(--turquoise); outline: none; }
+
+.hint { color: var(--ink-muted); margin: 0; }
+
+.channel {
+  min-block-size: var(--touch-manager);
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding-inline: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--r-input);
+  background: var(--surface);
+  color: var(--ink);
+  font-family: inherit;
+  text-align: start;
+}
+
+.box {
+  inline-size: 24px;
+  block-size: 24px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--border);
+  border-radius: var(--r-input);
+  color: var(--surface);
+}
+
+.boxOn { background: var(--turquoise-dark); border-color: transparent; }
+
+/* ── صفحه تأیید ─────────────────────────────────────────────── */
+.preview {
+  padding: var(--space-4);
+  border-radius: var(--r-card);
+  background: var(--turquoise-tint);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.previewLabel { color: var(--ink-muted); }
+.previewTitle { margin: 0; font-weight: var(--weight-bold); color: var(--ink); }
+.previewBody { margin: 0; color: var(--ink); }
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.row {
+  margin: 0;
+  min-block-size: var(--touch-manager);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  color: var(--ink);
+}
+
+.row + .row { border-block-start: 1px solid var(--border); }
+.row b { font-variant-numeric: tabular-nums; }
+.short { color: var(--brick); }
+
+.warn { background: var(--saffron-tint); border-color: transparent; }
+.warnHead {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--ink);
+  font-weight: var(--weight-bold);
+}
+.warnHead svg { color: var(--saffron); flex: none; }
+
+.done { padding: var(--space-6) var(--space-4); text-align: center; display: flex; flex-direction: column; gap: var(--space-2); }
+.doneTitle { margin: 0; font-family: var(--font-display); font-weight: var(--weight-display-fallback); color: var(--sage); }
+
+.error { margin: 0; color: var(--brick); }
+
+/* ── نوار چسبیده. یک کنش اصلی، در پایین قاب — بخش ۱۲.۷. ── */
+.bar {
+  position: fixed;
+  inset-block-end: 0;
+  inset-inline: 0;
+  display: flex;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  background: var(--surface);
+  border-block-start: 1px solid var(--border);
+}
+
+.primary {
+  flex: 2;
+  min-block-size: var(--touch-manager);
+  border: none;
+  border-radius: var(--r-input);
+  background: var(--turquoise-dark);
+  color: var(--surface);
+  font-family: inherit;
+  font-weight: var(--weight-bold);
+}
+
+.primary:disabled { background: var(--disabled-bg); color: var(--disabled-fg); }
+
+.secondary {
+  flex: 1;
+  min-block-size: var(--touch-manager);
+  border: 1px solid var(--border);
+  border-radius: var(--r-input);
+  background: var(--surface);
+  color: var(--ink);
+  font-family: inherit;
+}

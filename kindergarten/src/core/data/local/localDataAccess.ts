@@ -369,7 +369,9 @@ export function createLocalDataAccess(scope: AccessScope): DataAccess {
     async listPickupOptions(childId): Promise<PickupOption[]> {
       const child = CHILDREN.find((c) => c.id === childId)
       if (!child?.classId) return []
-      assertVisible(child.classId)
+      // قید کلاسی جواب نمی‌دهد: سرپرست هیچ کلاسی ندارد ولی باید فهرست
+      // مجاز کودک خودش را ببیند تا بتواند برای فردا انتخاب کند.
+      assertOwnChild(childId)
 
       // بخش ۶.۵: سرپرست محدودشده در فهرست تحویل‌گیرنده دیده نمی‌شود.
       // شِما هم همین را می‌بندد؛ اینجا آینه همان است.

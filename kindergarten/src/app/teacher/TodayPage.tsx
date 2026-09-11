@@ -12,6 +12,7 @@ import {
 } from '../../design-system/index.ts'
 import { formatCount, formatJalali, formatTime, toIsoDate } from '../../i18n/index.ts'
 import { ROLE_LABEL, useAuth, useData } from '../../core/auth/index.ts'
+import type { PickupPlan } from '../../core/data/index.ts'
 import {
   indexAbsences,
   indexAttendance,
@@ -58,6 +59,14 @@ export function TodayPage({
   const [checkOutFor, setCheckOutFor] = useState<string | null>(null)
   /** کودکی که همین الان با یک ضربه واردش کردیم، برای تراشه «تغییر». */
   const [justIn, setJustIn] = useState<{ childId: string; name: string | null } | null>(null)
+  /*
+   * اعلام‌های خانواده برای امروز — بخش ۵.۸ و ۶.۴.
+   *
+   * مربی این را می‌بیند ولی نمی‌سازد: تصمیم اینکه فردا چه کسی می‌آورد
+   * یا می‌برد، تصمیم خانواده است. دیدنش پیش از ساعت خروج مهم است، نه
+   * وقتی فرد دم در ایستاده.
+   */
+  const [plans, setPlans] = useState<PickupPlan[]>([])
   // بخش ۱۳.۱: دکمه شناور ثبت رویداد، در همه تب‌ها.
   const [incidentOpen, setIncidentOpen] = useState(false)
   // فهرست کودکانی که نیامده‌اند، وقتی مربی روی تراشه بزند.
@@ -95,7 +104,12 @@ export function TodayPage({
   const load = useCallback(async () => {
     if (!classId) return
     try {
-      setDay(await data.getClassDay(classId, date))
+      const [classDay, todayPlans] = await Promise.all([
+        data.getClassDay(classId, date),
+        data.listPlans(classId, date),
+      ])
+      setDay(classDay)
+      setPlans(todayPlans)
     } catch (cause) {
       setError(messageOf(cause))
     }
@@ -334,6 +348,31 @@ export function TodayPage({
           <span className={`${styles.outstandingNames} t-body-lg`}>
             {outstandingNames.join(' · ')}
           </span>
+        </div>
+      ) : null}
+
+      {/*
+        بخش ۵.۸: اعلام خانواده برای امروز. بالای شبکه می‌نشیند چون اگر
+        مربی آن را ساعت چهار ببیند دیر است.
+      */}
+      {plans.length > 0 ? (
+        <div className={styles.plans}>
+          <span className={`${styles.plansLabel} t-caption`}>امروز فرق دارد</span>
+          {plans.map((plan) => {
+            const child = day?.children.find((c) => c.id === plan.childId)
+            return (
+              <p key={plan.id} className={`${styles.plan} t-body-lg`}>
+                <b className={styles.planChild}>{child?.firstName ?? '—'}</b>
+                <span>
+                  {plan.direction === 'drop_off' ? 'را می‌آورد: ' : 'را می‌برد: '}
+                  {plan.personName}
+                </span>
+                <span className={`${styles.planHow} t-caption`}>
+                  {plan.code ? 'با کد تحویل' : 'در فهرست مجاز'}
+                </span>
+              </p>
+            )
+          })}
         </div>
       ) : null}
 
