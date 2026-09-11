@@ -528,9 +528,16 @@ console.log('▸ ارسال، و قفل پس از آن')
 await page.click('[class*="bar"] button:has-text("ارسال گزارش‌های امروز")')
 await page.waitForSelector('[class*="sentTitle"]')
 check(true, 'گزارش‌ها فرستاده شدند')
+// این گزاره پیش‌تر می‌خواست دکمه خاموش بماند، یعنی دقیقاً همان رفتاری
+// که کاربر دو بار «خراب» خواندش. آنچه باید بماند این است که ارسال
+// دوباره ممکن نباشد، نه اینکه یک دکمه مرده روی صفحه بنشیند.
 check(
-  await page.locator('[class*="bar"] button').isDisabled(),
-  'دکمه ارسال پس از فرستادن غیرفعال می‌شود',
+  (await page.locator('[class*="bar"] button:has-text("ارسال گزارش‌های امروز")').count()) === 0,
+  'راه ارسال دوباره بسته است',
+)
+check(
+  !(await page.locator('[class*="bar"] button').last().isDisabled()),
+  'ولی نوار پایین دکمه مرده نشان نمی‌دهد',
 )
 check(
   (await page.locator('button:has-text("تکمیل")').count()) === 0,
@@ -870,6 +877,18 @@ await page.waitForSelector('[class*="sentTitle"]')
 check(
   (await page.locator('button:has-text("ثبت اصلاحیه")').count()) === 1,
   'پس از قفل شدن، دکمه اصلاحیه هست — پیش‌تر مربی تا پایان روز گیر می‌کرد',
+)
+
+// دکمه خاموشِ «فرستاده شد» در جای کنش اصلی می‌ماند و دو بار «خراب»
+// خوانده شد. حالا جایش کنش بعدیِ واقعی می‌نشیند.
+const closeBar = page.locator('[class*="bar"] button').last()
+check(
+  !(await closeBar.isDisabled()),
+  `نوار پایین پس از ارسال هم زنده است: ${await closeBar.innerText()}`,
+)
+check(
+  (await page.locator('[class*="bar"] button:has-text("فرستاده شد")').count()) === 0,
+  'و هیچ دکمه مرده‌ای روی صفحه نمانده',
 )
 
 await page.click('button:has-text("ثبت اصلاحیه")')

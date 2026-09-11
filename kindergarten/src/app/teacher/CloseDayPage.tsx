@@ -253,9 +253,20 @@ export function CloseDayPage({ onBack, onFixReports }: Props) {
         ) : null}
       </div>
 
-      <QuickAction onClick={send} disabled={busy || Boolean(sentAt)}>
-        {sentAt ? 'فرستاده شد' : 'ارسال گزارش‌های امروز'}
-      </QuickAction>
+      {/*
+        پس از ارسال، این جا دیگر کنشی برای انجام دادن ندارد. دکمه خاموشِ
+        «فرستاده شد» را نگه داشتن یعنی مربی یک دکمه مرده می‌بیند و فکر
+        می‌کند اپ خراب است — دو بار همین برداشت شد. پس جایش کنش بعدیِ
+        واقعی می‌نشیند: بازگشت. خبرِ «فرستاده شد» بالای صفحه است، جایی
+        که خبر باید باشد، نه روی دکمه.
+      */}
+      {sentAt ? (
+        <QuickAction onClick={onBack}>بازگشت به امروز</QuickAction>
+      ) : (
+        <QuickAction onClick={send} disabled={busy}>
+          ارسال گزارش‌های امروز
+        </QuickAction>
+      )}
     </div>
   )
 }

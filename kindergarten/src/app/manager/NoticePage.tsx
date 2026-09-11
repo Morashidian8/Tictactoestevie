@@ -343,14 +343,22 @@ export function NoticePage({ onBack }: { onBack: () => void }) {
 
       <div className={styles.bar}>
         {step === 'write' ? (
-          <button
-            type="button"
-            className={`${styles.primary} t-body-lg`}
-            disabled={!ready || busy}
-            onClick={() => void review()}
-          >
-            بررسی پیش از ارسال
-          </button>
+          <div className={styles.barStack}>
+            <button
+              type="button"
+              className={`${styles.primary} t-body-lg`}
+              disabled={!ready || busy}
+              onClick={() => void review()}
+            >
+              بررسی پیش از ارسال
+            </button>
+            {/* بخش ۱۲.۱۰: دکمه غیرفعال دلیلش را می‌نویسد. */}
+            {!ready ? (
+              <span className={`${styles.barWhy} t-caption`}>
+                {input.title.length === 0 ? 'عنوان را بنویسید.' : 'متن پیام را بنویسید.'}
+              </span>
+            ) : null}
+          </div>
         ) : null}
         {step === 'confirm' ? (
           <>
