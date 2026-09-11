@@ -402,3 +402,198 @@ begin
   perform assert(missing is null,
                  coalesce('جدول بدون رد پا: ' || missing, 'هر دوازده جدول حساس تریگر رد پا دارند'));
 end $$;
+
+\echo ''
+\echo '── بازه روز، دوره حضور، و شیفت مربی ──'
+do $$
+declare
+  centre uuid := '11111111-1111-1111-1111-111111111111';
+  golha  uuid := 'c1111111-1111-1111-1111-111111111111';
+  sara   uuid := 'd1111111-1111-1111-1111-111111111111';
+  amir   uuid := 'd2222222-2222-2222-2222-222222222222';
+  saturday date;
+  n integer;
+  fields text[];
+begin
+  -- شنبه‌ای در آینده، تا روز هفته قابل پیش‌بینی باشد.
+  saturday := current_date + ((6 - extract(dow from current_date)::int + 7) % 7);
+
+  perform assert((select count(*) from day_period where center_id = centre) = 2,
+                 'دو بازه پیش‌فرض برای مرکز ساخته شد');
+
+  -- مهاجرت: هر کودک یک ثبت‌نام تمام‌روز گرفت.
+  perform assert(
+    (select attendance_type from app.active_enrollment(sara, saturday)) = 'full_day',
+    'مهاجرت به هر کودک ثبت‌نام تمام‌روز داد');
+
+  update child_enrollment set start_date = saturday - 30 where child_id in (sara, amir);
+
+  -- سارا صبحانه‌ای می‌شود، امیر بعدازظهری.
+  update child_enrollment set attendance_type = 'morning'   where child_id = sara;
+  update child_enrollment set attendance_type = 'afternoon' where child_id = amir;
+
+  select count(*) into n from app.enrollment_periods(sara, saturday);
+  perform assert(n = 1, format('کودک صبحانه‌ای فقط یک بازه دارد [n=%s type=%s enr=%s periods=%s]',
+    n,
+    (app.active_enrollment(sara, saturday)).attendance_type,
+    (app.active_enrollment(sara, saturday)).id,
+    (select string_agg(key || ':' || included_in::text, ' ') from day_period)));
+  perform assert(
+    (select key from app.enrollment_periods(sara, saturday)) = 'morning',
+    'و آن بازه صبح است');
+  perform assert(
+    (select key from app.enrollment_periods(amir, saturday)) = 'afternoon',
+    'کودک بعدازظهری بازه بعدازظهر می‌گیرد');
+
+  -- فیلدهای قابل اعمال
+  fields := app.applicable_fields(sara, saturday);
+  perform assert('lunch' = any (fields), 'ناهار برای کودک صبحانه‌ای هم هست');
+  perform assert('mood_morning' = any (fields), 'خلق صبح برای او هست');
+  perform assert(not ('mood_afternoon' = any (fields)),
+                 'ولی خلق عصر برای او اصلاً وجود ندارد');
+  perform assert(not ('nap' = any (fields)), 'و خواب هم نه');
+
+  fields := app.applicable_fields(amir, saturday);
+  perform assert('lunch' = any (fields), 'ناهار برای کودک بعدازظهری هم هست');
+  perform assert(not ('mood_morning' = any (fields)), 'ولی خلق صبح برای او نیست');
+  perform assert('nap' = any (fields), 'و خواب برایش هست');
+
+  -- ساعت آغاز و پایانِ خودِ کودک
+  perform assert(app.child_day_start(amir, saturday) = time '13:00',
+                 'روز کودک بعدازظهری از ۱۳ شروع می‌شود، نه از ساعت کار مهد');
+  perform assert(app.child_day_end(sara, saturday) = time '13:00',
+                 'و روز کودک صبحانه‌ای ساعت ۱۳ تمام می‌شود');
+
+  -- روزهای هفته
+  update child_enrollment set weekdays = array[1, 2, 3]::smallint[] where child_id = sara;
+  perform assert(not app.enrolled_today(sara, saturday),
+                 'کودک سه‌روزه در روزی که ثبت‌نامش نیست، امروزش نیست');
+  update child_enrollment set weekdays = array[0, 1, 2, 3, 4]::smallint[] where child_id = sara;
+  perform assert(app.enrolled_today(sara, saturday), 'و با روزهای کامل، هست');
+
+  -- دو ثبت‌نام هم‌زمان ممکن نیست
+  perform assert_rejects(format($x$
+    insert into child_enrollment (center_id, child_id, class_id, start_date)
+    values (%L, %L, %L, %L)
+  $x$, centre, sara, golha, saturday), 'دو ثبت‌نام هم‌زمان برای یک کودک رد می‌شود');
+end $$;
+
+\echo ''
+\echo '── حضور در جلسه، شیفت، و نسبت مربی به کودک ──'
+do $$
+declare
+  centre uuid := '11111111-1111-1111-1111-111111111111';
+  golha  uuid := 'c1111111-1111-1111-1111-111111111111';
+  zahra  uuid := '51111111-1111-1111-1111-111111111111';
+  sara   uuid := 'd1111111-1111-1111-1111-111111111111';
+  saturday date;
+  morning timestamptz;
+  afternoon timestamptz;
+  n integer;
+begin
+  saturday := current_date + ((6 - extract(dow from current_date)::int + 7) % 7);
+  morning   := (saturday + time '09:00') at time zone 'Asia/Tehran';
+  afternoon := (saturday + time '15:00') at time zone 'Asia/Tehran';
+
+  -- سارا صبحانه‌ای، امیر بعدازظهری (از بلوک قبل مانده‌اند).
+  select count(*) into n from app.children_in_session(golha, morning);
+  perform assert(n >= 1, 'صبح، کودکان صبحانه‌ای در جلسه‌اند');
+  perform assert(
+    exists (select 1 from app.children_in_session(golha, morning) c where c.id = sara),
+    'سارا صبح در شبکه هست');
+  perform assert(
+    not exists (select 1 from app.children_in_session(golha, morning) c
+                where c.id = 'd2222222-2222-2222-2222-222222222222'),
+    'ولی امیرِ بعدازظهری صبح اصلاً در شبکه نیست');
+  perform assert(
+    not exists (select 1 from app.children_in_session(golha, afternoon) c where c.id = sara),
+    'و عصر، سارا دیگر در شبکه نیست');
+
+  -- شیفت مربی با ساعت تعریف می‌شود، نه با بازه.
+  delete from staff_shift where staff_id = zahra;
+  insert into staff_shift (center_id, staff_id, class_id, weekday, start_time, end_time)
+  values (centre, zahra, golha, ((extract(dow from saturday)::int + 1) % 7)::smallint,
+          time '08:00', time '13:00');
+  select count(*) into n from app.shift_periods(zahra, saturday);
+  perform assert(n = 1, 'مربی ۸ تا ۱۳ فقط یک بازه را می‌پوشاند');
+
+  update staff_shift set end_time = time '16:30' where staff_id = zahra;
+  select count(*) into n from app.shift_periods(zahra, saturday);
+  perform assert(n = 2, 'همان مربی با شیفت ۸ تا ۱۶:۳۰ هر دو بازه را می‌پوشاند');
+
+  perform assert(
+    exists (select 1 from app.staff_on_duty(golha, morning) s where s.id = zahra),
+    'مربی در ساعت شیفتش، بر سر کار شمرده می‌شود');
+
+  perform assert(
+    (select breached from app.staff_ratio(golha, morning)) = false,
+    'با دو کودک و یک مربی، نسبت مجاز است');
+  update center set max_children_per_staff = 1 where id = centre;
+  perform assert(
+    (select children from app.staff_ratio(golha, morning)) >= 1,
+    'شمار کودکان در نسبت، از همان کودکان حاضر در بازه می‌آید');
+  update center set max_children_per_staff = 15 where id = centre;
+end $$;
+
+\echo ''
+\echo '── گزارش کامل، وابسته به دوره حضور کودک ──'
+do $$
+declare
+  centre uuid := '11111111-1111-1111-1111-111111111111';
+  sara   uuid := 'd1111111-1111-1111-1111-111111111111';
+  saturday date;
+  rid uuid;
+begin
+  -- یک هفته جلوتر، تا با ردیف‌های بلوک‌های پیشین برخورد نکند.
+  saturday := current_date + ((6 - extract(dow from current_date)::int + 7) % 7) + 7;
+
+  insert into daily_report (center_id, child_id, date, mood_morning, mood_noon)
+  values (centre, sara, saturday, 'good', 'good')
+  returning id into rid;
+
+  insert into meal_log (center_id, daily_report_id, meal_type, amount)
+  values (centre, rid, 'lunch', 'most');
+
+  -- سارا صبحانه‌ای است: خلق عصر و خواب برایش وجود ندارند، پس نبودشان
+  -- گزارش را ناقص نمی‌کند.
+  perform assert((select status from daily_report where id = rid) = 'complete',
+                 'گزارش کودک صبحانه‌ای بدون خلق عصر و خواب، کامل است');
+
+  update child_enrollment set attendance_type = 'full_day' where child_id = sara;
+  perform app.refresh_report_status(rid);
+  perform assert((select status from daily_report where id = rid) = 'draft',
+                 'همان گزارش برای کودک تمام‌روز ناقص می‌شود');
+
+  update daily_report set nap_start = time '13:00', mood_afternoon = 'good' where id = rid;
+  perform assert((select status from daily_report where id = rid) = 'complete',
+                 'و با پر شدن خواب و خلق عصر، کامل می‌شود');
+end $$;
+
+\echo ''
+\echo '── تأخیر از پایان بازه خودِ کودک ──'
+do $$
+declare
+  centre uuid := '11111111-1111-1111-1111-111111111111';
+  sara   uuid := 'd1111111-1111-1111-1111-111111111111';
+  saturday date;
+  late integer;
+begin
+  saturday := current_date + ((6 - extract(dow from current_date)::int + 7) % 7) + 14;
+  update child_enrollment set attendance_type = 'morning' where child_id = sara;
+
+  insert into attendance (center_id, child_id, date, check_in_at)
+  values (centre, sara, saturday, (saturday + time '08:00') at time zone 'Asia/Tehran');
+
+  -- کودک صبحانه‌ای که ساعت ۱۳ می‌رود، سر وقت رفته.
+  update attendance set check_out_at = (saturday + time '13:00') at time zone 'Asia/Tehran',
+                        pickup_method = 'guardian',
+                        picked_up_by_guardian_id = '91111111-1111-1111-1111-111111111111'
+  where child_id = sara and date = saturday;
+  select late_minutes into late from attendance where child_id = sara and date = saturday;
+  perform assert(late = 0, 'کودک صبحانه‌ای ساعت ۱۳ تأخیر ندارد');
+
+  update attendance set check_out_at = (saturday + time '13:20') at time zone 'Asia/Tehran'
+  where child_id = sara and date = saturday;
+  select late_minutes into late from attendance where child_id = sara and date = saturday;
+  perform assert(late = 20, format('و بیست دقیقه بعدش، بیست دقیقه تأخیر دارد (%s)', late));
+end $$;
