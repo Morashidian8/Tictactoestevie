@@ -733,6 +733,106 @@ check(
   'ارسال انجام شد و گزارشش داده شد',
 )
 
+console.log('▸ ماژول M5: مالی، از صدور تا دیدن خانواده')
+await signIn('09120000002')
+await page.waitForSelector('text=با کدام حساب وارد می‌شوید؟')
+await page.locator('button:has-text("مریم رضایی")').nth(1).click()
+await page.waitForSelector('text=وضعیت ثبت', { timeout: 10000 })
+await page.click('button:has-text("مالی")')
+await page.waitForSelector('text=شهریه‌ها')
+check(
+  (await page.locator('text=هنوز صورتحسابی برای این دوره صادر نشده').count()) === 1,
+  'پیش از صدور، حالت خالی گفته می‌شود',
+)
+
+await page.click('button:has-text("صدور گروهی")')
+await page.waitForSelector('text=/صورتحساب صادر شد/')
+check(true, 'صدور گروهی با یک ضربه — بخش ۸')
+
+const issuedText = await page.evaluate(() => document.body.innerText)
+check(/صادر شده/.test(issuedText), 'مجموع صادرشده نشان داده می‌شود')
+
+// ضربه دوم نباید همه را دو برابر کند.
+const beforeTwice = await page.locator('[class*="tileValue"]').first().innerText()
+await page.click('button:has-text("صدور گروهی")')
+await page.waitForTimeout(800)
+check(
+  (await page.locator('[class*="tileValue"]').first().innerText()) === beforeTwice,
+  'ضربه دوم صورتحساب تکراری نمی‌سازد',
+)
+
+await page.locator('[class*="invoice"]').first().click()
+await page.waitForSelector('[role="dialog"]')
+const sheet = await page.locator('[role="dialog"]').innerText()
+check(/باقی‌مانده/.test(sheet), 'شیت پرداخت باقی‌مانده را می‌گوید')
+await page.click('button:has-text("ثبت پرداخت")')
+await page.waitForSelector('text=پرداخت ثبت شد')
+check(true, 'پرداخت دستی ثبت شد')
+const afterPay = await page.evaluate(() => document.body.innerText)
+check(/وصول‌شده/.test(afterPay), 'وصولی به‌روز شد')
+
+console.log('▸ ماژول M1: پرونده کودک')
+await page.click('[aria-label="بازگشت به داشبورد"]')
+await page.waitForSelector('text=وضعیت ثبت')
+await page.click('button:has-text("کودکان")')
+await page.waitForSelector('input[aria-label="جست‌وجوی نام کودک"]')
+await page.locator('[class*="item"]').first().click()
+await page.waitForSelector('text=رضایت‌نامه‌ها')
+const profile = await page.evaluate(() => document.body.innerText)
+check(/آلرژی/.test(profile), 'آلرژی در پرونده هست — بخش ۷.۱')
+const allergyFirst = profile.indexOf('آلرژی') < profile.indexOf('سرپرستان')
+check(allergyFirst, 'و پیش از سرپرستان می‌آید، چون موضوع ایمنی است')
+check(/پرداخت‌کننده/.test(profile), 'سرپرست پرداخت‌کننده علامت دارد — بخش ۶.۵')
+check(/رضایت‌نامه‌ها/.test(profile), 'رضایت‌نامه‌ها فهرست شده‌اند')
+
+console.log('▸ بخش ۶.۴ و ۶.۶: بیشترِ خانواده')
+await page.locator('[aria-label="بازگشت به فهرست کودکان"]').click()
+await page.waitForTimeout(400)
+await page.locator('[aria-label="بازگشت به داشبورد"]').click()
+await page.waitForSelector('text=وضعیت ثبت')
+await signOutAny()
+await signIn('09120000003', { fresh: false })
+await page.waitForSelector('[class*="dateLine"]', { timeout: 8000 })
+await page.click('button:has-text("بیشتر")')
+await page.waitForSelector('text=اعلام غیبت')
+check(true, 'فهرست «بیشتر» باز شد')
+
+await page.click('button:has-text("پیام به مربی")')
+await page.waitForSelector('text=ساعت کاری پیام')
+check(true, 'ساعت کاری پیام به خانواده گفته می‌شود — بخش ۶.۶')
+await page.fill('textarea[aria-label="متن پیام"]', 'سلام، سارا امروز کمی سرما خورده.')
+await page.click('button:has-text("فرستادن")')
+await page.waitForTimeout(700)
+// bubbleBody، نه bubble: سه کلاس با همین پیشوند روی یک حباب هستند.
+check(
+  (await page.locator('[class*="bubbleBody"]').count()) === 1,
+  'پیام در گفت‌وگو نشست',
+)
+check(
+  (await page.locator('[class*="bubbleBody"]').innerText()).includes('سرما خورده'),
+  'و متنش همان است که نوشته شد',
+)
+
+await page.locator('[aria-label="بازگشت"]').click()
+await page.waitForTimeout(400)
+await page.click('button:has-text("اعلام غیبت")')
+await page.waitForSelector('text=/علت، اگر/')
+await page.fill('textarea[aria-label="علت غیبت"]', 'سرماخوردگی')
+await page.locator('button:has-text("اعلام غیبت")').last().click()
+await page.waitForTimeout(700)
+check(
+  (await page.locator('text=/غیبت .* اعلام شد/').count()) === 1,
+  'اعلام غیبت برای فردا کار می‌کند',
+)
+
+await page.locator('[aria-label="بازگشت"]').click()
+await page.waitForTimeout(400)
+await page.click('button:has-text("مالی")')
+await page.waitForSelector('text=مانده')
+const parentMoney = await page.evaluate(() => document.body.innerText)
+check(/تسویه/.test(parentMoney), 'خانواده همان صورتحسابی را می‌بیند که مدیر صادر کرد')
+check(/پرداخت‌های ثبت‌شده/.test(parentMoney), 'و پرداختی را که مدیر ثبت کرد')
+
 console.log('▸ بخش ۱۲.۷: کف کیفیت')
 await signIn('09120000001')
 await page.waitForSelector('text=ثبت گروهی امروز')

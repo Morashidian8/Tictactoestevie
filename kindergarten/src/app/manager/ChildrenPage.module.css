@@ -1,0 +1,103 @@
+.page { min-block-size: 100dvh; display: flex; flex-direction: column; background: var(--paper); }
+
+.header {
+  position: sticky; inset-block-start: 0; z-index: 2;
+  display: flex; align-items: center; gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: var(--surface); border-block-end: 1px solid var(--border);
+}
+
+.back {
+  min-inline-size: var(--touch-manager); min-block-size: var(--touch-manager);
+  display: grid; place-items: center; border: none; background: none; color: var(--ink);
+}
+
+.title { font-family: var(--font-display); font-weight: var(--weight-display-fallback); }
+.count { color: var(--ink-muted); margin-inline-start: auto; }
+
+.body {
+  flex: 1; display: flex; flex-direction: column; gap: var(--space-3);
+  padding: var(--space-3) var(--space-4) var(--space-7);
+}
+
+.search {
+  min-block-size: var(--touch-manager); padding-inline: var(--space-3);
+  border: 1px solid var(--border); border-radius: var(--r-input);
+  background: var(--surface); color: var(--ink);
+  font-family: inherit; font-size: var(--text-body-sm);
+}
+.search:focus { border-color: var(--turquoise); outline: none; }
+
+.list {
+  list-style: none; margin: 0; padding: 0;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r-card); overflow: hidden;
+}
+
+.item {
+  inline-size: 100%; min-block-size: var(--touch-teacher);
+  display: flex; align-items: center; gap: var(--space-3);
+  padding-inline: var(--space-4);
+  border: none; background: var(--surface); color: var(--ink);
+  font-family: inherit; font-size: var(--text-body-sm); text-align: start;
+}
+
+.list li + li .item { border-block-start: 1px solid var(--border); }
+.item:active { background: var(--turquoise-tint); }
+.item svg { color: var(--ink-muted); flex: none; }
+
+.avatar {
+  inline-size: var(--avatar-sm); block-size: var(--avatar-sm);
+  border-radius: var(--r-chip); overflow: hidden; flex: none;
+}
+
+.itemName { flex: 1; min-inline-size: 0; }
+
+/*
+ * آلرژی آجری است چون بخش ۷.۱ آن را موضوع ایمنی نامیده، و آجر در بخش
+ * ۱۲.۲ رنگ ایمنی است. تنها جای پرونده که رنگ هشدار می‌گیرد.
+ */
+.allergy {
+  padding: var(--space-4); border-radius: var(--r-card);
+  background: var(--brick-tint);
+  display: flex; flex-direction: column; gap: var(--space-1);
+}
+
+.allergyHead {
+  margin: 0; display: flex; align-items: center; gap: var(--space-2);
+  color: var(--ink); font-weight: var(--weight-bold);
+}
+.allergyHead svg { color: var(--brick); flex: none; }
+.allergyList { margin: 0; color: var(--ink); font-weight: var(--weight-medium); }
+
+.card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r-card); padding: var(--space-4);
+  display: flex; flex-direction: column; gap: var(--space-2);
+}
+
+.cardLabel { color: var(--ink-muted); }
+.muted { color: var(--ink-muted); margin: 0; }
+
+.row {
+  margin: 0; min-block-size: var(--touch-manager);
+  display: flex; align-items: center; gap: var(--space-3);
+  flex-wrap: wrap; color: var(--ink);
+}
+.row + .row { border-block-start: 1px solid var(--border); }
+
+.tag {
+  padding: var(--space-1) var(--space-2); border-radius: var(--r-chip);
+  background: var(--turquoise-tint); color: var(--ink);
+}
+
+.phone {
+  margin-inline-start: auto; color: var(--turquoise-dark);
+  font-variant-numeric: tabular-nums; text-decoration: none;
+  font-weight: var(--weight-medium);
+}
+
+.noPhone { margin-inline-start: auto; color: var(--brick); }
+.granted { margin-inline-start: auto; color: var(--sage); }
+.notGranted { margin-inline-start: auto; color: var(--ink-muted); }
+.error { margin: 0; color: var(--brick); }

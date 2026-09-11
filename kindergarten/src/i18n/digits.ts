@@ -44,3 +44,14 @@ export function formatCount(value: number): string {
 export function formatToman(value: number): string {
   return `${amountFormatter.format(value)} تومان`
 }
+
+/**
+ * مبلغ ذخیره‌شده به ریال، نمایش‌داده‌شده به تومان.
+ *
+ * ستون‌های مالی دیتابیس به ریال‌اند (bigint) و مردم به تومان حرف
+ * می‌زنند. تقسیم بر ده فقط اینجا انجام می‌شود تا هیچ صفحه‌ای خودش این
+ * کار را نکند و هیچ‌جا ده برابر نشود.
+ */
+export function formatRial(value: number): string {
+  return formatToman(Math.round(value / 10))
+}

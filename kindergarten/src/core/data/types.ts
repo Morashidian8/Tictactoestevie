@@ -272,6 +272,135 @@ export type MedicationInput = {
   handedByGuardianId?: string | null
 }
 
+/* ── مالی — بخش ۸ و ماژول M5 ────────────────────────────────── */
+
+export type FeePeriod = 'monthly' | 'termly' | 'yearly'
+export type InvoiceStatus = 'issued' | 'partially_paid' | 'paid' | 'overdue' | 'cancelled'
+
+export type FeePlan = {
+  id: string
+  title: string
+  /** به ریال. نمایش به تومان کار لایه i18n است، نه لایه داده. */
+  amount: number
+  period: FeePeriod
+  active: boolean
+  childCount: number
+}
+
+export type Invoice = {
+  id: string
+  childId: string
+  childName: string
+  /** دوره به شکل «۱۴۰۵-۰۶». */
+  period: string
+  amount: number
+  discount: number
+  lateFee: number
+  paid: number
+  dueDate: string
+  status: InvoiceStatus
+}
+
+export type Payment = {
+  id: string
+  invoiceId: string
+  amount: number
+  paidAt: string
+  method: string | null
+  receiptNo: string | null
+}
+
+/**
+ * نمای مالی مدیر — بخش ۸.
+ *
+ * آنچه عمداً اینجا نیست: درآمد در برابر هزینه، و هر تحلیل مالی دیگری.
+ * فاز ۳ سند است.
+ */
+export type FinanceOverview = {
+  period: string
+  issued: number
+  collected: number
+  outstanding: number
+  overdue: Invoice[]
+  unpaid: Invoice[]
+  plans: FeePlan[]
+}
+
+export type PaymentInput = {
+  invoiceId: string
+  amount: number
+  method?: string | null
+  receiptNo?: string | null
+}
+
+/** نمای مالی خانواده. فقط سرپرست پرداخت‌کننده — بخش ۶.۵. */
+export type ParentFinance = {
+  /** اگر این حساب پرداخت‌کننده نیست، false و بقیه خالی است. */
+  isPayer: boolean
+  invoices: Invoice[]
+  payments: Payment[]
+  outstanding: number
+}
+
+/* ── پرونده کودک — ماژول M1 ─────────────────────────────────── */
+
+export type ConsentType =
+  | 'photo_capture'
+  | 'photo_group_publish'
+  | 'field_trip'
+  | 'medication'
+  | 'emergency_care'
+
+export type MedicalProfile = {
+  childId: string
+  bloodType: string | null
+  /** بخش ۷.۱: آلرژی غذایی باید همیشه در دید مربی باشد. */
+  allergies: string[]
+  chronicConditions: string | null
+  dailyMedication: string | null
+  doctorName: string | null
+  doctorPhone: string | null
+}
+
+export type ChildProfile = {
+  child: Child
+  className: string | null
+  guardians: (Guardian & { phone: string | null; isPayer: boolean })[]
+  authorized: PickupOption[]
+  medical: MedicalProfile
+  consents: { type: ConsentType; granted: boolean }[]
+}
+
+/* ── اعلام غیبت — بخش ۶.۴ ───────────────────────────────────── */
+
+export type AbsenceInput = {
+  childId: string
+  date: string
+  reason: string | null
+}
+
+/* ── پیام با ساعت کاری — بخش ۶.۶ ────────────────────────────── */
+
+export type Message = {
+  id: string
+  childId: string
+  body: string
+  /** فرستنده از دید بیننده: خودش یا طرف مقابل. */
+  mine: boolean
+  senderName: string
+  sentAt: string | null
+  /** بیرون از ساعت کاری، پیام تا این زمان در صف می‌ماند — بخش ۶.۶. */
+  queuedUntil: string | null
+}
+
+export type MessageThread = {
+  childId: string
+  childName: string
+  messages: Message[]
+  /** ساعت کاری پیام مهد، برای نوشتن روی صفحه. */
+  hours: { start: string; end: string }
+}
+
 /* ── برنامه فردا — بخش ۵.۸ و ۶.۴ ───────────────────────────── */
 
 /** «چه کسی می‌آورد» و «چه کسی می‌برد» دو تصمیم جدایند. */
@@ -476,6 +605,43 @@ export interface DataAccess {
   publishNotice(input: NoticeInput): Promise<Notice>
 
   listNotices(limit: number): Promise<Notice[]>
+
+  /* ── مالی — ماژول M5 ──────────────────────────────────────── */
+
+  /** نمای مالی مدیر برای یک دوره. */
+  getFinance(period: string): Promise<FinanceOverview>
+
+  /**
+   * صدور گروهی صورتحساب یک دوره — بخش ۸.
+   * روی کودکی که قبلاً صورتحساب همان دوره را دارد دوباره نمی‌نشیند.
+   */
+  issueInvoices(period: string, dueDate: string): Promise<number>
+
+  /** ثبت پرداخت دستی و رسید. درگاه آنلاین فاز ۳ است. */
+  recordPayment(input: PaymentInput): Promise<Payment>
+
+  /** یادآوری پیامکی معوقات. تعداد پیامک فرستاده‌شده را برمی‌گرداند. */
+  remindOverdue(period: string): Promise<number>
+
+  /** نمای مالی خانواده. فقط سرپرست پرداخت‌کننده — بخش ۶.۵. */
+  getParentFinance(childId: string): Promise<ParentFinance>
+
+  /* ── پرونده کودک — ماژول M1 ───────────────────────────────── */
+
+  getChildProfile(childId: string): Promise<ChildProfile>
+
+  /* ── اعلام غیبت — بخش ۶.۴ ─────────────────────────────────── */
+
+  declareAbsence(input: AbsenceInput): Promise<void>
+
+  /** اطلاعیه‌هایی که به این حساب مربوط‌اند. */
+  listMyNotices(): Promise<Notice[]>
+
+  /* ── پیام با ساعت کاری — بخش ۶.۶ ──────────────────────────── */
+
+  getThread(childId: string): Promise<MessageThread>
+
+  sendMessage(childId: string, body: string): Promise<Message>
 
   /**
    * ارسال گزارش‌های روز — بخش ۵.۹.

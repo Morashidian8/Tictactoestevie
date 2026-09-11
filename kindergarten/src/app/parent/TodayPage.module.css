@@ -199,3 +199,22 @@
   composes: pending;
   color: var(--brick);
 }
+
+/* ورودی «بیشتر» — بخش ۶.۴. */
+.more {
+  margin: 0 var(--space-4) var(--space-6);
+  min-block-size: var(--touch-parent);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding-inline: var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  background: var(--surface);
+  color: var(--ink);
+  font-family: inherit;
+  text-align: start;
+}
+
+.moreHint { color: var(--ink-muted); font-size: var(--text-caption); }

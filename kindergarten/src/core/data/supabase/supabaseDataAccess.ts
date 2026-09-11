@@ -33,6 +33,17 @@ import type {
   PlanDirection,
   ManagerDashboard,
   IncidentDecision,
+  AbsenceInput,
+  ChildProfile,
+  ConsentType,
+  FinanceOverview,
+  Invoice,
+  InvoiceStatus,
+  Message,
+  MessageThread,
+  ParentFinance,
+  Payment,
+  PaymentInput,
   Photo,
   PickupCodeCheck,
   PickupOption,
@@ -154,6 +165,57 @@ const asNotice = (r: Row, kind: Notice['kind']): Notice => ({
   smsSentCount: (r.sms_sent_count as number | null) ?? 0,
   seenInAppCount: (r.delivered_count as number | null) ?? 0,
 })
+
+
+/**
+ * وضعیت صورتحساب از پرداخت‌ها و سررسید محاسبه می‌شود، نه فقط از ستون
+ * status: یک منبع حقیقت یعنی «پرداخت‌شده ولی هنوز issued» ممکن نیست.
+ */
+const asInvoice = (r: Row): Invoice => {
+  const child = r.child as Row | null
+  const paid = ((r.payment as Row[] | null) ?? []).reduce(
+    (sum, p) => sum + ((p.amount as number) ?? 0),
+    0,
+  )
+  const amount = (r.amount as number) ?? 0
+  const discount = (r.discount as number) ?? 0
+  const lateFee = (r.late_fee as number) ?? 0
+  const due = amount - discount + lateFee
+  const today = new Date().toISOString().slice(0, 10)
+  const status: InvoiceStatus =
+    r.status === 'cancelled'
+      ? 'cancelled'
+      : paid >= due
+        ? 'paid'
+        : paid > 0
+          ? 'partially_paid'
+          : today > (r.due_date as string)
+            ? 'overdue'
+            : 'issued'
+  return {
+    id: r.id as string,
+    childId: r.child_id as string,
+    childName: `${child?.first_name ?? ''} ${child?.last_name ?? ''}`.trim() || '—',
+    period: r.period as string,
+    amount,
+    discount,
+    lateFee,
+    paid,
+    dueDate: r.due_date as string,
+    status,
+  }
+}
+
+/** آغاز ساعت کاری روز بعد، به شکل ISO. */
+function nextMorningIso(from: Date, start: string): string {
+  const [h, m] = start.split(':').map(Number)
+  const next = new Date(from)
+  if (from.getHours() * 60 + from.getMinutes() >= (h ?? 8) * 60 + (m ?? 0)) {
+    next.setDate(next.getDate() + 1)
+  }
+  next.setHours(h ?? 8, m ?? 0, 0, 0)
+  return next.toISOString()
+}
 
 export function createSupabaseDataAccess(scope: AccessScope): DataAccess {
   const db = supabase()
@@ -1019,6 +1081,379 @@ export function createSupabaseDataAccess(scope: AccessScope): DataAccess {
           .limit(limit),
       ) as Row[]
       return rows.map((r) => asNotice(r, 'announcement'))
+    },
+
+
+    /* ── مالی — ماژول M5 ────────────────────────────────────── */
+
+    async getFinance(period): Promise<FinanceOverview> {
+      const [invoiceRows, planRows, feeRows] = await Promise.all([
+        db
+          .from('invoice')
+          .select('*, child:child_id(first_name, last_name), payment(amount)')
+          .eq('center_id', scope.centerId)
+          .eq('period', period),
+        from('fee_plan').eq('active', true),
+        from('child_fee'),
+      ])
+
+      const invoices = (orThrow(invoiceRows) as Row[]).map(asInvoice)
+      const issued = invoices.reduce((sum, i) => sum + i.amount - i.discount + i.lateFee, 0)
+      const collected = invoices.reduce((sum, i) => sum + i.paid, 0)
+      const fees = orThrow(feeRows) as Row[]
+
+      return {
+        period,
+        issued,
+        collected,
+        outstanding: issued - collected,
+        overdue: invoices.filter((i) => i.status === 'overdue'),
+        unpaid: invoices.filter((i) => i.status !== 'paid' && i.status !== 'cancelled'),
+        plans: (orThrow(planRows) as Row[]).map((r) => ({
+          id: r.id as string,
+          title: r.title as string,
+          amount: r.amount as number,
+          period: r.period as FinanceOverview['plans'][number]['period'],
+          active: Boolean(r.active),
+          childCount: fees.filter((f) => f.fee_plan_id === r.id).length,
+        })),
+      }
+    },
+
+    async issueInvoices(period, dueDate) {
+      const [children, fees, plans, existing] = await Promise.all([
+        from('child').is('left_at', null),
+        from('child_fee'),
+        from('fee_plan'),
+        from('invoice').eq('period', period),
+      ])
+      const feeRows = orThrow(fees) as Row[]
+      const planRows = orThrow(plans) as Row[]
+      const have = new Set((orThrow(existing) as Row[]).map((r) => r.child_id as string))
+
+      // بخش ۸: «صدور گروهی با یک اقدام». کودکی که صورتحساب همان دوره را
+      // دارد دوباره نمی‌گیرد، وگرنه ضربه دوم همه را دو برابر می‌کرد.
+      const rows = (orThrow(children) as Row[])
+        .filter((child) => !have.has(child.id as string))
+        .flatMap((child) => {
+          const fee = feeRows.find((f) => f.child_id === child.id)
+          const plan = planRows.find((p) => p.id === fee?.fee_plan_id)
+          if (!plan) return []
+          const amount = plan.amount as number
+          const percent = Number(fee?.discount_percent ?? 0)
+          return [{
+            center_id: scope.centerId,
+            child_id: child.id,
+            period,
+            amount,
+            discount: Math.round((amount * percent) / 100),
+            due_date: dueDate,
+          }]
+        })
+
+      if (rows.length === 0) return 0
+      orThrow(await db.from('invoice').insert(rows).select('id'))
+      return rows.length
+    },
+
+    async recordPayment(input: PaymentInput): Promise<Payment> {
+      if (input.amount <= 0) throw new Error('مبلغ باید بیشتر از صفر باشد.')
+      const invoice = orThrow(
+        await db
+          .from('invoice')
+          .select('*, payment(amount)')
+          .eq('center_id', scope.centerId)
+          .eq('id', input.invoiceId)
+          .single(),
+      ) as Row
+      const view = asInvoice(invoice)
+      const remaining = view.amount - view.discount + view.lateFee - view.paid
+      if (input.amount > remaining) throw new Error('مبلغ از باقی‌مانده صورتحساب بیشتر است.')
+
+      const row = orThrow(
+        await db
+          .from('payment')
+          .insert({
+            center_id: scope.centerId,
+            invoice_id: input.invoiceId,
+            amount: input.amount,
+            method: input.method ?? null,
+            receipt_no: input.receiptNo ?? null,
+            recorded_by: scope.accountId,
+          })
+          .select()
+          .single(),
+      ) as Row
+
+      // وضعیت صورتحساب از مجموع پرداخت‌ها می‌آید، نه از دست کاربر.
+      const paid = view.paid + input.amount
+      orThrow(
+        await db
+          .from('invoice')
+          .update({ status: paid >= view.amount - view.discount + view.lateFee ? 'paid' : 'partially_paid' })
+          .eq('center_id', scope.centerId)
+          .eq('id', input.invoiceId)
+          .select('id'),
+      )
+
+      return {
+        id: row.id as string,
+        invoiceId: row.invoice_id as string,
+        amount: row.amount as number,
+        paidAt: row.paid_at as string,
+        method: (row.method as string | null) ?? null,
+        receiptNo: (row.receipt_no as string | null) ?? null,
+      }
+    },
+
+    async remindOverdue(period) {
+      const overview = await this.getFinance(period)
+      const phones = orThrow(
+        await db
+          .from('child_guardian')
+          .select('child_id, is_payer, guardian:guardian_id(phone)')
+          .eq('center_id', scope.centerId)
+          .eq('is_payer', true),
+      ) as Row[]
+      const reachable = overview.overdue.filter((i) =>
+        phones.some((p) => p.child_id === i.childId && (p.guardian as Row).phone),
+      )
+      const remaining = await smsRemaining()
+      if (reachable.length > remaining) throw new Error('سهمیه پیامک برای یادآوری کافی نیست.')
+
+      const periodKey = new Date().toISOString().slice(0, 7)
+      const quota = orThrow(await from('sms_quota').eq('period', periodKey)) as Row[]
+      orThrow(
+        await db
+          .from('sms_quota')
+          .upsert(
+            {
+              center_id: scope.centerId,
+              period: periodKey,
+              allocated: (quota[0]?.allocated as number) ?? 0,
+              used: ((quota[0]?.used as number) ?? 0) + reachable.length,
+            },
+            { onConflict: 'center_id,period' },
+          )
+          .select('period'),
+      )
+      return reachable.length
+    },
+
+    async getParentFinance(childId): Promise<ParentFinance> {
+      // بخش ۶.۵: فقط سرپرست پرداخت‌کننده. سیاست سطر-محور هم همین را
+      // می‌بندد؛ اینجا پیش از آن پرسیده می‌شود تا پیام روشن باشد.
+      const link = orThrow(
+        await db
+          .from('child_guardian')
+          .select('is_payer')
+          .eq('center_id', scope.centerId)
+          .eq('child_id', childId),
+      ) as Row[]
+      const isPayer = scope.role === 'manager' || link.some((r) => r.is_payer)
+      if (!isPayer) return { isPayer: false, invoices: [], payments: [], outstanding: 0 }
+
+      const rows = orThrow(
+        await db
+          .from('invoice')
+          .select('*, child:child_id(first_name, last_name), payment(amount, paid_at, method, receipt_no, id, invoice_id)')
+          .eq('center_id', scope.centerId)
+          .eq('child_id', childId)
+          .order('period', { ascending: false }),
+      ) as Row[]
+
+      const invoices = rows.map(asInvoice)
+      const payments = rows.flatMap((r) =>
+        ((r.payment as Row[] | null) ?? []).map((p): Payment => ({
+          id: p.id as string,
+          invoiceId: r.id as string,
+          amount: p.amount as number,
+          paidAt: p.paid_at as string,
+          method: (p.method as string | null) ?? null,
+          receiptNo: (p.receipt_no as string | null) ?? null,
+        })),
+      )
+      return {
+        isPayer: true,
+        invoices,
+        payments,
+        outstanding: invoices
+          .filter((i) => i.status !== 'paid' && i.status !== 'cancelled')
+          .reduce((sum, i) => sum + (i.amount - i.discount + i.lateFee - i.paid), 0),
+      }
+    },
+
+    /* ── پرونده کودک — ماژول M1 ─────────────────────────────── */
+
+    async getChildProfile(childId): Promise<ChildProfile> {
+      const [childRow, links, medicalRows, consentRows, options] = await Promise.all([
+        db.from('child').select('*, class:class_id(name)').eq('center_id', scope.centerId).eq('id', childId).single(),
+        db
+          .from('child_guardian')
+          .select('relation, can_pickup, is_payer, guardian:guardian_id(id, full_name, phone)')
+          .eq('center_id', scope.centerId)
+          .eq('child_id', childId),
+        from('medical_profile').eq('child_id', childId),
+        from('consent').eq('child_id', childId),
+        this.listPickupOptions(childId),
+      ])
+
+      const child = orThrow(childRow) as Row
+      const medical = (orThrow(medicalRows) as Row[])[0]
+      const granted = new Set(
+        (orThrow(consentRows) as Row[]).filter((r) => r.granted_at).map((r) => r.type as string),
+      )
+
+      return {
+        child: asChild(child),
+        className: ((child.class as Row | null)?.name as string | null) ?? null,
+        guardians: (orThrow(links) as Row[]).map((r) => {
+          const g = r.guardian as Row
+          return {
+            id: g.id as string,
+            fullName: g.full_name as string,
+            relation: (r.relation as string | null) ?? null,
+            canPickup: Boolean(r.can_pickup),
+            phone: (g.phone as string | null) ?? null,
+            isPayer: Boolean(r.is_payer),
+          }
+        }),
+        authorized: options.filter((o) => o.kind === 'authorized'),
+        medical: {
+          childId,
+          bloodType: (medical?.blood_type as string | null) ?? null,
+          allergies: ((medical?.allergies_json as string[] | null) ?? []),
+          chronicConditions: (medical?.chronic_conditions as string | null) ?? null,
+          dailyMedication: (medical?.daily_medication as string | null) ?? null,
+          doctorName: (medical?.doctor_name as string | null) ?? null,
+          doctorPhone: (medical?.doctor_phone as string | null) ?? null,
+        },
+        consents: (
+          ['photo_capture', 'photo_group_publish', 'field_trip', 'medication', 'emergency_care'] as ConsentType[]
+        ).map((type) => ({ type, granted: granted.has(type) })),
+      }
+    },
+
+    /* ── اعلام غیبت — بخش ۶.۴ ───────────────────────────────── */
+
+    async declareAbsence(input: AbsenceInput) {
+      orThrow(
+        await db
+          .from('absence_notice')
+          .upsert(
+            {
+              center_id: scope.centerId,
+              child_id: input.childId,
+              date: input.date,
+              reason: input.reason,
+              declared_by: scope.accountId,
+            },
+            { onConflict: 'child_id,date' },
+          )
+          .select('id'),
+      )
+    },
+
+    async listMyNotices() {
+      // سیاست سطر-محور خودش اطلاعیه کلاس دیگر را پنهان می‌کند.
+      const rows = orThrow(
+        await from('announcement')
+          .not('published_at', 'is', null)
+          .order('published_at', { ascending: false })
+          .limit(20),
+      ) as Row[]
+      return rows.map((r) => asNotice(r, 'announcement'))
+    },
+
+    /* ── پیام با ساعت کاری — بخش ۶.۶ ────────────────────────── */
+
+    async getThread(childId): Promise<MessageThread> {
+      const [threadRows, centerRows, childRows] = await Promise.all([
+        from('message_thread').eq('child_id', childId),
+        from('center').eq('id', scope.centerId),
+        from('child').eq('id', childId),
+      ])
+      const center = (orThrow(centerRows) as Row[])[0]
+      const child = (orThrow(childRows) as Row[])[0]
+      const thread = (orThrow(threadRows) as Row[])[0]
+      const hours = {
+        start: ((center?.parent_message_start as string | undefined) ?? '08:00').slice(0, 5),
+        end: ((center?.parent_message_end as string | undefined) ?? '16:30').slice(0, 5),
+      }
+      if (!thread) {
+        return {
+          childId,
+          childName: `${child?.first_name ?? ''} ${child?.last_name ?? ''}`.trim(),
+          messages: [],
+          hours,
+        }
+      }
+      const rows = orThrow(
+        await from('message').eq('thread_id', thread.id as string).order('created_at'),
+      ) as Row[]
+      return {
+        childId,
+        childName: `${child?.first_name ?? ''} ${child?.last_name ?? ''}`.trim(),
+        messages: rows.map((r): Message => ({
+          id: r.id as string,
+          childId,
+          body: r.body as string,
+          mine: r.sender_id === scope.accountId,
+          senderName: r.sender_id === scope.accountId ? 'خودم' : 'طرف مقابل',
+          sentAt: (r.sent_at as string | null) ?? null,
+          queuedUntil: (r.queued_until as string | null) ?? null,
+        })),
+        hours,
+      }
+    },
+
+    async sendMessage(childId, body): Promise<Message> {
+      const text = body.trim()
+      if (!text) throw new Error('پیام خالی است.')
+
+      const existing = orThrow(await from('message_thread').eq('child_id', childId)) as Row[]
+      const threadId =
+        (existing[0]?.id as string | undefined) ??
+        ((orThrow(
+          await db
+            .from('message_thread')
+            .insert({ center_id: scope.centerId, child_id: childId })
+            .select()
+            .single(),
+        ) as Row).id as string)
+
+      const thread = await this.getThread(childId)
+      const now = new Date()
+      const clock = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
+      // بخش ۶.۶: بیرون از ساعت کاری پیام می‌رود ولی تحویلش تا صبح
+      // عقب می‌افتد. حذف نمی‌شود و خطا هم نمی‌دهد.
+      const inHours = clock >= thread.hours.start && clock <= thread.hours.end
+      const queuedUntil = inHours ? null : nextMorningIso(now, thread.hours.start)
+
+      const row = orThrow(
+        await db
+          .from('message')
+          .insert({
+            center_id: scope.centerId,
+            thread_id: threadId,
+            sender_id: scope.accountId,
+            body: text,
+            sent_at: inHours ? now.toISOString() : null,
+            queued_until: queuedUntil,
+          })
+          .select()
+          .single(),
+      ) as Row
+
+      return {
+        id: row.id as string,
+        childId,
+        body: text,
+        mine: true,
+        senderName: 'خودم',
+        sentAt: (row.sent_at as string | null) ?? null,
+        queuedUntil,
+      }
     },
 
     /** بخش ۵.۹: ارسال، و قفل شدن. پس از این فقط اصلاحیه. */

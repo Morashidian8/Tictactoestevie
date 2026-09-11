@@ -9,6 +9,10 @@ import type {
   AccessScope,
   ReadAuditSink,
   Notice,
+  Invoice,
+  InvoiceStatus,
+  Message,
+  Payment,
   PickupPlan,
   Attendance,
   CheckInInput,
@@ -39,12 +43,18 @@ import {
   GUARDIANS,
   PICKUP_CODES,
   seedPickupCodes,
+  CHILD_FEES,
+  CONSENTS,
+  FEE_PLANS,
   GUARDIAN_PHONES,
+  MEDICAL,
+  PAYER,
   seedAbsences,
   seedAttendance,
   seedMedications,
 } from './fixture.ts'
 import { UNACCOUNTED_AFTER_HOUR } from '../attendanceState.ts'
+import { toIsoDate } from '../../../i18n/index.ts'
 
 type DayState = {
   attendance: Map<string, Attendance>
@@ -100,6 +110,12 @@ function save(): void {
       ),
       needs: [...NEEDS.entries()],
       codes: PICKUP_CODES,
+      plans: PLANS,
+      notices: NOTICES,
+      invoices: INVOICES,
+      payments: PAYMENTS,
+      messages: MESSAGES,
+      smsUsed,
     }
     localStorage.setItem(STORE_KEY, JSON.stringify(payload))
   } catch {
@@ -117,6 +133,12 @@ function hydrate(): void {
       days: Record<string, StoredDay>
       needs: [string, { id: string; text: string; done: boolean }[]][]
       codes: typeof PICKUP_CODES
+      plans?: PickupPlan[]
+      notices?: Notice[]
+      invoices?: InvoiceRow[]
+      payments?: Payment[]
+      messages?: Message[]
+      smsUsed?: number
     }
     for (const [date, stored] of Object.entries(payload.days ?? {})) {
       days.set(date, {
@@ -133,6 +155,18 @@ function hydrate(): void {
     if (payload.codes?.length) {
       PICKUP_CODES.splice(0, PICKUP_CODES.length, ...payload.codes)
     }
+    // بدون این‌ها، کار مدیر و خانواده با هر بارگذاری دوباره از بین
+    // می‌رفت و جریان «مدیر صورتحساب صادر کرد، خانواده دید» اصلاً
+    // قابل دیدن نبود.
+    const restore = <T>(target: T[], source: T[] | undefined) => {
+      if (source?.length) target.splice(0, target.length, ...source)
+    }
+    restore(PLANS, payload.plans)
+    restore(NOTICES, payload.notices)
+    restore(INVOICES, payload.invoices)
+    restore(PAYMENTS, payload.payments)
+    restore(MESSAGES, payload.messages)
+    if (typeof payload.smsUsed === 'number') smsUsed = payload.smsUsed
   } catch {
     // داده ذخیره‌شده خراب بود. از نمونه تازه شروع می‌کنیم.
   }
@@ -197,6 +231,78 @@ function makeCode(): string {
   throw new Error('ساخت کد ممکن نشد.')
 }
 
+
+
+/** ساعت کاری پیام مهد — بخش ۶.۶. در داده واقعی از ستون center می‌آید. */
+const MESSAGE_HOURS = { start: '08:00', end: '16:30' }
+
+/** آغاز ساعت کاری روز بعد. پیام صف‌شده همان موقع تحویل می‌شود. */
+function nextMorning(from: Date): Date {
+  const next = new Date(from)
+  const [h, m] = MESSAGE_HOURS.start.split(':').map(Number)
+  if (from.getHours() * 60 + from.getMinutes() >= (h ?? 8) * 60 + (m ?? 0)) {
+    next.setDate(next.getDate() + 1)
+  }
+  next.setHours(h ?? 8, m ?? 0, 0, 0)
+  return next
+}
+
+/* ── حالت مالی و پیام ─────────────────────────────────────────── */
+
+type InvoiceRow = {
+  id: string
+  childId: string
+  period: string
+  amount: number
+  discount: number
+  lateFee: number
+  dueDate: string
+  cancelled: boolean
+}
+
+const INVOICES: InvoiceRow[] = []
+const PAYMENTS: Payment[] = []
+const MESSAGES: Message[] = []
+const ABSENCES_DECLARED: { childId: string; date: string; reason: string | null }[] = []
+
+const childName = (childId: string): string => {
+  const child = CHILDREN.find((c) => c.id === childId)
+  return child ? `${child.firstName} ${child.lastName}` : '—'
+}
+
+const paidFor = (invoiceId: string): number =>
+  PAYMENTS.filter((p) => p.invoiceId === invoiceId).reduce((sum, p) => sum + p.amount, 0)
+
+/**
+ * وضعیت صورتحساب از روی پرداخت‌ها و سررسید محاسبه می‌شود، نه از ستون
+ * جدا. یک منبع حقیقت یعنی «پرداخت‌شده ولی هنوز issued» ممکن نیست.
+ */
+function invoiceOf(row: InvoiceRow): Invoice {
+  const due = row.amount - row.discount + row.lateFee
+  const paid = paidFor(row.id)
+  const status: InvoiceStatus = row.cancelled
+    ? 'cancelled'
+    : paid >= due
+      ? 'paid'
+      : paid > 0
+        ? 'partially_paid'
+        : toIsoDate(new Date()) > row.dueDate
+          ? 'overdue'
+          : 'issued'
+  return {
+    id: row.id,
+    childId: row.childId,
+    childName: childName(row.childId),
+    period: row.period,
+    amount: row.amount,
+    discount: row.discount,
+    lateFee: row.lateFee,
+    paid,
+    dueDate: row.dueDate,
+    status,
+  }
+}
+
 export function createLocalDataAccess(scope: AccessScope): DataAccess {
   if (scope.centerId !== CENTER_ID) {
     throw new Error('داده محلی فقط برای همان یک مرکز نمونه است')
@@ -213,6 +319,9 @@ export function createLocalDataAccess(scope: AccessScope): DataAccess {
       throw new Error('این کلاس به حساب فعال تخصیص نیافته است')
     }
   }
+
+  /** نام فرستنده از دید بیننده. در داده واقعی از user_account می‌آید. */
+  const senderName = () => (scope.role === 'guardian' ? 'خانواده' : 'مربی')
 
   const assertManager = () => {
     if (scope.role !== 'manager') {
@@ -849,6 +958,227 @@ export function createLocalDataAccess(scope: AccessScope): DataAccess {
 
     async listNotices(limit) {
       return NOTICES.slice(0, limit)
+    },
+
+
+    /* ── مالی — ماژول M5 ────────────────────────────────────── */
+
+    async getFinance(period) {
+      assertManager()
+      const rows = INVOICES.filter((r) => r.period === period).map(invoiceOf)
+      const issued = rows.reduce((sum, i) => sum + i.amount - i.discount + i.lateFee, 0)
+      const collected = rows.reduce((sum, i) => sum + i.paid, 0)
+      return {
+        period,
+        issued,
+        collected,
+        outstanding: issued - collected,
+        overdue: rows.filter((i) => i.status === 'overdue'),
+        unpaid: rows.filter((i) => i.status !== 'paid' && i.status !== 'cancelled'),
+        plans: FEE_PLANS.map((plan) => ({
+          ...plan,
+          childCount: Object.values(CHILD_FEES).filter((f) => f.planId === plan.id).length,
+        })),
+      }
+    },
+
+    /**
+     * بخش ۸: «صدور صورتحساب ماهانه گروهی با یک اقدام».
+     * روی کودکی که صورتحساب همان دوره را دارد دوباره نمی‌نشیند، وگرنه
+     * ضربه دوم مدیر همه را دو برابر می‌کرد.
+     */
+    async issueInvoices(period, dueDate) {
+      assertManager()
+      let made = 0
+      for (const child of CHILDREN) {
+        if (INVOICES.some((r) => r.childId === child.id && r.period === period)) continue
+        const fee = CHILD_FEES[child.id]
+        const plan = FEE_PLANS.find((p) => p.id === fee?.planId)
+        if (!plan) continue
+        INVOICES.push({
+          id: `inv-${child.id}-${period}`,
+          childId: child.id,
+          period,
+          amount: plan.amount,
+          discount: Math.round((plan.amount * (fee?.discountPercent ?? 0)) / 100),
+          lateFee: 0,
+          dueDate,
+          cancelled: false,
+        })
+        made += 1
+      }
+      save()
+      return made
+    },
+
+    async recordPayment(input) {
+      assertManager()
+      const row = INVOICES.find((r) => r.id === input.invoiceId)
+      if (!row) throw new Error('صورتحساب پیدا نشد.')
+      if (input.amount <= 0) throw new Error('مبلغ باید بیشتر از صفر باشد.')
+      const remaining = row.amount - row.discount + row.lateFee - paidFor(row.id)
+      if (input.amount > remaining) {
+        throw new Error('مبلغ از باقی‌مانده صورتحساب بیشتر است.')
+      }
+      const payment: Payment = {
+        id: `pay-${PAYMENTS.length + 1}`,
+        invoiceId: input.invoiceId,
+        amount: input.amount,
+        paidAt: new Date().toISOString(),
+        method: input.method ?? null,
+        receiptNo: input.receiptNo ?? null,
+      }
+      PAYMENTS.push(payment)
+      save()
+      return payment
+    },
+
+    async remindOverdue(period) {
+      assertManager()
+      const overdue = INVOICES.filter((r) => r.period === period)
+        .map(invoiceOf)
+        .filter((i) => i.status === 'overdue')
+      // فقط خانواده‌هایی که شماره دارند. بقیه در فهرست مدیر می‌مانند.
+      const reachable = overdue.filter((i) => GUARDIAN_PHONES[i.childId])
+      if (reachable.length > smsRemaining()) {
+        throw new Error('سهمیه پیامک برای یادآوری کافی نیست.')
+      }
+      smsUsed += reachable.length
+      save()
+      return reachable.length
+    },
+
+    /** بخش ۶.۵: فقط سرپرست پرداخت‌کننده مالی را می‌بیند. */
+    async getParentFinance(childId) {
+      assertOwnChild(childId)
+      const payerGuardianId = PAYER[childId]
+      const mine = (GUARDIAN_CHILDREN[scope.accountId] ?? []).includes(childId)
+      // در داده نمونه، سرپرست اولِ هر کودک پرداخت‌کننده است.
+      const isPayer = scope.role === 'manager' || (mine && payerGuardianId !== undefined)
+      if (!isPayer) return { isPayer: false, invoices: [], payments: [], outstanding: 0 }
+
+      const invoices = INVOICES.filter((r) => r.childId === childId).map(invoiceOf)
+      const ids = new Set(invoices.map((i) => i.id))
+      const outstanding = invoices
+        .filter((i) => i.status !== 'paid' && i.status !== 'cancelled')
+        .reduce((sum, i) => sum + (i.amount - i.discount + i.lateFee - i.paid), 0)
+      return {
+        isPayer: true,
+        invoices,
+        payments: PAYMENTS.filter((p) => ids.has(p.invoiceId)),
+        outstanding,
+      }
+    },
+
+    /* ── پرونده کودک — ماژول M1 ─────────────────────────────── */
+
+    async getChildProfile(childId) {
+      assertOwnChild(childId)
+      const child = CHILDREN.find((c) => c.id === childId)
+      if (!child) throw new Error('کودک پیدا نشد.')
+      const medical = MEDICAL[childId]
+      const granted = CONSENTS[childId] ?? []
+      const options = await this.listPickupOptions(childId)
+
+      return {
+        child,
+        className: CLASSES.find((c) => c.id === child.classId)?.name ?? null,
+        // شماره در داده نمونه روی کودک است، نه روی تک‌تک سرپرستان. پس
+        // فقط پرداخت‌کننده شماره می‌گیرد تا صفحه دو شماره یکسان نشان
+        // ندهد. در داده واقعی هر سرپرست شماره خودش را دارد.
+        guardians: (GUARDIANS[childId] ?? []).map((g) => ({
+          ...g,
+          phone: PAYER[childId] === g.id ? (GUARDIAN_PHONES[childId] ?? null) : null,
+          isPayer: PAYER[childId] === g.id,
+        })),
+        authorized: options.filter((o) => o.kind === 'authorized'),
+        medical: {
+          childId,
+          bloodType: medical?.bloodType ?? null,
+          allergies: medical?.allergies ?? [],
+          chronicConditions: medical?.chronicConditions ?? null,
+          dailyMedication: medical?.dailyMedication ?? null,
+          doctorName: medical?.doctorName ?? null,
+          doctorPhone: medical?.doctorPhone ?? null,
+        },
+        consents: (
+          ['photo_capture', 'photo_group_publish', 'field_trip', 'medication', 'emergency_care'] as const
+        ).map((type) => ({ type, granted: granted.includes(type) })),
+      }
+    },
+
+    /* ── اعلام غیبت — بخش ۶.۴ ───────────────────────────────── */
+
+    async declareAbsence(input) {
+      assertOwnChild(input.childId)
+      const state = dayState(input.date)
+      // فقط برای امروز و گذشته معنا دارد. روز آینده هنوز ورودی ندارد،
+      // و بررسی نکردن این شرط باعث می‌شد اعلام غیبت فردا همیشه رد شود.
+      if (input.date <= toIsoDate(new Date()) && state.attendance.get(input.childId)?.checkInAt) {
+        throw new Error('این کودک امروز وارد شده است.')
+      }
+      const at = state.absences.findIndex((a) => a.childId === input.childId)
+      const notice = { childId: input.childId, date: input.date, reason: input.reason }
+      if (at >= 0) state.absences.splice(at, 1, notice)
+      else state.absences.push(notice)
+      ABSENCES_DECLARED.push(notice)
+      save()
+    },
+
+    async listMyNotices() {
+      // اطلاعیه کل مهد به همه می‌رسد؛ اطلاعیه کلاس فقط به کلاس خودش.
+      const mine = new Set(
+        scope.role === 'guardian'
+          ? CHILDREN.filter((c) => (GUARDIAN_CHILDREN[scope.accountId] ?? []).includes(c.id))
+              .map((c) => c.classId)
+          : visibleClassIds(),
+      )
+      return NOTICES.filter((n) => n.classId === null || mine.has(n.classId))
+    },
+
+    /* ── پیام با ساعت کاری — بخش ۶.۶ ────────────────────────── */
+
+    async getThread(childId) {
+      assertOwnChild(childId)
+      return {
+        childId,
+        childName: childName(childId),
+        messages: MESSAGES.filter((m) => m.childId === childId).map((m) => ({
+          ...m,
+          mine: m.senderName === senderName(),
+        })),
+        hours: { start: MESSAGE_HOURS.start, end: MESSAGE_HOURS.end },
+      }
+    },
+
+    /**
+     * بخش ۶.۶: بیرون از ساعت کاری، پیام تا صبح در صف می‌ماند.
+     *
+     * پیام حذف نمی‌شود و خطا هم نمی‌دهد؛ فرستاده می‌شود ولی تحویلش عقب
+     * می‌افتد و همین به فرستنده گفته می‌شود. مربی ساعت یازده شب پیام
+     * نمی‌گیرد، و خانواده هم حس نمی‌کند حرفش گم شده.
+     */
+    async sendMessage(childId, body) {
+      assertOwnChild(childId)
+      const text = body.trim()
+      if (!text) throw new Error('پیام خالی است.')
+
+      const now = new Date()
+      const clock = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
+      const inHours = clock >= MESSAGE_HOURS.start && clock <= MESSAGE_HOURS.end
+
+      const message: Message = {
+        id: `msg-${MESSAGES.length + 1}`,
+        childId,
+        body: text,
+        mine: true,
+        senderName: senderName(),
+        sentAt: inHours ? now.toISOString() : null,
+        queuedUntil: inHours ? null : nextMorning(now).toISOString(),
+      }
+      MESSAGES.push(message)
+      save()
+      return message
     },
 
     async sendReports(classId, date): Promise<number> {

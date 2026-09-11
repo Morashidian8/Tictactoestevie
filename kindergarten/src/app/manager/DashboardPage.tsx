@@ -3,6 +3,7 @@ import { AlertIcon, EmptyState, QuickAction } from '../../design-system/index.ts
 import { formatCount, formatJalali, formatTime, toIsoDate, toPersianDigits } from '../../i18n/index.ts'
 import { ROLE_LABEL, useAuth, useData } from '../../core/auth/index.ts'
 import type { IncidentDecision, ManagerDashboard } from '../../core/data/index.ts'
+import type { ManagerPage } from './ManagerApp.tsx'
 import styles from './DashboardPage.module.css'
 
 /**
@@ -38,7 +39,7 @@ const LOCATION_TEXT: Record<string, string> = {
   other: 'جای دیگر',
 }
 
-export function DashboardPage({ onNotice }: { onNotice: () => void }) {
+export function DashboardPage({ onGo }: { onGo: (page: ManagerPage) => void }) {
   const data = useData()
   const { session, signOut } = useAuth()
   const [board, setBoard] = useState<ManagerDashboard | null>(null)
@@ -227,7 +228,25 @@ export function DashboardPage({ onNotice }: { onNotice: () => void }) {
         {error ? <p className={`${styles.error} t-body`}>{error}</p> : null}
       </div>
 
-      <QuickAction onClick={onNotice}>اطلاع‌رسانی به خانواده‌ها</QuickAction>
+      {/*
+        سه مقصد پنل مدیر. «اطلاع‌رسانی» کنش اصلی است چون تنها کاری است
+        که فوریت دارد؛ بقیه رفتن به صفحه‌اند، نه انجام دادن کاری.
+      */}
+      <QuickAction
+        onClick={() => onGo('notice')}
+        aside={
+          <div className={styles.nav}>
+            <button type="button" className={styles.navItem} onClick={() => onGo('finance')}>
+              مالی
+            </button>
+            <button type="button" className={styles.navItem} onClick={() => onGo('children')}>
+              کودکان
+            </button>
+          </div>
+        }
+      >
+        اطلاع‌رسانی به خانواده‌ها
+      </QuickAction>
     </div>
   )
 }

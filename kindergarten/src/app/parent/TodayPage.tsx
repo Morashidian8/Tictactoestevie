@@ -3,6 +3,7 @@ import { AlertIcon, CheckIcon } from '../../design-system/index.ts'
 import { formatCount, formatJalali, formatTime, toIsoDate } from '../../i18n/index.ts'
 import { ROLE_LABEL, useAuth, useData } from '../../core/auth/index.ts'
 import type { Child, MealAmount, Mood, ParentDay } from '../../core/data/index.ts'
+import { MorePage } from './MorePage.tsx'
 import { TomorrowCard } from './TomorrowCard.tsx'
 import styles from './TodayPage.module.css'
 
@@ -51,6 +52,7 @@ export function ParentTodayPage() {
   const [day, setDay] = useState<ParentDay | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [menuOpen, setMenuOpen] = useState(false)
+  const [showMore, setShowMore] = useState(false)
 
   const date = useMemo(() => toIsoDate(new Date()), [])
 
@@ -91,6 +93,16 @@ export function ParentTodayPage() {
     [day?.moodAfternoon ?? null, 'عصر'],
   ]
   const hasMood = moods.some(([mood]) => mood !== null)
+
+  if (showMore && childId && day) {
+    return (
+      <MorePage
+        childId={childId}
+        childName={day.child.firstName}
+        onBack={() => setShowMore(false)}
+      />
+    )
+  }
 
   return (
     <div className={styles.page}>
@@ -319,6 +331,17 @@ export function ParentTodayPage() {
       */}
       {childId && day ? (
         <TomorrowCard childId={childId} childName={day.child.firstName} />
+      ) : null}
+
+      {/*
+        بخش ۶.۴: «بیشتر» فهرست ساده است و «اعلام غیبت» بالای آن. پایین
+        صفحه می‌نشیند چون والد برای دیدن امروز می‌آید، نه برای این‌ها.
+      */}
+      {childId && day ? (
+        <button type="button" className={`${styles.more} t-body`} onClick={() => setShowMore(true)}>
+          <span>بیشتر</span>
+          <span className={styles.moreHint}>غیبت، پیام، اطلاعیه، مالی</span>
+        </button>
       ) : null}
 
       {error ? (

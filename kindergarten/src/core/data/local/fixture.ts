@@ -162,3 +162,75 @@ export const GUARDIAN_PHONES: Record<string, string> = Object.fromEntries(
     `0912${String(1000000 + index * 37).slice(0, 7)}`,
   ]),
 )
+
+
+/* ── مالی — ماژول M5 ─────────────────────────────────────────── */
+
+/**
+ * مبلغ‌ها به ریال‌اند، مثل ستون bigint دیتابیس. تبدیل به تومان کار
+ * لایه i18n است تا هیچ‌جای دیگری تقسیم بر ده نکند.
+ */
+export const FEE_PLANS = [
+  { id: 'plan-full', title: 'تمام‌وقت', amount: 45_000_000, period: 'monthly' as const, active: true },
+  { id: 'plan-half', title: 'نیمه‌وقت', amount: 28_000_000, period: 'monthly' as const, active: true },
+]
+
+/** کدام کودک کدام پلن را دارد، و تخفیف خواهر و برادر. */
+export const CHILD_FEES: Record<string, { planId: string; discountPercent: number }> =
+  Object.fromEntries(
+    CHILDREN.map((child, index) => [
+      child.id,
+      {
+        planId: index % 4 === 0 ? 'plan-half' : 'plan-full',
+        // بخش ۸: تخفیف خواهر و برادر. سارا و هستی یک خانواده‌اند.
+        discountPercent: child.id === 'child-9' ? 15 : 0,
+      },
+    ]),
+  )
+
+/** سرپرست پرداخت‌کننده هر کودک — بخش ۶.۵. فقط او مالی را می‌بیند. */
+export const PAYER: Record<string, string> = Object.fromEntries(
+  CHILDREN.map((child) => [child.id, `${child.id}-g1`]),
+)
+
+/* ── پرونده پزشکی — بخش ۷.۱ ──────────────────────────────────── */
+
+export const MEDICAL: Record<string, {
+  bloodType: string | null
+  allergies: string[]
+  chronicConditions: string | null
+  dailyMedication: string | null
+  doctorName: string | null
+  doctorPhone: string | null
+}> = {
+  'child-1': {
+    bloodType: 'O+',
+    allergies: ['تخم‌مرغ', 'بادام‌زمینی'],
+    chronicConditions: null,
+    dailyMedication: null,
+    doctorName: 'دکتر نادری',
+    doctorPhone: '02188001122',
+  },
+  'child-3': {
+    bloodType: 'A-',
+    allergies: ['شیر گاو'],
+    chronicConditions: 'آسم خفیف',
+    dailyMedication: 'اسپری در صورت نیاز',
+    doctorName: 'دکتر رحیمی',
+    doctorPhone: '02188003344',
+  },
+  'child-7': {
+    bloodType: 'B+',
+    allergies: [],
+    chronicConditions: null,
+    dailyMedication: null,
+    doctorName: null,
+    doctorPhone: null,
+  },
+}
+
+export const CONSENTS: Record<string, string[]> = {
+  'child-1': ['photo_capture', 'emergency_care'],
+  'child-3': ['photo_capture', 'photo_group_publish', 'emergency_care', 'medication'],
+  'child-9': ['photo_capture'],
+}

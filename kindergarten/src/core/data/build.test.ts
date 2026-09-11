@@ -5,10 +5,12 @@
  * «شاخه انتخاب‌نشده حذف می‌شود» ادعایی درباره tree-shaking است و فقط
  * روی خروجی واقعی قابل اثبات است، نه از روی کد.
  *
- * اگر dist وجود نداشته باشد تست خودش بیلد می‌گیرد.
+ * تست همیشه خودش بیلد می‌گیرد و dist موجود را دور می‌ریزد. پیش‌تر اگر
+ * dist بود همان را می‌خواند، و یک بار با خروجیِ یک بیلد دیگر سبز شد در
+ * حالی که بیلد خودش کثیف بود.
  */
 import { execFileSync } from 'node:child_process'
-import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
+import { readdirSync, readFileSync, rmSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
@@ -30,6 +32,11 @@ function buildOnce() {
     stdio: 'pipe',
     env: {
       ...process.env,
+      // vitest مقدار NODE_ENV را روی test می‌گذارد و آن مقدار به Vite
+      // ارث می‌رسد؛ آن وقت import.meta.env.DEV در بیلد هم true می‌شود و
+      // شاخه نمایشی حذف نمی‌شود. این همان چیزی است که یک بار این تست را
+      // به اشتباه سبز نگه داشت.
+      NODE_ENV: 'production',
       VITE_DATA_SOURCE: 'supabase',
       VITE_SUPABASE_URL: 'https://example.invalid',
       VITE_SUPABASE_ANON_KEY: 'test',
@@ -48,7 +55,8 @@ function jsFiles(dir: string): string[] {
 
 describe('بیلد تولید', () => {
   it('هیچ ردی از داده نمونه ندارد', () => {
-    if (!existsSync(dist)) buildOnce()
+    rmSync(dist, { recursive: true, force: true })
+    buildOnce()
     const files = jsFiles(dist)
     expect(files.length).toBeGreaterThan(0)
 

@@ -1,0 +1,143 @@
+/* لحن دفترچه، مثل بقیه پنل خانواده — بخش ۱۲.۱. هدف لمسی ۴۸. */
+.page { min-block-size: 100dvh; display: flex; flex-direction: column; background: var(--paper); }
+
+.header {
+  position: sticky; inset-block-start: 0; z-index: 2;
+  display: flex; align-items: center; gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: var(--surface); border-block-end: 1px solid var(--border);
+}
+
+.back {
+  min-inline-size: var(--touch-parent); min-block-size: var(--touch-parent);
+  display: grid; place-items: center; border: none; background: none; color: var(--ink);
+}
+
+.title { font-family: var(--font-display); font-weight: var(--weight-display-fallback); }
+
+.body {
+  flex: 1; display: flex; flex-direction: column; gap: var(--space-3);
+  padding: var(--space-4) var(--space-4) var(--space-7);
+}
+
+.menu {
+  list-style: none; margin: 0; padding: 0;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r-card); overflow: hidden;
+}
+
+.menuItem {
+  inline-size: 100%; min-block-size: calc(var(--touch-parent) + var(--space-3));
+  display: flex; align-items: center; gap: var(--space-3);
+  padding-inline: var(--space-4);
+  border: none; background: var(--surface); color: var(--ink);
+  font-family: inherit; text-align: start;
+}
+
+.menu li + li .menuItem { border-block-start: 1px solid var(--border); }
+.menuItem:active { background: var(--turquoise-tint); }
+.menuItem svg { color: var(--ink-muted); flex: none; }
+
+.menuMain { flex: 1; min-inline-size: 0; display: flex; flex-direction: column; gap: 2px; }
+.menuLabel { font-weight: var(--weight-medium); }
+.menuHint { color: var(--ink-muted); }
+
+.card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r-card); padding: var(--space-4);
+  display: flex; flex-direction: column; gap: var(--space-2);
+}
+
+.cardLabel { color: var(--ink-muted); }
+.hint { color: var(--ink-muted); margin: 0; }
+
+.big {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: var(--weight-display-fallback);
+  font-size: var(--text-display);
+  line-height: var(--text-display-line);
+  font-variant-numeric: tabular-nums;
+}
+
+.owed { color: var(--ink); }
+.clear { color: var(--sage); }
+
+.row {
+  margin: 0; min-block-size: var(--touch-parent);
+  display: flex; align-items: center; gap: var(--space-3); color: var(--ink);
+}
+.row + .row { border-block-start: 1px solid var(--border); }
+.row .hint { margin-inline-start: auto; }
+.amount { font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+.noticeTitle { margin: 0; font-weight: var(--weight-bold); color: var(--ink); }
+.noticeBody { margin: 0; color: var(--ink); }
+
+.choices { display: flex; gap: var(--space-2); }
+
+.choice {
+  flex: 1; min-block-size: var(--touch-parent);
+  border: 1px solid var(--border); border-radius: var(--r-input);
+  background: var(--surface); color: var(--ink); font-family: inherit;
+}
+.choice[aria-pressed='true'] {
+  background: var(--turquoise-tint); border-color: var(--turquoise);
+  font-weight: var(--weight-medium);
+}
+
+.field { display: flex; flex-direction: column; gap: var(--space-1); color: var(--ink-muted); }
+
+.text {
+  padding: var(--space-3);
+  border: 1px solid var(--border); border-radius: var(--r-input);
+  background: var(--surface); color: var(--ink);
+  font-family: inherit; font-size: var(--text-body); line-height: var(--text-body-line);
+  resize: vertical;
+}
+.text:focus { border-color: var(--turquoise); outline: none; }
+
+.primary {
+  min-block-size: var(--touch-parent);
+  border: none; border-radius: var(--r-input);
+  background: var(--turquoise-dark); color: var(--surface);
+  font-family: inherit; font-weight: var(--weight-bold);
+}
+.primary:disabled { background: var(--disabled-bg); color: var(--disabled-fg); }
+
+.done {
+  margin: 0; display: flex; align-items: center; gap: var(--space-2);
+  padding: var(--space-4); border-radius: var(--r-card);
+  background: var(--sage-tint); color: var(--ink);
+}
+.done svg { color: var(--sage); flex: none; }
+
+/* ── گفت‌وگو ─────────────────────────────────────────────────── */
+.thread { display: flex; flex-direction: column; gap: var(--space-2); }
+
+.bubble {
+  max-inline-size: 85%;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--r-card);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  display: flex; flex-direction: column; gap: var(--space-1);
+}
+
+.bubbleMine {
+  align-self: flex-start;
+  background: var(--turquoise-tint);
+  border-color: transparent;
+}
+
+.bubbleBody { margin: 0; color: var(--ink); }
+
+.bubbleMeta {
+  color: var(--ink-muted);
+  display: flex; align-items: center; gap: var(--space-1);
+  font-variant-numeric: tabular-nums;
+}
+.bubbleMeta svg { color: var(--saffron); flex: none; }
+
+.composer { display: flex; flex-direction: column; gap: var(--space-2); }
+.error { margin: 0; color: var(--brick); }

@@ -214,3 +214,17 @@
   font-weight: var(--weight-medium);
   text-align: start;
 }
+
+/* دو مقصد ثانویه، داخل همان نوار چسبیده تا روی محتوا نیفتند. */
+.nav { display: flex; gap: var(--space-2); }
+
+.navItem {
+  flex: 1;
+  min-block-size: var(--touch-manager);
+  border: 1px solid var(--border);
+  border-radius: var(--r-input);
+  background: var(--surface);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: var(--text-body-sm);
+}

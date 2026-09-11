@@ -3,6 +3,7 @@ export {
   toLatinDigits,
   formatCount,
   formatToman,
+  formatRial,
 } from './digits.ts'
 
 export {
