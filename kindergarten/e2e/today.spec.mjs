@@ -38,6 +38,40 @@ const signIn = async (phone) => {
   await page.click('button:has-text("ورود")')
 }
 
+
+/**
+ * نگه‌داشتن انگشت روی یک کودک: شیت استثناها بدون ثبت ورود.
+ *
+ * پس از هر ثبت، شبکه دوباره چیده می‌شود و خانه زیر انگشت جابه‌جا
+ * می‌شود؛ آن وقت pointerleave نگه‌داشتن را لغو می‌کند. پس تا آرام شدن
+ * چیدمان صبر می‌کنیم و در صورت لغو، یک بار دیگر تلاش می‌کنیم.
+ */
+const holdFirstNotArrived = async () => {
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const cell = page.locator('button[aria-label^="ثبت ورود"] >> nth=0')
+    // وسط قاب، نه لبه: نوار چسبیده پایین صفحه می‌تواند روی خانه بیفتد و
+    // آن وقت انگشت روی نوار می‌نشیند نه روی کودک.
+    await cell.evaluate((el) => el.scrollIntoView({ block: 'center', behavior: 'instant' }))
+    await page.waitForTimeout(400)
+    const box = await cell.boundingBox()
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
+    await page.mouse.down()
+    await page.waitForTimeout(750)
+    await page.mouse.up()
+    await page.waitForTimeout(400)
+    if ((await page.locator('[role="dialog"]').count()) > 0) return
+    // اگر ضربه شمرده شد، همان‌جا ورود ثبت شده؛ لغوش کن و دوباره امتحان.
+    const chip = page.locator('[class*="justIn"]')
+    if (await chip.count()) {
+      console.log('    (ضربه به‌جای نگه‌داشتن شمرده شد، تلاش دوباره)')
+      await page.waitForTimeout(4200)
+    }
+  }
+  await page.screenshot({ path: '/tmp/hold-fail.png' })
+  console.log('    BODY:', (await page.evaluate(() => document.body.innerText)).slice(0, 200).replace(/\n/g, ' | '))
+  throw new Error('نگه‌داشتن انگشت شیت را باز نکرد')
+}
+
 console.log('▸ بخش ۳.۲: یک حساب یعنی ورود مستقیم')
 await signIn('09120000001')
 await page.waitForSelector('text=ثبت گروهی امروز')
@@ -62,13 +96,24 @@ check(
 await page.click('button:has-text("مریم رضایی") >> nth=0')
 await page.waitForSelector('text=ثبت گروهی امروز')
 
-console.log('▸ بخش ۵.۳: ورود هم مثل خروج پرسیده می‌شود')
+console.log('▸ بخش ۵.۳: ضربه کوتاه، ورود با پیش‌فرض و بدون صفحه واسط')
 const tallyText = () => page.locator('[class*="tally"]').first().innerText()
 const before = await tallyText()
 await page.click('button[aria-label^="ثبت ورود"] >> nth=0')
+await page.waitForTimeout(700)
+check((await page.locator('[role="dialog"]').count()) === 0, 'هیچ شیتی باز نمی‌شود')
+const afterQuick = await tallyText()
+check(afterQuick !== before, 'ورود همان‌جا ثبت شد')
+
+const chip = page.locator('[class*="justIn"]').first()
+check(await chip.isVisible(), 'تراشه تأیید آمد')
+const chipText = await chip.innerText()
+check(/ورود با .+/.test(chipText), `تراشه نام آورنده را می‌گوید: ${chipText.replace(/\n/g, ' ')}`)
+check(chipText.includes('تغییر'), 'و راه تغییر را باز می‌گذارد')
+
+await chip.click()
 await page.waitForSelector('[role="dialog"]')
-check(true, 'ضربه روی کودک نیامده، شیت ورود را باز می‌کند')
-check((await tallyText()) === before, 'و ورود هنوز ثبت نشده است')
+check(true, 'ضربه روی «تغییر» شیت سه‌بخشی را باز می‌کند')
 
 const sheetSections = await page.locator('[role="dialog"] h3').allInnerTexts()
 check(
@@ -83,13 +128,26 @@ check(
   sheetSections.some((t) => t.includes('دارو')),
   'می‌پرسد دارو آورده‌اند یا نه',
 )
-
-// پیش‌فرض هوشمند: همه‌چیز از پیش انتخاب شده تا تأیید یک ضربه بماند.
 const preset = await page.locator('[role="dialog"] [aria-pressed="true"]').count()
 check(preset >= 2, `آورنده و وضعیت از پیش انتخاب‌اند (${preset} گزینه)`)
+// ورود قبلاً ثبت شده، پس این شیت ویرایش همان ردیف است نه ثبت تازه؛ و
+// دکمه‌اش همین را می‌گوید.
 const confirmLabel = await page.locator('[role="dialog"] [class*="primary"]').first().innerText()
-check(/ساعت/.test(confirmLabel), `دکمه ساعت ثبت را می‌گوید: ${confirmLabel}`)
+check(/ذخیره/.test(confirmLabel), `دکمه می‌گوید ویرایش است نه ثبت دوباره: ${confirmLabel}`)
+await page.click('[role="dialog"] button[aria-label="بستن"]')
+await page.waitForTimeout(300)
 
+console.log('▸ تراشه تأیید خودش می‌رود')
+await page.waitForTimeout(4500)
+check((await page.locator('[class*="justIn"]').count()) === 0, 'پس از چهار ثانیه تراشه رفت')
+
+console.log('▸ نگه‌داشتن انگشت، مستقیم شیت استثناها را باز می‌کند')
+const beforeHold = await tallyText()
+await holdFirstNotArrived()
+check(true, 'نگه‌داشتن شیت را باز کرد')
+check((await tallyText()) === beforeHold, 'و ورودی ثبت نشد')
+const holdLabel = await page.locator('[role="dialog"] [class*="primary"]').first().innerText()
+check(/ساعت/.test(holdLabel), `اینجا ثبت تازه است و ساعت را می‌گوید: ${holdLabel}`)
 await page.click('[role="dialog"] [class*="primary"]')
 await page.waitForTimeout(700)
 const after = await tallyText()
@@ -252,8 +310,7 @@ await page.click(D + '[class*="primary"]:has-text("بستن")')
 await page.waitForTimeout(300)
 
 console.log('▸ استثناهای ورود: عکس و دارو')
-await page.click('button[aria-label^="ثبت ورود"] >> nth=0')
-await page.waitForSelector('[role="dialog"]')
+await holdFirstNotArrived()
 
 // عکس همیشه در دسترس است؛ همان عکس، اگر خانواده بعداً ادعای آسیب‌دیدگی
 // کرد، سند دفاعی مهد است. با وضعیت غیرعادی برجسته می‌شود.
@@ -290,8 +347,7 @@ check(
 )
 
 console.log('▸ شیت با کلید Escape بسته می‌شود')
-await page.click('button[aria-label^="ثبت ورود"] >> nth=0')
-await page.waitForSelector('[role="dialog"]')
+await holdFirstNotArrived()
 await page.keyboard.press('Escape')
 await page.waitForTimeout(300)
 check((await page.locator('[role="dialog"]').count()) === 0, 'Escape شیت را می‌بندد')

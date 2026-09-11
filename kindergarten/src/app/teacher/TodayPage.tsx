@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
+  CheckIcon,
   AlertIcon,
   ChildGrid,
   EmptyState,
@@ -55,6 +56,8 @@ export function TodayPage({
   const [sheetFor, setSheetFor] = useState<string | null>(null)
   // کودکی که شیت خروجش باز است — بخش ۵.۸.
   const [checkOutFor, setCheckOutFor] = useState<string | null>(null)
+  /** کودکی که همین الان با یک ضربه واردش کردیم، برای تراشه «تغییر». */
+  const [justIn, setJustIn] = useState<{ childId: string; name: string | null } | null>(null)
   // بخش ۱۳.۱: دکمه شناور ثبت رویداد، در همه تب‌ها.
   const [incidentOpen, setIncidentOpen] = useState(false)
   // فهرست کودکانی که نیامده‌اند، وقتی مربی روی تراشه بزند.
@@ -134,19 +137,58 @@ export function TodayPage({
   )
 
   /**
-   * ضربه روی کودک.
+   * ضربه کوتاه روی کودک — بخش ۵.۳.
    *
-   * بخش ۵.۳ ورود را «یک ضربه» تعریف کرده بود، ولی آن ثبت هیچ‌وقت
-   * نمی‌پرسید چه کسی آورد، حال کودک چطور بود، و دارو آورده‌اند یا نه.
-   * حالا ضربه همان شیتی را باز می‌کند که خروج باز می‌کند، با همه
-   * پیش‌فرض‌ها از قبل انتخاب‌شده. مربی فقط تأیید می‌کند، پس معیار
-   * «زیر ۳ ثانیه» بخش ۱۷ هم می‌ماند: دو ضربه، نه یک فرم خالی.
+   * ورود همان‌جا و با سرپرست پیش‌فرض ثبت می‌شود، بدون هیچ صفحه واسط.
+   * چهار ثانیه یک تراشه «<نام> · تغییر» می‌ماند؛ اگر آورنده کس دیگری
+   * بود یا کودک حالش خوب نبود یا دارو آورده بودند، همان تراشه شیت
+   * سه‌بخشی را باز می‌کند. نگه‌داشتن انگشت هم مستقیم همان شیت را
+   * باز می‌کند، برای مربی‌ای که از قبل می‌داند استثناست.
+   *
+   * چرا پیش‌فرض و بعد تغییر، نه پرسش و بعد ثبت: صبح مهد بیست‌وپنج کودک
+   * در ده دقیقه می‌آیند و حالت غالب «مادر آورد، حالش خوب است» است.
+   * پرسیدن از همه برای گرفتن استثنای دو نفر، هزینه را روی بیست‌وسه نفر
+   * دیگر می‌گذارد.
    */
+  const quickCheckIn = async (childId: string) => {
+    const options = await data.listPickupOptions(childId)
+    const first = options[0] ?? null
+    await queue.submit('text', () =>
+      data.checkIn({
+        childId,
+        at: new Date(),
+        droppedByGuardianId: first?.kind === 'guardian' ? first.id : null,
+        arrivalCondition: 'normal',
+      }),
+    )
+    setJustIn({ childId, name: first?.fullName ?? null })
+    await load()
+  }
+
+  /*
+   * تراشه پس از چهار ثانیه خودش می‌رود. عدد از سند نمی‌آید؛ کوتاه‌ترین
+   * زمانی است که مربی فرصت خواندن و ضربه زدن دارد بدون اینکه تراشه
+   * روی ورود بعدی بیفتد.
+   */
+  useEffect(() => {
+    if (!justIn) return
+    const timer = setTimeout(() => setJustIn(null), 4000)
+    return () => clearTimeout(timer)
+  }, [justIn])
+
   const openChild = (childId: string) => {
     const state = resolveState(childId, attendance, absences, now)
     if (state === 'left') return
     if (state === 'present') setCheckOutFor(childId)
-    else setSheetFor(childId)
+    else void quickCheckIn(childId)
+  }
+
+  /** نگه‌داشتن انگشت: مستقیم شیت استثناها، بی‌آنکه اول ورودی ثبت شود. */
+  const openArrivalSheet = (childId: string) => {
+    const state = resolveState(childId, attendance, absences, now)
+    if (state === 'left') return
+    setJustIn(null)
+    setSheetFor(childId)
   }
 
   const submitSheet = async (result: ArrivalResult) => {
@@ -312,21 +354,37 @@ export function TodayPage({
         </div>
       ) : null}
 
+      {/*
+        بخش ۵.۳: ورود با یک ضربه ثبت شد؛ این تراشه فقط راه تغییرش را باز
+        نگه می‌دارد. چهار ثانیه می‌ماند و خودش می‌رود.
+      */}
+      {justIn ? (
+        <button
+          type="button"
+          className={`${styles.justIn} t-body`}
+          onClick={() => openArrivalSheet(justIn.childId)}
+        >
+          <CheckIcon />
+          <span>{justIn.name ? `ورود با ${justIn.name}` : 'ورود ثبت شد'}</span>
+          <span className={styles.justInChange}>تغییر</span>
+        </button>
+      ) : null}
+
       <div className={styles.grid}>
         {day && day.children.length === 0 ? (
           <EmptyState text="هنوز کودکی به این کلاس تخصیص نیافته است." />
         ) : counts.present === 0 && !counts.isAfterNine ? (
           <>
             <EmptyState text="هنوز کسی وارد نشده. با ضربه روی عکس هر کودک، ورودش را ثبت کنید." />
-            <ChildGrid items={items} onSelect={openChild} />
+            <ChildGrid items={items} onSelect={openChild} onHold={openArrivalSheet} />
           </>
         ) : (
-          <ChildGrid items={items} onSelect={openChild} />
+          <ChildGrid items={items} onSelect={openChild} onHold={openArrivalSheet} />
         )}
       </div>
 
       <p className={`${styles.footerNote} t-caption`}>
-        با ضربه روی هر کودک، ورود یا خروجش را ثبت کنید
+        ضربه: ورود یا خروج · نگه‌داشتن: آورنده، حال کودک، دارو
       </p>
 
       {/*

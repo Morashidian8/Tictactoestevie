@@ -85,3 +85,26 @@ describe('استثناهای عمدی', () => {
     expect(contrast(token('neutral-fill-strong'), token('paper'))).toBeLessThan(UI_MIN)
   })
 })
+
+/**
+ * پالت باید مقدار به مقدار همان چیزی باشد که سند می‌گوید.
+ *
+ * تا پیش از این، سند در مخزن نبود و این ادعا قابل سنجش نبود. حالا هست،
+ * پس هر انحرافی اینجا قرمز می‌شود — چه کسی رنگی را در کد عوض کند، چه
+ * در سند.
+ */
+describe('پالت با سند یکی است — بخش ۱۲.۲', () => {
+  const spec = readFileSync(new URL('../../docs/spec.md', import.meta.url), 'utf8')
+  const block = spec.slice(spec.indexOf('### ۱۲.۲ پالت رنگ'))
+  const wanted = [...block.matchAll(/--([a-z-]+):\s*(#[0-9A-Fa-f]{6})/g)].slice(0, 11)
+
+  it('سند یازده رنگ تعریف کرده', () => {
+    expect(wanted.length).toBe(11)
+  })
+
+  for (const [, name, value] of wanted) {
+    it(`--${name} برابر ${value} است`, () => {
+      expect(token(name!).toLowerCase()).toBe(value!.toLowerCase())
+    })
+  }
+})

@@ -32,13 +32,6 @@ const MOOD_TEXT: Record<Mood, string> = {
   sad: 'گریان',
 }
 
-const MOOD_CLASS: Record<Mood, string> = {
-  good: styles.moodGood!,
-  normal: styles.moodNormal!,
-  restless: styles.moodRestless!,
-  sad: styles.moodSad!,
-}
-
 const INCIDENT_TEXT: Record<string, string> = {
   fall: 'زمین خوردن',
   conflict: 'درگیری',
@@ -251,7 +244,7 @@ export function ParentTodayPage() {
                     {moods.map(([mood, band]) =>
                       mood ? (
                         <span key={band} className={styles.mood}>
-                          <span className={`${styles.moodDot} ${MOOD_CLASS[mood]}`} aria-hidden />
+                          <MoodMark mood={mood} />
                           <span className={`${styles.moodBand} t-body`}>
                             {band} {MOOD_TEXT[mood]}
                           </span>
@@ -320,7 +313,7 @@ export function ParentTodayPage() {
       </article>
 
       {error ? (
-        <p className={`${styles.pending} t-body`} style={{ color: 'var(--brick)' }}>
+        <p className={`${styles.loadError} t-body`}>
           {error}
         </p>
       ) : null}
@@ -380,3 +373,37 @@ function messageOf(cause: unknown): string {
   return cause instanceof Error ? cause.message : 'گزارش امروز خوانده نشد.'
 }
 
+
+/*
+ * چهار چهره برای چهار حال. خودِ شکل معنا را می‌رساند، پس رنگ لازم نیست
+ * و همه یک رنگ خنثی می‌گیرند — بند ۱۰ و بخش ۱۲.۲.
+ */
+const MOUTH: Record<Mood, string> = {
+  good: 'M8.5 14.5c1 1.4 2.2 2 3.5 2s2.5-.6 3.5-2',
+  normal: 'M8.75 14.75h6.5',
+  restless: 'M8.5 15.5c1-.9 2.2-1.35 3.5-1.35s2.5.45 3.5 1.35',
+  sad: 'M8.5 16c1-1.4 2.2-2 3.5-2s2.5.6 3.5 2',
+}
+
+function MoodMark({ mood }: { mood: Mood }) {
+  return (
+    <svg
+      className={styles.moodMark}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.7"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      role="img"
+      aria-label={MOOD_TEXT[mood]}
+    >
+      <circle cx="12" cy="12" r="9" />
+      <path d={MOUTH[mood]} />
+      <path d="M9 9.6v.8" />
+      <path d="M15 9.6v.8" />
+      {/* «گریان» یک قطره اشک هم دارد تا از «بی‌قرار» جدا باشد. */}
+      {mood === 'sad' ? <path d="M9 12.4c0 .9-.7 1.4-.7 2.1" /> : null}
+    </svg>
+  )
+}

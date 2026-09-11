@@ -118,14 +118,19 @@
 
 .moods { display: flex; align-items: center; gap: var(--space-4); flex-wrap: wrap; }
 .mood { display: flex; align-items: center; gap: var(--space-2); }
-.moodDot {
-  inline-size: 12px; block-size: 12px; border-radius: var(--r-chip);
-  background: var(--neutral-fill-strong);
+
+/*
+ * خلق با آیکون و متن نشان داده می‌شود، نه با رنگ.
+ *
+ * پیش‌تر «بی‌قرار» زعفرانی و «گریان» آجری بود. بند ۱۰ سند قضاوت درباره
+ * کودک را ممنوع کرده و آجر در بخش ۱۲.۲ رنگ ایمنی و رویداد است؛ گذاشتنش
+ * روی حالت عاطفی کودک یعنی گریه‌اش خطر است. رنگ فقط خنثی می‌ماند و بار
+ * معنا روی آیکون و واژه است.
+ */
+.moodMark {
+  inline-size: 18px; block-size: 18px; flex: none;
+  color: var(--ink-muted);
 }
-.moodGood { background: var(--sage); }
-.moodNormal { background: var(--turquoise); }
-.moodRestless { background: var(--saffron); }
-.moodSad { background: var(--brick); }
 .moodBand { color: var(--ink-muted); }
 
 /* ۵ — یادداشت مربی */
@@ -153,7 +158,7 @@
   inline-size: 100%;
 }
 .needBox {
-  inline-size: 24px; block-size: 24px; border-radius: 6px;
+  inline-size: 24px; block-size: 24px; border-radius: var(--r-input);
   border: 2px solid var(--neutral-fill-strong);
   display: grid; place-items: center; flex: none; color: var(--surface);
 }
@@ -182,4 +187,15 @@
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--r-card);
+}
+
+/*
+ * خطای بارگذاری. همان قالب حالت خالی را دارد ولی آجری است، چون خطای
+ * اعتبارسنجی و بارگذاری در بخش ۱۲.۲ نقش آجر است. کلاسش جداست تا کسی
+ * نتواند حالت خالی را با خطا اشتباه بگیرد — چیزی که در ممیزی خودم
+ * اشتباه خواندمش.
+ */
+.loadError {
+  composes: pending;
+  color: var(--brick);
 }

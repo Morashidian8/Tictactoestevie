@@ -35,13 +35,14 @@ function pick<T>(hash: number, shift: number, list: readonly T[]): T {
   return list[((hash >>> shift) ^ (hash >>> (shift + 11))) % list.length]!
 }
 
-/**
+/*
  * رنگ پوست و مو عمداً متنوع‌اند. مهد ایرانی یکدست نیست و شبکه‌ای که همه
  * چهره‌هایش یک رنگ باشد، هم نادرست است هم برای تشخیص بی‌فایده.
+ *
+ * مقادیرشان در design-system/illustration.ts است، نه اینجا و نه در
+ * tokens.css: پالت تصویرسازی از توکن‌های رابط جداست.
  */
-const SKIN = ['#F4D2AE', '#E7B78C', '#D19A6C', '#B0764B', '#8D5A38'] as const
-const HAIR = ['#2B2724', '#43301F', '#6B4A2E', '#141312', '#8A5A33'] as const
-const WEAR = ['#0F8C86', '#4C8B6B', '#DDA02C', '#B0402C', '#5A6E76'] as const
+import { FEATURE_LINE, HAIR, SKIN, WEAR } from './illustration.ts'
 
 /**
  * پس‌زمینه همه چهره‌ها یکی است و خنثی.
@@ -108,11 +109,11 @@ export function AvatarFace({ seed }: Props) {
         />
 
         {/* چشم و لبخند */}
-        <circle cx="27.6" cy="30.6" r="1.55" fill="#332924" />
-        <circle cx="36.4" cy="30.6" r="1.55" fill="#332924" />
+        <circle cx="27.6" cy="30.6" r="1.55" fill={FEATURE_LINE} />
+        <circle cx="36.4" cy="30.6" r="1.55" fill={FEATURE_LINE} />
         <path
           d="M28.9 35.4c1.6 1.5 4.6 1.5 6.2 0"
-          stroke="#332924"
+          stroke={FEATURE_LINE}
           strokeWidth="1.5"
           strokeLinecap="round"
           fill="none"

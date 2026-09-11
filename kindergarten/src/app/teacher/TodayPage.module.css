@@ -198,3 +198,32 @@
   font-weight: var(--weight-medium);
   font-size: var(--text-body-lg);
 }
+
+/*
+ * تراشه «ورود ثبت شد · تغییر» — بخش ۵.۳.
+ *
+ * لحن تأیید دارد نه هشدار، پس --sage-tint می‌گیرد و نه زعفرانی. بالای
+ * شبکه می‌نشیند و جای خودش را در جریان می‌گیرد، تا مثل دکمه شناور روی
+ * هیچ کودکی نیفتد.
+ */
+.justIn {
+  margin: 0 var(--space-4) var(--space-3);
+  min-block-size: var(--touch-teacher);
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding-inline: var(--space-4);
+  border-radius: var(--r-chip);
+  background: var(--sage-tint);
+  color: var(--ink);
+  border: 1px solid transparent;
+  text-align: start;
+}
+
+.justIn svg { inline-size: 20px; block-size: 20px; color: var(--sage); flex: none; }
+
+.justInChange {
+  margin-inline-start: auto;
+  color: var(--turquoise-dark);
+  font-weight: var(--weight-bold);
+}

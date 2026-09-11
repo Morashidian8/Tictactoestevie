@@ -11,7 +11,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:db": "./supabase/tests/run.sh",
-    "test:e2e": "node e2e/today.spec.mjs"
+    "test:e2e": "node e2e/today.spec.mjs",
+    "test:timing": "node e2e/timing.spec.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.116.0",
