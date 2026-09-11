@@ -21,28 +21,44 @@
   padding: var(--space-3) var(--space-4) var(--space-7);
 }
 
-.tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-2); }
-
-.tile {
-  background: var(--surface); border: 1px solid var(--border);
-  border-radius: var(--r-card); padding: var(--space-3);
-  display: flex; flex-direction: column; gap: var(--space-1);
+/*
+ * سه عدد مالی در یک ردیف نمی‌نشینند.
+ *
+ * مبلغ شهریه یک مهد نُه رقم است و در یک‌سومِ عرض ۳۹۰ پیکسل جا نمی‌شود؛
+ * اول رقم سمت چپ بریده می‌شد و «۱۰۹٬۱۸۰٬۰۰۰» را «۰۹٬۱۸۰٬۰۰۰» نشان
+ * می‌داد، یعنی عددی که ده برابر کوچک‌تر بود و غلط به نظر نمی‌رسید.
+ * حالا هر عدد سطر خودش را دارد: برچسب راست، مبلغ چپ.
+ */
+.tiles {
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  overflow: hidden;
 }
 
-.tileWarn { background: var(--saffron-tint); border-color: transparent; }
-.tileLabel { color: var(--ink-muted); }
+.tile {
+  min-block-size: var(--touch-manager);
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+}
 
-/*
- * مبلغ کوچک‌تر از کاشی‌های شمارشی داشبورد است. عدد پول طولانی است و با
- * اندازه --text-display در سه ستون نمی‌نشیند.
- */
+.tile + .tile { border-block-start: 1px solid var(--border); }
+.tileWarn { background: var(--saffron-tint); }
+.tileLabel { color: var(--ink-muted); flex: none; }
+
 .tileValue {
   font-family: var(--font-display);
   font-weight: var(--weight-display-fallback);
-  font-size: var(--text-h2);
-  line-height: var(--text-h2-line);
+  font-size: var(--text-h1);
+  line-height: var(--text-h1-line);
   font-variant-numeric: tabular-nums;
   color: var(--ink);
+  text-align: end;
 }
 
 .ok { color: var(--sage); }
@@ -216,3 +232,35 @@
 }
 
 .zoomImage { max-inline-size: 100%; max-block-size: 100%; border-radius: var(--r-photo); }
+
+/*
+ * دکمه‌های تصمیم روی اعلام پرداخت.
+ *
+ * این‌ها اول به کلاس‌های DashboardPage اشاره می‌کردند و چون CSS Module
+ * جداست، هیچ استایلی نمی‌گرفتند و مثل متن ساده دیده می‌شدند.
+ */
+.decide {
+  flex: 1;
+  min-inline-size: 12ch;
+  min-block-size: var(--touch-manager);
+  padding-inline: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--r-input);
+  background: var(--surface);
+  color: var(--ink);
+  font-family: inherit;
+}
+
+.decidePrimary {
+  flex: 2;
+  background: var(--turquoise-dark);
+  border-color: transparent;
+  color: var(--surface);
+  font-weight: var(--weight-bold);
+}
+
+.decide:disabled {
+  background: var(--disabled-bg);
+  color: var(--disabled-fg);
+  border-color: transparent;
+}

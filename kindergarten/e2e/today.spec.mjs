@@ -946,6 +946,15 @@ await page.waitForSelector('text=/اعلام پرداخت در انتظار تأ
 const queue = await page.locator('[aria-label="اعلام‌های پرداخت"]').innerText()
 check(/کارت‌به‌کارت از حساب پدر/.test(queue), 'توضیح خانواده به مدیر می‌رسد')
 
+// عدد مالی نُه رقم است و یک بار در کاشی سه‌ستونه بریده می‌شد، طوری که
+// «۱۰۹٬۱۸۰٬۰۰۰» را «۰۹٬۱۸۰٬۰۰۰» نشان می‌داد و غلط به نظر نمی‌رسید.
+const clipped = await page.evaluate(() =>
+  [...document.querySelectorAll('*')].filter(
+    (el) => el.scrollWidth > el.clientWidth + 1 && getComputedStyle(el).overflowX !== 'auto',
+  ).length,
+)
+check(clipped === 0, 'هیچ مبلغی در صفحه مالی بریده نمی‌شود')
+
 await page.click('button:has-text("تأیید و ثبت پرداخت")')
 await page.waitForSelector('text=پرداخت تأیید و ثبت شد')
 const afterApprove = await page.evaluate(() => document.body.innerText)

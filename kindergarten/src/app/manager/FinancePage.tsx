@@ -423,7 +423,7 @@ function PaymentSheet({
 function Tile({ label, value, tone }: { label: string; value: number; tone?: 'ok' | 'warn' | 'plain' }) {
   return (
     <div className={`${styles.tile} ${tone === 'warn' ? styles.tileWarn : ''}`}>
-      <span className={`${styles.tileLabel} t-caption`}>{label}</span>
+      <span className={`${styles.tileLabel} t-body-sm`}>{label}</span>
       <span className={`${styles.tileValue} ${tone === 'ok' ? styles.ok : ''}`}>{formatRial(value)}</span>
     </div>
   )
