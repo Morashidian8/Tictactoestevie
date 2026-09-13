@@ -49,8 +49,27 @@ export { NOTES_PER_DAY, suggestNoteTargets } from './noteRotation.ts'
 export {
   indexAbsences,
   indexAttendance,
+  isOverdue,
   resolveState,
   tally,
-  UNACCOUNTED_AFTER_HOUR,
+  unaccountedAfter,
+  UNACCOUNTED_GRACE_MINUTES,
   type DayTally,
+  type SessionChild,
 } from './attendanceState.ts'
+
+/*
+ * منطق مشترک بازه‌ها. رابط هم به آن نیاز دارد: صفحه‌ای که فیلد
+ * غیرقابل‌اعمال را اصلاً نباید بکشد، باید بداند کدام‌ها اعمال‌شدنی‌اند.
+ */
+export {
+  applicableFields,
+  bulkFields,
+  clockOf,
+  dayEndFor,
+  dayStartFor,
+  minutesOf,
+  periodsAt,
+  periodsFor,
+  weekdayOf,
+} from './periods.ts'

@@ -157,7 +157,18 @@ function DevNote() {
     <aside className={`${styles.devNote} t-caption`}>
       <strong>اجرای محلی، بدون سرور</strong>
       <span>
-        مربی: <span className={styles.devPhone}>{demo.phones.teacher}</span>
+        مربی تمام‌روز: <span className={styles.devPhone}>{demo.phones.teacher}</span>
+      </span>
+      {/* سه شیفت متفاوت، تا حالت چندمربی در نسخه نمایشی دیده شود. */}
+      <span>
+        مربی تا ظهر: <span className={styles.devPhone}>{demo.phones.teacherMorning}</span>
+      </span>
+      <span>
+        مربی از ظهر: <span className={styles.devPhone}>{demo.phones.teacherAfternoon}</span>
+      </span>
+      <span>
+        مربی کلاس ستاره‌ها:{' '}
+        <span className={styles.devPhone}>{demo.phones.teacherOtherClass}</span>
       </span>
       <span>
         مربی و مدیر: <span className={styles.devPhone}>{demo.phones.teacherAndManager}</span>

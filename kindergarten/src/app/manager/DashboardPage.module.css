@@ -254,3 +254,20 @@
   text-align: center;
   font-variant-numeric: tabular-nums;
 }
+
+/*
+ * کارت هشدار نسبت مربی به کودک — بخش ۷.
+ *
+ * همان ساختار .card با زمینه آجری، چون ایمنی است. فقط وقتی کشیده
+ * می‌شود که کلاسی از حد گذشته باشد؛ نسبت سالم خبر نیست.
+ */
+.alert {
+  margin-inline: var(--space-4);
+  background: var(--brick-tint);
+  border: 1px solid var(--brick);
+  border-radius: var(--r-card);
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}

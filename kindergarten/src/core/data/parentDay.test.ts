@@ -5,7 +5,7 @@
  * استفاده می‌کند. بقیه تست‌ها در node اجرا می‌شوند؛ دو تای آن‌ها فایل
  * منبع را می‌خوانند و زیر jsdom می‌شکنند.
  */
-import { beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createDataAccess } from './index.ts'
 import type { AccessScope, DataAccess } from './types.ts'
 
@@ -36,10 +36,22 @@ const teacher: AccessScope = {
 let asParent: DataAccess
 let asTeacher: DataAccess
 
+/*
+ * ساعت ثابت روی یک روز کاری، ساعت ۹ صبح.
+ *
+ * ثبت گروهی از وقتی بازه‌محور شده فقط روی کودکان حاضر در همان لحظه
+ * می‌نشیند. بدون این، تست بسته به ساعت اجرا پاس یا رد می‌شد.
+ */
 beforeEach(async () => {
+  vi.useFakeTimers()
+  vi.setSystemTime(new Date(2026, 4, 2, 9, 0))
   localStorage.clear()
   asParent = await createDataAccess(parent)
   asTeacher = await createDataAccess(teacher)
+})
+
+afterEach(() => {
+  vi.useRealTimers()
 })
 
 describe('سرپرست فقط کودک خودش را می‌بیند', () => {
@@ -79,9 +91,16 @@ describe('گزارش پیش از ارسال به خانواده نمی‌رسد'
   })
 
   it('پس از ارسال، همه‌چیز می‌آید', async () => {
-    const date = '2026-05-22'
+    const date = '2026-05-25'
+    // دو ثبت، یکی در هر بازه: خواب فیلد بعدازظهر است و صبح ثبت نمی‌شود.
     await asTeacher.applyBulk('class-golha', date, {
       lunch: 'most',
+      mood: 'good',
+      napStart: null,
+    })
+    vi.setSystemTime(new Date(2026, 4, 25, 14, 0))
+    await asTeacher.applyBulk('class-golha', date, {
+      lunch: null,
       mood: 'good',
       napStart: '13:00',
     })

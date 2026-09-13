@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createDataAccess } from './index.ts'
 import { toIsoDate } from '../../i18n/index.ts'
 import type { AccessScope, DataAccess } from './types.ts'
@@ -9,6 +9,11 @@ import type { AccessScope, DataAccess } from './types.ts'
  * قاعده‌ای که اینجا مهم است: پس از ارسال، گزارش قفل می‌شود. سند
  * می‌گوید «تغییر بعدی فقط به شکل اصلاحیه ثبت می‌شود». اگر این نبندد،
  * چیزی که خانواده دیده بی‌سروصدا عوض می‌شود.
+ *
+ * از زمانی که کودکان دوره حضور جدا دارند، «کامل» دیگر یک تعریف ثابت
+ * نیست: کودک صبحانه‌ای خواب و خلق عصر ندارد، پس نداشتنش نقص نیست.
+ * تاریخ‌های این فایل همه روز کاری‌اند (شنبه تا چهارشنبه)؛ روز تعطیل
+ * اصلاً کودکی ندارد که گزارشش ناقص باشد.
  */
 const scope: AccessScope = {
   accountId: 'acc-1',
@@ -20,39 +25,85 @@ const scope: AccessScope = {
 const CLASS = 'class-golha'
 let data: DataAccess
 
+/*
+ * ساعت ثابت، وگرنه تست شب‌ها می‌افتد: ثبت گروهی فقط روی کودکان بازه
+ * فعلی می‌نشیند و نیمه‌شب هیچ بازه‌ای باز نیست.
+ */
 beforeEach(async () => {
+  vi.useFakeTimers()
+  vi.setSystemTime(new Date(2026, 2, 11, 9, 0))
   data = await createDataAccess(scope)
+})
+
+afterEach(() => {
+  vi.useRealTimers()
 })
 
 describe('شمارش کامل و ناقص', () => {
   it('گزارش دست‌نخورده ناقص است و می‌گوید چه کم دارد', async () => {
-    const date = '2026-04-01'
+    const date = '2026-04-04'
     const summary = await data.getDaySummary(CLASS, date)
     expect(summary.complete).toHaveLength(0)
     expect(summary.incomplete[0]?.missing).toEqual(['ناهار', 'خواب', 'خلق'])
   })
 
-  it('یک بار ثبت گروهی، کل کلاس را کامل می‌کند', async () => {
-    // «خلق عمومی امروز» هر سه بازه را پر می‌کند. اگر فقط یک بازه را پر
-    // می‌کرد، گزارش هیچ‌وقت از صفحه ثبت گروهی کامل نمی‌شد و صفحه بستن
-    // روز همیشه همه را ناقص می‌شمرد.
-    const date = '2026-04-02'
+  /*
+   * کودک صبحانه‌ای نه خواب دارد نه خلق عصر. پیش‌تر همین باعث می‌شد
+   * گزارشش تا آخر روز ناقص بماند و مربی دنبال چیزی بگردد که وجود ندارد.
+   */
+  it('کودک صبحانه‌ای برای نداشتن خواب ناقص شمرده نمی‌شود', async () => {
+    const date = '2026-04-05'
+    await data.applyBulk(CLASS, date, { lunch: 'most', mood: 'good', napStart: null })
+    const summary = await data.getDaySummary(CLASS, date)
+    // child-3 صبحانه‌ای است
+    expect(summary.complete).toContain('child-3')
+    expect(summary.incomplete.find((i) => i.childId === 'child-3')).toBeUndefined()
+  })
+
+  /*
+   * یک ثبت گروهی صبح، کلاس را کامل نمی‌کند: کودک بعدازظهری هنوز نیامده
+   * و اصلاً در جلسه نیست. کامل شدنِ کلاس دو ثبت می‌خواهد، یکی در هر بازه.
+   */
+  it('ثبت گروهی صبح کودک بعدازظهری را کامل نمی‌کند', async () => {
+    const date = '2026-04-05'
     await data.applyBulk(CLASS, date, { lunch: 'most', mood: 'good', napStart: '13:00' })
+    const summary = await data.getDaySummary(CLASS, date)
+    // child-4 بعدازظهری است و صبح در جلسه نبوده
+    expect(summary.incomplete.map((i) => i.childId)).toContain('child-4')
+    // child-1 تمام‌روز است: صبحش پر شده ولی بعدازظهرش هنوز نه
+    expect(summary.incomplete.find((i) => i.childId === 'child-1')?.missing).toEqual([
+      'خواب',
+      'خلق',
+    ])
+  })
+
+  it('ثبت گروهی در هر دو بازه، کل کلاس را کامل می‌کند', async () => {
+    const date = '2026-04-05'
+    await data.applyBulk(CLASS, date, { lunch: 'most', mood: 'good', napStart: '13:00' })
+    vi.setSystemTime(new Date(2026, 3, 5, 14, 0))
+    await data.applyBulk(CLASS, date, { lunch: 'most', mood: 'good', napStart: '13:00' })
+
     const summary = await data.getDaySummary(CLASS, date)
     expect(summary.incomplete).toHaveLength(0)
     expect(summary.complete.length).toBeGreaterThan(0)
   })
 
-  it('ثبت گروهی بدون خواب، گزارش را ناقص می‌گذارد', async () => {
-    const date = '2026-04-03'
+  it('ثبت گروهی بدون خواب، گزارش تمام‌روز را ناقص می‌گذارد', async () => {
+    const date = '2026-04-06'
     await data.applyBulk(CLASS, date, { lunch: 'most', mood: 'good', napStart: null })
+    vi.setSystemTime(new Date(2026, 3, 6, 14, 0))
+    await data.applyBulk(CLASS, date, { lunch: null, mood: 'good', napStart: null })
+
     const summary = await data.getDaySummary(CLASS, date)
-    expect(summary.incomplete[0]?.missing).toEqual(['خواب'])
+    // child-1 تمام‌روز است، پس خواب برایش معنا دارد و تنها چیزی است که مانده
+    expect(summary.incomplete.find((i) => i.childId === 'child-1')?.missing).toEqual(['خواب'])
   })
 
   it('تفکیک بازه‌های خلق در استثنای هر کودک ممکن می‌ماند', async () => {
-    const date = '2026-04-04'
-    await data.applyBulk(CLASS, date, { lunch: 'most', mood: 'good', napStart: '13:00' })
+    const date = '2026-04-07'
+    await data.applyBulk(CLASS, date, { lunch: 'most', mood: 'good', napStart: null })
+    vi.setSystemTime(new Date(2026, 3, 7, 14, 0))
+    await data.applyBulk(CLASS, date, { lunch: null, mood: 'good', napStart: '13:00' })
     await data.saveChildReport('child-1', date, { moodAfternoon: 'restless' })
 
     const day = await data.getClassDay(CLASS, date)
@@ -86,7 +137,7 @@ describe('کودکان بدون یادداشت این هفته', () => {
 
 describe('ارسال و قفل', () => {
   it('ارسال، تعداد گزارش‌ها را برمی‌گرداند و زمان می‌گذارد', async () => {
-    const date = '2026-04-10'
+    const date = '2026-04-08'
     const count = await data.sendReports(CLASS, date)
     expect(count).toBeGreaterThan(0)
     expect((await data.getDaySummary(CLASS, date)).sentAt).not.toBeNull()

@@ -8,6 +8,8 @@ import type {
   AbsenceNotice,
   AccessScope,
   ReadAuditSink,
+  ChildInSession,
+  Enrollment,
   Notice,
   Amendment,
   PaymentClaim,
@@ -46,6 +48,10 @@ import {
   PICKUP_CODES,
   seedPickupCodes,
   CHILD_FEES,
+  DAY_PERIODS,
+  ENROLLMENTS,
+  STAFF_NAMES,
+  STAFF_SHIFTS,
   CONSENTS,
   FEE_PLANS,
   GUARDIAN_PHONES,
@@ -55,8 +61,19 @@ import {
   seedAttendance,
   seedMedications,
 } from './fixture.ts'
-import { UNACCOUNTED_AFTER_HOUR } from '../attendanceState.ts'
+import { isOverdue } from '../attendanceState.ts'
 import { toIsoDate } from '../../../i18n/index.ts'
+import {
+  applicableFields,
+  bulkFields,
+  dayEndFor,
+  dayStartFor,
+  enrolledOn,
+  minutesOf,
+  periodsAt,
+  periodsFor,
+  staffOnDutyIds,
+} from '../periods.ts'
 
 type DayState = {
   attendance: Map<string, Attendance>
@@ -119,6 +136,7 @@ function save(): void {
       messages: MESSAGES,
       amendments: AMENDMENTS,
       claims: CLAIMS,
+      extras: [...EXTRA_TODAY.entries()].map(([k, v]) => [k, [...v]] as [string, string[]]),
       smsUsed,
     }
     localStorage.setItem(STORE_KEY, JSON.stringify(payload))
@@ -144,6 +162,7 @@ function hydrate(): void {
       messages?: Message[]
       amendments?: Amendment[]
       claims?: PaymentClaim[]
+      extras?: [string, string[]][]
       smsUsed?: number
     }
     for (const [date, stored] of Object.entries(payload.days ?? {})) {
@@ -174,6 +193,7 @@ function hydrate(): void {
     restore(MESSAGES, payload.messages)
     restore(AMENDMENTS, payload.amendments)
     restore(CLAIMS, payload.claims)
+    for (const [k, v] of payload.extras ?? []) EXTRA_TODAY.set(k, new Set(v))
     if (typeof payload.smsUsed === 'number') smsUsed = payload.smsUsed
   } catch {
     // داده ذخیره‌شده خراب بود. از نمونه تازه شروع می‌کنیم.
@@ -313,6 +333,111 @@ function invoiceOf(row: InvoiceRow): Invoice {
   }
 }
 
+
+
+
+/** فیلدهای قابل اعمال یک کودک، از ثبت‌نام فعالش. */
+/** ساعت آغاز روزِ این کودک، از بازه‌های دوره حضورش. */
+function dayStartOf(childId: string): string | null {
+  const enrollment = ENROLLMENTS.find((e) => e.childId === childId)
+  return enrollment ? dayStartFor(DAY_PERIODS, enrollment.attendanceType) : null
+}
+
+function fieldsOf(childId: string): string[] {
+  const enrollment = ENROLLMENTS.find((e) => e.childId === childId)
+  return enrollment ? applicableFields(DAY_PERIODS, enrollment.attendanceType) : []
+}
+
+/** نام مربیِ حساب فعال. در داده واقعی از staff می‌آید. */
+function staffNameOf(accountId: string): string {
+  return STAFF_NAMES[accountId] ?? ACCOUNT_STAFF[accountId] ?? 'مربی'
+}
+
+/**
+ * شناسه کارکنِ هر حساب نمونه. در داده واقعی user_account.staff_id است.
+ */
+const ACCOUNT_STAFF: Record<string, string> = {
+  'acc-teacher-golha': 'زهرا محمدی',
+  'acc-teacher-both': 'مریم رضایی',
+  'acc-teacher-noon': 'نسرین کاظمی',
+  'acc-teacher-setareha': 'الهام نوری',
+}
+
+/**
+ * تأخیر تحویل، از پایان بازه خودِ کودک.
+ *
+ * پیش‌تر از ساعت ثابت ۱۶:۳۰ می‌آمد، پس کودک صبحانه‌ای هرگز تأخیر
+ * نمی‌گرفت و ساعت ۱۳ رفتنش «زودتر از موعد» به نظر می‌رسید.
+ */
+function lateAfter(childId: string, at: Date): number {
+  const enrollment = ENROLLMENTS.find((e) => e.childId === childId)
+  const end = enrollment ? dayEndFor(DAY_PERIODS, enrollment.attendanceType) : null
+  if (!end) return 0
+  const minutes = at.getHours() * 60 + at.getMinutes()
+  return Math.max(0, minutes - minutesOf(end))
+}
+
+/* ── بازه و دوره حضور ─────────────────────────────────────────── */
+
+/** بخش ۷.۲. در داده واقعی از center.max_children_per_staff می‌آید. */
+const MAX_CHILDREN_PER_STAFF = 15
+
+/**
+ * کودکانی که مربی امروز دستی به فهرست افزوده.
+ *
+ * بخش ۵.۳ اصلاح‌شده: کودک سه‌روزه گاهی روز چهارم هم می‌آید و بدون این،
+ * مربی هیچ راهی برای ثبت ورودش ندارد. کلید «کلاس|تاریخ» است.
+ */
+const EXTRA_TODAY = new Map<string, Set<string>>()
+
+/**
+ * لحظه جاری، ولی روی تاریخِ خواسته‌شده.
+ *
+ * روز گذشته یا آینده ساعتِ حالا را می‌گیرد؛ بدون این، بازه‌ها برای هر
+ * روزی جز امروز بی‌معنا می‌شدند.
+ */
+function sameDayNow(isoDate: string): Date {
+  const now = new Date()
+  if (toLocalIsoDate(now) === isoDate) return now
+  const [y, m, d] = isoDate.split('-').map(Number)
+  const at = new Date(now)
+  at.setFullYear(y ?? 2026, (m ?? 1) - 1, d ?? 1)
+  return at
+}
+
+const enrollmentOf = (childId: string): Enrollment | null =>
+  ENROLLMENTS.find((e) => e.childId === childId) ?? null
+
+/**
+ * کودک را با آنچه امروز درباره‌اش صادق است برمی‌گرداند، یا null اگر
+ * امروز در جلسه نباشد.
+ */
+function childInSession(child: Child, at: Date, isExtra: boolean): ChildInSession | null {
+  const enrollment = enrollmentOf(child.id)
+  if (!enrollment) return null
+
+  // روزی که ثبت‌نامش نیست: فقط اگر مربی دستی افزوده باشد.
+  if (!enrolledOn(enrollment, at) && !isExtra) return null
+
+  const mine = periodsFor(DAY_PERIODS, enrollment.attendanceType)
+  const nowMinutes = at.getHours() * 60 + at.getMinutes()
+  const inSession = mine.some(
+    (p) => nowMinutes >= minutesOf(p.startTime) && nowMinutes < minutesOf(p.endTime),
+  )
+  // استثنای دستی از قید بازه هم می‌گذرد: مربی می‌داند چه می‌کند.
+  if (!inSession && !isExtra) return null
+
+  return {
+    ...child,
+    attendanceType: enrollment.attendanceType,
+    periods: mine,
+    fields: applicableFields(DAY_PERIODS, enrollment.attendanceType),
+    dayStart: dayStartFor(DAY_PERIODS, enrollment.attendanceType),
+    dayEnd: dayEndFor(DAY_PERIODS, enrollment.attendanceType),
+    addedException: isExtra,
+  }
+}
+
 export function createLocalDataAccess(scope: AccessScope): DataAccess {
   if (scope.centerId !== CENTER_ID) {
     throw new Error('داده محلی فقط برای همان یک مرکز نمونه است')
@@ -332,6 +457,8 @@ export function createLocalDataAccess(scope: AccessScope): DataAccess {
 
   /** نام فرستنده از دید بیننده. در داده واقعی از user_account می‌آید. */
   const senderName = () => (scope.role === 'guardian' ? 'خانواده' : 'مربی')
+
+  const currentStaffName = () => staffNameOf(scope.accountId)
 
   const assertManager = () => {
     if (scope.role !== 'manager') {
@@ -362,18 +489,52 @@ export function createLocalDataAccess(scope: AccessScope): DataAccess {
       return CLASSES.filter((c) => allowed.includes(c.id))
     },
 
+    /**
+     * روز کلاس، در یک لحظه مشخص.
+     *
+     * فقط کودکانی برمی‌گردند که همین حالا در جلسه‌اند: ثبت‌نام فعال
+     * دارند، امروز روزشان است، و لحظه جاری در یکی از بازه‌هایشان است.
+     * پیش‌تر کل کلاس برمی‌گشت و مربی صبح، کودکان بعدازظهری را هم
+     * می‌دید و نوار خلاصه روی همه حساب می‌شد.
+     */
     async getClassDay(classId, date): Promise<ClassDay> {
       assertVisible(classId)
       const classRoom = CLASSES.find((c) => c.id === classId)
       if (!classRoom) throw new Error('کلاس پیدا نشد')
 
+      const at = sameDayNow(date)
+      const current = periodsAt(DAY_PERIODS, at)
+      const extras = EXTRA_TODAY.get(`${classId}|${date}`) ?? new Set<string>()
+
       const children = CHILDREN.filter((c) => c.classId === classId)
+        .map((child) => childInSession(child, at, extras.has(child.id)))
+        .filter((c): c is ChildInSession => c !== null)
+
       const ids = new Set(children.map((c) => c.id))
       const state = dayState(date)
+
+      const onDuty = staffOnDutyIds(
+        STAFF_SHIFTS.filter((sh) => sh.classId === classId),
+        at,
+        date,
+      )
 
       return {
         classRoom,
         children,
+        enrolledToday: CHILDREN.filter(
+          (c) => c.classId === classId && enrolledOn(enrollmentOf(c.id), at),
+        ).length,
+        periods: DAY_PERIODS,
+        currentPeriods: current,
+        // بخش ۷.۲: نسبت در همین لحظه، نه یک بار در روز. مرز بازه‌ها
+        // بحرانی‌ترین نقطه است و خودکار در همین عدد می‌افتد.
+        ratio: {
+          children: children.length,
+          staff: onDuty.length,
+          maxAllowed: MAX_CHILDREN_PER_STAFF,
+          breached: children.length > MAX_CHILDREN_PER_STAFF * Math.max(onDuty.length, 1),
+        },
         attendance: [...state.attendance.values()].filter((a) => ids.has(a.childId)),
         absences: state.absences.filter((a) => ids.has(a.childId)),
         medications: state.medications.filter((m) => ids.has(m.childId)),
@@ -408,6 +569,9 @@ export function createLocalDataAccess(scope: AccessScope): DataAccess {
         arrivalPhotoUrl: input.arrivalPhotoUrl ?? null,
         pickedUpById: null,
         pickupMethod: null,
+        // نام مربیِ تحویل‌گیرنده. سرپرست هم همین را می‌بیند.
+        checkedInByName: currentStaffName(),
+        checkedOutByName: null,
         lateMinutes: 0,
       }
       state.attendance.set(input.childId, row)
@@ -437,23 +601,50 @@ export function createLocalDataAccess(scope: AccessScope): DataAccess {
       return row
     },
 
+    /**
+     * ثبت گروهی — بخش ۵.۵، با قید بازه.
+     *
+     * فقط روی کودکان حاضر در بازه فعلی می‌نشیند و فقط روی فیلدهایی که
+     * برای همان کودک معنا دارند. پیش‌تر روی کل کلاس می‌نشست، پس خلق عصرِ
+     * کودک صبحانه‌ای هم پر می‌شد — چیزی که برای او اصلاً وجود ندارد.
+     */
     async applyBulk(classId, date, values: BulkValues): Promise<DailyReport[]> {
       assertVisible(classId)
       const state = dayState(date)
       const written: DailyReport[] = []
+      const day = await this.getClassDay(classId, date)
 
-      for (const child of CHILDREN.filter((c) => c.classId === classId)) {
+      for (const child of day.children) {
         const current = state.reports.get(child.id)
-        // بخش ۵.۵: کودکی که مربی جدا دست زده، مقدار گروهی نمی‌گیرد.
-        if (current?.touched) continue
+
+        /*
+         * بخش ۵.۵: «هر کودکی که دست‌نخورده بماند، مقدار گروهی برایش ثبت
+         * می‌شود.» یعنی آنچه مربی جدا نوشته پاک نمی‌شود.
+         *
+         * ولی «دست خورده» به معنای «تا آخر روز کنار گذاشته شده» نیست.
+         * با دو بازه، کودکی که مربی صبح ناهارش را استثنا کرده بود از
+         * ثبت گروهیِ عصر هم می‌افتاد و مربی باید خوابش را تک‌تک وارد
+         * می‌کرد. پس قاعده دقیق‌تر می‌شود: روی کودک استثنا فقط جاهای
+         * خالی پر می‌شوند، و هیچ مقدار نوشته‌شده‌ای بازنویسی نمی‌شود.
+         */
+        const keep = current?.touched === true
+        const put = <T>(next: T | null, now: T | null): T | null =>
+          keep && now !== null ? now : (next ?? now ?? null)
+
+        // بخش ۶: فقط فیلدهای بازه جاری، و فقط آن‌هایی که برای این کودک
+        // معنا دارند. خلق صبحِ ثبت‌شده با ثبت گروهیِ عصر عوض نمی‌شود.
+        const writable = bulkFields(child.fields, day.currentPeriods)
 
         const next: DailyReport = {
           ...blank(child.id, date),
           ...current,
-          lunch: values.lunch ?? current?.lunch ?? null,
-          napStart: values.napStart ?? current?.napStart ?? null,
-          ...moodPatch(values.mood, current),
-          touched: false,
+          // ناهار برای همه است و به بازه وصل نیست.
+          lunch: put(values.lunch, current?.lunch ?? null),
+          napStart: writable.includes('nap')
+            ? put(values.napStart, current?.napStart ?? null)
+            : (current?.napStart ?? null),
+          ...moodPatch(values.mood, current, writable, keep),
+          touched: keep,
         }
         state.reports.set(child.id, next)
         written.push(next)
@@ -572,8 +763,11 @@ export function createLocalDataAccess(scope: AccessScope): DataAccess {
         checkOutAt: input.at.toISOString(),
         pickupMethod: input.method,
         pickedUpById: input.personId ?? null,
-        // بخش ۵.۸: پس از ساعت پایان مهد، دقایق تأخیر خودکار ثبت می‌شود.
-        lateMinutes: lateMinutesAfter(input.at),
+        // نام مربیِ تحویل‌دهنده. هر مربی آن کلاس حق تحویل دارد.
+        checkedOutByName: currentStaffName(),
+        // بخش ۵.۸: تأخیر از پایان بازه خودِ کودک، نه پایان کار مهد.
+        // کودک صبحانه‌ای که ساعت ۱۳ می‌رود سر وقت رفته.
+        lateMinutes: lateAfter(input.childId, input.at),
       }
       state.attendance.set(input.childId, next)
       save()
@@ -672,7 +866,10 @@ export function createLocalDataAccess(scope: AccessScope): DataAccess {
         sent,
         checkInAt: attendance?.checkInAt ?? null,
         droppedByName: nameOf(attendance?.droppedByGuardianId ?? null),
+        // سرپرستان خواسته‌اند بدانند کودکشان را دست چه کسی داده‌اند.
+        checkedInByName: attendance?.checkedInByName ?? null,
         checkOutAt: attendance?.checkOutAt ?? null,
+        checkedOutByName: attendance?.checkedOutByName ?? null,
         pickedUpByName:
           attendance?.pickupMethod === 'code'
             ? 'با کد تحویل'
@@ -705,14 +902,19 @@ export function createLocalDataAccess(scope: AccessScope): DataAccess {
     async getDaySummary(classId, date): Promise<DaySummary> {
       assertVisible(classId)
       const state = dayState(date)
-      const children = CHILDREN.filter((c) => c.classId === classId)
+      // همه کودکانِ امروزِ کلاس، نه فقط کودکان بازه جاری: کودک
+      // صبحانه‌ای که ظهر رفته هم باید در شمارش پایان روز بیاید.
+      const at = sameDayNow(date)
+      const children = CHILDREN.filter(
+        (c) => c.classId === classId && enrolledOn(enrollmentOf(c.id), at),
+      )
 
       const complete: string[] = []
       const incomplete: DaySummary['incomplete'] = []
 
       for (const child of children) {
         const report = state.reports.get(child.id)
-        const missing = missingParts(report)
+        const missing = missingParts(report, fieldsOf(child.id))
         if (missing.length === 0) complete.push(child.id)
         else incomplete.push({ childId: child.id, missing })
       }
@@ -733,6 +935,7 @@ export function createLocalDataAccess(scope: AccessScope): DataAccess {
         // تگ عکس هنوز ساخته نشده؛ وقتی استوریج وصل شد از photo_tag می‌آید.
         untaggedPhotos: state.photos.filter((p) => p.childIds.length === 0).length,
         withoutNoteThisWeek: children.filter((c) => !noted.has(c.id)).map((c) => c.id),
+        names: Object.fromEntries(children.map((c) => [c.id, c.firstName])),
         sentAt: state.sentAt,
       }
     },
@@ -857,15 +1060,25 @@ export function createLocalDataAccess(scope: AccessScope): DataAccess {
     async getManagerDashboard(date) {
       assertManager()
       const state = dayState(date)
-      const now = new Date()
       const present = [...state.attendance.values()].filter(
         (a) => a.checkInAt && !a.checkOutAt,
       ).length
 
+      /*
+       * بی‌خبر، از مهلتِ بازه خودِ هر کودک.
+       *
+       * پیش‌تر یک ساعت ثابت برای همه بود و کل فهرست را تا ساعت ۹ خالی
+       * نگه می‌داشت یا پس از آن کودک بعدازظهری را هم بی‌خبر می‌شمرد.
+       * حالا هر کودک مهلت خودش را دارد، و کودکی که امروز اصلاً روزش
+       * نیست اصلاً در فهرست نمی‌آید.
+       */
       const absent = new Set(state.absences.map((a) => a.childId))
-      const unaccounted = CHILDREN.filter(
-        (c) => !state.attendance.get(c.id)?.checkInAt && !absent.has(c.id),
-      ).map((c) => ({
+      const at = sameDayNow(date)
+      const unaccounted = CHILDREN.filter((c) => {
+        if (!enrolledOn(enrollmentOf(c.id), at)) return false
+        if (state.attendance.get(c.id)?.checkInAt || absent.has(c.id)) return false
+        return isOverdue({ id: c.id, dayStart: dayStartOf(c.id) }, at)
+      }).map((c) => ({
         childId: c.id,
         name: `${c.firstName} ${c.lastName}`,
         guardianPhone: GUARDIAN_PHONES[c.id] ?? null,
@@ -880,22 +1093,38 @@ export function createLocalDataAccess(scope: AccessScope): DataAccess {
         date,
         present,
         enrolled: CHILDREN.length,
-        // پیش از ساعت نُه، «نیامده» هنوز «بی‌خبر» نیست — بخش ۵.۱.
-        unaccounted: now.getHours() >= UNACCOUNTED_AFTER_HOUR ? unaccounted : [],
+        unaccounted,
         pendingIncidents: state.incidents
           .filter((i) => i.requiresApproval)
           .map((i) => ({ ...i, childName: nameOf(i.childId) })),
         classes: CLASSES.map((room) => {
-          const kids = CHILDREN.filter((c) => c.classId === room.id)
+          const kids = CHILDREN.filter(
+            (c) => c.classId === room.id && enrolledOn(enrollmentOf(c.id), at),
+          )
           const complete = kids.filter(
-            (c) => missingParts(state.reports.get(c.id)).length === 0,
+            (c) => missingParts(state.reports.get(c.id), fieldsOf(c.id)).length === 0,
           ).length
+          // بخش ۷: نسبت از کودکانِ همین لحظه و مربیانِ همین لحظه، نه از
+          // کل کلاس و کل کارکنان. مرز دو بازه خودش را در همین عدد نشان
+          // می‌دهد.
+          const inSession = kids.filter((c) => childInSession(c, at, false) !== null)
+          const onDuty = staffOnDutyIds(
+            STAFF_SHIFTS.filter((sh) => sh.classId === room.id),
+            at,
+            date,
+          )
           return {
             classId: room.id,
             name: room.name,
             complete,
             total: kids.length,
             sent: state.sentAt !== null,
+            ratio: {
+              children: inSession.length,
+              staff: onDuty.length,
+              maxAllowed: MAX_CHILDREN_PER_STAFF,
+              breached: inSession.length > MAX_CHILDREN_PER_STAFF * Math.max(onDuty.length, 1),
+            },
           }
         }),
         pendingClaims: CLAIMS.filter((c) => c.status === 'pending').length,
@@ -1309,6 +1538,35 @@ export function createLocalDataAccess(scope: AccessScope): DataAccess {
       save()
     },
 
+
+    /* ── دوره حضور — بخش ۵.۳ اصلاح‌شده ────────────────────────── */
+
+    async listOffDayChildren(classId, date) {
+      assertVisible(classId)
+      const at = sameDayNow(date)
+      const extras = EXTRA_TODAY.get(`${classId}|${date}`) ?? new Set<string>()
+      return CHILDREN.filter((child) => {
+        if (child.classId !== classId) return false
+        if (extras.has(child.id)) return false
+        const enrollment = enrollmentOf(child.id)
+        if (!enrollment) return false
+        // یا امروز روزش نیست، یا بازه‌اش الان نیست. هر دو حالت را مربی
+        // ممکن است بخواهد دستی اضافه کند.
+        return childInSession(child, at, false) === null
+      })
+    },
+
+    async addChildToday(childId, date) {
+      const child = CHILDREN.find((c) => c.id === childId)
+      if (!child?.classId) throw new Error('کودک پیدا نشد')
+      assertVisible(child.classId)
+      const key = `${child.classId}|${date}`
+      const set = EXTRA_TODAY.get(key) ?? new Set<string>()
+      set.add(childId)
+      EXTRA_TODAY.set(key, set)
+      save()
+    },
+
     async sendReports(classId, date): Promise<number> {
       assertVisible(classId)
       const state = dayState(date)
@@ -1325,7 +1583,28 @@ export function createLocalDataAccess(scope: AccessScope): DataAccess {
  * بخش ۵.۹: «کامل» یعنی غذا و خواب و هر سه بازه خلق پر شده باشند.
  * همان تعریفی که تریگر دیتابیس هم به کار می‌برد.
  */
-function missingParts(report: DailyReport | undefined): string[] {
+/**
+ * بخش ۵.۹: «کامل» یعنی هر فیلدی که برای این کودک معنا دارد پر باشد.
+ *
+ * تعریف دیگر ثابت نیست: کودک صبحانه‌ای خلق عصر و خواب ندارد و نبودشان
+ * نقص نیست. همان منطقی که تریگر پایگاه داده هم اجرا می‌کند.
+ */
+function missingParts(report: DailyReport | undefined, fields?: readonly string[]): string[] {
+  if (fields) {
+    const missing: string[] = []
+    if (fields.includes('lunch') && !report?.lunch) missing.push('ناهار')
+    if (fields.includes('nap') && !report?.napStart) missing.push('خواب')
+    const moodMissing =
+      (fields.includes('mood_morning') && !report?.moodMorning) ||
+      (fields.includes('mood_noon') && !report?.moodNoon) ||
+      (fields.includes('mood_afternoon') && !report?.moodAfternoon)
+    if (moodMissing) missing.push('خلق')
+    return missing
+  }
+  return legacyMissingParts(report)
+}
+
+function legacyMissingParts(report: DailyReport | undefined): string[] {
   const missing: string[] = []
   if (!report?.lunch) missing.push('ناهار')
   if (!report?.napStart) missing.push('خواب')
@@ -1396,23 +1675,36 @@ function blank(childId: string, date: string): DailyReport {
  * تفکیک بازه‌ها جای خودش را دارد: شیت استثنای هر کودک، جایی که مربی
  * می‌گوید این کودک صبح خوب بود و عصر بی‌قرار.
  */
-function moodPatch(mood: DailyReport['moodNoon'], _current: DailyReport | undefined) {
-  if (!mood) return {}
-  return { moodMorning: mood, moodNoon: mood, moodAfternoon: mood }
-}
-
 /**
- * بخش ۵.۸: پس از ساعت پایان مهد، شمارنده فعال و دقایق تأخیر خودکار ثبت
- * و به صورتحساب اضافه می‌شود. ساعت پایان از تنظیمات مرکز می‌آید؛ تا وصل
- * شدن آن، پیش‌فرض سند به کار می‌رود.
+ * نوار گروهی «خلق عمومی امروز» است، پس هر سه بازه را پر می‌کند — ولی
+ * فقط آن‌هایی که برای این کودک وجود دارند.
+ *
+ * پیش‌تر هر سه را بی‌قید پر می‌کرد و خلق عصرِ کودک صبحانه‌ای هم مقدار
+ * می‌گرفت، در حالی که او اصلاً عصر در مهد نیست.
  */
-const WORK_END_HOUR = 16
-const WORK_END_MINUTE = 30
-
-function lateMinutesAfter(at: Date): number {
-  const end = new Date(at)
-  end.setHours(WORK_END_HOUR, WORK_END_MINUTE, 0, 0)
-  return Math.max(0, Math.round((at.getTime() - end.getTime()) / 60000))
+/**
+ * خلق گروهی روی بازه‌های مجاز.
+ *
+ * keep یعنی این کودک استثناست: جای خالی پر می‌شود ولی آنچه مربی نوشته
+ * دست نمی‌خورد.
+ */
+function moodPatch(
+  mood: DailyReport['moodNoon'],
+  current: DailyReport | undefined,
+  fields: readonly string[],
+  keep = false,
+) {
+  if (!mood) return {}
+  const patch: Partial<DailyReport> = {}
+  const set = (field: 'moodMorning' | 'moodNoon' | 'moodAfternoon', key: string) => {
+    if (!fields.includes(key)) return
+    if (keep && current?.[field]) return
+    patch[field] = mood
+  }
+  set('moodMorning', 'mood_morning')
+  set('moodNoon', 'mood_noon')
+  set('moodAfternoon', 'mood_afternoon')
+  return patch
 }
 
 /**

@@ -70,7 +70,15 @@ export function CloseDayPage({ onBack, onFixReports }: Props) {
     void load()
   }, [load])
 
-  const nameOf = (id: string) => children.find((c) => c.id === id)?.firstName ?? ''
+  /*
+   * نام از خودِ خلاصه می‌آید، نه از ClassDay.
+   *
+   * ساعت بستن روز، کودک صبحانه‌ای دیگر در جلسه نیست و در children نبود؛
+   * نامش خالی چاپ می‌شد و مربی «(ناهار، خلق)» بی‌نام می‌دید. children
+   * برای فهرست اصلاحیه می‌ماند، که فقط کودکان حاضر را می‌خواهد.
+   */
+  const nameOf = (id: string) =>
+    summary?.names[id] ?? children.find((c) => c.id === id)?.firstName ?? ''
 
   const send = () => {
     if (!classId) return

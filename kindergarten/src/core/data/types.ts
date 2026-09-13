@@ -48,6 +48,10 @@ export type Attendance = {
   /** چه کسی تحویل گرفت. برای روش code خالی است و نامش در کد ثبت شده. */
   pickedUpById: string | null
   pickupMethod: PickupMethod | null
+  /** مربی‌ای که کودک را تحویل گرفت. به سرپرست هم نشان داده می‌شود. */
+  checkedInByName: string | null
+  /** مربی‌ای که کودک را تحویل داد. */
+  checkedOutByName: string | null
   /** بخش ۵.۸: دقایق تأخیر پس از ساعت پایان مهد، خودکار. */
   lateMinutes: number
 }
@@ -98,7 +102,25 @@ export type CheckInInput = {
 /** نمای یک روز از یک کلاس، همان چیزی که صفحه «امروز» لازم دارد. */
 export type ClassDay = {
   classRoom: ClassRoom
-  children: Child[]
+  /**
+   * فقط کودکانی که در همین لحظه در جلسه‌اند.
+   *
+   * پیش‌تر کل کلاس بود و مربی صبح، کودکان بعدازظهری را هم می‌دید.
+   */
+  children: ChildInSession[]
+  /**
+   * شمار کودکانی که امروز روزشان هست، چه در این لحظه در جلسه باشند چه نه.
+   *
+   * جدا از children لازم است: کودک صبحانه‌ای ساعت ۱۵ در جلسه نیست ولی
+   * امروز آمده بود. شمارش پایان روز و آمار مدیر باید او را ببینند.
+   */
+  enrolledToday: number
+  /** بازه‌های این مرکز، برای ساختن رابط بدون فرض تعداد. */
+  periods: DayPeriod[]
+  /** بازه یا بازه‌های همین لحظه. در مرز می‌تواند بیش از یکی باشد. */
+  currentPeriods: DayPeriod[]
+  /** نسبت مربی به کودک در همین لحظه — بخش ۷.۲. */
+  ratio: StaffRatio
   attendance: Attendance[]
   absences: AbsenceNotice[]
   medications: MedicationLog[]
@@ -157,8 +179,12 @@ export type ParentDay = {
   sent: boolean
   checkInAt: string | null
   droppedByName: string | null
+  /** مربی‌ای که کودک را تحویل گرفت — خواسته سرپرستان. */
+  checkedInByName: string | null
   checkOutAt: string | null
   pickedUpByName: string | null
+  /** مربی‌ای که کودک را تحویل داد. */
+  checkedOutByName: string | null
   lunch: MealAmount | null
   napMinutes: number | null
   moodMorning: Mood | null
@@ -190,6 +216,14 @@ export type DaySummary = {
   untaggedPhotos: number
   /** کودکانی که این هفته هیچ یادداشتی نگرفته‌اند. */
   withoutNoteThisWeek: string[]
+  /**
+   * نام کوچک هر کودکی که در این خلاصه شمرده شده.
+   *
+   * صفحه بستن روز نمی‌تواند نام‌ها را از ClassDay بگیرد: آن فقط کودکانِ
+   * همین لحظه را دارد و ساعت ۱۶:۳۰ کودک صبحانه‌ای رفته است. بدون این،
+   * فهرست ناقص‌ها نامِ خالی نشان می‌داد.
+   */
+  names: Record<string, string>
   /** اگر گزارش‌های امروز فرستاده شده‌اند، زمانش. */
   sentAt: string | null
 }
@@ -451,6 +485,84 @@ export type MessageThread = {
   hours: { start: string; end: string }
 }
 
+/* ── بازه روز، دوره حضور، و شیفت ─────────────────────────────── */
+
+export type AttendanceType = 'morning' | 'afternoon' | 'full_day'
+
+/**
+ * یک بازه از روز. مرجع مشترک دوره حضور کودک و شیفت مربی.
+ *
+ * تعدادش هیچ‌جا فرض نمی‌شود: مهد می‌تواند مرز را جابه‌جا کند یا بازه
+ * سوم اضافه کند.
+ */
+export type DayPeriod = {
+  id: string
+  key: string
+  title: string
+  startTime: string
+  endTime: string
+  sortOrder: number
+  /** فیلدهای گزارش که به این بازه تعلق دارند. ناهار عمداً اینجا نیست. */
+  reportFields: string[]
+  /** در کدام نوع‌های حضور می‌آید. روی خود بازه است، نه در کد. */
+  includedIn: AttendanceType[]
+}
+
+/**
+ * دوره حضور کودک — ویژگی ثبت‌نام، نه ویژگی کودک.
+ *
+ * روی child نمی‌نشیند تا کودکی که از صبحانه‌ای به تمام‌روز تغییر می‌کند
+ * تاریخچه‌اش را از دست ندهد، و شهریه به همین ردیف بچسبد.
+ */
+export type Enrollment = {
+  id: string
+  childId: string
+  classId: string
+  startDate: string
+  endDate: string | null
+  attendanceType: AttendanceType
+  /** روزهای هفته‌ای که می‌آید. شنبه صفر. */
+  weekdays: number[]
+  feePlanId: string | null
+  discountPercent: number
+}
+
+/** شیفت مربی — با ساعت، نه با بازه. */
+export type StaffShift = {
+  id: string
+  staffId: string
+  classId: string
+  weekday: number
+  startTime: string
+  endTime: string
+  effectiveFrom: string
+  effectiveTo: string | null
+}
+
+/** کودک، همراه آنچه امروز درباره‌اش صادق است. */
+export type ChildInSession = Child & {
+  attendanceType: AttendanceType
+  /** بازه‌هایی که امروز برای او معنا دارند. */
+  periods: DayPeriod[]
+  /** فیلدهای گزارش که برای او قابل اعمال‌اند. */
+  fields: string[]
+  dayStart: string | null
+  dayEnd: string | null
+  /**
+   * امروز روزِ او نیست ولی مربی دستی به فهرست افزوده — استثنا.
+   * بخش ۵.۳ اصلاح‌شده: کودک سه‌روزه گاهی روز چهارم هم می‌آید.
+   */
+  addedException: boolean
+}
+
+/** نسبت مربی به کودک در یک لحظه — بخش ۷.۲. */
+export type StaffRatio = {
+  children: number
+  staff: number
+  maxAllowed: number
+  breached: boolean
+}
+
 /* ── برنامه فردا — بخش ۵.۸ و ۶.۴ ───────────────────────────── */
 
 /** «چه کسی می‌آورد» و «چه کسی می‌برد» دو تصمیم جدایند. */
@@ -546,8 +658,21 @@ export type ManagerDashboard = {
   unaccounted: { childId: string; name: string; guardianPhone: string | null }[]
   /** رویدادهایی که منتظر تصمیم مدیرند — بخش ۳.۳. */
   pendingIncidents: (Incident & { childName: string })[]
-  /** وضعیت ثبت هر کلاس: کامل، ناقص، یا دست‌نخورده. */
-  classes: { classId: string; name: string; complete: number; total: number; sent: boolean }[]
+  /**
+   * وضعیت ثبت هر کلاس، به‌علاوه نسبت مربی به کودک در همین لحظه.
+   *
+   * بخش ۷: نسبت باید در هر لحظه حساب شود، نه یک بار در روز. مدیر تنها
+   * کسی است که هر دو کلاس را با هم می‌بیند، پس هشدار مرز اینجا معنا
+   * دارد.
+   */
+  classes: {
+    classId: string
+    name: string
+    complete: number
+    total: number
+    sent: boolean
+    ratio: StaffRatio
+  }[]
   /** اعلام‌های پرداخت که منتظر تصمیم مدیرند — بخش ۸. */
   pendingClaims: number
   smsRemaining: number
@@ -657,6 +782,19 @@ export interface DataAccess {
   publishNotice(input: NoticeInput): Promise<Notice>
 
   listNotices(limit: number): Promise<Notice[]>
+
+  /* ── دوره حضور و بازه — بخش ۵.۳ اصلاح‌شده ─────────────────── */
+
+  /**
+   * کودکی که امروز روزش نیست ولی آمده.
+   *
+   * کودک سه‌روزه گاهی روز چهارم هم می‌آید؛ بدون این، مربی هیچ راهی
+   * برای ثبت ورودش ندارد.
+   */
+  addChildToday(childId: string, date: string): Promise<void>
+
+  /** کودکانی از این کلاس که امروز روزشان نیست، برای افزودن دستی. */
+  listOffDayChildren(classId: string, date: string): Promise<Child[]>
 
   /* ── مالی — ماژول M5 ──────────────────────────────────────── */
 

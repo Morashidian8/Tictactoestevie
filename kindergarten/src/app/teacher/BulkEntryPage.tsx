@@ -10,6 +10,7 @@ import {
 import { formatClock, formatCount, formatJalali, toIsoDate, toLatinDigits } from '../../i18n/index.ts'
 import { useAuth, useData } from '../../core/auth/index.ts'
 import {
+  bulkFields,
   suggestNoteTargets,
   type BulkValues,
   type Child,
@@ -121,6 +122,32 @@ export function BulkEntryPage({ onBack }: Props) {
   const children = day?.children ?? []
   const exceptions = children.filter((c) => reports.get(c.id)?.touched).length
 
+  /*
+   * بخش ۶ سند دوره حضور: «فیلدهای غیرقابل‌اعمال نباید وجود داشته باشند،
+   * نه اینکه خالی بمانند.»
+   *
+   * صبح، ردیف خواب اصلاً کشیده نمی‌شود؛ عصر هم کشیده می‌شود چون آن‌وقت
+   * معنا دارد. هیچ‌جا فرض نشده که دو بازه هست: مجموعه از خودِ بازه‌های
+   * مرکز و کودکان حاضر ساخته می‌شود.
+   */
+  const offered = useMemo(() => {
+    const set = new Set<string>()
+    for (const child of children) {
+      for (const field of bulkFields(child.fields, day?.currentPeriods ?? [])) set.add(field)
+    }
+    return set
+  }, [children, day])
+
+  const showLunch = offered.has('lunch')
+  const showNap = offered.has('nap')
+  const showMood =
+    offered.has('mood_morning') || offered.has('mood_noon') || offered.has('mood_afternoon')
+
+  const periodLabel =
+    day && day.currentPeriods.length > 0
+      ? day.currentPeriods.map((p) => p.title).join(' و ')
+      : 'بیرون از ساعت کار'
+
   // بخش ۵.۵: چرخش پیشنهاد یادداشت، تا هیچ کودکی از قلم نیفتد.
   const suggested = useMemo(
     () => new Set(suggestNoteTargets(children.map((c) => c.id), date)),
@@ -173,8 +200,17 @@ export function BulkEntryPage({ onBack }: Props) {
       </header>
 
       <div className={styles.body}>
-        {/* ── بالا: ثبت یکجا برای کل کلاس ── */}
-        <section className={styles.bulk} aria-label="ثبت یکجا برای کل کلاس">
+        {/* ── بالا: ثبت یکجا برای کودکان همین بازه ── */}
+        <section className={styles.bulk} aria-label="ثبت یکجا برای کودکان این بازه">
+          {/*
+            مربی باید بداند این ثبت روی چه کسانی می‌نشیند. «کل کلاس»
+            دیگر درست نیست: کودک بعدازظهری صبح اینجا نیست.
+          */}
+          <p className={`${styles.scope} t-caption`}>
+            بازه {periodLabel} · {formatCount(children.length)} کودک
+          </p>
+
+          {showLunch ? (
           <div className={styles.row}>
             <span className={`${styles.rowLabel} t-caption`}>ناهار</span>
             <div className={styles.choices}>
@@ -191,15 +227,17 @@ export function BulkEntryPage({ onBack }: Props) {
               ))}
             </div>
           </div>
+          ) : null}
 
           {/*
-            یک کنترل واحد که هر سه بازه را پر می‌کند. پیش‌تر فقط بازه
-            ساعت جاری را می‌گرفت، که یعنی گزارش هیچ‌وقت از این صفحه کامل
-            نمی‌شد و مربی باید سه بار سر می‌زد. تغییر تک‌تک بازه‌ها همچنان
-            در شیت استثنای هر کودک ممکن است.
+            خلق همین بازه، نه کل روز. پیش‌تر یک ضربه هر سه بازه را پر
+            می‌کرد، که یعنی ثبت گروهیِ عصر خلق صبح را هم بازمی‌نوشت.
+            حالا هر بازه سهم خودش را می‌گیرد و تفکیک دقیق‌تر همچنان در
+            شیت استثنای هر کودک ممکن است.
           */}
+          {showMood ? (
           <div className={styles.row}>
-            <span className={`${styles.rowLabel} t-caption`}>خلق عمومی امروز</span>
+            <span className={`${styles.rowLabel} t-caption`}>خلق در بازه {periodLabel}</span>
             <div className={styles.choices}>
               {BULK_MOOD.map((value) => (
                 <button
@@ -214,18 +252,22 @@ export function BulkEntryPage({ onBack }: Props) {
               ))}
             </div>
           </div>
+          ) : null}
 
-          <div className={styles.row}>
-            <span className={`${styles.rowLabel} t-caption`}>خواب، ساعت شروع</span>
-            <input
-              className={styles.napInput}
-              inputMode="numeric"
-              placeholder="۱۳:۰۰"
-              value={napStart}
-              onChange={(event) => setNapStart(event.target.value)}
-              aria-label="ساعت شروع خواب"
-            />
-          </div>
+          {/* خواب فیلد بازه بعدازظهر است. صبح اصلاً کشیده نمی‌شود. */}
+          {showNap ? (
+            <div className={styles.row}>
+              <span className={`${styles.rowLabel} t-caption`}>خواب، ساعت شروع</span>
+              <input
+                className={styles.napInput}
+                inputMode="numeric"
+                placeholder="۱۳:۰۰"
+                value={napStart}
+                onChange={(event) => setNapStart(event.target.value)}
+                aria-label="ساعت شروع خواب"
+              />
+            </div>
+          ) : null}
 
           <button
             type="button"
@@ -254,7 +296,7 @@ export function BulkEntryPage({ onBack }: Props) {
 
         {/* ── پایین: فهرست کودکان ── */}
         <div className={styles.listHead}>
-          <span className={`${styles.listTitle} t-h2`}>کودکان</span>
+          <span className={`${styles.listTitle} t-h2`}>کودکان بازه {periodLabel}</span>
           <span className={`${styles.listCount} t-caption`}>
             {formatCount(exceptions)} استثنا از {formatCount(children.length)}
           </span>

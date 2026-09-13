@@ -9,6 +9,9 @@
  * هیچ‌کدام از این‌ها در ساخت تولید بارگذاری نمی‌شود.
  */
 import type {
+  DayPeriod,
+  Enrollment,
+  StaffShift,
   AbsenceNotice,
   Attendance,
   Child,
@@ -198,6 +201,8 @@ export function seedAttendance(date: string): Attendance[] {
     arrivalPhotoUrl: null,
     pickedUpById: null,
     pickupMethod: null,
+    checkedInByName: 'زهرا محمدی',
+    checkedOutByName: null,
     lateMinutes: 0,
   }))
 }
@@ -310,3 +315,96 @@ export const CONSENTS: Record<string, string[]> = {
   'child-3': ['photo_capture', 'photo_group_publish', 'emergency_care', 'medication'],
   'child-9': ['photo_capture'],
 }
+
+
+/* ── بازه روز، دوره حضور، و شیفت مربی ────────────────────────── */
+
+/**
+ * دو بازه پیش‌فرض. مرز پایان ناهار است و مهد می‌تواند جابه‌جایش کند.
+ *
+ * ناهار عمداً در هیچ بازه‌ای نیست: طبق تصمیم مالک محصول برای همه کودکان
+ * است. خواب در بعدازظهر است چون کودکی که بعد از ناهار می‌رود نمی‌خوابد.
+ */
+export const DAY_PERIODS: DayPeriod[] = [
+  {
+    id: 'period-morning',
+    key: 'morning',
+    title: 'صبح',
+    startTime: '07:30',
+    endTime: '13:00',
+    sortOrder: 1,
+    reportFields: ['mood_morning', 'mood_noon'],
+    includedIn: ['morning', 'full_day'],
+  },
+  {
+    id: 'period-afternoon',
+    key: 'afternoon',
+    title: 'بعدازظهر',
+    startTime: '13:00',
+    endTime: '16:30',
+    sortOrder: 2,
+    reportFields: ['nap', 'mood_afternoon'],
+    includedIn: ['afternoon', 'full_day'],
+  },
+]
+
+/**
+ * دوره حضور هر کودک.
+ *
+ * عمداً هر سه نوع در داده نمونه هست، وگرنه هیچ‌کدام از قاعده‌های تازه
+ * در نسخه نمایشی دیده نمی‌شوند. چند کودک هم سه‌روزه‌اند.
+ */
+const MORNING_ONLY = new Set(['child-3', 'child-7', 'child-11', 'child-15', 'child-19'])
+const AFTERNOON_ONLY = new Set(['child-4', 'child-8', 'child-12', 'child-16', 'child-20'])
+const THREE_DAYS = new Set(['child-5', 'child-13'])
+
+export const ENROLLMENTS: Enrollment[] = CHILDREN.filter((c) => c.classId).map((child) => ({
+  id: `enr-${child.id}`,
+  childId: child.id,
+  classId: child.classId!,
+  startDate: '1404-01-01',
+  endDate: null,
+  attendanceType: MORNING_ONLY.has(child.id)
+    ? 'morning'
+    : AFTERNOON_ONLY.has(child.id)
+      ? 'afternoon'
+      : 'full_day',
+  weekdays: THREE_DAYS.has(child.id) ? [0, 2, 4] : [0, 1, 2, 3, 4],
+  feePlanId: CHILD_FEES[child.id]?.planId ?? null,
+  discountPercent: CHILD_FEES[child.id]?.discountPercent ?? 0,
+}))
+
+/**
+ * شیفت چهار مربی.
+ *
+ * عمداً هر سه الگو هست: تمام‌روز، تا ظهر، و از ظهر. همپوشانی صبح هم
+ * هست تا حالت «بیش از یک مربی سر کار» دیده شود.
+ */
+const SHIFT_PLAN: [string, string, string, string][] = [
+  // شناسه، کلاس، شروع، پایان
+  ['staff-zahra', 'class-golha', '07:30', '16:30'],
+  ['staff-maryam', 'class-golha', '07:30', '13:00'],
+  ['staff-nasrin', 'class-golha', '12:30', '16:30'],
+  ['staff-elham', 'class-setareha', '07:30', '16:30'],
+]
+
+export const STAFF_NAMES: Record<string, string> = {
+  'staff-zahra': 'زهرا محمدی',
+  'staff-maryam': 'مریم رضایی',
+  'staff-nasrin': 'نسرین کاظمی',
+  'staff-elham': 'الهام نوری',
+}
+
+export const STAFF_SHIFTS: StaffShift[] = SHIFT_PLAN.flatMap(
+  ([staffId, classId, start, end]) =>
+    [0, 1, 2, 3, 4].map((weekday) => ({
+      id: `shift-${staffId}-${weekday}`,
+      staffId,
+      classId,
+      weekday,
+      startTime: start,
+      endTime: end,
+      effectiveFrom: '1404-01-01',
+      effectiveTo: null,
+    })),
+)

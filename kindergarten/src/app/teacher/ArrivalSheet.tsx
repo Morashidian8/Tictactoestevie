@@ -139,8 +139,16 @@ export function ArrivalSheet({ child, existing, onClose, onSubmit }: Props) {
       }
     >
       {alreadyIn && existing?.checkInAt ? (
+        /*
+         * چه کسی ثبتش کرده هم گفته می‌شود.
+         *
+         * مهد چند مربی دارد و شیفت‌ها با بازه‌ها یکی نیستند. مربی دومی
+         * که این شیت را باز می‌کند باید بداند همکارش پیش از او ثبت کرده،
+         * نه اینکه فکر کند چیزی دوبار ثبت شده.
+         */
         <p className={`${styles.note} t-body`}>
-          ورودش ساعت {formatTime(new Date(existing.checkInAt))} ثبت شده.
+          ورودش ساعت {formatTime(new Date(existing.checkInAt))} ثبت شده
+          {existing.checkedInByName ? ` — ${existing.checkedInByName}` : ''}.
         </p>
       ) : (
         <p className={`${styles.note} t-body`}>

@@ -22,6 +22,21 @@ const READ_MS = Number(process.env.READ_MS ?? 900)
 const browser = await chromium.launch({ executablePath: EXECUTABLE })
 const page = await browser.newPage({ viewport: { width: 390, height: 844 } })
 
+/*
+ * ساعت ثابت روی یک روز کاری.
+ *
+ * صفحه حالا بازه‌محور است: شب هیچ کودکی در جلسه نیست و عدد اندازه‌گیری
+ * بی‌معنا می‌شود. ۲۰۲۶-۰۳-۱۱ چهارشنبه است.
+ */
+const FIXED_DAY = '2026-03-11'
+const setClock = (hour, minute = 0) =>
+  page.clock.setFixedTime(
+    new Date(
+      `${FIXED_DAY}T${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}:00`,
+    ),
+  )
+await setClock(9)
+
 let taps = 0
 let scrolls = 0
 
@@ -77,9 +92,17 @@ const tallyText = () => page.locator('[class*="tally"]').first().innerText()
   results.push({ label: 'ثبت ورود یک کودک', target: 3000, ms, taps, scrolls })
 }
 
-// ── ۲. ثبت کامل کلاس ۲۵ نفره با ۴ استثنا ───────────────────────
-await signIn('09120000001')
-{
+/*
+ * ── ۲ و ۳. ثبت روز، حالا در دو بازه ─────────────────────────────
+ *
+ * بودجه سند (۹۰ ثانیه) برای یک پنجره طلایی است، و مهد واقعی دو پنجره
+ * دارد: یکی پیش از ناهار و یکی پس از خواب. پس هر بازه جدا سنجیده
+ * می‌شود، نه جمعشان — وگرنه عددی می‌ساختیم که با هیچ لحظه‌ای از روزِ
+ * مربی نمی‌خواند.
+ */
+const bar = '[aria-label="ثبت یکجا برای کودکان این بازه"] '
+
+const measureSession = async (label, { withNap }) => {
   taps = 0
   scrolls = 0
   const start = Date.now()
@@ -88,17 +111,23 @@ await signIn('09120000001')
   await page.waitForSelector('text=اعمال روی همه')
   await read()
 
-  const bar = '[aria-label="ثبت یکجا برای کل کلاس"] '
   await tap(page.locator(`${bar}button:has-text("بیشترش")`))
   await tap(page.locator(`${bar}button:has-text("خوب")`))
-  // ساعت خواب پیش‌فرض دارد؛ مربی فقط وقتی دست می‌زند که فرق کند.
+  if (withNap) {
+    // ساعت خواب فقط در بازه بعدازظهر پرسیده می‌شود.
+    await page.fill('input[aria-label="ساعت شروع خواب"]', '13:00')
+    taps += 1
+  }
   await tap(page.locator('[class*="applyInline"]'))
   await page.waitForSelector('text=/اعمال شد/')
   await read()
 
   // چهار استثنا. هر کدام: پیدا کردن در فهرست، باز کردن، یک تغییر، ذخیره.
-  for (const name of ['امیر', 'آوا', 'کیان', 'هستی']) {
+  let done = 0
+  for (const name of ['امیر', 'آوا', 'کیان', 'هستی', 'سارا', 'رضا', 'مریم', 'هستی']) {
+    if (done === 4) break
     const row = page.locator(`button:has([class*="itemName"]:text-is("${name}"))`)
+    if ((await row.count()) === 0) continue
     const seen = await row.isVisible().catch(() => false)
     if (!seen) await scrollDown()
     await row.evaluate((el) => el.scrollIntoView({ block: 'center', behavior: 'instant' }))
@@ -109,13 +138,26 @@ await signIn('09120000001')
     await tap(page.locator('[role="dialog"] button:has-text("کمی")'))
     await tap(page.locator('[role="dialog"] button:has-text("ذخیره استثنا")'))
     await page.waitForSelector('[role="dialog"]', { state: 'detached' })
+    done += 1
   }
 
   await tap(page.locator('[class*="bar"] button:has-text("ذخیره و بازگشت")'))
   await page.waitForSelector('text=ثبت گروهی امروز')
-  const ms = Date.now() - start
-  results.push({ label: 'کل کلاس ۲۵ نفره با ۴ استثنا', target: 90_000, ms, taps, scrolls })
+  results.push({ label, target: 90_000, ms: Date.now() - start, taps, scrolls })
 }
+
+await signIn('09120000001')
+const inSession = async () =>
+  (await page.locator('[class*="periodCount"]').innerText()).trim()
+
+console.log(`  بازه صبح: ${await inSession()}`)
+await measureSession('بازه صبح، با ۴ استثنا', { withNap: false })
+
+await setClock(14)
+await page.reload()
+await page.waitForSelector('text=ثبت گروهی امروز')
+console.log(`  بازه بعدازظهر: ${await inSession()}`)
+await measureSession('بازه بعدازظهر، با ۴ استثنا', { withNap: true })
 
 await browser.close()
 

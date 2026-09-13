@@ -211,6 +211,31 @@ export function DashboardPage({ onGo }: { onGo: (page: ManagerPage) => void }) {
               ))}
             </section>
 
+            {/*
+              بخش ۷: نسبت مربی به کودک در همین لحظه.
+              فقط کلاسی که از حد گذشته نشان داده می‌شود. نسبت سالم خبر
+              نیست و جای خبر بد را می‌گیرد؛ مدیر باید در یک نگاه ببیند
+              کجا کم آورده‌اند. بحرانی‌ترین لحظه مرز دو بازه است، وقتی
+              هر دو گروه با هم‌اند و شیفت صبح دارد تمام می‌شود.
+            */}
+            {board.classes.some((room) => room.ratio.breached) ? (
+              <section className={styles.alert} aria-label="نسبت مربی به کودک">
+                <span className={`${styles.cardLabel} t-caption`}>نسبت مربی به کودک</span>
+                {board.classes
+                  .filter((room) => room.ratio.breached)
+                  .map((room) => (
+                    <p key={room.classId} className={`${styles.row} t-body`}>
+                      <span>{room.name}</span>
+                      <span className={styles.partial}>
+                        {toPersianDigits(room.ratio.children)} کودک با{' '}
+                        {toPersianDigits(room.ratio.staff)} مربی · حد{' '}
+                        {toPersianDigits(room.ratio.maxAllowed)}
+                      </span>
+                    </p>
+                  ))}
+              </section>
+            ) : null}
+
             <section className={styles.card} aria-label="سهمیه پیامک">
               <span className={`${styles.cardLabel} t-caption`}>سهمیه پیامک این ماه</span>
               <p className={`${styles.row} t-body`}>

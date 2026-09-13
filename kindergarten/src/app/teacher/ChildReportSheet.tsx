@@ -2,7 +2,13 @@ import { useMemo, useState } from 'react'
 import { AlertIcon, BottomSheet } from '../../design-system/index.ts'
 import { toLatinDigits } from '../../i18n/index.ts'
 import { findBannedWords } from '../../core/data/bannedWords.ts'
-import type { Child, DailyReport, MealAmount, Mood, ReportPatch } from '../../core/data/index.ts'
+import type {
+  ChildInSession,
+  DailyReport,
+  MealAmount,
+  Mood,
+  ReportPatch,
+} from '../../core/data/index.ts'
 import styles from './ChildReportSheet.module.css'
 
 /**
@@ -12,6 +18,10 @@ import styles from './ChildReportSheet.module.css'
  *
  * هر کودکی که از اینجا رد شود، دیگر مقدار گروهی نمی‌گیرد. این تنها راه
  * رسیدن به هدف «۲۵ کودک با ۴ استثنا زیر ۹۰ ثانیه» است.
+ *
+ * بخش ۶ سند دوره حضور: فیلدی که برای این کودک معنا ندارد اصلاً کشیده
+ * نمی‌شود. کودک صبحانه‌ای «خلق عصر» ندارد؛ داشتنِ خالی‌اش یعنی مربی هر
+ * روز دنبال پر کردن چیزی می‌گردد که وجود ندارد.
  */
 
 export const LUNCH_LABEL: Record<MealAmount, string> = {
@@ -31,14 +41,18 @@ export const MOOD_LABEL: Record<Mood, string> = {
 const LUNCH: MealAmount[] = ['all', 'most', 'little', 'none']
 const MOOD: Mood[] = ['good', 'normal', 'restless', 'sad']
 
+/*
+ * هر بازه خلق به فیلدی در day_period وصل است. نگاشت اینجاست، نه در
+ * شرط‌های پراکنده، تا بازه سومِ مهد فقط یک سطر تازه بخواهد.
+ */
 const BANDS = [
-  { key: 'moodMorning', label: 'صبح' },
-  { key: 'moodNoon', label: 'ظهر' },
-  { key: 'moodAfternoon', label: 'عصر' },
+  { key: 'moodMorning', field: 'mood_morning', label: 'صبح' },
+  { key: 'moodNoon', field: 'mood_noon', label: 'ظهر' },
+  { key: 'moodAfternoon', field: 'mood_afternoon', label: 'عصر' },
 ] as const
 
 type Props = {
-  child: Child
+  child: ChildInSession
   report: DailyReport | null
   suggested: boolean
   onClose: () => void
@@ -56,18 +70,25 @@ export function ChildReportSheet({ child, report, suggested, onClose, onSave }: 
   const [note, setNote] = useState(report?.teacherNote ?? '')
   const [busy, setBusy] = useState(false)
 
+  const has = (field: string) => child.fields.includes(field)
+  const bands = BANDS.filter((band) => has(band.field))
+
   // پیوست ب: هشدار روی متن آزاد مربی، نه مانع.
   const flagged = useMemo(() => findBannedWords(note), [note])
 
   const save = async () => {
     setBusy(true)
     try {
-      await onSave({
-        lunch,
-        ...moods,
-        napStart: nap.trim() ? toLatinDigits(nap.trim()) : null,
-        teacherNote: note.trim() || null,
-      })
+      /*
+       * فقط فیلدهای اعمال‌شدنی فرستاده می‌شوند. اگر خلق عصر را برای
+       * کودک صبحانه‌ای هم می‌فرستادیم، null نوشتنش یعنی گزارشش برای
+       * همیشه ناقص می‌ماند.
+       */
+      const patch: ReportPatch = { teacherNote: note.trim() || null }
+      if (has('lunch')) patch.lunch = lunch
+      for (const band of bands) patch[band.key] = moods[band.key]
+      if (has('nap')) patch.napStart = nap.trim() ? toLatinDigits(nap.trim()) : null
+      await onSave(patch)
       onClose()
     } finally {
       setBusy(false)
@@ -94,6 +115,16 @@ export function ChildReportSheet({ child, report, suggested, onClose, onSave }: 
         </>
       }
     >
+      {/*
+        چرا این کارت کوتاه‌تر از کارت کودک بغلی است: دوره حضورش فرق
+        دارد. بی این یک سطر، مربی فکر می‌کند صفحه ناقص بارگذاری شده.
+      */}
+      <p className={`${styles.periodNote} t-caption`}>
+        {child.periods.map((p) => p.title).join(' و ')}
+        {child.addedException ? ' · امروز استثنائاً افزوده شده' : ''}
+      </p>
+
+      {has('lunch') ? (
       <section className={styles.section}>
         <h3 className={`${styles.legend} t-caption`}>ناهار</h3>
         <div className={styles.choices}>
@@ -110,9 +141,13 @@ export function ChildReportSheet({ child, report, suggested, onClose, onSave }: 
           ))}
         </div>
       </section>
+      ) : null}
 
-      {/* سه بازه خلق. بخش ۵.۹ گزارش را وقتی «کامل» می‌داند که هر سه پر باشد. */}
-      {BANDS.map((band) => (
+      {/*
+        بازه‌های خلقِ همین کودک، نه هر سه تا. «کامل» هم از همین‌ها حساب
+        می‌شود — بخش ۵.۹ با تعریف پویای بخش ۶.
+      */}
+      {bands.map((band) => (
         <section key={band.key} className={styles.section}>
           <h3 className={`${styles.legend} t-caption`}>خلق {band.label}</h3>
           <div className={styles.choices}>
@@ -136,6 +171,7 @@ export function ChildReportSheet({ child, report, suggested, onClose, onSave }: 
         </section>
       ))}
 
+      {has('nap') ? (
       <section className={styles.section}>
         <h3 className={`${styles.legend} t-caption`}>خواب، ساعت شروع</h3>
         <input
@@ -148,6 +184,7 @@ export function ChildReportSheet({ child, report, suggested, onClose, onSave }: 
           aria-label="ساعت شروع خواب"
         />
       </section>
+      ) : null}
 
       <section className={styles.section}>
         <h3 className={`${styles.legend} t-caption`}>یادداشت مربی</h3>

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { AlertIcon, AvatarFace, BottomSheet, CheckIcon } from '../../design-system/index.ts'
 import { formatCount, formatTime, toIsoDate, toLatinDigits } from '../../i18n/index.ts'
 import { useData } from '../../core/auth/index.ts'
-import type { Child, PickupCodeCheck, PickupOption } from '../../core/data/index.ts'
+import type { Attendance, Child, PickupCodeCheck, PickupOption } from '../../core/data/index.ts'
 import styles from './CheckOutSheet.module.css'
 
 /**
@@ -20,6 +20,8 @@ import styles from './CheckOutSheet.module.css'
  */
 type Props = {
   child: Child
+  /** ردیف حضور امروز، برای نشان دادن اینکه چه کسی تحویلش گرفته بود. */
+  attendance: Attendance | null
   onClose: () => void
   onDone: () => void
 }
@@ -27,7 +29,7 @@ type Props = {
 /** ساعت پایان مهد. تا وصل شدن تنظیمات مرکز، پیش‌فرض سند. */
 const WORK_END = { hour: 16, minute: 30 }
 
-export function CheckOutSheet({ child, onClose, onDone }: Props) {
+export function CheckOutSheet({ child, attendance, onClose, onDone }: Props) {
   const data = useData()
   const [options, setOptions] = useState<PickupOption[]>([])
   const [personId, setPersonId] = useState<string | null>(null)
@@ -108,6 +110,17 @@ export function CheckOutSheet({ child, onClose, onDone }: Props) {
         </>
       }
     >
+      {/*
+        مربیِ صبح و مربیِ عصر یک نفر نیستند. کسی که الان تحویل می‌دهد
+        باید ببیند صبح چه کسی تحویلش گرفته بود؛ اگر سؤالی پیش بیاید،
+        می‌داند از که بپرسد.
+      */}
+      {attendance?.checkedInByName ? (
+        <p className={`${styles.handover} t-body`}>
+          صبح {attendance.checkedInByName} تحویلش گرفته بود.
+        </p>
+      ) : null}
+
       {late > 0 ? (
         <p className={`${styles.late} t-body`}>
           <span aria-hidden><AlertIcon size={18} /></span>

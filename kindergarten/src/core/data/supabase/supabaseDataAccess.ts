@@ -34,6 +34,11 @@ import type {
   ManagerDashboard,
   IncidentDecision,
   AbsenceInput,
+  AttendanceType,
+  ChildInSession,
+  DayPeriod,
+  Enrollment,
+  StaffShift,
   Amendment,
   ClaimStatus,
   PaymentClaim,
@@ -56,7 +61,19 @@ import type {
   CheckOutInput,
 } from '../types.ts'
 import { isInCurrentWeek } from '../../../i18n/week.ts'
+import { isOverdue } from '../attendanceState.ts'
 import { supabase } from './client.ts'
+import {
+  applicableFields,
+  bulkFields,
+  dayEndFor,
+  dayStartFor,
+  enrolledOn,
+  minutesOf,
+  periodsAt,
+  periodsFor,
+  staffOnDutyIds,
+} from '../periods.ts'
 
 type Row = Record<string, unknown>
 
@@ -88,7 +105,43 @@ const asAttendance = (r: Row): Attendance => ({
     (r.picked_up_by_authorized_id as string | null) ??
     null,
   pickupMethod: (r.pickup_method as Attendance['pickupMethod']) ?? null,
+  checkedInByName: ((r.checked_in_by as Row | null)?.full_name as string | null) ?? null,
+  checkedOutByName: ((r.checked_out_by as Row | null)?.full_name as string | null) ?? null,
   lateMinutes: (r.late_minutes as number | null) ?? 0,
+})
+
+const asPeriod = (r: Row): DayPeriod => ({
+  id: r.id as string,
+  key: r.key as string,
+  title: r.title as string,
+  startTime: (r.start_time as string).slice(0, 5),
+  endTime: (r.end_time as string).slice(0, 5),
+  sortOrder: r.sort_order as number,
+  reportFields: ((r.report_fields as string[] | null) ?? []),
+  includedIn: ((r.included_in as AttendanceType[] | null) ?? []),
+})
+
+const asEnrollment = (r: Row): Enrollment => ({
+  id: r.id as string,
+  childId: r.child_id as string,
+  classId: r.class_id as string,
+  startDate: r.start_date as string,
+  endDate: (r.end_date as string | null) ?? null,
+  attendanceType: r.attendance_type as AttendanceType,
+  weekdays: ((r.weekdays as number[] | null) ?? []),
+  feePlanId: (r.fee_plan_id as string | null) ?? null,
+  discountPercent: Number(r.discount_percent ?? 0),
+})
+
+const asShift = (r: Row): StaffShift => ({
+  id: r.id as string,
+  staffId: r.staff_id as string,
+  classId: r.class_id as string,
+  weekday: r.weekday as number,
+  startTime: (r.start_time as string).slice(0, 5),
+  endTime: (r.end_time as string).slice(0, 5),
+  effectiveFrom: r.effective_from as string,
+  effectiveTo: (r.effective_to as string | null) ?? null,
 })
 
 const asReport = (r: Row): DailyReport => ({
@@ -239,6 +292,20 @@ function nextMorningIso(from: Date, start: string): string {
   return next.toISOString()
 }
 
+
+/**
+ * لحظه جاری، ولی روی تاریخِ خواسته‌شده.
+ * بدون این، بازه‌ها برای هر روزی جز امروز بی‌معنا می‌شدند.
+ */
+function sameDayNow(isoDate: string): Date {
+  const now = new Date()
+  if (now.toISOString().slice(0, 10) === isoDate) return now
+  const [y, m, d] = isoDate.split('-').map(Number)
+  const at = new Date(now)
+  at.setFullYear(y ?? 2026, (m ?? 1) - 1, d ?? 1)
+  return at
+}
+
 export function createSupabaseDataAccess(scope: AccessScope): DataAccess {
   const db = supabase()
 
@@ -290,6 +357,36 @@ export function createSupabaseDataAccess(scope: AccessScope): DataAccess {
     (orThrow(await from('child').eq('class_id', classId).is('left_at', null).order('first_name')) as Row[])
       .map(asChild)
 
+  /**
+   * کودکانی که امروز روزشان هست، همراه فیلدهای گزارشِ خودشان.
+   *
+   * برخلاف getClassDay، قید «همین لحظه در جلسه» ندارد. هرجا که کل روز
+   * شمرده می‌شود — خلاصه پایان روز، گزارش ماهانه — این لازم است.
+   */
+  const enrolledTodayIn = async (
+    classId: string,
+    date: string,
+  ): Promise<(Child & { fields: string[] })[]> => {
+    const at = sameDayNow(date)
+    const [periodRows, enrollmentRows] = await Promise.all([
+      from('day_period').order('sort_order'),
+      from('child_enrollment').eq('class_id', classId),
+    ])
+    const periods = (orThrow(periodRows) as Row[]).map(asPeriod)
+    const enrollments = (orThrow(enrollmentRows) as Row[]).map(asEnrollment)
+    const all = await childrenOf(classId)
+    return all.flatMap((child) => {
+      const enrollment = enrollments.find(
+        (e) =>
+          e.childId === child.id &&
+          date >= e.startDate &&
+          (e.endDate === null || date <= e.endDate),
+      )
+      if (!enrollment || !enrolledOn(enrollment, at)) return []
+      return [{ ...child, fields: applicableFields(periods, enrollment.attendanceType) }]
+    })
+  }
+
   return {
     scope,
     listClasses,
@@ -300,14 +397,88 @@ export function createSupabaseDataAccess(scope: AccessScope): DataAccess {
       const classRoom = classes.find((c) => c.id === classId)
       if (!classRoom) throw new Error('کلاس پیدا نشد')
 
-      const children = await childrenOf(classId)
+      const at = sameDayNow(date)
+      const [periodRows, enrollmentRows, shiftRows, extraRows] = await Promise.all([
+        from('day_period').order('sort_order'),
+        from('child_enrollment').eq('class_id', classId),
+        from('staff_shift').eq('class_id', classId),
+        from('session_extra').eq('class_id', classId).eq('date', date),
+      ])
+      const periods = (orThrow(periodRows) as Row[]).map(asPeriod)
+      const enrollments = (orThrow(enrollmentRows) as Row[]).map(asEnrollment)
+      const extras = new Set(
+        (orThrow(extraRows) as Row[]).map((r) => r.child_id as string),
+      )
+
+      // فقط کودکانی که همین حالا در جلسه‌اند. پیش‌تر کل کلاس برمی‌گشت.
+      const all = await childrenOf(classId)
+      const children = all.flatMap((child): ChildInSession[] => {
+        const enrollment = enrollments.find(
+          (e) =>
+            e.childId === child.id &&
+            date >= e.startDate &&
+            (e.endDate === null || date <= e.endDate),
+        )
+        if (!enrollment) return []
+        const isExtra = extras.has(child.id)
+        if (!enrolledOn(enrollment, at) && !isExtra) return []
+        const mine = periodsFor(periods, enrollment.attendanceType)
+        const now = at.getHours() * 60 + at.getMinutes()
+        const inSession = mine.some(
+          (p) => now >= minutesOf(p.startTime) && now < minutesOf(p.endTime),
+        )
+        if (!inSession && !isExtra) return []
+        return [{
+          ...child,
+          attendanceType: enrollment.attendanceType,
+          periods: mine,
+          fields: applicableFields(periods, enrollment.attendanceType),
+          dayStart: dayStartFor(periods, enrollment.attendanceType),
+          dayEnd: dayEndFor(periods, enrollment.attendanceType),
+          addedException: isExtra,
+        }]
+      })
+
+      /*
+       * کودکانی که امروز روزشان هست، فارغ از اینکه همین لحظه در جلسه
+       * باشند یا نه. شمارش پایان روز و آمار مدیر از این می‌آید.
+       */
+      const enrolledToday = all.filter((child) => {
+        const enrollment = enrollments.find(
+          (e) =>
+            e.childId === child.id &&
+            date >= e.startDate &&
+            (e.endDate === null || date <= e.endDate),
+        )
+        return enrollment ? enrolledOn(enrollment, at) : false
+      }).length
+
+      const onDuty = staffOnDutyIds((orThrow(shiftRows) as Row[]).map(asShift), at, date)
+      const centreRows = orThrow(await from('center').eq('id', scope.centerId)) as Row[]
+      const maxAllowed = (centreRows[0]?.max_children_per_staff as number | undefined) ?? 15
+      const ratio = {
+        children: children.length,
+        staff: onDuty.length,
+        maxAllowed,
+        breached: children.length > maxAllowed * Math.max(onDuty.length, 1),
+      }
+
       const ids = children.map((c) => c.id)
       if (ids.length === 0) {
-        return { classRoom, children, attendance: [], absences: [], medications: [], reports: [], incidents: [], photos: [] }
+        return {
+          classRoom, children, enrolledToday, periods,
+          currentPeriods: periodsAt(periods, at), ratio,
+          attendance: [], absences: [], medications: [], reports: [], incidents: [], photos: [],
+        }
       }
 
       const [attendance, absences, medications, reports, incidents, photos] = await Promise.all([
-        from('attendance').eq('date', date).in('child_id', ids),
+        db
+          .from('attendance')
+          .select('*, checked_in_by:checked_in_by_staff_id(full_name), checked_out_by:checked_out_by_staff_id(full_name)')
+          .eq('center_id', scope.centerId)
+          .eq('date', date)
+          .in('child_id', ids),
         from('absence_notice').eq('date', date).in('child_id', ids),
         from('medication_log').eq('date', date).in('child_id', ids),
         from('daily_report').eq('date', date).in('child_id', ids),
@@ -323,6 +494,10 @@ export function createSupabaseDataAccess(scope: AccessScope): DataAccess {
       return {
         classRoom,
         children,
+        enrolledToday,
+        periods,
+        currentPeriods: periodsAt(periods, at),
+        ratio,
         attendance: (orThrow(attendance) as Row[]).map(asAttendance),
         absences: (orThrow(absences) as Row[]).map((r) => ({
           childId: r.child_id as string,
@@ -402,10 +577,18 @@ export function createSupabaseDataAccess(scope: AccessScope): DataAccess {
      * خود UPDATE است، نه در کد، تا رقابت دو مربی هم‌زمان استثنا را پاک
      * نکند.
      */
+    /**
+     * ثبت گروهی — بخش ۵.۵، با قید بخش ۶ سند دوره حضور.
+     *
+     * فقط روی کودکانی که همین لحظه در جلسه‌اند، و فقط روی فیلدهای بازه
+     * جاری. چون فیلدهای مجاز از کودکی به کودک دیگر فرق می‌کند، کودکان
+     * بر اساس همان مجموعه دسته می‌شوند و هر دسته یک update می‌گیرد —
+     * نه یک update برای کل کلاس، که خلق صبح را با مقدار عصر می‌پوشاند.
+     */
     async applyBulk(classId, date, values: BulkValues) {
       await assertVisible(classId)
-      const children = await childrenOf(classId)
-      const ids = children.map((c) => c.id)
+      const day = await this.getClassDay(classId, date)
+      const ids = day.children.map((c) => c.id)
       if (ids.length === 0) return []
 
       // ردیف نبودِ گزارش هم باید مقدار بگیرد، پس اول ردیف خالی ساخته می‌شود.
@@ -419,30 +602,64 @@ export function createSupabaseDataAccess(scope: AccessScope): DataAccess {
           .select('id'),
       )
 
-      const patch: Row = {}
-      if (values.lunch !== null) patch.lunch = values.lunch
-      if (values.napStart !== null) patch.nap_start = toTime(values.napStart)
-      if (values.mood !== null) {
-        // بخش ۵.۵: نوار گروهی «خلق عمومی امروز» است، پس هر سه بازه را پر
-        // می‌کند. وگرنه هیچ گزارشی هرگز کامل نمی‌شد.
-        patch.mood_morning = values.mood
-        patch.mood_noon = values.mood
-        patch.mood_afternoon = values.mood
+      const groups = new Map<string, string[]>()
+      for (const child of day.children) {
+        const writable = bulkFields(child.fields, day.currentPeriods).sort().join(',')
+        const group = groups.get(writable) ?? []
+        group.push(child.id)
+        groups.set(writable, group)
       }
-      if (Object.keys(patch).length === 0) return []
 
-      const rows = orThrow(
-        await db
-          .from('daily_report')
-          .update(patch)
-          .eq('center_id', scope.centerId)
-          .eq('date', date)
-          .in('child_id', ids)
-          .eq('touched', false)
-          .is('locked_at', null)
-          .select(),
-      ) as Row[]
-      return rows.map(asReport)
+      const written: Row[] = []
+      for (const [key, groupIds] of groups) {
+        const writable = key ? key.split(',') : []
+        const patch: Row = {}
+        if (values.lunch !== null && writable.includes('lunch')) patch.lunch = values.lunch
+        if (values.napStart !== null && writable.includes('nap')) {
+          patch.nap_start = toTime(values.napStart)
+        }
+        if (values.mood !== null) {
+          if (writable.includes('mood_morning')) patch.mood_morning = values.mood
+          if (writable.includes('mood_noon')) patch.mood_noon = values.mood
+          if (writable.includes('mood_afternoon')) patch.mood_afternoon = values.mood
+        }
+        if (Object.keys(patch).length === 0) continue
+
+        const base = () =>
+          db
+            .from('daily_report')
+            .update(patch)
+            .eq('center_id', scope.centerId)
+            .eq('date', date)
+            .in('child_id', groupIds)
+            .is('locked_at', null)
+
+        // کودک دست‌نخورده: همه فیلدهای بازه یکجا.
+        written.push(...(orThrow(await base().eq('touched', false).select()) as Row[]))
+
+        /*
+         * کودک استثنا: فقط جاهای خالی.
+         *
+         * بخش ۵.۵ می‌گوید نوشته مربی پاک نشود، نه اینکه کودک تا آخر روز
+         * از ثبت گروهی بیفتد. هر فیلد جدا نوشته می‌شود چون شرط «خالی
+         * بودن» برای هر کدام جداست.
+         */
+        for (const [column, value] of Object.entries(patch)) {
+          orThrow(
+            await db
+              .from('daily_report')
+              .update({ [column]: value })
+              .eq('center_id', scope.centerId)
+              .eq('date', date)
+              .in('child_id', groupIds)
+              .is('locked_at', null)
+              .eq('touched', true)
+              .is(column, null)
+              .select('id'),
+          )
+        }
+      }
+      return written.map(asReport)
     },
 
     async saveChildReport(childId, date, patch: ReportPatch) {
@@ -629,25 +846,39 @@ export function createSupabaseDataAccess(scope: AccessScope): DataAccess {
       return asPhoto(row)
     },
 
+    /**
+     * خلاصه پایان روز — بخش ۵.۹.
+     *
+     * روی همه کودکانِ امروز حساب می‌شود، نه فقط کودکانِ همین لحظه: ساعت
+     * ۱۶:۳۰ که مربی روز را می‌بندد، کودک صبحانه‌ای ساعت‌هاست رفته و
+     * گزارشش هنوز باید شمرده شود.
+     *
+     * «کامل» هم پویاست (بخش ۶): هر کودک با فیلدهای خودش سنجیده می‌شود.
+     */
     async getDaySummary(classId, date): Promise<DaySummary> {
       const day = await this.getClassDay(classId, date)
+      const everyone = await enrolledTodayIn(classId, date)
       const reports = new Map(day.reports.map((r) => [r.childId, r]))
 
       const complete: string[] = []
       const incomplete: DaySummary['incomplete'] = []
-      for (const child of day.children) {
+      for (const child of everyone) {
         const r = reports.get(child.id)
         const missing: string[] = []
-        if (!r?.lunch) missing.push('ناهار')
-        if (!r?.napStart) missing.push('خواب')
-        if (!r?.moodMorning || !r?.moodNoon || !r?.moodAfternoon) missing.push('خلق')
+        if (child.fields.includes('lunch') && !r?.lunch) missing.push('ناهار')
+        if (child.fields.includes('nap') && !r?.napStart) missing.push('خواب')
+        const moodMissing =
+          (child.fields.includes('mood_morning') && !r?.moodMorning) ||
+          (child.fields.includes('mood_noon') && !r?.moodNoon) ||
+          (child.fields.includes('mood_afternoon') && !r?.moodAfternoon)
+        if (moodMissing) missing.push('خلق')
         if (missing.length === 0) complete.push(child.id)
         else incomplete.push({ childId: child.id, missing })
       }
 
       const notes = orThrow(
         await from('daily_report')
-          .in('child_id', day.children.map((c) => c.id))
+          .in('child_id', everyone.map((c) => c.id))
           .not('teacher_note', 'is', null),
       ) as Row[]
       const notedThisWeek = new Set(
@@ -662,7 +893,8 @@ export function createSupabaseDataAccess(scope: AccessScope): DataAccess {
         complete,
         incomplete,
         untaggedPhotos: day.photos.filter((p) => p.childIds.length === 0).length,
-        withoutNoteThisWeek: day.children.filter((c) => !notedThisWeek.has(c.id)).map((c) => c.id),
+        withoutNoteThisWeek: everyone.filter((c) => !notedThisWeek.has(c.id)).map((c) => c.id),
+        names: Object.fromEntries(everyone.map((c) => [c.id, c.firstName])),
         sentAt: (sent[0]?.sent_at as string | undefined) ?? null,
       }
     },
@@ -687,7 +919,12 @@ export function createSupabaseDataAccess(scope: AccessScope): DataAccess {
       if (!child) throw new Error('این کودک به حساب شما وصل نیست')
 
       const [attendanceRows, reportRows, photoRows, incidentRows] = await Promise.all([
-        from('attendance').eq('child_id', childId).eq('date', date),
+        db
+          .from('attendance')
+          .select('*, checked_in_by:checked_in_by_staff_id(full_name), checked_out_by:checked_out_by_staff_id(full_name)')
+          .eq('center_id', scope.centerId)
+          .eq('child_id', childId)
+          .eq('date', date),
         from('daily_report').eq('child_id', childId).eq('date', date),
         db
           .from('photo')
@@ -730,7 +967,10 @@ export function createSupabaseDataAccess(scope: AccessScope): DataAccess {
         sent,
         checkInAt: (attendance?.check_in_at as string | null) ?? null,
         droppedByName: nameOf((attendance?.dropped_by_guardian_id as string | null) ?? null),
+        // سرپرستان خواسته‌اند بدانند کودکشان را دست چه کسی داده‌اند.
+        checkedInByName: ((attendance?.checked_in_by as Row | null)?.full_name as string | null) ?? null,
         checkOutAt: (attendance?.check_out_at as string | null) ?? null,
+        checkedOutByName: ((attendance?.checked_out_by as Row | null)?.full_name as string | null) ?? null,
         pickedUpByName: nameOf((attendance?.picked_up_by_guardian_id as string | null) ?? null),
         lunch: sent ? ((report?.lunch as ParentDay['lunch']) ?? null) : null,
         napMinutes,
@@ -918,11 +1158,16 @@ export function createSupabaseDataAccess(scope: AccessScope): DataAccess {
         classes.map(async (room) => {
           const day = await this.getClassDay(room.id, date)
           const reports = new Map(day.reports.map((r) => [r.childId, r]))
+          // بخش ۶: «کامل» پویاست. کودک صبحانه‌ای خواب ندارد، پس نداشتنش
+          // ناقص بودن نیست.
           const complete = day.children.filter((c) => {
             const r = reports.get(c.id)
-            return (
-              r?.lunch && r?.napStart && r?.moodMorning && r?.moodNoon && r?.moodAfternoon
-            )
+            if (c.fields.includes('lunch') && !r?.lunch) return false
+            if (c.fields.includes('nap') && !r?.napStart) return false
+            if (c.fields.includes('mood_morning') && !r?.moodMorning) return false
+            if (c.fields.includes('mood_noon') && !r?.moodNoon) return false
+            if (c.fields.includes('mood_afternoon') && !r?.moodAfternoon) return false
+            return true
           }).length
           return { room, day, complete }
         }),
@@ -935,13 +1180,14 @@ export function createSupabaseDataAccess(scope: AccessScope): DataAccess {
       let enrolled = 0
 
       for (const { day } of perClass) {
-        enrolled += day.children.length
+        enrolled += day.enrolledToday
         const absent = new Set(day.absences.map((a) => a.childId))
         const byChild = new Map(day.attendance.map((a) => [a.childId, a]))
         for (const child of day.children) {
           const row = byChild.get(child.id)
           if (row?.checkInAt && !row.checkOutAt) present += 1
-          if (!row?.checkInAt && !absent.has(child.id)) {
+          // مهلت هر کودک از آغاز بازه خودش، نه از ساعت ثابت ۹.
+          if (!row?.checkInAt && !absent.has(child.id) && isOverdue(child, now)) {
             unaccounted.push({
               childId: child.id,
               name: `${child.firstName} ${child.lastName}`,
@@ -974,15 +1220,15 @@ export function createSupabaseDataAccess(scope: AccessScope): DataAccess {
         date,
         present,
         enrolled,
-        // پیش از ساعت نُه، «نیامده» هنوز «بی‌خبر» نیست — بخش ۵.۱.
-        unaccounted: now.getHours() >= 9 ? unaccounted : [],
+        unaccounted,
         pendingIncidents: pending,
         classes: perClass.map(({ room, day, complete }) => ({
           classId: room.id,
           name: room.name,
           complete,
-          total: day.children.length,
+          total: day.enrolledToday,
           sent: day.reports.some((r) => r.touched) && complete === day.children.length,
+          ratio: day.ratio,
         })),
         pendingClaims: (
           orThrow(await from('payment_claim').eq('status', 'pending')) as Row[]
@@ -1688,6 +1934,33 @@ export function createSupabaseDataAccess(scope: AccessScope): DataAccess {
           })
           .eq('center_id', scope.centerId)
           .eq('id', claimId)
+          .select('id'),
+      )
+    },
+
+
+    /* ── دوره حضور — بخش ۵.۳ اصلاح‌شده ────────────────────────── */
+
+    async listOffDayChildren(classId, date) {
+      await assertVisible(classId)
+      const day = await this.getClassDay(classId, date)
+      const inSession = new Set(day.children.map((c) => c.id))
+      const all = await childrenOf(classId)
+      return all.filter((c) => !inSession.has(c.id))
+    },
+
+    async addChildToday(childId, date) {
+      const rows = orThrow(await from('child').eq('id', childId)) as Row[]
+      const classId = rows[0]?.class_id as string | undefined
+      if (!classId) throw new Error('کودک پیدا نشد')
+      orThrow(
+        await db
+          .from('session_extra')
+          .upsert(
+            { center_id: scope.centerId, child_id: childId, class_id: classId, date,
+              added_by: scope.accountId },
+            { onConflict: 'child_id,date' },
+          )
           .select('id'),
       )
     },

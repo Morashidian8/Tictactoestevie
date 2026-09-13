@@ -199,6 +199,17 @@ export function ParentTodayPage() {
               </span>
             </div>
 
+            {/*
+              نام مربیِ تحویل‌گیرنده. مهد چند مربی دارد و شیفت‌هایشان با
+              بازه‌ها یکی نیست، پس «مربی کلاس» جواب روشنی نیست: خانواده
+              باید بداند صبح چه کسی کودکش را گرفت.
+            */}
+            {day?.checkedInByName ? (
+              <p className={`${styles.gateStaff} t-body`}>
+                تحویل گرفت: {day.checkedInByName}
+              </p>
+            ) : null}
+
             <div className={styles.gateRow}>
               <span className={styles.gateIcon} aria-hidden>
                 <ArrowOut />
@@ -212,6 +223,12 @@ export function ParentTodayPage() {
                   : 'هنوز در مهد است'}
               </span>
             </div>
+
+            {day?.checkedOutByName ? (
+              <p className={`${styles.gateStaff} t-body`}>
+                تحویل داد: {day.checkedOutByName}
+              </p>
+            ) : null}
           </section>
         </div>
 

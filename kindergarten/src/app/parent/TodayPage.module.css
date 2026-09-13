@@ -110,6 +110,18 @@
 }
 .gateWho { color: var(--ink-muted); }
 
+/*
+ * نام مربیِ تحویل‌گیرنده و تحویل‌دهنده.
+ *
+ * زیر همان سطر می‌نشیند و تورفتگی‌اش به اندازه آیکون و ساعت است، تا
+ * روشن باشد که به کدام رویداد وصل است.
+ */
+.gateStaff {
+  margin: 0;
+  padding-inline-start: calc(var(--space-5) + var(--space-3));
+  color: var(--ink-muted);
+}
+
 /* ۳ و ۴ — غذا، خواب، خلق */
 .fact { display: flex; align-items: center; gap: var(--space-3); }
 .factIcon { color: var(--ink-muted); flex: none; }

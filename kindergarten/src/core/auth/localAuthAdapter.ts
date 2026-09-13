@@ -14,8 +14,15 @@ const STORAGE_KEY = 'kg.dev.session'
 const CENTER_NAME = 'مهد آفتاب'
 
 /**
- * دو شماره نمونه. اولی فقط یک حساب دارد و مستقیم وارد می‌شود؛ دومی دو
- * حساب دارد تا صفحه انتخاب حساب و جابه‌جایی قابل آزمایش باشد.
+ * شماره‌های نمونه.
+ *
+ * چهار مربی، نه دو تا. مهد واقعی سه تا چهار مربی دارد و شیفت‌هایشان با
+ * بازه‌های روز یکی نیست: یکی تمام‌روز، یکی تا ظهر، یکی از ظهر. بدون هر
+ * سه، حالت «بیش از یک مربی همزمان سر کار» و حالت «مربی‌ای که فقط نیمی
+ * از بازه‌ها را می‌بیند» در نسخه نمایشی اصلاً دیده نمی‌شوند.
+ *
+ * شناسه هر حساب همان شناسه کارکن در staff_shift است، تا نام مربیِ
+ * تحویل‌گیرنده از همان‌جا بیاید.
  */
 const ACCOUNTS: Record<string, AccountOption[]> = {
   '09120000001': [
@@ -37,6 +44,40 @@ const ACCOUNTS: Record<string, AccountOption[]> = {
       role: 'guardian',
       displayName: 'مادر سارا',
       classIds: [],
+    },
+  ],
+  // مربی تا ظهر. بازه بعدازظهر را اصلاً نمی‌بیند.
+  '09120000004': [
+    {
+      id: 'staff-maryam',
+      centerId: CENTER_ID,
+      centerName: CENTER_NAME,
+      role: 'teacher',
+      displayName: 'مریم رضایی',
+      classIds: ['class-golha'],
+    },
+  ],
+  // مربی از ظهر. نیم‌ساعت با شیفت صبح همپوشانی دارد — همان مرزی که
+  // نسبت مربی به کودک در آن بحرانی می‌شود.
+  '09120000005': [
+    {
+      id: 'staff-nasrin',
+      centerId: CENTER_ID,
+      centerName: CENTER_NAME,
+      role: 'teacher',
+      displayName: 'نسرین کاظمی',
+      classIds: ['class-golha'],
+    },
+  ],
+  // مربی کلاس دیگر. برای آزمودن اینکه کلاس دیگری را نمی‌بیند.
+  '09120000006': [
+    {
+      id: 'staff-elham',
+      centerId: CENTER_ID,
+      centerName: CENTER_NAME,
+      role: 'teacher',
+      displayName: 'الهام نوری',
+      classIds: ['class-setareha'],
     },
   ],
   '09120000002': [
@@ -72,6 +113,9 @@ export const DEV_PHONES = {
   teacher: '09120000001',
   teacherAndManager: '09120000002',
   guardian: '09120000003',
+  teacherMorning: '09120000004',
+  teacherAfternoon: '09120000005',
+  teacherOtherClass: '09120000006',
 } as const
 
 export function createLocalAuthAdapter(): AuthAdapter {

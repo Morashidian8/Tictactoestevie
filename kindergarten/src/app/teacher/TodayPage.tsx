@@ -12,7 +12,7 @@ import {
 } from '../../design-system/index.ts'
 import { formatClock, formatCount, formatJalali, formatTime, toIsoDate } from '../../i18n/index.ts'
 import { ROLE_LABEL, useAuth, useData } from '../../core/auth/index.ts'
-import type { PickupPlan } from '../../core/data/index.ts'
+import type { Child, PickupPlan } from '../../core/data/index.ts'
 import {
   indexAbsences,
   indexAttendance,
@@ -73,6 +73,15 @@ export function TodayPage({
   const [incidentOpen, setIncidentOpen] = useState(false)
   // فهرست کودکانی که نیامده‌اند، وقتی مربی روی تراشه بزند.
   const [showOutstanding, setShowOutstanding] = useState(false)
+  /*
+   * کودکانی که امروز روزشان نیست — بخش ۲ و ۴ سند تازه.
+   *
+   * از شبکه بیرونند، نه اینکه کم‌رنگ باشند: کودک سه‌روزه روز چهارم
+   * اصلاً قرار نیست بیاید و دیدنش هر روز یعنی مربی چهار غیبت دروغین
+   * می‌بیند. ولی استثنا واقعی است، پس راه افزودن دستی باز می‌ماند.
+   */
+  const [offDay, setOffDay] = useState<Child[]>([])
+  const [offDayOpen, setOffDayOpen] = useState(false)
 
   // ساعت جاری در حالت نگه داشته می‌شود چون مرز ۹:۰۰ ستون سوم نوار خلاصه
   // را عوض می‌کند و صفحه باید بدون نوسازی دستی رد شود.
@@ -106,12 +115,14 @@ export function TodayPage({
   const load = useCallback(async () => {
     if (!classId) return
     try {
-      const [classDay, todayPlans] = await Promise.all([
+      const [classDay, todayPlans, off] = await Promise.all([
         data.getClassDay(classId, date),
         data.listPlans(classId, date),
+        data.listOffDayChildren(classId, date),
       ])
       setDay(classDay)
       setPlans(todayPlans)
+      setOffDay(off)
     } catch (cause) {
       setError(messageOf(cause))
     }
@@ -121,18 +132,32 @@ export function TodayPage({
     void load()
   }, [load])
 
+  /*
+   * نوسازی دوره‌ای — تصمیم مالک محصول: «چیزهای مشترک همپوشانی بشه.»
+   *
+   * مهد چند مربی دارد و هر کدام گوشی خودش را دارد. وقتی یکی کودکی را
+   * تحویل می‌گیرد، بقیه باید همان را ببینند، وگرنه دو نفر یک ورود را
+   * ثبت می‌کنند یا یکی دنبال کودکی می‌گردد که همکارش تحویلش گرفته.
+   *
+   * همان تپش سی‌ثانیه‌ای ساعت را سوار می‌شویم، نه یک تایمر دوم: صفحه
+   * از قبل هر سی ثانیه بیدار می‌شود و اتصال مهد پایدار نیست.
+   */
+  useEffect(() => {
+    void load()
+  }, [now, load])
+
   const attendance = useMemo(() => indexAttendance(day?.attendance ?? []), [day])
   const absences = useMemo(() => indexAbsences(day?.absences ?? []), [day])
 
   const counts = useMemo(
-    () => tally(day?.children.map((c) => c.id) ?? [], attendance, absences, now),
+    () => tally(day?.children ?? [], attendance, absences, now),
     [day, attendance, absences, now],
   )
 
   const items = useMemo<ChildGridItem[]>(
     () =>
       (day?.children ?? []).map((child) => {
-        const state = resolveState(child.id, attendance, absences, now)
+        const state = resolveState(child, attendance, absences, now)
         const row = attendance.get(child.id)
         const checkIn = row?.checkInAt ? new Date(row.checkInAt) : null
         return {
@@ -192,8 +217,14 @@ export function TodayPage({
     return () => clearTimeout(timer)
   }, [justIn])
 
+  const stateOf = (childId: string) => {
+    const child = day?.children.find((c) => c.id === childId)
+    if (!child) return 'notArrived' as const
+    return resolveState(child, attendance, absences, now)
+  }
+
   const openChild = (childId: string) => {
-    const state = resolveState(childId, attendance, absences, now)
+    const state = stateOf(childId)
     if (state === 'left') return
     if (state === 'present') setCheckOutFor(childId)
     else void quickCheckIn(childId)
@@ -201,7 +232,7 @@ export function TodayPage({
 
   /** نگه‌داشتن انگشت: مستقیم شیت استثناها، بی‌آنکه اول ورودی ثبت شود. */
   const openArrivalSheet = (childId: string) => {
-    const state = resolveState(childId, attendance, absences, now)
+    const state = stateOf(childId)
     if (state === 'left') return
     setJustIn(null)
     setSheetFor(childId)
@@ -241,12 +272,31 @@ export function TodayPage({
   const sheetChild = day?.children.find((c) => c.id === sheetFor) ?? null
   const checkOutChild = day?.children.find((c) => c.id === checkOutFor) ?? null
 
+  /*
+   * فهرست پشت تراشه سوم.
+   *
+   * وقتی بی‌خبر داریم، فقط بی‌خبرها را می‌آورد: نام کودکی که هنوز مهلتش
+   * نگذشته در کنار نام کودکی که باید دنبالش گشت، هر دو را بی‌اثر می‌کند.
+   */
   const outstandingNames = (day?.children ?? [])
     .filter((child) => {
-      const state = resolveState(child.id, attendance, absences, now)
-      return state === 'notArrived' || state === 'unaccounted'
+      const state = resolveState(child, attendance, absences, now)
+      if (counts.unaccounted > 0) return state === 'unaccounted'
+      return state === 'notArrived'
     })
     .map((child) => child.firstName)
+
+  /*
+   * نام بازه جاری. در مرز، هر دو با «و» می‌آیند؛ بیرون ساعت کار هیچ
+   * بازه‌ای باز نیست و همان را می‌گوییم، نه اینکه جای خالی بماند.
+   *
+   * هیچ‌جا فرض نشده که دو بازه هست: هر تعداد بازه که مهد تعریف کند،
+   * همین جمله ساخته می‌شود.
+   */
+  const periodLabel =
+    day && day.currentPeriods.length > 0
+      ? day.currentPeriods.map((p) => p.title).join(' و ')
+      : 'بیرون از ساعت کار'
 
   // مرتب بر اساس ساعت مصرف. داروی بی‌ساعت ته فهرست می‌رود، نه اولش.
   const pendingMedication = (day?.medications ?? [])
@@ -319,16 +369,49 @@ export function TodayPage({
         </div>
       </header>
 
+      {/*
+        بخش ۴ سند تازه: سرصفحه می‌گوید الان کدام بازه است و چند کودک در
+        همین بازه‌اند. بدون این، مربی نمی‌فهمد چرا شبکه ساعت ۱۳ عوض شد.
+        در مرز دو بازه هر دو نام می‌آید، چون واقعاً هر دو گروه با هم‌اند.
+      */}
+      <div className={styles.periodBar}>
+        <span className={`${styles.periodName} t-body-lg`}>{periodLabel}</span>
+        <span className={`${styles.periodCount} t-caption`}>
+          {formatCount(day?.children.length ?? 0)} کودک در این بازه
+        </span>
+        {day ? (
+          <span className={`${styles.periodStaff} t-caption`}>
+            {formatCount(day.ratio.staff)} مربی سر کار
+          </span>
+        ) : null}
+      </div>
+
+      {/*
+        بخش ۷ سند تازه: نسبت مربی به کودک در همین لحظه. مرز دو بازه
+        بحرانی‌ترین نقطه روز است چون هر دو گروه با هم‌اند و مربی صبح
+        هنوز نرفته یا رفته.
+      */}
+      {day?.ratio.breached ? (
+        <div className={styles.ratioWarning}>
+          <span aria-hidden>
+            <AlertIcon size={18} />
+          </span>
+          <span className="t-body">
+            {formatCount(day.ratio.children)} کودک با {formatCount(day.ratio.staff)} مربی.
+            حد مجاز {formatCount(day.ratio.maxAllowed)} کودک برای هر مربی است.
+          </span>
+        </div>
+      ) : null}
+
       <div className={styles.tally}>
         <StatusChip tone="turquoise">{formatCount(counts.present)} حاضر</StatusChip>
         <StatusChip tone="neutral">
           {formatCount(counts.absenceDeclared)} غیبت اعلام‌شده
         </StatusChip>
         {/*
-          بخش ۵.۳: ساعت ۹:۰۰ فهرست غایبان بی‌خبر نشان داده می‌شود.
-          پیش‌تر همین را یک بنر قرمز جداگانه هم می‌گفت؛ تکرار همان جمله
-          بود و جای شبکه کودکان را می‌گرفت. حالا خودِ تراشه لمسی است و
-          فهرست را باز می‌کند.
+          بخش ۵.۳: فهرست غایبان بی‌خبر. مهلت هر کودک از آغاز بازه خودش
+          شمرده می‌شود، نه از ساعت ثابت ۹، وگرنه کودک بعدازظهری صبح
+          بی‌خبر به نظر می‌رسید. تراشه لمسی است و فهرست را باز می‌کند.
         */}
         <button
           type="button"
@@ -338,10 +421,12 @@ export function TodayPage({
           aria-expanded={showOutstanding}
         >
           <StatusChip
-            tone={counts.isAfterNine && counts.outstanding > 0 ? 'brick' : 'neutral'}
-            icon={counts.isAfterNine && counts.outstanding > 0 ? <AlertIcon size={14} /> : undefined}
+            tone={counts.unaccounted > 0 ? 'brick' : 'neutral'}
+            icon={counts.unaccounted > 0 ? <AlertIcon size={14} /> : undefined}
           >
-            {formatCount(counts.outstanding)} {counts.isAfterNine ? 'بی‌خبر' : 'نیامده'}
+            {counts.unaccounted > 0
+              ? `${formatCount(counts.unaccounted)} بی‌خبر`
+              : `${formatCount(counts.notArrived)} نیامده`}
           </StatusChip>
         </button>
       </div>
@@ -349,7 +434,7 @@ export function TodayPage({
       {showOutstanding && outstandingNames.length > 0 ? (
         <div className={styles.outstanding}>
           <span className={`${styles.outstandingLabel} t-caption`}>
-            {counts.isAfterNine ? 'بدون اطلاع نیامده‌اند' : 'هنوز نیامده‌اند'}
+            {counts.unaccounted > 0 ? 'بدون اطلاع نیامده‌اند' : 'هنوز نیامده‌اند'}
           </span>
           <span className={`${styles.outstandingNames} t-body-lg`}>
             {outstandingNames.join(' · ')}
@@ -465,8 +550,14 @@ export function TodayPage({
 
       <div className={styles.grid}>
         {day && day.children.length === 0 ? (
-          <EmptyState text="هنوز کودکی به این کلاس تخصیص نیافته است." />
-        ) : counts.present === 0 && !counts.isAfterNine ? (
+          <EmptyState
+            text={
+              day.currentPeriods.length === 0
+                ? 'الان بازه‌ای باز نیست. شبکه با شروع بازه بعدی پر می‌شود.'
+                : `در بازه ${periodLabel} کودکی نیست.`
+            }
+          />
+        ) : counts.present === 0 && counts.unaccounted === 0 ? (
           <>
             <EmptyState text="هنوز کسی وارد نشده. با ضربه روی عکس هر کودک، ورودش را ثبت کنید." />
             <ChildGrid items={items} onSelect={openChild} onHold={openArrivalSheet} />
@@ -475,6 +566,51 @@ export function TodayPage({
           <ChildGrid items={items} onSelect={openChild} onHold={openArrivalSheet} />
         )}
       </div>
+
+      {/*
+        بخش ۴ سند تازه: کودکی که امروز روزش نیست از شبکه بیرون است، ولی
+        اگر استثنائاً آمد باید بشود افزودش. این تنها راه افزودن است و
+        عمداً یک لایه پایین‌تر نشسته تا مسیر روزمره را شلوغ نکند.
+      */}
+      {offDay.length > 0 ? (
+        <div className={styles.offDay}>
+          <button
+            type="button"
+            className={`${styles.offDayBar} t-body`}
+            aria-expanded={offDayOpen}
+            onClick={() => setOffDayOpen((open) => !open)}
+          >
+            <span>{formatCount(offDay.length)} کودک امروز روزشان نیست</span>
+            <span className={`${styles.offDayMore} t-caption`}>
+              {offDayOpen ? 'بستن' : 'اگر استثنا آمد'}
+            </span>
+          </button>
+
+          {offDayOpen ? (
+            <ul className={styles.offDayList}>
+              {offDay.map((child) => (
+                <li key={child.id} className={styles.offDayItem}>
+                  <span className="t-body-lg">
+                    {child.firstName} {child.lastName}
+                  </span>
+                  <button
+                    type="button"
+                    className={`${styles.offDayAdd} t-caption`}
+                    onClick={() => {
+                      void queue
+                        .submit('text', () => data.addChildToday(child.id, date))
+                        .then(() => load())
+                        .catch((cause: unknown) => setError(messageOf(cause)))
+                    }}
+                  >
+                    افزودن به فهرست امروز
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+        </div>
+      ) : null}
 
       <p className={`${styles.footerNote} t-caption`}>
         ضربه: ورود یا خروج · نگه‌داشتن: آورنده، حال کودک، دارو
@@ -516,6 +652,7 @@ export function TodayPage({
       {checkOutFor && checkOutChild ? (
         <CheckOutSheet
           child={checkOutChild}
+          attendance={attendance.get(checkOutFor) ?? null}
           onClose={() => setCheckOutFor(null)}
           onDone={() => void load()}
         />

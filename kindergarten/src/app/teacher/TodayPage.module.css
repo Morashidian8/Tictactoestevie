@@ -318,3 +318,112 @@
 
 .planChild { font-weight: var(--weight-bold); }
 .planHow { color: var(--ink-muted); margin-inline-start: auto; }
+
+/* ------------------------------------------------------------
+   بازه جاری — بخش ۴ و ۷ سند دوره حضور
+
+   یک نوار باریک زیر سرصفحه: نام بازه، تعداد کودکان همین بازه، و تعداد
+   مربی سر کار. سه عدد کوچک که با هم می‌گویند «الان چه خبر است»، و
+   ساعت ۱۳ وقتی شبکه عوض می‌شود همین نوار توضیحش را داده است.
+   ------------------------------------------------------------ */
+.periodBar {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  padding: var(--space-2) var(--space-4);
+  background: var(--turquoise-tint);
+  border-block-end: 1px solid var(--border);
+}
+
+.periodName {
+  color: var(--ink);
+  font-weight: var(--weight-bold);
+}
+
+.periodCount,
+.periodStaff {
+  color: var(--ink-muted);
+}
+
+.periodStaff {
+  margin-inline-start: auto;
+}
+
+/* نسبت مربی به کودک از حد گذشته — بخش ۷.۲. آجر، چون ایمنی است. */
+.ratioWarning {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: var(--space-3) var(--space-4) 0;
+  padding: var(--space-3);
+  border-radius: var(--r-card);
+  background: var(--brick-tint);
+  color: var(--brick);
+}
+
+/* ------------------------------------------------------------
+   کودکان خارج از روزشان — بخش ۲ و ۴
+
+   بسته می‌ماند. روز عادی هیچ‌کس بازش نمی‌کند؛ فقط وقتی کودک سه‌روزه
+   روز چهارم دم در است، مربی یک ضربه تا افزودنش فاصله دارد.
+   ------------------------------------------------------------ */
+.offDay {
+  margin: 0 var(--space-4) var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  background: var(--surface);
+  overflow: hidden;
+}
+
+.offDayBar {
+  inline-size: 100%;
+  min-block-size: var(--touch-teacher);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border: none;
+  background: none;
+  color: var(--ink-muted);
+  font-family: inherit;
+  text-align: start;
+}
+
+.offDayMore {
+  margin-inline-start: auto;
+  color: var(--turquoise-dark);
+  font-weight: var(--weight-medium);
+  flex: none;
+}
+
+.offDayList {
+  list-style: none;
+  margin: 0;
+  padding: 0 var(--space-4) var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.offDayItem {
+  min-block-size: var(--touch-teacher);
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding-block-start: var(--space-2);
+  border-block-start: 1px solid var(--border);
+}
+
+.offDayAdd {
+  flex: none;
+  margin-inline-start: auto;
+  min-block-size: var(--touch-teacher);
+  padding-inline: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--r-chip);
+  background: var(--surface);
+  color: var(--turquoise-dark);
+  font-family: inherit;
+  font-weight: var(--weight-medium);
+}

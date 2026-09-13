@@ -73,3 +73,9 @@
   border: 1px solid var(--border); border-radius: var(--r-input);
   color: var(--ink); font-weight: var(--weight-medium);
 }
+
+/* نام مربیِ تحویل‌گیرنده صبح. اطلاع است، نه هشدار، پس خنثی می‌ماند. */
+.handover {
+  margin: 0 0 var(--space-3);
+  color: var(--ink-muted);
+}

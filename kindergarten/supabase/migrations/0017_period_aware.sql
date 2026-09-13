@@ -182,3 +182,46 @@ as $$
   join center c on c.id = cl.center_id
   where cl.id = target_class
 $$;
+
+-- ── ۶. استثنای دستی: کودکی که امروز روزش نیست ولی آمده ─────────
+--
+-- بخش ۵.۳ اصلاح‌شده. کودک سه‌روزه گاهی روز چهارم هم می‌آید و بدون این،
+-- مربی هیچ راهی برای ثبت ورودش ندارد — نه در شبکه است و نه می‌تواند
+-- اضافه‌اش کند.
+create table session_extra (
+  id uuid primary key default gen_random_uuid(),
+  center_id uuid not null references center(id) on delete restrict,
+  child_id uuid not null references child(id) on delete cascade,
+  class_id uuid not null references class(id) on delete cascade,
+  date date not null,
+  added_by uuid references user_account(id) on delete set null,
+  created_at timestamptz not null default now(),
+
+  constraint session_extra_child_date_unique unique (child_id, date)
+);
+create index session_extra_lookup_idx on session_extra (center_id, class_id, date);
+
+alter table session_extra enable row level security;
+alter table session_extra force row level security;
+
+-- مربی همان کلاس اضافه می‌کند؛ تصمیم لحظه‌ای اوست، نه کار مدیر.
+create policy session_extra_visible on session_extra
+  for select using (
+    center_id = app.current_center_id() and app.can_see_child(child_id)
+  );
+
+create policy session_extra_staff_write on session_extra
+  for all using (
+    center_id = app.current_center_id()
+    and app.current_role() in ('manager', 'teacher', 'assistant')
+    and app.can_see_child(child_id)
+  )
+  with check (
+    center_id = app.current_center_id()
+    and app.current_role() in ('manager', 'teacher', 'assistant')
+    and app.can_see_child(child_id)
+  );
+
+create trigger audit_session_extra
+  after insert or update or delete on session_extra
+  for each row execute function app.write_audit();

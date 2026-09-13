@@ -26,6 +26,26 @@ const consoleErrors = []
 page.on('console', (m) => m.type() === 'error' && consoleErrors.push(m.text()))
 page.on('pageerror', (e) => consoleErrors.push(String(e)))
 
+/*
+ * ساعت مرورگر را می‌بندیم.
+ *
+ * از وقتی کودکان دوره حضور جدا دارند، آنچه صفحه نشان می‌دهد به ساعت
+ * اجرا بسته است: شب هیچ بازه‌ای باز نیست و شبکه خالی است، و کودک
+ * بعدازظهری صبح اصلاً در فهرست نیست. بدون ساعت ثابت، این تست شب‌ها
+ * می‌افتاد و صبح‌ها پاس می‌شد — بی‌اعتمادترین حالت ممکن.
+ *
+ * ۱۱ اسفند ۱۴۰۴ (۲۰۲۶-۰۳-۱۱) چهارشنبه است، یعنی روز کاری و در
+ * weekdays همه ثبت‌نام‌های نمونه.
+ */
+const FIXED_DAY = '2026-03-11'
+const setClock = (hour, minute = 0) =>
+  page.clock.setFixedTime(
+    new Date(
+      `${FIXED_DAY}T${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}:00`,
+    ),
+  )
+await setClock(9)
+
 /**
  * ورود با یک شماره.
  *
@@ -406,9 +426,8 @@ check(suggested.split('·').length === 3, `سه کودک برای یادداشت
 let taps = 0
 const tap = async (selector) => { await page.click(selector); taps += 1 }
 
-await tap('[aria-label="ثبت یکجا برای کل کلاس"] button:has-text("بیشترش")')
-await tap('[aria-label="ثبت یکجا برای کل کلاس"] button:has-text("خوب")')
-await page.fill('input[aria-label="ساعت شروع خواب"]', '13:00'); taps += 1
+await tap('[aria-label="ثبت یکجا برای کودکان این بازه"] button:has-text("بیشترش")')
+await tap('[aria-label="ثبت یکجا برای کودکان این بازه"] button:has-text("خوب")')
 await tap('[class*="applyInline"]')
 await page.waitForSelector('text=/اعمال شد/')
 
@@ -425,14 +444,22 @@ check(
   `چهار استثنا ثبت شد، کل مسیر ${taps} ضربه`,
 )
 
-console.log('▸ خلق عمومی هر سه بازه را پر می‌کند')
+console.log('▸ بخش ۶: ثبت گروهی فقط فیلدهای بازه جاری را نشان می‌دهد')
 check(
-  (await page.locator('[class*="rowLabel"]').nth(1).innerText()) === 'خلق عمومی امروز',
-  'نوار گروهی یک کنترل خلق دارد، نه بازه جاری',
+  (await page.locator('[class*="rowLabel"]').nth(1).innerText()) === 'خلق در بازه صبح',
+  'کنترل خلق می‌گوید مال کدام بازه است',
+)
+check(
+  (await page.locator('input[aria-label="ساعت شروع خواب"]').count()) === 0,
+  'صبح، ردیف خواب اصلاً کشیده نمی‌شود — فیلد بازه بعدازظهر است',
+)
+check(
+  /بازه صبح/.test(await page.locator('[class*="scope"]').innerText()),
+  'و بالای کارت نوشته این ثبت روی کودکان کدام بازه می‌نشیند',
 )
 
 console.log('▸ استثنا برنده است، نه آخرین نوشته')
-await tap('[aria-label="ثبت یکجا برای کل کلاس"] button:has-text("همه")')
+await tap('[aria-label="ثبت یکجا برای کودکان این بازه"] button:has-text("همه")')
 await tap('[class*="applyInline"]')
 await page.waitForTimeout(500)
 const amir = await page.locator('button:has([class*="itemName"]:text-is("امیر"))').innerText()
@@ -503,17 +530,44 @@ await page.click('[aria-label="بازگشت به امروز"]')
 await page.waitForSelector('text=ثبت گروهی امروز')
 check(true, 'پیکان سرصفحه به «امروز» برمی‌گردد')
 
+console.log('▸ بخش ۶: ثبت بعدازظهر، همان صفحه با فیلدهای دیگر')
+/*
+ * ساعت را به بعدازظهر می‌بریم. همان صفحه، ولی حالا ردیف خواب هست و
+ * کودکان بعدازظهری در فهرست‌اند. کامل شدن روز دو ثبت می‌خواهد، یکی در
+ * هر بازه — و این دقیقاً همان چیزی است که مربی واقعی می‌کند.
+ */
+await setClock(14)
+await page.reload()
+await page.waitForSelector('text=ثبت گروهی امروز')
+await page.click('button:has-text("ثبت گروهی امروز")')
+await page.waitForSelector('text=اعمال روی همه')
+check(
+  /بازه بعدازظهر/.test(await page.locator('[class*="scope"]').innerText()),
+  'صفحه می‌گوید حالا بازه بعدازظهر است',
+)
+check(
+  (await page.locator('input[aria-label="ساعت شروع خواب"]').count()) === 1,
+  'و ردیف خواب حالا کشیده می‌شود',
+)
+await page.click('[aria-label="ثبت یکجا برای کودکان این بازه"] button:has-text("بیشترش")')
+await page.click('[aria-label="ثبت یکجا برای کودکان این بازه"] button:has-text("خوب")')
+await page.fill('input[aria-label="ساعت شروع خواب"]', '13:00')
+await page.click('[class*="applyInline"]')
+await page.waitForSelector('text=/اعمال شد/')
+await page.click('[aria-label="بازگشت به امروز"]')
+await page.waitForSelector('text=ثبت گروهی امروز')
+
 console.log('▸ بخش ۵.۹: بستن روز')
 await page.click('button:has-text("بستن روز")')
 await page.waitForSelector('text=ارسال گزارش‌های امروز')
 const lines = () => page.locator('[class*="lineText"]').allInnerTexts()
 check((await lines()).some((t) => t.includes('کامل')), 'شمار گزارش کامل نشان داده می‌شود')
-// یک بار ثبت گروهی، هر سه بازه خلق را پر می‌کند، پس گزارشی ناقص
-// نمی‌ماند. پیش‌تر نوار فقط بازه جاری را می‌گرفت و همه ناقص می‌ماندند.
+// با ثبت در هر دو بازه، هیچ گزارشی ناقص نمی‌ماند — نه کودک صبحانه‌ای
+// که خواب ندارد، نه کودک بعدازظهری که صبح نبود.
 check(
   (await lines()).some((t) => t.includes('کامل')) &&
     !(await lines()).some((t) => t.includes('ناقص')),
-  'پس از ثبت گروهی، گزارشی ناقص نمی‌ماند',
+  'پس از ثبت در هر دو بازه، گزارشی ناقص نمی‌ماند',
 )
 check(
   (await lines()).some((t) => t.includes('بدون یادداشت این هفته')),
