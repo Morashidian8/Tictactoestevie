@@ -20,8 +20,26 @@
 }
 .lineIcon { flex: none; display: grid; place-items: center; }
 .lineText { flex: 1; color: var(--ink); }
-.ok      { color: var(--ink); }
-.warn    { color: var(--ink); }
+.ok {
+  padding-block: 1px;
+  padding-inline: var(--space-2);
+  border-radius: var(--r-chip);
+  border: 1px solid var(--mint);
+  background: var(--mint-tint);
+  color: var(--ink);
+  font-weight: var(--weight-bold);
+  white-space: nowrap;
+}
+.warn {
+  padding-block: 1px;
+  padding-inline: var(--space-2);
+  border-radius: var(--r-chip);
+  border: 1px solid var(--mango);
+  background: var(--mango-tint);
+  color: var(--ink);
+  font-weight: var(--weight-bold);
+  white-space: nowrap;
+}
 
 .lineAction {
   min-block-size: var(--touch-teacher); padding-inline: var(--space-4);
