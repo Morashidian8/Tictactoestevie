@@ -6,7 +6,7 @@
   min-block-size: var(--touch-teacher);
   flex: 1 1 auto;
   padding-inline: var(--space-3);
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-input);
   border-radius: var(--r-input);
   background: var(--surface);
   color: var(--ink);
@@ -14,15 +14,15 @@
 }
 
 .choice[aria-pressed='true'] {
-  background: var(--turquoise-tint);
-  border-color: var(--turquoise);
+  background: var(--coral-tint);
+  border-color: var(--coral);
   font-weight: var(--weight-bold);
 }
 
 .note {
   min-block-size: 5.5rem;
   padding: var(--space-3) var(--space-4);
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-input);
   border-radius: var(--r-input);
   background: var(--surface);
   color: var(--ink);
@@ -32,12 +32,12 @@
   resize: vertical;
 }
 
-.note:focus { border-color: var(--turquoise); }
+.note:focus { border-color: var(--coral); }
 
 .hint { color: var(--ink-muted); }
 
 .suggestBanner {
-  background: var(--turquoise-tint);
+  background: var(--coral-tint);
   color: var(--ink);
   padding: var(--space-3) var(--space-4);
   border-radius: var(--r-input);
@@ -48,7 +48,7 @@
   display: flex;
   align-items: flex-start;
   gap: var(--space-2);
-  background: var(--saffron-tint);
+  background: var(--mango-tint);
   color: var(--ink);
   padding: var(--space-3) var(--space-4);
   border-radius: var(--r-input);
@@ -60,8 +60,8 @@
   flex: 1;
   min-block-size: var(--touch-teacher);
   border-radius: var(--r-input);
-  background: var(--turquoise-dark);
-  color: var(--surface);
+  background: var(--coral);
+  color: var(--ink);
   font-weight: var(--weight-bold);
 }
 .primary:active { filter: brightness(0.9); }
@@ -69,7 +69,7 @@
 .secondary {
   min-block-size: var(--touch-teacher);
   padding-inline: var(--space-5);
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-input);
   border-radius: var(--r-input);
   color: var(--ink);
   font-weight: var(--weight-medium);

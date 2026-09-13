@@ -21,11 +21,11 @@ export const SKIN = ['#F4D2AE', '#E7B78C', '#D19A6C', '#B0764B', '#8D5A38'] as c
 export const HAIR = ['#2B2724', '#43301F', '#6B4A2E', '#141312', '#8A5A33'] as const
 
 /**
- * رنگ لباس. همان مقادیر --turquoise، --sage، --saffron، --brick و
+ * رنگ لباس. همان مقادیر --coral، --mint، --mango، --brick و
  * --ink-muted از بخش ۱۲.۲‌اند. اگر پالت رابط عوض شود، این‌ها هم باید
  * دستی عوض شوند؛ تست پالت همین را یادآوری می‌کند.
  */
-export const WEAR = ['#0F8C86', '#4C8B6B', '#DDA02C', '#B0402C', '#5A6E76'] as const
+export const WEAR = ['#FF6B6B', '#10B981', '#F59E0B', '#EF4444', '#64748B'] as const
 
 /** خط چشم و دهان. تیره‌تر از مو تا روی هر پوستی دیده شود. */
 export const FEATURE_LINE = '#332924'

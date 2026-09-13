@@ -10,7 +10,7 @@
   padding-block-end: calc(var(--space-3) + env(safe-area-inset-bottom));
   background: var(--surface);
   border-block-start: 1px solid var(--border);
-  box-shadow: var(--shadow-2);
+  box-shadow: var(--shadow-lg);
 }
 
 /* ردیف کنش ثانویه، یک فاصله ۱۶ بالای کنش اصلی */
@@ -24,14 +24,14 @@
   inline-size: 100%;
   min-block-size: var(--touch-teacher);
   border-radius: var(--r-input);
-  background: var(--turquoise-dark);
-  color: var(--surface);
+  background: var(--coral);
+  color: var(--ink);
   font-weight: var(--weight-bold);
   transition: background var(--motion-feedback) var(--easing);
 }
 
 /*
- * بازخورد لمس. رنگ فشرده‌تری از --turquoise-dark در پالت نیست، پس حالت
+ * بازخورد لمس. رنگ فشرده‌تری از --coral-dark در پالت نیست، پس حالت
  * فشرده با تیره‌تر شدن خودِ همان رنگ ساخته می‌شود، نه با رنگ تازه.
  */
 .button:active:not(:disabled) {

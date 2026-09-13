@@ -2,10 +2,10 @@ import type { ReactNode } from 'react'
 import styles from './StatusChip.module.css'
 
 /**
- * رنگ‌ها معنای ثابت دارند — بخش ۱۲.۲:
- * زعفران در انتظار و سررسید نزدیک، آجر خطر و ایمنی، مریم‌گلی تکمیل.
+ * رنگ‌ها معنای ثابت دارند — بخش ۱۲.۲ نسخه ۲.۰:
+ * مرجانی کنش و برند، انبه‌ای در انتظار و خواب، آجر ایمنی، نعنایی تکمیل.
  */
-export type ChipTone = 'neutral' | 'turquoise' | 'saffron' | 'brick' | 'sage'
+export type ChipTone = 'neutral' | 'coral' | 'mango' | 'brick' | 'mint'
 
 type Props = {
   tone?: ChipTone

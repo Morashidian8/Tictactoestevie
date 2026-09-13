@@ -23,7 +23,7 @@
   border-block-end: 1px solid var(--border);
 }
 
-.centerName { font-family: var(--font-display); font-weight: var(--weight-display-fallback); }
+.centerName { font-family: var(--font); font-weight: var(--weight-black); }
 .date { color: var(--ink-muted); }
 .accountWrap { margin-inline-start: auto; position: relative; }
 
@@ -44,7 +44,7 @@
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--r-card);
-  box-shadow: var(--shadow-2);
+  box-shadow: var(--shadow-lg);
   padding: var(--space-2);
   z-index: 20;
 }
@@ -78,6 +78,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
+  color: var(--ink);
 }
 
 .queueHead {
@@ -118,7 +119,7 @@
   min-inline-size: 14ch;
   min-block-size: var(--touch-manager);
   padding-inline: var(--space-3);
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-input);
   border-radius: var(--r-input);
   background: var(--surface);
   color: var(--ink);
@@ -126,9 +127,9 @@
 }
 
 .decidePrimary {
-  background: var(--turquoise-dark);
+  background: var(--coral);
   border-color: transparent;
-  color: var(--surface);
+  color: var(--ink);
   font-weight: var(--weight-bold);
 }
 
@@ -156,8 +157,8 @@
 .tileAlert { background: var(--brick-tint); border-color: transparent; }
 
 .tileBig {
-  font-family: var(--font-display);
-  font-weight: var(--weight-display-fallback);
+  font-family: var(--font);
+  font-weight: var(--weight-black);
   font-size: var(--text-display);
   line-height: var(--text-display-line);
   font-variant-numeric: tabular-nums;
@@ -193,25 +194,25 @@
 .row + .row { border-block-start: 1px solid var(--border); }
 
 .phone {
-  color: var(--turquoise-dark);
+  color: var(--ink);
   font-variant-numeric: tabular-nums;
   text-decoration: none;
-  font-weight: var(--weight-medium);
+  font-weight: var(--weight-bold);
 }
 
-.noPhone { color: var(--brick); }
-.ok { color: var(--sage); }
-.partial { color: var(--saffron); }
-.error { margin: var(--space-4); color: var(--brick); }
+.noPhone { color: var(--ink); }
+.ok { color: var(--ink); }
+.partial { color: var(--ink); }
+.error { margin: var(--space-4); color: var(--ink); }
 
 .more {
   min-block-size: var(--touch-manager);
   border: none;
   background: none;
-  color: var(--turquoise-dark);
+  color: var(--ink);
   font-family: inherit;
   font-size: var(--text-body-sm);
-  font-weight: var(--weight-medium);
+  font-weight: var(--weight-bold);
   text-align: start;
 }
 
@@ -231,7 +232,7 @@
   align-items: center;
   justify-content: center;
   gap: var(--space-2);
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-input);
   border-radius: var(--r-input);
   background: var(--surface);
   color: var(--ink);
@@ -240,17 +241,20 @@
   font-weight: var(--weight-bold);
 }
 
-.navItem svg { color: var(--turquoise-dark); flex: none; }
+/* آیکون است نه متن، پس کف ۳:۱ کافی است و مرجانی فشرده می‌ماند. */
+.navItem svg { color: var(--coral-dark); flex: none; }
 
 /* شمار اعلام‌های پرداختِ در انتظار. عدد روی دکمه، نه در ته صفحه. */
 .navBadge {
   min-inline-size: 22px;
   padding-inline: var(--space-1);
   border-radius: var(--r-chip);
-  background: var(--brick);
-  color: var(--surface);
+  background: var(--brick-tint);
+  border: 1px solid var(--brick);
+  color: var(--ink);
+  font-weight: var(--weight-bold);
   font-size: var(--text-caption);
-  line-height: 22px;
+  line-height: 20px;
   text-align: center;
   font-variant-numeric: tabular-nums;
 }
@@ -270,4 +274,5 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
+  color: var(--ink);
 }

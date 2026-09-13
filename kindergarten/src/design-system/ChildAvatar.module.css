@@ -13,6 +13,7 @@
   display: grid;
   place-items: center;
   flex: none;
+  color: var(--ink);
 }
 
 .sm {
@@ -71,13 +72,19 @@
 }
 
 /* حاضر: حلقه فیروزه‌ای */
+/*
+ * حضور نعنایی است، نه مرجانی — بخش ۱۲.۲ نسخه ۲.۰.
+ *
+ * مرجانی رنگ کنش است و حلقه مرجانی دور آواتار یعنی «اینجا را بزن».
+ * نعنایی در پالت تازه معنای موفقیت و حضور را دارد.
+ */
 .present {
-  box-shadow: 0 0 0 2px var(--turquoise);
+  box-shadow: 0 0 0 2px var(--mint);
 }
 
 /* رفته: همان حلقه، کم‌رنگ، به‌علاوه نشان ✓ */
 .left {
-  box-shadow: 0 0 0 2px var(--turquoise);
+  box-shadow: 0 0 0 2px var(--mint);
   opacity: 0.6;
 }
 

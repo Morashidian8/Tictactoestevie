@@ -36,7 +36,7 @@ export function AccountPicker() {
           >
             <span className={`${styles.accountName} t-body-lg`}>{account.displayName}</span>
             <span className={styles.accountMeta}>
-              <StatusChip tone="turquoise">{ROLE_LABEL[account.role]}</StatusChip>{' '}
+              <StatusChip tone="coral">{ROLE_LABEL[account.role]}</StatusChip>{' '}
               <span className="t-caption">{account.centerName}</span>
             </span>
           </button>

@@ -21,7 +21,7 @@ body {
   margin: 0;
   background: var(--paper);
   color: var(--ink);
-  font-family: var(--font-body);
+  font-family: var(--font);
   font-size: var(--text-body);
   line-height: var(--text-body-line);
   font-weight: var(--weight-regular);

@@ -13,7 +13,7 @@
   display: grid; place-items: center; border: none; background: none; color: var(--ink);
 }
 
-.title { font-family: var(--font-display); font-weight: var(--weight-display-fallback); }
+.title { font-family: var(--font); font-weight: var(--weight-black); }
 .period { color: var(--ink-muted); margin-inline-start: auto; font-variant-numeric: tabular-nums; }
 
 .body {
@@ -48,12 +48,14 @@
 }
 
 .tile + .tile { border-block-start: 1px solid var(--border); }
-.tileWarn { background: var(--saffron-tint); }
+.tileWarn { background: var(--mango-tint);
+  color: var(--ink);
+}
 .tileLabel { color: var(--ink-muted); flex: none; }
 
 .tileValue {
-  font-family: var(--font-display);
-  font-weight: var(--weight-display-fallback);
+  font-family: var(--font);
+  font-weight: var(--weight-black);
   font-size: var(--text-h1);
   line-height: var(--text-h1-line);
   font-variant-numeric: tabular-nums;
@@ -61,7 +63,7 @@
   text-align: end;
 }
 
-.ok { color: var(--sage); }
+.ok { color: var(--ink); }
 
 .card {
   background: var(--surface); border: 1px solid var(--border);
@@ -69,12 +71,12 @@
   display: flex; flex-direction: column; gap: var(--space-2);
 }
 
-.warnCard { background: var(--saffron-tint); border-color: transparent; }
+.warnCard { background: var(--mango-tint); border-color: transparent; }
 .warnHead {
   margin: 0; display: flex; align-items: center; gap: var(--space-2);
   color: var(--ink); font-weight: var(--weight-bold);
 }
-.warnHead svg { color: var(--saffron); flex: none; }
+.warnHead svg { color: var(--ink); flex: none; }
 
 .cardLabel { color: var(--ink-muted); }
 .muted { color: var(--ink-muted); margin: 0; }
@@ -95,30 +97,32 @@
 }
 
 .invoice + .invoice { border-block-start: 1px solid var(--border); border-radius: 0; }
-.invoice:active { background: var(--turquoise-tint); }
+.invoice:active { background: var(--coral-tint);
+  color: var(--ink);
+}
 .invoiceName { flex: 1; min-inline-size: 0; }
 
 .status { color: var(--ink-muted); }
-.statusOverdue { color: var(--brick); font-weight: var(--weight-medium); }
+.statusOverdue { color: var(--ink); font-weight: var(--weight-medium); }
 
 .amount { font-variant-numeric: tabular-nums; white-space: nowrap; }
 
 .action {
   min-block-size: var(--touch-manager); margin-block-start: var(--space-2);
-  border: 1px solid var(--border); border-radius: var(--r-input);
-  background: var(--surface); color: var(--turquoise-dark);
-  font-family: inherit; font-size: var(--text-body-sm); font-weight: var(--weight-medium);
+  border: 1px solid var(--border-input); border-radius: var(--r-input);
+  background: var(--surface); color: var(--ink);
+  font-family: inherit; font-size: var(--text-body-sm); font-weight: var(--weight-bold);
 }
 .action:disabled { color: var(--disabled-fg); }
 
 .note {
   margin: 0; display: flex; align-items: center; gap: var(--space-2);
   padding: var(--space-3) var(--space-4);
-  border-radius: var(--r-card); background: var(--sage-tint); color: var(--ink);
+  border-radius: var(--r-card); background: var(--mint-tint); color: var(--ink);
 }
-.note svg { color: var(--sage); flex: none; }
+.note svg { color: var(--ink); flex: none; }
 
-.error { margin: 0; color: var(--brick); }
+.error { margin: 0; color: var(--ink); }
 
 /* ── شیت ثبت پرداخت ─────────────────────────────────────────── */
 .sheetBackdrop {
@@ -132,34 +136,34 @@
   background: var(--surface);
   border-start-start-radius: var(--r-card);
   border-start-end-radius: var(--r-card);
-  box-shadow: var(--shadow-2);
+  box-shadow: var(--shadow-lg);
   padding: var(--space-5) var(--space-4) var(--space-6);
   display: flex; flex-direction: column; gap: var(--space-3);
   max-block-size: 90dvh; overflow-y: auto;
 }
 
-.sheetTitle { margin: 0; font-family: var(--font-display); font-weight: var(--weight-display-fallback); }
+.sheetTitle { margin: 0; font-family: var(--font); font-weight: var(--weight-black); }
 .field { display: flex; flex-direction: column; gap: var(--space-1); color: var(--ink-muted); }
 
 .input {
   min-block-size: var(--touch-manager); padding-inline: var(--space-3);
-  border: 1px solid var(--border); border-radius: var(--r-input);
+  border: 1px solid var(--border-input); border-radius: var(--r-input);
   background: var(--surface); color: var(--ink);
   font-family: inherit; font-size: var(--text-body-sm);
   font-variant-numeric: tabular-nums;
 }
-.input:focus { border-color: var(--turquoise); outline: none; }
+.input:focus { border-color: var(--coral); outline: none; }
 
 .methods { display: flex; gap: var(--space-2); flex-wrap: wrap; }
 
 .choice {
   flex: 1; min-inline-size: 10ch; min-block-size: var(--touch-manager);
-  border: 1px solid var(--border); border-radius: var(--r-input);
+  border: 1px solid var(--border-input); border-radius: var(--r-input);
   background: var(--surface); color: var(--ink);
   font-family: inherit; font-size: var(--text-body-sm);
 }
 .choice[aria-pressed='true'] {
-  background: var(--turquoise-tint); border-color: var(--turquoise);
+  background: var(--coral-tint); border-color: var(--coral);
   font-weight: var(--weight-medium);
 }
 
@@ -168,20 +172,20 @@
 .primary {
   flex: 2; min-block-size: var(--touch-manager);
   border: none; border-radius: var(--r-input);
-  background: var(--turquoise-dark); color: var(--surface);
+  background: var(--coral); color: var(--ink);
   font-family: inherit; font-weight: var(--weight-bold);
 }
 .primary:disabled { background: var(--disabled-bg); color: var(--disabled-fg); }
 
 .secondary {
   flex: 1; min-block-size: var(--touch-manager);
-  border: 1px solid var(--border); border-radius: var(--r-input);
+  border: 1px solid var(--border-input); border-radius: var(--r-input);
   background: var(--surface); color: var(--ink); font-family: inherit;
 }
 
 /* ── اعلام‌های پرداخت خانواده — بخش ۸ ────────────────────────── */
 
-.claims { background: var(--saffron-tint); border-color: transparent; }
+.claims { background: var(--mango-tint); border-color: transparent; }
 
 .claim {
   background: var(--surface);
@@ -210,12 +214,13 @@
   inline-size: 64px;
   block-size: 64px;
   object-fit: cover;
-  border-radius: var(--r-photo);
+  border-radius: var(--r-avatar);
   background: var(--neutral-fill);
   flex: none;
+  color: var(--ink);
 }
 
-.noReceipt { color: var(--brick); margin: 0; }
+.noReceipt { color: var(--ink); margin: 0; }
 
 .claimActions { display: flex; gap: var(--space-2); }
 
@@ -231,7 +236,7 @@
   padding: var(--space-4);
 }
 
-.zoomImage { max-inline-size: 100%; max-block-size: 100%; border-radius: var(--r-photo); }
+.zoomImage { max-inline-size: 100%; max-block-size: 100%; border-radius: var(--r-avatar); }
 
 /*
  * دکمه‌های تصمیم روی اعلام پرداخت.
@@ -244,7 +249,7 @@
   min-inline-size: 12ch;
   min-block-size: var(--touch-manager);
   padding-inline: var(--space-3);
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-input);
   border-radius: var(--r-input);
   background: var(--surface);
   color: var(--ink);
@@ -253,9 +258,9 @@
 
 .decidePrimary {
   flex: 2;
-  background: var(--turquoise-dark);
+  background: var(--coral);
   border-color: transparent;
-  color: var(--surface);
+  color: var(--ink);
   font-weight: var(--weight-bold);
 }
 

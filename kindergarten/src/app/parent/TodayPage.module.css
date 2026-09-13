@@ -47,8 +47,8 @@
   font-weight: var(--weight-medium);
 }
 .switchItem[aria-pressed='true'] {
-  background: var(--turquoise-tint);
-  border-color: var(--turquoise);
+  background: var(--coral-tint);
+  border-color: var(--coral);
   font-weight: var(--weight-bold);
 }
 
@@ -58,7 +58,7 @@
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--r-card);
-  box-shadow: var(--shadow-1);
+  box-shadow: var(--shadow-sm);
   overflow: hidden;
 }
 
@@ -67,8 +67,8 @@
   text-align: center;
   color: var(--ink);
   /* تاریخ روز با فونت نمایشی — بخش ۱۲.۶ */
-  font-family: var(--font-display);
-  font-weight: var(--weight-display-fallback);
+  font-family: var(--font);
+  font-weight: var(--weight-black);
   font-size: var(--text-h1);
   line-height: var(--text-h1-line);
 }
@@ -81,8 +81,9 @@
   inline-size: 100%;
   aspect-ratio: 4 / 3;
   object-fit: cover;
-  border-radius: var(--r-photo);
+  border-radius: var(--r-avatar);
   background: var(--neutral-fill);
+  color: var(--ink);
 }
 
 .noPhotos {
@@ -91,7 +92,7 @@
   text-align: center;
   color: var(--ink-muted);
   background: var(--paper);
-  border-radius: var(--r-photo);
+  border-radius: var(--r-avatar);
 }
 
 .rows { padding: var(--space-5); display: flex; flex-direction: column; gap: var(--space-5); }
@@ -147,12 +148,13 @@
 
 /* ۵ — یادداشت مربی */
 .note {
-  background: var(--turquoise-tint);
+  background: var(--coral-tint);
   border-radius: var(--r-card);
   padding: var(--space-4);
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
+  color: var(--ink);
 }
 .noteLabel { color: var(--ink-muted); }
 .noteText { color: var(--ink); line-height: var(--text-body-line); }
@@ -163,7 +165,7 @@
   display: flex; align-items: center; gap: var(--space-3);
   min-block-size: var(--touch-parent);
   padding: var(--space-2) var(--space-3);
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-input);
   border-radius: var(--r-input);
   background: var(--surface);
   text-align: start;
@@ -171,19 +173,20 @@
 }
 .needBox {
   inline-size: 24px; block-size: 24px; border-radius: var(--r-input);
-  border: 2px solid var(--neutral-fill-strong);
-  display: grid; place-items: center; flex: none; color: var(--surface);
+  border: 2px solid var(--border-input);
+  display: grid; place-items: center; flex: none; color: var(--ink);
 }
-.needBoxDone { background: var(--sage); border-color: var(--sage); }
+.needBoxDone { background: var(--mint); border-color: var(--mint); }
 .needText { flex: 1; color: var(--ink); }
 .needTextDone { color: var(--ink-muted); text-decoration: line-through; }
 
 /* رویداد. فقط آنچه خانواده حق دیدنش را دارد. */
 .incident {
   display: flex; gap: var(--space-3);
-  background: var(--saffron-tint);
+  background: var(--mango-tint);
   border-radius: var(--r-card);
   padding: var(--space-4);
+  color: var(--ink);
 }
 .incidentIcon { color: var(--ink); flex: none; margin-block-start: 2px; }
 .incidentBody { display: flex; flex-direction: column; gap: var(--space-1); }
@@ -209,7 +212,7 @@
  */
 .loadError {
   composes: pending;
-  color: var(--brick);
+  color: var(--ink);
 }
 
 /* ورودی «بیشتر» — بخش ۶.۴. */

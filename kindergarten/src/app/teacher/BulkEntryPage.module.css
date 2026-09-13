@@ -49,7 +49,7 @@
   min-block-size: var(--touch-teacher);
   flex: 1 1 auto;
   padding-inline: var(--space-4);
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-input);
   border-radius: var(--r-input);
   background: var(--surface);
   color: var(--ink);
@@ -57,8 +57,8 @@
 }
 
 .choice[aria-pressed='true'] {
-  background: var(--turquoise-tint);
-  border-color: var(--turquoise);
+  background: var(--coral-tint);
+  border-color: var(--coral);
   font-weight: var(--weight-bold);
 }
 
@@ -66,7 +66,7 @@
   min-block-size: var(--touch-teacher);
   inline-size: 8rem;
   padding-inline: var(--space-4);
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-input);
   border-radius: var(--r-input);
   background: var(--surface);
   color: var(--ink);
@@ -81,16 +81,16 @@
  * کنش اصلی کارت گروهی. رنگ پرشده می‌گیرد تا از دکمه‌های انتخاب بالایش
  * جدا باشد.
  *
- * چرا --turquoise-dark و نه --turquoise: بخش ۱۲.۷ کف کنتراست ۴.۵:۱ برای
- * متن می‌خواهد. سفید روی --turquoise فقط ۴.۱۰ می‌دهد و --ink روی همان
- * ۳.۷۶؛ هیچ‌کدام کافی نیست. --turquoise-dark با سفید ۶.۳۵ می‌دهد و از
+ * چرا --coral-dark و نه --coral: بخش ۱۲.۷ کف کنتراست ۴.۵:۱ برای
+ * متن می‌خواهد. سفید روی --coral فقط ۴.۱۰ می‌دهد و --ink روی همان
+ * ۳.۷۶؛ هیچ‌کدام کافی نیست. --coral-dark با سفید ۶.۳۵ می‌دهد و از
  * همان خانواده رنگی است.
  */
 .applyInline {
   min-block-size: var(--touch-teacher);
   border-radius: var(--r-input);
-  background: var(--turquoise-dark);
-  color: var(--surface);
+  background: var(--coral);
+  color: var(--ink);
   font-weight: var(--weight-bold);
   font-size: var(--text-body-lg);
 }
@@ -156,7 +156,9 @@
   background: var(--surface);
 }
 
-.item:active { background: var(--turquoise-tint); }
+.item:active { background: var(--coral-tint);
+  color: var(--ink);
+}
 
 .avatar { inline-size: var(--avatar-sm); block-size: var(--avatar-sm); border-radius: var(--r-chip); flex: none; overflow: hidden; }
 
@@ -172,7 +174,7 @@
   gap: var(--space-1);
   padding: var(--space-1) var(--space-2);
   border-radius: var(--r-chip);
-  background: var(--saffron-tint);
+  background: var(--mango-tint);
   color: var(--ink);
 }
 
@@ -189,7 +191,7 @@
 .suggestNames { color: var(--ink); font-weight: var(--weight-medium); }
 
 .error {
-  color: var(--brick);
+  color: var(--ink);
   background: var(--brick-tint);
   padding: var(--space-3) var(--space-4);
   border-radius: var(--r-input);
@@ -211,7 +213,7 @@
   min-inline-size: 0;
   min-block-size: var(--touch-teacher);
   padding-inline: var(--space-3);
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-input);
   border-radius: var(--r-input);
   background: var(--surface);
   color: var(--ink);
@@ -219,7 +221,7 @@
   font-size: var(--text-body-lg);
 }
 
-.needInput:focus { border-color: var(--turquoise); outline: none; }
+.needInput:focus { border-color: var(--coral); outline: none; }
 
 .needRemove {
   flex: none;
@@ -243,7 +245,7 @@
 .needAdd {
   min-block-size: var(--touch-teacher);
   padding-inline: var(--space-4);
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-input);
   border-radius: var(--r-input);
   background: var(--surface);
   color: var(--ink);
@@ -262,8 +264,8 @@
   min-block-size: var(--touch-teacher);
   border: none;
   border-radius: var(--r-input);
-  background: var(--turquoise-dark);
-  color: var(--surface);
+  background: var(--coral);
+  color: var(--ink);
   font-family: inherit;
   font-weight: var(--weight-bold);
 }

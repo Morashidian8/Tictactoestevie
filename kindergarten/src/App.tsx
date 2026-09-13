@@ -88,7 +88,7 @@ function NotBuiltYet({ role }: { role: string }) {
         style={{
           minBlockSize: 'var(--touch-teacher)',
           borderRadius: 'var(--r-input)',
-          background: 'var(--turquoise-dark)',
+          background: 'var(--coral-dark)',
           color: 'var(--surface)',
           fontWeight: 'var(--weight-bold)',
         }}

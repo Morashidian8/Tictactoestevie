@@ -12,7 +12,7 @@
   display: grid; place-items: center; border: none; background: none; color: var(--ink);
 }
 
-.title { font-family: var(--font-display); font-weight: var(--weight-display-fallback); }
+.title { font-family: var(--font); font-weight: var(--weight-black); }
 .count { color: var(--ink-muted); margin-inline-start: auto; }
 
 .body {
@@ -22,11 +22,11 @@
 
 .search {
   min-block-size: var(--touch-manager); padding-inline: var(--space-3);
-  border: 1px solid var(--border); border-radius: var(--r-input);
+  border: 1px solid var(--border-input); border-radius: var(--r-input);
   background: var(--surface); color: var(--ink);
   font-family: inherit; font-size: var(--text-body-sm);
 }
-.search:focus { border-color: var(--turquoise); outline: none; }
+.search:focus { border-color: var(--coral); outline: none; }
 
 .list {
   list-style: none; margin: 0; padding: 0;
@@ -43,7 +43,9 @@
 }
 
 .list li + li .item { border-block-start: 1px solid var(--border); }
-.item:active { background: var(--turquoise-tint); }
+.item:active { background: var(--coral-tint);
+  color: var(--ink);
+}
 .item svg { color: var(--ink-muted); flex: none; }
 
 .avatar {
@@ -61,6 +63,7 @@
   padding: var(--space-4); border-radius: var(--r-card);
   background: var(--brick-tint);
   display: flex; flex-direction: column; gap: var(--space-1);
+  color: var(--ink);
 }
 
 .allergyHead {
@@ -88,16 +91,16 @@
 
 .tag {
   padding: var(--space-1) var(--space-2); border-radius: var(--r-chip);
-  background: var(--turquoise-tint); color: var(--ink);
+  background: var(--coral-tint); color: var(--ink);
 }
 
 .phone {
-  margin-inline-start: auto; color: var(--turquoise-dark);
+  margin-inline-start: auto; color: var(--ink);
   font-variant-numeric: tabular-nums; text-decoration: none;
-  font-weight: var(--weight-medium);
+  font-weight: var(--weight-bold);
 }
 
-.noPhone { margin-inline-start: auto; color: var(--brick); }
-.granted { margin-inline-start: auto; color: var(--sage); }
+.noPhone { margin-inline-start: auto; color: var(--ink); }
+.granted { margin-inline-start: auto; color: var(--ink); }
 .notGranted { margin-inline-start: auto; color: var(--ink-muted); }
-.error { margin: 0; color: var(--brick); }
+.error { margin: 0; color: var(--ink); }

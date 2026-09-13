@@ -522,7 +522,7 @@ function ChildRow({
       </span>
 
       {suggested && !report?.teacherNote ? (
-        <StatusChip tone="turquoise">یادداشت</StatusChip>
+        <StatusChip tone="coral">یادداشت</StatusChip>
       ) : null}
 
       {report?.touched ? (

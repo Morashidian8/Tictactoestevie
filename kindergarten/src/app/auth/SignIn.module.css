@@ -30,7 +30,7 @@
 .input {
   min-block-size: var(--touch-teacher);
   padding-inline: var(--space-4);
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-input);
   border-radius: var(--r-input);
   background: var(--surface);
   color: var(--ink);
@@ -42,14 +42,14 @@
 }
 
 .input:focus {
-  border-color: var(--turquoise);
+  border-color: var(--coral);
 }
 
 .submit {
   min-block-size: var(--touch-teacher);
   border-radius: var(--r-input);
-  background: var(--turquoise-dark);
-  color: var(--surface);
+  background: var(--coral);
+  color: var(--ink);
   font-weight: var(--weight-bold);
 }
 
@@ -59,7 +59,7 @@
 }
 
 .error {
-  color: var(--brick);
+  color: var(--ink);
   background: var(--brick-tint);
   padding: var(--space-3) var(--space-4);
   border-radius: var(--r-input);
@@ -102,7 +102,7 @@
 }
 
 .account:active {
-  border-color: var(--turquoise);
+  border-color: var(--coral);
 }
 
 .accountName {
@@ -115,8 +115,8 @@
 }
 
 .link {
-  color: var(--turquoise-dark);
-  font-weight: var(--weight-medium);
+  color: var(--ink);
+  font-weight: var(--weight-bold);
   align-self: flex-start;
   min-block-size: var(--touch-teacher);
 }

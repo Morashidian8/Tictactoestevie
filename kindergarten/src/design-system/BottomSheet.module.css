@@ -24,7 +24,7 @@
   background: var(--surface);
   border-start-start-radius: var(--r-card);
   border-start-end-radius: var(--r-card);
-  box-shadow: var(--shadow-2);
+  box-shadow: var(--shadow-lg);
   /* بخش ۱۲.۸: باز شدن شیت پاسخ کنش کاربر است، پس حرکت مجاز است. */
   animation: rise var(--motion-page) var(--easing);
 }
@@ -42,7 +42,7 @@
   inline-size: 36px;
   block-size: 4px;
   border-radius: var(--r-chip);
-  background: var(--neutral-fill-strong);
+  background: var(--border);
   margin: var(--space-2) auto 0;
   flex: none;
 }

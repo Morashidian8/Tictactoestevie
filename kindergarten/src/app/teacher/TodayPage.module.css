@@ -38,7 +38,7 @@
 .classSwitch {
   min-block-size: var(--touch-teacher);
   padding-inline: var(--space-3);
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-input);
   border-radius: var(--r-input);
   background: var(--surface);
   color: var(--ink);
@@ -101,7 +101,7 @@
 }
 
 .bannerIcon {
-  color: var(--brick);
+  color: var(--ink);
   flex: none;
 }
 
@@ -116,7 +116,7 @@
 .medication {
   margin: 0 var(--space-4) var(--space-4);
   border-radius: var(--r-card);
-  background: var(--saffron-tint);
+  background: var(--mango-tint);
   color: var(--ink);
   overflow: hidden;
 }
@@ -137,8 +137,8 @@
 
 .medicationMore {
   margin-inline-start: auto;
-  color: var(--turquoise-dark);
-  font-weight: var(--weight-medium);
+  color: var(--ink);
+  font-weight: var(--weight-bold);
   flex: none;
 }
 
@@ -176,9 +176,9 @@
   border: 1px solid var(--border);
   border-radius: var(--r-chip);
   background: var(--surface);
-  color: var(--turquoise-dark);
+  color: var(--ink);
   font-family: inherit;
-  font-weight: var(--weight-medium);
+  font-weight: var(--weight-bold);
 }
 
 .medicationIcon {
@@ -222,7 +222,7 @@
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--r-card);
-  box-shadow: var(--shadow-2);
+  box-shadow: var(--shadow-lg);
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
@@ -243,7 +243,8 @@
 }
 
 .menuItem:active {
-  background: var(--turquoise-tint);
+  background: var(--coral-tint);
+  color: var(--ink);
 }
 
 /* راه رفتن به صفحه پایان روز. کنش ثانویه است، پس فیروزه‌ای نمی‌گیرد. */
@@ -252,7 +253,7 @@
   min-block-size: var(--touch-teacher);
   margin-block-end: var(--space-3);
   padding-inline: var(--space-5);
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-input);
   border-radius: var(--r-input);
   background: var(--surface);
   color: var(--ink);
@@ -263,7 +264,7 @@
 /*
  * تراشه «ورود ثبت شد · تغییر» — بخش ۵.۳.
  *
- * لحن تأیید دارد نه هشدار، پس --sage-tint می‌گیرد و نه زعفرانی. بالای
+ * لحن تأیید دارد نه هشدار، پس --mint-tint می‌گیرد و نه زعفرانی. بالای
  * شبکه می‌نشیند و جای خودش را در جریان می‌گیرد، تا مثل دکمه شناور روی
  * هیچ کودکی نیفتد.
  */
@@ -275,34 +276,35 @@
   gap: var(--space-3);
   padding-inline: var(--space-4);
   border-radius: var(--r-chip);
-  background: var(--sage-tint);
+  background: var(--mint-tint);
   color: var(--ink);
   border: 1px solid transparent;
   text-align: start;
 }
 
-.justIn svg { inline-size: 20px; block-size: 20px; color: var(--sage); flex: none; }
+.justIn svg { inline-size: 20px; block-size: 20px; color: var(--ink); flex: none; }
 
 .justInChange {
   margin-inline-start: auto;
-  color: var(--turquoise-dark);
+  color: var(--ink);
   font-weight: var(--weight-bold);
 }
 
 /*
  * اعلام خانواده برای امروز — بخش ۵.۸.
  *
- * لحن اطلاع است نه هشدار، پس --turquoise-tint می‌گیرد و نه زعفرانی:
+ * لحن اطلاع است نه هشدار، پس --coral-tint می‌گیرد و نه زعفرانی:
  * چیزی خراب نشده، فقط امروز فرق دارد.
  */
 .plans {
   margin: 0 var(--space-4) var(--space-3);
   padding: var(--space-4);
   border-radius: var(--r-card);
-  background: var(--turquoise-tint);
+  background: var(--coral-tint);
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
+  color: var(--ink);
 }
 
 .plansLabel { color: var(--ink-muted); }
@@ -332,8 +334,13 @@
   gap: var(--space-3);
   flex-wrap: wrap;
   padding: var(--space-2) var(--space-4);
-  background: var(--turquoise-tint);
+  /*
+   * کرم، نه مرجانی. مرجانی رنگ کنش است و نوار بازه خبر می‌دهد، کنش
+   * نیست — اگر مرجانی بگیرد، دو مرجانی در یک صفحه می‌شود.
+   */
+  background: var(--surface-warm);
   border-block-end: 1px solid var(--border);
+  color: var(--ink);
 }
 
 .periodName {
@@ -359,7 +366,7 @@
   padding: var(--space-3);
   border-radius: var(--r-card);
   background: var(--brick-tint);
-  color: var(--brick);
+  color: var(--ink);
 }
 
 /* ------------------------------------------------------------
@@ -392,8 +399,8 @@
 
 .offDayMore {
   margin-inline-start: auto;
-  color: var(--turquoise-dark);
-  font-weight: var(--weight-medium);
+  color: var(--ink);
+  font-weight: var(--weight-bold);
   flex: none;
 }
 
@@ -423,7 +430,7 @@
   border: 1px solid var(--border);
   border-radius: var(--r-chip);
   background: var(--surface);
-  color: var(--turquoise-dark);
+  color: var(--ink);
   font-family: inherit;
-  font-weight: var(--weight-medium);
+  font-weight: var(--weight-bold);
 }

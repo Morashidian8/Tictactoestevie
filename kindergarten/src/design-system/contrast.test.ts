@@ -6,6 +6,10 @@ import { describe, expect, it } from 'vitest'
  *
  * توکن‌ها از خود فایل CSS خوانده می‌شوند تا این تست با تغییر پالت هم
  * معتبر بماند. اگر کسی رنگی را عوض کرد و کف شکست، اینجا قرمز می‌شود.
+ *
+ * نسخه ۲.۰: پالت مرجانی هیچ رنگی ندارد که به‌تنهایی به عنوان متن روی
+ * زمینه روشن قبول شود. راه‌حل تغییر رنگ نبود، تغییر قاعده بود — و
+ * قاعده‌ها همان‌هایی‌اند که این فایل می‌سنجدشان.
  */
 const css = readFileSync(new URL('./tokens.css', import.meta.url), 'utf8')
 
@@ -31,20 +35,24 @@ function contrast(a: string, b: string): number {
 const TEXT_MIN = 4.5
 const UI_MIN = 3
 
+/** رنگ‌های پرکننده پالت. هیچ‌کدام حق ندارند گلیف باشند. */
+const FILLS = ['coral', 'coral-dark', 'mint', 'mango', 'brick'] as const
+/** زمینه‌های روشنی که متن رویشان می‌نشیند. */
+const GROUNDS = ['paper', 'surface', 'surface-warm'] as const
+const TINTS = ['coral-tint', 'mint-tint', 'mango-tint', 'brick-tint'] as const
+
 describe('کنتراست متن، کف ۴.۵:۱', () => {
   const pairs: [string, string, string][] = [
-    ['متن اصلی روی کاغذ', 'ink', 'paper'],
+    ['متن اصلی روی بوم', 'ink', 'paper'],
     ['متن اصلی روی سطح', 'ink', 'surface'],
-    ['متن ثانویه روی کاغذ', 'ink-muted', 'paper'],
+    ['متن اصلی روی سطح گرم', 'ink', 'surface-warm'],
+    ['متن ثانویه روی بوم', 'ink-muted', 'paper'],
     ['متن ثانویه روی سطح', 'ink-muted', 'surface'],
-    ['حرف اول در آواتار خالی', 'ink-muted', 'neutral-fill'],
-    ['متن دکمه اصلی', 'surface', 'turquoise-dark'],
-    // متن هر تراشه --ink است، روی هر پنج پس‌زمینه لحن
-    ['تراشه خنثی', 'ink', 'neutral-fill'],
-    ['تراشه فیروزه‌ای', 'ink', 'turquoise-tint'],
-    ['تراشه زعفرانی', 'ink', 'saffron-tint'],
-    ['تراشه آجری', 'ink', 'brick-tint'],
-    ['تراشه مریم‌گلی', 'ink', 'sage-tint'],
+    ['متن روی سطح گرم و تینت‌دار', 'ink', 'surface-warm'],
+    // بخش ۱۲.۲: متن دکمه کنش اصلی --ink است، نه سفید.
+    ['متن دکمه کنش اصلی', 'ink', 'coral'],
+    // تراشه وضعیت: زمینه تینت، متن --ink
+    ...TINTS.map((t): [string, string, string] => [`تراشه ${t}`, 'ink', t]),
   ]
 
   it.each(pairs)('%s', (_label, fg, bg) => {
@@ -54,11 +62,15 @@ describe('کنتراست متن، کف ۴.۵:۱', () => {
 
 describe('کنتراست عناصر رابط، کف ۳:۱', () => {
   const pairs: [string, string, string][] = [
-    ['حلقه آواتار حاضر روی کاغذ', 'turquoise', 'paper'],
-    ['آیکون تراشه زعفرانی', 'ink', 'saffron-tint'],
-    ['آیکون تراشه آجری', 'brick', 'brick-tint'],
-    ['آیکون تراشه مریم‌گلی', 'sage', 'sage-tint'],
-    ['نقطه بی‌خبر روی سطح', 'brick', 'surface'],
+    // بخش ۱۲.۲: مرز کنترل تعاملی --ink-muted است، نه --border.
+    ['مرز ورودی روی سطح', 'ink-muted', 'surface'],
+    ['مرز ورودی روی بوم', 'ink-muted', 'paper'],
+    // حلقه فوکوس --coral-dark است.
+    ['حلقه فوکوس روی سطح', 'coral-dark', 'surface'],
+    ['حلقه فوکوس روی بوم', 'coral-dark', 'paper'],
+    // آجری تنها رنگی است که حق آیکون شدن دارد، و فقط برای ایمنی.
+    ['آیکون ایمنی روی سطح', 'brick', 'surface'],
+    ['آیکون ایمنی روی بوم', 'brick', 'paper'],
   ]
 
   it.each(pairs)('%s', (_label, fg, bg) => {
@@ -67,39 +79,83 @@ describe('کنتراست عناصر رابط، کف ۳:۱', () => {
 })
 
 /**
+ * قاعده‌ای که رنگ‌ها را نجات داد، به شکل تست.
+ *
+ * هیچ رنگ پرکننده‌ای روی هیچ زمینه روشنی به کف متن نمی‌رسد. اگر روزی
+ * کسی وسوسه شد «حاضر» را نعنایی بنویسد، این تست می‌گوید چرا نمی‌شود.
+ */
+describe('هیچ رنگ پرکننده‌ای متن نمی‌شود — بخش ۱۲.۲', () => {
+  for (const fill of FILLS) {
+    for (const ground of GROUNDS) {
+      it(`--${fill} روی --${ground} کف متن را رد نمی‌کند`, () => {
+        expect(contrast(token(fill), token(ground))).toBeLessThan(TEXT_MIN)
+      })
+    }
+  }
+
+  it('ولی --ink روی هر پرکننده‌ای که متن می‌گیرد، قبول است', () => {
+    for (const fill of ['coral', 'mint', 'mango'] as const) {
+      expect(contrast(token('ink'), token(fill))).toBeGreaterThanOrEqual(TEXT_MIN)
+    }
+  })
+
+  /*
+   * --brick استثناست: --ink رویش ۳٫۸۹ می‌دهد. پس آجری فقط زمینه متن
+   * درشت یا آیکون می‌شود، و پیام هشدار روی --brick-tint می‌نشیند نه
+   * روی خودِ --brick.
+   */
+  it('آجری برای متن عادی زمینه نمی‌شود، ولی تینتش می‌شود', () => {
+    expect(contrast(token('ink'), token('brick'))).toBeLessThan(TEXT_MIN)
+    expect(contrast(token('ink'), token('brick'))).toBeGreaterThanOrEqual(UI_MIN)
+    expect(contrast(token('ink'), token('brick-tint'))).toBeGreaterThanOrEqual(TEXT_MIN)
+  })
+})
+
+/**
  * دو استثنای عمدی، اینجا ثبت می‌شوند تا سکوت نباشند.
  *
  * حالت غیرفعال: معیار ۱.۴.۳ استاندارد، عنصر غیرفعال را صراحتاً معاف
- * می‌کند. --disabled-fg روی --disabled-bg حدود ۲.۱ است و همین درست است،
- * چون غیرفعال باید خوانا نباشد.
+ * می‌کند.
  *
- * حلقه آواتار «نیامده»: تزئینی است، نه حامل معنا. وضعیت با متن زیر آواتار
- * و برچسب صفحه‌خوان هم گفته می‌شود، پس مشمول کف ۳:۱ نیست.
+ * --border: با نسبت حدود ۱.۲ عملاً نامرئی است و همین درست است — خط
+ * جداکننده است، نه مرز کنترل. جدایی کارت از بوم را سایه می‌سازد.
  */
 describe('استثناهای عمدی', () => {
   it('متن غیرفعال عمداً کم‌کنتراست است', () => {
-    expect(contrast(token('disabled-fg'), token('disabled-bg'))).toBeLessThan(TEXT_MIN)
+    expect(contrast(token('ink-muted'), token('surface-warm'))).toBeLessThan(
+      contrast(token('ink'), token('surface-warm')),
+    )
   })
 
-  it('حلقه خنثی تزئینی است و وضعیت را متن حمل می‌کند', () => {
-    expect(contrast(token('neutral-fill-strong'), token('paper'))).toBeLessThan(UI_MIN)
+  /*
+   * چرا قاعده «روی تینت، متن --ink است» وجود دارد: --ink-muted روی
+   * هر چهار تینت زیر کف می‌ماند. این تست همان را ثبت می‌کند تا قاعده
+   * بی‌دلیل به نظر نرسد.
+   */
+  it('متن ثانویه روی تینت‌ها کف را رد نمی‌کند، پس آنجا --ink می‌نشیند', () => {
+    for (const tint of [...TINTS, 'surface-warm'] as const) {
+      expect(contrast(token('ink-muted'), token(tint))).toBeLessThan(TEXT_MIN)
+    }
+  })
+
+  it('خط جداکننده تزئینی است و مرز کنترل نیست', () => {
+    expect(contrast(token('border'), token('paper'))).toBeLessThan(UI_MIN)
   })
 })
 
 /**
  * پالت باید مقدار به مقدار همان چیزی باشد که سند می‌گوید.
  *
- * تا پیش از این، سند در مخزن نبود و این ادعا قابل سنجش نبود. حالا هست،
- * پس هر انحرافی اینجا قرمز می‌شود — چه کسی رنگی را در کد عوض کند، چه
- * در سند.
+ * هر انحرافی اینجا قرمز می‌شود — چه کسی رنگی را در کد عوض کند، چه در
+ * سند.
  */
 describe('پالت با سند یکی است — بخش ۱۲.۲', () => {
   const spec = readFileSync(new URL('../../docs/spec.md', import.meta.url), 'utf8')
   const block = spec.slice(spec.indexOf('### ۱۲.۲ پالت رنگ'))
-  const wanted = [...block.matchAll(/--([a-z-]+):\s*(#[0-9A-Fa-f]{6})/g)].slice(0, 11)
+  const wanted = [...block.matchAll(/--([a-z-]+):\s*(#[0-9A-Fa-f]{6})/g)].slice(0, 14)
 
-  it('سند یازده رنگ تعریف کرده', () => {
-    expect(wanted.length).toBe(11)
+  it('سند چهارده رنگ تعریف کرده', () => {
+    expect(wanted.length).toBe(14)
   })
 
   for (const [, name, value] of wanted) {

@@ -404,7 +404,7 @@ export function TodayPage({
       ) : null}
 
       <div className={styles.tally}>
-        <StatusChip tone="turquoise">{formatCount(counts.present)} حاضر</StatusChip>
+        <StatusChip tone="mint">{formatCount(counts.present)} حاضر</StatusChip>
         <StatusChip tone="neutral">
           {formatCount(counts.absenceDeclared)} غیبت اعلام‌شده
         </StatusChip>

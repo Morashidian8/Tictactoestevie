@@ -29,7 +29,7 @@
   color: var(--ink);
 }
 
-.title { font-family: var(--font-display); font-weight: var(--weight-display-fallback); }
+.title { font-family: var(--font); font-weight: var(--weight-black); }
 
 .body {
   flex: 1;
@@ -47,7 +47,7 @@
 .choice {
   min-block-size: var(--touch-manager);
   padding-inline: var(--space-4);
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-input);
   border-radius: var(--r-input);
   background: var(--surface);
   color: var(--ink);
@@ -55,15 +55,15 @@
 }
 
 .choice[aria-pressed='true'] {
-  background: var(--turquoise-tint);
-  border-color: var(--turquoise);
+  background: var(--coral-tint);
+  border-color: var(--coral);
   font-weight: var(--weight-medium);
 }
 
 .input, .time {
   min-block-size: var(--touch-manager);
   padding-inline: var(--space-3);
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-input);
   border-radius: var(--r-input);
   background: var(--surface);
   color: var(--ink);
@@ -75,7 +75,7 @@
 
 .text {
   padding: var(--space-3);
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-input);
   border-radius: var(--r-input);
   background: var(--surface);
   color: var(--ink);
@@ -85,7 +85,7 @@
   resize: vertical;
 }
 
-.input:focus, .text:focus, .time:focus { border-color: var(--turquoise); outline: none; }
+.input:focus, .text:focus, .time:focus { border-color: var(--coral); outline: none; }
 
 .hint { color: var(--ink-muted); margin: 0; }
 
@@ -95,7 +95,7 @@
   align-items: center;
   gap: var(--space-3);
   padding-inline: var(--space-3);
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-input);
   border-radius: var(--r-input);
   background: var(--surface);
   color: var(--ink);
@@ -109,21 +109,22 @@
   flex: none;
   display: grid;
   place-items: center;
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-input);
   border-radius: var(--r-input);
-  color: var(--surface);
+  color: var(--ink);
 }
 
-.boxOn { background: var(--turquoise-dark); border-color: transparent; }
+.boxOn { background: var(--coral); border-color: transparent; }
 
 /* ── صفحه تأیید ─────────────────────────────────────────────── */
 .preview {
   padding: var(--space-4);
   border-radius: var(--r-card);
-  background: var(--turquoise-tint);
+  background: var(--coral-tint);
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
+  color: var(--ink);
 }
 
 .previewLabel { color: var(--ink-muted); }
@@ -152,9 +153,9 @@
 
 .row + .row { border-block-start: 1px solid var(--border); }
 .row b { font-variant-numeric: tabular-nums; }
-.short { color: var(--brick); }
+.short { color: var(--ink); }
 
-.warn { background: var(--saffron-tint); border-color: transparent; }
+.warn { background: var(--mango-tint); border-color: transparent; }
 .warnHead {
   margin: 0;
   display: flex;
@@ -163,12 +164,12 @@
   color: var(--ink);
   font-weight: var(--weight-bold);
 }
-.warnHead svg { color: var(--saffron); flex: none; }
+.warnHead svg { color: var(--ink); flex: none; }
 
 .done { padding: var(--space-6) var(--space-4); text-align: center; display: flex; flex-direction: column; gap: var(--space-2); }
-.doneTitle { margin: 0; font-family: var(--font-display); font-weight: var(--weight-display-fallback); color: var(--sage); }
+.doneTitle { margin: 0; font-family: var(--font); font-weight: var(--weight-black); color: var(--ink); }
 
-.error { margin: 0; color: var(--brick); }
+.error { margin: 0; color: var(--ink); }
 
 /* ── نوار چسبیده. یک کنش اصلی، در پایین قاب — بخش ۱۲.۷. ── */
 .bar {
@@ -187,8 +188,8 @@
   min-block-size: var(--touch-manager);
   border: none;
   border-radius: var(--r-input);
-  background: var(--turquoise-dark);
-  color: var(--surface);
+  background: var(--coral);
+  color: var(--ink);
   font-family: inherit;
   font-weight: var(--weight-bold);
 }
@@ -198,7 +199,7 @@
 .secondary {
   flex: 1;
   min-block-size: var(--touch-manager);
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-input);
   border-radius: var(--r-input);
   background: var(--surface);
   color: var(--ink);

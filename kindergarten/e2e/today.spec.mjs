@@ -279,7 +279,7 @@ const shape = await page.evaluate(() => {
 check(shape.text === 'ثبت رویداد', 'برچسب فارسی کنار آیکون نوشته شده')
 check(shape.hasIcon, 'آیکون هم دارد، پس دکمه خالی نیست')
 check(shape.gap === 16, `فاصله ۱۶ تا کنش اصلی دارد (${shape.gap})`)
-check(shape.bg === 'rgb(19, 39, 47)', 'پس‌زمینه --ink است، نه آجری')
+check(shape.bg === 'rgb(30, 41, 59)', 'پس‌زمینه --ink است، نه آجری')
 await page.evaluate(() => window.scrollTo(0, 0))
 
 console.log('▸ تراشه «بی‌خبر» فهرست را باز می‌کند، بنر تکراری حذف شده')

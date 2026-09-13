@@ -13,7 +13,7 @@
   display: grid; place-items: center; border: none; background: none; color: var(--ink);
 }
 
-.title { font-family: var(--font-display); font-weight: var(--weight-display-fallback); }
+.title { font-family: var(--font); font-weight: var(--weight-black); }
 
 .body {
   flex: 1; display: flex; flex-direction: column; gap: var(--space-3);
@@ -35,7 +35,9 @@
 }
 
 .menu li + li .menuItem { border-block-start: 1px solid var(--border); }
-.menuItem:active { background: var(--turquoise-tint); }
+.menuItem:active { background: var(--coral-tint);
+  color: var(--ink);
+}
 .menuItem svg { color: var(--ink-muted); flex: none; }
 
 .menuMain { flex: 1; min-inline-size: 0; display: flex; flex-direction: column; gap: 2px; }
@@ -53,15 +55,15 @@
 
 .big {
   margin: 0;
-  font-family: var(--font-display);
-  font-weight: var(--weight-display-fallback);
+  font-family: var(--font);
+  font-weight: var(--weight-black);
   font-size: var(--text-display);
   line-height: var(--text-display-line);
   font-variant-numeric: tabular-nums;
 }
 
 .owed { color: var(--ink); }
-.clear { color: var(--sage); }
+.clear { color: var(--ink); }
 
 .row {
   margin: 0; min-block-size: var(--touch-parent);
@@ -78,11 +80,11 @@
 
 .choice {
   flex: 1; min-block-size: var(--touch-parent);
-  border: 1px solid var(--border); border-radius: var(--r-input);
+  border: 1px solid var(--border-input); border-radius: var(--r-input);
   background: var(--surface); color: var(--ink); font-family: inherit;
 }
 .choice[aria-pressed='true'] {
-  background: var(--turquoise-tint); border-color: var(--turquoise);
+  background: var(--coral-tint); border-color: var(--coral);
   font-weight: var(--weight-medium);
 }
 
@@ -90,17 +92,17 @@
 
 .text {
   padding: var(--space-3);
-  border: 1px solid var(--border); border-radius: var(--r-input);
+  border: 1px solid var(--border-input); border-radius: var(--r-input);
   background: var(--surface); color: var(--ink);
   font-family: inherit; font-size: var(--text-body); line-height: var(--text-body-line);
   resize: vertical;
 }
-.text:focus { border-color: var(--turquoise); outline: none; }
+.text:focus { border-color: var(--coral); outline: none; }
 
 .primary {
   min-block-size: var(--touch-parent);
   border: none; border-radius: var(--r-input);
-  background: var(--turquoise-dark); color: var(--surface);
+  background: var(--coral); color: var(--ink);
   font-family: inherit; font-weight: var(--weight-bold);
 }
 .primary:disabled { background: var(--disabled-bg); color: var(--disabled-fg); }
@@ -108,9 +110,9 @@
 .done {
   margin: 0; display: flex; align-items: center; gap: var(--space-2);
   padding: var(--space-4); border-radius: var(--r-card);
-  background: var(--sage-tint); color: var(--ink);
+  background: var(--mint-tint); color: var(--ink);
 }
-.done svg { color: var(--sage); flex: none; }
+.done svg { color: var(--ink); flex: none; }
 
 /* ── گفت‌وگو ─────────────────────────────────────────────────── */
 .thread { display: flex; flex-direction: column; gap: var(--space-2); }
@@ -126,7 +128,7 @@
 
 .bubbleMine {
   align-self: flex-start;
-  background: var(--turquoise-tint);
+  background: var(--coral-tint);
   border-color: transparent;
 }
 
@@ -137,10 +139,10 @@
   display: flex; align-items: center; gap: var(--space-1);
   font-variant-numeric: tabular-nums;
 }
-.bubbleMeta svg { color: var(--saffron); flex: none; }
+.bubbleMeta svg { color: var(--ink); flex: none; }
 
 .composer { display: flex; flex-direction: column; gap: var(--space-2); }
-.error { margin: 0; color: var(--brick); }
+.error { margin: 0; color: var(--ink); }
 
 /* ── اعلام پرداخت — بخش ۸ ───────────────────────────────────── */
 
@@ -149,13 +151,13 @@
 
 .declare {
   min-block-size: var(--touch-parent);
-  border: 1px solid var(--turquoise);
+  border: 1px solid var(--coral);
   border-radius: var(--r-input);
   background: var(--surface);
-  color: var(--turquoise-dark);
+  color: var(--ink);
   font-family: inherit;
   font-size: var(--text-body);
-  font-weight: var(--weight-medium);
+  font-weight: var(--weight-bold);
 }
 
 /*
@@ -167,7 +169,7 @@
   margin: 0;
   padding: var(--space-2) var(--space-3);
   border-radius: var(--r-input);
-  background: var(--saffron-tint);
+  background: var(--mango-tint);
   color: var(--ink);
 }
 
@@ -184,18 +186,18 @@
   background: var(--surface);
   border-start-start-radius: var(--r-card);
   border-start-end-radius: var(--r-card);
-  box-shadow: var(--shadow-2);
+  box-shadow: var(--shadow-lg);
   padding: var(--space-5) var(--space-4) var(--space-6);
   display: flex; flex-direction: column; gap: var(--space-3);
   max-block-size: 90dvh; overflow-y: auto;
 }
 
-.sheetTitle { margin: 0; font-family: var(--font-display); font-weight: var(--weight-display-fallback); }
+.sheetTitle { margin: 0; font-family: var(--font); font-weight: var(--weight-black); }
 
 .input {
   min-block-size: var(--touch-parent);
   padding-inline: var(--space-3);
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-input);
   border-radius: var(--r-input);
   background: var(--surface);
   color: var(--ink);
@@ -203,14 +205,15 @@
   font-size: var(--text-body);
   font-variant-numeric: tabular-nums;
 }
-.input:focus { border-color: var(--turquoise); outline: none; }
+.input:focus { border-color: var(--coral); outline: none; }
 
 .receipt {
   inline-size: 100%;
   max-block-size: 240px;
   object-fit: contain;
-  border-radius: var(--r-photo);
+  border-radius: var(--r-avatar);
   background: var(--neutral-fill);
+  color: var(--ink);
 }
 
 .pickReceipt {
@@ -223,7 +226,7 @@
 }
 
 /* با انتخاب عکس، خط‌چین به خط پیوسته تبدیل می‌شود. */
-.pickReceiptDone { border-style: solid; border-color: var(--turquoise); }
+.pickReceiptDone { border-style: solid; border-color: var(--coral); }
 
 .hiddenInput {
   position: absolute; inline-size: 1px; block-size: 1px;
@@ -234,7 +237,7 @@
 
 .secondary {
   flex: 1; min-block-size: var(--touch-parent);
-  border: 1px solid var(--border); border-radius: var(--r-input);
+  border: 1px solid var(--border-input); border-radius: var(--r-input);
   background: var(--surface); color: var(--ink); font-family: inherit;
 }
 

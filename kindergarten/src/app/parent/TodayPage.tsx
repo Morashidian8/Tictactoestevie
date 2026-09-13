@@ -129,7 +129,7 @@ export function ParentTodayPage() {
                 background: 'var(--surface)',
                 border: '1px solid var(--border)',
                 borderRadius: 'var(--r-card)',
-                boxShadow: 'var(--shadow-2)',
+                boxShadow: 'var(--shadow-lg)',
                 padding: 'var(--space-2)',
                 zIndex: 20,
               }}
