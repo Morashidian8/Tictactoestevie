@@ -69,9 +69,10 @@ import {
   dayEndFor,
   dayStartFor,
   enrolledOn,
-  minutesOf,
   periodsAt,
   periodsFor,
+  phaseAt,
+  upcomingPeriodAt,
   staffOnDutyIds,
 } from '../periods.ts'
 
@@ -423,14 +424,14 @@ export function createSupabaseDataAccess(scope: AccessScope): DataAccess {
         const isExtra = extras.has(child.id)
         if (!enrolledOn(enrollment, at) && !isExtra) return []
         const mine = periodsFor(periods, enrollment.attendanceType)
-        const now = at.getHours() * 60 + at.getMinutes()
-        const inSession = mine.some(
-          (p) => now >= minutesOf(p.startTime) && now < minutesOf(p.endTime),
-        )
-        if (!inSession && !isExtra) return []
+        // پنجره انتقال: نیم‌ساعت پیش از بازه پیدا می‌شود، نیم‌ساعت پس از
+        // آن می‌ماند. بی این، شبکه سر مرز ناگهان عوض می‌شد.
+        const phase = phaseAt(mine, at)
+        if (phase === null && !isExtra) return []
         return [{
           ...child,
           attendanceType: enrollment.attendanceType,
+          phase: phase ?? 'current',
           periods: mine,
           fields: applicableFields(periods, enrollment.attendanceType),
           dayStart: dayStartFor(periods, enrollment.attendanceType),
@@ -456,18 +457,21 @@ export function createSupabaseDataAccess(scope: AccessScope): DataAccess {
       const onDuty = staffOnDutyIds((orThrow(shiftRows) as Row[]).map(asShift), at, date)
       const centreRows = orThrow(await from('center').eq('id', scope.centerId)) as Row[]
       const maxAllowed = (centreRows[0]?.max_children_per_staff as number | undefined) ?? 15
+      // نسبت فقط از کودکان بازه جاری؛ پنجره انتقال در آن سهمی ندارد.
+      const inSession = children.filter((c) => c.phase === 'current')
       const ratio = {
-        children: children.length,
+        children: inSession.length,
         staff: onDuty.length,
         maxAllowed,
-        breached: children.length > maxAllowed * Math.max(onDuty.length, 1),
+        breached: inSession.length > maxAllowed * Math.max(onDuty.length, 1),
       }
+      const upcoming = upcomingPeriodAt(periods, at)
 
       const ids = children.map((c) => c.id)
       if (ids.length === 0) {
         return {
           classRoom, children, enrolledToday, periods,
-          currentPeriods: periodsAt(periods, at), ratio,
+          currentPeriods: periodsAt(periods, at), upcomingPeriod: upcoming, ratio,
           attendance: [], absences: [], medications: [], reports: [], incidents: [], photos: [],
         }
       }
@@ -497,6 +501,7 @@ export function createSupabaseDataAccess(scope: AccessScope): DataAccess {
         enrolledToday,
         periods,
         currentPeriods: periodsAt(periods, at),
+        upcomingPeriod: upcoming,
         ratio,
         attendance: (orThrow(attendance) as Row[]).map(asAttendance),
         absences: (orThrow(absences) as Row[]).map((r) => ({
@@ -604,6 +609,8 @@ export function createSupabaseDataAccess(scope: AccessScope): DataAccess {
 
       const groups = new Map<string, string[]>()
       for (const child of day.children) {
+        // پنجره انتقال مقدار گروهی نمی‌گیرد.
+        if (child.phase !== 'current') continue
         const writable = bulkFields(child.fields, day.currentPeriods).sort().join(',')
         const group = groups.get(writable) ?? []
         group.push(child.id)

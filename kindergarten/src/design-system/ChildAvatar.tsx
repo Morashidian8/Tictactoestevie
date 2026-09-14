@@ -46,6 +46,9 @@ type Props = {
   size?: AvatarSize
   /** خط زیر نام. در صفحه «امروز» ساعت ورود است. */
   caption?: string
+  /** نشان استثنا — تصمیم ۰۴ سند بررسی طراحی. */
+  flagged?: boolean
+  flagLabel?: string
 }
 
 export function ChildAvatar({
@@ -55,6 +58,8 @@ export function ChildAvatar({
   state,
   size = 'md',
   caption,
+  flagged = false,
+  flagLabel,
 }: Props) {
   return (
     <span className={styles.root}>
@@ -65,13 +70,21 @@ export function ChildAvatar({
           <AvatarFace seed={id} />
         )}
         <StateBadge state={state} />
+        {/*
+          نقطه انبه‌ای گوشه دور از شروع، با حلقه سطح تا روی هر عکسی دیده
+          شود. حالت حضور گوشه مقابل می‌نشیند، پس دو نشان با هم جا دارند.
+        */}
+        {flagged ? <span className={styles.flag} aria-hidden /> : null}
       </span>
 
       <span className={`${styles.name} t-body-lg`}>{firstName}</span>
       <span className={`${styles.caption} t-caption tabular`}>
         {caption ?? STATE_LABEL[state]}
       </span>
-      <span className="sr-only">{STATE_LABEL_FULL[state]}</span>
+      <span className="sr-only">
+        {STATE_LABEL_FULL[state]}
+        {flagged && flagLabel ? `، ${flagLabel}` : ''}
+      </span>
     </span>
   )
 }

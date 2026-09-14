@@ -530,6 +530,47 @@ await page.click('[aria-label="بازگشت به امروز"]')
 await page.waitForSelector('text=ثبت گروهی امروز')
 check(true, 'پیکان سرصفحه به «امروز» برمی‌گردد')
 
+console.log('▸ تصمیم ۰۳: پنجره انتقال، شبکه ناگهان عوض نمی‌شود')
+/*
+ * ساعت ۱۲:۴۵ — نیم‌ساعت مانده به مرز. کودکان بعدازظهر باید در بخش
+ * تفکیک‌شده پیدا شده باشند، نه در شبکه اصلی، و بنر موقت هم آمده باشد.
+ */
+await setClock(12, 45)
+await page.reload()
+await page.waitForSelector('text=ثبت گروهی امروز')
+await page.waitForTimeout(600)
+check(
+  (await page.locator('[class*="transitionBanner"]').count()) === 1,
+  'بنر موقت پنجره انتقال آمد',
+)
+const bannerRole = await page.locator('[class*="transitionBanner"]').getAttribute('role')
+check(bannerRole === 'status', `بنر role=status دارد، پس صفحه‌خوان می‌خواندش (${bannerRole})`)
+const phaseTitles = await page.locator('[class*="phaseTitle"]').allInnerTexts()
+check(
+  phaseTitles.some((t) => t.includes('ورودی‌های بازه بعدازظهر')),
+  `کودکان بازه بعد در بخش تفکیک‌شده‌اند: ${phaseTitles.join(' · ')}`,
+)
+check(
+  (await page.locator('[class*="phaseDim"] img').first().evaluate((el) =>
+    Number(getComputedStyle(el).opacity),
+  )) < 1,
+  'و کم‌رنگ‌اند، چون هنوز بازه‌شان نیست',
+)
+// منبع حقیقت عنوان بخش است، نه بنر: بنر می‌رود، عنوان می‌ماند.
+await page.waitForTimeout(5200)
+check(
+  (await page.locator('[class*="transitionBanner"]').count()) === 0,
+  'بنر پس از پنج ثانیه خودش می‌رود',
+)
+check(
+  (await page.locator('[class*="phaseTitle"]').count()) > 0,
+  'ولی عنوان بخش می‌ماند — منبع حقیقت آن است، نه بنر',
+)
+
+console.log('▸ تصمیم ۰۲: بازه‌های هم‌پوشان با عدد فشرده می‌شوند، نه با «و»')
+const barText = await page.locator('[class*="periodBar"]').innerText()
+check(!barText.includes(' و '), `نوار بازه اسامی را با «و» نمی‌چیند: ${barText.replace(/\n/g, ' · ')}`)
+
 console.log('▸ بخش ۶: ثبت بعدازظهر، همان صفحه با فیلدهای دیگر')
 /*
  * ساعت را به بعدازظهر می‌بریم. همان صفحه، ولی حالا ردیف خواب هست و

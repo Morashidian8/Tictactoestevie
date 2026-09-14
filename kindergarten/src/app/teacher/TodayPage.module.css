@@ -434,3 +434,88 @@
   font-family: inherit;
   font-weight: var(--weight-bold);
 }
+
+/* ------------------------------------------------------------
+   نشانگر بازه‌های هم‌پوشان — تصمیم ۰۲ سند بررسی طراحی
+
+   به‌جای چیدن اسامی با «و»، بازه جاری پررنگ می‌آید و بقیه در یک عدد
+   فشرده می‌شوند. در عرض ۳۲۰ پیکسل، سه نام کنار هم بریده می‌شد.
+   ------------------------------------------------------------ */
+.periodName {
+  max-inline-size: 14ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.periodMore {
+  flex: none;
+  min-block-size: var(--touch-manager);
+  padding-inline: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--r-chip);
+  background: var(--surface);
+  color: var(--ink);
+  font-family: inherit;
+  font-weight: var(--weight-bold);
+}
+
+.periodList {
+  list-style: none;
+  margin: 0;
+  padding: var(--space-2) var(--space-4) var(--space-3);
+  background: var(--surface-warm);
+  border-block-end: 1px solid var(--border);
+  display: grid;
+  gap: var(--space-1);
+}
+
+.periodItem {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ------------------------------------------------------------
+   بنر پنجره انتقال — تصمیم ۰۳
+
+   پنج ثانیه می‌ماند. تقویت است، نه منبع حقیقت: عنوان بخش پایین شبکه
+   همان خبر را می‌دهد و نمی‌رود.
+   ------------------------------------------------------------ */
+.transitionBanner {
+  margin: var(--space-3) var(--space-4) 0;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--r-card);
+  border: 1px solid var(--mango);
+  background: var(--mango-tint);
+  color: var(--ink);
+  box-shadow: var(--shadow-md);
+}
+
+/* ------------------------------------------------------------
+   بخش‌های تفکیک‌شده پنجره انتقال
+
+   عنوان ملایم و شبکه کم‌رنگ‌تر: هست، ولی هنوز بازه‌اش نیست.
+   ------------------------------------------------------------ */
+.phaseGroup {
+  margin-block-start: var(--space-5);
+  padding-block-start: var(--space-3);
+  border-block-start: 1px solid var(--border);
+}
+
+.phaseTitle {
+  margin: 0 var(--space-4) var(--space-2);
+  color: var(--ink-muted);
+  font-weight: var(--weight-bold);
+}
+
+/*
+ * شفافیت ۰٫۶۵ فقط روی آواتار می‌نشیند، نه روی متن: نام و ساعت باید
+ * خوانا بمانند وگرنه کف کنتراست می‌شکند.
+ */
+.phaseDim img,
+.phaseDim svg {
+  opacity: 0.65;
+}

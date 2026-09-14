@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   CheckIcon,
   AlertIcon,
@@ -12,7 +12,7 @@ import {
 } from '../../design-system/index.ts'
 import { formatClock, formatCount, formatJalali, formatTime, toIsoDate } from '../../i18n/index.ts'
 import { ROLE_LABEL, useAuth, useData } from '../../core/auth/index.ts'
-import type { Child, PickupPlan } from '../../core/data/index.ts'
+import type { Child, ChildInSession, PickupPlan } from '../../core/data/index.ts'
 import {
   indexAbsences,
   indexAttendance,
@@ -82,6 +82,10 @@ export function TodayPage({
    */
   const [offDay, setOffDay] = useState<Child[]>([])
   const [offDayOpen, setOffDayOpen] = useState(false)
+  /** فهرست بازه‌های هم‌پوشان، پشت نشانگر «+۱ شیفت». */
+  const [periodsOpen, setPeriodsOpen] = useState(false)
+  /** نام بازه‌ای که تازه پنجره‌اش باز شده. پنج ثانیه می‌ماند. */
+  const [banner, setBanner] = useState<string | null>(null)
 
   // ساعت جاری در حالت نگه داشته می‌شود چون مرز ۹:۰۰ ستون سوم نوار خلاصه
   // را عوض می‌کند و صفحه باید بدون نوسازی دستی رد شود.
@@ -149,14 +153,35 @@ export function TodayPage({
   const attendance = useMemo(() => indexAttendance(day?.attendance ?? []), [day])
   const absences = useMemo(() => indexAbsences(day?.absences ?? []), [day])
 
-  const counts = useMemo(
-    () => tally(day?.children ?? [], attendance, absences, now),
-    [day, attendance, absences, now],
+  /*
+   * سه گروه، نه یک شبکه — تصمیم ۰۳ سند بررسی طراحی.
+   *
+   * شبکه اصلی فقط کودکان بازه جاری را دارد. کودکی که بازه‌اش تا نیم‌ساعت
+   * دیگر شروع می‌شود و کودکی که بازه‌اش تازه تمام شده، هر کدام بخش
+   * تفکیک‌شده خودشان را می‌گیرند. بی این، ساعت ۱۳ نیمی از چهره‌ها یکباره
+   * می‌رفتند و نیمی یکباره می‌آمدند.
+   */
+  const inSession = useMemo(
+    () => (day?.children ?? []).filter((c) => c.phase === 'current'),
+    [day],
+  )
+  const upcoming = useMemo(
+    () => (day?.children ?? []).filter((c) => c.phase === 'upcoming'),
+    [day],
+  )
+  const departing = useMemo(
+    () => (day?.children ?? []).filter((c) => c.phase === 'departing'),
+    [day],
   )
 
-  const items = useMemo<ChildGridItem[]>(
-    () =>
-      (day?.children ?? []).map((child) => {
+  const counts = useMemo(
+    () => tally(inSession, attendance, absences, now),
+    [inSession, attendance, absences, now],
+  )
+
+  const toItems = useCallback(
+    (list: ChildInSession[]): ChildGridItem[] =>
+      list.map((child) => {
         const state = resolveState(child, attendance, absences, now)
         const row = attendance.get(child.id)
         const checkIn = row?.checkInAt ? new Date(row.checkInAt) : null
@@ -165,6 +190,10 @@ export function TodayPage({
           firstName: child.firstName,
           photoUrl: child.photoUrl,
           state,
+          // تصمیم ۰۴: نشان استثنا روی حاشیه آواتار، تا مربی بی‌باز کردن
+          // شیت بفهمد این کودک وضعیت متفاوتی دارد.
+          flagged: child.addedException,
+          flagLabel: 'استثنا',
           caption: checkIn ? formatTime(checkIn) : undefined,
           actionLabel:
             state === 'present'
@@ -174,8 +203,12 @@ export function TodayPage({
                 : `ثبت ورود ${child.firstName}`,
         }
       }),
-    [day, attendance, absences, now],
+    [attendance, absences, now],
   )
+
+  const items = useMemo(() => toItems(inSession), [toItems, inSession])
+  const upcomingItems = useMemo(() => toItems(upcoming), [toItems, upcoming])
+  const departingItems = useMemo(() => toItems(departing), [toItems, departing])
 
   /**
    * ضربه کوتاه روی کودک — بخش ۵.۳.
@@ -205,6 +238,33 @@ export function TodayPage({
     setJustIn({ childId, name: first?.fullName ?? null })
     await load()
   }
+
+  /*
+   * بنر پنجره انتقال — تصمیم ۰۳.
+   *
+   * تنها وقتی می‌آید که بازه تازه‌ای پنجره‌اش باز شده باشد، و فقط یک بار
+   * برای هر بازه. پنج ثانیه بعد خودش می‌رود.
+   *
+   * seenRef لازم است چون صفحه هر سی ثانیه تازه می‌شود؛ بی آن، بنر تا
+   * پایان پنجره هر نیم‌دقیقه دوباره می‌آمد.
+   */
+  const seenUpcoming = useRef<string | null>(null)
+  useEffect(() => {
+    const next = day?.upcomingPeriod ?? null
+    if (!next) {
+      seenUpcoming.current = null
+      return
+    }
+    if (seenUpcoming.current === next.id) return
+    seenUpcoming.current = next.id
+    setBanner(next.title)
+  }, [day?.upcomingPeriod])
+
+  useEffect(() => {
+    if (!banner) return
+    const timer = setTimeout(() => setBanner(null), 5000)
+    return () => clearTimeout(timer)
+  }, [banner])
 
   /*
    * تراشه پس از چهار ثانیه خودش می‌رود. عدد از سند نمی‌آید؛ کوتاه‌ترین
@@ -278,7 +338,7 @@ export function TodayPage({
    * وقتی بی‌خبر داریم، فقط بی‌خبرها را می‌آورد: نام کودکی که هنوز مهلتش
    * نگذشته در کنار نام کودکی که باید دنبالش گشت، هر دو را بی‌اثر می‌کند.
    */
-  const outstandingNames = (day?.children ?? [])
+  const outstandingNames = inSession
     .filter((child) => {
       const state = resolveState(child, attendance, absences, now)
       if (counts.unaccounted > 0) return state === 'unaccounted'
@@ -293,10 +353,19 @@ export function TodayPage({
    * هیچ‌جا فرض نشده که دو بازه هست: هر تعداد بازه که مهد تعریف کند،
    * همین جمله ساخته می‌شود.
    */
-  const periodLabel =
-    day && day.currentPeriods.length > 0
-      ? day.currentPeriods.map((p) => p.title).join(' و ')
-      : 'بیرون از ساعت کار'
+  /*
+   * تصمیم ۰۲ سند بررسی طراحی: چیدن اسامی بازه با «و» ممنوع است.
+   *
+   * بازه جاری با برچسب پررنگ می‌آید و بقیه بازه‌های هم‌پوشان در یک
+   * نشانگر عددی فشرده می‌شوند. در عرض ۳۲۰ پیکسل، «صبح و بعدازظهر و
+   * عصرانه» جا نمی‌شد و متن بریده می‌شد.
+   *
+   * هیچ‌جا فرض نشده دو بازه هست: هر تعدادی که مرکز تعریف کند، اولی
+   * نوشته می‌شود و بقیه شمرده.
+   */
+  const activePeriod = day?.currentPeriods[0] ?? null
+  const periodLabel = activePeriod?.title ?? 'بیرون از ساعت کار'
+  const extraPeriods = Math.max((day?.currentPeriods.length ?? 0) - 1, 0)
 
   // مرتب بر اساس ساعت مصرف. داروی بی‌ساعت ته فهرست می‌رود، نه اولش.
   const pendingMedication = (day?.medications ?? [])
@@ -376,8 +445,18 @@ export function TodayPage({
       */}
       <div className={styles.periodBar}>
         <span className={`${styles.periodName} t-body-lg`}>{periodLabel}</span>
+        {extraPeriods > 0 ? (
+          <button
+            type="button"
+            className={`${styles.periodMore} t-caption`}
+            onClick={() => setPeriodsOpen((open) => !open)}
+            aria-expanded={periodsOpen}
+          >
+            +{formatCount(extraPeriods)} شیفت
+          </button>
+        ) : null}
         <span className={`${styles.periodCount} t-caption`}>
-          {formatCount(day?.children.length ?? 0)} کودک در این بازه
+          {formatCount(inSession.length)} کودک در این بازه
         </span>
         {day ? (
           <span className={`${styles.periodStaff} t-caption`}>
@@ -385,6 +464,31 @@ export function TodayPage({
           </span>
         ) : null}
       </div>
+
+      {periodsOpen && day ? (
+        <ul className={styles.periodList}>
+          {day.currentPeriods.map((period) => (
+            <li key={period.id} className={`${styles.periodItem} t-body`}>
+              <b>{period.title}</b>
+              <span className="tabular">
+                {formatClock(period.startTime)} تا {formatClock(period.endTime)}
+              </span>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+
+      {/*
+        تصمیم ۰۳: بنر موقت پنجره انتقال.
+        پنج ثانیه می‌ماند. منبع حقیقت عنوان بخش پایین شبکه است، نه این
+        بنر؛ کسی که ندیدش چیزی از دست نمی‌دهد. role=status تا صفحه‌خوان
+        یک بار بخواندش.
+      */}
+      {banner ? (
+        <p className={`${styles.transitionBanner} t-body`} role="status" aria-live="polite">
+          کودکان بازه {banner} به شبکه اضافه شدند
+        </p>
+      ) : null}
 
       {/*
         بخش ۷ سند تازه: نسبت مربی به کودک در همین لحظه. مرز دو بازه
@@ -557,13 +661,48 @@ export function TodayPage({
                 : `در بازه ${periodLabel} کودکی نیست.`
             }
           />
-        ) : counts.present === 0 && counts.unaccounted === 0 ? (
-          <>
-            <EmptyState text="هنوز کسی وارد نشده. با ضربه روی عکس هر کودک، ورودش را ثبت کنید." />
-            <ChildGrid items={items} onSelect={openChild} onHold={openArrivalSheet} />
-          </>
         ) : (
-          <ChildGrid items={items} onSelect={openChild} onHold={openArrivalSheet} />
+          <>
+            {counts.present === 0 && counts.unaccounted === 0 && items.length > 0 ? (
+              <EmptyState text="هنوز کسی وارد نشده. با ضربه روی عکس هر کودک، ورودش را ثبت کنید." />
+            ) : null}
+            <ChildGrid items={items} onSelect={openChild} onHold={openArrivalSheet} />
+
+            {/*
+              تصمیم ۰۳: کودکان بازه بعد، جدا و کم‌رنگ.
+              عنوان این بخش منبع حقیقت است؛ بنر بالای صفحه فقط تقویتش
+              می‌کند و می‌رود.
+            */}
+            {upcoming.length > 0 && day?.upcomingPeriod ? (
+              <section className={styles.phaseGroup} aria-label="کودکان بازه بعد">
+                <h2 className={`${styles.phaseTitle} t-caption`}>
+                  ورودی‌های بازه {day.upcomingPeriod.title}
+                </h2>
+                <div className={styles.phaseDim}>
+                  <ChildGrid
+                    items={upcomingItems}
+                    onSelect={openChild}
+                    onHold={openArrivalSheet}
+                  />
+                </div>
+              </section>
+            ) : null}
+
+            {departing.length > 0 ? (
+              <section className={styles.phaseGroup} aria-label="کودکان بازه پیش">
+                <h2 className={`${styles.phaseTitle} t-caption`}>
+                  رفته‌های بازه {departing[0]?.periods.at(-1)?.title ?? 'پیشین'}
+                </h2>
+                <div className={styles.phaseDim}>
+                  <ChildGrid
+                    items={departingItems}
+                    onSelect={openChild}
+                    onHold={openArrivalSheet}
+                  />
+                </div>
+              </section>
+            ) : null}
+          </>
         )}
       </div>
 

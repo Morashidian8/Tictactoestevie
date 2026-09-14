@@ -39,6 +39,79 @@ export function periodsAt(periods: readonly DayPeriod[], at: Date): DayPeriod[] 
     .sort((a, b) => a.sortOrder - b.sortOrder)
 }
 
+/**
+ * پنجره انتقال — تصمیم ۰۳ بخش ۲ سند بررسی طراحی.
+ *
+ * چقدر پیش از شروع بازه بعد، کودکانش در فهرست ظاهر شوند — و چقدر پس از
+ * پایان بازه قبل، کودکانش در فهرست بمانند.
+ *
+ * بی این، ساعت ۱۳:۰۰ شبکه ناگهان عوض می‌شد: نیمی از چهره‌ها می‌رفتند و
+ * نیمی یکباره می‌آمدند، بی‌آنکه مربی فرصت دیدن داشته باشد.
+ *
+ * عدد ۳۰ پیش‌فرض است نه ثابت. مرکزی که مرز ۱۳:۰۰ را جابه‌جا کند، این هم
+ * با آن جابه‌جا می‌شود؛ مقدارش از center می‌آید.
+ */
+export const TRANSITION_WINDOW_MINUTES = 30
+
+/**
+ * جایگاه کودک در همین لحظه.
+ *
+ *   current    در بازه‌اش است، در شبکه اصلی
+ *   upcoming   بازه‌اش نزدیک است، در بخش تفکیک‌شده پایین
+ *   departing  بازه‌اش تازه تمام شده، هنوز در فهرست ولی جدا
+ */
+export type SessionPhase = 'current' | 'upcoming' | 'departing'
+
+/**
+ * کودک در کدام جایگاه است، یا هیچ‌کدام.
+ *
+ * null یعنی نه در بازه است، نه در پنجره انتقال — پس اصلاً در فهرست
+ * امروز نمی‌آید.
+ */
+export function phaseAt(
+  mine: readonly DayPeriod[],
+  at: Date,
+  windowMinutes: number = TRANSITION_WINDOW_MINUTES,
+): SessionPhase | null {
+  const now = minutesAt(at)
+  for (const p of mine) {
+    const start = minutesOf(p.startTime)
+    const end = minutesOf(p.endTime)
+    if (now >= start && now < end) return 'current'
+  }
+  for (const p of mine) {
+    const start = minutesOf(p.startTime)
+    if (now >= start - windowMinutes && now < start) return 'upcoming'
+  }
+  for (const p of mine) {
+    const end = minutesOf(p.endTime)
+    if (now >= end && now < end + windowMinutes) return 'departing'
+  }
+  return null
+}
+
+/**
+ * بازه‌ای که پنجره انتقالش باز است ولی هنوز شروع نشده.
+ *
+ * نوار بازه و بنر موقت نامش را می‌گویند: «کودکان بازه بعدازظهر به شبکه
+ * اضافه شدند». null یعنی هیچ پنجره‌ای باز نیست.
+ */
+export function upcomingPeriodAt(
+  periods: readonly DayPeriod[],
+  at: Date,
+  windowMinutes: number = TRANSITION_WINDOW_MINUTES,
+): DayPeriod | null {
+  const now = minutesAt(at)
+  return (
+    periods
+      .filter((p) => {
+        const start = minutesOf(p.startTime)
+        return now >= start - windowMinutes && now < start
+      })
+      .sort((a, b) => a.sortOrder - b.sortOrder)[0] ?? null
+  )
+}
+
 /** بازه‌هایی که برای این نوع حضور معنا دارند. */
 export function periodsFor(
   periods: readonly DayPeriod[],

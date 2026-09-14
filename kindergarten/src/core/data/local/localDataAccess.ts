@@ -71,6 +71,8 @@ import {
   enrolledOn,
   minutesOf,
   periodsAt,
+  phaseAt,
+  upcomingPeriodAt,
   periodsFor,
   staffOnDutyIds,
 } from '../periods.ts'
@@ -172,7 +174,15 @@ function hydrate(): void {
         medications: stored.medications,
         reports: new Map(stored.reports),
         incidents: stored.incidents,
-        photos: stored.photos,
+        /*
+         * نشانی blob با بارگذاری دوباره صفحه می‌میرد.
+         *
+         * نگه داشتنش یعنی مربی پس از هر نوسازی، تصویر شکسته می‌بیند و
+         * فکر می‌کند عکسش از بین رفته. در پیاده‌سازی واقعی نشانی از
+         * استوریج می‌آید و پایدار است؛ اینجا عکسِ مرده انداخته می‌شود
+         * و تگ‌هایش با آن.
+         */
+        photos: stored.photos.filter((photo) => !photo.previewUrl.startsWith('blob:')),
         sentAt: stored.sentAt,
       })
     }
@@ -337,6 +347,32 @@ function invoiceOf(row: InvoiceRow): Invoice {
 
 
 /** فیلدهای قابل اعمال یک کودک، از ثبت‌نام فعالش. */
+/**
+ * نشانی عکسی که بارگذاری دوباره صفحه را تاب می‌آورد.
+ *
+ * blob فقط تا پایان همین بارگذاری زنده است. مربی که صفحه را نو می‌کند
+ * — یا خانواده که از حساب خودش وارد می‌شود — تصویر شکسته می‌دید.
+ *
+ * در پیاده‌سازی واقعی نشانی از استوریج می‌آید و این تابع اصلاً لازم
+ * نیست. اینجا blob به data تبدیل می‌شود تا نسخه نمایشی همان رفتار را
+ * نشان بدهد. اگر تبدیل نشد، همان blob برمی‌گردد و عکس فقط تا نوسازی
+ * بعدی می‌ماند — که از نشانی مرده بهتر است.
+ */
+async function durableUrl(url: string): Promise<string> {
+  if (!url.startsWith('blob:')) return url
+  try {
+    const blob = await (await fetch(url)).blob()
+    return await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = () => resolve(String(reader.result))
+      reader.onerror = () => reject(new Error('عکس خوانده نشد'))
+      reader.readAsDataURL(blob)
+    })
+  } catch {
+    return url
+  }
+}
+
 /** ساعت آغاز روزِ این کودک، از بازه‌های دوره حضورش. */
 function dayStartOf(childId: string): string | null {
   const enrollment = ENROLLMENTS.find((e) => e.childId === childId)
@@ -420,16 +456,16 @@ function childInSession(child: Child, at: Date, isExtra: boolean): ChildInSessio
   if (!enrolledOn(enrollment, at) && !isExtra) return null
 
   const mine = periodsFor(DAY_PERIODS, enrollment.attendanceType)
-  const nowMinutes = at.getHours() * 60 + at.getMinutes()
-  const inSession = mine.some(
-    (p) => nowMinutes >= minutesOf(p.startTime) && nowMinutes < minutesOf(p.endTime),
-  )
+  // پنجره انتقال: کودک نیم‌ساعت پیش از بازه‌اش پیدا می‌شود و نیم‌ساعت
+  // پس از آن می‌ماند، تا شبکه سر مرز ناگهان عوض نشود.
+  const phase = phaseAt(mine, at)
   // استثنای دستی از قید بازه هم می‌گذرد: مربی می‌داند چه می‌کند.
-  if (!inSession && !isExtra) return null
+  if (phase === null && !isExtra) return null
 
   return {
     ...child,
     attendanceType: enrollment.attendanceType,
+    phase: phase ?? 'current',
     periods: mine,
     fields: applicableFields(DAY_PERIODS, enrollment.attendanceType),
     dayStart: dayStartFor(DAY_PERIODS, enrollment.attendanceType),
@@ -519,9 +555,16 @@ export function createLocalDataAccess(scope: AccessScope): DataAccess {
         date,
       )
 
+      /*
+       * فقط کودکان بازه جاری در شمارش نسبت می‌آیند. کودکی که در پنجره
+       * انتقال است هنوز نیامده یا رفته، و شمردنش نسبت را غلط می‌کند.
+       */
+      const inSession = children.filter((c) => c.phase === 'current')
+
       return {
         classRoom,
         children,
+        upcomingPeriod: upcomingPeriodAt(DAY_PERIODS, at),
         enrolledToday: CHILDREN.filter(
           (c) => c.classId === classId && enrolledOn(enrollmentOf(c.id), at),
         ).length,
@@ -530,10 +573,10 @@ export function createLocalDataAccess(scope: AccessScope): DataAccess {
         // بخش ۷.۲: نسبت در همین لحظه، نه یک بار در روز. مرز بازه‌ها
         // بحرانی‌ترین نقطه است و خودکار در همین عدد می‌افتد.
         ratio: {
-          children: children.length,
+          children: inSession.length,
           staff: onDuty.length,
           maxAllowed: MAX_CHILDREN_PER_STAFF,
-          breached: children.length > MAX_CHILDREN_PER_STAFF * Math.max(onDuty.length, 1),
+          breached: inSession.length > MAX_CHILDREN_PER_STAFF * Math.max(onDuty.length, 1),
         },
         attendance: [...state.attendance.values()].filter((a) => ids.has(a.childId)),
         absences: state.absences.filter((a) => ids.has(a.childId)),
@@ -615,6 +658,9 @@ export function createLocalDataAccess(scope: AccessScope): DataAccess {
       const day = await this.getClassDay(classId, date)
 
       for (const child of day.children) {
+        // پنجره انتقال در ثبت گروهی سهمی ندارد: کودکی که هنوز نیامده یا
+        // رفته، مقدار گروهی نمی‌گیرد.
+        if (child.phase !== 'current') continue
         const current = state.reports.get(child.id)
 
         /*
@@ -806,7 +852,7 @@ export function createLocalDataAccess(scope: AccessScope): DataAccess {
       const row: Photo = {
         id: `pho-${Math.random().toString(36).slice(2, 10)}`,
         date,
-        previewUrl,
+        previewUrl: await durableUrl(previewUrl),
         childIds,
         // بخش ۵.۵: عکس بدون تگ منتشر نمی‌شود.
         published: childIds.length > 0,

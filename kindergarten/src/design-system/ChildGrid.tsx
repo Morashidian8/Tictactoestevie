@@ -7,6 +7,10 @@ export type ChildGridItem = {
   firstName: string
   photoUrl?: string | null
   state: AttendanceState
+  /** نشان استثنا روی حاشیه آواتار — تصمیم ۰۴ سند بررسی طراحی. */
+  flagged?: boolean
+  /** متن همین نشان برای صفحه‌خوان. رنگ هرگز تنها حامل معنا نیست. */
+  flagLabel?: string
   caption?: string
   /** برچسب کنش برای صفحه‌خوان، مثل «ثبت ورود سارا». */
   actionLabel: string
@@ -96,6 +100,8 @@ function GridCell({
         state={item.state}
         size={avatarSize}
         caption={item.caption}
+        flagged={item.flagged}
+        flagLabel={item.flagLabel}
       />
     </button>
   )

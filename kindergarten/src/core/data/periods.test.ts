@@ -8,8 +8,10 @@ import {
   minutesOf,
   periodsAt,
   periodsFor,
+  phaseAt,
   shiftPeriods,
   staffOnDutyIds,
+  upcomingPeriodAt,
   weekdayOf,
 } from './periods.ts'
 import type { DayPeriod, Enrollment, StaffShift } from './types.ts'
@@ -181,5 +183,68 @@ describe('ساعت', () => {
   it('به دقیقه تبدیل می‌شود، چون مقایسه رشته‌ای برای ساعت کافی نیست', () => {
     expect(minutesOf('09:05')).toBe(545)
     expect(minutesOf('13:00')).toBe(780)
+  })
+})
+
+/**
+ * پنجره انتقال — تصمیم ۰۳ سند بررسی طراحی.
+ *
+ * قاعده‌ای که این‌ها محافظت می‌کنند: هیچ کودکی نباید ناگهان از شبکه
+ * ظاهر یا ناپدید شود. هر تغییر دست‌کم نیم‌ساعت از قبل دیده شده است.
+ */
+describe('پنجره انتقال بازه‌ها', () => {
+  const morning = periodsFor(PERIODS, 'morning')
+  const afternoon = periodsFor(PERIODS, 'afternoon')
+  const fullDay = periodsFor(PERIODS, 'full_day')
+  const at = (h: number, m = 0) => new Date(2026, 2, 11, h, m)
+
+  it('کودک بعدازظهری، نیم‌ساعت پیش از بازه‌اش پیدا می‌شود', () => {
+    expect(phaseAt(afternoon, at(12, 25))).toBeNull()
+    expect(phaseAt(afternoon, at(12, 30))).toBe('upcoming')
+    expect(phaseAt(afternoon, at(12, 59))).toBe('upcoming')
+    expect(phaseAt(afternoon, at(13, 0))).toBe('current')
+  })
+
+  it('کودک صبحانه‌ای، نیم‌ساعت پس از بازه‌اش می‌ماند و بعد می‌رود', () => {
+    expect(phaseAt(morning, at(12, 59))).toBe('current')
+    expect(phaseAt(morning, at(13, 0))).toBe('departing')
+    expect(phaseAt(morning, at(13, 29))).toBe('departing')
+    expect(phaseAt(morning, at(13, 30))).toBeNull()
+  })
+
+  /*
+   * کودک تمام‌روز سر مرز هیچ‌وقت از شبکه بیرون نمی‌رود: پایان بازه صبح
+   * همان آغاز بازه بعدازظهر است، پس همیشه current می‌ماند.
+   */
+  it('کودک تمام‌روز سر مرز از شبکه بیرون نمی‌رود', () => {
+    for (const [h, m] of [[12, 30], [12, 59], [13, 0], [13, 30]] as const) {
+      expect(phaseAt(fullDay, at(h, m))).toBe('current')
+    }
+  })
+
+  it('بیرون از ساعت کار هیچ‌کس در فهرست نیست', () => {
+    expect(phaseAt(fullDay, at(6, 0))).toBeNull()
+    expect(phaseAt(fullDay, at(22, 0))).toBeNull()
+  })
+
+  it('نیم‌ساعت پیش از شروع کار، بازه صبح پنجره‌اش باز می‌شود', () => {
+    expect(phaseAt(morning, at(7, 0))).toBe('upcoming')
+    expect(phaseAt(morning, at(6, 59))).toBeNull()
+  })
+
+  it('بازه در راه، نامش را می‌دهد — برای بنر و نوار بازه', () => {
+    expect(upcomingPeriodAt(PERIODS, at(12, 45))?.key).toBe('afternoon')
+    expect(upcomingPeriodAt(PERIODS, at(9, 0))).toBeNull()
+    expect(upcomingPeriodAt(PERIODS, at(13, 15))).toBeNull()
+  })
+
+  /*
+   * طول پنجره توکن است، نه ثابت. مرکزی که مرز را جابه‌جا کند یا پنجره
+   * کوتاه‌تری بخواهد، نباید به کد دست بزند.
+   */
+  it('طول پنجره قابل تنظیم است', () => {
+    expect(phaseAt(afternoon, at(12, 45), 10)).toBeNull()
+    expect(phaseAt(afternoon, at(12, 55), 10)).toBe('upcoming')
+    expect(upcomingPeriodAt(PERIODS, at(12, 45), 10)).toBeNull()
   })
 })

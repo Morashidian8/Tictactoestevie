@@ -1,4 +1,7 @@
 /** انواع دامنه. آینه شِمای دیتابیس، فقط برای بخش‌هایی که ساخته شده‌اند. */
+import type { SessionPhase } from './periods.ts'
+
+export type { SessionPhase }
 
 export type AccountRole = 'manager' | 'teacher' | 'assistant' | 'guardian' | 'platform_admin'
 
@@ -119,6 +122,12 @@ export type ClassDay = {
   periods: DayPeriod[]
   /** بازه یا بازه‌های همین لحظه. در مرز می‌تواند بیش از یکی باشد. */
   currentPeriods: DayPeriod[]
+  /**
+   * بازه‌ای که پنجره انتقالش باز است ولی هنوز شروع نشده.
+   *
+   * نوار بازه و بنر موقت نامش را می‌گویند. null یعنی پنجره‌ای باز نیست.
+   */
+  upcomingPeriod: DayPeriod | null
   /** نسبت مربی به کودک در همین لحظه — بخش ۷.۲. */
   ratio: StaffRatio
   attendance: Attendance[]
@@ -542,6 +551,13 @@ export type StaffShift = {
 /** کودک، همراه آنچه امروز درباره‌اش صادق است. */
 export type ChildInSession = Child & {
   attendanceType: AttendanceType
+  /**
+   * جایگاه کودک در همین لحظه — تصمیم ۰۳ سند بررسی طراحی.
+   *
+   * شبکه اصلی فقط current را می‌گیرد. upcoming و departing در بخش‌های
+   * تفکیک‌شده پایین می‌نشینند، تا تغییر ساعت ۱۳:۰۰ ناگهانی نباشد.
+   */
+  phase: SessionPhase
   /** بازه‌هایی که امروز برای او معنا دارند. */
   periods: DayPeriod[]
   /** فیلدهای گزارش که برای او قابل اعمال‌اند. */
