@@ -74,6 +74,47 @@ export type MedicationLog = {
   dose: string | null
   scheduledTime: string | null
   givenAt: string | null
+  /** اگر از درخواست خانواده آمده، شناسه‌اش. مربی باید بداند از کجاست. */
+  requestId?: string | null
+}
+
+/**
+ * درخواست مصرف دارو از سمت خانواده — ارتقای ۳ سند بررسی طراحی.
+ *
+ * قاعده ایمنی که کل این نوع بر آن سوار است:
+ * **درخواست والد به‌تنهایی مجوز دادن دارو نیست.**
+ *
+ * والد می‌تواند فرم را پر کند و شیشه دارو را در خانه جا بگذارد. پس تا
+ * `receivedAt` پر نشده، مربی نمی‌تواند «داده شد» بزند — نه در رابط، نه
+ * در پایگاه داده.
+ */
+export type MedicationRequest = {
+  id: string
+  childId: string
+  name: string
+  dose: string
+  /** می‌تواند بیش از یکی باشد. */
+  times: string[]
+  fromDate: string
+  toDate: string
+  note: string | null
+  announcedAt: string
+  /** نام سرپرستی که اعلام کرده، برای مربی. */
+  announcedByName: string | null
+  /** مربی شیشه دارو را واقعاً گرفت. تا پر نشدن، خوراندن ممکن نیست. */
+  receivedAt: string | null
+  receivedByName: string | null
+  cancelledAt: string | null
+}
+
+export type MedicationRequestInput = {
+  childId: string
+  name: string
+  dose: string
+  times: string[]
+  fromDate: string
+  toDate: string
+  note?: string | null
 }
 
 /**
@@ -133,6 +174,8 @@ export type ClassDay = {
   attendance: Attendance[]
   absences: AbsenceNotice[]
   medications: MedicationLog[]
+  /** درخواست‌های دارویی که خانواده برای امروز اعلام کرده — ارتقای ۳. */
+  medicationRequests: MedicationRequest[]
   reports: DailyReport[]
   incidents: Incident[]
   photos: Photo[]
@@ -716,6 +759,25 @@ export interface DataAccess {
   checkIn(input: CheckInInput): Promise<Attendance>
   /** ثبت داروی امروز. تا خورانده نشدنش، مربی یادآور می‌بیند. */
   addMedication(input: MedicationInput): Promise<MedicationLog>
+
+  /* ── درخواست دارو از خانواده — ارتقای ۳ ───────────────────── */
+
+  /** خانواده از شب قبل اعلام می‌کند. مجوز دادن دارو نیست. */
+  requestMedication(input: MedicationRequestInput): Promise<MedicationRequest>
+
+  /** درخواست‌های یک کودک در یک تاریخ، از دید خانواده. */
+  listMedicationRequests(childId: string, date: string): Promise<MedicationRequest[]>
+
+  /** خانواده پیش از تحویل می‌تواند لغو کند. */
+  cancelMedicationRequest(requestId: string): Promise<void>
+
+  /**
+   * مربی شیشه دارو را تحویل گرفت.
+   *
+   * همین یک ضربه زنجیره مسئولیت را کامل می‌کند و تازه از اینجا
+   * «داده شد» ممکن می‌شود.
+   */
+  receiveMedication(requestId: string, date: string): Promise<MedicationLog[]>
 
   /**
    * ثبت گروهی — بخش ۵.۵.

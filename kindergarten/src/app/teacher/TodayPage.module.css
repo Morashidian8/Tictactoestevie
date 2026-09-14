@@ -519,3 +519,84 @@
 .phaseDim svg {
   opacity: 0.65;
 }
+
+/* ------------------------------------------------------------
+   داروی اعلام‌شده از خانه، پیش از تحویل — ارتقای ۳
+
+   عمداً از یادآور دارو جداست و بالاترش می‌نشیند: یادآور یعنی «وقتش
+   رسیده، بده»، این یعنی «از خانواده بگیر». قاطی شدنشان همان اشتباهی
+   است که کل این ماژول برای جلوگیری از آن ساخته شده.
+   ------------------------------------------------------------ */
+.handover {
+  margin: 0 var(--space-4) var(--space-3);
+  border: 1px solid var(--mango);
+  border-radius: var(--r-card);
+  background: var(--mango-tint);
+  color: var(--ink);
+  overflow: hidden;
+}
+
+.handoverHead {
+  margin: 0;
+  padding: var(--space-3) var(--space-4) var(--space-2);
+  font-weight: var(--weight-bold);
+}
+
+.handoverList {
+  list-style: none;
+  margin: 0;
+  padding: 0 var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/*
+ * دو سطر، نه یک ردیف.
+ *
+ * در عرض ۳۹۰ پیکسل، نام دارو کنار دکمه فشرده می‌شد و «شربت سرماخوردگی»
+ * سه تکه می‌شکست. حالا مشخصات بالا و دکمه پایین.
+ */
+.handoverItem {
+  display: grid;
+  gap: var(--space-2);
+  padding-block-start: var(--space-3);
+  border-block-start: 1px solid var(--mango);
+}
+
+.handoverItem .medicationName {
+  flex: initial;
+  color: var(--ink);
+}
+
+.handoverWho {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-1) var(--space-2);
+}
+
+/*
+ * دکمه ثانویه، نه مرجانی.
+ *
+ * کنش اصلی این صفحه «ثبت گروهی امروز» است و بخش ۱۲.۲ می‌گوید در هر
+ * صفحه فقط یک مرجانی. این دکمه مهم است ولی کنش اصلی روز نیست.
+ */
+.handoverTake {
+  /* تمام‌عرض کارت: کنش اصلیِ همین کارت است و هدف لمسی بزرگ می‌خواهد. */
+  inline-size: 100%;
+  min-block-size: var(--touch-teacher);
+  padding-inline: var(--space-5);
+  border: 1px solid var(--ink);
+  border-radius: var(--r-input);
+  background: var(--surface);
+  color: var(--ink);
+  font-family: inherit;
+  font-weight: var(--weight-bold);
+}
+
+.handoverWhy {
+  margin: 0;
+  padding: var(--space-2) var(--space-4) var(--space-3);
+  color: var(--ink);
+}

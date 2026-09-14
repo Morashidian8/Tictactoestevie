@@ -36,6 +36,7 @@ import type {
   Guardian,
   MedicationInput,
   MedicationLog,
+  MedicationRequest,
   ReportPatch,
 } from '../types.ts'
 import { isInCurrentWeek } from '../../../i18n/week.ts'
@@ -112,6 +113,14 @@ type StoredDay = {
   sentAt: string | null
 }
 
+/**
+ * درخواست‌های دارویی خانواده — ارتقای ۳ سند بررسی طراحی.
+ *
+ * برخلاف medication_log که روزانه است، درخواست بازه تاریخ دارد و ممکن
+ * است چند روز بماند. پس بیرون از days نگه داشته می‌شود.
+ */
+const MED_REQUESTS: MedicationRequest[] = []
+
 function save(): void {
   try {
     const payload = {
@@ -138,6 +147,7 @@ function save(): void {
       messages: MESSAGES,
       amendments: AMENDMENTS,
       claims: CLAIMS,
+      medRequests: MED_REQUESTS,
       extras: [...EXTRA_TODAY.entries()].map(([k, v]) => [k, [...v]] as [string, string[]]),
       smsUsed,
     }
@@ -164,6 +174,7 @@ function hydrate(): void {
       messages?: Message[]
       amendments?: Amendment[]
       claims?: PaymentClaim[]
+      medRequests?: MedicationRequest[]
       extras?: [string, string[]][]
       smsUsed?: number
     }
@@ -203,6 +214,7 @@ function hydrate(): void {
     restore(MESSAGES, payload.messages)
     restore(AMENDMENTS, payload.amendments)
     restore(CLAIMS, payload.claims)
+    restore(MED_REQUESTS, payload.medRequests)
     for (const [k, v] of payload.extras ?? []) EXTRA_TODAY.set(k, new Set(v))
     if (typeof payload.smsUsed === 'number') smsUsed = payload.smsUsed
   } catch {
@@ -371,6 +383,29 @@ async function durableUrl(url: string): Promise<string> {
   } catch {
     return url
   }
+}
+
+/**
+ * نام سرپرستی که اعلام کرده.
+ *
+ * مربی باید بداند کدام سرپرست دارو را اعلام کرده؛ اگر سؤالی پیش بیاید
+ * می‌داند به که زنگ بزند.
+ */
+function guardianName(accountId: string): string | null {
+  const childId = (GUARDIAN_CHILDREN[accountId] ?? [])[0]
+  if (!childId) return null
+  return GUARDIANS[childId]?.[0]?.fullName ?? null
+}
+
+/** درخواست‌های دارویی باز یک کودک در یک تاریخ. */
+function requestsOn(childId: string, date: string): MedicationRequest[] {
+  return MED_REQUESTS.filter(
+    (r) =>
+      r.childId === childId &&
+      r.cancelledAt === null &&
+      date >= r.fromDate &&
+      date <= r.toDate,
+  )
 }
 
 /** ساعت آغاز روزِ این کودک، از بازه‌های دوره حضورش. */
@@ -581,6 +616,8 @@ export function createLocalDataAccess(scope: AccessScope): DataAccess {
         attendance: [...state.attendance.values()].filter((a) => ids.has(a.childId)),
         absences: state.absences.filter((a) => ids.has(a.childId)),
         medications: state.medications.filter((m) => ids.has(m.childId)),
+        // درخواست‌هایی که خانواده اعلام کرده ولی هنوز تحویل نگرفته‌ایم.
+        medicationRequests: [...ids].flatMap((id) => requestsOn(id, date)),
         reports: [...state.reports.values()].filter((r) => ids.has(r.childId)),
         incidents: state.incidents.filter((i) => ids.has(i.childId)),
         photos: state.photos,
@@ -642,6 +679,86 @@ export function createLocalDataAccess(scope: AccessScope): DataAccess {
       dayState(input.date).medications.push(row)
       save()
       return row
+    },
+
+    /* ── درخواست دارو از خانواده — ارتقای ۳ ─────────────────── */
+
+    async requestMedication(input): Promise<MedicationRequest> {
+      assertOwnChild(input.childId)
+      if (!input.name.trim()) throw new Error('نام دارو لازم است.')
+      if (!input.dose.trim()) throw new Error('مقدار مصرف لازم است.')
+      if (input.times.length === 0) throw new Error('دست‌کم یک ساعت مصرف لازم است.')
+      if (input.toDate < input.fromDate) throw new Error('تاریخ پایان پیش از شروع است.')
+
+      const row: MedicationRequest = {
+        id: `mrq-${Math.random().toString(36).slice(2, 10)}`,
+        childId: input.childId,
+        name: input.name.trim(),
+        dose: input.dose.trim(),
+        times: [...input.times].sort(),
+        fromDate: input.fromDate,
+        toDate: input.toDate,
+        note: input.note?.trim() || null,
+        announcedAt: new Date().toISOString(),
+        announcedByName: guardianName(scope.accountId),
+        receivedAt: null,
+        receivedByName: null,
+        cancelledAt: null,
+      }
+      MED_REQUESTS.push(row)
+      save()
+      return row
+    },
+
+    async listMedicationRequests(childId, date): Promise<MedicationRequest[]> {
+      assertOwnChild(childId)
+      return requestsOn(childId, date)
+    },
+
+    async cancelMedicationRequest(requestId) {
+      const row = MED_REQUESTS.find((r) => r.id === requestId)
+      if (!row) throw new Error('درخواست پیدا نشد.')
+      assertOwnChild(row.childId)
+      // پس از تحویل، لغو از سمت خانواده معنا ندارد: دارو دست مهد است.
+      if (row.receivedAt) {
+        throw new Error('این دارو تحویل مهد شده. برای لغو با مربی صحبت کنید.')
+      }
+      row.cancelledAt = new Date().toISOString()
+      save()
+    },
+
+    /**
+     * مربی شیشه دارو را تحویل گرفت — حلقه دوم زنجیره.
+     *
+     * تا اینجا درخواست فقط یک اعلام بود. حالا برای هر ساعت مصرف یک
+     * ردیف یادآور ساخته می‌شود و تازه از این لحظه «داده شد» ممکن است.
+     */
+    async receiveMedication(requestId, date): Promise<MedicationLog[]> {
+      const row = MED_REQUESTS.find((r) => r.id === requestId)
+      if (!row) throw new Error('درخواست پیدا نشد.')
+      const child = CHILDREN.find((c) => c.id === row.childId)
+      if (!child?.classId) throw new Error('کودک پیدا نشد')
+      assertVisible(child.classId)
+      if (row.cancelledAt) throw new Error('این درخواست لغو شده است.')
+      if (row.receivedAt) return dayState(date).medications.filter((m) => m.requestId === row.id)
+
+      row.receivedAt = new Date().toISOString()
+      row.receivedByName = currentStaffName()
+
+      const state = dayState(date)
+      const made = row.times.map((time): MedicationLog => ({
+        id: `med-${Math.random().toString(36).slice(2, 10)}`,
+        childId: row.childId,
+        date,
+        name: row.name,
+        dose: row.dose,
+        scheduledTime: time,
+        givenAt: null,
+        requestId: row.id,
+      }))
+      state.medications.push(...made)
+      save()
+      return made
     },
 
     /**
@@ -1480,6 +1597,17 @@ export function createLocalDataAccess(scope: AccessScope): DataAccess {
         const row = state.medications.find((m) => m.id === medicationId)
         if (!row) continue
         if (row.childId) assertOwnChild(row.childId)
+        /*
+         * قاعده ایمنی ارتقای ۳: دارویی که از خانواده تحویل گرفته نشده،
+         * خورانده نمی‌شود. تریگر پایگاه داده همین را می‌بندد؛ اینجا
+         * آینه همان است.
+         */
+        if (row.requestId) {
+          const request = MED_REQUESTS.find((r) => r.id === row.requestId)
+          if (!request?.receivedAt) {
+            throw new Error('این دارو هنوز تحویل گرفته نشده. اول «تحویل گرفتم» را بزنید.')
+          }
+        }
         row.givenAt = new Date().toISOString()
         save()
         return

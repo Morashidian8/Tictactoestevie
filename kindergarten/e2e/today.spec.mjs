@@ -1078,6 +1078,77 @@ check(
   'و اعلام از صف رفت',
 )
 
+console.log('▸ ارتقای ۳: درخواست دارو از خانه، تا ثبت مصرف')
+/*
+ * قاعده‌ای که این بخش محافظت می‌کند: اعلام والد، تحویل دادن نیست.
+ * والد می‌تواند فرم را پر کند و شیشه دارو را در خانه جا بگذارد.
+ */
+await setClock(9)
+await signIn('09120000003')
+await page.waitForSelector('[class*="dateLine"]', { timeout: 8000 })
+await page.click('button:has-text("بیشتر")')
+await page.click('button:has-text("درخواست مصرف دارو")')
+await page.waitForSelector('input[aria-label="نام دارو"]')
+await page.fill('input[aria-label="نام دارو"]', 'شربت سرماخوردگی')
+await page.fill('input[aria-label="مقدار مصرف"]', '۵ سی‌سی')
+await page.fill('input[aria-label="ساعت مصرف ۱"]', '11:30')
+await page.click('button:has-text("امروز")')
+await page.click('button:has-text("اعلام به مهد")')
+await page.waitForTimeout(900)
+const afterAnnounce = await page.evaluate(() => document.body.innerText)
+check(/اعلام شد/.test(afterAnnounce), 'خانواده دارو را اعلام کرد')
+check(
+  /هنوز تحویل مهد نشده/.test(afterAnnounce),
+  'و صفحه صادقانه می‌گوید هنوز تحویل نشده — اعلام، تحویل نیست',
+)
+
+await page.locator('[aria-label="بازگشت"]').first().click()
+await page.waitForTimeout(300)
+await page.locator('[aria-label="بازگشت"]').first().click()
+await page.waitForTimeout(500)
+await signOutAny()
+await signIn('09120000001', { fresh: false })
+await page.waitForSelector('text=ثبت گروهی امروز')
+await page.waitForTimeout(700)
+check(
+  (await page.locator('[class*="handoverHead"]').count()) === 1,
+  `مربی کارت «تحویل نگرفته‌ایم» را می‌بیند: ${await page
+    .locator('[class*="handoverHead"]')
+    .innerText()}`,
+)
+const takeBox = await page.locator('button:has-text("تحویل گرفتم")').boundingBox()
+check(takeBox.height >= 56, `دکمه تحویل هدف لمسی کامل دارد (${Math.round(takeBox.height)})`)
+
+await page.click('button:has-text("تحویل گرفتم")')
+await page.waitForTimeout(900)
+check(
+  (await page.locator('[class*="handoverHead"]').count()) === 0,
+  'با «تحویل گرفتم»، کارت انتظار می‌رود',
+)
+await page.click('[class*="medicationBar"]')
+await page.waitForTimeout(400)
+check(
+  (await page.locator('[class*="medicationList"]').innerText()).includes('شربت سرماخوردگی'),
+  'و همان دارو در یادآور می‌نشیند، حالا با دکمه «داده شد»',
+)
+
+await signOutAny()
+await signIn('09120000003', { fresh: false })
+await page.waitForSelector('[class*="dateLine"]', { timeout: 8000 })
+await page.click('button:has-text("بیشتر")')
+await page.click('button:has-text("درخواست مصرف دارو")')
+await page.waitForTimeout(600)
+const afterReceive = await page.evaluate(() => document.body.innerText)
+check(/مهد تحویل گرفت/.test(afterReceive), 'خانواده می‌بیند که مهد تحویل گرفت')
+check(
+  (await page.locator('button:has-text("لغو درخواست")').count()) === 0,
+  'و راه لغو بسته شد، چون دارو دست مهد است',
+)
+await page.locator('[aria-label="بازگشت"]').first().click()
+await page.waitForTimeout(300)
+await page.locator('[aria-label="بازگشت"]').first().click()
+await page.waitForTimeout(400)
+
 console.log('▸ بخش ۱۲.۷: کف کیفیت')
 await signIn('09120000001')
 await page.waitForSelector('text=ثبت گروهی امروز')

@@ -251,3 +251,97 @@
 }
 
 .sheetActions .primary { flex: 2; }
+
+/* ------------------------------------------------------------
+   درخواست مصرف دارو — ارتقای ۳ سند بررسی طراحی
+   ------------------------------------------------------------ */
+.medList {
+  display: grid;
+  gap: var(--space-3);
+  margin-block-end: var(--space-4);
+}
+
+.medCard {
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+  padding: var(--space-3) var(--space-4);
+  display: grid;
+  gap: var(--space-1);
+}
+
+.medName { margin: 0; font-weight: var(--weight-bold); color: var(--ink); }
+.medTimes { margin: 0; color: var(--ink-muted); font-variant-numeric: tabular-nums; }
+
+/*
+ * نوار سه‌مرحله‌ای. مرحله انجام‌نشده تینت انبه‌ای می‌گیرد، نه متن رنگی:
+ * قاعده بخش ۱۲.۲ می‌گوید گلیف همیشه --ink است.
+ */
+.medSteps {
+  list-style: none;
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.medSteps li {
+  font-size: var(--text-caption);
+  font-weight: var(--weight-bold);
+  padding: 2px var(--space-3);
+  border-radius: var(--r-chip);
+  border: 1px solid transparent;
+  color: var(--ink);
+}
+
+.medStepDone { background: var(--mint-tint); border-color: var(--mint); }
+.medStepWait { background: var(--mango-tint); border-color: var(--mango); }
+
+.medCancel {
+  justify-self: start;
+  margin-block-start: var(--space-2);
+  min-block-size: var(--touch-parent);
+  padding-inline: var(--space-3);
+  border: 1px solid var(--border-input);
+  border-radius: var(--r-input);
+  background: var(--surface);
+  color: var(--ink);
+  font-family: inherit;
+  font-weight: var(--weight-bold);
+}
+
+.medTimeRow {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  margin-block-end: var(--space-2);
+}
+
+.medTimeRow .input { flex: 1; }
+
+.medTimeRemove {
+  flex: none;
+  inline-size: var(--touch-parent);
+  block-size: var(--touch-parent);
+  border: 1px solid var(--border-input);
+  border-radius: var(--r-input);
+  background: var(--surface);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: var(--text-body-lg);
+}
+
+.medAddTime {
+  justify-self: start;
+  min-block-size: var(--touch-parent);
+  padding-inline: var(--space-3);
+  border: 1px dashed var(--border-input);
+  border-radius: var(--r-input);
+  background: none;
+  color: var(--ink);
+  font-family: inherit;
+  font-weight: var(--weight-bold);
+  margin-block-end: var(--space-4);
+}

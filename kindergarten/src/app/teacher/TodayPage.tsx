@@ -372,6 +372,15 @@ export function TodayPage({
     .filter((m) => !m.givenAt)
     .sort((a, b) => (a.scheduledTime ?? '99:99').localeCompare(b.scheduledTime ?? '99:99'))
   const nextMedicationTime = pendingMedication.find((m) => m.scheduledTime)?.scheduledTime ?? null
+
+  /*
+   * درخواست‌هایی که خانواده اعلام کرده ولی شیشه دارو هنوز به مهد نرسیده
+   * — ارتقای ۳ سند بررسی طراحی.
+   *
+   * این‌ها یادآور نیستند، چون چیزی برای خوراندن وجود ندارد. جدا و بالاتر
+   * می‌نشینند تا مربی صبح که خانواده دم در است بداند چه بخواهد.
+   */
+  const awaitingHandover = (day?.medicationRequests ?? []).filter((r) => !r.receivedAt)
   const activeClass = classes.find((c) => c.id === classId)
 
   return (
@@ -576,6 +585,52 @@ export function TodayPage({
         ساعت روی خود نوار می‌آید و بقیه با یک ضربه باز می‌شوند؛ مربی وسط
         صبح وقت خواندن فهرست ندارد ولی باید بداند ساعت بعدی کی است.
       */}
+      {/*
+        ارتقای ۳: اعلام خانواده، پیش از تحویل گرفتن.
+        «داده شد» اینجا اصلاً وجود ندارد — والد می‌تواند فرم را پر کند و
+        شیشه دارو را در خانه جا بگذارد.
+      */}
+      {awaitingHandover.length > 0 ? (
+        <section className={styles.handover} aria-label="داروهای اعلام‌شده از خانه">
+          <p className={`${styles.handoverHead} t-body`}>
+            {formatCount(awaitingHandover.length)} دارو از خانه اعلام شده، هنوز تحویل نگرفته‌ایم
+          </p>
+          <ul className={styles.handoverList}>
+            {awaitingHandover.map((request) => {
+              const child = day?.children.find((c) => c.id === request.childId)
+              return (
+                <li key={request.id} className={styles.handoverItem}>
+                  <span className={styles.handoverWho}>
+                    <span className={styles.medicationChild}>{child?.firstName ?? '—'}</span>
+                    <span className={`${styles.medicationName} t-body`}>
+                      {request.name} · {request.dose}
+                    </span>
+                    <span className={styles.medicationTime}>
+                      {request.times.map((t) => formatClock(t)).join('، ')}
+                    </span>
+                  </span>
+                  <button
+                    type="button"
+                    className={`${styles.handoverTake} t-caption`}
+                    onClick={() => {
+                      void queue
+                        .submit('text', () => data.receiveMedication(request.id, date))
+                        .then(() => load())
+                        .catch((cause: unknown) => setError(messageOf(cause)))
+                    }}
+                  >
+                    تحویل گرفتم
+                  </button>
+                </li>
+              )
+            })}
+          </ul>
+          <p className={`${styles.handoverWhy} t-caption`}>
+            تا تحویل نگرفتن، ثبت مصرف ممکن نیست.
+          </p>
+        </section>
+      ) : null}
+
       {pendingMedication.length > 0 ? (
         <div className={styles.medication}>
           <button

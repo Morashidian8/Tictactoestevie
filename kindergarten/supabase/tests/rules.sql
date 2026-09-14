@@ -597,3 +597,63 @@ begin
   select late_minutes into late from attendance where child_id = sara and date = saturday;
   perform assert(late = 20, format('و بیست دقیقه بعدش، بیست دقیقه تأخیر دارد (%s)', late));
 end $$;
+
+\echo ''
+\echo '── درخواست دارو از خانواده: تحویل نگرفته، خورانده نمی‌شود ──'
+do $$
+declare
+  centre  uuid := '11111111-1111-1111-1111-111111111111';
+  sara    uuid := 'd1111111-1111-1111-1111-111111111111';
+  mother  uuid := '91111111-1111-1111-1111-111111111111';
+  teacher uuid;
+  req     uuid;
+  logged  uuid;
+  blocked boolean := false;
+  today   date := current_date;
+begin
+  select id into teacher from staff where center_id = centre limit 1;
+
+  insert into medication_request
+    (center_id, child_id, name, dose, times, from_date, to_date, announced_by)
+  values
+    (centre, sara, 'شربت سرماخوردگی', '۵ سی‌سی', array['11:30'::time], today, today, mother)
+  returning id into req;
+  perform assert(req is not null, 'خانواده از شب قبل درخواست دارو ثبت می‌کند');
+
+  insert into medication_log (center_id, child_id, date, name, dose, request_id)
+  values (centre, sara, today, 'شربت سرماخوردگی', '۵ سی‌سی', req)
+  returning id into logged;
+
+  /*
+   * قاعده ایمنی: والد فرم را پر کرده ولی شیشه دارو هنوز به مهد نرسیده.
+   * اگر این نبندد، مربی «داده شد» را می‌زند برای دارویی که وجود ندارد.
+   */
+  begin
+    update medication_log
+    set given_at = now(), given_by = teacher
+    where id = logged;
+  exception when others then
+    blocked := true;
+  end;
+  perform assert(blocked, 'تا تحویل نگرفتن، خوراندن ثبت نمی‌شود');
+
+  -- حلقه دو: مربی شیشه را واقعاً گرفت.
+  update medication_request set received_at = now(), received_by = teacher where id = req;
+
+  update medication_log set given_at = now(), given_by = teacher where id = logged;
+  perform assert(
+    (select given_at is not null from medication_log where id = logged),
+    'پس از تحویل گرفتن، خوراندن ثبت می‌شود'
+  );
+
+  perform assert(
+    (select count(*) from app.medication_requests_on(sara, today)) = 1,
+    'درخواست امروز کودک در فهرست می‌آید'
+  );
+
+  update medication_request set cancelled_at = now() where id = req;
+  perform assert(
+    (select count(*) from app.medication_requests_on(sara, today)) = 0,
+    'و درخواست لغوشده از فهرست بیرون می‌رود'
+  );
+end $$;

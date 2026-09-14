@@ -24,6 +24,7 @@ import type {
   IncidentInput,
   MedicationInput,
   MedicationLog,
+  MedicationRequest,
   Notice,
   NoticeAudience,
   NoticeInput,
@@ -186,7 +187,28 @@ const asMedication = (r: Row): MedicationLog => ({
   dose: (r.dose as string | null) ?? null,
   scheduledTime: (r.scheduled_time as string | null) ?? null,
   givenAt: (r.given_at as string | null) ?? null,
+  requestId: (r.request_id as string | null) ?? null,
 })
+
+const asMedRequest = (r: Row): MedicationRequest => ({
+  id: r.id as string,
+  childId: r.child_id as string,
+  name: r.name as string,
+  dose: r.dose as string,
+  times: (r.times as string[] | null) ?? [],
+  fromDate: r.from_date as string,
+  toDate: r.to_date as string,
+  note: (r.note as string | null) ?? null,
+  announcedAt: r.announced_at as string,
+  announcedByName: ((r.announced_by_guardian as Row | null)?.full_name as string | null) ?? null,
+  receivedAt: (r.received_at as string | null) ?? null,
+  receivedByName: ((r.received_by_staff as Row | null)?.full_name as string | null) ?? null,
+  cancelledAt: (r.cancelled_at as string | null) ?? null,
+})
+
+/** ستون‌های پیوندی نام سرپرست و مربی، برای اینکه مربی بداند از که بپرسد. */
+const MED_REQUEST_SELECT =
+  '*, announced_by_guardian:announced_by(full_name), received_by_staff:received_by(full_name)'
 
 const toTime = (value: string | null | undefined): string | null =>
   value && value.length > 0 ? value : null
@@ -472,11 +494,13 @@ export function createSupabaseDataAccess(scope: AccessScope): DataAccess {
         return {
           classRoom, children, enrolledToday, periods,
           currentPeriods: periodsAt(periods, at), upcomingPeriod: upcoming, ratio,
-          attendance: [], absences: [], medications: [], reports: [], incidents: [], photos: [],
+          attendance: [], absences: [], medications: [], medicationRequests: [],
+          reports: [], incidents: [], photos: [],
         }
       }
 
-      const [attendance, absences, medications, reports, incidents, photos] = await Promise.all([
+      const [attendance, absences, medRequests, medications, reports, incidents, photos] =
+        await Promise.all([
         db
           .from('attendance')
           .select('*, checked_in_by:checked_in_by_staff_id(full_name), checked_out_by:checked_out_by_staff_id(full_name)')
@@ -484,6 +508,14 @@ export function createSupabaseDataAccess(scope: AccessScope): DataAccess {
           .eq('date', date)
           .in('child_id', ids),
         from('absence_notice').eq('date', date).in('child_id', ids),
+        db
+          .from('medication_request')
+          .select(MED_REQUEST_SELECT)
+          .eq('center_id', scope.centerId)
+          .in('child_id', ids)
+          .is('cancelled_at', null)
+          .lte('from_date', date)
+          .gte('to_date', date),
         from('medication_log').eq('date', date).in('child_id', ids),
         from('daily_report').eq('date', date).in('child_id', ids),
         from('incident').gte('occurred_at', `${date}T00:00:00`).lte('occurred_at', `${date}T23:59:59`).in('child_id', ids),
@@ -510,6 +542,7 @@ export function createSupabaseDataAccess(scope: AccessScope): DataAccess {
           reason: (r.reason as string | null) ?? null,
         })),
         medications: (orThrow(medications) as Row[]).map(asMedication),
+        medicationRequests: (orThrow(medRequests) as Row[]).map(asMedRequest),
         reports: (orThrow(reports) as Row[]).map(asReport),
         incidents: (orThrow(incidents) as Row[]).map(asIncident),
         photos: (orThrow(photos) as Row[]).map(asPhoto),
@@ -575,6 +608,112 @@ export function createSupabaseDataAccess(scope: AccessScope): DataAccess {
           .single(),
       ) as Row
       return asMedication(row)
+    },
+
+    /* ── درخواست دارو از خانواده — ارتقای ۳ ─────────────────── */
+
+    async requestMedication(input) {
+      const row = orThrow(
+        await db
+          .from('medication_request')
+          .insert({
+            center_id: scope.centerId,
+            child_id: input.childId,
+            name: input.name.trim(),
+            dose: input.dose.trim(),
+            times: [...input.times].sort(),
+            from_date: input.fromDate,
+            to_date: input.toDate,
+            note: input.note?.trim() || null,
+          })
+          .select(MED_REQUEST_SELECT)
+          .single(),
+      ) as Row
+      return asMedRequest(row)
+    },
+
+    async listMedicationRequests(childId, date) {
+      const rows = orThrow(
+        await db
+          .from('medication_request')
+          .select(MED_REQUEST_SELECT)
+          .eq('center_id', scope.centerId)
+          .eq('child_id', childId)
+          .is('cancelled_at', null)
+          .lte('from_date', date)
+          .gte('to_date', date)
+          .order('announced_at'),
+      ) as Row[]
+      return rows.map(asMedRequest)
+    },
+
+    async cancelMedicationRequest(requestId) {
+      /*
+       * پس از تحویل، لغو از سمت خانواده معنا ندارد: دارو دست مهد است.
+       * شرط is('received_at', null) همین را می‌بندد، پس مسابقه‌ای بین
+       * «والد لغو کرد» و «مربی تحویل گرفت» پیش نمی‌آید.
+       */
+      const rows = orThrow(
+        await db
+          .from('medication_request')
+          .update({ cancelled_at: new Date().toISOString() })
+          .eq('center_id', scope.centerId)
+          .eq('id', requestId)
+          .is('received_at', null)
+          .select('id'),
+      ) as Row[]
+      if (rows.length === 0) {
+        throw new Error('این دارو تحویل مهد شده. برای لغو با مربی صحبت کنید.')
+      }
+    },
+
+    /**
+     * مربی شیشه دارو را تحویل گرفت — حلقه دوم زنجیره.
+     *
+     * تا اینجا درخواست فقط یک اعلام بود. از این لحظه برای هر ساعت مصرف
+     * یک یادآور ساخته می‌شود و تریگر پایگاه داده اجازه «داده شد»
+     * می‌دهد.
+     */
+    async receiveMedication(requestId, date) {
+      // received_by را تریگر پایگاه داده از حساب فعال پر می‌کند؛ کلاینت
+      // نه لازم است بداند و نه حق دارد بگوید.
+      const taken = orThrow(
+        await db
+          .from('medication_request')
+          .update({ received_at: new Date().toISOString() })
+          .eq('center_id', scope.centerId)
+          .eq('id', requestId)
+          .is('received_at', null)
+          .is('cancelled_at', null)
+          .select(MED_REQUEST_SELECT),
+      ) as Row[]
+
+      const request = taken[0]
+      // قبلاً تحویل گرفته شده: همان یادآورهای ساخته‌شده برمی‌گردند.
+      if (!request) {
+        const made = orThrow(
+          await from('medication_log').eq('date', date).eq('request_id', requestId),
+        ) as Row[]
+        return made.map(asMedication)
+      }
+
+      const rows = orThrow(
+        await db
+          .from('medication_log')
+          .insert(
+            ((request.times as string[] | null) ?? []).map((time) => ({
+              center_id: scope.centerId,
+              child_id: request.child_id as string,
+              date,
+              name: request.name as string,
+              dose: request.dose as string,
+              scheduled_time: time,
+              request_id: requestId,
+            })),
+          )
+          .select(),
+      ) as Row[]
+      return rows.map(asMedication)
     },
 
     /**
