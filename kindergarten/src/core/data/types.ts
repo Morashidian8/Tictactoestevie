@@ -1,4 +1,5 @@
 /** انواع دامنه. آینه شِمای دیتابیس، فقط برای بخش‌هایی که ساخته شده‌اند. */
+import type { QuotaLine } from '../notify/index.ts'
 import type { SessionPhase } from './periods.ts'
 
 export type { SessionPhase }
@@ -767,7 +768,14 @@ export type ManagerDashboard = {
   }[]
   /** اعلام‌های پرداخت که منتظر تصمیم مدیرند — بخش ۸. */
   pendingClaims: number
-  smsRemaining: number
+  /**
+   * سهمیه پیامک، دو سطل جدا — ارتقای ۴.
+   *
+   * تا اینجا یک عدد بود. مسئله‌اش این است که مدیری که سهمیه‌اش را برای
+   * اطلاعیه‌های ماه سوزانده، همان عدد را می‌بیند و نمی‌داند که آیا
+   * فردا می‌تواند حادثه را خبر دهد یا نه. دو سطل، دو عدد.
+   */
+  smsQuota: QuotaLine[]
 }
 
 export type IncidentDecision = 'send_to_family' | 'call_then_send' | 'archive'

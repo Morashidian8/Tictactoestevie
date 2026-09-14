@@ -4,6 +4,7 @@
  * قید مرکز و کلاس اینجا هم دقیقاً مثل مخزن واقعی اعمال می‌شود، تا رفتار
  * دو پیاده‌سازی یکی باشد و صفحه نفهمد با کدام‌یک کار می‌کند.
  */
+import { quotaReport, type QuotaLine, type SmsBucket } from '../../notify/index.ts'
 import type {
   AbsenceNotice,
   AccessScope,
@@ -183,7 +184,7 @@ function save(): void {
       medRequests: MED_REQUESTS,
       gateway: GATEWAY,
       extras: [...EXTRA_TODAY.entries()].map(([k, v]) => [k, [...v]] as [string, string[]]),
-      smsUsed,
+      smsUsed: { ...smsUsedBy },
     }
     localStorage.setItem(STORE_KEY, JSON.stringify(payload))
   } catch {
@@ -252,7 +253,15 @@ function hydrate(): void {
     restore(MED_REQUESTS, payload.medRequests)
     restore(GATEWAY, payload.gateway)
     for (const [k, v] of payload.extras ?? []) EXTRA_TODAY.set(k, new Set(v))
-    if (typeof payload.smsUsed === 'number') smsUsed = payload.smsUsed
+    // نسخه پیشین یک عدد ذخیره می‌کرد. همان را روی سطل اطلاع‌رسانی
+    // می‌نشانیم تا داده ذخیره‌شده کاربر با ارتقا از بین نرود.
+    if (typeof payload.smsUsed === 'number') smsUsedBy.notice = payload.smsUsed
+    else if (payload.smsUsed && typeof payload.smsUsed === 'object') {
+      for (const bucket of ['notice', 'critical_fallback'] as SmsBucket[]) {
+        const value = (payload.smsUsed as Partial<Record<SmsBucket, number>>)[bucket]
+        if (typeof value === 'number') smsUsedBy[bucket] = value
+      }
+    }
   } catch {
     // داده ذخیره‌شده خراب بود. از نمونه تازه شروع می‌کنیم.
   }
@@ -297,10 +306,28 @@ const PLANS: PickupPlan[] = []
 /** اطلاعیه‌های منتشرشده. در داده واقعی جدول announcement است. */
 const NOTICES: Notice[] = []
 
-/** بخش ۱۵.۴: سهمیه پیامک هرگز نامحدود نیست. */
-const SMS_ALLOCATED = 500
-let smsUsed = 0
-const smsRemaining = () => SMS_ALLOCATED - smsUsed
+/**
+ * بخش ۱۵.۴: سهمیه پیامک هرگز نامحدود نیست.
+ *
+ * ارتقای ۴: دو سطل جدا. سطل «اطلاع‌رسانی» برای اطلاعیه و یادآوری بدهی
+ * است و مدیر می‌تواند تمامش کند؛ سطل «پشتیبان رخداد حیاتی» فقط برای کد
+ * تحویل، حادثه تأییدشده و هشدار دارویی است و از آن سطل برداشت نمی‌شود.
+ *
+ * چرا جدا: مدیری که برای اطلاعیه‌های ماه سهمیه‌اش را سوزانده، نباید
+ * فردا نتواند حادثه را خبر دهد.
+ */
+const SMS_ALLOCATED: Record<SmsBucket, number> = { notice: 500, critical_fallback: 200 }
+const smsUsedBy: Record<SmsBucket, number> = { notice: 0, critical_fallback: 0 }
+const smsRemaining = () => SMS_ALLOCATED.notice - smsUsedBy.notice
+const smsQuota = (): QuotaLine[] =>
+  quotaReport(
+    (['notice', 'critical_fallback'] as SmsBucket[]).map((bucket) => ({
+      bucket,
+      allocated: SMS_ALLOCATED[bucket],
+      extraPurchased: 0,
+      used: smsUsedBy[bucket],
+    })),
+  )
 
 /** تعداد پرسنلی که پیامک تعطیلی به آن‌ها هم می‌رود — بخش ۱۵.۳. */
 const STAFF_COUNT = 12
@@ -1339,7 +1366,7 @@ export function createLocalDataAccess(scope: AccessScope): DataAccess {
           }
         }),
         pendingClaims: CLAIMS.filter((c) => c.status === 'pending').length,
-        smsRemaining: smsRemaining(),
+        smsQuota: smsQuota(),
       }
     },
 
@@ -1470,7 +1497,7 @@ export function createLocalDataAccess(scope: AccessScope): DataAccess {
           `سهمیه پیامک کافی نیست: ${audience.smsNeeded} لازم است و ${audience.smsRemaining} مانده.`,
         )
       }
-      if (input.sendSms) smsUsed += audience.smsNeeded
+      if (input.sendSms) smsUsedBy.notice += audience.smsNeeded
 
       const notice: Notice = {
         id: `notice-${NOTICES.length + 1}`,
@@ -1574,7 +1601,7 @@ export function createLocalDataAccess(scope: AccessScope): DataAccess {
       if (reachable.length > smsRemaining()) {
         throw new Error('سهمیه پیامک برای یادآوری کافی نیست.')
       }
-      smsUsed += reachable.length
+      smsUsedBy.notice += reachable.length
       save()
       return reachable.length
     },

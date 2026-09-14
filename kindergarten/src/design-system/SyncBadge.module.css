@@ -23,3 +23,17 @@
     animation: none;
   }
 }
+
+/*
+ * ارتقای ۴: خط قطع‌شده پررنگ‌تر از صفِ پر است.
+ *
+ * رنگ از همان چهارده رنگ طراح می‌آید و پرکننده است، نه گلیف: متن روی
+ * آن همیشه --ink می‌ماند (بخش ۱۲.۲).
+ */
+.offline {
+  padding: 2px var(--space-2);
+  border: 1px solid var(--mango);
+  border-radius: var(--r-chip);
+  background: var(--mango-tint);
+  color: var(--ink);
+}

@@ -255,13 +255,25 @@ export function DashboardPage({ onGo }: { onGo: (page: ManagerPage) => void }) {
               </section>
             ) : null}
 
+            {/*
+              ارتقای ۴: سهمیه پیامک دو سطل جداست.
+              یک عدد به مدیر نمی‌گفت که آیا فردا می‌تواند حادثه را خبر
+              دهد یا نه؛ دو عدد می‌گوید. هشدار روی آستانه هشتاد درصد
+              می‌آید (بخش ۱۵.۴)، نه روی عددی دلبخواه.
+            */}
             <section className={styles.card} aria-label="سهمیه پیامک">
               <span className={`${styles.cardLabel} t-caption`}>سهمیه پیامک این ماه</span>
-              <p className={`${styles.row} t-body`}>
-                <span>باقی‌مانده</span>
-                <span className={board.smsRemaining < 100 ? styles.partial : styles.ok}>
-                  {toPersianDigits(board.smsRemaining)}
-                </span>
+              {board.smsQuota.map((line) => (
+                <p key={line.bucket} className={`${styles.row} t-body`}>
+                  <span>{line.label}</span>
+                  <span className={line.warn ? styles.partial : styles.ok}>
+                    {toPersianDigits(line.remaining)} از {toPersianDigits(line.allocated)}
+                  </span>
+                </p>
+              ))}
+              <p className={`${styles.quotaWhy} t-caption`}>
+                سطل رخداد حیاتی فقط برای کد تحویل، حادثه تأییدشده و هشدار دارویی
+                است و با اطلاعیه خرج نمی‌شود.
               </p>
             </section>
           </>

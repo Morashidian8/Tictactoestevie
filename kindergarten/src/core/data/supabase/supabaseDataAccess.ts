@@ -9,6 +9,7 @@
  * نام ستون‌ها با مهاجرت‌های supabase/migrations خوانده شده‌اند، ولی تا
  * وصل شدن یک نمونه واقعی، «کامپایل می‌شود» تنها چیزی است که ثابت شده.
  */
+import { quotaReport, type QuotaLine, type SmsBucket } from '../../notify/index.ts'
 import type {
   AccessScope,
   Attendance,
@@ -357,18 +358,32 @@ export function createSupabaseDataAccess(scope: AccessScope): DataAccess {
   }
 
 
-  /** بخش ۱۵.۴: باقی‌مانده سهمیه ماه جاری. */
-  const smsRemaining = async (): Promise<number> => {
+  /**
+   * بخش ۱۵.۴ و ارتقای ۴: سهمیه ماه جاری، دو سطل جدا.
+   *
+   * جدول از مهاجرت ۰۰۲۱ کلید سه‌تایی دارد (مرکز، دوره، سطل)، پس یک
+   * مرکز در یک ماه دو ردیف دارد. سطلی که ردیف ندارد هم باید دیده شود،
+   * وگرنه مدیر فکر می‌کند وجود ندارد — این کار را quotaReport می‌کند.
+   */
+  const smsQuota = async (): Promise<QuotaLine[]> => {
     const period = new Date().toISOString().slice(0, 7)
     const rows = orThrow(await from('sms_quota').eq('period', period)) as Row[]
-    const row = rows[0]
-    if (!row) return 0
-    return (
-      ((row.allocated as number) ?? 0) +
-      ((row.extra_purchased as number) ?? 0) -
-      ((row.used as number) ?? 0)
+    return quotaReport(
+      rows.map((row) => ({
+        bucket: row.bucket as SmsBucket,
+        allocated: (row.allocated as number) ?? 0,
+        extraPurchased: (row.extra_purchased as number) ?? 0,
+        used: (row.used as number) ?? 0,
+      })),
     )
   }
+
+  /**
+   * باقی‌مانده سطل «اطلاع‌رسانی» — تنها سطلی که اطلاعیه و یادآوری بدهی
+   * از آن برمی‌دارند. سطل حیاتی عمداً اینجا خوانده نمی‌شود.
+   */
+  const smsRemaining = async (): Promise<number> =>
+    (await smsQuota()).find((line) => line.bucket === 'notice')?.remaining ?? 0
 
   async function listClasses(): Promise<ClassRoom[]> {
     const rows = orThrow(
@@ -1386,7 +1401,7 @@ export function createSupabaseDataAccess(scope: AccessScope): DataAccess {
         pendingClaims: (
           orThrow(await from('payment_claim').eq('status', 'pending')) as Row[]
         ).length,
-        smsRemaining: await smsRemaining(),
+        smsQuota: await smsQuota(),
       }
     },
 

@@ -788,3 +788,122 @@ begin
   values (centre, bill, 500000, 'manual_receipt', 'R-1');
   perform assert(app.invoice_paid(bill) = 5500000, 'ثبت دستی همچنان کار می‌کند');
 end $$;
+
+\echo ''
+\echo '── پشتیبان پیامک: اپ اول، پیامک پس از شصت ثانیه، دو سطل سهمیه ──'
+do $$
+declare
+  centre uuid := '11111111-1111-1111-1111-111111111111';
+  sara   uuid := 'd1111111-1111-1111-1111-111111111111';
+  parent uuid;
+  t0     timestamptz := timestamptz '2025-11-04 08:00:00+03:30';
+  span   text := to_char(t0, 'YYYY-MM');
+  seen   uuid;
+  quiet  uuid;
+  hush   uuid;
+begin
+  select id into parent from user_account
+   where center_id = centre and role = 'guardian' limit 1;
+
+  -- ۱. رخداد ثبت می‌شود و مهلت اپ دقیقاً شصت ثانیه است.
+  seen := app.raise_critical_alert(centre, 'pickup_code', parent, 'کد تحویل سارا: ۴۸۲۱', sara, t0);
+  perform assert(
+    (select sms_due_at - raised_at from critical_alert where id = seen) = interval '60 seconds',
+    'رخداد حیاتی شصت ثانیه به اپ فرصت می‌دهد'
+  );
+  perform assert(
+    (select count(*) from notification
+      where user_account_id = parent and channel = 'push' and type = 'pickup_code') = 1,
+    'و همان لحظه اعلان اپ می‌رود — پیامک مسیر دوم است'
+  );
+
+  -- ۲. پیش از مهلت، هیچ پیامکی نمی‌رود.
+  perform assert(
+    (select count(*) from app.due_critical_alerts(centre, t0 + interval '30 seconds')) = 0,
+    'در ثانیه سی‌ام هنوز پیامکی سررسید نشده'
+  );
+  perform assert(
+    app.send_critical_sms(seen, t0 + interval '30 seconds') = 'waiting',
+    'و صدا زدن زودهنگام ارسال، پیامکی نمی‌فرستد'
+  );
+
+  -- ۳. دیدن در اپ، پیامک را لغو می‌کند و سهمیه‌ای خرج نمی‌شود.
+  update critical_alert set acknowledged_at = t0 + interval '20 seconds' where id = seen;
+  perform assert(
+    app.send_critical_sms(seen, t0 + interval '90 seconds') = 'acknowledged',
+    'خانواده‌ای که در اپ دید، پیامک نمی‌گیرد'
+  );
+  perform assert(
+    not exists (select 1 from sms_quota where center_id = centre and period = span),
+    'و سهمیه پیامک اصلاً دست نمی‌خورد'
+  );
+
+  -- ۴. ندیدن در اپ: پس از مهلت، پیامک می‌رود.
+  insert into sms_quota (center_id, period, bucket, allocated)
+  values (centre, span, 'critical_fallback', 2), (centre, span, 'notice', 1);
+
+  quiet := app.raise_critical_alert(centre, 'incident_confirmed', parent, 'حادثه سارا', sara, t0);
+  perform assert(
+    (select count(*) from app.due_critical_alerts(centre, t0 + interval '61 seconds')) = 1,
+    'رخدادی که کسی ندید، در ثانیه شصت‌ویکم سررسید می‌شود'
+  );
+  perform assert(
+    app.send_critical_sms(quiet, t0 + interval '61 seconds') = 'sent',
+    'و پیامکش می‌رود'
+  );
+  perform assert(
+    (select used from sms_quota
+      where center_id = centre and period = span and bucket = 'critical_fallback') = 1,
+    'مصرف از سطل «پشتیبان رخداد حیاتی» برداشته می‌شود'
+  );
+  perform assert(
+    (select used from sms_quota
+      where center_id = centre and period = span and bucket = 'notice') = 0,
+    'و سطل «اطلاع‌رسانی» دست‌نخورده می‌ماند'
+  );
+
+  -- ۵. تأیید پس از رفتن پیامک بی‌اثر است: سهمیه خرج شده و آمار نباید دروغ بگوید.
+  perform assert(
+    app.acknowledge_critical_alert(quiet, t0 + interval '120 seconds') = false,
+    'تأیید پس از ارسال پیامک، آمار مصرف را پس نمی‌گیرد'
+  );
+
+  -- ۶. سطل اطلاع‌رسانیِ تمام‌شده، جلوی رخداد حیاتی را نمی‌گیرد.
+  update sms_quota set used = allocated where center_id = centre and period = span and bucket = 'notice';
+  hush := app.raise_critical_alert(centre, 'medication_emergency', parent, 'دارو داده نشد', sara, t0);
+  perform assert(
+    app.send_critical_sms(hush, t0 + interval '61 seconds') = 'sent',
+    'سهمیه اطلاع‌رسانیِ تمام‌شده، هشدار دارویی را متوقف نمی‌کند'
+  );
+
+  -- ۷. تمام شدن سطل حیاتی، رخداد را پاک نمی‌کند — دلیلش می‌ماند تا مدیر تلفن بزند.
+  perform app.raise_critical_alert(centre, 'pickup_code', parent, 'کد تحویل امیر', sara, t0);
+  perform assert(
+    app.send_critical_sms(
+      (select id from critical_alert where sms_sent_at is null and sms_skipped_reason is null
+        order by created_at desc limit 1),
+      t0 + interval '61 seconds'
+    ) = 'quota_exhausted',
+    'با سطل حیاتیِ تمام، پیامک نمی‌رود'
+  );
+  perform assert(
+    (select count(*) from critical_alert where sms_skipped_reason = 'quota_exhausted') = 1,
+    'ولی رخداد با دلیلِ نرفتن می‌ماند، نه اینکه بی‌صدا گم شود'
+  );
+
+  -- ۸. گزارش سهمیه: هر دو سطل همیشه دیده می‌شوند، حتی سطل خالی.
+  perform assert(
+    (select count(*) from app.sms_quota_report(centre, span)) = 2,
+    'پنل مدیر هر دو سطل را جدا می‌بیند'
+  );
+  perform assert(
+    (select warn from app.sms_quota_report(centre, span) where bucket = 'critical_fallback'),
+    'و از آستانه هشتاد درصد هشدار می‌دهد'
+  );
+
+  -- ۹. یک رخداد، یک سرنوشت.
+  perform assert_rejects($x$
+    update critical_alert set sms_skipped_reason = 'acknowledged'
+     where sms_sent_at is not null
+  $x$, 'یک رخداد نمی‌تواند هم پیامک رفته باشد هم نرفته');
+end $$;

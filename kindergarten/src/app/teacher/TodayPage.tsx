@@ -21,6 +21,13 @@ import {
   type ClassDay,
   type ClassRoom,
 } from '../../core/data/index.ts'
+import {
+  announceLocal,
+  createLocalLiveChannel,
+  FALLBACK_POLL_MS,
+  type LiveEvent,
+  type LiveStatus,
+} from '../../core/sync/index.ts'
 import { ArrivalSheet, type ArrivalResult } from './ArrivalSheet.tsx'
 import { CheckOutSheet } from './CheckOutSheet.tsx'
 import { IncidentSheet } from './IncidentSheet.tsx'
@@ -132,23 +139,68 @@ export function TodayPage({
     }
   }, [classId, data, date])
 
-  useEffect(() => {
-    void load()
-  }, [load])
-
   /*
-   * نوسازی دوره‌ای — تصمیم مالک محصول: «چیزهای مشترک همپوشانی بشه.»
+   * همگام‌سازی بین مربیان — ارتقای ۴ سند بررسی طراحی.
    *
    * مهد چند مربی دارد و هر کدام گوشی خودش را دارد. وقتی یکی کودکی را
    * تحویل می‌گیرد، بقیه باید همان را ببینند، وگرنه دو نفر یک ورود را
    * ثبت می‌کنند یا یکی دنبال کودکی می‌گردد که همکارش تحویلش گرفته.
    *
-   * همان تپش سی‌ثانیه‌ای ساعت را سوار می‌شویم، نه یک تایمر دوم: صفحه
-   * از قبل هر سی ثانیه بیدار می‌شود و اتصال مهد پایدار نیست.
+   * تا نسخه پیش، صفحه هر سی ثانیه خودش را می‌خواند. صبح مهد، سی ثانیه
+   * یعنی همان دو ثبت تکراری. حالا اتصال پایدار خبر می‌دهد و نوسازی
+   * دوره‌ای فقط لایه پشتیبان است.
+   */
+  const live = useMemo(() => createLocalLiveChannel(), [])
+  useEffect(() => () => live.close(), [live])
+
+  const [liveStatus, setLiveStatus] = useState<LiveStatus>(() => live.getStatus())
+  useEffect(() => live.watch(setLiveStatus), [live])
+
+  useEffect(() => {
+    if (!classId) return
+    return live.subscribe(classId, () => {
+      void load()
+    })
+  }, [classId, live, load])
+
+  /*
+   * یک خواندن کامل در آغاز، و یک خواندن کامل پس از هر اتصال دوباره.
+   *
+   * رویدادهای حین قطعی از دست رفته‌اند و هیچ سوکتی آن‌ها را برنمی‌گرداند؛
+   * پس epoch — نه رویداد بعدی — مرجع تازه‌سازی است.
    */
   useEffect(() => {
     void load()
-  }, [now, load])
+  }, [liveStatus.epoch, load])
+
+  /*
+   * لایه پشتیبان: فقط وقتی اتصال نیست.
+   *
+   * روی اتصال سالم، تایمر خاموش است — باتری و سهمیه اینترنت مربی برای
+   * خواندنی که چیزی تازه ندارد خرج نمی‌شود.
+   */
+  useEffect(() => {
+    if (liveStatus.state === 'connected') return
+    const timer = setInterval(() => {
+      void load()
+    }, FALLBACK_POLL_MS)
+    return () => clearInterval(timer)
+  }, [liveStatus.state, load])
+
+  /**
+   * خواندن دوباره پس از یک نوشتن، به‌علاوه خبر دادن به بقیه دستگاه‌ها.
+   *
+   * در پیاده‌سازی واقعی خبر دادن لازم نیست — نوشتن در پایگاه داده خودش
+   * رویداد Realtime می‌سازد. اینجا چون سروری نیست، نویسنده خبر می‌دهد و
+   * رفتار صفحه دقیقاً همانی می‌شود که با سوکت خواهد بود.
+   */
+  const reload = useCallback(
+    async (event?: LiveEvent) => {
+      if (event && classId) announceLocal(classId, event)
+      await load()
+    },
+    [classId, load],
+  )
 
   const attendance = useMemo(() => indexAttendance(day?.attendance ?? []), [day])
   const absences = useMemo(() => indexAbsences(day?.absences ?? []), [day])
@@ -236,7 +288,7 @@ export function TodayPage({
       }),
     )
     setJustIn({ childId, name: first?.fullName ?? null })
-    await load()
+    await reload('attendance')
   }
 
   /*
@@ -326,7 +378,7 @@ export function TodayPage({
         // آپلود واقعی وقتی استوریج وصل شود. صف مسیرش را نگه می‌دارد.
       })
     }
-    await load()
+    await reload('attendance')
   }
 
   const sheetChild = day?.children.find((c) => c.id === sheetFor) ?? null
@@ -404,7 +456,7 @@ export function TodayPage({
         </div>
 
         <span className={`${styles.date} t-body-lg`}>{formatJalali(now, 'short')}</span>
-        <SyncBadge pending={pending} />
+        <SyncBadge pending={pending} live={liveStatus.state} />
 
         {/* بخش ۳.۲: جابه‌جایی بین حساب‌ها از منو، بدون خروج و ورود مجدد. */}
         <div className={styles.account}>
@@ -615,7 +667,7 @@ export function TodayPage({
                     onClick={() => {
                       void queue
                         .submit('text', () => data.receiveMedication(request.id, date))
-                        .then(() => load())
+                        .then(() => reload('medication'))
                         .catch((cause: unknown) => setError(messageOf(cause)))
                     }}
                   >
@@ -671,7 +723,7 @@ export function TodayPage({
                       onClick={() => {
                         void queue
                           .submit('text', () => data.markMedicationGiven(med.id))
-                          .then(() => load())
+                          .then(() => reload('medication'))
                           .catch((cause: unknown) => setError(messageOf(cause)))
                       }}
                     >
@@ -793,7 +845,7 @@ export function TodayPage({
                     onClick={() => {
                       void queue
                         .submit('text', () => data.addChildToday(child.id, date))
-                        .then(() => load())
+                        .then(() => reload('session_extra'))
                         .catch((cause: unknown) => setError(messageOf(cause)))
                     }}
                   >
@@ -848,7 +900,7 @@ export function TodayPage({
           child={checkOutChild}
           attendance={attendance.get(checkOutFor) ?? null}
           onClose={() => setCheckOutFor(null)}
-          onDone={() => void load()}
+          onDone={() => void reload('attendance')}
         />
       ) : null}
 
