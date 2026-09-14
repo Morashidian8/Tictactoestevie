@@ -231,12 +231,25 @@ export function TodayPage({
     [inSession, attendance, absences, now],
   )
 
+  /*
+   * گزارش‌های امروز، برای میکروآیکون‌های ناهار و خواب روی کارت.
+   *
+   * داده‌اش از قبل در ClassDay بود و کسی نگاهش نمی‌کرد: مربی برای
+   * فهمیدن اینکه ناهار سارا ثبت شده یا نه، باید به صفحه ثبت گروهی
+   * می‌رفت. حالا روی همان کارت است.
+   */
+  const reports = useMemo(
+    () => new Map((day?.reports ?? []).map((report) => [report.childId, report])),
+    [day],
+  )
+
   const toItems = useCallback(
     (list: ChildInSession[]): ChildGridItem[] =>
       list.map((child) => {
         const state = resolveState(child, attendance, absences, now)
         const row = attendance.get(child.id)
         const checkIn = row?.checkInAt ? new Date(row.checkInAt) : null
+        const report = reports.get(child.id)
         return {
           id: child.id,
           firstName: child.firstName,
@@ -247,6 +260,10 @@ export function TodayPage({
           flagged: child.addedException,
           flagLabel: 'استثنا',
           caption: checkIn ? formatTime(checkIn) : undefined,
+          // بخش ۷.۱: آلرژی در دید مربی، نه در پرونده کودک.
+          allergy: child.allergies.length > 0 ? child.allergies.join('، ') : null,
+          lunchLogged: report?.lunch != null,
+          napLogged: report?.napStart != null,
           actionLabel:
             state === 'present'
               ? `ثبت خروج ${child.firstName}`
@@ -255,7 +272,7 @@ export function TodayPage({
                 : `ثبت ورود ${child.firstName}`,
         }
       }),
-    [attendance, absences, now],
+    [attendance, absences, now, reports],
   )
 
   const items = useMemo(() => toItems(inSession), [toItems, inSession])

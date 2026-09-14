@@ -581,6 +581,8 @@ function childInSession(child: Child, at: Date, isExtra: boolean): ChildInSessio
     dayStart: dayStartFor(DAY_PERIODS, enrollment.attendanceType),
     dayEnd: dayEndFor(DAY_PERIODS, enrollment.attendanceType),
     addedException: isExtra,
+    // بخش ۷.۱: آلرژی همراه کودک می‌آید، نه پشت یک فراخوانی دیگر.
+    allergies: MEDICAL[child.id]?.allergies ?? [],
   }
 }
 

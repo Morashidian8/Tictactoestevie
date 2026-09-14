@@ -49,6 +49,22 @@ type Props = {
   /** نشان استثنا — تصمیم ۰۴ سند بررسی طراحی. */
   flagged?: boolean
   flagLabel?: string
+  /**
+   * شکل قاب.
+   *
+   * `circle` شکل تاریخی شبکه چهارستونه است. `rounded` مربعِ گوشه‌نرم
+   * بازطراحی کارت‌محور: در یک کارت افقی، عکس مربع لبه‌اش را با لبه کارت
+   * هم‌راستا می‌کند و دایره نمی‌کند.
+   */
+  shape?: 'circle' | 'rounded'
+  /**
+   * `frame` فقط قاب را می‌دهد: عکس، نشان حالت، نقطه استثنا.
+   *
+   * کارت، نام و ساعت را خودش کنار قاب می‌چیند نه زیرش، پس نمی‌تواند از
+   * چیدمان ستونی این کامپوننت استفاده کند. جدا کردنش بهتر از دو نسخه
+   * موازی از منطق نشان‌هاست.
+   */
+  layout?: 'stack' | 'frame'
 }
 
 export function ChildAvatar({
@@ -60,10 +76,15 @@ export function ChildAvatar({
   caption,
   flagged = false,
   flagLabel,
+  shape = 'circle',
+  layout = 'stack',
 }: Props) {
-  return (
-    <span className={styles.root}>
-      <span className={`${styles.frame} ${styles[size]} ${styles[state]}`}>
+  const frame = (
+    <span
+      className={`${styles.frame} ${styles[size]} ${styles[state]} ${
+        shape === 'rounded' ? styles.rounded : ''
+      }`}
+    >
         {photoUrl ? (
           <img className={styles.photo} src={photoUrl} alt="" />
         ) : (
@@ -75,7 +96,14 @@ export function ChildAvatar({
           شود. حالت حضور گوشه مقابل می‌نشیند، پس دو نشان با هم جا دارند.
         */}
         {flagged ? <span className={styles.flag} aria-hidden /> : null}
-      </span>
+    </span>
+  )
+
+  if (layout === 'frame') return frame
+
+  return (
+    <span className={styles.root}>
+      {frame}
 
       <span className={`${styles.name} t-body-lg`}>{firstName}</span>
       <span className={`${styles.caption} t-caption tabular`}>
@@ -89,8 +117,33 @@ export function ChildAvatar({
   )
 }
 
+/**
+ * نشان حالت روی گوشه عکس.
+ *
+ * در شبکه چهارستونه پیشین، حاضر و نیامده نشان نداشتند و حلقه دور آواتار
+ * کار تفکیک را می‌کرد. روی کارت، حلقه زیر سایه و مرز گم می‌شود، پس هر
+ * پنج حالت نشان خودشان را می‌گیرند:
+ *
+ *   حاضر      تیک روی پرکننده نعنایی — بلندترین نشانه شبکه
+ *   رفته      همان تیک، ولی روی سطح؛ کارت هم کم‌رنگ‌تر است
+ *   نیامده    دایره توخالی. چیزی نیفتاده، پس چیزی هم نباید جیغ بزند
+ *   غایب      ضربدر
+ *   بی‌خبر    نقطه آجری
+ *
+ * گلیف همیشه --ink است، حتی روی نعنایی: نسبتش ۷٫۰۴ است.
+ */
 function StateBadge({ state }: { state: AttendanceState }) {
-  if (state === 'present' || state === 'notArrived') return null
+  if (state === 'present') {
+    return (
+      <span className={`${styles.badge} ${styles.badgePresent}`} aria-hidden>
+        <CheckIcon size={12} />
+      </span>
+    )
+  }
+
+  if (state === 'notArrived') {
+    return <span className={`${styles.badge} ${styles.badgeHollow}`} aria-hidden />
+  }
 
   if (state === 'unaccounted') {
     return <span className={`${styles.badge} ${styles.badgeDot}`} aria-hidden />

@@ -100,14 +100,69 @@ describe('هیچ رنگ پرکننده‌ای متن نمی‌شود — بخش 
   })
 
   /*
-   * --brick استثناست: --ink رویش ۳٫۸۹ می‌دهد. پس آجری فقط زمینه متن
-   * درشت یا آیکون می‌شود، و پیام هشدار روی --brick-tint می‌نشیند نه
-   * روی خودِ --brick.
+   * آجری با --ink تازه (#0F172A) به ۴٫۷۴ رسید و دیگر استثنا نیست.
+   *
+   * ولی قاعده استفاده عوض نمی‌شود: پیام هشدار همچنان روی --brick-tint
+   * می‌نشیند، نه روی خودِ --brick. دلیلش این بار کنتراست نیست، لحن
+   * است — یک مستطیل قرمز پر، در صفحه‌ای که «رنگ رویداد است»، جیغ
+   * می‌زند.
    */
-  it('آجری برای متن عادی زمینه نمی‌شود، ولی تینتش می‌شود', () => {
-    expect(contrast(token('ink'), token('brick'))).toBeLessThan(TEXT_MIN)
-    expect(contrast(token('ink'), token('brick'))).toBeGreaterThanOrEqual(UI_MIN)
+  it('آجری هم مثل بقیه، با متن --ink کف را رد می‌کند', () => {
+    expect(contrast(token('ink'), token('brick'))).toBeGreaterThanOrEqual(TEXT_MIN)
     expect(contrast(token('ink'), token('brick-tint'))).toBeGreaterThanOrEqual(TEXT_MIN)
+  })
+
+  /*
+   * دکمه کنش اصلی گرادیانی شد. هر دو سرِ گرادیان باید با برچسب --ink
+   * از کف رد شوند، وگرنه وسط دکمه خوانا و لبه‌اش ناخوانا می‌ماند.
+   */
+  describe('گرادیان کنش اصلی', () => {
+    const GRADIENT_ENDS = ['#10B981', '#059669'] as const
+
+    it('برچسب --ink روی هر دو سرِ گرادیان قبول است', () => {
+      for (const end of GRADIENT_ENDS) {
+        expect(contrast(token('ink'), end)).toBeGreaterThanOrEqual(TEXT_MIN)
+      }
+    })
+
+    /*
+     * این تست دلیلِ نه گفتن به «متن سفید» را نگه می‌دارد. سند بازطراحی
+     * سفید خواسته بود؛ عدد اجازه نداد.
+     */
+    it('و سفید روی هیچ‌کدام قبول نیست — چرا برچسب سفید نشد', () => {
+      for (const end of GRADIENT_ENDS) {
+        expect(contrast('#FFFFFF', end)).toBeLessThan(TEXT_MIN)
+      }
+    })
+  })
+
+  /*
+   * تنها رنگی که حق گلیف شدن دارد، و فقط روی یک زمینه.
+   */
+  describe('--mint-deep، تنها استثنای قاعده گلیف', () => {
+    it('روی --mint-tint کف متن را رد می‌کند', () => {
+      expect(contrast(token('mint-deep'), token('mint-tint'))).toBeGreaterThanOrEqual(
+        TEXT_MIN,
+      )
+    })
+
+    it('و روی سفید و بوم هم می‌رد، ولی کاربردش عمداً همان یکی است', () => {
+      for (const ground of ['surface', 'paper'] as const) {
+        expect(contrast(token('mint-deep'), token(ground))).toBeGreaterThanOrEqual(TEXT_MIN)
+      }
+    })
+  })
+
+  /*
+   * میکروآیکون‌های فعالیت: رنگ لحن گلیف نمی‌شود.
+   *
+   * سند بازطراحی `text-emerald-600` و `text-amber-600` روی تینتشان
+   * خواسته بود. هر دو زیر کف‌اند و گلیف اینجا ۱۰ پیکسل است، یعنی
+   * بدترین حالت ممکن.
+   */
+  it('رنگ لحن روی تینت خودش گلیف نمی‌شود', () => {
+    expect(contrast('#059669', token('mint-tint'))).toBeLessThan(TEXT_MIN)
+    expect(contrast('#D97706', token('mango-tint'))).toBeLessThan(TEXT_MIN)
   })
 })
 
@@ -129,13 +184,22 @@ describe('استثناهای عمدی', () => {
 
   /*
    * چرا قاعده «روی تینت، متن --ink است» وجود دارد: --ink-muted روی
-   * هر چهار تینت زیر کف می‌ماند. این تست همان را ثبت می‌کند تا قاعده
-   * بی‌دلیل به نظر نرسد.
+   * تینت‌ها زیر کف می‌ماند.
+   *
+   * --mint-tint پس از روشن‌تر شدن به ۴٫۵۲ رسید، یعنی ۰٫۰۲ بالای کف.
+   * قاعده با این حال بی‌استثنا می‌ماند و همین تست حاشیه را نگه می‌دارد:
+   * اگر روزی تینت یک پله تیره‌تر شود، اینجا قرمز می‌شود نه در دست مربی.
    */
   it('متن ثانویه روی تینت‌ها کف را رد نمی‌کند، پس آنجا --ink می‌نشیند', () => {
-    for (const tint of [...TINTS, 'surface-warm'] as const) {
+    for (const tint of ['coral-tint', 'mango-tint', 'brick-tint', 'surface-warm'] as const) {
       expect(contrast(token('ink-muted'), token(tint))).toBeLessThan(TEXT_MIN)
     }
+  })
+
+  it('--mint-tint تنها تینتی است که مرز را رد می‌کند، و آن هم مویی', () => {
+    const ratio = contrast(token('ink-muted'), token('mint-tint'))
+    expect(ratio).toBeGreaterThanOrEqual(TEXT_MIN)
+    expect(ratio).toBeLessThan(4.7)
   })
 
   it('خط جداکننده تزئینی است و مرز کنترل نیست', () => {
@@ -152,10 +216,10 @@ describe('استثناهای عمدی', () => {
 describe('پالت با سند یکی است — بخش ۱۲.۲', () => {
   const spec = readFileSync(new URL('../../docs/spec.md', import.meta.url), 'utf8')
   const block = spec.slice(spec.indexOf('### ۱۲.۲ پالت رنگ'))
-  const wanted = [...block.matchAll(/--([a-z-]+):\s*(#[0-9A-Fa-f]{6})/g)].slice(0, 14)
+  const wanted = [...block.matchAll(/--([a-z-]+):\s*(#[0-9A-Fa-f]{6})/g)].slice(0, 16)
 
-  it('سند چهارده رنگ تعریف کرده', () => {
-    expect(wanted.length).toBe(14)
+  it('سند شانزده رنگ تعریف کرده', () => {
+    expect(wanted.length).toBe(16)
   })
 
   for (const [, name, value] of wanted) {

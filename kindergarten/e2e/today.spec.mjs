@@ -274,13 +274,150 @@ const shape = await page.evaluate(() => {
     hasIcon: el.querySelector('svg') !== null,
     gap: Math.round(m.top - f.bottom),
     bg: getComputedStyle(el).backgroundColor,
+    shadow: getComputedStyle(el).boxShadow,
+    iconColor: getComputedStyle(el.querySelector('svg')).color,
   }
 })
 check(shape.text === 'ثبت رویداد', 'برچسب فارسی کنار آیکون نوشته شده')
 check(shape.hasIcon, 'آیکون هم دارد، پس دکمه خالی نیست')
 check(shape.gap === 16, `فاصله ۱۶ تا کنش اصلی دارد (${shape.gap})`)
-check(shape.bg === 'rgb(30, 41, 59)', 'پس‌زمینه --ink است، نه آجری')
+/*
+ * بازطراحی کارت‌محور: کپسول سفید، نه بلوک تیره.
+ *
+ * دو چیز با هم باید درست باشند، وگرنه دکمه به متن تبدیل می‌شود:
+ * پس‌زمینه سفید، و سایه‌ای که بگوید این یک شیء شناور است.
+ */
+check(shape.bg === 'rgb(255, 255, 255)', 'پس‌زمینه سفید است، نه بلوک تیره')
+check(shape.shadow !== 'none', 'و سایه شناور دارد، وگرنه روی بوم گم می‌شود')
+/*
+ * آجری در این پالت یعنی «همین حالا چیزی شده». دکمه‌ای که تمام روز روی
+ * صفحه است نباید آن را بگوید.
+ */
+check(
+  shape.iconColor === 'rgb(15, 23, 42)',
+  `گلیف --ink است، نه آجری (${shape.iconColor})`,
+)
 await page.evaluate(() => window.scrollTo(0, 0))
+
+console.log('▸ بازطراحی کارت‌محور: شبکه دو ستونه، کارت مستقل')
+const cardLayout = await page.evaluate(() => {
+  const cards = [...document.querySelectorAll('ul li button[aria-label]')].filter((b) =>
+    /ثبت ورود|ثبت خروج|رفته/.test(b.getAttribute('aria-label') ?? ''),
+  )
+  const grid = cards[0]?.closest('ul')
+  const first = cards[0].getBoundingClientRect()
+  // دو کارت اول باید در یک سطر باشند، سومی در سطر بعد.
+  const second = cards[1].getBoundingClientRect()
+  const third = cards[2].getBoundingClientRect()
+  /*
+   * کارت کودکی که رفته، عمداً بی‌سایه و روی بوم می‌نشیند — پس معیار
+   * ظاهر کارت نیست. سنجش روی اولین کارتِ کودکی است که هنوز اینجاست.
+   */
+  const live =
+    cards.find((b) => !(b.getAttribute('aria-label') ?? '').includes('رفته')) ?? cards[0]
+  const style = getComputedStyle(live)
+  return {
+    columns: getComputedStyle(grid).gridTemplateColumns.split(' ').length,
+    sameRow: Math.abs(first.top - second.top) < 2,
+    nextRow: third.top > first.bottom - 2,
+    height: Math.round(first.height),
+    bg: style.backgroundColor,
+    shadow: style.boxShadow,
+    radius: style.borderRadius,
+    // عکس مربعِ گوشه‌نرم، نه دایره
+    photoRadius: getComputedStyle(live.querySelector('span[class*="frame"]')).borderRadius,
+  }
+})
+check(cardLayout.columns === 2, `شبکه دو ستونه است (${cardLayout.columns})`)
+check(cardLayout.sameRow && cardLayout.nextRow, 'دو کارت در هر سطر، سومی سطر بعد')
+/*
+ * سند بازطراحی ۸۸ تا ۹۶ خواسته. زیر ۸۸، سه سطر متن کارت به هم می‌چسبند؛
+ * بالای ۹۶، یک ردیف از هر پرده کم می‌شود.
+ */
+check(
+  cardLayout.height >= 88 && cardLayout.height <= 96,
+  `ارتفاع کارت در بازه ۸۸ تا ۹۶ است (${cardLayout.height})`,
+)
+check(cardLayout.bg === 'rgb(255, 255, 255)', 'کارت سفید خالص است')
+check(cardLayout.shadow !== 'none', 'و سایه دارد — همان چیزی که می‌گوید این را می‌شود زد')
+check(cardLayout.radius === '18px', `گوشه‌های نرم ۱۸ پیکسلی (${cardLayout.radius})`)
+check(
+  cardLayout.photoRadius === '16px',
+  `عکس مربعِ گوشه‌نرم است، نه دایره (${cardLayout.photoRadius})`,
+)
+
+/*
+ * بخش ۷.۱: «آلرژی غذایی باید همیشه در دید مربی باشد.»
+ * تا پیش از بازطراحی، فقط در پرونده کودک بود — دو ضربه دورتر از لحظه‌ای
+ * که مربی بشقاب را دستش می‌گیرد.
+ */
+const allergyCard = await page.evaluate(() => {
+  const card = [...document.querySelectorAll('ul li button[aria-label]')].find((b) =>
+    (b.getAttribute('aria-label') ?? '').includes('سارا'),
+  )
+  if (!card) return null
+  return {
+    badge: card.textContent.includes('آلرژی'),
+    reader: (card.querySelector('.sr-only')?.textContent ?? '').trim(),
+    topBorder: getComputedStyle(card).borderTopWidth,
+  }
+})
+check(allergyCard?.badge === true, 'کودک آلرژی‌دار روی کارتش بج آلرژی دارد')
+check(
+  allergyCard?.topBorder === '2px',
+  `و نوار آجری لبه بالا (${allergyCard?.topBorder})`,
+)
+// رنگ هرگز تنها حامل معنا نیست — بخش ۱۲.۲
+check(
+  /آلرژی: .+/.test(allergyCard?.reader ?? ''),
+  `صفحه‌خوان نام آلرژی را می‌خواند: ${(allergyCard?.reader ?? '').slice(0, 30)}`,
+)
+
+/*
+ * میکروآیکون‌های وضعیت روز. داده‌اش از قبل در ClassDay بود و کسی
+ * نگاهش نمی‌کرد.
+ */
+const micro = await page.evaluate(() => {
+  const card = [...document.querySelectorAll('ul li button[aria-label]')].find((b) =>
+    (b.getAttribute('aria-label') ?? '').includes('سارا'),
+  )
+  const acts = [...card.querySelectorAll('span[class*="activity"] > span')]
+  return {
+    count: acts.length,
+    // گلیف رنگی نمی‌شود: رنگ لحن روی تینت خودش برای ۱۲ پیکسل کافی نیست
+    colors: acts.map((a) => getComputedStyle(a).color),
+    reader: (card.querySelector('.sr-only')?.textContent ?? '').trim(),
+  }
+})
+check(micro.count === 2, `دو میکروآیکون روی کارت: ناهار و خواب (${micro.count})`)
+check(
+  micro.colors.every((c) => c === 'rgb(15, 23, 42)' || c === 'rgb(100, 116, 139)'),
+  `گلیف --ink یا --ink-muted است، نه رنگ لحن (${micro.colors.join(' · ')})`,
+)
+check(
+  micro.reader.includes('ناهار') && micro.reader.includes('خواب'),
+  'و هر دو برای صفحه‌خوان کلمه دارند، نه فقط رنگ',
+)
+
+/*
+ * هزینه صریح دو ستون، ثبت‌شده تا کسی بعداً غافلگیر نشود.
+ *
+ * چهار ستونه، حدود ۱۲ کودک در یک پرده دیده می‌شد. دو ستونه شش تا.
+ * برای صفحه «امروز» این معامله درست است چون مربی دنبال یک کودک مشخص
+ * می‌گردد نه مرور کل فهرست — ولی اگر روزی از یک پرده و نیم بگذرد،
+ * معامله دیگر درست نیست.
+ */
+const reach = await page.evaluate(() => {
+  const bar = document.querySelector('[class*="bar"]')?.getBoundingClientRect()
+  const usable = window.innerHeight - (bar?.height ?? 0)
+  window.scrollTo(0, document.documentElement.scrollHeight)
+  return { screens: window.scrollY / usable }
+})
+await page.evaluate(() => window.scrollTo(0, 0))
+check(
+  reach.screens <= 1.5,
+  `رسیدن به آخرین کودک زیر یک‌ونیم پرده می‌ماند (${reach.screens.toFixed(2)})`,
+)
 
 console.log('▸ تراشه «بی‌خبر» فهرست را باز می‌کند، بنر تکراری حذف شده')
 check(

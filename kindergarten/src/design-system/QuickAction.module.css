@@ -20,25 +20,39 @@
   margin-block-end: var(--space-4);
 }
 
+/*
+ * کنش اصلی — بازطراحی کارت‌محور.
+ *
+ * گرادیان نعنایی با درخششی هم‌رنگ خودش. دکمه تخت مرجانی کار می‌کرد
+ * ولی با کارت‌های سفیدِ حالا در یک صفحه، مسطح به نظر می‌رسید.
+ *
+ * برچسب --ink است، نه سفید. سفید روی #10B981 نسبت ۲٫۵۴ و روی #059669
+ * نسبت ۳٫۷۷ می‌دهد — هر دو زیر کف ۴٫۵ و در هیچ اندازه‌ای مجاز نیستند.
+ * --ink روی همان دو، ۷٫۰۴ و ۴٫۷۴ می‌دهد. گرادیان، ارتفاع، شعاع و
+ * درخشش همان‌اند که خواسته شده؛ فقط رنگ برچسب عوض شده، چون دکمه‌ای که
+ * خوانده نشود دکمه نیست.
+ */
 .button {
   inline-size: 100%;
   min-block-size: var(--touch-teacher);
-  border-radius: var(--r-input);
-  background: var(--coral);
+  border-radius: var(--r-action);
+  background: var(--grad-primary);
+  box-shadow: var(--glow-primary);
   color: var(--ink);
   font-weight: var(--weight-bold);
-  transition: background var(--motion-feedback) var(--easing);
+  transition:
+    transform var(--motion-feedback) var(--easing),
+    box-shadow var(--motion-feedback) var(--easing);
 }
 
-/*
- * بازخورد لمس. رنگ فشرده‌تری از --coral-dark در پالت نیست، پس حالت
- * فشرده با تیره‌تر شدن خودِ همان رنگ ساخته می‌شود، نه با رنگ تازه.
- */
+/* بازخورد لمس: درخشش جمع می‌شود، انگار دکمه به صفحه نزدیک شده. */
 .button:active:not(:disabled) {
-  filter: brightness(0.9);
+  transform: scale(0.98);
+  box-shadow: none;
 }
 
 .button:disabled {
   background: var(--disabled-bg);
+  box-shadow: none;
   color: var(--disabled-fg);
 }

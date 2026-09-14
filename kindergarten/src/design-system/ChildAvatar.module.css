@@ -88,11 +88,28 @@
   opacity: 0.6;
 }
 
-/* نشان وضعیت روی گوشه آواتار */
+/*
+ * قاب مربعِ گوشه‌نرم — بازطراحی کارت‌محور.
+ *
+ * در یک کارت افقی، لبه صافِ عکس با لبه کارت هم‌راستا می‌شود؛ دایره
+ * فضای گوشه را هدر می‌دهد و کارت را شلخته می‌کند.
+ */
+.rounded {
+  border-radius: var(--r-photo);
+  inline-size: var(--card-photo);
+  block-size: var(--card-photo);
+}
+
+/*
+ * نشان وضعیت روی گوشه آواتار.
+ *
+ * گوشه بیرونی می‌نشیند، نه گوشه‌ای که به متن نزدیک است: روی کارت، نام
+ * کودک کنار عکس است و نشان نباید رویش بیفتد.
+ */
 .badge {
   position: absolute;
   inset-block-end: -2px;
-  inset-inline-end: -2px;
+  inset-inline-start: -2px;
   inline-size: 20px;
   block-size: 20px;
   border-radius: var(--r-chip);
@@ -101,6 +118,21 @@
   background: var(--surface);
   border: 1.5px solid var(--border);
   color: var(--ink-muted);
+}
+
+/* حاضر: بلندترین نشانه شبکه. گلیف --ink روی نعنایی، نسبت ۷٫۰۴ */
+.badgePresent {
+  background: var(--mint);
+  border-color: var(--surface);
+  color: var(--ink);
+}
+
+/* نیامده: دایره توخالی. چیزی نیفتاده، پس چیزی هم نباید جیغ بزند */
+.badgeHollow {
+  inline-size: 14px;
+  block-size: 14px;
+  background: var(--surface);
+  border: 2px solid var(--border);
 }
 
 .badgeDot {
@@ -140,6 +172,7 @@
   position: absolute;
   inset-block-start: -2px;
   inset-inline-end: -2px;
+  /* قطر بیرونی همان است؛ گوشه قطری نسبت به نشان حالت، تا تداخل نکنند */
   inline-size: 10px;
   block-size: 10px;
   border-radius: var(--r-chip);

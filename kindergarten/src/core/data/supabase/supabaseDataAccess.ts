@@ -443,16 +443,26 @@ export function createSupabaseDataAccess(scope: AccessScope): DataAccess {
       if (!classRoom) throw new Error('کلاس پیدا نشد')
 
       const at = sameDayNow(date)
-      const [periodRows, enrollmentRows, shiftRows, extraRows] = await Promise.all([
-        from('day_period').order('sort_order'),
-        from('child_enrollment').eq('class_id', classId),
-        from('staff_shift').eq('class_id', classId),
-        from('session_extra').eq('class_id', classId).eq('date', date),
-      ])
+      const [periodRows, enrollmentRows, shiftRows, extraRows, medicalRows] =
+        await Promise.all([
+          from('day_period').order('sort_order'),
+          from('child_enrollment').eq('class_id', classId),
+          from('staff_shift').eq('class_id', classId),
+          from('session_extra').eq('class_id', classId).eq('date', date),
+          // بخش ۷.۱: آلرژی همراه روز می‌آید، نه پشت یک فراخوانی دیگر.
+          // یک درخواست بیشتر در صبح مهد، ارزان‌تر از دو ضربه در لحظه غذاست.
+          from('medical_profile'),
+        ])
       const periods = (orThrow(periodRows) as Row[]).map(asPeriod)
       const enrollments = (orThrow(enrollmentRows) as Row[]).map(asEnrollment)
       const extras = new Set(
         (orThrow(extraRows) as Row[]).map((r) => r.child_id as string),
+      )
+      const allergiesOf = new Map<string, string[]>(
+        (orThrow(medicalRows) as Row[]).map((r) => [
+          r.child_id as string,
+          (r.allergies_json as string[] | null) ?? [],
+        ]),
       )
 
       // فقط کودکانی که همین حالا در جلسه‌اند. پیش‌تر کل کلاس برمی‌گشت.
@@ -481,6 +491,7 @@ export function createSupabaseDataAccess(scope: AccessScope): DataAccess {
           dayStart: dayStartFor(periods, enrollment.attendanceType),
           dayEnd: dayEndFor(periods, enrollment.attendanceType),
           addedException: isExtra,
+          allergies: allergiesOf.get(child.id) ?? [],
         }]
       })
 

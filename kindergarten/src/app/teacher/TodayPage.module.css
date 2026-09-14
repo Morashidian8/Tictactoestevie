@@ -51,14 +51,17 @@
 }
 
 /* نوار خلاصه، همیشه دیده می‌شود */
+/*
+ * فیلترهای حضور و غیاب. روی بوم می‌نشینند، نه روی یک نوار سفید:
+ * نوار سفید زیر سرصفحه سفید، یک مرز اضافی می‌سازد که چیزی را جدا
+ * نمی‌کند.
+ */
 .tally {
   display: flex;
   align-items: center;
   gap: var(--space-2);
   flex-wrap: wrap;
-  padding: var(--space-3) var(--space-4);
-  background: var(--surface);
-  border-block-end: 1px solid var(--border);
+  padding: var(--space-1) var(--space-4) var(--space-2);
 }
 
 /* تراشه‌ای که فهرست را باز می‌کند. هدف لمسی کامل می‌گیرد. */
@@ -113,10 +116,21 @@
  * یادآور دارو — بخش ۵.۳. زعفرانی است چون «در انتظار» است، نه خطر.
  * خودِ نوار دکمه است تا جزئیات با یک ضربه باز شود.
  */
+/*
+ * یادآور دارو — بازطراحی کارت‌محور.
+ *
+ * پیش‌تر یک بلوک تمام‌تینت انبه‌ای بود. مشکلش این نبود که دیده نمی‌شد؛
+ * این بود که همیشه دیده می‌شد و چشم مربی به آن عادت می‌کرد. حالا کارت
+ * سفید است با یک لبه زعفرانی چهارپیکسلی: در فهرست سفید کارت‌ها، همان
+ * یک خط رنگی کافی است.
+ */
 .medication {
   margin: 0 var(--space-4) var(--space-4);
   border-radius: var(--r-card);
-  background: var(--mango-tint);
+  background: var(--surface);
+  border: 1px solid var(--card-border);
+  border-inline-start: 4px solid var(--mango);
+  box-shadow: var(--shadow-sm);
   color: var(--ink);
   overflow: hidden;
 }
@@ -135,12 +149,7 @@
   text-align: start;
 }
 
-.medicationMore {
-  margin-inline-start: auto;
-  color: var(--ink);
-  font-weight: var(--weight-bold);
-  flex: none;
-}
+
 
 .medicationList {
   list-style: none;
@@ -181,9 +190,27 @@
   font-weight: var(--weight-bold);
 }
 
+/* آیکون کپسول داخل یک دایره انبه‌ای ملایم. گلیف --ink می‌ماند. */
 .medicationIcon {
+  display: grid;
+  place-items: center;
+  inline-size: 36px;
+  block-size: 36px;
+  border-radius: var(--r-chip);
+  background: var(--mango-tint);
   color: var(--ink);
   flex: none;
+}
+
+/* «جزئیات» یک لینک متنی است، نه دکمه‌ای که با کارت رقابت کند. */
+.medicationMore {
+  margin-inline-start: auto;
+  color: var(--ink);
+  font-weight: var(--weight-bold);
+  flex: none;
+  text-decoration: underline;
+  text-decoration-color: var(--mango);
+  text-underline-offset: 3px;
 }
 
 .grid {
@@ -328,24 +355,35 @@
    مربی سر کار. سه عدد کوچک که با هم می‌گویند «الان چه خبر است»، و
    ساعت ۱۳ وقتی شبکه عوض می‌شود همین نوار توضیحش را داده است.
    ------------------------------------------------------------ */
+/*
+ * نوار بازه، به شکل تراشه شناور — بازطراحی کارت‌محور.
+ *
+ * پیش‌تر یک نوار پهن تمام‌عرض بود که مثل سرصفحه دوم به نظر می‌رسید و
+ * وزن بصری‌اش از خودِ شبکه بیشتر بود. حالا یک کپسول است که روی بوم
+ * می‌نشیند: همان اطلاعات، یک پله پایین‌تر در سلسله‌مراتب.
+ */
 .periodBar {
   display: flex;
-  align-items: baseline;
-  gap: var(--space-3);
+  align-items: center;
+  gap: var(--space-2);
   flex-wrap: wrap;
-  padding: var(--space-2) var(--space-4);
+  align-self: flex-start;
+  margin: var(--space-3) var(--space-4) var(--space-1);
+  min-block-size: 32px;
+  padding: 0 var(--space-3);
   /*
-   * کرم، نه مرجانی. مرجانی رنگ کنش است و نوار بازه خبر می‌دهد، کنش
-   * نیست — اگر مرجانی بگیرد، دو مرجانی در یک صفحه می‌شود.
+   * خاکستری سرد، نه کرم و نه مرجانی. مرجانی رنگ کنش است و تراشه خبر
+   * می‌دهد؛ کرم روی بوم تازه گِل‌آلود می‌نشیند.
    */
-  background: var(--surface-warm);
-  border-block-end: 1px solid var(--border);
+  background: var(--card-border);
+  border-radius: var(--r-chip);
   color: var(--ink);
 }
 
 .periodName {
   color: var(--ink);
   font-weight: var(--weight-bold);
+  font-size: 14px;
 }
 
 .periodCount,
@@ -353,8 +391,15 @@
   color: var(--ink-muted);
 }
 
-.periodStaff {
-  margin-inline-start: auto;
+/*
+ * جداکننده نقطه‌ای به‌جای فاصله: در یک کپسول، سه تکه متن بدون جداکننده
+ * یک جمله بریده به نظر می‌رسند.
+ */
+.periodCount::before,
+.periodStaff::before {
+  content: '·';
+  margin-inline-end: var(--space-2);
+  color: var(--ink-muted);
 }
 
 /* نسبت مربی به کودک از حد گذشته — بخش ۷.۲. آجر، چون ایمنی است. */

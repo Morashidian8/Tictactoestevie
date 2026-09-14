@@ -93,29 +93,45 @@
  *    حدس بزند این دکمه چه می‌کند؛ بخش ۱۲.۱۰ می‌گوید دکمه دقیقاً بگوید چه
  *    اتفاقی می‌افتد.
  */
+/*
+ * «ثبت رویداد» — بازطراحی کارت‌محور.
+ *
+ * پیش‌تر یک کپسول سرمه‌ای پُر بود. کنار دکمه کنش اصلی، دو مستطیل تیره
+ * پشت سر هم می‌شد و چشم نمی‌فهمید کدام کنش اصلی است.
+ *
+ * حالا کپسول سفید با سایه شناور عمیق: در سلسله‌مراتب یک پله پایین‌تر
+ * از کنش اصلی می‌نشیند، ولی با آن سایه هنوز «دکمه» دیده می‌شود نه متن.
+ *
+ * آیکون هم --ink شد. آجری روی سفید ۳٫۷۶ می‌دهد که برای گلیف کافی است،
+ * ولی این دکمه هر روز و تمام روز روی صفحه است و رنگ آجری در این پالت
+ * یعنی «همین حالا چیزی شده». ثبت رویداد یک راه است، نه یک رویداد.
+ */
 .fab {
   min-block-size: var(--touch-teacher);
   padding-inline: var(--space-4);
   border-radius: var(--r-chip);
-  background: var(--ink);
-  color: var(--surface);
+  background: var(--surface);
+  border: 1px solid var(--card-border);
+  color: var(--ink);
   font-weight: var(--weight-bold);
   font-size: var(--text-body-lg);
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
-  /*
-   * آیکون از خانواده آجر است ولی خودِ --brick روی --ink فقط ۲.۶۶ کنتراست
-   * می‌دهد، زیر کف ۳:۱ عناصر رابط. --brick-tint همان لحن گرم را دارد و
-   * روی زمینه تیره خوانا است. متن سفید می‌ماند.
-   */
   box-shadow: var(--shadow-lg);
+  transition:
+    transform var(--motion-feedback) var(--easing),
+    box-shadow var(--motion-feedback) var(--easing);
 }
 
 .fabIcon {
-  color: var(--brick-tint);
+  color: var(--ink);
   display: inline-grid;
   place-items: center;
   flex: none;
 }
-.fab:active { filter: brightness(1.25); }
+
+.fab:active {
+  transform: scale(0.98);
+  box-shadow: var(--shadow-sm);
+}
