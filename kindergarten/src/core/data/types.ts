@@ -435,6 +435,8 @@ export type Invoice = {
   status: InvoiceStatus
 }
 
+export type PaymentMethod = 'online' | 'manual_receipt' | 'cash' | 'cheque'
+
 export type Payment = {
   id: string
   invoiceId: string
@@ -442,7 +444,38 @@ export type Payment = {
   paidAt: string
   method: string | null
   receiptNo: string | null
+  /** آنلاین یا یکی از مسیرهای فرعی — ارتقای ۱ سند بررسی طراحی. */
+  paymentMethod?: PaymentMethod
+  /** کد رهگیری، فقط برای پرداخت آنلاین تأییدشده. */
+  trackingCode?: string | null
 }
+
+/* ── درگاه پرداخت — ارتقای ۱ سند بررسی طراحی ─────────────────── */
+
+/**
+ * تراکنشی که تازه باز شده و کاربر باید به درگاه برود.
+ *
+ * `redirectUrl` جایی است که والد فرستاده می‌شود. `key` کلید ضدتکرار
+ * است و همان است که وب‌هوک با آن برمی‌گردد.
+ */
+export type PaymentIntent = {
+  paymentId: string
+  key: string
+  redirectUrl: string
+  amount: number
+  psp: string
+}
+
+/**
+ * نتیجه تأیید، از دید والد.
+ *
+ * `pending` یعنی هنوز خبری نرسیده — نه موفق، نه ناموفق. این حالت واقعی
+ * است و باید متن خودش را داشته باشد، وگرنه والد فکر می‌کند پولش رفته.
+ */
+export type PaymentResult =
+  | { state: 'paid'; trackingCode: string; amount: number }
+  | { state: 'failed'; reason: string }
+  | { state: 'pending' }
 
 /**
  * نمای مالی مدیر — بخش ۸.
@@ -962,6 +995,19 @@ export interface DataAccess {
 
   /** نمای مالی خانواده. فقط سرپرست پرداخت‌کننده — بخش ۶.۵. */
   getParentFinance(childId: string): Promise<ParentFinance>
+
+  /* ── درگاه پرداخت — ارتقای ۱ ──────────────────────────────── */
+
+  /** تراکنش را باز می‌کند و نشانی درگاه را می‌دهد. پرداخت نیست. */
+  startOnlinePayment(invoiceId: string): Promise<PaymentIntent>
+
+  /**
+   * وضعیت تراکنش را از سرور می‌پرسد.
+   *
+   * بازگشت مرورگر سند نیست؛ این تابع است که می‌گوید چه شد. تا وقتی
+   * پاسخ `pending` است، صورتحساب دست‌نخورده می‌ماند.
+   */
+  checkOnlinePayment(key: string): Promise<PaymentResult>
 
   /* ── پرونده کودک — ماژول M1 ───────────────────────────────── */
 

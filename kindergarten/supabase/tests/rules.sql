@@ -723,3 +723,68 @@ begin
   select * into line from app.audit_health(centre) where full_name = line.full_name limit 1;
   perform assert(line.allergies is not null, 'جدول سلامت آلرژی را «ندارد» می‌نویسد، نه خالی');
 end $$;
+
+\echo ''
+\echo '── درگاه پرداخت: تا تأیید سمت سرور، پرداختی وجود ندارد ──'
+do $$
+declare
+  centre  uuid := '11111111-1111-1111-1111-111111111111';
+  sara    uuid := 'd1111111-1111-1111-1111-111111111111';
+  bill    uuid;
+  pay     uuid;
+  again   uuid;
+  blocked boolean := false;
+begin
+  insert into invoice (center_id, child_id, period, amount, due_date)
+  values (centre, sara, '1404-12', 5000000, current_date + 7)
+  returning id into bill;
+
+  -- ۱. تراکنش باز می‌شود. هنوز پرداختی نیست.
+  insert into payment (center_id, invoice_id, amount, payment_method, idempotency_key)
+  values (centre, bill, 5000000, 'online', 'idem-a1')
+  returning id into pay;
+  perform assert(
+    (select gateway_state from payment where id = pay) = 'pending',
+    'تراکنش آنلاین در حالت انتظار باز می‌شود'
+  );
+  perform assert(app.invoice_paid(bill) = 0, 'و در مانده صورتحساب هیچ سهمی ندارد');
+
+  -- ۲. دست‌کاری مستقیم به verified بی verified_at رد می‌شود.
+  begin
+    update payment set gateway_state = 'verified' where id = pay;
+  exception when others then
+    blocked := true;
+  end;
+  perform assert(blocked, 'تأییدشده کردنِ دستی، بدون تأیید سمت سرور رد می‌شود');
+
+  -- ۳. مسیر درست: verify واسط.
+  pay := app.verify_online_payment('idem-a1', 'ZBL-9001', '770001234');
+  perform assert(
+    (select verified_at is not null and tracking_code = '770001234' from payment where id = pay),
+    'با تأیید واسط، پرداخت ثبت و کد رهگیری صادر می‌شود'
+  );
+  perform assert(app.invoice_paid(bill) = 5000000, 'و تازه آن‌وقت در مانده می‌نشیند');
+
+  -- ۴. رسیدن دوباره وب‌هوک: همان ردیف، نه پرداخت دوم.
+  again := app.verify_online_payment('idem-a1', 'ZBL-9001', '770001234');
+  perform assert(again = pay, 'وب‌هوک تکراری همان ردیف را برمی‌گرداند');
+  perform assert(
+    (select count(*) from payment where invoice_id = bill) = 1,
+    'و پرداخت دوم نمی‌سازد'
+  );
+
+  -- ۵. تراکنش ناموفق در مانده سهمی ندارد.
+  insert into payment (center_id, invoice_id, amount, payment_method, idempotency_key)
+  values (centre, bill, 1000000, 'online', 'idem-a2');
+  perform app.fail_online_payment('idem-a2');
+  perform assert(
+    (select gateway_state from payment where idempotency_key = 'idem-a2') = 'failed',
+    'تراکنش ناموفق نشانه‌گذاری می‌شود'
+  );
+  perform assert(app.invoice_paid(bill) = 5000000, 'و مانده را تکان نمی‌دهد');
+
+  -- ۶. ثبت دستی مسیر فرعی می‌ماند و بی‌درنگ می‌نشیند.
+  insert into payment (center_id, invoice_id, amount, payment_method, receipt_no)
+  values (centre, bill, 500000, 'manual_receipt', 'R-1');
+  perform assert(app.invoice_paid(bill) = 5500000, 'ثبت دستی همچنان کار می‌کند');
+end $$;

@@ -39,6 +39,8 @@ import type {
   MedicationRequest,
   AuditFile,
   AuditReadiness,
+  PaymentIntent,
+  PaymentResult,
   ReportPatch,
 } from '../types.ts'
 import { isInCurrentWeek } from '../../../i18n/week.ts'
@@ -126,6 +128,32 @@ type StoredDay = {
  */
 const MED_REQUESTS: MedicationRequest[] = []
 
+/**
+ * تراکنش‌های باز درگاه — ارتقای ۱ سند بررسی طراحی.
+ *
+ * جدا از PAYMENTS نگه داشته می‌شوند و همین نکته اصلی است: تراکنشِ
+ * تأییدنشده پرداخت نیست و نباید در هیچ جمعی بیاید. فقط وقتی تأیید
+ * سمت سرور رسید، یک ردیف در PAYMENTS ساخته می‌شود.
+ */
+type PendingPayment = {
+  key: string
+  invoiceId: string
+  amount: number
+  psp: string
+  state: 'pending' | 'verified' | 'failed'
+  /**
+   * چند بار وضعیت پرسیده شده.
+   *
+   * نسخه نمایشی باید حالت «در انتظار» را هم نشان بدهد، چون در واقعیت
+   * وب‌هوک گاهی دیر می‌رسد. ولی این نباید به ساعت دیواری بسته باشد:
+   * تستی که ساعت را ثابت می‌کند هرگز از انتظار بیرون نمی‌آمد.
+   */
+  asked: number
+  trackingCode?: string
+}
+
+const GATEWAY: PendingPayment[] = []
+
 function save(): void {
   try {
     const payload = {
@@ -153,6 +181,7 @@ function save(): void {
       amendments: AMENDMENTS,
       claims: CLAIMS,
       medRequests: MED_REQUESTS,
+      gateway: GATEWAY,
       extras: [...EXTRA_TODAY.entries()].map(([k, v]) => [k, [...v]] as [string, string[]]),
       smsUsed,
     }
@@ -180,6 +209,7 @@ function hydrate(): void {
       amendments?: Amendment[]
       claims?: PaymentClaim[]
       medRequests?: MedicationRequest[]
+      gateway?: PendingPayment[]
       extras?: [string, string[]][]
       smsUsed?: number
     }
@@ -220,6 +250,7 @@ function hydrate(): void {
     restore(AMENDMENTS, payload.amendments)
     restore(CLAIMS, payload.claims)
     restore(MED_REQUESTS, payload.medRequests)
+    restore(GATEWAY, payload.gateway)
     for (const [k, v] of payload.extras ?? []) EXTRA_TODAY.set(k, new Set(v))
     if (typeof payload.smsUsed === 'number') smsUsed = payload.smsUsed
   } catch {
@@ -1570,6 +1601,95 @@ export function createLocalDataAccess(scope: AccessScope): DataAccess {
         payments: PAYMENTS.filter((p) => ids.has(p.invoiceId)),
         claims: CLAIMS.filter((c) => c.childId === childId),
         outstanding,
+      }
+    },
+
+    /* ── درگاه پرداخت — ارتقای ۱ ────────────────────────────── */
+
+    /**
+     * تراکنش را باز می‌کند. **پرداخت نیست.**
+     *
+     * در پیاده‌سازی واقعی اینجا به واسط (زیبال، وندار، زرین‌پال) وصل
+     * می‌شود و نشانی درگاهش برمی‌گردد. اینجا نسخه نمایشی است، ولی
+     * قاعده معماری همان است: ردیف با حالت انتظار ساخته می‌شود و تا
+     * تأیید سمت سرور در هیچ جمعی نمی‌آید.
+     */
+    async startOnlinePayment(invoiceId): Promise<PaymentIntent> {
+      const row = INVOICES.find((r) => r.id === invoiceId)
+      if (!row) throw new Error('صورتحساب پیدا نشد.')
+      assertOwnChild(row.childId)
+
+      const invoice = invoiceOf(row)
+      const due = invoice.amount - invoice.discount + invoice.lateFee - invoice.paid
+      if (due <= 0) throw new Error('این صورتحساب تسویه شده است.')
+
+      const key = `idem-${Math.random().toString(36).slice(2, 12)}`
+      const pending: PendingPayment = {
+        key,
+        invoiceId,
+        amount: due,
+        psp: 'zibal',
+        state: 'pending',
+        asked: 0,
+      }
+      GATEWAY.push(pending)
+      save()
+      return {
+        paymentId: key,
+        key,
+        redirectUrl: `https://gateway.zibal.ir/start/${key}`,
+        amount: due,
+        psp: 'zibal',
+      }
+    },
+
+    /**
+     * وضعیت تراکنش، از سرور.
+     *
+     * بازگشت مرورگر سند نیست. در نسخه نمایشی، تراکنش سه ثانیه پس از
+     * باز شدن «تأیید» می‌شود تا حالت انتظار هم قابل دیدن باشد — همان
+     * حالتی که در واقعیت وقتی وب‌هوک دیر می‌رسد پیش می‌آید.
+     */
+    async checkOnlinePayment(key): Promise<PaymentResult> {
+      const pending = GATEWAY.find((g) => g.key === key)
+      if (!pending) return { state: 'failed', reason: 'تراکنشی با این شناسه پیدا نشد.' }
+      if (pending.state === 'failed') {
+        return { state: 'failed', reason: 'پرداخت انجام نشد. مبلغی از حساب شما کم نشده.' }
+      }
+      if (pending.state === 'pending') {
+        // پرسش اول «در انتظار» است، دومی تأییدشده — بی وابستگی به ساعت.
+        pending.asked += 1
+        if (pending.asked < 2) {
+          save()
+          return { state: 'pending' }
+        }
+        pending.state = 'verified'
+        /*
+         * کد رهگیری فقط رقم است، نه حروف.
+         *
+         * واسط‌های واقعی (زیبال، وندار) هم شماره برمی‌گردانند. مهم‌تر
+         * اینکه رابط ارقام را فارسی نشان می‌دهد؛ کدی که حرف لاتین
+         * داشته باشد نیمه‌فارسی می‌شود و والد نمی‌تواند برای بانک
+         * بخواندش.
+         */
+        pending.trackingCode = String(Math.floor(100000000 + Math.random() * 899999999))
+        PAYMENTS.push({
+          id: `pay-${Math.random().toString(36).slice(2, 10)}`,
+          invoiceId: pending.invoiceId,
+          amount: pending.amount,
+          paidAt: new Date().toISOString(),
+          method: 'online',
+          receiptNo: null,
+          paymentMethod: 'online',
+          trackingCode: pending.trackingCode,
+        })
+        // وضعیت صورتحساب از جمع پرداخت‌ها ساخته می‌شود، پس همین کافی است.
+        save()
+      }
+      return {
+        state: 'paid',
+        trackingCode: pending.trackingCode ?? '—',
+        amount: pending.amount,
       }
     },
 

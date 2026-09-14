@@ -1079,6 +1079,63 @@ check(
   'و اعلام از صف رفت',
 )
 
+console.log('▸ ارتقای ۱: پرداخت آنلاین، تا کد رهگیری')
+/*
+ * قاعده سفت معماری: وضعیت صورتحساب فقط با تأیید سمت سرور عوض می‌شود،
+ * هرگز با بازگشت مرورگر. پس شیت پس از بازگشت «پرداخت شد» نمی‌گوید؛
+ * می‌پرسد.
+ */
+await signIn('09120000002')
+await page.waitForSelector('text=با کدام حساب وارد می‌شوید؟')
+await page.locator('button:has-text("مریم رضایی")').nth(1).click()
+await page.waitForSelector('text=وضعیت ثبت', { timeout: 10000 })
+await page.click('button:has-text("مالی")')
+await page.waitForSelector('text=شهریه‌ها')
+await page.click('button:has-text("صدور گروهی")')
+await page.waitForSelector('text=/صورتحساب صادر شد/')
+await page.locator('[aria-label="بازگشت به داشبورد"]').click()
+await page.waitForSelector('text=وضعیت ثبت')
+
+await signOutAny()
+await signIn('09120000003', { fresh: false })
+await page.waitForSelector('[class*="dateLine"]', { timeout: 8000 })
+await page.click('button:has-text("بیشتر")')
+await page.click('button:has-text("مالی")')
+await page.waitForSelector('text=مانده')
+await page.waitForTimeout(500)
+check(
+  (await page.locator('button:has-text("پرداخت آنلاین")').count()) >= 1,
+  'پرداخت آنلاین کنش اصلی کارت صورتحساب است',
+)
+check(
+  (await page.locator('button:has-text("پرداخت کردم، ولی نه از اینجا")').count()) >= 1,
+  'و ثبت دستی فیش به مسیر فرعی تبدیل شده، نه حذف',
+)
+
+await page.locator('button:has-text("پرداخت آنلاین")').first().click()
+await page.waitForSelector('[role="dialog"]')
+await page.click('button:has-text("رفتن به درگاه")')
+await page.waitForTimeout(400)
+await page.click('button:has-text("بازگشت از درگاه")')
+check(
+  (await page.locator('text=در حال تأیید پرداخت').count()) === 1,
+  'بازگشت از درگاه «پرداخت شد» نمی‌گوید، می‌پرسد',
+)
+await page.waitForSelector('text=/کد رهگیری/', { timeout: 15000 })
+const receipt = await page.locator('[role="dialog"]').innerText()
+check(/تأیید شد/.test(receipt), 'پس از تأیید سرور، پرداخت ثبت می‌شود')
+check(/کد رهگیری/.test(receipt), 'و رسید دیجیتال با کد رهگیری صادر می‌شود')
+await page.click('button:has-text("بستن")')
+await page.waitForTimeout(800)
+check(
+  (await page.locator('button:has-text("پرداخت آنلاین")').count()) === 0,
+  'و صورتحساب تسویه‌شده دیگر دکمه پرداخت ندارد',
+)
+await page.locator('[aria-label="بازگشت"]').first().click()
+await page.waitForTimeout(300)
+await page.locator('[aria-label="بازگشت"]').first().click()
+await page.waitForTimeout(400)
+
 console.log('▸ ارتقای ۲: پرونده بازرسی')
 await signIn('09120000002')
 await page.waitForSelector('text=با کدام حساب وارد می‌شوید؟')

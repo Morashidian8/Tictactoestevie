@@ -30,6 +30,8 @@ import type {
   AuditChildRow,
   AuditHealthRow,
   AuditStaffRow,
+  PaymentIntent,
+  PaymentResult,
   Notice,
   NoticeAudience,
   NoticeInput,
@@ -1795,6 +1797,59 @@ export function createSupabaseDataAccess(scope: AccessScope): DataAccess {
         outstanding: invoices
           .filter((i) => i.status !== 'paid' && i.status !== 'cancelled')
           .reduce((sum, i) => sum + (i.amount - i.discount + i.lateFee - i.paid), 0),
+      }
+    },
+
+    /* ── درگاه پرداخت — ارتقای ۱ ────────────────────────────── */
+
+    /**
+     * تراکنش را باز می‌کند و نشانی درگاه را می‌دهد.
+     *
+     * ردیف با حالت انتظار ساخته می‌شود و تریگر پایگاه داده تضمین
+     * می‌کند تا تأیید سمت سرور در مانده صورتحساب سهمی نداشته باشد.
+     * نشانی درگاه از تابع لبه (edge function) می‌آید، نه از کلاینت:
+     * کلید واسط پرداخت هرگز نباید به مرورگر برسد.
+     */
+    async startOnlinePayment(invoiceId): Promise<PaymentIntent> {
+      const row = orThrow(
+        await db.rpc('start_online_payment', { invoice: invoiceId }),
+      ) as Row
+      return {
+        paymentId: row.payment_id as string,
+        key: row.idempotency_key as string,
+        redirectUrl: row.redirect_url as string,
+        amount: row.amount as number,
+        psp: row.psp as string,
+      }
+    },
+
+    /**
+     * وضعیت تراکنش، از سرور.
+     *
+     * بازگشت مرورگر سند نیست — این پرس‌وجو است که می‌گوید چه شد. تا
+     * وقتی verified_at پر نشده، پاسخ «در انتظار» است و صورتحساب
+     * دست‌نخورده می‌ماند.
+     */
+    async checkOnlinePayment(key): Promise<PaymentResult> {
+      const rows = orThrow(
+        await db
+          .from('payment')
+          .select('amount, tracking_code, gateway_state, verified_at')
+          .eq('center_id', scope.centerId)
+          .eq('idempotency_key', key)
+          .limit(1),
+      ) as Row[]
+
+      const row = rows[0]
+      if (!row) return { state: 'failed', reason: 'تراکنشی با این شناسه پیدا نشد.' }
+      if (row.gateway_state === 'failed') {
+        return { state: 'failed', reason: 'پرداخت انجام نشد. مبلغی از حساب شما کم نشده.' }
+      }
+      if (!row.verified_at) return { state: 'pending' }
+      return {
+        state: 'paid',
+        trackingCode: (row.tracking_code as string | null) ?? '—',
+        amount: row.amount as number,
       }
     },
 

@@ -158,14 +158,20 @@
 .invoice { display: flex; flex-direction: column; gap: var(--space-2); }
 .invoice + .invoice { border-block-start: 1px solid var(--border); padding-block-start: var(--space-2); }
 
+/*
+ * مسیر فرعی — ارتقای ۱.
+ *
+ * تا پیش از درگاه، این کنش اصلی کارت بود. حالا زیر «پرداخت آنلاین»
+ * می‌نشیند و مرزش خنثی است، نه مرجانی: هم‌وزن نیست و نباید به نظر
+ * برسد.
+ */
 .declare {
   min-block-size: var(--touch-parent);
-  border: 1px solid var(--coral);
+  border: 1px solid var(--border-input);
   border-radius: var(--r-input);
   background: var(--surface);
   color: var(--ink);
   font-family: inherit;
-  font-size: var(--text-body);
   font-weight: var(--weight-bold);
 }
 
@@ -344,4 +350,64 @@
   font-family: inherit;
   font-weight: var(--weight-bold);
   margin-block-end: var(--space-4);
+}
+
+/* ------------------------------------------------------------
+   پرداخت آنلاین — ارتقای ۱ سند بررسی طراحی
+
+   کنش اصلی کارت صورتحساب. «پرداخت کردم، ولی نه از اینجا» زیرش و
+   کوچک‌تر می‌نشیند: مسیر فرعی است، نه هم‌وزن.
+   ------------------------------------------------------------ */
+.payOnline {
+  inline-size: 100%;
+  min-block-size: var(--touch-parent);
+  margin-block-start: var(--space-3);
+  border: none;
+  border-radius: var(--r-input);
+  background: var(--coral);
+  color: var(--ink);
+  font-family: inherit;
+  font-weight: var(--weight-bold);
+}
+
+.payAmount {
+  margin: var(--space-2) 0 0;
+  color: var(--ink);
+  font-weight: var(--weight-black);
+  font-variant-numeric: tabular-nums;
+}
+
+.payDone {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: var(--space-2) 0 0;
+  color: var(--ink);
+  font-weight: var(--weight-bold);
+}
+
+/*
+ * کد رهگیری. تنها چیزی که والد ممکن است بخواهد یادداشت کند یا بخواند،
+ * پس درشت‌تر و با ارقام هم‌عرض.
+ */
+.trackingCode {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--mint);
+  border-radius: var(--r-input);
+  background: var(--mint-tint);
+  color: var(--ink);
+  font-weight: var(--weight-bold);
+  font-variant-numeric: tabular-nums;
+}
+
+.ghost {
+  inline-size: 100%;
+  min-block-size: var(--touch-parent);
+  border: 1px solid var(--border-input);
+  border-radius: var(--r-input);
+  background: var(--surface);
+  color: var(--ink);
+  font-family: inherit;
+  font-weight: var(--weight-bold);
 }
