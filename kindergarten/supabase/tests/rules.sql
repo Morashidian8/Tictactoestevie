@@ -657,3 +657,69 @@ begin
     'و درخواست لغوشده از فهرست بیرون می‌رود'
   );
 end $$;
+
+\echo ''
+\echo '── پرونده بازرسی: سه جدول، و آمادگی پیش از بازرسی ──'
+do $$
+declare
+  centre uuid := '11111111-1111-1111-1111-111111111111';
+  sara   uuid := 'd1111111-1111-1111-1111-111111111111';
+  worker uuid;
+  ready  record;
+  line   record;
+begin
+  select id into worker from staff where center_id = centre limit 1;
+
+  -- ۱. آمادگی: هر سه عدد باید وضعیت واقعی را بگویند.
+  select * into ready from app.audit_readiness(centre);
+  perform assert(
+    ready.incomplete_vaccination > 0,
+    format('کودکان با واکسیناسیون ناقص شمرده می‌شوند (%s)', ready.incomplete_vaccination)
+  );
+  perform assert(
+    ready.missing_national_id > 0,
+    format('کودکان بدون کد ملی شمرده می‌شوند (%s)', ready.missing_national_id)
+  );
+  perform assert(
+    ready.expiring_health_cards > 0,
+    'مربی بدون کارت بهداشت هم شمرده می‌شود، نه فقط منقضی'
+  );
+
+  -- ۲. با پر شدن داده، عددها پایین می‌آیند.
+  update child set national_id = '0012345678' where id = sara;
+  insert into medical_profile (child_id, center_id, vaccination_status, vaccination_updated_at)
+  values (sara, centre, 'complete', current_date)
+  on conflict (child_id) do update
+    set vaccination_status = 'complete', vaccination_updated_at = current_date;
+
+  select * into ready from app.audit_readiness(centre);
+  perform assert(
+    ready.missing_national_id = 1,
+    format('و با ثبت کد ملی یکی، عدد یکی کم می‌شود (%s)', ready.missing_national_id)
+  );
+
+  -- ۳. کارت بهداشت: سه حالت، و «نزدیک انقضا» جدا از «منقضی».
+  update staff set health_card_number = 'HC-1',
+                   health_card_issued_at = current_date - 300,
+                   health_card_expires_at = current_date + 10
+  where id = worker;
+  select * into line from app.audit_staff(centre) where card_number = 'HC-1';
+  perform assert(line.card_state = 'نزدیک انقضا', format('کارت ده‌روزه «نزدیک انقضا» است (%s)', line.card_state));
+
+  update staff set health_card_expires_at = current_date - 1 where id = worker;
+  select * into line from app.audit_staff(centre) where card_number = 'HC-1';
+  perform assert(line.card_state = 'منقضی', 'و کارت گذشته «منقضی»');
+
+  update staff set health_card_expires_at = current_date + 200 where id = worker;
+  select * into line from app.audit_staff(centre) where card_number = 'HC-1';
+  perform assert(line.card_state = 'معتبر', 'و کارت دوروز «معتبر»');
+
+  -- ۴. جدول کودکان: نام سرپرست و شماره‌اش می‌آید، چون بازرس زنگ می‌زند.
+  select * into line from app.audit_children(centre) where national_id = '0012345678';
+  perform assert(line.full_name is not null, 'دفتر آمار نام کودک را دارد');
+  perform assert(line.guardian_name is not null, 'و نام سرپرست را');
+
+  -- ۵. جدول سلامت: آلرژی نداشته «ندارد» است، نه خالی.
+  select * into line from app.audit_health(centre) where full_name = line.full_name limit 1;
+  perform assert(line.allergies is not null, 'جدول سلامت آلرژی را «ندارد» می‌نویسد، نه خالی');
+end $$;

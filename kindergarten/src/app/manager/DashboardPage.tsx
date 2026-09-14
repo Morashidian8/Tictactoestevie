@@ -65,6 +65,25 @@ export function DashboardPage({ onGo }: { onGo: (page: ManagerPage) => void }) {
     void load()
   }, [load])
 
+  /*
+   * آمادگی بازرسی — ارتقای ۲.
+   *
+   * مدیر باید هفته‌ها پیش از بازرسی بداند کجا لنگ است. عدد روی دکمه
+   * بازرسی همان است: کارت واکسیناسیون ناقص، کد ملی ثبت‌نشده، و کارت
+   * بهداشت نزدیک انقضا.
+   */
+  const [gaps, setGaps] = useState(0)
+  useEffect(() => {
+    data
+      .getAuditReadiness()
+      .then((ready) =>
+        setGaps(
+          ready.incompleteVaccination + ready.missingNationalId + ready.expiringHealthCards,
+        ),
+      )
+      .catch(() => setGaps(0))
+  }, [data])
+
   const decide = async (incidentId: string, decision: IncidentDecision) => {
     setBusy(incidentId)
     try {
@@ -272,6 +291,15 @@ export function DashboardPage({ onGo }: { onGo: (page: ManagerPage) => void }) {
               <PeopleIcon />
               <span>کودکان</span>
             </button>
+            {/*
+              ارتقای ۲: پرونده بازرسی.
+              نشان عددی وقتی می‌آید که کاری هست — روز بازرسی دیر است.
+            */}
+            <button type="button" className={styles.navItem} onClick={() => onGo('audit')}>
+              <FolderIcon />
+              <span>بازرسی</span>
+              {gaps > 0 ? <span className={styles.navBadge}>{formatCount(gaps)}</span> : null}
+            </button>
           </div>
         }
       >
@@ -298,6 +326,17 @@ function WalletIcon() {
       <path d="M3 8a2 2 0 0 1 2-2h13a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z" />
       <path d="M3 10h18" />
       <circle cx="16.5" cy="14.5" r="1.2" />
+    </svg>
+  )
+}
+
+/** پوشه پرونده. برای مدخل بازرسی — ارتقای ۲. */
+function FolderIcon() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M3 7a2 2 0 0 1 2-2h4l2 2.5h6a2 2 0 0 1 2 2V17a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z" />
+      <path d="M3 11h18" />
     </svg>
   )
 }

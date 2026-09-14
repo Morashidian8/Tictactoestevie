@@ -1051,7 +1051,8 @@ if (await page.locator('button:has-text("مریم رضایی")').count()) {
 }
 await page.waitForSelector('text=وضعیت ثبت', { timeout: 10000 })
 check(
-  (await page.locator('[class*="navBadge"]').count()) === 1,
+  // دکمه بازرسی هم نشان دارد، پس دقیقاً همین یکی سنجیده می‌شود.
+  (await page.locator('button:has-text("مالی") [class*="navBadge"]').count()) === 1,
   'شمار اعلام‌های در انتظار روی دکمه مالی دیده می‌شود',
 )
 
@@ -1077,6 +1078,48 @@ check(
   (await page.locator('text=/اعلام پرداخت در انتظار تأیید/').count()) === 0,
   'و اعلام از صف رفت',
 )
+
+console.log('▸ ارتقای ۲: پرونده بازرسی')
+await signIn('09120000002')
+await page.waitForSelector('text=با کدام حساب وارد می‌شوید؟')
+await page.locator('button:has-text("مریم رضایی")').nth(1).click()
+await page.waitForSelector('text=وضعیت ثبت', { timeout: 10000 })
+await page.waitForTimeout(800)
+const auditBadge = await page
+  .locator('button:has-text("بازرسی") [class*="navBadge"]')
+  .innerText()
+  .catch(() => '')
+check(auditBadge.length > 0, `نشان آمادگی روی دکمه بازرسی می‌آید: ${auditBadge}`)
+
+await page.click('button:has-text("بازرسی")')
+await page.waitForSelector('text=آمادگی بازرسی')
+await page.waitForTimeout(500)
+check(
+  (await page.locator('[class*="gap_"]').count()) > 0,
+  'شکاف‌های پیش از بازرسی فهرست می‌شوند، نه فقط در خروجی',
+)
+check(
+  (await page.locator('text=/ساختنش با نام شما ثبت می‌شود/').count()) === 1,
+  'پیش از ساخت، گفته می‌شود که فایل حساس است و ردِ پا می‌گذارد',
+)
+
+await page.click('button:has-text("ساخت پرونده")')
+await page.waitForSelector('text=جدول ۱', { timeout: 10000 })
+await page.waitForTimeout(400)
+const tables = await page.locator('[class*="tableTitle"]').allInnerTexts()
+check(tables.length === 3, `هر سه جدول ساخته شد: ${tables.length}`)
+check(
+  tables.some((t) => t.includes('دفتر آمار')) &&
+    tables.some((t) => t.includes('واکسیناسیون')) &&
+    tables.some((t) => t.includes('کارت بهداشت')),
+  'دفتر آمار، کنترل سلامت، و کارت بهداشت مربیان',
+)
+check(
+  (await page.locator('[class*="rowMarked"]').count()) > 0,
+  'ردیفی که کار دارد علامت می‌خورد — تنها رنگ فایل',
+)
+await page.locator('[aria-label="بازگشت به داشبورد"]').click()
+await page.waitForSelector('text=وضعیت ثبت')
 
 console.log('▸ ارتقای ۳: درخواست دارو از خانه، تا ثبت مصرف')
 /*

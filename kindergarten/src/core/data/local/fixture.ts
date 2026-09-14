@@ -310,6 +310,43 @@ export const MEDICAL: Record<string, {
   },
 }
 
+/**
+ * وضعیت واکسیناسیون و کد ملی — ارتقای ۲ سند بررسی طراحی.
+ *
+ * عمداً ناقص است: مهد واقعی هم پرونده همه کودکان را کامل ندارد، و نمای
+ * آمادگی بازرسی تا وقتی همه‌چیز کامل باشد هیچ کاری نمی‌کند.
+ */
+export const VACCINATION: Record<string, 'complete' | 'incomplete' | 'unrecorded'> =
+  Object.fromEntries(
+    CHILDREN.map((child, index) => [
+      child.id,
+      index % 7 === 3 ? 'incomplete' : index % 11 === 5 ? 'unrecorded' : 'complete',
+    ]),
+  )
+
+export const NATIONAL_IDS: Record<string, string> = Object.fromEntries(
+  CHILDREN.filter((_, index) => index % 9 !== 4).map((child, index) => [
+    child.id,
+    `00${String(12345670 + index).padStart(8, '0')}`,
+  ]),
+)
+
+/**
+ * کارت بهداشت مربیان.
+ *
+ * یکی عمداً نزدیک انقضاست و یکی ثبت‌نشده: مدیر باید ببیند نمای آمادگی
+ * وقتی کار دارد چه شکلی است، نه فقط وقتی همه‌چیز سبز است.
+ */
+export const HEALTH_CARDS: Record<
+  string,
+  { number: string | null; issuedAt: string | null; expiresAt: string | null }
+> = {
+  'staff-zahra': { number: 'HC-1041', issuedAt: '1404-02-10', expiresAt: '1405-02-10' },
+  'staff-maryam': { number: 'HC-1042', issuedAt: '1403-12-01', expiresAt: '1404-12-01' },
+  'staff-nasrin': { number: 'HC-1043', issuedAt: '1404-06-20', expiresAt: '1405-06-20' },
+  'staff-elham': { number: null, issuedAt: null, expiresAt: null },
+}
+
 export const CONSENTS: Record<string, string[]> = {
   'child-1': ['photo_capture', 'emergency_care'],
   'child-3': ['photo_capture', 'photo_group_publish', 'emergency_care', 'medication'],

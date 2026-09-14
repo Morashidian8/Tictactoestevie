@@ -25,6 +25,11 @@ import type {
   MedicationInput,
   MedicationLog,
   MedicationRequest,
+  AuditFile,
+  AuditReadiness,
+  AuditChildRow,
+  AuditHealthRow,
+  AuditStaffRow,
   Notice,
   NoticeAudience,
   NoticeInput,
@@ -1380,6 +1385,70 @@ export function createSupabaseDataAccess(scope: AccessScope): DataAccess {
           orThrow(await from('payment_claim').eq('status', 'pending')) as Row[]
         ).length,
         smsRemaining: await smsRemaining(),
+      }
+    },
+
+    /* ── پرونده بازرسی — ارتقای ۲ ───────────────────────────── */
+
+    async getAuditReadiness(): Promise<AuditReadiness> {
+      const rows = orThrow(
+        await db.rpc('audit_readiness', { centre: scope.centerId }),
+      ) as Row[]
+      const row = rows[0] ?? {}
+      return {
+        incompleteVaccination: (row.incomplete_vaccination as number | undefined) ?? 0,
+        missingNationalId: (row.missing_national_id as number | undefined) ?? 0,
+        expiringHealthCards: (row.expiring_health_cards as number | undefined) ?? 0,
+      }
+    },
+
+    /**
+     * پرونده بازرسی.
+     *
+     * record_audit_export اول صدا زده می‌شود، نه آخر: اگر ساختن فایل
+     * نیمه‌کاره بماند هم رد پا زده شده است. و همان تابع نقش را بررسی
+     * می‌کند، پس کلاینت نمی‌تواند دورش بزند.
+     */
+    async buildAuditFile(): Promise<AuditFile> {
+      orThrow(await db.rpc('record_audit_export'))
+
+      const [children, health, staff, centre] = await Promise.all([
+        db.rpc('audit_children', { centre: scope.centerId }),
+        db.rpc('audit_health', { centre: scope.centerId }),
+        db.rpc('audit_staff', { centre: scope.centerId }),
+        db.from('center').select('name').eq('id', scope.centerId).single(),
+      ])
+
+      return {
+        centerName: ((orThrow(centre) as Row).name as string | undefined) ?? 'مهد',
+        builtAt: new Date().toISOString(),
+        builtBy: scope.accountId,
+        children: (orThrow(children) as Row[]).map((r): AuditChildRow => ({
+          fullName: r.full_name as string,
+          nationalId: (r.national_id as string | null) ?? null,
+          birthDate: (r.birth_date as string | null) ?? null,
+          className: (r.class_name as string | null) ?? null,
+          attendanceType: (r.attendance_type as AuditChildRow['attendanceType']) ?? null,
+          guardianName: (r.guardian_name as string | null) ?? null,
+          guardianPhone: (r.guardian_phone as string | null) ?? null,
+          enrolledSince: (r.enrolled_since as string | null) ?? null,
+        })),
+        health: (orThrow(health) as Row[]).map((r): AuditHealthRow => ({
+          className: (r.class_name as string | null) ?? null,
+          fullName: r.full_name as string,
+          allergies: (r.allergies as string | null) ?? 'ندارد',
+          conditions: (r.conditions as string | null) ?? 'ندارد',
+          vaccinationStatus: r.vaccination_status as AuditHealthRow['vaccinationStatus'],
+          updatedAt: (r.updated_at as string | null) ?? null,
+        })),
+        staff: (orThrow(staff) as Row[]).map((r): AuditStaffRow => ({
+          fullName: r.full_name as string,
+          role: r.role as string,
+          cardNumber: (r.card_number as string | null) ?? null,
+          issuedAt: (r.issued_at as string | null) ?? null,
+          expiresAt: (r.expires_at as string | null) ?? null,
+          cardState: r.card_state as AuditStaffRow['cardState'],
+        })),
       }
     },
 

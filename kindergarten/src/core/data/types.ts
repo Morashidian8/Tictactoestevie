@@ -739,6 +739,65 @@ export type ManagerDashboard = {
 
 export type IncidentDecision = 'send_to_family' | 'call_then_send' | 'archive'
 
+/* ── پرونده بازرسی — ارتقای ۲ سند بررسی طراحی ──────────────── */
+
+export type VaccinationStatus = 'complete' | 'incomplete' | 'unrecorded'
+
+/** سه عددی که مدیر باید **پیش از** بازرسی ببیند، نه بعدش. */
+export type AuditReadiness = {
+  incompleteVaccination: number
+  missingNationalId: number
+  expiringHealthCards: number
+}
+
+export type AuditChildRow = {
+  fullName: string
+  nationalId: string | null
+  birthDate: string | null
+  className: string | null
+  attendanceType: AttendanceType | null
+  guardianName: string | null
+  guardianPhone: string | null
+  enrolledSince: string | null
+}
+
+export type AuditHealthRow = {
+  className: string | null
+  fullName: string
+  allergies: string
+  conditions: string
+  vaccinationStatus: VaccinationStatus
+  updatedAt: string | null
+}
+
+/** وضعیت کارت بهداشت. «نزدیک انقضا» از «منقضی» جداست، چون کار فرق دارد. */
+export type HealthCardState = 'معتبر' | 'نزدیک انقضا' | 'منقضی' | 'ثبت نشده'
+
+export type AuditStaffRow = {
+  fullName: string
+  role: string
+  cardNumber: string | null
+  issuedAt: string | null
+  expiresAt: string | null
+  cardState: HealthCardState
+}
+
+/**
+ * پرونده کامل بازرسی.
+ *
+ * حساس‌ترین خروجی کل سامانه: کد ملی، شماره تماس و وضعیت سلامت کودکان
+ * در یک جا. بخش ۱۰.۲ دسترسی نقش‌محور و لاگ دسترسی را الزامی کرده، پس
+ * ساختنش هم مثل خواندن پرونده پزشکی ثبت می‌شود.
+ */
+export type AuditFile = {
+  centerName: string
+  builtAt: string
+  builtBy: string
+  children: AuditChildRow[]
+  health: AuditHealthRow[]
+  staff: AuditStaffRow[]
+}
+
 /**
  * موجودیت‌های حساسی که خواندنشان هم رد پا می‌گذارد — بند ۱۱.۹.
  * نوشتن روی دوازده جدول با تریگر پایگاه داده لاگ می‌شود (مهاجرت ۰۰۱۱)؛
@@ -853,6 +912,16 @@ export interface DataAccess {
 
   /** تصمیم مدیر درباره رویداد در انتظار — بخش ۳.۳. */
   decideIncident(incidentId: string, decision: IncidentDecision): Promise<void>
+
+  /* ── پرونده بازرسی — ارتقای ۲ ─────────────────────────────── */
+
+  /** سه عدد آمادگی، برای دیدن پیش از بازرسی. */
+  getAuditReadiness(): Promise<AuditReadiness>
+
+  /**
+   * ساخت پرونده بازرسی. فقط مدیر، و ساختنش در audit_log ثبت می‌شود.
+   */
+  buildAuditFile(): Promise<AuditFile>
 
   /** پیش از ارسال: چند گیرنده، چند پیامک، و چه کسانی شماره ندارند. */
   previewNotice(input: NoticeInput): Promise<NoticeAudience>

@@ -44,5 +44,18 @@ export function withReadAudit(inner: DataAccess, sink: ReadAuditSink): DataAcces
       log('incident', day.incidents.map((i) => i.id))
       return day
     },
+
+    /*
+     * پرونده بازرسی — ارتقای ۲ سند بررسی طراحی.
+     *
+     * حساس‌ترین خواندن کل سامانه: کد ملی، شماره تماس و وضعیت سلامت
+     * همه کودکان در یک فایل. اگر نسخه‌ای از این فایل جایی پیدا شود،
+     * باید بشود گفت چه کسی و چه ساعتی ساختش.
+     */
+    async buildAuditFile() {
+      const file = await inner.buildAuditFile()
+      log('medical_profile', file.health.map((row) => row.fullName))
+      return file
+    },
   }
 }

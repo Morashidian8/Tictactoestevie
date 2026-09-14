@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { AuditPage } from './AuditPage.tsx'
 import { ChildrenPage } from './ChildrenPage.tsx'
 import { DashboardPage } from './DashboardPage.tsx'
 import { FinancePage } from './FinancePage.tsx'
@@ -11,7 +12,7 @@ import { NoticePage } from './NoticePage.tsx'
  * اول ساخته شده‌اند و «بیشتر» هنوز محتوایی ندارد، پس نوار سه‌خانه‌ای
  * است نه چهارخانه: دکمه‌ای که کار نکند بدتر از نبودنش است.
  */
-export type ManagerPage = 'dashboard' | 'finance' | 'children' | 'notice'
+export type ManagerPage = 'dashboard' | 'finance' | 'children' | 'notice' | 'audit'
 
 export function ManagerApp() {
   const [page, setPage] = useState<ManagerPage>('dashboard')
@@ -24,6 +25,8 @@ export function ManagerApp() {
       return <FinancePage onBack={back} />
     case 'children':
       return <ChildrenPage onBack={back} />
+    case 'audit':
+      return <AuditPage onBack={back} />
     default:
       return <DashboardPage onGo={setPage} />
   }

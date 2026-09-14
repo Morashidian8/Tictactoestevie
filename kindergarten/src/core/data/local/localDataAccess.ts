@@ -37,6 +37,8 @@ import type {
   MedicationInput,
   MedicationLog,
   MedicationRequest,
+  AuditFile,
+  AuditReadiness,
   ReportPatch,
 } from '../types.ts'
 import { isInCurrentWeek } from '../../../i18n/week.ts'
@@ -61,6 +63,9 @@ import {
   seedAbsences,
   seedAttendance,
   seedMedications,
+  VACCINATION,
+  NATIONAL_IDS,
+  HEALTH_CARDS,
 } from './fixture.ts'
 import { isOverdue } from '../attendanceState.ts'
 import { toIsoDate } from '../../../i18n/index.ts'
@@ -395,6 +400,18 @@ function guardianName(accountId: string): string | null {
   const childId = (GUARDIAN_CHILDREN[accountId] ?? [])[0]
   if (!childId) return null
   return GUARDIANS[childId]?.[0]?.fullName ?? null
+}
+
+/**
+ * تاریخ جلالی داده نمونه به ISO، فقط برای مقایسه.
+ *
+ * داده نمونه تاریخ‌ها را جلالی نگه می‌دارد چون همان چیزی است که در
+ * رابط دیده می‌شود. برای «منقضی شده یا نه» باید قابل مقایسه باشد، و
+ * تفاوت ۶۲۱ سال برای همین مقایسه کافی است.
+ */
+function jalaliToIso(jalali: string): string {
+  const [year = '1400', month = '01', day = '01'] = jalali.split('-')
+  return `${Number(year) + 621}-${month}-${day}`
 }
 
 /** درخواست‌های دارویی باز یک کودک در یک تاریخ. */
@@ -1292,6 +1309,84 @@ export function createLocalDataAccess(scope: AccessScope): DataAccess {
         }),
         pendingClaims: CLAIMS.filter((c) => c.status === 'pending').length,
         smsRemaining: smsRemaining(),
+      }
+    },
+
+    /* ── پرونده بازرسی — ارتقای ۲ ───────────────────────────── */
+
+    async getAuditReadiness(): Promise<AuditReadiness> {
+      assertManager()
+      const soon = new Date()
+      soon.setDate(soon.getDate() + 30)
+      const limit = toIsoDate(soon)
+      return {
+        incompleteVaccination: CHILDREN.filter(
+          (c) => (VACCINATION[c.id] ?? 'unrecorded') !== 'complete',
+        ).length,
+        missingNationalId: CHILDREN.filter((c) => !NATIONAL_IDS[c.id]).length,
+        // منقضی، نزدیک انقضا، و ثبت‌نشده — هر سه یک کار لازم دارند.
+        expiringHealthCards: Object.values(HEALTH_CARDS).filter(
+          (card) => !card.expiresAt || jalaliToIso(card.expiresAt) < limit,
+        ).length,
+      }
+    },
+
+    /**
+     * پرونده بازرسی — سه جدولی که بازرس می‌خواهد.
+     *
+     * فقط مدیر، و ساختنش رد پا می‌گذارد: بخش ۱۰.۲ لاگ دسترسی را برای
+     * همه داده کودک الزامی کرده، و این حساس‌ترین خروجی کل سامانه است.
+     */
+    async buildAuditFile(): Promise<AuditFile> {
+      assertManager()
+
+      const today = toIsoDate(new Date())
+      const soon = new Date()
+      soon.setDate(soon.getDate() + 30)
+      const limit = toIsoDate(soon)
+
+      return {
+        centerName: 'مهد آفتاب',
+        builtAt: new Date().toISOString(),
+        builtBy: staffNameOf(scope.accountId),
+        children: CHILDREN.map((child) => {
+          const enrollment = enrollmentOf(child.id)
+          return {
+            fullName: `${child.firstName} ${child.lastName}`,
+            nationalId: NATIONAL_IDS[child.id] ?? null,
+            birthDate: null,
+            className: CLASSES.find((c) => c.id === child.classId)?.name ?? null,
+            attendanceType: enrollment?.attendanceType ?? null,
+            guardianName: GUARDIANS[child.id]?.[0]?.fullName ?? null,
+            guardianPhone: GUARDIAN_PHONES[child.id] ?? null,
+            enrolledSince: enrollment?.startDate ?? null,
+          }
+        }),
+        health: CHILDREN.map((child) => {
+          const profile = MEDICAL[child.id]
+          return {
+            className: CLASSES.find((c) => c.id === child.classId)?.name ?? null,
+            fullName: `${child.firstName} ${child.lastName}`,
+            allergies: profile?.allergies.length ? profile.allergies.join('، ') : 'ندارد',
+            conditions: profile?.chronicConditions ?? 'ندارد',
+            vaccinationStatus: VACCINATION[child.id] ?? 'unrecorded',
+            updatedAt: null,
+          }
+        }),
+        staff: Object.entries(HEALTH_CARDS).map(([id, card]) => ({
+          fullName: STAFF_NAMES[id] ?? id,
+          role: 'مربی',
+          cardNumber: card.number,
+          issuedAt: card.issuedAt,
+          expiresAt: card.expiresAt,
+          cardState: !card.expiresAt
+            ? ('ثبت نشده' as const)
+            : jalaliToIso(card.expiresAt) < today
+              ? ('منقضی' as const)
+              : jalaliToIso(card.expiresAt) < limit
+                ? ('نزدیک انقضا' as const)
+                : ('معتبر' as const),
+        })),
       }
     },
 
