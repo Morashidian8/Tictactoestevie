@@ -6,6 +6,14 @@
  *
  * هدف لمسی ۴۸ و متن پایه ۱۶، طبق جدول بخش ۱۲.۷.
  */
+/* ─────────────────────────────────────────────────────────
+   بازطراحی پنل والد — سرصفحه سلام، جابه‌جاگر چهره، خط زمان.
+
+   صفحه پیشین یک کارت بلند بود که همه‌چیز را در خودش داشت. والد صبح
+   اپ را باز می‌کند و دنبال دو چیز است: حال کودک، و اینکه دارو داده
+   شده یا نه. هر دو ته آن کارت بودند.
+   ───────────────────────────────────────────────────────── */
+
 .page {
   min-block-size: 100dvh;
   background: var(--paper);
@@ -13,39 +21,10 @@
   flex-direction: column;
 }
 
-.header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3);
-  padding: var(--space-4);
-  background: var(--surface);
-  border-block-end: 1px solid var(--border);
-}
 
-.childName { color: var(--ink); font-weight: var(--weight-bold); }
 
-.account {
-  min-block-size: var(--touch-parent);
-  min-inline-size: var(--touch-parent);
-  padding-inline: var(--space-3);
-  border: 1px solid var(--border);
-  border-radius: var(--r-chip);
-  color: var(--ink-muted);
-  font-weight: var(--weight-medium);
-}
 
 /* کلید تعویض کودک، وقتی خانواده بیش از یک کودک در مهد دارد */
-.switcher { display: flex; gap: var(--space-2); padding: var(--space-3) var(--space-4) 0; }
-.switchItem {
-  min-block-size: var(--touch-parent);
-  padding-inline: var(--space-4);
-  border: 1px solid var(--border);
-  border-radius: var(--r-chip);
-  background: var(--surface);
-  color: var(--ink);
-  font-weight: var(--weight-medium);
-}
 .switchItem[aria-pressed='true'] {
   background: var(--coral-tint);
   border-color: var(--coral);
@@ -53,25 +32,7 @@
 }
 
 /* کارت روز. یک صفحه دفترچه. */
-.card {
-  margin: var(--space-4);
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--r-card);
-  box-shadow: var(--shadow-sm);
-  overflow: hidden;
-}
 
-.dateLine {
-  padding: var(--space-5) var(--space-5) var(--space-4);
-  text-align: center;
-  color: var(--ink);
-  /* تاریخ روز با فونت نمایشی — بخش ۱۲.۶ */
-  font-family: var(--font);
-  font-weight: var(--weight-black);
-  font-size: var(--text-h1);
-  line-height: var(--text-h1-line);
-}
 
 /* ۱ — عکس‌های امروز، بالای صفحه، بدون استثنا */
 .photos { display: grid; gap: var(--space-2); padding: 0 var(--space-4); }
@@ -233,3 +194,413 @@
 }
 
 .moreHint { color: var(--ink-muted); font-size: var(--text-caption); }
+
+/* ── سرصفحه سلام ──────────────────────────────────────────── */
+.header {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-5) var(--space-4) var(--space-3);
+}
+
+/*
+ * نشان مهد. دایره تینت نعنایی با گلیف --ink — پرکننده رنگ دارد، گلیف
+ * نه (بخش ۱۲.۲).
+ */
+.brand {
+  flex: none;
+  display: grid;
+  place-items: center;
+  inline-size: 44px;
+  block-size: 44px;
+  border-radius: var(--r-chip);
+  background: var(--mint-tint);
+  color: var(--ink);
+}
+
+.greet {
+  flex: 1;
+  min-inline-size: 0;
+}
+
+.hello {
+  margin: 0;
+  color: var(--ink);
+  font-weight: var(--weight-black);
+}
+
+.helloSub {
+  margin: 2px 0 0;
+  color: var(--ink-muted);
+}
+
+.headerEnd {
+  position: relative;
+  flex: none;
+}
+
+.accountBell {
+  /* هدف لمسی پنل والد — بخش ۱۲.۷ */
+  min-inline-size: var(--touch-parent);
+  min-block-size: var(--touch-parent);
+  display: grid;
+  place-items: center;
+  border-radius: var(--r-chip);
+  background: none;
+  border: none;
+  color: var(--ink);
+}
+
+.menu {
+  position: absolute;
+  inset-block-start: calc(100% + var(--space-2));
+  inset-inline-end: 0;
+  z-index: 20;
+  min-inline-size: 140px;
+  padding: var(--space-2);
+  background: var(--surface);
+  border: 1px solid var(--card-border);
+  border-radius: var(--r-card);
+  box-shadow: var(--shadow-lg);
+}
+
+.menuRole {
+  margin: 0 0 var(--space-1);
+  padding-inline: var(--space-2);
+  color: var(--ink-muted);
+}
+
+.menuItem {
+  inline-size: 100%;
+  min-block-size: var(--touch-parent);
+  padding-inline: var(--space-2);
+  text-align: start;
+  background: none;
+  border: none;
+  border-radius: var(--r-input);
+  color: var(--ink);
+}
+
+/* ── جابه‌جاگر کودک ───────────────────────────────────────── */
+/*
+ * چهره، نه نام: والد بچه‌اش را از عکس سریع‌تر می‌شناسد تا از متن.
+ * افقی اسکرول می‌شود چون خانواده‌ای با چهار کودک هم وجود دارد.
+ */
+.switcher {
+  display: flex;
+  gap: var(--space-3);
+  padding: 0 var(--space-4) var(--space-3);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.switcher::-webkit-scrollbar {
+  display: none;
+}
+
+.kid {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+  background: none;
+  border: none;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.kidFace {
+  position: relative;
+  display: grid;
+  place-items: center;
+  inline-size: 56px;
+  block-size: 56px;
+  border-radius: var(--r-chip);
+  background: var(--neutral-fill);
+  overflow: hidden;
+  /* حلقه خاکستری یعنی «انتخاب‌نشده»، نه «غایب». */
+  box-shadow: 0 0 0 2px var(--card-border);
+}
+
+.kidFace > img,
+.kidFace > svg {
+  inline-size: 100%;
+  block-size: 100%;
+  object-fit: cover;
+}
+
+/* کودک انتخاب‌شده: حلقه نعنایی. یکی بیشتر نمی‌شود، پس رقابت رنگی نیست. */
+.kidOn .kidFace {
+  box-shadow: 0 0 0 3px var(--mint);
+}
+
+.kidName {
+  color: var(--ink-muted);
+  max-inline-size: 64px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kidOn .kidName {
+  color: var(--ink);
+  font-weight: var(--weight-bold);
+}
+
+/* ── کارت برنامه روزانه ──────────────────────────────────── */
+.card {
+  margin: 0 var(--space-4) var(--space-3);
+  padding: var(--space-4);
+  background: var(--surface);
+  border: 1px solid var(--card-border);
+  border-radius: var(--r-card);
+  box-shadow: var(--shadow-sm);
+}
+
+.cardHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-block-end: var(--space-4);
+}
+
+.cardTitle {
+  margin: 0;
+  color: var(--ink);
+  font-weight: var(--weight-black);
+}
+
+.cardDate {
+  color: var(--ink-muted);
+  flex: none;
+}
+
+/* ── ناهار و دارو ─────────────────────────────────────────── */
+.meal,
+.med {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-block-start: var(--space-4);
+  padding: var(--space-3);
+  border-radius: var(--r-input);
+  background: var(--paper);
+}
+
+.mealIcon,
+.medIcon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  inline-size: 40px;
+  block-size: 40px;
+  border-radius: var(--r-photo);
+  background: var(--surface-warm);
+  color: var(--ink);
+}
+
+.mealBody {
+  flex: 1;
+  min-inline-size: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.mealTitle {
+  color: var(--ink);
+  font-weight: var(--weight-bold);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mealText {
+  color: var(--ink-muted);
+}
+
+.mealChip {
+  flex: none;
+  display: grid;
+  place-items: center;
+  inline-size: 32px;
+  block-size: 32px;
+  border-radius: var(--r-chip);
+  background: var(--mint-tint);
+  border: 1px solid var(--mint);
+  color: var(--ink);
+}
+
+/*
+ * دارویی که هنوز تحویل نشده، انبه‌ای می‌ماند نه نعنایی.
+ *
+ * ارتقای ۳: اعلام، تحویل نیست. سبز کردنش پیش از تحویل، همان دروغی است
+ * که آن ارتقا بست.
+ */
+.med {
+  background: var(--mango-tint);
+}
+
+.medOn {
+  background: var(--mint-tint);
+}
+
+/* ── سه کاشی وضعیت ───────────────────────────────────────── */
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-2);
+  padding: 0 var(--space-4) var(--space-3);
+}
+
+.tile {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-3);
+  background: var(--surface);
+  border: 1px solid var(--card-border);
+  border-radius: var(--r-card);
+  box-shadow: var(--shadow-sm);
+}
+
+.tileIcon {
+  color: var(--ink);
+}
+
+.tileLabel {
+  color: var(--ink-muted);
+}
+
+/* سه حال در یک کاشی. چهره‌ها کوچک‌اند ولی از هم تفکیک‌پذیر. */
+.tileMoods {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  color: var(--ink);
+}
+
+.tileMood {
+  display: inline-grid;
+  place-items: center;
+}
+
+.tileMood svg {
+  inline-size: 20px;
+  block-size: 20px;
+}
+
+.tileValue {
+  color: var(--ink);
+  font-weight: var(--weight-bold);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── گالری امروز ─────────────────────────────────────────── */
+.gallery {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  inline-size: calc(100% - 2 * var(--space-4));
+  margin: 0 var(--space-4) var(--space-3);
+  padding: var(--space-3);
+  text-align: start;
+  background: var(--surface);
+  border: 1px solid var(--card-border);
+  border-radius: var(--r-card);
+  box-shadow: var(--shadow-sm);
+}
+
+.galleryThumb {
+  flex: none;
+  inline-size: 56px;
+  block-size: 56px;
+  border-radius: var(--r-photo);
+  overflow: hidden;
+  background: var(--neutral-fill);
+}
+
+.galleryThumb img {
+  inline-size: 100%;
+  block-size: 100%;
+  object-fit: cover;
+}
+
+.galleryBody {
+  flex: 1;
+  min-inline-size: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.galleryTitle {
+  color: var(--ink);
+  font-weight: var(--weight-bold);
+}
+
+.gallerySub {
+  color: var(--ink-muted);
+}
+
+.galleryIcon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  inline-size: 36px;
+  block-size: 36px;
+  border-radius: var(--r-chip);
+  background: var(--mint-tint);
+  color: var(--ink);
+}
+
+.galleryGo {
+  flex: none;
+  color: var(--ink-muted);
+}
+
+/* ── گزارش کامل، پشت یک ضربه ─────────────────────────────── */
+.detailToggle {
+  inline-size: calc(100% - 2 * var(--space-4));
+  min-block-size: var(--touch-parent);
+  margin: 0 var(--space-4) var(--space-3);
+  border: 1px solid var(--border-input);
+  border-radius: var(--r-input);
+  background: var(--surface);
+  color: var(--ink);
+  font-weight: var(--weight-bold);
+}
+
+.detail {
+  margin: 0 var(--space-4) var(--space-3);
+  padding: var(--space-4);
+  background: var(--surface);
+  border: 1px solid var(--card-border);
+  border-radius: var(--r-card);
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+/*
+ * پوسته پنل والد: محتوای اسکرول‌شونده، به‌علاوه نوار ناوبری چسبیده پایین.
+ *
+ * نوار بیرون از ناحیه اسکرول است، نه داخلش: نواری که با صفحه بالا و
+ * پایین برود، در صفحه‌ای که هفت کارت دارد عملاً ناپدید می‌شود.
+ */
+.shell {
+  min-block-size: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background: var(--paper);
+}
+
+.shellBody {
+  flex: 1;
+  min-block-size: 0;
+}

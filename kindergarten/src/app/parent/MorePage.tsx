@@ -32,15 +32,24 @@ import styles from './MorePage.module.css'
  */
 type Tab = 'menu' | 'absence' | 'medication' | 'finance' | 'notices' | 'messages'
 
-export function MorePage({ childId, childName, onBack }: {
+export function MorePage({ childId, childName, onBack, initialTab = 'menu' }: {
   childId: string
   childName: string
   onBack: () => void
+  /**
+   * تبی که مستقیم باز می‌شود.
+   *
+   * نوار پایین، «پیام» و «اطلاعیه» را مقصد مستقل کرده. بی این، هر دو
+   * پشت فهرست «بیشتر» می‌ماندند و یک ضربه دورتر — که کل دلیل وجود
+   * نوار پایین را از بین می‌برد.
+   */
+  initialTab?: Tab
 }) {
-  const [tab, setTab] = useState<Tab>('menu')
+  const [tab, setTab] = useState<Tab>(initialTab)
 
   if (tab !== 'menu') {
-    const back = () => setTab('menu')
+    // اگر این تب مقصدِ نوار پایین بوده، «بازگشت» یعنی خانه، نه فهرست بیشتر.
+    const back = initialTab === 'menu' ? () => setTab('menu') : onBack
     if (tab === 'absence') return <AbsenceTab childId={childId} childName={childName} onBack={back} />
     if (tab === 'medication') return <MedicationTab childId={childId} onBack={back} />
     if (tab === 'finance') return <FinanceTab childId={childId} onBack={back} />

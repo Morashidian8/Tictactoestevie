@@ -1,0 +1,127 @@
+/*
+ * نوار ناوبری پایین — بازطراحی پنل والد.
+ *
+ * چسبیده به پایین قاب، با سایه رو به بالا: نوار پایین باید بگوید صفحه
+ * زیرش ادامه دارد، نه اینکه تمام شده.
+ */
+.bar {
+  position: sticky;
+  inset-block-end: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-3);
+  padding-block-end: calc(var(--space-2) + env(safe-area-inset-bottom));
+  background: var(--surface);
+  border-block-start: 1px solid var(--card-border);
+  box-shadow: 0 -4px 16px -6px rgb(15 23 42 / .08);
+}
+
+.tab {
+  flex: 1;
+  min-inline-size: 0;
+  /* هدف لمسی پنل والد — بخش ۱۲.۷ */
+  min-block-size: var(--touch-parent);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: var(--space-1) 2px;
+  border-radius: var(--r-input);
+  background: none;
+  border: none;
+  color: var(--ink-muted);
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+/*
+ * خانه فعال فقط رنگ عوض می‌کند، نه اندازه.
+ *
+ * پرکننده زیر خانه فعال امتحان شد و کنار دکمه گرد وسط، دو چیز رنگی در
+ * یک نوار می‌شد و چشم نمی‌فهمید کدام کنش است.
+ */
+.tabActive {
+  color: var(--ink);
+}
+
+.tabActive .label {
+  font-weight: var(--weight-bold);
+}
+
+.icon {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+}
+
+.label {
+  max-inline-size: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* نشان «چیز تازه‌ای هست». عدد نمی‌گیرد؛ در نوار پایین عدد خوانده نمی‌شود. */
+.dot {
+  position: absolute;
+  inset-block-start: -2px;
+  inset-inline-end: -3px;
+  inline-size: 7px;
+  block-size: 7px;
+  border-radius: var(--r-chip);
+  background: var(--coral);
+  box-shadow: 0 0 0 2px var(--surface);
+}
+
+/*
+ * کنش مرکزی.
+ *
+ * بالاتر از نوار می‌نشیند تا از خانه‌های دیگر جدا دیده شود، ولی نه آنقدر
+ * که روی محتوای صفحه بیفتد — همان قاعده‌ای که دکمه شناور «ثبت رویداد»
+ * در پنل مربی از آن پیروی می‌کند.
+ */
+.center {
+  flex: none;
+  inline-size: 56px;
+  block-size: 56px;
+  margin-block-start: -18px;
+  position: relative;
+  display: grid;
+  place-items: center;
+  border: 3px solid var(--surface);
+  border-radius: var(--r-chip);
+  background: var(--grad-primary);
+  box-shadow: var(--glow-primary);
+  /* گلیف --ink روی نعنایی نسبت ۷٫۰۴ می‌دهد؛ سفید ۲٫۵۴ و مجاز نیست. */
+  color: var(--ink);
+  transition:
+    transform var(--motion-feedback) var(--easing),
+    box-shadow var(--motion-feedback) var(--easing);
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+.center:active {
+  transform: scale(0.94);
+  box-shadow: none;
+}
+
+.centerIcon {
+  display: inline-grid;
+  place-items: center;
+}
+
+.centerDot {
+  position: absolute;
+  inset-block-start: 2px;
+  inset-inline-end: 2px;
+  inline-size: 10px;
+  block-size: 10px;
+  border-radius: var(--r-chip);
+  background: var(--coral);
+  box-shadow: 0 0 0 2px var(--surface);
+}
