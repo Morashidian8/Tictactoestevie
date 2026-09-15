@@ -1320,3 +1320,118 @@ begin
     'در شِمای گزارش ماهانه هیچ ستون امتیاز یا مقایسه‌ای نیست'
   );
 end $$;
+
+\echo ''
+\echo '── پیش‌نویس کمکی: مدل فقط جملات مربی را می‌بیند ──'
+do $$
+declare
+  centre uuid := '11111111-1111-1111-1111-111111111111';
+  sara   uuid := 'd1111111-1111-1111-1111-111111111111';
+  amir   uuid := 'd2222222-2222-2222-2222-222222222222';
+  f date := date '2025-09-23';
+  t date := date '2025-10-22';
+  rep    uuid;
+  mine   uuid[];
+  other  uuid;
+  cols   text;
+  line   record;
+  blocked boolean := false;
+  logged integer;
+begin
+  select id into rep from monthly_report where child_id = sara and period = '1404-07';
+  select array_agg(observation_id) into mine
+    from app.report_material(centre, sara, f, t);
+
+  /*
+   * ۱. مرز (الف) و (ب) یک تابع است، نه یک جمله در دستورالعمل مدل.
+   *
+   * تنها ورودی مجاز، متن مشاهدات مربی است. اگر روزی کسی حضور و غیاب
+   * یا خلق یا غذا را هم به این تابع اضافه کند، این تست می‌افتد —
+   * چون از عدد، نتیجه‌گیری درمی‌آید و از جمله مربی، فقط ویرایش.
+   */
+  select string_agg(column_name, ',' order by column_name) into cols
+    from information_schema.columns
+   where table_schema = 'app' and table_name = 'report_material';
+  perform assert(
+    cols = 'body,date,lens,observation_id',
+    'ورودی مجاز مدل فقط متن مشاهده است: ' || coalesce(cols, '—')
+  );
+
+  -- ۲. ثبت پیش‌نویس، همراه ردِ مصالحش.
+  perform app.record_assisted_draft(rep, 'پیش‌نویس ماشین.', 'test-model', mine);
+
+  perform assert(
+    (select draft_source from monthly_report where id = rep) = 'assisted',
+    'گزارش، کمکی‌بودن پیش‌نویسش را ثبت می‌کند'
+  );
+  perform assert(
+    (select count(*) from monthly_report_source where report_id = rep) = cardinality(mine),
+    'و ردِ همه مشاهده‌هایی که به مدل داده شد'
+  );
+
+  /*
+   * ۳. بند ۱۰.۲: هر دسترسی به داده کودک ردِ پا می‌خواهد — ماشین هم
+   * استثنا نیست.
+   */
+  select count(*) into logged from audit_log
+   where entity = 'monthly_report' and entity_id = rep and action = 'assisted_draft';
+  perform assert(logged = 1, 'ساخت پیش‌نویس در لاگ دسترسی می‌نشیند');
+
+  /*
+   * ۴. مشاهده کودک دیگر هرگز وارد گزارش نمی‌شود.
+   *
+   * یک اشتباه در فراخوانی نباید بتواند مشاهده امیر را به گزارش سارا
+   * ببرد. بررسی در خودِ تابع است، نه در فراخواننده.
+   */
+  insert into observation (center_id, child_id, date, lens, body)
+  values (centre, amir, f + 2, 'interest', 'مشاهده امیر.')
+  returning id into other;
+
+  begin
+    perform app.record_assisted_draft(rep, 'پیش‌نویس.', 'test-model', array[other]);
+  exception when others then
+    blocked := true;
+  end;
+  perform assert(blocked, 'مشاهده کودک دیگر در مصالح گزارش رد می‌شود');
+
+  /*
+   * ۵. پیش‌نویس خام هرگز جای جمع‌بندی مربی را نمی‌گیرد.
+   *
+   * قید monthly_report_shared_needs_summary از مهاجرت پیشین هنوز
+   * برقرار است: گزارشی که مربی جمع‌بندی‌اش نکرده، به خانواده نمی‌رود
+   * — حتی اگر پیش‌نویس ماشین پر باشد.
+   */
+  blocked := false;
+  begin
+    update monthly_report
+       set teacher_summary = null, status = 'shared', shared_at = now()
+     where id = rep;
+  exception when others then
+    blocked := true;
+  end;
+  perform assert(blocked, 'پیش‌نویس ماشین بی‌جمع‌بندی مربی، قابل ارسال نیست');
+
+  /*
+   * ۶. مدیر باید بتواند ببیند مربی پیش‌نویس را دست‌نخورده امضا کرده
+   * یا نه. خطا نیست، ولی کل ارزش گزینه (ب) به همین بستگی دارد.
+   */
+  update monthly_report set teacher_summary = 'پیش‌نویس ماشین.' where id = rep;
+  select * into line from app.assisted_report_review(centre, '1404-07') where report_id = rep;
+  perform assert(line.untouched, 'امضای دست‌نخورده پیش‌نویس، برای مدیر دیده می‌شود');
+
+  update monthly_report
+     set teacher_summary = 'مهر برای سارا ماه خمیر و برج بود؛ صبر کردن هنوز سخت است.'
+   where id = rep;
+  select * into line from app.assisted_report_review(centre, '1404-07') where report_id = rep;
+  perform assert(not line.untouched, 'و وقتی مربی ویرایشش کرد، دیگر دست‌نخورده نیست');
+  perform assert(line.sources_used = cardinality(mine), 'شمار مصالح هم دیده می‌شود');
+
+  /*
+   * ۷. پیش‌نویس ماشین بی‌ثبت زمان و مدل نمی‌ماند: ادعای بی‌سند همان
+   * چیزی است که این مهاجرت برای جلوگیری از آن نوشته شده.
+   */
+  perform assert_rejects($x$
+    update monthly_report set draft_source = 'assisted', assisted_draft = null
+     where period = '1404-07'
+  $x$, 'کمکی بودن بی پیش‌نویس ثبت‌شده، رد می‌شود');
+end $$;
