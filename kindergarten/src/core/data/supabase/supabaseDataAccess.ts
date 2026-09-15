@@ -11,6 +11,7 @@
  */
 import { quotaReport, type QuotaLine, type SmsBucket } from '../../notify/index.ts'
 import type {
+  ThreadSummary,
   AccessScope,
   Attendance,
   BulkValues,
@@ -1994,22 +1995,98 @@ export function createSupabaseDataAccess(scope: AccessScope): DataAccess {
         }
       }
       const rows = orThrow(
-        await from('message').eq('thread_id', thread.id as string).order('created_at'),
+        await db
+          .from('message')
+          .select('*, sender:sender_id(role, staff:staff_id(full_name), guardian:guardian_id(full_name))')
+          .eq('center_id', scope.centerId)
+          .eq('thread_id', thread.id as string)
+          .order('created_at'),
       ) as Row[]
+      const side = scope.role === 'guardian' ? 'family' : 'staff'
       return {
         childId,
         childName: `${child?.first_name ?? ''} ${child?.last_name ?? ''}`.trim(),
-        messages: rows.map((r): Message => ({
-          id: r.id as string,
-          childId,
-          body: r.body as string,
-          mine: r.sender_id === scope.accountId,
-          senderName: r.sender_id === scope.accountId ? 'خودم' : 'طرف مقابل',
-          sentAt: (r.sent_at as string | null) ?? null,
-          queuedUntil: (r.queued_until as string | null) ?? null,
-        })),
+        messages: rows.map((r): Message => {
+          const sender = r.sender as Row | null
+          const role = (sender?.role as string | undefined) ?? 'teacher'
+          const senderRole: Message['senderRole'] = role === 'guardian' ? 'family' : 'staff'
+          return {
+            id: r.id as string,
+            childId,
+            body: r.body as string,
+            // طرفِ گفتگو، نه شخص: مهد چند مربی دارد و همه یک طرف‌اند.
+            mine: senderRole === side,
+            senderRole,
+            senderName:
+              ((sender?.staff as Row | null)?.full_name as string | undefined) ??
+              ((sender?.guardian as Row | null)?.full_name as string | undefined) ??
+              (senderRole === 'family' ? 'خانواده' : 'مربی'),
+            sentAt: (r.sent_at as string | null) ?? null,
+            queuedUntil: (r.queued_until as string | null) ?? null,
+          }
+        }),
         hours,
       }
+    },
+
+    /**
+     * صندوق گفتگوهای مربی.
+     *
+     * فقط کودکانی که گفتگویی دارند می‌آیند. فهرست کامل کلاس با بیست
+     * ردیف خالی، صندوقی است که کسی بازش نمی‌کند.
+     */
+    async listThreads(): Promise<ThreadSummary[]> {
+      const threads = orThrow(
+        await db
+          .from('message_thread')
+          .select('id, child_id, child:child_id(first_name, last_name, photo_url, class_id)')
+          .eq('center_id', scope.centerId),
+      ) as Row[]
+
+      const visible = threads.filter((t) => {
+        if (scope.role === 'manager') return true
+        const kid = t.child as Row | null
+        const classId = kid?.class_id as string | null
+        return classId !== null && scope.classIds.includes(classId)
+      })
+      if (visible.length === 0) return []
+
+      const rows = orThrow(
+        await db
+          .from('message')
+          .select('thread_id, body, sent_at, queued_until, created_at, sender:sender_id(role)')
+          .eq('center_id', scope.centerId)
+          .in('thread_id', visible.map((t) => t.id as string))
+          .order('created_at'),
+      ) as Row[]
+
+      const summaries = visible.map((thread): ThreadSummary => {
+        const kid = thread.child as Row | null
+        const mine = rows.filter((r) => r.thread_id === thread.id)
+        const last = mine[mine.length - 1]
+        const lastRole = ((last?.sender as Row | null)?.role as string | undefined) ?? null
+        return {
+          childId: thread.child_id as string,
+          childName: `${kid?.first_name ?? ''} ${kid?.last_name ?? ''}`.trim(),
+          photoUrl: (kid?.photo_url as string | null) ?? null,
+          lastBody: (last?.body as string | undefined) ?? null,
+          lastAt:
+            ((last?.sent_at as string | null) ?? (last?.queued_until as string | null)) ?? null,
+          awaitingReply: lastRole === 'guardian',
+          queued: mine.filter((r) => r.sent_at === null).length,
+        }
+      })
+
+      /*
+       * منتظرِ جواب اول، بعد تازه‌ترین. پیامی که خانواده فرستاده و
+       * جوابی نگرفته، مهم‌ترین چیز این صفحه است.
+       */
+      return summaries
+        .filter((t) => t.lastBody !== null)
+        .sort((a, b) => {
+          if (a.awaitingReply !== b.awaitingReply) return a.awaitingReply ? -1 : 1
+          return (b.lastAt ?? '').localeCompare(a.lastAt ?? '')
+        })
     },
 
     async sendMessage(childId, body): Promise<Message> {
@@ -2055,6 +2132,7 @@ export function createSupabaseDataAccess(scope: AccessScope): DataAccess {
         childId,
         body: text,
         mine: true,
+        senderRole: scope.role === 'guardian' ? 'family' : 'staff',
         senderName: 'خودم',
         sentAt: (row.sent_at as string | null) ?? null,
         queuedUntil,

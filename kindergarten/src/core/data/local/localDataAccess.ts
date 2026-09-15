@@ -591,6 +591,19 @@ export function createLocalDataAccess(scope: AccessScope): DataAccess {
     throw new Error('داده محلی فقط برای همان یک مرکز نمونه است')
   }
 
+  /*
+   * خواندن داده ذخیره‌شده، همین‌جا و یک بار.
+   *
+   * پیش‌تر hydrate فقط از dayState صدا زده می‌شد، یعنی تنبل: هر متدی
+   * که حالت ماژول را مستقیم می‌خواند و به روزی دست نمی‌زد، آرایه خالی
+   * می‌دید. صندوق پیام مربی دقیقاً در همین افتاد — روی بارگذاری تازه
+   * صفر گفتگو برمی‌گرداند و بعد از باز شدن «امروز» درست کار می‌کرد.
+   *
+   * hydrate خودش idempotent است، پس صدا زدنش اینجا هزینه‌ای ندارد و
+   * کل این دسته از باگ را می‌بندد.
+   */
+  hydrate()
+
   /** همان قید کلاسی که سیاست سطر-محور در دیتابیس اعمال می‌کند. */
   const visibleClassIds = (): string[] =>
     scope.role === 'manager'
@@ -605,6 +618,9 @@ export function createLocalDataAccess(scope: AccessScope): DataAccess {
 
   /** نام فرستنده از دید بیننده. در داده واقعی از user_account می‌آید. */
   const senderName = () => (scope.role === 'guardian' ? 'خانواده' : 'مربی')
+
+  /** کلید مرتب‌سازی پیام: زمان ارسال، وگرنه زمان سررسید صف. */
+  const order = (m: Message) => m.sentAt ?? m.queuedUntil ?? ''
 
   const currentStaffName = () => staffNameOf(scope.accountId)
 
@@ -1796,14 +1812,59 @@ export function createLocalDataAccess(scope: AccessScope): DataAccess {
 
     /* ── پیام با ساعت کاری — بخش ۶.۶ ────────────────────────── */
 
+    /**
+     * صندوق گفتگوهای مربی.
+     *
+     * فقط کودکانی که گفتگویی دارند می‌آیند. فهرست کامل کلاس با بیست
+     * ردیف خالی، صندوقی است که کسی بازش نمی‌کند.
+     *
+     * مرتب‌سازی بر اساس «منتظر جواب» و بعد تازگی: پیامی که خانواده
+     * فرستاده و جوابی نگرفته، مهم‌ترین چیز این صفحه است.
+     */
+    async listThreads() {
+      const mine = new Set(
+        CHILDREN.filter((c) => c.classId && visibleClassIds().includes(c.classId)).map(
+          (c) => c.id,
+        ),
+      )
+      const byChild = new Map<string, Message[]>()
+      for (const message of MESSAGES) {
+        if (!mine.has(message.childId)) continue
+        const list = byChild.get(message.childId) ?? []
+        list.push(message)
+        byChild.set(message.childId, list)
+      }
+
+      const rows = [...byChild.entries()].map(([childId, list]) => {
+        const sorted = [...list].sort((a, b) => order(a).localeCompare(order(b)))
+        const last = sorted[sorted.length - 1]
+        return {
+          childId,
+          childName: childName(childId),
+          photoUrl: CHILDREN.find((c) => c.id === childId)?.photoUrl ?? null,
+          lastBody: last?.body ?? null,
+          lastAt: last ? order(last) : null,
+          awaitingReply: last?.senderRole === 'family',
+          queued: list.filter((m) => m.sentAt === null).length,
+        }
+      })
+
+      return rows.sort((a, b) => {
+        if (a.awaitingReply !== b.awaitingReply) return a.awaitingReply ? -1 : 1
+        return (b.lastAt ?? '').localeCompare(a.lastAt ?? '')
+      })
+    },
+
     async getThread(childId) {
       assertOwnChild(childId)
+      const side = scope.role === 'guardian' ? 'family' : 'staff'
       return {
         childId,
         childName: childName(childId),
         messages: MESSAGES.filter((m) => m.childId === childId).map((m) => ({
           ...m,
-          mine: m.senderName === senderName(),
+          // طرفِ گفتگو، نه شخص: مهد چند مربی دارد و همه یک طرف‌اند.
+          mine: m.senderRole === side,
         })),
         hours: { start: MESSAGE_HOURS.start, end: MESSAGE_HOURS.end },
       }
@@ -1830,7 +1891,9 @@ export function createLocalDataAccess(scope: AccessScope): DataAccess {
         childId,
         body: text,
         mine: true,
-        senderName: senderName(),
+        senderRole: scope.role === 'guardian' ? 'family' : 'staff',
+        // نام واقعی، نه «مربی»: خانواده باید بداند با که حرف می‌زند.
+        senderName: scope.role === 'guardian' ? senderName() : currentStaffName(),
         sentAt: inHours ? now.toISOString() : null,
         queuedUntil: inHours ? null : nextMorning(now).toISOString(),
       }

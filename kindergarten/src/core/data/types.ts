@@ -566,10 +566,38 @@ export type Message = {
   body: string
   /** فرستنده از دید بیننده: خودش یا طرف مقابل. */
   mine: boolean
+  /**
+   * کدام طرفِ گفتگو. گفتگو دو طرف دارد — خانواده و مهد — نه دو نفر.
+   *
+   * پیش‌تر `mine` از مقایسه نام حساب می‌شد. مشکلش این بود که مهد چند
+   * مربی دارد: پیامی که مربی صبح فرستاده، برای مربی بعدازظهر «مالِ
+   * طرف مقابل» دیده می‌شد، در حالی که هر دو یک طرف‌اند.
+   */
+  senderRole: 'family' | 'staff'
+  /** نام واقعی فرستنده. خانواده باید بداند با که حرف می‌زند. */
   senderName: string
   sentAt: string | null
   /** بیرون از ساعت کاری، پیام تا این زمان در صف می‌ماند — بخش ۶.۶. */
   queuedUntil: string | null
+}
+
+/**
+ * یک گفتگو در فهرست صندوق مربی.
+ *
+ * تا اینجا خانواده می‌توانست پیام بفرستد و مربی هیچ صندوق ورودی
+ * نداشت — پیام ثبت می‌شد و به جایی نمی‌رسید.
+ */
+export type ThreadSummary = {
+  childId: string
+  childName: string
+  photoUrl: string | null
+  /** آخرین پیام، برای پیش‌نمایش. */
+  lastBody: string | null
+  lastAt: string | null
+  /** آخرین پیام از خانواده بوده و هنوز جوابی نرفته. */
+  awaitingReply: boolean
+  /** پیام‌هایی که هنوز در صف ساعت کاری‌اند. */
+  queued: number
 }
 
 export type MessageThread = {
@@ -1058,6 +1086,14 @@ export interface DataAccess {
   listMyNotices(): Promise<Notice[]>
 
   /* ── پیام با ساعت کاری — بخش ۶.۶ ──────────────────────────── */
+
+  /**
+   * صندوق گفتگوهای مربی — همه کودکان کلاس‌هایش که پیامی دارند.
+   *
+   * شماره هیچ‌کس در این مسیر نیست: گفتگو با شناسه کودک کلید می‌خورد و
+   * پیام‌ها نام فرستنده را حمل می‌کنند، نه شماره‌اش.
+   */
+  listThreads(): Promise<ThreadSummary[]>
 
   getThread(childId: string): Promise<MessageThread>
 

@@ -1,0 +1,265 @@
+/*
+ * صندوق پیام مربی — بخش ۶.۶.
+ *
+ * حباب‌های گفتگو عمداً همان الگوی پنل والد را دارند: یک چیز که در دو
+ * پنل دو شکل داشته باشد، دو چیز یاد گرفته می‌شود.
+ */
+.page {
+  min-block-size: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background: var(--paper);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background: var(--surface);
+  border-block-end: 1px solid var(--card-border);
+  position: sticky;
+  inset-block-start: 0;
+  z-index: 5;
+}
+
+.back {
+  flex: none;
+  min-inline-size: var(--touch-teacher);
+  min-block-size: var(--touch-teacher);
+  display: grid;
+  place-items: center;
+  margin-inline-start: calc(-1 * var(--space-3));
+  border: none;
+  background: none;
+  border-radius: var(--r-chip);
+  color: var(--ink);
+}
+
+.title {
+  flex: 1;
+  min-inline-size: 0;
+  margin: 0;
+  color: var(--ink);
+  font-weight: var(--weight-black);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── فهرست گفتگوها ────────────────────────────────────────── */
+.list {
+  list-style: none;
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.row {
+  inline-size: 100%;
+  min-block-size: var(--touch-teacher);
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  text-align: start;
+  background: var(--surface);
+  border: 1px solid var(--card-border);
+  border-radius: var(--r-card);
+  box-shadow: var(--shadow-sm);
+  -webkit-tap-highlight-color: transparent;
+}
+
+/*
+ * گفتگویی که منتظر جواب است، لبه مرجانی می‌گیرد.
+ *
+ * مرجانی رنگ کنش است و اینجا واقعاً کنش لازم است: خانواده پرسیده و
+ * جوابی نرفته. تنها مرجانیِ این صفحه هم همین است.
+ */
+.rowWaiting {
+  border-inline-start: 4px solid var(--coral);
+}
+
+.face {
+  flex: none;
+  inline-size: 48px;
+  block-size: 48px;
+  border-radius: var(--r-chip);
+  overflow: hidden;
+  background: var(--neutral-fill);
+  display: grid;
+  place-items: center;
+}
+
+.face > img,
+.face > svg {
+  inline-size: 100%;
+  block-size: 100%;
+  object-fit: cover;
+}
+
+.body {
+  flex: 1;
+  min-inline-size: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.name {
+  color: var(--ink);
+  font-weight: var(--weight-bold);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.when {
+  flex: none;
+  color: var(--ink-muted);
+}
+
+/* پیش‌نمایش یک خط. دو خط یعنی فهرست به گفتگو تبدیل می‌شود. */
+.preview {
+  color: var(--ink-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.queued {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--ink);
+}
+
+.badge {
+  flex: none;
+  align-self: flex-start;
+  padding: 2px var(--space-2);
+  border-radius: var(--r-chip);
+  background: var(--coral-tint);
+  border: 1px solid var(--coral);
+  color: var(--ink);
+  font-weight: var(--weight-bold);
+  white-space: nowrap;
+}
+
+/* ── گفتگو ────────────────────────────────────────────────── */
+.hours {
+  margin: var(--space-3) var(--space-4) 0;
+  color: var(--ink-muted);
+}
+
+.thread {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+}
+
+.bubble {
+  max-inline-size: 80%;
+  align-self: flex-start;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--r-card);
+  background: var(--surface);
+  border: 1px solid var(--card-border);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/*
+ * پیام مهد سمت مقابلِ پیام خانواده می‌نشیند و تینت نعنایی می‌گیرد.
+ * متن --ink می‌ماند: روی تینت، هیچ رنگی به کف نمی‌رسد جز --mint-deep
+ * که کاربردش عمداً یکی است.
+ */
+.bubbleMine {
+  align-self: flex-end;
+  background: var(--mint-tint);
+  border-color: var(--mint);
+}
+
+.who {
+  color: var(--ink-muted);
+  font-weight: var(--weight-bold);
+}
+
+.bubbleBody {
+  margin: 0;
+  color: var(--ink);
+  white-space: pre-wrap;
+}
+
+.bubbleMeta {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--ink-muted);
+  align-self: flex-end;
+}
+
+/* ── نوشتن ────────────────────────────────────────────────── */
+.composer {
+  position: sticky;
+  inset-block-end: 0;
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  padding-block-end: calc(var(--space-3) + env(safe-area-inset-bottom));
+  background: var(--surface);
+  border-block-start: 1px solid var(--card-border);
+  box-shadow: var(--shadow-lg);
+}
+
+.text {
+  flex: 1;
+  min-inline-size: 0;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border-input);
+  border-radius: var(--r-input);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  resize: none;
+}
+
+.send {
+  flex: none;
+  min-block-size: var(--touch-teacher);
+  padding-inline: var(--space-4);
+  border: none;
+  border-radius: var(--r-action);
+  background: var(--grad-primary);
+  box-shadow: var(--glow-primary);
+  /* گلیف --ink روی نعنایی ۷٫۰۴؛ سفید ۲٫۵۴ و مجاز نیست. */
+  color: var(--ink);
+  font-weight: var(--weight-bold);
+}
+
+.send:disabled {
+  background: var(--disabled-bg);
+  box-shadow: none;
+  color: var(--disabled-fg);
+}
+
+.error {
+  margin: 0 var(--space-4);
+  padding: var(--space-3);
+  border-radius: var(--r-card);
+  background: var(--brick-tint);
+  color: var(--ink);
+}

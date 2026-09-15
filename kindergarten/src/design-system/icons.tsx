@@ -210,6 +210,21 @@ export function ImageIcon({ size = 16 }: IconProps) {
   )
 }
 
+/**
+ * پیکان بازگشت. جهت‌دار است و قرینه می‌شود.
+ *
+ * در چپ‌به‌راست به چپ اشاره می‌کند (عقب)، پس در راست‌به‌چپ به راست —
+ * که همان جهت «عقب» در فارسی است. ChevronIcon برای این کار نیست:
+ * آن به جلو اشاره می‌کند و قرینه‌اش به عقبِ اشتباه می‌رسد.
+ */
+export function BackIcon({ size = 16 }: IconProps) {
+  return (
+    <svg {...frame(size)} className="mirror">
+      <path d="m15 6-6 6 6 6" />
+    </svg>
+  )
+}
+
 /** پیکان ادامه. جهت‌دار است، پس در راست‌به‌چپ قرینه می‌شود. */
 export function ChevronIcon({ size = 16 }: IconProps) {
   return (

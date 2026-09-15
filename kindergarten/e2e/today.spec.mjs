@@ -1423,6 +1423,73 @@ await page.waitForTimeout(300)
 await page.locator('[aria-label="بازگشت"]').first().click()
 await page.waitForTimeout(400)
 
+console.log('▸ بخش ۶.۶: پیام خانواده تا صندوق مربی و جوابش')
+/*
+ * حلقه‌ای که تا امروز شکسته بود: خانواده می‌توانست پیام بفرستد و مربی
+ * هیچ صندوق ورودی نداشت — پیام ثبت می‌شد و به جایی نمی‌رسید.
+ */
+await signOutAny()
+await signIn('09120000003', { fresh: false })
+await page.waitForSelector('[class*="cardDate"]', { timeout: 8000 })
+await page.click('[aria-label="پیام به مربی"]')
+await page.waitForSelector('textarea[aria-label="متن پیام"]')
+await page.fill('textarea[aria-label="متن پیام"]', 'سارا امروز کمی سرفه داشت.')
+await page.click('button:has-text("فرستادن")')
+await page.waitForTimeout(700)
+check(
+  (await page.locator('text=سارا امروز کمی سرفه داشت.').count()) > 0,
+  'خانواده پیام فرستاد',
+)
+
+await page.click('nav button:has-text("خانه")')
+await page.waitForTimeout(500)
+await signOutAny()
+await signIn('09120000001', { fresh: false })
+await page.waitForSelector('text=ثبت گروهی امروز', { timeout: 8000 })
+
+/*
+ * نشان روی تب، پیش از باز کردن صندوق.
+ *
+ * این گزاره یک باگ واقعی را نگه می‌دارد: hydrate داده ذخیره‌شده را
+ * تنبل می‌خواند و listThreads روی بارگذاری تازه صفر برمی‌گرداند.
+ * بی این تست، نشان فقط وقتی می‌آمد که مربی از قبل جای دیگری رفته بود.
+ */
+const inboxTab = page.locator('nav button:has-text("پیام‌ها")')
+check(
+  (await inboxTab.locator('span[class*="dot"]').count()) === 1,
+  'نشان «منتظر جواب» روی تب پیام‌ها می‌آید، بی باز کردن صندوق',
+)
+
+await inboxTab.click()
+await page.waitForTimeout(800)
+const inbox = await page.evaluate(() => document.body.innerText)
+check(inbox.includes('سارا'), 'صندوق مربی گفتگو را نشان می‌دهد')
+check(inbox.includes('منتظر جواب'), 'و علامت می‌زند که جوابی نرفته')
+/*
+ * شماره هیچ‌کس در این مسیر نیست: گفتگو با شناسه کودک کلید می‌خورد و
+ * پیام‌ها نام فرستنده را حمل می‌کنند، نه شماره‌اش.
+ */
+check(!/09\d{9}/.test(inbox), 'و هیچ شماره تلفنی در صندوق دیده نمی‌شود')
+
+await page.click('[class*="row"]')
+await page.waitForTimeout(700)
+await page.fill('textarea[aria-label="متن پیام"]', 'حواسمان هست، خبر می‌دهیم.')
+await page.click('button:has-text("فرستادن")')
+await page.waitForTimeout(700)
+const chat = await page.evaluate(() => document.body.innerText)
+check(chat.includes('حواسمان هست'), 'مربی جواب داد')
+check(chat.includes('سارا امروز کمی سرفه داشت.'), 'و هر دو پیام در یک گفتگو هستند')
+check(!/09\d{9}/.test(chat), 'در گفتگو هم شماره‌ای نیست')
+
+await page.click('[aria-label="بازگشت به پیام‌ها"]')
+await page.waitForTimeout(600)
+check(
+  (await page.locator('nav button:has-text("پیام‌ها") span[class*="dot"]').count()) === 0,
+  'پس از جواب، نشان «منتظر جواب» می‌رود',
+)
+await page.click('nav button:has-text("امروز")')
+await page.waitForTimeout(600)
+
 console.log('▸ بخش ۱۲.۷: کف کیفیت')
 await signIn('09120000001')
 await page.waitForSelector('text=ثبت گروهی امروز')
