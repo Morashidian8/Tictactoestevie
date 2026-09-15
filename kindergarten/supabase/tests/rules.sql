@@ -1119,3 +1119,204 @@ begin
     'مهد می‌تواند قلم تازه به چک‌لیست اضافه کند — فهرست در کد قفل نیست'
   );
 end $$;
+
+\echo ''
+\echo '── کارنامه مربی: واقعیت، نه نمره ──'
+do $$
+declare
+  centre uuid := '11111111-1111-1111-1111-111111111111';
+  zahra  uuid := '51111111-1111-1111-1111-111111111111';
+  sara   uuid := 'd1111111-1111-1111-1111-111111111111';
+  amir   uuid := 'd2222222-2222-2222-2222-222222222222';
+  d1 date := date '2025-10-06';
+  d2 date := date '2025-10-07';
+  act    record;
+  notes  record;
+  card   record;
+  cols   integer;
+begin
+  -- ۱. کارنامه از داده واقعی ساخته می‌شود، نه از تخمین.
+  insert into attendance (center_id, child_id, date, check_in_at, checked_in_by_staff_id)
+  values (centre, sara, d1, d1 + time '08:00', zahra),
+         (centre, amir, d1, d1 + time '08:10', zahra),
+         (centre, sara, d2, d2 + time '08:05', zahra);
+
+  select * into act from app.staff_activity(centre, zahra, d1, d2);
+  perform assert(act.check_ins = 3, 'ثبت ورودهای مربی شمرده می‌شود');
+  perform assert(act.days_active = 2, 'و روزهای فعالش');
+
+  /*
+   * «روز فعال» جایگزین حضور و غیاب پرسنل نیست. اپ ورود و خروج کودک را
+   * ثبت می‌کند، نه پرسنل را؛ مربی‌ای که تمام روز بوده و چیزی ثبت نکرده
+   * اینجا صفر می‌خورد. ساختن عددی از روی داده‌ای که وجود ندارد،
+   * بدترین کار ممکن است.
+   */
+  perform assert(
+    (select days_active from app.staff_activity(centre, zahra, d2 + 1, d2 + 30)) = 0,
+    'بازه‌ای که ثبتی نداشته صفر می‌خورد، نه اینکه حدس زده شود'
+  );
+
+  /*
+   * ۲. قاعده ایمنی: رویداد در هیچ جمعی وارد نمی‌شود.
+   *
+   * اگر مربی بداند حادثه کمتر یعنی نمره بهتر، زمین‌خوردن را ننوشته
+   * می‌گذارد. این تست ثابت می‌کند که ستون رویداد جداست و هیچ عدد
+   * مرکبی وجود ندارد که بشود درش پنهانش کرد.
+   */
+  select count(*) into cols
+    from information_schema.columns
+   where table_schema = 'app'
+     and column_name in ('score', 'rating', 'rank', 'performance');
+  perform assert(cols = 0, 'هیچ ستون نمره یا رتبه‌ای در کل شِما نیست');
+
+  -- ۳. یادداشت ارزیابی.
+  insert into staff_note (center_id, staff_id, kind, body)
+  values (centre, zahra, 'commendation', 'در روز شلوغ، آرامش کلاس را حفظ کرد.');
+  insert into staff_note (center_id, staff_id, kind, body, period_from, period_to)
+  values (centre, zahra, 'review', 'ارزیابی سه‌ماهه.', d1 - 90, d1);
+
+  select * into notes from app.staff_note_summary(centre, zahra);
+  perform assert(notes.commendations = 1, 'تقدیر شمرده می‌شود');
+  perform assert(notes.reviews = 1, 'و ارزیابی دوره‌ای');
+  perform assert(notes.last_review = current_date, 'و تاریخ آخرین ارزیابی می‌ماند');
+
+  /*
+   * ارزیابی‌ای که مربی هرگز نمی‌بیند، ارزیابی نیست؛ پرونده‌سازی است.
+   * ستون shared_at مدیر را وادار نمی‌کند، ولی سکوت را ثبت می‌کند.
+   */
+  perform assert(notes.unshared = 1, 'یادداشت در میان گذاشته‌نشده، خودش هشدار است');
+
+  update staff_note set shared_at = now()
+   where staff_id = zahra and kind = 'review';
+  select * into notes from app.staff_note_summary(centre, zahra);
+  perform assert(notes.unshared = 0, 'پس از در میان گذاشتن، هشدار می‌رود');
+
+  -- ۴. کارتابل مدیر.
+  select * into card from app.staff_cartable(centre, d1, d2) where staff_id = zahra;
+  perform assert(card.full_name is not null, 'کارتابل مدیر مربی را فهرست می‌کند');
+  perform assert(card.check_ins = 3, 'با کارنامه واقعیتش');
+  perform assert(card.documents_expired is not null, 'و وضعیت مدارکش');
+
+  /*
+   * مرتب‌سازی بر اساس نام است، نه هیچ معیاری. فهرستی که مرتب‌شده
+   * باشد خودش یک رتبه‌بندی است، حتی اگر ستون نمره نداشته باشد.
+   */
+  perform assert(
+    (select array_agg(full_name order by ordinality) = array_agg(full_name order by full_name)
+       from app.staff_cartable(centre, d1, d2) with ordinality),
+    'کارتابل بر اساس نام مرتب است، نه بر اساس عملکرد'
+  );
+end $$;
+
+\echo ''
+\echo '── گزارش ماهانه: مصالحش مشاهده است، جمع‌بندی‌اش کار مربی ──'
+do $$
+declare
+  centre uuid := '11111111-1111-1111-1111-111111111111';
+  sara   uuid := 'd1111111-1111-1111-1111-111111111111';
+  amir   uuid := 'd2222222-2222-2222-2222-222222222222';
+  zahra  uuid := '51111111-1111-1111-1111-111111111111';
+  f date := date '2025-09-23';
+  t date := date '2025-10-22';
+  obs   uuid;
+  line  record;
+  facts record;
+  gap   record;
+  blocked boolean := false;
+begin
+  -- ۱. مشاهده، با عدسی و تاریخ.
+  insert into observation (center_id, child_id, date, lens, body, staff_id)
+  values (centre, sara, f + 3, 'interest', 'یک ساعت با خمیر بازی کرد و نمی‌خواست تمام شود.', zahra)
+  returning id into obs;
+
+  insert into observation (center_id, child_id, date, lens, body, staff_id)
+  values (centre, sara, f + 5, 'challenge', 'موقع نوبت گرفتن سرسره صبر برایش سخت بود.', zahra);
+
+  insert into observation (center_id, child_id, date, lens, body, staff_id)
+  values (centre, sara, f + 9, 'social', 'با امیر برج ساخت؛ تا آخر وقت کنار هم بودند.', zahra)
+  returning id into obs;
+  insert into observation_peer (observation_id, child_id) values (obs, amir);
+
+  perform assert(
+    (select count(*) from app.month_observations(centre, sara, f, t)) = 3,
+    'مشاهدات ماه جمع می‌شوند'
+  );
+
+  /*
+   * ۲. کودک دیگر فقط نام کوچک. گزارشی که به خانواده سارا می‌رود
+   * نباید مشخصات امیر را ببرد.
+   */
+  select * into line from app.month_observations(centre, sara, f, t) where lens = 'social';
+  perform assert(line.peers = array['امیر'], 'نام کودک دیگر فقط کوچک است، بی نام خانوادگی');
+
+  select * into line from app.month_peers(centre, sara, f, t);
+  perform assert(line.first_name = 'امیر' and line.times = 1, 'و در فهرست هم‌بازی‌ها می‌آید');
+
+  /*
+   * ۳. هم‌بازی از مشاهده می‌آید، نه از حدس.
+   *
+   * امیر و سارا هم‌کلاس‌اند و هر روز کنار هم‌اند؛ اگر هم‌حضوری را
+   * می‌شمردیم، رابطه‌ای می‌ساختیم که هیچ‌کس ندیده. این تست ثابت
+   * می‌کند کودکی که مربی نامش را نبرده، در فهرست نیست.
+   */
+  perform assert(
+    (select count(*) from app.month_peers(centre, amir, f, t)) = 0,
+    'کودکی که مشاهده‌ای به نامش ثبت نشده، هم‌بازی ساختگی نمی‌گیرد'
+  );
+
+  -- ۴. عدسی خالی، پیش از جلسه معلوم می‌شود.
+  select * into gap from app.month_gaps(centre, sara, f, t) where lens = 'skill';
+  perform assert(gap.seen = 0, 'عدسی بی‌مشاهده، صفر نشان می‌دهد نه اینکه غایب باشد');
+  select * into gap from app.month_gaps(centre, sara, f, t) where lens = 'interest';
+  perform assert(gap.seen = 1, 'و عدسی پر، شمارش خودش را');
+
+  -- ۵. واقعیت‌های عددی، بی هیچ مقایسه‌ای.
+  select * into facts from app.month_facts(centre, sara, f, t);
+  perform assert(facts.observations = 3, 'شمار مشاهدات در واقعیت‌های ماه می‌آید');
+  perform assert(facts.present_days is not null, 'و روزهای حضور');
+
+  /*
+   * ۶. گزارشی که به خانواده می‌رود باید جمع‌بندی مربی داشته باشد.
+   *
+   * فهرستی از مشاهدات خام، گزارش نیست. جمع‌بندی را آدمی می‌نویسد که
+   * کودک را دیده و مسئولش است — نه یک تابع.
+   */
+  insert into monthly_report (center_id, child_id, period, period_from, period_to)
+  values (centre, sara, '1404-07', f, t);
+
+  begin
+    update monthly_report set status = 'shared', shared_at = now()
+     where child_id = sara and period = '1404-07';
+  exception when others then
+    blocked := true;
+  end;
+  perform assert(blocked, 'گزارش بی‌جمع‌بندی مربی به خانواده نمی‌رود');
+
+  update monthly_report
+     set teacher_summary = 'مهر برای سارا ماه خمیر و برج بود.',
+         status = 'shared', shared_at = now()
+   where child_id = sara and period = '1404-07';
+  perform assert(
+    (select status from monthly_report where child_id = sara and period = '1404-07') = 'shared',
+    'با جمع‌بندی مربی، گزارش قابل ارسال می‌شود'
+  );
+
+  -- ۷. یک گزارش برای هر کودک در هر دوره، نه بیشتر.
+  perform assert_rejects($x$
+    insert into monthly_report (center_id, child_id, period, period_from, period_to)
+    values ('11111111-1111-1111-1111-111111111111',
+            'd1111111-1111-1111-1111-111111111111',
+            '1404-07', date '2025-09-23', date '2025-10-22')
+  $x$, 'دو گزارش برای یک کودک در یک ماه ساخته نمی‌شود');
+
+  /*
+   * ۸. بند ۱۰ و پیوست ج: هیچ امتیاز، درصد پیشرفت، یا مقایسه‌ای.
+   * این تست کل شِمای گزارش را می‌گردد.
+   */
+  perform assert(
+    (select count(*) from information_schema.columns
+      where table_name in ('observation', 'monthly_report')
+        and column_name ~ '(score|rating|rank|percentile|average)') = 0,
+    'در شِمای گزارش ماهانه هیچ ستون امتیاز یا مقایسه‌ای نیست'
+  );
+end $$;
