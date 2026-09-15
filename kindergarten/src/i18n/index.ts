@@ -14,5 +14,7 @@ export {
   jalaliParts,
   jalaliYearMonth,
   formatAge,
+  formatPeriod,
+  JALALI_MONTHS,
   type JalaliFormat,
 } from './jalali.ts'

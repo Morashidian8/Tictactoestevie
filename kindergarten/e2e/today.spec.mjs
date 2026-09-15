@@ -1103,11 +1103,77 @@ check(
 
 await page.locator('[aria-label="بازگشت"]').click()
 await page.waitForTimeout(400)
-await page.click('button:has-text("مالی")')
+
+/*
+ * مالی دیگر پشت «بیشتر» نیست؛ مقصد نوار پایین است.
+ *
+ * این ضربه از خانه زده می‌شود، نه از فهرست بیشتر — همان مسیری که
+ * خانواده واقعاً می‌رود. اگر روزی مالی دوباره به فهرست برگردد، این
+ * تست می‌افتد.
+ */
+await page.locator('nav button:has-text("مالی")').click()
 await page.waitForSelector('text=مانده')
 const parentMoney = await page.evaluate(() => document.body.innerText)
 check(/تسویه/.test(parentMoney), 'خانواده همان صورتحسابی را می‌بیند که مدیر صادر کرد')
 check(/پرداخت‌های ثبت‌شده/.test(parentMoney), 'و پرداختی را که مدیر ثبت کرد')
+
+console.log('▸ شهریه سال، اقلام و جریمه — از دید خانواده')
+check(/شهریه سال ۱۴/.test(parentMoney), 'برنامه شهریه سال آمد')
+check(
+  (await page.locator('[class*="month"]').count()) >= 12,
+  'و هر دوازده ماه در آن هست',
+)
+check(
+  /صادر نشده/.test(parentMoney),
+  'ماه‌هایی که هنوز صورتحساب ندارند، «صادر نشده» علامت می‌خورند',
+)
+check(
+  /بدهی به حساب نمی‌آیند/.test(parentMoney),
+  'و صریح گفته می‌شود که برآوردند، نه بدهی',
+)
+
+/*
+ * قلم اختیاری: تا وقتی خانواده نپذیرفته، در مانده نمی‌آید.
+ *
+ * این را با عدد می‌سنجیم نه با متن: مانده پیش و پس از «شرکت نمی‌کنیم»
+ * باید یکی باشد، وگرنه اردویی که کودک نمی‌رود در بدهی نشسته.
+ */
+check(/منتظر جواب شما/.test(parentMoney), 'قلم اختیاری از خانواده جواب می‌خواهد')
+check(/اردوی باغ پرندگان/.test(parentMoney), 'و نامش را می‌گوید')
+const owedBefore = await page.locator('[class*="big"]').first().innerText()
+await page.locator('button:has-text("شرکت نمی‌کنیم")').first().click()
+await page.waitForTimeout(600)
+check(
+  (await page.locator('[class*="big"]').first().innerText()) === owedBefore,
+  'نپذیرفتن اردو، مانده را تکان نمی‌دهد',
+)
+
+// یک ماه را باز می‌کنیم تا ریز مبلغ دیده شود.
+await page.locator('[class*="monthButton"]').first().click()
+await page.waitForTimeout(400)
+const detail = await page.evaluate(() => document.body.innerText)
+check(/شهریه/.test(detail), 'ریز مبلغ ماه باز می‌شود')
+check(
+  /جریمه دیرکرد پرداخت/.test(detail) || /جریمه تأخیر در تحویل/.test(detail)
+    || /پرداخت‌شده/.test(detail),
+  'و اجزای مبلغ را نام می‌برد',
+)
+
+/*
+ * دو جریمه، دو اسم.
+ *
+ * اگر روزی کسی این دو را در یک ستون جمع کند، همین تست می‌افتد —
+ * چون خانواده‌ای که دیر رسیده بود، متهم به دیر پرداختن می‌شود.
+ */
+const all = await page.evaluate(() => document.body.innerText)
+check(
+  !/جریمه(?! تأخیر در تحویل)(?! دیرکرد پرداخت)/.test(all),
+  'هر جریمه‌ای که نوشته می‌شود، می‌گوید بابت چیست',
+)
+check(
+  /کد رهگیری|تصویر فیش|سندی ثبت نشده/.test(all),
+  'هر پرداخت گذشته سندش را می‌گوید — یا صریح می‌گوید که ندارد',
+)
 
 console.log('▸ بخش ۵.۳: یادآور دارو ساعت را می‌گوید و باز می‌شود')
 await signIn('09120000001')
@@ -1193,8 +1259,7 @@ await page.waitForSelector('text=وضعیت ثبت')
 await signOutAny()
 await signIn('09120000003', { fresh: false })
 await page.waitForSelector('[class*="cardDate"]', { timeout: 8000 })
-await page.click('button:has-text("بیشتر")')
-await page.click('button:has-text("مالی")')
+await page.locator('nav button:has-text("مالی")').click()
 await page.waitForSelector('text=مانده')
 await page.click('button:has-text("پرداخت کردم")')
 await page.waitForSelector('[role="dialog"]')
@@ -1213,8 +1278,7 @@ check(
   'و وضعیت صورتحساب هنوز پرداخت‌نشده است — اعلام خانواده خودش پرداخت نیست',
 )
 
-await page.locator('[aria-label="بازگشت"]').click()
-await page.waitForTimeout(400)
+// یک «بازگشت»، نه دو: مالی حالا مقصد نوار است و بازگشتش یک‌راست خانه.
 await page.locator('[aria-label="بازگشت"]').click()
 await page.waitForTimeout(600)
 await signOutAny()
@@ -1273,8 +1337,7 @@ await page.waitForSelector('text=وضعیت ثبت')
 await signOutAny()
 await signIn('09120000003', { fresh: false })
 await page.waitForSelector('[class*="cardDate"]', { timeout: 8000 })
-await page.click('button:has-text("بیشتر")')
-await page.click('button:has-text("مالی")')
+await page.locator('nav button:has-text("مالی")').click()
 await page.waitForSelector('text=مانده')
 await page.waitForTimeout(500)
 check(
@@ -1286,6 +1349,7 @@ check(
   'و ثبت دستی فیش به مسیر فرعی تبدیل شده، نه حذف',
 )
 
+const payableBefore = await page.locator('button:has-text("پرداخت آنلاین")').count()
 await page.locator('button:has-text("پرداخت آنلاین")').first().click()
 await page.waitForSelector('[role="dialog"]')
 await page.click('button:has-text("رفتن به درگاه")')
@@ -1295,18 +1359,23 @@ check(
   (await page.locator('text=در حال تأیید پرداخت').count()) === 1,
   'بازگشت از درگاه «پرداخت شد» نمی‌گوید، می‌پرسد',
 )
-await page.waitForSelector('text=/کد رهگیری/', { timeout: 15000 })
+/*
+ * انتظار داخل شیت، نه روی کل صفحه.
+ *
+ * «کد رهگیری» حالا در فهرست پرداخت‌های گذشته هم هست، پس انتظارِ
+ * بی‌قید همان لحظه اول برآورده می‌شد و تست، رسیدِ نیامده را می‌سنجید.
+ */
+await page.waitForSelector('[role="dialog"] >> text=/کد رهگیری/', { timeout: 15000 })
 const receipt = await page.locator('[role="dialog"]').innerText()
 check(/تأیید شد/.test(receipt), 'پس از تأیید سرور، پرداخت ثبت می‌شود')
 check(/کد رهگیری/.test(receipt), 'و رسید دیجیتال با کد رهگیری صادر می‌شود')
 await page.click('button:has-text("بستن")')
 await page.waitForTimeout(800)
+// یکی کم‌تر، نه صفر: صورتحساب‌های باز دیگری هم روی صفحه هست.
 check(
-  (await page.locator('button:has-text("پرداخت آنلاین")').count()) === 0,
+  (await page.locator('button:has-text("پرداخت آنلاین")').count()) === payableBefore - 1,
   'و صورتحساب تسویه‌شده دیگر دکمه پرداخت ندارد',
 )
-await page.locator('[aria-label="بازگشت"]').first().click()
-await page.waitForTimeout(300)
 await page.locator('[aria-label="بازگشت"]').first().click()
 await page.waitForTimeout(400)
 

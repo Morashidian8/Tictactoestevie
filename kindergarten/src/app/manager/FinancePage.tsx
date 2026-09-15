@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { AlertIcon, CheckIcon, EmptyState } from '../../design-system/index.ts'
 import { formatCount, formatRial, jalaliYearMonth, toIsoDate, toLatinDigits, toPersianDigits } from '../../i18n/index.ts'
 import { useData } from '../../core/auth/index.ts'
+import { invoiceDue } from '../../core/data/index.ts'
 import type { FinanceOverview, Invoice, PaymentClaim } from '../../core/data/index.ts'
 import styles from './FinancePage.module.css'
 
@@ -308,7 +309,7 @@ export function FinancePage({ onBack }: { onBack: () => void }) {
 }
 
 function InvoiceRow({ invoice, onPay }: { invoice: Invoice; onPay: () => void }) {
-  const due = invoice.amount - invoice.discount + invoice.lateFee - invoice.paid
+  const due = invoiceDue(invoice)
   return (
     <button type="button" className={styles.invoice} onClick={onPay}>
       <span className={styles.invoiceName}>{invoice.childName}</span>
@@ -331,7 +332,7 @@ function PaymentSheet({
   onDone: () => Promise<void>
 }) {
   const data = useData()
-  const remaining = invoice.amount - invoice.discount + invoice.lateFee - invoice.paid
+  const remaining = invoiceDue(invoice)
   const [amount, setAmount] = useState(String(Math.round(remaining / 10)))
   const [method, setMethod] = useState('کارت‌به‌کارت')
   const [receipt, setReceipt] = useState('')

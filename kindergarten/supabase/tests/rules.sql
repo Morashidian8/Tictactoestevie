@@ -1435,3 +1435,275 @@ begin
      where period = '1404-07'
   $x$, 'کمکی بودن بی پیش‌نویس ثبت‌شده، رد می‌شود');
 end $$;
+
+\echo ''
+\echo '── شهریه: قلم هزینه، جریمه دیرکرد، یادآوری ──'
+do $$
+declare
+  centre uuid := '11111111-1111-1111-1111-111111111111';
+  sara   uuid := 'd1111111-1111-1111-1111-111111111111';
+  amir   uuid := 'd2222222-2222-2222-2222-222222222222';
+  plan   uuid;
+  bill   uuid;
+  other  uuid;
+  trip   uuid;
+  lunch  uuid;
+  today  date := date '2025-10-20';
+  n      integer;
+  fee    bigint;
+  row    record;
+begin
+  insert into fee_plan (center_id, title, amount)
+  values (centre, 'شهریه تمام‌روز', 10000000) returning id into plan;
+  insert into child_fee (child_id, center_id, fee_plan_id) values (sara, centre, plan);
+
+  insert into invoice (center_id, child_id, period, amount, due_date)
+  values (centre, sara, '1404-07', 10000000, today - 20) returning id into bill;
+  insert into invoice (center_id, child_id, period, amount, due_date)
+  values (centre, amir, '1404-07', 10000000, today - 20) returning id into other;
+
+  /*
+   * ۱. جریمه تأخیر در بردن کودک، جریمه دیرکرد پرداخت نیست.
+   *
+   * اگر روزی کسی این دو را در یک ستون جمع کند، صورتحساب دیگر نمی‌تواند
+   * بگوید مبلغ بابت چیست — و خانواده‌ای که دیر رسیده بود، متهم به دیر
+   * پرداختن می‌شود.
+   */
+  perform assert(
+    (select count(*) from information_schema.columns
+      where table_name = 'invoice' and column_name in ('late_fee', 'overdue_fee')) = 2,
+    'جریمه تأخیر تحویل و جریمه دیرکرد پرداخت، دو ستون جدایند'
+  );
+
+  -- ۲. مهد بی‌سیاست، کسی را جریمه نمی‌کند.
+  perform assert(app.apply_overdue_fees(centre, today) = 0,
+    'مهدی که نرخ جریمه تعریف نکرده، هیچ جریمه‌ای نمی‌زند');
+
+  update center set overdue_fee_percent = 10, overdue_grace_days = 5,
+                    overdue_fee_cap = 700000
+   where id = centre;
+
+  -- ۳. جریمه روی مبلغِ پرداخت‌نشده، با سقف.
+  n := app.apply_overdue_fees(centre, today);
+  select overdue_fee into fee from invoice where id = bill;
+  perform assert(fee = 700000, 'جریمه به سقف مهد محدود می‌شود: ' || fee);
+
+  /*
+   * ۴. اجرای دوباره، جریمه دوم نمی‌سازد.
+   *
+   * تنها چیزی که جلوی جریمه مرکب سهوی را می‌گیرد همین است: تابع
+   * می‌نشاند، جمع نمی‌زند. کار شبانه‌ای که دو بار اجرا شود نباید
+   * بدهی خانواده را دو برابر کند.
+   */
+  perform app.apply_overdue_fees(centre, today);
+  perform assert((select overdue_fee from invoice where id = bill) = 700000,
+    'اجرای دوباره، جریمه را دو برابر نمی‌کند');
+
+  -- ۵. جریمه روی جریمه نمی‌نشیند: پایه همیشه بی‌جریمهٔ فعلی حساب می‌شود.
+  update center set overdue_fee_cap = null where id = centre;
+  perform app.apply_overdue_fees(centre, today);
+  perform assert((select overdue_fee from invoice where id = bill) = 1000000,
+    'پایه جریمه، مبلغ بی‌جریمه است نه صورتحساب جریمه‌خورده');
+
+  /*
+   * ۶. خانواده‌ای که نصف را داده، بابت نصفِ داده‌شده جریمه نمی‌شود.
+   */
+  insert into payment (center_id, invoice_id, amount, payment_method)
+  values (centre, bill, 6000000, 'cash');
+  perform app.apply_overdue_fees(centre, today);
+  perform assert((select overdue_fee from invoice where id = bill) = 400000,
+    'جریمه فقط روی مبلغ پرداخت‌نشده است');
+
+  -- ۷. وضعیت صورتحساب از خود پرداخت‌ها درمی‌آید، نه از کد کلاینت.
+  perform assert((select status from invoice where id = bill) = 'overdue',
+    'صورتحساب سررسیدگذشتهٔ نیمه‌پرداخت، «سررسید گذشته» است');
+end $$;
+
+do $$
+declare
+  centre uuid := '11111111-1111-1111-1111-111111111111';
+  sara   uuid := 'd1111111-1111-1111-1111-111111111111';
+  bill   uuid;
+  trip   uuid;
+  lunch  uuid;
+  total  bigint;
+begin
+  select id into bill from invoice where child_id = sara and period = '1404-07';
+
+  insert into fee_item (center_id, title, amount, period, optional, published_at)
+  values (centre, 'اردوی باغ پرندگان', 1500000, '1404-07', true, now())
+  returning id into trip;
+  insert into fee_item (center_id, title, amount, period, optional, published_at)
+  values (centre, 'ناهار مهر', 2000000, '1404-07', false, now())
+  returning id into lunch;
+
+  insert into fee_item_child (fee_item_id, child_id, center_id) values (trip, sara, centre);
+  insert into fee_item_child (fee_item_id, child_id, center_id) values (lunch, sara, centre);
+
+  /*
+   * ۸. اردویی که خانواده نپذیرفته، بدهی نیست.
+   *
+   * این تصمیم محصول است، نه جزئیات فنی: قلم اختیاریِ نپذیرفته اصلاً
+   * سطر صورتحساب نمی‌سازد. وگرنه خانواده‌ای که کودکش اردو نمی‌رود،
+   * صورتحسابی می‌گیرد که باید تلفنی پسش بگیرد.
+   */
+  perform assert(app.issue_fee_item(trip) = 0,
+    'قلم اختیاریِ نپذیرفته، سطر صورتحساب نمی‌سازد');
+  perform assert(app.issue_fee_item(lunch) = 1,
+    'قلم اجباری روی صورتحساب همان دوره می‌نشیند');
+
+  update fee_item_child set accepted_at = now() where fee_item_id = trip and child_id = sara;
+  perform assert(app.issue_fee_item(trip) = 1, 'با پذیرفتن خانواده، اردو سطر می‌شود');
+  perform assert(app.issue_fee_item(trip) = 0, 'و دوباره صادر نمی‌شود');
+
+  -- ۹. عدد و فهرست پشتش نمی‌توانند فرق کنند.
+  perform assert((select extra_charges from invoice where id = bill) = 3500000,
+    'ستون اقلام، مجموع سطرهاست');
+
+  update invoice set extra_charges = 99 where id = bill;
+  perform assert((select extra_charges from invoice where id = bill) = 3500000,
+    'نوشتن دستی روی ستون اقلام بی‌اثر است');
+
+  delete from invoice_line where invoice_id = bill and fee_item_id = lunch;
+  perform assert((select extra_charges from invoice where id = bill) = 1500000,
+    'با حذف سطر، عدد هم پایین می‌آید');
+
+  -- ۱۰. قلم منتشرنشده اصلاً صادر نمی‌شود.
+  update fee_item set published_at = null where id = lunch;
+  perform assert_rejects(
+    format('select app.issue_fee_item(%L)', lunch),
+    'قلم منتشرنشده روی صورتحساب نمی‌نشیند');
+end $$;
+
+do $$
+declare
+  centre uuid := '11111111-1111-1111-1111-111111111111';
+  sara   uuid := 'd1111111-1111-1111-1111-111111111111';
+  bill   uuid;
+  today  date := date '2025-10-20';
+  kinds  text;
+  n      integer;
+begin
+  select id into bill from invoice where child_id = sara and period = '1404-07';
+  update invoice set due_date = today, overdue_fee = 0 where id = bill;
+  update center set due_soon_days = 3, overdue_grace_days = 5, overdue_reminder_max = 3
+   where id = centre;
+
+  -- ۱۱. روز سررسید، یادآوری «امروز» است.
+  select string_agg(kind::text, ',') into kinds
+    from app.payment_reminders_due(centre, today) where invoice_id = bill;
+  perform assert(kinds = 'due_today', 'روز سررسید، یادآوری سررسید می‌رود: ' || coalesce(kinds, '—'));
+
+  -- ۱۲. سه روز مانده هم یک بار خبر می‌رود.
+  select string_agg(kind::text, ',') into kinds
+    from app.payment_reminders_due(centre, today - 3) where invoice_id = bill;
+  perform assert(kinds = 'due_soon', 'سه روز پیش از سررسید، خبر می‌رود');
+
+  /*
+   * ۱۳. یک بار در روز، از هر کانال.
+   *
+   * کار شبانه‌ای که دو بار اجرا شود نباید دو پیامک بفرستد. خانواده
+   * پیامک تکراری را هرزنامه می‌خواند و دفعه بعد نمی‌خواند.
+   */
+  perform assert(app.record_payment_reminder(bill, 'due_today', 'sms', today),
+    'یادآوری اول ثبت می‌شود');
+  perform assert(not app.record_payment_reminder(bill, 'due_today', 'sms', today),
+    'یادآوری دوم همان روز، ثبت نمی‌شود');
+  perform assert(
+    (select count(*) from app.payment_reminders_due(centre, today) where invoice_id = bill) = 0,
+    'و دیگر در صف امروز نمی‌آید'
+  );
+  perform assert(app.record_payment_reminder(bill, 'due_today', 'app', today),
+    'نوتیف اپ کانال جداست و جداگانه ثبت می‌شود');
+
+  -- ۱۴. پس از سررسید، هر پنج روز یک بار — نه هر روز.
+  perform assert(
+    (select count(*) from app.payment_reminders_due(centre, today + 5) where invoice_id = bill) = 1,
+    'پنج روز پس از سررسید، یادآوری دیرکرد می‌رود');
+  perform assert(
+    (select count(*) from app.payment_reminders_due(centre, today + 6) where invoice_id = bill) = 0,
+    'ولی روز ششم نه');
+
+  /*
+   * ۱۵. یادآوری سقف دارد.
+   *
+   * خانواده‌ای که پول ندارد با پیامک هر پنج روز پولدار نمی‌شود. پس از
+   * سقف، کار مدیر است: یک تماس، نه پیامک سیزدهم.
+   */
+  perform app.record_payment_reminder(bill, 'overdue', 'sms', today + 5);
+  perform app.record_payment_reminder(bill, 'overdue', 'sms', today + 10);
+  perform app.record_payment_reminder(bill, 'overdue', 'sms', today + 15);
+  perform assert(
+    (select count(*) from app.payment_reminders_due(centre, today + 20) where invoice_id = bill) = 0,
+    'پس از سقف، یادآوری دیرکرد متوقف می‌شود');
+
+  -- ۱۶. صورتحساب تسویه‌شده هیچ یادآوری‌ای نمی‌گیرد.
+  insert into payment (center_id, invoice_id, amount, payment_method)
+  values (centre, bill, app.invoice_due(bill), 'cash');
+  perform assert((select status from invoice where id = bill) = 'paid',
+    'با پرداخت کامل، صورتحساب خودش تسویه می‌شود');
+  perform assert(
+    (select count(*) from app.payment_reminders_due(centre, today + 25) where invoice_id = bill) = 0,
+    'به صورتحساب تسویه‌شده یادآوری نمی‌رود');
+end $$;
+
+do $$
+declare
+  centre uuid := '11111111-1111-1111-1111-111111111111';
+  sara   uuid := 'd1111111-1111-1111-1111-111111111111';
+  rows   integer;
+  mehr   record;
+  aban   record;
+begin
+  -- ۱۷. برنامه سال، دوازده ماه است — چه صورتحساب داشته باشند چه نه.
+  select count(*) into rows from app.child_fee_year(centre, sara, '1404');
+  perform assert(rows = 12, 'برنامه شهریه، هر دوازده ماه سال را می‌آورد');
+
+  select * into mehr from app.child_fee_year(centre, sara, '1404') where period = '1404-07';
+  select * into aban from app.child_fee_year(centre, sara, '1404') where period = '1404-08';
+
+  perform assert(mehr.issued, 'ماهی که صورتحساب دارد، صادرشده است');
+
+  /*
+   * ۱۸. ماهی که هنوز صورتحساب ندارد، بدهی نیست.
+   *
+   * اگر این را بدهی نشان می‌دادیم، خانواده در مهر یک رقم دوازده‌ماهه
+   * می‌دید و می‌ترسید. مبلغش برآورد است و وضعیتش «صادر نشده».
+   */
+  perform assert(not aban.issued, 'ماه صادرنشده، صادرنشده علامت می‌خورد');
+  perform assert(aban.status = 'not_issued', 'و وضعیتش هیچ‌کدام از وضعیت‌های صورتحساب نیست');
+  perform assert(aban.paid = 0 and aban.due_date is null,
+    'ماه صادرنشده نه پرداختی دارد نه سررسید');
+end $$;
+
+do $$
+declare
+  centre uuid := '11111111-1111-1111-1111-111111111111';
+  sara   uuid := 'd1111111-1111-1111-1111-111111111111';
+  bill   uuid;
+  claim  uuid;
+  pay    uuid;
+begin
+  insert into invoice (center_id, child_id, period, amount, due_date)
+  values (centre, sara, '1404-09', 10000000, date '2025-11-20') returning id into bill;
+
+  insert into payment_claim (center_id, invoice_id, amount, receipt_url)
+  values (centre, bill, 10000000, 'blob:receipt-1') returning id into claim;
+
+  insert into payment (center_id, invoice_id, amount, payment_method)
+  values (centre, bill, 10000000, 'manual_receipt') returning id into pay;
+
+  update payment_claim
+     set status = 'approved', reviewed_at = now(), payment_id = pay
+   where id = claim;
+
+  /*
+   * ۱۹. سند پرداخت گم نمی‌شود.
+   *
+   * خواسته مالک محصول: «گذشته به همراه مستندات ثبت شده باشه که هروقت
+   * لازم داشت چک کنه». تا اینجا تصویر رسید روی اعلام خانواده می‌ماند و
+   * پرداختِ ساخته‌شده بی‌سند بود — یعنی بازرس ردیف می‌دید، سند نه.
+   */
+  perform assert((select receipt_url from payment where id = pay) = 'blob:receipt-1',
+    'با تأیید اعلام، تصویر رسید روی خودِ پرداخت می‌نشیند');
+end $$;

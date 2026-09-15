@@ -10,7 +10,7 @@ import {
   HomeIcon,
   ImageIcon,
   LeafIcon,
-  MegaphoneIcon,
+  WalletIcon,
   PersonIcon,
   ShieldCheckIcon,
   TabBar,
@@ -90,7 +90,7 @@ export function ParentTodayPage() {
    * تا اینجا پنل والد یک صفحه بلند بود با دکمه «بیشتر» در انتها: هر
    * چیزی جز گزارش امروز، پشت یک اسکرول تا ته صفحه بود.
    */
-  const [nav, setNav] = useState<'home' | 'tomorrow' | 'messages' | 'notices' | 'more'>(
+  const [nav, setNav] = useState<'home' | 'tomorrow' | 'messages' | 'finance' | 'more'>(
     'home',
   )
   /** گزارش کامل روز، پشت کارت خلاصه. بسته می‌ماند تا والد بخواهد. */
@@ -195,7 +195,13 @@ export function ParentTodayPage() {
   const NAV: TabItem[] = [
     { id: 'home', label: 'خانه', icon: <HomeIcon size={22} /> },
     { id: 'tomorrow', label: 'فردا', icon: <CalendarIcon size={22} /> },
-    { id: 'notices', label: 'اطلاعیه', icon: <MegaphoneIcon size={22} /> },
+    /*
+      مالی در نوار پایین است، نه پشت «بیشتر».
+      خانواده شهریه را ماهی یک‌بار می‌بیند ولی وقتی سررسید نزدیک است
+      هر روز؛ اطلاعیه برعکس، خوانده می‌شود و تمام. پس مالی مقصد شد و
+      اطلاعیه به فهرست «بیشتر» برگشت.
+    */
+    { id: 'finance', label: 'مالی', icon: <WalletIcon size={22} /> },
     { id: 'more', label: 'بیشتر', icon: <PersonIcon size={22} /> },
   ]
   const CENTER: TabItem = { id: 'messages', label: 'پیام به مربی', icon: <ChatIcon size={24} /> }
@@ -209,7 +215,15 @@ export function ParentTodayPage() {
     return (
       <div className={styles.shell}>
         <div className={styles.shellBody}>
+          {/*
+            key: بی این، رفتن از یک مقصد نوار به مقصد دیگر هیچ کاری
+            نمی‌کرد. MorePage تبِ اولیه را فقط در useState اولش
+            می‌خواند و چون مونت‌شده می‌ماند، prop تازه را نادیده
+            می‌گرفت — یعنی کاربر «مالی» را می‌زد و همان فهرست «بیشتر»
+            را می‌دید.
+          */}
           <MorePage
+            key={tab}
             childId={childId}
             childName={day.child.firstName}
             onBack={() => setNav('home')}

@@ -44,6 +44,7 @@ export async function createDataAccess(scope: AccessScope): Promise<DataAccess> 
 }
 
 export * from './types.ts'
+export { invoiceTotal, invoiceDue } from './money.ts'
 export { withReadAudit } from './audit.ts'
 export { NOTES_PER_DAY, suggestNoteTargets } from './noteRotation.ts'
 export {

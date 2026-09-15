@@ -42,6 +42,10 @@ import type {
   AuditReadiness,
   PaymentIntent,
   PaymentResult,
+  PaymentReminderLog,
+  InvoiceLine,
+  FeeItemOffer,
+  FeeYearMonth,
   ReportPatch,
 } from '../types.ts'
 import { isInCurrentWeek } from '../../../i18n/week.ts'
@@ -71,7 +75,8 @@ import {
   HEALTH_CARDS,
 } from './fixture.ts'
 import { isOverdue } from '../attendanceState.ts'
-import { toIsoDate } from '../../../i18n/index.ts'
+import { jalaliYearMonth, toIsoDate } from '../../../i18n/index.ts'
+import { invoiceDue, invoiceTotal } from '../money.ts'
 import {
   applicableFields,
   bulkFields,
@@ -177,6 +182,10 @@ function save(): void {
       plans: PLANS,
       notices: NOTICES,
       invoices: INVOICES,
+      feeItems: FEE_ITEMS,
+      feeItemChildren: FEE_ITEM_CHILDREN,
+      invoiceLines: INVOICE_LINES,
+      reminders: REMINDERS,
       payments: PAYMENTS,
       messages: MESSAGES,
       amendments: AMENDMENTS,
@@ -205,6 +214,10 @@ function hydrate(): void {
       plans?: PickupPlan[]
       notices?: Notice[]
       invoices?: InvoiceRow[]
+      feeItems?: FeeItemRow[]
+      feeItemChildren?: FeeItemChildRow[]
+      invoiceLines?: InvoiceLineRow[]
+      reminders?: PaymentReminderLog[]
       payments?: Payment[]
       messages?: Message[]
       amendments?: Amendment[]
@@ -246,6 +259,10 @@ function hydrate(): void {
     restore(PLANS, payload.plans)
     restore(NOTICES, payload.notices)
     restore(INVOICES, payload.invoices)
+    restore(FEE_ITEMS, payload.feeItems)
+    restore(FEE_ITEM_CHILDREN, payload.feeItemChildren)
+    restore(INVOICE_LINES, payload.invoiceLines)
+    restore(REMINDERS, payload.reminders)
     restore(PAYMENTS, payload.payments)
     restore(MESSAGES, payload.messages)
     restore(AMENDMENTS, payload.amendments)
@@ -264,7 +281,191 @@ function hydrate(): void {
     }
   } catch {
     // داده ذخیره‌شده خراب بود. از نمونه تازه شروع می‌کنیم.
+  } finally {
+    // پس از بازیابی، نه پیش از آن: اگر مدیر خودش صورتحساب صادر کرده
+    // باشد، نمونه چیزی روی آن نمی‌نویسد.
+    seedFinance()
   }
+}
+
+/**
+ * داده مالی نمونه — فقط نسخه نمایشی.
+ *
+ * بی این، خانواده صفحه مالی را باز می‌کرد و یک فهرست خالی می‌دید؛ یعنی
+ * دقیقاً چیزی که آمده ببیند را نمی‌دید. مدیرِ یک مهد واقعی خودش
+ * صورتحساب صادر می‌کند و این تابع هیچ‌وقت کاری نمی‌کند، چون فقط وقتی
+ * می‌نویسد که هیچ صورتحسابی وجود نداشته باشد.
+ *
+ * الگو عمداً یکنواخت نیست: ماه‌های گذشته تسویه‌اند، ماه پیش نیمه‌پرداخت
+ * و ماه جاری باز است. حالت «همه‌چیز پرداخت‌شده» هیچ‌کدام از صفحه‌های
+ * سررسید و جریمه و یادآوری را نشان نمی‌دهد.
+ */
+function seedFinance(): void {
+  if (INVOICES.length > 0) return
+  const now = new Date()
+  const year = jalaliYearMonth(now).split('-')[0]
+  if (!year) return
+
+  /*
+   * دوره‌های گذشته از روی تاریخ واقعی ساخته می‌شوند، نه با شمارش ماه
+   * جلالی: نگاشت ماه جلالی به بازه میلادی اینجا نیست و حدس زدنش، عدد
+   * ساختن است.
+   */
+  const back = (months: number): Date => {
+    const d = new Date(now)
+    d.setDate(1)
+    d.setMonth(d.getMonth() - months)
+    return d
+  }
+
+  CHILDREN.forEach((child, index) => {
+    if (!PAYER[child.id]) return
+    const fee = CHILD_FEES[child.id]
+    const plan = FEE_PLANS.find((p) => p.id === fee?.planId) ?? FEE_PLANS[0]
+    if (!plan) return
+    const discount = Math.round((plan.amount * (fee?.discountPercent ?? 0)) / 100)
+
+    /*
+     * ماه جاری عمداً صادر نمی‌شود.
+     *
+     * صدور، کارِ مدیر است و جریان «مدیر صادر کرد ← خانواده دید» تنها
+     * وقتی دیده می‌شود که ماه جاری باز باشد. اگر نمونه خودش صادرش
+     * می‌کرد، آن جریان اصلاً قابل نشان دادن نبود.
+     */
+    for (let k = 4; k >= 1; k -= 1) {
+      const when = back(k)
+      const period = jalaliYearMonth(when)
+      if (!period.startsWith(`${year}-`)) continue
+
+      const due = new Date(when)
+      due.setDate(10)
+      const id = `inv-${child.id}-${period}`
+      INVOICES.push({
+        id,
+        childId: child.id,
+        period,
+        amount: plan.amount,
+        discount,
+        lateFee: 0,
+        overdueFee: 0,
+        dueDate: toIsoDate(due),
+        cancelled: false,
+      })
+
+      const total = plan.amount - discount
+
+      /*
+       * ماه گذشته باز می‌ماند تا حالت‌های سررسیدگذشته و جریمه و
+       * یادآوری اصلاً دیدنی باشند. یک نمونه که همه‌چیزش تسویه است،
+       * نیمی از این صفحه را نشان نمی‌دهد.
+       */
+      if (k === 1) {
+        if (index % 3 === 0) {
+          // یکی از هر سه، نیمه‌پرداخت — تا حالت «بخشی پرداخت شده» هم بیاید.
+          const paidAt = new Date(due)
+          paidAt.setDate(paidAt.getDate() - 1)
+          PAYMENTS.push({
+            id: `pay-${id}`,
+            invoiceId: id,
+            amount: Math.round(total / 2),
+            paidAt: paidAt.toISOString(),
+            method: 'کارت به کارت',
+            receiptNo: null,
+            paymentMethod: 'manual_receipt',
+            trackingCode: null,
+            receiptUrl: 'demo-receipt',
+          })
+        }
+        // جریمه دیرکرد، ده درصدِ مانده — همان سیاست پیش‌فرض نمونه.
+        const row = INVOICES[INVOICES.length - 1]
+        if (row) {
+          const unpaid = total - (index % 3 === 0 ? Math.round(total / 2) : 0)
+          row.overdueFee = Math.round(unpaid / 10)
+        }
+        REMINDERS.push(
+          {
+            id: `rem-${id}-due`,
+            period,
+            kind: 'due_today',
+            channel: 'sms',
+            sentAt: toIsoDate(due) + 'T08:00:00.000Z',
+          },
+          {
+            id: `rem-${id}-late`,
+            period,
+            kind: 'overdue',
+            channel: 'app',
+            sentAt: new Date(due.getTime() + 5 * 86_400_000).toISOString(),
+          },
+        )
+        continue
+      }
+
+      const paidAt = new Date(due)
+      paidAt.setDate(paidAt.getDate() - 3)
+      const online = k % 2 === 0
+      PAYMENTS.push({
+        id: `pay-${id}`,
+        invoiceId: id,
+        amount: total,
+        paidAt: paidAt.toISOString(),
+        method: online ? 'درگاه اینترنتی' : 'کارت به کارت',
+        receiptNo: null,
+        paymentMethod: online ? 'online' : 'manual_receipt',
+        trackingCode: online ? `82${index}${k}4519` : null,
+        // یکی از پرداخت‌های گذشته عمداً بی‌سند است تا حالت «سندی ثبت
+        // نشده» دیده شود؛ همان حالتی که صفحه نباید پنهانش کند.
+        receiptUrl: online || k === 3 ? null : 'demo-receipt',
+      })
+    }
+  })
+
+  /*
+   * قلم‌های هزینه: یکی اجباری و صادرشده، یکی اختیاری و بی‌جواب.
+   *
+   * اختیاریِ بی‌جواب مهم‌ترین حالت است — همان که نشان می‌دهد اردو تا
+   * وقتی خانواده نپذیرفته، در مانده نمی‌آید.
+   */
+  const thisPeriod = jalaliYearMonth(now)
+  const lastPeriod = jalaliYearMonth(back(1))
+  FEE_ITEMS.push(
+    {
+      id: 'fee-lunch',
+      title: 'ناهار',
+      description: 'ناهار گرم، ماهانه',
+      amount: 6_000_000,
+      period: lastPeriod,
+      optional: false,
+      publishedAt: now.toISOString(),
+    },
+    {
+      id: 'fee-trip',
+      title: 'اردوی باغ پرندگان',
+      description: 'پنجشنبه، با سرویس مهد. شرکت اختیاری است.',
+      amount: 3_500_000,
+      period: thisPeriod,
+      optional: true,
+      publishedAt: now.toISOString(),
+    },
+    {
+      id: 'fee-craft',
+      title: 'لوازم کاردستی',
+      description: 'خمیر بازی، مقوا و رنگ — نیم‌سال اول',
+      amount: 1_800_000,
+      period: lastPeriod,
+      optional: false,
+      publishedAt: now.toISOString(),
+    },
+  )
+  for (const child of CHILDREN) {
+    if (!PAYER[child.id]) continue
+    FEE_ITEM_CHILDREN.push(
+      { itemId: 'fee-lunch', childId: child.id, answer: null },
+      { itemId: 'fee-craft', childId: child.id, answer: null },
+      { itemId: 'fee-trip', childId: child.id, answer: null },
+    )
+  }
+  for (const item of FEE_ITEMS) issueFeeItem(item)
 }
 
 function dayState(date: string): DayState {
@@ -368,12 +569,45 @@ type InvoiceRow = {
   period: string
   amount: number
   discount: number
+  /** جریمه تأخیر در تحویل گرفتن کودک — بخش ۵.۸. */
   lateFee: number
+  /** جریمه دیرکرد پرداخت. دو چیز جدا، دو ستون جدا. */
+  overdueFee: number
   dueDate: string
   cancelled: boolean
 }
 
+/** تعریف مدیر. تا `publishedAt` پر نشود، خانواده نمی‌بیندش. */
+type FeeItemRow = {
+  id: string
+  title: string
+  description: string | null
+  amount: number
+  period: string
+  optional: boolean
+  publishedAt: string | null
+}
+
+/** به چه کودکی خورده و خانواده چه جوابی داده. */
+type FeeItemChildRow = {
+  itemId: string
+  childId: string
+  answer: 'accepted' | 'declined' | null
+}
+
+type InvoiceLineRow = {
+  id: string
+  invoiceId: string
+  itemId: string
+  title: string
+  amount: number
+}
+
 const INVOICES: InvoiceRow[] = []
+const FEE_ITEMS: FeeItemRow[] = []
+const FEE_ITEM_CHILDREN: FeeItemChildRow[] = []
+const INVOICE_LINES: InvoiceLineRow[] = []
+const REMINDERS: PaymentReminderLog[] = []
 const PAYMENTS: Payment[] = []
 const MESSAGES: Message[] = []
 const AMENDMENTS: Amendment[] = []
@@ -392,17 +626,124 @@ const paidFor = (invoiceId: string): number =>
  * وضعیت صورتحساب از روی پرداخت‌ها و سررسید محاسبه می‌شود، نه از ستون
  * جدا. یک منبع حقیقت یعنی «پرداخت‌شده ولی هنوز issued» ممکن نیست.
  */
+function linesFor(invoiceId: string): InvoiceLine[] {
+  return INVOICE_LINES.filter((l) => l.invoiceId === invoiceId).map((l) => ({
+    id: l.id,
+    title: l.title,
+    amount: l.amount,
+  }))
+}
+
+/** مجموع اقلام. عدد و فهرست پشتش همیشه یکی‌اند چون عدد اصلاً ذخیره نمی‌شود. */
+const extrasFor = (invoiceId: string): number =>
+  INVOICE_LINES.filter((l) => l.invoiceId === invoiceId).reduce((sum, l) => sum + l.amount, 0)
+
+/**
+ * قلم هزینه را روی صورتحساب‌های همان دوره می‌نشاند.
+ *
+ * قلم اختیاریِ نپذیرفته سطر نمی‌سازد: اردویی که کودک نمی‌رود نباید در
+ * مانده خانواده بیاید. دوباره صدا زدنش سطر تکراری نمی‌سازد.
+ */
+function issueFeeItem(item: FeeItemRow): number {
+  if (!item.publishedAt) return 0
+  let made = 0
+  for (const link of FEE_ITEM_CHILDREN.filter((f) => f.itemId === item.id)) {
+    if (item.optional && link.answer !== 'accepted') continue
+    const invoice = INVOICES.find(
+      (i) => i.childId === link.childId && i.period === item.period && !i.cancelled,
+    )
+    if (!invoice) continue
+    if (INVOICE_LINES.some((l) => l.invoiceId === invoice.id && l.itemId === item.id)) continue
+    INVOICE_LINES.push({
+      id: `line-${invoice.id}-${item.id}`,
+      invoiceId: invoice.id,
+      itemId: item.id,
+      title: item.title,
+      amount: item.amount,
+    })
+    made += 1
+  }
+  return made
+}
+
+/** قلم‌های منتشرشده‌ای که به این کودک خورده، با جواب خانواده. */
+function offersFor(childId: string): FeeItemOffer[] {
+  return FEE_ITEM_CHILDREN.filter((f) => f.childId === childId)
+    .flatMap((link) => {
+      const item = FEE_ITEMS.find((f) => f.id === link.itemId)
+      if (!item?.publishedAt) return []
+      return [{
+        itemId: item.id,
+        title: item.title,
+        description: item.description,
+        amount: item.amount,
+        period: item.period,
+        optional: item.optional,
+        answer: link.answer,
+      } satisfies FeeItemOffer]
+    })
+    .sort((a, b) => a.period.localeCompare(b.period))
+}
+
+/**
+ * دوازده ماه سال، صادرشده و نشده.
+ *
+ * ماهی که صورتحساب ندارد بدهی نیست: `issued=false` و مبلغش برآوردِ
+ * طرح شهریه است. اگر برآورد را بدهی نشان می‌دادیم، خانواده در مهر یک
+ * رقم دوازده‌ماهه می‌دید و می‌ترسید.
+ */
+function feeYear(childId: string, year: string): FeeYearMonth[] {
+  const fee = CHILD_FEES[childId]
+  const plan = FEE_PLANS.find((p) => p.id === fee?.planId) ?? FEE_PLANS[0]
+  const estimate = plan
+    ? plan.amount - Math.round((plan.amount * (fee?.discountPercent ?? 0)) / 100)
+    : 0
+
+  return Array.from({ length: 12 }, (_, i) => {
+    const period = `${year}-${String(i + 1).padStart(2, '0')}`
+    const row = INVOICES.find((r) => r.childId === childId && r.period === period)
+    if (!row) {
+      return {
+        period,
+        issued: false,
+        amount: estimate,
+        discount: 0,
+        extras: 0,
+        lateFee: 0,
+        overdueFee: 0,
+        paid: 0,
+        dueDate: null,
+        status: 'not_issued' as const,
+      }
+    }
+    const invoice = invoiceOf(row)
+    return {
+      period,
+      issued: true,
+      amount: invoice.amount,
+      discount: invoice.discount,
+      extras: invoice.lines.reduce((sum, l) => sum + l.amount, 0),
+      lateFee: invoice.lateFee,
+      overdueFee: invoice.overdueFee,
+      paid: invoice.paid,
+      dueDate: invoice.dueDate,
+      status: invoice.status,
+    }
+  })
+}
+
 function invoiceOf(row: InvoiceRow): Invoice {
-  const due = row.amount - row.discount + row.lateFee
+  const lines = linesFor(row.id)
+  const due = row.amount - row.discount + row.lateFee + row.overdueFee + extrasFor(row.id)
   const paid = paidFor(row.id)
   const status: InvoiceStatus = row.cancelled
     ? 'cancelled'
     : paid >= due
       ? 'paid'
-      : paid > 0
-        ? 'partially_paid'
-        : toIsoDate(new Date()) > row.dueDate
-          ? 'overdue'
+      : toIsoDate(new Date()) > row.dueDate
+        ? 'overdue'
+        : paid > 0
+          ? 'partially_paid'
           : 'issued'
   return {
     id: row.id,
@@ -412,9 +753,11 @@ function invoiceOf(row: InvoiceRow): Invoice {
     amount: row.amount,
     discount: row.discount,
     lateFee: row.lateFee,
+    overdueFee: row.overdueFee,
     paid,
     dueDate: row.dueDate,
     status,
+    lines,
   }
 }
 
@@ -1548,7 +1891,7 @@ export function createLocalDataAccess(scope: AccessScope): DataAccess {
     async getFinance(period) {
       assertManager()
       const rows = INVOICES.filter((r) => r.period === period).map(invoiceOf)
-      const issued = rows.reduce((sum, i) => sum + i.amount - i.discount + i.lateFee, 0)
+      const issued = rows.reduce((sum, i) => sum + invoiceTotal(i), 0)
       const collected = rows.reduce((sum, i) => sum + i.paid, 0)
       return {
         period,
@@ -1584,6 +1927,7 @@ export function createLocalDataAccess(scope: AccessScope): DataAccess {
           amount: plan.amount,
           discount: Math.round((plan.amount * (fee?.discountPercent ?? 0)) / 100),
           lateFee: 0,
+          overdueFee: 0,
           dueDate,
           cancelled: false,
         })
@@ -1598,7 +1942,7 @@ export function createLocalDataAccess(scope: AccessScope): DataAccess {
       const row = INVOICES.find((r) => r.id === input.invoiceId)
       if (!row) throw new Error('صورتحساب پیدا نشد.')
       if (input.amount <= 0) throw new Error('مبلغ باید بیشتر از صفر باشد.')
-      const remaining = row.amount - row.discount + row.lateFee - paidFor(row.id)
+      const remaining = invoiceDue(invoiceOf(row))
       if (input.amount > remaining) {
         throw new Error('مبلغ از باقی‌مانده صورتحساب بیشتر است.')
       }
@@ -1638,21 +1982,67 @@ export function createLocalDataAccess(scope: AccessScope): DataAccess {
       // در داده نمونه، سرپرست اولِ هر کودک پرداخت‌کننده است.
       const isPayer = scope.role === 'manager' || (mine && payerGuardianId !== undefined)
       if (!isPayer) {
-        return { isPayer: false, invoices: [], payments: [], claims: [], outstanding: 0 }
+        return {
+          isPayer: false,
+          invoices: [],
+          payments: [],
+          claims: [],
+          outstanding: 0,
+          year: [],
+          yearLabel: '',
+          offers: [],
+          reminders: [],
+        }
       }
 
       const invoices = INVOICES.filter((r) => r.childId === childId).map(invoiceOf)
       const ids = new Set(invoices.map((i) => i.id))
       const outstanding = invoices
         .filter((i) => i.status !== 'paid' && i.status !== 'cancelled')
-        .reduce((sum, i) => sum + (i.amount - i.discount + i.lateFee - i.paid), 0)
+        .reduce((sum, i) => sum + invoiceDue(i), 0)
+
+      const yearLabel = jalaliYearMonth(new Date()).split('-')[0] ?? ''
       return {
         isPayer: true,
         invoices,
         payments: PAYMENTS.filter((p) => ids.has(p.invoiceId)),
         claims: CLAIMS.filter((c) => c.childId === childId),
         outstanding,
+        year: feeYear(childId, yearLabel),
+        yearLabel,
+        offers: offersFor(childId),
+        reminders: REMINDERS.filter((r) =>
+          INVOICES.some((i) => i.childId === childId && i.period === r.period),
+        ),
       }
+    },
+
+    /**
+     * جواب خانواده به قلم اختیاری.
+     *
+     * پذیرفتن، همان‌جا سطر صورتحساب می‌سازد — اگر صورتحساب آن دوره
+     * صادر شده باشد. اگر نشده، سطر وقتی می‌آید که صادر شود؛ همین است
+     * که `issueFeeItem` را دوباره‌اجراپذیر نگه می‌دارد.
+     */
+    async answerFeeItem(itemId, childId, accept) {
+      assertOwnChild(childId)
+      const link = FEE_ITEM_CHILDREN.find((f) => f.itemId === itemId && f.childId === childId)
+      if (!link) throw new Error('این قلم به کودک شما مربوط نیست.')
+      const item = FEE_ITEMS.find((f) => f.id === itemId)
+      if (!item?.publishedAt) throw new Error('قلم هزینه پیدا نشد.')
+      if (!item.optional) throw new Error('این قلم اختیاری نیست.')
+
+      link.answer = accept ? 'accepted' : 'declined'
+      if (accept) issueFeeItem(item)
+      else {
+        // نپذیرفتن، سطرِ ساخته‌شده را هم برمی‌دارد. وگرنه خانواده‌ای که
+        // نظرش عوض شد، بدهی‌ای می‌ماند که رویش جواب «نه» ثبت است.
+        const drop = INVOICE_LINES.findIndex(
+          (l) => l.itemId === itemId && INVOICES.some((i) => i.id === l.invoiceId && i.childId === childId),
+        )
+        if (drop >= 0) INVOICE_LINES.splice(drop, 1)
+      }
+      save()
     },
 
     /* ── درگاه پرداخت — ارتقای ۱ ────────────────────────────── */
@@ -1671,7 +2061,7 @@ export function createLocalDataAccess(scope: AccessScope): DataAccess {
       assertOwnChild(row.childId)
 
       const invoice = invoiceOf(row)
-      const due = invoice.amount - invoice.discount + invoice.lateFee - invoice.paid
+      const due = invoiceDue(invoice)
       if (due <= 0) throw new Error('این صورتحساب تسویه شده است.')
 
       const key = `idem-${Math.random().toString(36).slice(2, 12)}`
@@ -1966,7 +2356,7 @@ export function createLocalDataAccess(scope: AccessScope): DataAccess {
       assertOwnChild(row.childId)
       if (input.amount <= 0) throw new Error('مبلغ باید بیشتر از صفر باشد.')
 
-      const remaining = row.amount - row.discount + row.lateFee - paidFor(row.id)
+      const remaining = invoiceDue(invoiceOf(row))
       const alreadyClaimed = CLAIMS.filter(
         (c) => c.invoiceId === row.id && c.status === 'pending',
       ).reduce((sum, c) => sum + c.amount, 0)

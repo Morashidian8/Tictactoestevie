@@ -431,6 +431,13 @@ export type FeePlan = {
   childCount: number
 }
 
+/** یک قلم روی صورتحساب: ناهار، اردو، کاردستی. */
+export type InvoiceLine = {
+  id: string
+  title: string
+  amount: number
+}
+
 export type Invoice = {
   id: string
   childId: string
@@ -439,10 +446,23 @@ export type Invoice = {
   period: string
   amount: number
   discount: number
+  /**
+   * جریمه تأخیر در **تحویل گرفتن کودک** — بخش ۵.۸.
+   * ربطی به دیر پرداختن ندارد؛ آن `overdueFee` است.
+   */
   lateFee: number
+  /** جریمه دیرکرد **پرداخت**. */
+  overdueFee: number
   paid: number
   dueDate: string
   status: InvoiceStatus
+  /**
+   * اقلامی که این مبلغ از آن‌ها ساخته شده.
+   *
+   * بی این، خانواده یک عدد بزرگ‌تر از شهریه می‌بیند و باید زنگ بزند
+   * بپرسد بابت چیست.
+   */
+  lines: InvoiceLine[]
 }
 
 export type PaymentMethod = 'online' | 'manual_receipt' | 'cash' | 'cheque'
@@ -458,6 +478,13 @@ export type Payment = {
   paymentMethod?: PaymentMethod
   /** کد رهگیری، فقط برای پرداخت آنلاین تأییدشده. */
   trackingCode?: string | null
+  /**
+   * سند پرداخت غیرآنلاین — تصویر فیش.
+   *
+   * پرداخت آنلاین سندش کد رهگیری است. پیش از این تصویر روی اعلامِ
+   * خانواده می‌ماند و با تأیید مدیر گم می‌شد؛ بازرس ردیف می‌دید، سند نه.
+   */
+  receiptUrl?: string | null
 }
 
 /* ── درگاه پرداخت — ارتقای ۱ سند بررسی طراحی ─────────────────── */
@@ -511,6 +538,58 @@ export type PaymentInput = {
 }
 
 /** نمای مالی خانواده. فقط سرپرست پرداخت‌کننده — بخش ۶.۵. */
+/**
+ * یک ماه از برنامه شهریه سال.
+ *
+ * `issued=false` یعنی هنوز صورتحسابی صادر نشده و `amount` **برآورد**
+ * است، از روی طرح شهریه — نه بدهی. اگر برآورد را بدهی نشان می‌دادیم،
+ * خانواده در مهر یک رقم دوازده‌ماهه می‌دید و می‌ترسید.
+ */
+export type FeeYearMonth = {
+  period: string
+  issued: boolean
+  amount: number
+  discount: number
+  extras: number
+  lateFee: number
+  overdueFee: number
+  paid: number
+  dueDate: string | null
+  status: InvoiceStatus | 'not_issued'
+}
+
+/**
+ * قلم هزینه‌ای که مدیر تعریف کرده و برای این کودک فرستاده.
+ *
+ * قلم اختیاری تا وقتی خانواده نپذیرفته، بدهی نیست و روی صورتحساب
+ * نمی‌نشیند. `answer === null` یعنی هنوز جواب نداده.
+ */
+export type FeeItemOffer = {
+  itemId: string
+  title: string
+  description: string | null
+  amount: number
+  period: string
+  optional: boolean
+  answer: 'accepted' | 'declined' | null
+}
+
+export type ReminderKind = 'due_soon' | 'due_today' | 'overdue'
+
+/**
+ * یادآوری‌هایی که رفته.
+ *
+ * خانواده باید ببیند کِی و از چه راهی خبر شده؛ ادعای «پیامک نیامد»
+ * بی این فهرست قابل بررسی نیست.
+ */
+export type PaymentReminderLog = {
+  id: string
+  period: string
+  kind: ReminderKind
+  channel: 'app' | 'sms'
+  sentAt: string
+}
+
 export type ParentFinance = {
   /** اگر این حساب پرداخت‌کننده نیست، false و بقیه خالی است. */
   isPayer: boolean
@@ -519,6 +598,13 @@ export type ParentFinance = {
   /** اعلام‌های خودش، تا بداند کدامشان هنوز منتظر تأیید مدیر است. */
   claims: PaymentClaim[]
   outstanding: number
+  /** دوازده ماه سال جاری، صادرشده و نشده. */
+  year: FeeYearMonth[]
+  /** سال جلالی‌ای که `year` به آن مربوط است، مثل «۱۴۰۴». */
+  yearLabel: string
+  /** قلم‌های اختیاری که منتظر جواب خانواده‌اند، و جواب‌داده‌ها. */
+  offers: FeeItemOffer[]
+  reminders: PaymentReminderLog[]
 }
 
 /* ── پرونده کودک — ماژول M1 ─────────────────────────────────── */
@@ -1073,6 +1159,14 @@ export interface DataAccess {
    * پاسخ `pending` است، صورتحساب دست‌نخورده می‌ماند.
    */
   checkOnlinePayment(key: string): Promise<PaymentResult>
+
+  /**
+   * جواب خانواده به یک قلم اختیاری.
+   *
+   * پذیرفتن، سطر صورتحساب می‌سازد؛ نپذیرفتن هیچ بدهی‌ای نمی‌سازد —
+   * اردویی که کودک نمی‌رود نباید در مانده بیاید.
+   */
+  answerFeeItem(itemId: string, childId: string, accept: boolean): Promise<void>
 
   /* ── پرونده کودک — ماژول M1 ───────────────────────────────── */
 

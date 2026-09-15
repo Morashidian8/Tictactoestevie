@@ -141,3 +141,30 @@ export function formatAge(birthDate: string | null, now: Date = new Date()): str
   if (rest === 0) return `${toPersianDigits(years)} سال`
   return `${toPersianDigits(years)} سال و ${toPersianDigits(rest)} ماه`
 }
+
+/**
+ * نام ماه‌های جلالی، به ترتیب. فروردین یک است، نه صفر.
+ *
+ * فهرست است نه تابع، چون نوار ماه‌های سال هم همین ترتیب را می‌خواهد.
+ */
+export const JALALI_MONTHS = [
+  'فروردین', 'اردیبهشت', 'خرداد', 'تیر', 'مرداد', 'شهریور',
+  'مهر', 'آبان', 'آذر', 'دی', 'بهمن', 'اسفند',
+] as const
+
+/**
+ * دوره مالی «۱۴۰۴-۰۷» را به «مهر ۱۴۰۴» تبدیل می‌کند.
+ *
+ * دوره‌ها در پایگاه داده با ارقام لاتین ذخیره می‌شوند چون کلیدند؛ آنچه
+ * خانواده می‌بیند اسم ماه است، نه یک شناسه — بخش ۱۲.۴.
+ *
+ * ورودی نامعتبر همان ورودی را با ارقام فارسی برمی‌گرداند: بهتر است
+ * خانواده یک رشته عجیب ببیند تا اینکه صفحه سفید شود.
+ */
+export function formatPeriod(period: string, withYear = true): string {
+  const [year, month] = period.split('-')
+  const index = Number(month)
+  const name = JALALI_MONTHS[index - 1]
+  if (!year || !name) return toPersianDigits(period)
+  return withYear ? `${name} ${toPersianDigits(year)}` : name
+}

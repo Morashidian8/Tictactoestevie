@@ -69,8 +69,15 @@ import type {
   ReportPatch,
   CheckInInput,
   CheckOutInput,
+  InvoiceLine,
+  FeeItemOffer,
+  FeeYearMonth,
+  PaymentMethod,
+  PaymentReminderLog,
 } from '../types.ts'
 import { isInCurrentWeek } from '../../../i18n/week.ts'
+import { jalaliYearMonth } from '../../../i18n/index.ts'
+import { invoiceDue, invoiceTotal } from '../money.ts'
 import { isOverdue } from '../attendanceState.ts'
 import { supabase } from './client.ts'
 import {
@@ -270,17 +277,30 @@ const asInvoice = (r: Row): Invoice => {
   const amount = (r.amount as number) ?? 0
   const discount = (r.discount as number) ?? 0
   const lateFee = (r.late_fee as number) ?? 0
-  const due = amount - discount + lateFee
+  const overdueFee = (r.overdue_fee as number) ?? 0
+  const lines = ((r.invoice_line as Row[] | null) ?? []).map((l): InvoiceLine => ({
+    id: l.id as string,
+    title: l.title as string,
+    amount: l.amount as number,
+  }))
+  const extras = lines.reduce((sum, l) => sum + l.amount, 0)
+  const due = amount - discount + lateFee + overdueFee + extras
   const today = new Date().toISOString().slice(0, 10)
+  /*
+   * سررسیدِ گذشته بر نیمه‌پرداخت مقدم است — همان ترتیبی که
+   * app.invoice_status_now در پایگاه داده دارد. اگر این دو با هم
+   * نخوانند، خانواده در اپ «بخشی پرداخت شده» می‌بیند و یادآوری
+   * دیرکرد می‌گیرد.
+   */
   const status: InvoiceStatus =
     r.status === 'cancelled'
       ? 'cancelled'
       : paid >= due
         ? 'paid'
-        : paid > 0
-          ? 'partially_paid'
-          : today > (r.due_date as string)
-            ? 'overdue'
+        : today > (r.due_date as string)
+          ? 'overdue'
+          : paid > 0
+            ? 'partially_paid'
             : 'issued'
   return {
     id: r.id as string,
@@ -290,9 +310,11 @@ const asInvoice = (r: Row): Invoice => {
     amount,
     discount,
     lateFee,
+    overdueFee,
     paid,
     dueDate: r.due_date as string,
     status,
+    lines,
   }
 }
 
@@ -1634,7 +1656,7 @@ export function createSupabaseDataAccess(scope: AccessScope): DataAccess {
       ])
 
       const invoices = (orThrow(invoiceRows) as Row[]).map(asInvoice)
-      const issued = invoices.reduce((sum, i) => sum + i.amount - i.discount + i.lateFee, 0)
+      const issued = invoices.reduce((sum, i) => sum + invoiceTotal(i), 0)
       const collected = invoices.reduce((sum, i) => sum + i.paid, 0)
       const fees = orThrow(feeRows) as Row[]
 
@@ -1703,7 +1725,7 @@ export function createSupabaseDataAccess(scope: AccessScope): DataAccess {
           .single(),
       ) as Row
       const view = asInvoice(invoice)
-      const remaining = view.amount - view.discount + view.lateFee - view.paid
+      const remaining = invoiceDue(view)
       if (input.amount > remaining) throw new Error('مبلغ از باقی‌مانده صورتحساب بیشتر است.')
 
       const row = orThrow(
@@ -1726,7 +1748,7 @@ export function createSupabaseDataAccess(scope: AccessScope): DataAccess {
       orThrow(
         await db
           .from('invoice')
-          .update({ status: paid >= view.amount - view.discount + view.lateFee ? 'paid' : 'partially_paid' })
+          .update({ status: paid >= invoiceTotal(view) ? 'paid' : 'partially_paid' })
           .eq('center_id', scope.centerId)
           .eq('id', input.invoiceId)
           .select('id'),
@@ -1788,20 +1810,39 @@ export function createSupabaseDataAccess(scope: AccessScope): DataAccess {
       ) as Row[]
       const isPayer = scope.role === 'manager' || link.some((r) => r.is_payer)
       if (!isPayer) {
-        return { isPayer: false, invoices: [], payments: [], claims: [], outstanding: 0 }
+        return {
+          isPayer: false,
+          invoices: [],
+          payments: [],
+          claims: [],
+          outstanding: 0,
+          year: [],
+          yearLabel: '',
+          offers: [],
+          reminders: [],
+        }
       }
 
-      const rows = orThrow(
-        await db
+      const yearLabel = jalaliYearMonth(new Date()).split('-')[0] ?? ''
+
+      const [rows, yearRows, offerRows] = await Promise.all([
+        db
           .from('invoice')
-          .select('*, child:child_id(first_name, last_name), payment(amount, paid_at, method, receipt_no, id, invoice_id)')
+          .select('*, child:child_id(first_name, last_name), invoice_line(id, title, amount), payment(amount, paid_at, method, receipt_no, receipt_url, tracking_code, payment_method, id, invoice_id)')
           .eq('center_id', scope.centerId)
           .eq('child_id', childId)
           .order('period', { ascending: false }),
-      ) as Row[]
+        db.rpc('child_fee_year', { centre: scope.centerId, target: childId, year: yearLabel }),
+        db
+          .from('fee_item_child')
+          .select('accepted_at, declined_at, fee_item:fee_item_id(id, title, description, amount, period, optional, published_at)')
+          .eq('center_id', scope.centerId)
+          .eq('child_id', childId),
+      ])
 
-      const invoices = rows.map(asInvoice)
-      const payments = rows.flatMap((r) =>
+      const invoiceRows = orThrow(rows) as Row[]
+      const invoices = invoiceRows.map(asInvoice)
+      const payments = invoiceRows.flatMap((r) =>
         ((r.payment as Row[] | null) ?? []).map((p): Payment => ({
           id: p.id as string,
           invoiceId: r.id as string,
@@ -1809,8 +1850,40 @@ export function createSupabaseDataAccess(scope: AccessScope): DataAccess {
           paidAt: p.paid_at as string,
           method: (p.method as string | null) ?? null,
           receiptNo: (p.receipt_no as string | null) ?? null,
+          paymentMethod: (p.payment_method as PaymentMethod | null) ?? undefined,
+          trackingCode: (p.tracking_code as string | null) ?? null,
+          receiptUrl: (p.receipt_url as string | null) ?? null,
         })),
       )
+
+      const year = ((orThrow(yearRows) as Row[]) ?? []).map((m): FeeYearMonth => ({
+        period: m.period as string,
+        issued: m.issued as boolean,
+        amount: (m.amount as number) ?? 0,
+        discount: (m.discount as number) ?? 0,
+        extras: (m.extras as number) ?? 0,
+        lateFee: (m.late_fee as number) ?? 0,
+        overdueFee: (m.overdue_fee as number) ?? 0,
+        paid: (m.paid as number) ?? 0,
+        dueDate: (m.due_date as string | null) ?? null,
+        status: m.status as FeeYearMonth['status'],
+      }))
+
+      // قلم منتشرنشده به خانواده نشان داده نمی‌شود. سیاست سطر-محور هم
+      // همین را می‌بندد؛ این فیلتر فقط صریحش می‌کند.
+      const offers = ((orThrow(offerRows) as Row[]) ?? []).flatMap((r): FeeItemOffer[] => {
+        const item = r.fee_item as Row | null
+        if (!item?.published_at) return []
+        return [{
+          itemId: item.id as string,
+          title: item.title as string,
+          description: (item.description as string | null) ?? null,
+          amount: item.amount as number,
+          period: item.period as string,
+          optional: item.optional as boolean,
+          answer: r.accepted_at ? 'accepted' : r.declined_at ? 'declined' : null,
+        }]
+      })
       const claims = (orThrow(
         await db
           .from('payment_claim')
@@ -1825,6 +1898,21 @@ export function createSupabaseDataAccess(scope: AccessScope): DataAccess {
         }),
       )
 
+      const reminders = ((orThrow(
+        await db
+          .from('payment_reminder')
+          .select('id, kind, channel, sent_at, invoice:invoice_id(period)')
+          .eq('center_id', scope.centerId)
+          .in('invoice_id', invoices.map((i) => i.id))
+          .order('sent_at', { ascending: false }),
+      ) as Row[]) ?? []).map((r): PaymentReminderLog => ({
+        id: r.id as string,
+        period: ((r.invoice as Row | null)?.period as string) ?? '',
+        kind: r.kind as PaymentReminderLog['kind'],
+        channel: r.channel as PaymentReminderLog['channel'],
+        sentAt: r.sent_at as string,
+      }))
+
       return {
         isPayer: true,
         invoices,
@@ -1832,8 +1920,36 @@ export function createSupabaseDataAccess(scope: AccessScope): DataAccess {
         claims,
         outstanding: invoices
           .filter((i) => i.status !== 'paid' && i.status !== 'cancelled')
-          .reduce((sum, i) => sum + (i.amount - i.discount + i.lateFee - i.paid), 0),
+          .reduce((sum, i) => sum + invoiceDue(i), 0),
+        year,
+        yearLabel,
+        offers,
+        reminders,
       }
+    },
+
+    /**
+     * جواب خانواده به قلم اختیاری.
+     *
+     * فقط همین دو ستون را می‌نویسد؛ مبلغ و اینکه قلم به کدام کودک
+     * خورده، دست مدیر است و سیاست سطر-محور همان را می‌بندد. پذیرفتن،
+     * سطر صورتحساب را از سمت سرور می‌سازد تا مبلغ از کلاینت نیاید.
+     */
+    async answerFeeItem(itemId, childId, accept) {
+      const now = new Date().toISOString()
+      orThrow(
+        await db
+          .from('fee_item_child')
+          .update(
+            accept
+              ? { accepted_at: now, declined_at: null }
+              : { declined_at: now, accepted_at: null },
+          )
+          .eq('fee_item_id', itemId)
+          .eq('child_id', childId)
+          .eq('center_id', scope.centerId),
+      )
+      if (accept) orThrow(await db.rpc('issue_fee_item', { item: itemId }))
     },
 
     /* ── درگاه پرداخت — ارتقای ۱ ────────────────────────────── */
@@ -2230,7 +2346,7 @@ export function createSupabaseDataAccess(scope: AccessScope): DataAccess {
       const pending = (orThrow(
         await from('payment_claim').eq('invoice_id', input.invoiceId).eq('status', 'pending'),
       ) as Row[]).reduce((sum, r) => sum + ((r.amount as number) ?? 0), 0)
-      const remaining = invoice.amount - invoice.discount + invoice.lateFee - invoice.paid - pending
+      const remaining = invoiceDue(invoice) - pending
       if (input.amount > remaining) throw new Error('مبلغ از باقی‌مانده صورتحساب بیشتر است.')
 
       const row = orThrow(

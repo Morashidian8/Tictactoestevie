@@ -159,6 +159,17 @@ export function MegaphoneIcon({ size = 16 }: IconProps) {
   )
 }
 
+/** کیف پول — شهریه و پرداخت‌ها. */
+export function WalletIcon({ size = 16 }: IconProps) {
+  return (
+    <svg {...frame(size)}>
+      <path d="M3 8a2 2 0 0 1 2-2h13a1 1 0 0 1 1 1v2" />
+      <rect x="3" y="8" width="18" height="11" rx="2" />
+      <path d="M21 12h-4a2 2 0 0 0 0 4h4" />
+    </svg>
+  )
+}
+
 /** آدمک — «بیشتر» و پروفایل. */
 export function PersonIcon({ size = 16 }: IconProps) {
   return (
