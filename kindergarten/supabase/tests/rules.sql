@@ -907,3 +907,109 @@ begin
      where sms_sent_at is not null
   $x$, 'یک رخداد نمی‌تواند هم پیامک رفته باشد هم نرفته');
 end $$;
+
+\echo ''
+\echo '── بایگانی حضور و مدارک مربی ──'
+do $$
+declare
+  centre uuid := '11111111-1111-1111-1111-111111111111';
+  sara   uuid := 'd1111111-1111-1111-1111-111111111111';
+  zahra  uuid := '51111111-1111-1111-1111-111111111111';
+  mother uuid := '91111111-1111-1111-1111-111111111111';
+  d1 date := date '2025-11-03';
+  d2 date := date '2025-11-04';
+  d3 date := date '2025-11-05';
+  line   record;
+  total  record;
+begin
+  -- ۱. سه روز: یکی کامل، یکی بی‌خروج، یکی غیبت اعلام‌شده.
+  -- روش تحویل اجباری است: قید attendance_checkout_needs_method نمی‌گذارد
+  -- خروجی ثبت شود بی آنکه معلوم باشد کودک را به چه کسی و چطور داده‌اند.
+  insert into attendance (center_id, child_id, date, check_in_at, check_out_at,
+                          dropped_by_guardian_id, picked_up_by_guardian_id,
+                          pickup_method, late_minutes)
+  values (centre, sara, d1,
+          d1 + time '08:05', d1 + time '13:05', mother, mother, 'guardian', 0);
+
+  insert into attendance (center_id, child_id, date, check_in_at, dropped_by_guardian_id)
+  values (centre, sara, d2, d2 + time '08:20', mother);
+
+  insert into absence_notice (center_id, child_id, date, reason)
+  values (centre, sara, d3, 'سرماخوردگی');
+
+  perform assert(
+    (select count(*) from app.child_attendance_month(centre, sara, d1, d3)) = 3,
+    'بایگانی حضور هر سه روز را برمی‌گرداند'
+  );
+
+  -- ۲. مدت فقط وقتی هر دو سر ثبت شده‌اند.
+  select * into line from app.child_attendance_month(centre, sara, d1, d1);
+  perform assert(line.minutes = 300, 'روز کامل، مدت حضور را دقیقه‌ای می‌دهد');
+
+  /*
+   * روزی که خروجش ثبت نشده مدت ندارد. صفر گذاشتن یعنی دروغ گفتن
+   * درباره ساعتی که کودک واقعاً آنجا بود.
+   */
+  select * into line from app.child_attendance_month(centre, sara, d2, d2);
+  perform assert(line.minutes is null, 'روز بی‌خروج، مدت ندارد — نه اینکه صفر باشد');
+  perform assert(line.check_in_at is not null, 'ولی ساعت ورودش سر جایش است');
+
+  -- ۳. غیبت اعلام‌شده از نیامدنِ بی‌خبر جدا می‌ماند.
+  select * into line from app.child_attendance_month(centre, sara, d3, d3);
+  perform assert(line.absent, 'غیبت اعلام‌شده در بایگانی غایب علامت می‌خورد');
+  perform assert(line.absence_reason = 'سرماخوردگی', 'و دلیلش می‌ماند');
+
+  /*
+   * روزی که کودک اصلاً برنامه‌اش نبوده، ردیف نمی‌گیرد. تفاوت «نیامد» و
+   * «امروز روزش نبود» تمام نکته این نماست.
+   */
+  perform assert(
+    (select count(*) from app.child_attendance_month(centre, sara, d1 - 10, d1 - 1)) = 0,
+    'روزهای بی‌سابقه ردیف نمی‌گیرند — غیبت ساختگی تولید نمی‌شود'
+  );
+
+  -- ۴. خلاصه ماه.
+  select * into total from app.child_attendance_summary(centre, sara, d1, d3);
+  perform assert(total.present_days = 2, 'خلاصه ماه دو روز حضور می‌شمارد');
+  perform assert(total.absent_days = 1, 'و یک روز غیبت');
+  perform assert(total.total_minutes = 300, 'و مجموع دقیقه فقط از روزهای کامل');
+
+  -- ۵. مدارک مربی: وضعیت از تاریخ انقضا می‌آید.
+  insert into staff_document (center_id, staff_id, kind, title, file_url, issued_at, expires_at)
+  values
+    (centre, zahra, 'health_card', 'کارت بهداشت', 'x1', current_date - 300, current_date - 1),
+    (centre, zahra, 'training', 'دوره کمک‌های اولیه', 'x2', current_date - 100, current_date + 10),
+    (centre, zahra, 'degree', 'کارشناسی روان‌شناسی', 'x3', current_date - 3000, null);
+
+  perform assert(
+    (select state from app.staff_documents(centre, zahra) where title = 'کارت بهداشت') = 'expired',
+    'مدرکی که تاریخش گذشته، منقضی علامت می‌خورد'
+  );
+  perform assert(
+    (select state from app.staff_documents(centre, zahra) where title = 'دوره کمک‌های اولیه') = 'expiring',
+    'مدرکی که کمتر از سی روز مانده، نزدیک انقضا'
+  );
+  /*
+   * مدرک تحصیلی تاریخ انقضا ندارد و نباید در فهرست هشدارها بیفتد.
+   * یکی گرفتنشان یعنی مدیر هر روز یک هشدار بی‌معنا می‌بیند و بعد از
+   * یک هفته دیگر هیچ هشداری را نمی‌خواند.
+   */
+  perform assert(
+    (select state from app.staff_documents(centre, zahra) where title = 'کارشناسی روان‌شناسی') = 'no_expiry',
+    'مدرک بی‌انقضا، حالت خودش را دارد نه «معتبر»'
+  );
+
+  -- ۶. شکاف مدارک، برای پرونده بازرسی.
+  select * into line from app.staff_document_gaps(centre) where staff_id = zahra;
+  perform assert(line.expired = 1, 'شکاف مدارک، منقضی‌ها را می‌شمارد');
+  perform assert(line.expiring = 1, 'و نزدیک‌انقضاها را جدا');
+  perform assert(line.total = 3, 'و کل مدارک را');
+
+  -- ۷. تاریخ انقضای پیش از صدور، داده خراب است.
+  perform assert_rejects($x$
+    insert into staff_document (center_id, staff_id, kind, title, file_url, issued_at, expires_at)
+    values ('11111111-1111-1111-1111-111111111111',
+            '51111111-1111-1111-1111-111111111111',
+            'other', 'خراب', 'x9', current_date, current_date - 1)
+  $x$, 'انقضای پیش از صدور رد می‌شود');
+end $$;
