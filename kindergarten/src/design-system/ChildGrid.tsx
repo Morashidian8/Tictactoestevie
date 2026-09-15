@@ -1,5 +1,6 @@
 import { useRef } from 'react'
 import { ChildAvatar, type AttendanceState, type AvatarSize } from './ChildAvatar.tsx'
+import { CubbyMark } from './CubbyMark.tsx'
 import { MoonIcon, SpoonIcon } from './icons.tsx'
 import styles from './ChildGrid.module.css'
 
@@ -42,19 +43,20 @@ type Props = {
 const HOLD_MS = 450
 
 /**
- * شبکه کودکان — دو ستون کارت.
+ * شبکه کودکان — دو ستون، کارت عمودی.
  *
- * پیش‌تر چهار آواتار معلق در عرض ۳۹۰ پیکسل بود. سه مشکل داشت: آواتار
- * ۶۴ پیکسلی بی‌محفظه به فهرست مخاطبین تلفن شبیه بود، جایی برای وضعیت
- * روز نمی‌ماند، و هدف لمسی فقط خودِ آواتار بود نه یک ناحیه.
+ * چیدمان اول افقی بود (عکس کنار متن) تا کودک بیشتری در یک پرده جا
+ * شود. مالک محصول ماکت را ملاک گذاشت و ماکت عمودی است: عکس دایره‌ای
+ * بالا و وسط، نام زیرش، بعد سن، بعد دو کپسول وضعیت روز.
  *
- * کارت هر سه را حل می‌کند: محفظه سفید با سایه یعنی «این را می‌شود زد»،
- * ستون کنار عکس جا برای نام، ساعت و وضعیت روز دارد، و کل کارت هدف
- * لمسی است.
+ * هزینه‌اش صریح است و اندازه گرفته شده: کارت از ۸۹ به حدود ۱۷۰ پیکسل
+ * می‌رسد و رسیدن به بیستمین کودک از ۱٫۲ پرده به حدود ۲٫۳ پرده. در عوض
+ * هر کارت از فاصله یک متری خوانده می‌شود و عکس دو برابر بزرگ‌تر است —
+ * که برای مربی‌ای که گوشی را روی میز گذاشته و کودک دم در است، معامله
+ * بدی نیست.
  *
- * هزینه‌اش صریح است: دو ستون یعنی نصف کودکان در یک پرده. برای شبکه
- * «امروز» این معامله درست است چون مربی دنبال یک کودک مشخص می‌گردد، نه
- * دنبال مرور کل فهرست. صفحه ثبت گروهی چیدمان خودش را دارد و دست نخورده.
+ * صفحه «ثبت گروهی» دست نخورده: آنجا کار مرور کل فهرست است و بودجه
+ * ۹۰ ثانیه به آن بسته، نه به این شبکه.
  */
 export function ChildGrid({ items, avatarSize, onSelect, onHold }: Props) {
   return (
@@ -121,69 +123,56 @@ function GridCell({
       }}
       aria-label={item.actionLabel}
     >
-      <ChildAvatar
-        id={item.id}
-        firstName={item.firstName}
-        photoUrl={item.photoUrl}
-        state={item.state}
-        size={avatarSize}
-        flagged={item.flagged}
-        flagLabel={item.flagLabel}
-        shape="rounded"
-        layout="frame"
-      />
+      <span className={styles.photo}>
+        <ChildAvatar
+          id={item.id}
+          firstName={item.firstName}
+          photoUrl={item.photoUrl}
+          state={item.state}
+          size={avatarSize}
+          flagged={item.flagged}
+          flagLabel={item.flagLabel}
+          layout="frame"
+        />
+        {/* نماد کمد — شناساگر، نه توصیف. از شناسه ساخته می‌شود. */}
+        <CubbyMark seed={item.id} />
+      </span>
 
-      <span className={styles.body}>
-        {/*
-          بخش ۷.۱: آلرژی هم‌ردیف نام، نه بالای آن.
-          بالای نام یک سطر به کارت اضافه می‌کرد و ارتفاع را از ۸۸ به ۱۰۷
-          می‌برد — یعنی یک ردیف کمتر در هر پرده، برای اطلاعاتی که همین‌جا
-          هم جا می‌شود. نوار آجری لبه بالا، خودش از دور دیده می‌شود.
-        */}
-        <span className={styles.name}>{item.firstName}</span>
+      <span className={styles.name}>{item.firstName}</span>
 
-        {/*
-          سن زیر نام. در کلاسی که از سه تا شش سال دارد، این تنها عددی
-          درباره کودک است که مقایسه‌ای نیست — و مربی جانشین از همین
-          می‌فهمد با چه کسی طرف است.
-        */}
-        {item.age ? <span className={`${styles.meta} t-caption`}>{item.age}</span> : null}
+      {/*
+        سن زیر نام. در کلاسی که از سه تا شش سال دارد، این تنها عددی
+        درباره کودک است که مقایسه‌ای نیست — و مربی جانشین از همین
+        می‌فهمد با چه کسی طرف است.
+      */}
+      {/*
+        جداکننده از روی چیزی که واقعاً نوشته می‌شود حساب می‌شود، نه از
+        روی item.caption: کودکی که نیامده caption ندارد ولی «نیامده»
+        نوشته می‌شود، و بی این، «۵ سال و ۳ ماهنیامده» درمی‌آمد.
+      */}
+      <span className={`${styles.meta} t-caption`}>
+        {item.age ? `${item.age} · ` : ''}
+        <span className="tabular">{item.caption ?? 'نیامده'}</span>
+      </span>
 
-        {/*
-          بخش ۷.۱: نامِ خودِ آلرژی، نه برچسب «آلرژی».
-          «آلرژی» به مربی نمی‌گوید بشقاب را بدهد یا نه؛ «گردو» می‌گوید.
-        */}
-        {item.allergy ? (
-          <span className={styles.allergy}>{item.allergy}</span>
-        ) : null}
+      {/*
+        بخش ۷.۱: نامِ خودِ آلرژی، نه برچسب «آلرژی».
+        «آلرژی» به مربی نمی‌گوید بشقاب را بدهد یا نه؛ «گردو» می‌گوید.
+      */}
+      {item.allergy ? <span className={styles.allergy}>{item.allergy}</span> : null}
 
-        {/*
-          وضعیت روز، دو گلیف ۱۲ پیکسلی.
-          خاموش یعنی ثبت نشده، روشن یعنی ثبت شده. گلیف در هر دو حالت
-          --ink است و آنچه عوض می‌شود پرکننده است — رنگ لحن روی تینت
-          خودش برای گلیف ۱۲ پیکسلی کافی نیست (نعنایی ۳٫۵۸، انبه‌ای ۳٫۰۷).
-        */}
-        <span className={styles.activity}>
-          <span
-            className={`${styles.act} ${item.lunchLogged ? styles.actLunch : ''}`}
-            aria-hidden
-          >
-            <SpoonIcon size={12} />
-          </span>
-          <span
-            className={`${styles.act} ${item.napLogged ? styles.actNap : ''}`}
-            aria-hidden
-          >
-            <MoonIcon size={12} />
-          </span>
-          {/*
-            ساعت ورود کنار آیکون‌ها، نه زیر نام.
-            در کارت ۱۷۳ پیکسلی، «۴ سال و ۱۱ ماه · ۸:۰۵» در یک سطر جا
-            نمی‌شود و هر دو بریده می‌شوند. اینجا سطر خودش خالی است.
-          */}
-          <span className={`${styles.time} t-caption tabular`}>
-            {item.caption ?? 'نیامده'}
-          </span>
+      {/*
+        وضعیت روز، دو کپسول.
+        خاموش یعنی ثبت نشده، روشن یعنی ثبت شده. گلیف در هر دو حالت
+        --ink است و آنچه عوض می‌شود پرکننده است — رنگ لحن روی تینت
+        خودش برای گلیف کوچک کافی نیست (نعنایی ۳٫۵۸، انبه‌ای ۳٫۰۷).
+      */}
+      <span className={styles.activity}>
+        <span className={`${styles.act} ${item.lunchLogged ? styles.actLunch : ''}`} aria-hidden>
+          <SpoonIcon size={13} />
+        </span>
+        <span className={`${styles.act} ${item.napLogged ? styles.actNap : ''}`} aria-hidden>
+          <MoonIcon size={13} />
         </span>
       </span>
 

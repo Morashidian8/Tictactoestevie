@@ -5,6 +5,7 @@ import './typography.css'
 
 export { AvatarFace } from './AvatarFace.tsx'
 export { ChildFace } from './ChildFace.tsx'
+export { CubbyMark } from './CubbyMark.tsx'
 export { BottomSheet } from './BottomSheet.tsx'
 export { ChildAvatar, type AttendanceState, type AvatarSize } from './ChildAvatar.tsx'
 export { ChildGrid, type ChildGridItem } from './ChildGrid.tsx'

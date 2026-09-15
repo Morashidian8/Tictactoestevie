@@ -331,25 +331,23 @@ const cardLayout = await page.evaluate(() => {
 check(cardLayout.columns === 2, `شبکه دو ستونه است (${cardLayout.columns})`)
 check(cardLayout.sameRow && cardLayout.nextRow, 'دو کارت در هر سطر، سومی سطر بعد')
 /*
- * سند بازطراحی ۸۸ تا ۹۶ خواسته بود، برای کارتی که نام و ساعت داشت.
- * حالا سن و نام آلرژی هم روی کارت‌اند و کف واقعی بالاتر رفته:
+ * کارت عمودی شد — تصمیم مالک محصول، مطابق ماکت.
  *
- *   بی آلرژی   ۸۹  — نام، سن، سطر فعالیت
- *   با آلرژی  ۱۱۴  — به‌علاوه نوار آلرژی
- *
- * سقف ۱۲۰ است، نه بیشتر: آنچه واقعاً مهم است تعداد کودکِ هر پرده است،
- * و گزاره «زیر یک‌ونیم پرده» پایین‌تر همان را می‌سنجد.
+ * عکس دایره‌ای بالا و وسط، نام، سن، و دو کپسول وضعیت در پایین. ارتفاع
+ * از ۸۹ به ۱۸۵ رسید؛ سقف ۲۰۰ است تا اگر روزی سطر ششمی به کارت اضافه
+ * شود، اینجا قرمز شود نه در دست مربی.
  */
 check(
-  cardLayout.height >= 88 && cardLayout.height <= 120,
-  `ارتفاع کارت در بازه ۸۸ تا ۱۲۰ است (${cardLayout.height})`,
+  cardLayout.height >= 150 && cardLayout.height <= 200,
+  `ارتفاع کارت در بازه ۱۵۰ تا ۲۰۰ است (${cardLayout.height})`,
 )
 check(cardLayout.bg === 'rgb(255, 255, 255)', 'کارت سفید خالص است')
 check(cardLayout.shadow !== 'none', 'و سایه دارد — همان چیزی که می‌گوید این را می‌شود زد')
 check(cardLayout.radius === '18px', `گوشه‌های نرم ۱۸ پیکسلی (${cardLayout.radius})`)
+// ماکت عکس دایره‌ای دارد. مربع گوشه‌نرم برای چیدمان افقی بود.
 check(
-  cardLayout.photoRadius === '16px',
-  `عکس مربعِ گوشه‌نرم است، نه دایره (${cardLayout.photoRadius})`,
+  cardLayout.photoRadius === '999px',
+  `عکس دایره‌ای است، مثل ماکت (${cardLayout.photoRadius})`,
 )
 
 /*
@@ -365,13 +363,18 @@ const allergyCard = await page.evaluate(() => {
   return {
     badge: card.textContent.includes('آلرژی'),
     reader: (card.querySelector('.sr-only')?.textContent ?? '').trim(),
-    topBorder: getComputedStyle(card).borderTopWidth,
+    background: getComputedStyle(card).backgroundColor,
   }
 })
 check(allergyCard?.badge === true, 'کودک آلرژی‌دار روی کارتش بج آلرژی دارد')
+/*
+ * در چیدمان عمودی، کل کارت کرم می‌شود به‌جای نوار آجری لبه بالا —
+ * مثل ماکت. در فهرست سفید کارت‌ها، تفاوت زمینه از دو متری دیده
+ * می‌شود؛ یک خط دو پیکسلی نه.
+ */
 check(
-  allergyCard?.topBorder === '2px',
-  `و نوار آجری لبه بالا (${allergyCard?.topBorder})`,
+  allergyCard?.background === 'rgb(254, 243, 199)',
+  `کارت کودک آلرژی‌دار کرم می‌شود (${allergyCard?.background})`,
 )
 // رنگ هرگز تنها حامل معنا نیست — بخش ۱۲.۲
 check(
@@ -409,12 +412,17 @@ check(
 )
 
 /*
- * هزینه صریح دو ستون، ثبت‌شده تا کسی بعداً غافلگیر نشود.
+ * هزینه صریح کارت عمودی، ثبت‌شده تا کسی بعداً غافلگیر نشود.
  *
- * چهار ستونه، حدود ۱۲ کودک در یک پرده دیده می‌شد. دو ستونه شش تا.
- * برای صفحه «امروز» این معامله درست است چون مربی دنبال یک کودک مشخص
- * می‌گردد نه مرور کل فهرست — ولی اگر روزی از یک پرده و نیم بگذرد،
- * معامله دیگر درست نیست.
+ *   چهار ستونه، آواتار معلق      ~۱۲ کودک در پرده، ۰٫۸ پرده اسکرول
+ *   دو ستونه، کارت افقی           ۶ کودک،           ۱٫۲ پرده
+ *   دو ستونه، کارت عمودی (ماکت)   ۴ کودک،           ۲٫۵ پرده
+ *
+ * تصمیم مالک محصول است و آگاهانه گرفته شده: در عوضش عکس دو برابر
+ * بزرگ‌تر است و کارت از یک متری خوانده می‌شود.
+ *
+ * سقف سه پرده است. اگر از آن بگذرد، پیدا کردن یک کودک مشخص از «کمی
+ * اسکرول» به «گشتن» تبدیل می‌شود و معامله دیگر درست نیست.
  */
 const reach = await page.evaluate(() => {
   const bar = document.querySelector('[class*="bar"]')?.getBoundingClientRect()
@@ -424,8 +432,8 @@ const reach = await page.evaluate(() => {
 })
 await page.evaluate(() => window.scrollTo(0, 0))
 check(
-  reach.screens <= 1.5,
-  `رسیدن به آخرین کودک زیر یک‌ونیم پرده می‌ماند (${reach.screens.toFixed(2)})`,
+  reach.screens <= 3,
+  `رسیدن به آخرین کودک زیر سه پرده می‌ماند (${reach.screens.toFixed(2)})`,
 )
 
 console.log('▸ تراشه «بی‌خبر» فهرست را باز می‌کند، بنر تکراری حذف شده')
