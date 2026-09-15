@@ -1013,3 +1013,109 @@ begin
             'other', 'خراب', 'x9', current_date, current_date - 1)
   $x$, 'انقضای پیش از صدور رد می‌شود');
 end $$;
+
+\echo ''
+\echo '── پرونده بازرسی: آماده پیش از بازرس، نه روز بازرسی ──'
+do $$
+declare
+  centre uuid := '11111111-1111-1111-1111-111111111111';
+  zahra  uuid := '51111111-1111-1111-1111-111111111111';
+  seeded integer;
+  line   record;
+  score  record;
+begin
+  -- ۱. چک‌لیست آغازین.
+  seeded := app.seed_inspection_checklist(centre);
+  perform assert(seeded > 10, 'چک‌لیست آغازین ساخته شد: ' || seeded || ' قلم');
+
+  /*
+   * دوباره صدا زدنش قلم تکراری نمی‌سازد. مدیری که دکمه را دو بار زد،
+   * نباید سی قلم ببیند.
+   */
+  perform assert(
+    app.seed_inspection_checklist(centre) = 0,
+    'و صدا زدن دوباره‌اش قلم تکراری نمی‌سازد'
+  );
+
+  -- ۲. قلمی که از داده خودِ اپ درمی‌آید، همیشه تأمین‌شده است.
+  select * into line from app.inspection_readiness(centre)
+   where title = 'دفتر حضور و غیاب';
+  perform assert(line.satisfied, 'دفتر حضور از اپ می‌آید، پس همیشه آماده است');
+  perform assert(line.source = 'app_report', 'و منبعش خودِ اپ است، نه کاغذ');
+
+  -- ۳. مدرک مهد که نیست، قلم ناقص است.
+  select * into line from app.inspection_readiness(centre)
+   where title = 'مجوز فعالیت مهدکودک';
+  perform assert(not line.satisfied, 'بی مجوز فعالیت، قلم ناقص می‌ماند');
+
+  insert into center_document (center_id, kind, title, issuer, issued_at, expires_at)
+  values (centre, 'operating_licence', 'مجوز فعالیت', 'بهزیستی',
+          current_date - 200, current_date + 200);
+
+  select * into line from app.inspection_readiness(centre)
+   where title = 'مجوز فعالیت مهدکودک';
+  perform assert(line.satisfied, 'با بارگذاری مجوز، قلم تأمین می‌شود');
+  perform assert(line.state = 'valid', 'و وضعیتش معتبر است');
+
+  /*
+   * مجوزِ منقضی از نبودنش بدتر است، چون مدیر فکر می‌کند دارد. پس
+   * منقضی، تأمین‌شده حساب نمی‌شود.
+   */
+  update center_document set expires_at = current_date - 1
+   where center_id = centre and kind = 'operating_licence';
+  select * into line from app.inspection_readiness(centre)
+   where title = 'مجوز فعالیت مهدکودک';
+  perform assert(not line.satisfied, 'مجوز منقضی، تأمین‌شده حساب نمی‌شود');
+  perform assert(line.state = 'expired', 'و منقضی علامت می‌خورد');
+  update center_document set expires_at = current_date + 200
+   where center_id = centre and kind = 'operating_licence';
+
+  /*
+   * ۴. یک مربیِ بی‌مدرک، کل قلم را ناقص می‌کند — بازرس هم همین‌طور
+   * نگاه می‌کند. «نُه نفر از ده نفر» جواب قابل قبولی نیست.
+   */
+  insert into staff (id, center_id, full_name, role)
+  values ('52222222-2222-2222-2222-222222222222', centre, 'مربی تازه', 'teacher');
+
+  select * into line from app.inspection_readiness(centre)
+   where title = 'کارت بهداشت همه مربیان';
+  perform assert(
+    not line.satisfied,
+    'یک مربی بی‌کارت بهداشت، کل قلم را ناقص می‌کند'
+  );
+
+  insert into staff_document (center_id, staff_id, kind, title, file_url, expires_at)
+  values (centre, '52222222-2222-2222-2222-222222222222',
+          'health_card', 'کارت بهداشت', 'y1', current_date + 100);
+  -- زهرا کارت منقضی داشت؛ تازه‌اش را می‌گیرد تا قلم کامل شود.
+  insert into staff_document (center_id, staff_id, kind, title, file_url, expires_at)
+  values (centre, zahra, 'health_card', 'کارت بهداشت تمدیدشده', 'y2', current_date + 100);
+
+  select * into line from app.inspection_readiness(centre)
+   where title = 'کارت بهداشت همه مربیان';
+  perform assert(line.satisfied, 'وقتی همه مربیان کارت معتبر دارند، قلم کامل می‌شود');
+
+  -- ۵. دفتر بازدید: کار باز شمرده می‌شود.
+  insert into inspection_visit (center_id, visited_on, authority, inspector_name,
+                                findings, action_required)
+  values (centre, current_date - 30, 'بهزیستی', 'بازرس نمونه',
+          'کارت بهداشت یکی از مربیان منقضی بود.', 'تمدید کارت بهداشت');
+
+  select * into score from app.inspection_score(centre);
+  perform assert(score.open_actions = 1, 'کار رفع‌نشده بازدید قبلی شمرده می‌شود');
+  perform assert(score.total > 10, 'و کل اقلام چک‌لیست: ' || score.total);
+  perform assert(score.ready < score.total, 'هنوز همه‌چیز آماده نیست، و صادقانه می‌گوید');
+
+  update inspection_visit set resolved_at = current_date
+   where center_id = centre and action_required is not null;
+  select * into score from app.inspection_score(centre);
+  perform assert(score.open_actions = 0, 'پس از رفع، کار باز صفر می‌شود');
+
+  -- ۶. چک‌لیست داده است نه کد: مهد می‌تواند قلم خودش را اضافه کند.
+  insert into inspection_requirement (center_id, title, source, sort_order)
+  values (centre, 'دفتر مانور تخلیه', 'manual', 200);
+  perform assert(
+    (select count(*) from app.inspection_readiness(centre) where title = 'دفتر مانور تخلیه') = 1,
+    'مهد می‌تواند قلم تازه به چک‌لیست اضافه کند — فهرست در کد قفل نیست'
+  );
+end $$;
