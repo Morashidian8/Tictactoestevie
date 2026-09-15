@@ -45,8 +45,10 @@ export default defineConfig({
         dir: 'rtl',
         start_url: '.',
         display: 'standalone',
-        background_color: '#F5F7F4', // --paper، بخش ۱۲.۲
-        theme_color: '#0F8C86', // --turquoise، بخش ۱۲.۲
+        // بوم فعلی. #F5F7F4 هم از همان پالت فیروزه‌ای جا مانده بود.
+        background_color: '#F8FAFC',
+        // سفیدِ سرصفحه. #0F8C86 از پالت فیروزه‌ای نسخه ۱ بود.
+        theme_color: '#FFFFFF',
         icons: [
           { src: 'icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' },
         ],
