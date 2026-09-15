@@ -1379,6 +1379,62 @@ check(
 await page.locator('[aria-label="بازگشت"]').first().click()
 await page.waitForTimeout(400)
 
+console.log('▸ اقلام هزینه: از تعریف مدیر تا صورتحساب خانواده')
+await signIn('09120000002')
+await page.waitForSelector('text=با کدام حساب وارد می‌شوید؟')
+await page.locator('button:has-text("مریم رضایی")').nth(1).click()
+await page.waitForSelector('text=وضعیت ثبت', { timeout: 10000 })
+await page.click('button:has-text("مالی")')
+await page.waitForSelector('text=اقلام هزینه این دوره')
+await page.click('button:has-text("صدور گروهی")')
+await page.waitForSelector('text=/صورتحساب صادر شد|صورتحساب این دوره را دارند/')
+
+await page.click('button:has-text("تعریف قلم تازه")')
+await page.waitForSelector('[role="dialog"]')
+await page.fill('input[aria-label="عنوان قلم"]', 'جشن پایان ترم')
+await page.fill('input[aria-label="مبلغ قلم"]', '120000')
+await page.locator('[role="dialog"] button:has-text("اجباری")').click()
+// دقیقاً دکمه داخل شیت: «تعریف قلم تازه» پشت شیت هم هنوز روی صفحه است.
+await page.locator('[role="dialog"] button:has-text("تعریف قلم")').click()
+await page.waitForSelector('text=/«جشن پایان ترم» تعریف شد/')
+
+/*
+ * ساختن، فرستادن نیست.
+ *
+ * پس از تعریف، قلم هنوز روی هیچ صورتحسابی ننشسته و هیچ خانواده‌ای
+ * نمی‌بیندش. اگر روزی این دو یکی شوند، همین تست می‌افتد.
+ */
+check(
+  (await page.locator('text=هنوز فرستاده نشده').count()) >= 1,
+  'قلم تازه ساخته می‌شود ولی فرستاده نمی‌شود',
+)
+check(
+  (await page.locator('button:has-text("فرستادن به خانواده‌ها")').count()) >= 1,
+  'و فرستادنش ضربه جدای خودش را دارد',
+)
+
+await page.locator('button:has-text("فرستادن به خانواده‌ها")').first().click()
+await page.waitForSelector('text=/روی .* صورتحساب نشست/')
+check(true, 'قلم اجباری با فرستادن، روی صورتحساب‌ها می‌نشیند')
+
+await page.locator('[aria-label="بازگشت به داشبورد"]').click()
+await page.waitForSelector('text=وضعیت ثبت')
+await signOutAny()
+await signIn('09120000003', { fresh: false })
+await page.waitForSelector('[class*="cardDate"]', { timeout: 8000 })
+await page.locator('nav button:has-text("مالی")').click()
+await page.waitForSelector('text=مانده')
+await page.locator('[class*="monthButton"]').last().click()
+await page.waitForTimeout(500)
+const withItem = await page.evaluate(() => document.body.innerText)
+check(/جشن پایان ترم/.test(withItem), 'خانواده همان قلمی را می‌بیند که مدیر فرستاد')
+check(
+  /جشن پایان ترم/.test(withItem) && /شهریه/.test(withItem),
+  'و می‌بیند مبلغ صورتحساب از چه چیزهایی ساخته شده',
+)
+await page.locator('[aria-label="بازگشت"]').click()
+await page.waitForTimeout(400)
+
 console.log('▸ ارتقای ۲: پرونده بازرسی')
 await signIn('09120000002')
 await page.waitForSelector('text=با کدام حساب وارد می‌شوید؟')

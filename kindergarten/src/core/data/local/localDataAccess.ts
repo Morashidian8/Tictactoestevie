@@ -44,6 +44,7 @@ import type {
   PaymentResult,
   PaymentReminderLog,
   InvoiceLine,
+  FeeItem,
   FeeItemOffer,
   FeeYearMonth,
   ReportPatch,
@@ -664,6 +665,24 @@ function issueFeeItem(item: FeeItemRow): number {
     made += 1
   }
   return made
+}
+
+/** قلم از دید مدیر: چند نفر، چند جواب، و چند سطر واقعاً ساخته شد. */
+function feeItemOf(item: FeeItemRow): FeeItem {
+  const links = FEE_ITEM_CHILDREN.filter((f) => f.itemId === item.id)
+  return {
+    id: item.id,
+    title: item.title,
+    description: item.description,
+    amount: item.amount,
+    period: item.period,
+    optional: item.optional,
+    published: item.publishedAt !== null,
+    childCount: links.length,
+    acceptedCount: links.filter((l) => l.answer === 'accepted').length,
+    declinedCount: links.filter((l) => l.answer === 'declined').length,
+    issuedCount: INVOICE_LINES.filter((l) => l.itemId === item.id).length,
+  }
 }
 
 /** قلم‌های منتشرشده‌ای که به این کودک خورده، با جواب خانواده. */
@@ -2385,6 +2404,51 @@ export function createLocalDataAccess(scope: AccessScope): DataAccess {
     async listPaymentClaims(status) {
       assertManager()
       return CLAIMS.filter((c) => c.status === status)
+    },
+
+    /* ── اقلام هزینه — مدیر ─────────────────────────────────── */
+
+    async listFeeItems(period) {
+      assertManager()
+      return FEE_ITEMS.filter((f) => f.period === period).map(feeItemOf)
+    },
+
+    async createFeeItem(input) {
+      assertManager()
+      if (!input.title.trim()) throw new Error('عنوان قلم لازم است.')
+      if (input.amount <= 0) throw new Error('مبلغ باید بیشتر از صفر باشد.')
+
+      const item: FeeItemRow = {
+        id: `fee-${Date.now().toString(36)}`,
+        title: input.title.trim(),
+        description: input.description?.trim() || null,
+        amount: input.amount,
+        period: input.period,
+        optional: input.optional,
+        // ساختن، فرستادن نیست. انتشار ضربه خودش را دارد.
+        publishedAt: null,
+      }
+      FEE_ITEMS.push(item)
+
+      const targets = CHILDREN.filter(
+        (c) => input.scope.kind === 'center' || c.classId === input.scope.classId,
+      )
+      for (const child of targets) {
+        FEE_ITEM_CHILDREN.push({ itemId: item.id, childId: child.id, answer: null })
+      }
+      save()
+      return feeItemOf(item)
+    },
+
+    async publishFeeItem(itemId) {
+      assertManager()
+      const item = FEE_ITEMS.find((f) => f.id === itemId)
+      if (!item) throw new Error('قلم هزینه پیدا نشد.')
+      if (item.publishedAt) throw new Error('این قلم قبلاً فرستاده شده.')
+      item.publishedAt = new Date().toISOString()
+      const made = issueFeeItem(item)
+      save()
+      return made
     },
 
     async decidePaymentClaim(claimId, approve, reason) {

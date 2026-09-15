@@ -3,7 +3,7 @@ import { AlertIcon, CheckIcon, EmptyState } from '../../design-system/index.ts'
 import { formatCount, formatRial, jalaliYearMonth, toIsoDate, toLatinDigits, toPersianDigits } from '../../i18n/index.ts'
 import { useData } from '../../core/auth/index.ts'
 import { invoiceDue } from '../../core/data/index.ts'
-import type { FinanceOverview, Invoice, PaymentClaim } from '../../core/data/index.ts'
+import type { ClassRoom, FeeItem, FinanceOverview, Invoice, PaymentClaim } from '../../core/data/index.ts'
 import styles from './FinancePage.module.css'
 
 /**
@@ -30,6 +30,9 @@ export function FinancePage({ onBack }: { onBack: () => void }) {
   const [view, setView] = useState<FinanceOverview | null>(null)
   /** اعلام‌های پرداخت خانواده‌ها، در انتظار تصمیم — بخش ۸. */
   const [claims, setClaims] = useState<PaymentClaim[]>([])
+  /** اقلام هزینه این دوره — ناهار، اردو، کاردستی. */
+  const [items, setItems] = useState<FeeItem[]>([])
+  const [defining, setDefining] = useState(false)
   const [rejecting, setRejecting] = useState<PaymentClaim | null>(null)
   const [rejectReason, setRejectReason] = useState('')
   const [zoom, setZoom] = useState<string | null>(null)
@@ -40,12 +43,14 @@ export function FinancePage({ onBack }: { onBack: () => void }) {
 
   const load = useCallback(async () => {
     try {
-      const [overview, pending] = await Promise.all([
+      const [overview, pending, feeItems] = await Promise.all([
         data.getFinance(period),
         data.listPaymentClaims('pending'),
+        data.listFeeItems(period),
       ])
       setView(overview)
       setClaims(pending)
+      setItems(feeItems)
       setError(null)
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'خوانده نشد.')
@@ -85,6 +90,29 @@ export function FinancePage({ onBack }: { onBack: () => void }) {
       await load()
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'ثبت نشد.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  /*
+   * فرستادن، برگشت‌ناپذیر است.
+   *
+   * پس از انتشار، قلم روی صورتحساب خانواده‌ها می‌نشیند و در اپشان
+   * دیده می‌شود. همین است که ساختن و فرستادن را دو ضربه نگه می‌دارد.
+   */
+  const publish = async (item: FeeItem) => {
+    setBusy(true)
+    try {
+      const made = await data.publishFeeItem(item.id)
+      setNote(
+        item.optional
+          ? `«${item.title}» برای ${formatCount(item.childCount)} خانواده فرستاده شد. تا نپذیرند، روی صورتحساب نمی‌نشیند.`
+          : `«${item.title}» روی ${formatCount(made)} صورتحساب نشست.`,
+      )
+      await load()
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'فرستاده نشد.')
     } finally {
       setBusy(false)
     }
@@ -213,6 +241,64 @@ export function FinancePage({ onBack }: { onBack: () => void }) {
               </button>
             </section>
 
+            {/*
+              اقلام هزینه — خواسته مالک محصول: «بتونه هزینه تعریف کنه و
+              بفرسته برای والدین».
+
+              زیر «شهریه‌ها» می‌آید چون اقلام روی همان صورتحساب دوره
+              می‌نشینند و بی صدور، جایی ندارند که بنشینند.
+            */}
+            <section className={styles.card} aria-label="اقلام هزینه">
+              <span className={`${styles.cardLabel} t-caption`}>اقلام هزینه این دوره</span>
+              {items.length === 0 ? (
+                <p className={`${styles.muted} t-body`}>
+                  قلمی تعریف نشده. ناهار، اردو، لوازم کاردستی و مانند این‌ها اینجا تعریف می‌شوند.
+                </p>
+              ) : (
+                items.map((item) => (
+                  <article key={item.id} className={styles.feeItem}>
+                    <p className={`${styles.row} t-body`}>
+                      <span>{item.title}</span>
+                      <span className={`${styles.muted} t-caption`}>
+                        {item.optional ? 'اختیاری' : 'اجباری'}
+                      </span>
+                      <b className={styles.amount}>{formatRial(item.amount)}</b>
+                    </p>
+                    {/*
+                      دو عدد جدا و نه یکی: «برای چند نفر فرستاده شد» با
+                      «روی چند صورتحساب نشست» فرق دارد، و تفاوتشان دقیقاً
+                      همان خانواده‌هایی است که هنوز جواب نداده‌اند.
+                    */}
+                    <p className={`${styles.muted} t-caption`}>
+                      {item.published
+                        ? item.optional
+                          ? `${formatCount(item.childCount)} خانواده · ${formatCount(item.acceptedCount)} پذیرفته · ${formatCount(item.declinedCount)} نپذیرفته`
+                          : `روی ${formatCount(item.issuedCount)} صورتحساب از ${formatCount(item.childCount)}`
+                        : `${formatCount(item.childCount)} خانواده — هنوز فرستاده نشده`}
+                    </p>
+                    {item.published ? null : (
+                      <button
+                        type="button"
+                        className={styles.action}
+                        disabled={busy}
+                        onClick={() => void publish(item)}
+                      >
+                        فرستادن به خانواده‌ها
+                      </button>
+                    )}
+                  </article>
+                ))
+              )}
+              <button
+                type="button"
+                className={styles.action}
+                disabled={busy}
+                onClick={() => setDefining(true)}
+              >
+                تعریف قلم تازه
+              </button>
+            </section>
+
             {view.overdue.length > 0 ? (
               <section className={`${styles.card} ${styles.warnCard}`} aria-label="معوقات">
                 <p className={`${styles.warnHead} t-body`}>
@@ -293,6 +379,18 @@ export function FinancePage({ onBack }: { onBack: () => void }) {
         </div>
       ) : null}
 
+      {defining ? (
+        <FeeItemSheet
+          period={period}
+          onClose={() => setDefining(false)}
+          onDone={async (title) => {
+            setDefining(false)
+            setNote(`«${title}» تعریف شد. هنوز فرستاده نشده.`)
+            await load()
+          }}
+        />
+      ) : null}
+
       {paying ? (
         <PaymentSheet
           invoice={paying}
@@ -304,6 +402,167 @@ export function FinancePage({ onBack }: { onBack: () => void }) {
           }}
         />
       ) : null}
+    </div>
+  )
+}
+
+/**
+ * تعریف قلم هزینه.
+ *
+ * دو تصمیمی که این شیت از مدیر می‌گیرد و هیچ‌کدام پیش‌فرض بی‌خطر
+ * ندارند:
+ *
+ * ۱. **اجباری یا اختیاری.** اختیاری یعنی تا خانواده نپذیرد، روی
+ *    صورتحساب نمی‌نشیند. اردو اختیاری است؛ ناهارِ کودک تمام‌روز نه.
+ *    پیش‌فرض «اختیاری» است، چون اشتباه در این جهت قابل جبران است و
+ *    در جهت دیگر یعنی صورتحسابی که باید تلفنی پس گرفته شود.
+ *
+ * ۲. **برای چه کسانی.** کل مهد یا یک کلاس. فهرست کودکان همین‌جا ثابت
+ *    می‌شود، نه هنگام فرستادن.
+ */
+function FeeItemSheet({ period, onClose, onDone }: {
+  period: string
+  onClose: () => void
+  onDone: (title: string) => Promise<void>
+}) {
+  const data = useData()
+  const [classes, setClasses] = useState<ClassRoom[]>([])
+  const [title, setTitle] = useState('')
+  const [description, setDescription] = useState('')
+  const [amount, setAmount] = useState('')
+  const [optional, setOptional] = useState(true)
+  const [classId, setClassId] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    data.listClasses().then(setClasses).catch(() => setClasses([]))
+  }, [data])
+
+  // ریال به تومان: مدیر تومان می‌نویسد، داده ریال نگه می‌دارد.
+  const rial = Number(toLatinDigits(amount).replace(/[^0-9]/g, '')) * 10
+
+  const submit = async () => {
+    setBusy(true)
+    setError(null)
+    try {
+      await data.createFeeItem({
+        title,
+        description,
+        amount: rial,
+        period,
+        optional,
+        scope: classId ? { kind: 'class', classId } : { kind: 'center' },
+      })
+      await onDone(title.trim())
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'ساخته نشد.')
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className={styles.sheetBackdrop} role="dialog" aria-label="تعریف قلم هزینه">
+      <div className={styles.sheet}>
+        <p className={`${styles.sheetTitle} t-h2`}>قلم هزینه تازه</p>
+
+        <label className={`${styles.field} t-caption`}>
+          عنوان
+          <input
+            className={styles.input}
+            value={title}
+            aria-label="عنوان قلم"
+            placeholder="مثلاً: اردوی باغ پرندگان"
+            onChange={(event) => setTitle(event.target.value)}
+          />
+        </label>
+
+        <label className={`${styles.field} t-caption`}>
+          مبلغ، به تومان
+          <input
+            className={styles.input}
+            value={amount}
+            inputMode="numeric"
+            aria-label="مبلغ قلم"
+            onChange={(event) => setAmount(event.target.value)}
+          />
+        </label>
+
+        <label className={`${styles.field} t-caption`}>
+          توضیح برای خانواده — اختیاری
+          <input
+            className={styles.input}
+            value={description}
+            aria-label="توضیح قلم"
+            placeholder="مثلاً: پنجشنبه، با سرویس مهد."
+            onChange={(event) => setDescription(event.target.value)}
+          />
+        </label>
+
+        <fieldset className={styles.choices}>
+          <legend className={`${styles.muted} t-caption`}>شرکت</legend>
+          <button
+            type="button"
+            className={styles.choice}
+            aria-pressed={optional}
+            onClick={() => setOptional(true)}
+          >
+            اختیاری
+          </button>
+          <button
+            type="button"
+            className={styles.choice}
+            aria-pressed={!optional}
+            onClick={() => setOptional(false)}
+          >
+            اجباری
+          </button>
+        </fieldset>
+        <p className={`${styles.muted} t-caption`}>
+          {optional
+            ? 'تا خانواده نپذیرد، روی صورتحساب نمی‌نشیند.'
+            : 'روی صورتحساب همه کودکانِ دامنه می‌نشیند.'}
+        </p>
+
+        <fieldset className={styles.choices}>
+          <legend className={`${styles.muted} t-caption`}>برای</legend>
+          <button
+            type="button"
+            className={styles.choice}
+            aria-pressed={classId === null}
+            onClick={() => setClassId(null)}
+          >
+            کل مهد
+          </button>
+          {classes.map((klass) => (
+            <button
+              key={klass.id}
+              type="button"
+              className={styles.choice}
+              aria-pressed={classId === klass.id}
+              onClick={() => setClassId(klass.id)}
+            >
+              {klass.name}
+            </button>
+          ))}
+        </fieldset>
+
+        {error ? <p className={`${styles.error} t-caption`}>{error}</p> : null}
+
+        <div className={styles.sheetActions}>
+          <button type="button" className={styles.secondary} onClick={onClose}>
+            انصراف
+          </button>
+          <button
+            type="button"
+            className={`${styles.primary} t-body-lg`}
+            disabled={busy || title.trim().length === 0 || rial <= 0}
+            onClick={() => void submit()}
+          >
+            تعریف قلم
+          </button>
+        </div>
+      </div>
     </div>
   )
 }

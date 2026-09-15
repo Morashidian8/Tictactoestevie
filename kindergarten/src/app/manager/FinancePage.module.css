@@ -298,3 +298,26 @@
   color: var(--disabled-fg);
   border-color: transparent;
 }
+
+/* ── اقلام هزینه ────────────────────────────────────────────── */
+
+.feeItem { display: flex; flex-direction: column; gap: var(--space-1); }
+.feeItem + .feeItem {
+  border-block-start: 1px solid var(--border);
+  padding-block-start: var(--space-3);
+  margin-block-start: var(--space-2);
+}
+
+/*
+ * گروه گزینه‌ها: fieldset پیش‌فرض مرورگر مرز و فاصله خودش را دارد و
+ * کنار کارت‌های این صفحه غریبه است.
+ */
+.choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+.choices legend { padding: 0; margin-block-end: var(--space-1); }

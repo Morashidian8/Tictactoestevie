@@ -70,6 +70,7 @@ import type {
   CheckInInput,
   CheckOutInput,
   InvoiceLine,
+  FeeItem,
   FeeItemOffer,
   FeeYearMonth,
   PaymentMethod,
@@ -361,7 +362,20 @@ function sameDayNow(isoDate: string): Date {
   return at
 }
 
-export function createSupabaseDataAccess(scope: AccessScope): DataAccess {
+/**
+ * قرارداد به‌علاوه یک متد داخلی که لایه ردِ پا صدایش می‌زند.
+ *
+ * چرا نوع بازگشتی همین است و نه `DataAccess`: خروجی پیش‌تر با
+ * `as DataAccess` بسته می‌شد، و آن یعنی هر متدی که به قرارداد اضافه
+ * می‌شد و اینجا نوشته نمی‌شد، بی‌صدا رد می‌شد — اولین باری که کاربر
+ * واقعی رویش می‌زد، خطای زمان اجرا می‌گرفت. با نوع صریح، کامپایلر
+ * همان لحظه می‌گوید کدام متد جا مانده.
+ */
+type AuditedDataAccess = DataAccess & {
+  readOccurred: (entity: string, ids: string[]) => Promise<void>
+}
+
+export function createSupabaseDataAccess(scope: AccessScope): AuditedDataAccess {
   const db = supabase()
 
   /**
@@ -2386,6 +2400,94 @@ export function createSupabaseDataAccess(scope: AccessScope): DataAccess {
       })
     },
 
+    /* ── اقلام هزینه — مدیر ─────────────────────────────────── */
+
+    async listFeeItems(period: string): Promise<FeeItem[]> {
+      const rows = orThrow(
+        await db
+          .from('fee_item')
+          .select('*, fee_item_child(child_id, accepted_at, declined_at), invoice_line(id)')
+          .eq('center_id', scope.centerId)
+          .eq('period', period)
+          .order('created_at', { ascending: false }),
+      ) as Row[]
+
+      return rows.map((r): FeeItem => {
+        const links = (r.fee_item_child as Row[] | null) ?? []
+        return {
+          id: r.id as string,
+          title: r.title as string,
+          description: (r.description as string | null) ?? null,
+          amount: r.amount as number,
+          period: r.period as string,
+          optional: r.optional as boolean,
+          published: r.published_at !== null,
+          childCount: links.length,
+          acceptedCount: links.filter((l) => l.accepted_at).length,
+          declinedCount: links.filter((l) => l.declined_at).length,
+          issuedCount: ((r.invoice_line as Row[] | null) ?? []).length,
+        }
+      })
+    },
+
+    /**
+     * قلم را می‌سازد و به کودکان دامنه‌اش می‌بندد — بی انتشار.
+     *
+     * فهرست کودکان همین‌جا ثابت می‌شود، نه هنگام انتشار: اگر فردا
+     * کودکی ثبت‌نام کند، نباید صورتحساب اردویی را بگیرد که برای
+     * کلاسِ آن روز تعریف شده بود.
+     */
+    async createFeeItem(input): Promise<FeeItem> {
+      const made = orThrow(
+        await db
+          .from('fee_item')
+          .insert({
+            center_id: scope.centerId,
+            title: input.title.trim(),
+            description: input.description?.trim() || null,
+            amount: input.amount,
+            period: input.period,
+            optional: input.optional,
+          })
+          .select('id')
+          .single(),
+      ) as Row
+
+      let children = db.from('child').select('id').eq('center_id', scope.centerId)
+      if (input.scope.kind === 'class') children = children.eq('class_id', input.scope.classId)
+      const targets = orThrow(await children) as Row[]
+
+      if (targets.length > 0) {
+        orThrow(
+          await db.from('fee_item_child').insert(
+            targets.map((c) => ({
+              fee_item_id: made.id as string,
+              child_id: c.id as string,
+              center_id: scope.centerId,
+            })),
+          ),
+        )
+      }
+
+      const list = await this.listFeeItems(input.period)
+      const item = list.find((f) => f.id === made.id)
+      if (!item) throw new Error('قلم ساخته شد ولی خوانده نشد.')
+      return item
+    },
+
+    async publishFeeItem(itemId: string): Promise<number> {
+      orThrow(
+        await db
+          .from('fee_item')
+          .update({ published_at: new Date().toISOString() })
+          .eq('id', itemId)
+          .eq('center_id', scope.centerId)
+          .is('published_at', null),
+      )
+      // ساختن سطرها سمت سرور است، تا مبلغ از کلاینت نیاید.
+      return (orThrow(await db.rpc('issue_fee_item', { item: itemId })) as number) ?? 0
+    },
+
     async decidePaymentClaim(claimId, approve, reason) {
       const claim = orThrow(
         await db
@@ -2494,5 +2596,5 @@ export function createSupabaseDataAccess(scope: AccessScope): DataAccess {
         })),
       )
     },
-  } as DataAccess & { readOccurred: (entity: string, ids: string[]) => Promise<void> }
+  }
 }

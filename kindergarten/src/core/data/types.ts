@@ -574,6 +574,38 @@ export type FeeItemOffer = {
   answer: 'accepted' | 'declined' | null
 }
 
+/**
+ * قلم هزینه از دید مدیر.
+ *
+ * `issuedCount` با `childCount` فرق دارد و همین تفاوت کل نکته است:
+ * قلم اختیاری فقط روی صورتحساب خانواده‌هایی می‌نشیند که پذیرفته‌اند.
+ */
+export type FeeItem = {
+  id: string
+  title: string
+  description: string | null
+  amount: number
+  period: string
+  optional: boolean
+  /** تا منتشر نشده، هیچ خانواده‌ای نمی‌بیندش و روی صورتحسابی نمی‌نشیند. */
+  published: boolean
+  childCount: number
+  acceptedCount: number
+  declinedCount: number
+  /** چند سطر صورتحساب واقعاً ساخته شده. */
+  issuedCount: number
+}
+
+export type FeeItemInput = {
+  title: string
+  description?: string | null
+  amount: number
+  period: string
+  optional: boolean
+  /** کل مهد، یا یک کلاس. فهرست کودکان از همین ساخته می‌شود. */
+  scope: { kind: 'center' } | { kind: 'class'; classId: string }
+}
+
 export type ReminderKind = 'due_soon' | 'due_today' | 'overdue'
 
 /**
@@ -1215,6 +1247,24 @@ export interface DataAccess {
 
   /** اعلام‌های در انتظار تصمیم مدیر. */
   listPaymentClaims(status: ClaimStatus): Promise<PaymentClaim[]>
+
+  /* ── اقلام هزینه — مدیر ───────────────────────────────────── */
+
+  listFeeItems(period: string): Promise<FeeItem[]>
+
+  /**
+   * قلم را می‌سازد و به کودکان دامنه‌اش می‌بندد — ولی منتشر نمی‌کند.
+   *
+   * ساختن و فرستادن دو کار جدایند: فرستادن، بیرونی و برگشت‌ناپذیر
+   * است و باید ضربه خودش را داشته باشد.
+   */
+  createFeeItem(input: FeeItemInput): Promise<FeeItem>
+
+  /**
+   * انتشار: از این لحظه خانواده‌ها می‌بینندش و سطرهای صورتحساب
+   * ساخته می‌شوند. شمار سطرهای ساخته‌شده برمی‌گردد.
+   */
+  publishFeeItem(itemId: string): Promise<number>
 
   /**
    * تصمیم مدیر. تأیید، پرداخت واقعی را می‌سازد و صورتحساب را به‌روز
