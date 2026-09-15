@@ -645,3 +645,35 @@
   padding: var(--space-2) var(--space-4) var(--space-3);
   color: var(--ink);
 }
+
+/*
+ * خلاصه ثبت روز، بالای دکمه ثبت گروهی — بازطراحی.
+ *
+ * می‌گوید چقدر از گزارش امروز مانده. جایش عمدی است: تنها عددی که مربی
+ * پیش از زدن «ثبت گروهی» لازم دارد، همین است.
+ */
+.daySummary {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  margin-inline-end: auto;
+}
+
+.sumItem {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 3px var(--space-2);
+  border-radius: var(--r-chip);
+  background: var(--card-border);
+  color: var(--ink);
+  white-space: nowrap;
+}
+
+/* گلیف --ink می‌ماند؛ پرکننده خنثی است و لحنی ندارد. */
+.sumIcon {
+  display: inline-grid;
+  place-items: center;
+  color: var(--ink-muted);
+}

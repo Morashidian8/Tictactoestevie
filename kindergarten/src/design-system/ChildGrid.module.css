@@ -96,17 +96,6 @@
   gap: 2px;
 }
 
-/*
- * نام و بج آلرژی در یک سطر. نام هرچه جا هست را می‌گیرد و بج، آخرِ سطر
- * می‌ماند — در کارت ۱۷۳ پیکسلی، نامِ بریده بهتر از بجِ افتاده است.
- */
-.nameRow {
-  display: flex;
-  align-items: center;
-  gap: var(--space-1);
-  min-inline-size: 0;
-}
-
 .name {
   min-inline-size: 0;
   color: var(--ink);
@@ -118,25 +107,40 @@
   white-space: nowrap;
 }
 
-.time {
+/* سن، سطر دوم. */
+.meta {
   color: var(--ink-muted);
   font-size: 11px;
   line-height: 1.4;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /*
  * بج آلرژی. تینت آجری با متن --ink (نسبت ۱۴٫۶۱)، نه متن آجری روی تینت.
  * عرضش به اندازه متن است تا در کارت ۱۵۰ پیکسلی جا بماند.
  */
+/*
+ * نوار آلرژی، تمام‌عرض کارت.
+ *
+ * بجِ کوچک کنار نام امتحان شد و در کارت ۱۷۳ پیکسلی، نام را به دو حرف
+ * می‌رساند. تمام‌عرض، هم نام سالم می‌ماند و هم خودِ آلرژی خوانده
+ * می‌شود — که تمام نکته بخش ۷.۱ است.
+ */
 .allergy {
-  flex: none;
-  padding: 0 var(--space-1);
-  border-radius: var(--space-1);
+  margin-block-start: var(--space-1);
+  padding: 1px var(--space-2);
+  border-radius: var(--r-chip);
   background: var(--brick-tint);
   color: var(--ink);
   font-weight: var(--weight-bold);
   font-size: 10px;
-  line-height: 1.6;
+  line-height: 1.7;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* ── میکروآیکون‌های فعالیت ─────────────────────────────────── */
@@ -145,6 +149,16 @@
   align-items: center;
   gap: var(--space-1);
   margin-block-start: var(--space-1);
+}
+
+/* ساعت ورود، آخرِ سطر آیکون‌ها. */
+.time {
+  margin-inline-start: auto;
+  color: var(--ink-muted);
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /*

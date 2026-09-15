@@ -96,18 +96,34 @@ const faceOf = (id: string): string | null => {
   return n ? (FACE_URLS[`./faces/child-${n}.webp`] ?? null) : null
 }
 
+/**
+ * تاریخ تولد نمونه.
+ *
+ * مهدی که فقط چهارساله داشته باشد، رابط را امتحان نمی‌کند: سن باید از
+ * سه تا شش پخش باشد تا هم متن «۳ سال و ۱۱ ماه» و هم «۶ سال» دیده شوند.
+ * پخش‌کردن از روی شاخص است، نه تصادفی، تا نسخه نمایشی هر بار یکی باشد.
+ */
+const birthOf = (index: number): string => {
+  const months = 36 + ((index * 7) % 36)
+  const born = new Date()
+  born.setMonth(born.getMonth() - months)
+  born.setDate(1 + ((index * 3) % 27))
+  return born.toISOString().slice(0, 10)
+}
+
 export const CHILDREN: Child[] = names.map(([first, last], index) => ({
   id: `child-${index + 1}`,
   classId: index < 25 ? 'class-golha' : 'class-setareha',
   firstName: first,
   lastName: last,
   photoUrl: faceOf(`child-${index + 1}`),
+  birthDate: birthOf(index),
 }))
 
 // کلاس دوم هم چند کودک دارد تا کلید تعویض کلاس معنا پیدا کند.
 CHILDREN.push(
-  { id: 'child-26', classId: 'class-setareha', firstName: 'ایلیا', lastName: 'وحیدی', photoUrl: null },
-  { id: 'child-27', classId: 'class-setareha', firstName: 'باران', lastName: 'کریمی', photoUrl: null },
+  { id: 'child-26', classId: 'class-setareha', firstName: 'ایلیا', lastName: 'وحیدی', photoUrl: null, birthDate: birthOf(25) },
+  { id: 'child-27', classId: 'class-setareha', firstName: 'باران', lastName: 'کریمی', photoUrl: null, birthDate: birthOf(26) },
 )
 
 /**

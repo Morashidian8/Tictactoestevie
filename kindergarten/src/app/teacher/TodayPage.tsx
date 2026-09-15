@@ -4,13 +4,22 @@ import {
   AlertIcon,
   ChildGrid,
   EmptyState,
+  MoonIcon,
   PillIcon,
   QuickAction,
+  SpoonIcon,
   StatusChip,
   SyncBadge,
   type ChildGridItem,
 } from '../../design-system/index.ts'
-import { formatClock, formatCount, formatJalali, formatTime, toIsoDate } from '../../i18n/index.ts'
+import {
+  formatAge,
+  formatClock,
+  formatCount,
+  formatJalali,
+  formatTime,
+  toIsoDate,
+} from '../../i18n/index.ts'
 import { ROLE_LABEL, useAuth, useData } from '../../core/auth/index.ts'
 import type { Child, ChildInSession, PickupPlan } from '../../core/data/index.ts'
 import {
@@ -260,8 +269,21 @@ export function TodayPage({
           flagged: child.addedException,
           flagLabel: 'استثنا',
           caption: checkIn ? formatTime(checkIn) : undefined,
+          age: formatAge(child.birthDate, now),
           // بخش ۷.۱: آلرژی در دید مربی، نه در پرونده کودک.
-          allergy: child.allergies.length > 0 ? child.allergies.join('، ') : null,
+          /*
+           * اولین آلرژی، به‌علاوه شمار بقیه.
+           *
+           * چسباندن همه با «،» در کارت ۱۷۳ پیکسلی به «تخم‌مرغ، بادام…»
+           * تبدیل می‌شد — یعنی مربی نه اولی را کامل می‌دید نه می‌فهمید
+           * دومی هم هست. «تخم‌مرغ +۱» هر دو را می‌گوید.
+           */
+          allergy:
+            child.allergies.length === 0
+              ? null
+              : child.allergies.length === 1
+                ? (child.allergies[0] ?? null)
+                : `${child.allergies[0]} +${formatCount(child.allergies.length - 1)}`,
           lunchLogged: report?.lunch != null,
           napLogged: report?.napStart != null,
           actionLabel:
@@ -273,6 +295,22 @@ export function TodayPage({
         }
       }),
     [attendance, absences, now, reports],
+  )
+
+  /*
+   * چقدر از گزارش امروز ثبت شده.
+   *
+   * فقط کودکان همین بازه شمرده می‌شوند، نه کل کلاس: مربی صبح نمی‌تواند
+   * ناهار کودک بعدازظهری را ثبت کند و شمردنش، عددی می‌سازد که هرگز
+   * کامل نمی‌شود.
+   */
+  const loggedLunch = useMemo(
+    () => inSession.filter((child) => reports.get(child.id)?.lunch != null).length,
+    [inSession, reports],
+  )
+  const loggedNap = useMemo(
+    () => inSession.filter((child) => reports.get(child.id)?.napStart != null).length,
+    [inSession, reports],
   )
 
   const items = useMemo(() => toItems(inSession), [toItems, inSession])
@@ -897,12 +935,38 @@ export function TodayPage({
       <QuickAction
         onClick={onOpenBulk}
         aside={
-          <button type="button" className={fab.fab} onClick={() => setIncidentOpen(true)}>
+          <>
+            {/*
+              خلاصه ثبت روز، درست بالای دکمه ثبت گروهی.
+              می‌گوید چقدر از گزارش امروز مانده — تنها عددی که مربی پیش
+              از زدن آن دکمه لازم دارد. سه عدد، نه بیشتر: ردیفی که
+              بشکند، خوانده نمی‌شود.
+            */}
+            <span className={styles.daySummary}>
+              <span className={`${styles.sumItem} t-caption`}>
+                <span className="tabular">{formatCount(counts.present)}</span> حاضر
+              </span>
+              <span className={`${styles.sumItem} t-caption`}>
+                <span className={styles.sumIcon} aria-hidden>
+                  <SpoonIcon size={13} />
+                </span>
+                <span className="tabular">{formatCount(loggedLunch)}</span> غذا
+              </span>
+              <span className={`${styles.sumItem} t-caption`}>
+                <span className={styles.sumIcon} aria-hidden>
+                  <MoonIcon size={13} />
+                </span>
+                <span className="tabular">{formatCount(loggedNap)}</span> استراحت
+              </span>
+            </span>
+
+            <button type="button" className={fab.fab} onClick={() => setIncidentOpen(true)}>
             <span className={fab.fabIcon} aria-hidden>
               <AlertIcon size={20} />
             </span>
             ثبت رویداد
-          </button>
+            </button>
+          </>
         }
       >
         ثبت گروهی امروز

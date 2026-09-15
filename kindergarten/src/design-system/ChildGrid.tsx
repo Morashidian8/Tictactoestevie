@@ -13,6 +13,8 @@ export type ChildGridItem = {
   /** متن همین نشان برای صفحه‌خوان. رنگ هرگز تنها حامل معنا نیست. */
   flagLabel?: string
   caption?: string
+  /** سن، مثل «۴ سال و ۱ ماه». */
+  age?: string | null
   /**
    * آلرژی ثبت‌شده — بخش ۷.۱: «آلرژی غذایی باید همیشه در دید مربی باشد».
    *
@@ -138,13 +140,22 @@ function GridCell({
           می‌برد — یعنی یک ردیف کمتر در هر پرده، برای اطلاعاتی که همین‌جا
           هم جا می‌شود. نوار آجری لبه بالا، خودش از دور دیده می‌شود.
         */}
-        <span className={styles.nameRow}>
-          <span className={styles.name}>{item.firstName}</span>
-          {hasAllergy ? <span className={styles.allergy}>آلرژی</span> : null}
-        </span>
-        <span className={`${styles.time} t-caption tabular`}>
-          {item.caption ?? 'هنوز نیامده'}
-        </span>
+        <span className={styles.name}>{item.firstName}</span>
+
+        {/*
+          سن زیر نام. در کلاسی که از سه تا شش سال دارد، این تنها عددی
+          درباره کودک است که مقایسه‌ای نیست — و مربی جانشین از همین
+          می‌فهمد با چه کسی طرف است.
+        */}
+        {item.age ? <span className={`${styles.meta} t-caption`}>{item.age}</span> : null}
+
+        {/*
+          بخش ۷.۱: نامِ خودِ آلرژی، نه برچسب «آلرژی».
+          «آلرژی» به مربی نمی‌گوید بشقاب را بدهد یا نه؛ «گردو» می‌گوید.
+        */}
+        {item.allergy ? (
+          <span className={styles.allergy}>{item.allergy}</span>
+        ) : null}
 
         {/*
           وضعیت روز، دو گلیف ۱۲ پیکسلی.
@@ -164,6 +175,14 @@ function GridCell({
             aria-hidden
           >
             <MoonIcon size={12} />
+          </span>
+          {/*
+            ساعت ورود کنار آیکون‌ها، نه زیر نام.
+            در کارت ۱۷۳ پیکسلی، «۴ سال و ۱۱ ماه · ۸:۰۵» در یک سطر جا
+            نمی‌شود و هر دو بریده می‌شوند. اینجا سطر خودش خالی است.
+          */}
+          <span className={`${styles.time} t-caption tabular`}>
+            {item.caption ?? 'نیامده'}
           </span>
         </span>
       </span>

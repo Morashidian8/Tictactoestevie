@@ -14,9 +14,18 @@
 }
 
 /* ردیف کنش ثانویه، یک فاصله ۱۶ بالای کنش اصلی */
+/*
+ * ردیف کنش ثانویه، یک فاصله ۱۶ بالای کنش اصلی.
+ *
+ * چند عنصر می‌گیرد: خلاصه روز از یک سو، دکمه شناور از سوی دیگر. در
+ * عرض ۳۲۰ پیکسل می‌شکند، و شکستنش بهتر از فشرده شدن هدف لمسی است.
+ */
 .aside {
   display: flex;
-  justify-content: flex-start;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  flex-wrap: wrap;
   margin-block-end: var(--space-4);
 }
 

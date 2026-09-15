@@ -310,3 +310,141 @@
   color: var(--ink-muted);
   line-height: 1.7;
 }
+
+/* ── سرصفحه سلام ──────────────────────────────────────────── */
+.greet {
+  flex: 1;
+  min-inline-size: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* ── ردیف شاخص‌ها ─────────────────────────────────────────── */
+/*
+ * حلقه حضور از یک سو، دو سنجه از سوی دیگر.
+ *
+ * حلقه بزرگ‌تر است چون حضور تنها عددی است که مدیر هر روز صبح
+ * می‌خواهد؛ بقیه را وقتی لازم شد نگاه می‌کند.
+ */
+.hero {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+  margin: 0 var(--space-4) var(--space-3);
+  padding: var(--space-4);
+  background: var(--surface);
+  border: 1px solid var(--card-border);
+  border-radius: var(--r-card);
+  box-shadow: var(--shadow-sm);
+}
+
+.heroSide {
+  flex: 1;
+  min-inline-size: 150px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.metric {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.metricLabel {
+  color: var(--ink-muted);
+}
+
+.metricValue {
+  color: var(--ink);
+  font-weight: var(--weight-bold);
+}
+
+.metricFoot {
+  color: var(--ink-muted);
+}
+
+/*
+ * نوار پیشرفت وصولی.
+ *
+ * عددش بالای نوار نوشته شده، پس نوار خودش حامل معنا نیست و کف ۳:۱
+ * عنصر غیرمتنی رویش الزام نمی‌آورد. با این حال نعنایی پر است، نه تینت،
+ * تا از مسیر خالی جدا دیده شود.
+ */
+.barTrack {
+  display: block;
+  block-size: 8px;
+  margin-block: var(--space-1);
+  border-radius: var(--r-chip);
+  background: var(--card-border);
+  overflow: hidden;
+}
+
+.barFill {
+  display: block;
+  block-size: 100%;
+  border-radius: var(--r-chip);
+  background: var(--mint);
+}
+
+/* ── کارت آمادگی بازرسی ──────────────────────────────────── */
+/*
+ * تنها کارت آجری داشبورد.
+ *
+ * ارتقای ۲ گفته بود شکاف‌ها باید پیش از بازرسی دیده شوند. پشت یک دکمه
+ * بودن یعنی روز بازرسی دیده می‌شوند، که دیر است.
+ */
+.compliance {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  inline-size: calc(100% - 2 * var(--space-4));
+  margin: 0 var(--space-4) var(--space-3);
+  padding: var(--space-3);
+  text-align: start;
+  background: var(--surface);
+  border: 1px solid var(--card-border);
+  border-inline-start: 4px solid var(--brick);
+  border-radius: var(--r-card);
+  box-shadow: var(--shadow-sm);
+}
+
+.complianceIcon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  inline-size: 36px;
+  block-size: 36px;
+  border-radius: var(--r-chip);
+  background: var(--brick-tint);
+  color: var(--ink);
+}
+
+.complianceBody {
+  flex: 1;
+  min-inline-size: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.complianceTitle {
+  color: var(--ink);
+  font-weight: var(--weight-bold);
+}
+
+.complianceText {
+  color: var(--ink-muted);
+}
+
+.complianceGo {
+  flex: none;
+  color: var(--ink);
+  font-weight: var(--weight-bold);
+  text-decoration: underline;
+  text-decoration-color: var(--brick);
+  text-underline-offset: 3px;
+}

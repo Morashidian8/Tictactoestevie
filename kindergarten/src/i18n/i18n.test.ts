@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  formatAge,
   formatCount,
   formatJalali,
   formatTime,
@@ -88,5 +89,44 @@ describe('ساعت ذخیره‌شده برای نمایش', () => {
     const { formatClock } = await import('./index.ts')
     expect(formatClock('13')).not.toMatch(/[0-9]/)
     expect(formatClock('')).toBe('')
+  })
+})
+
+describe('سن کودک — بخش ۱۳.۱', () => {
+  const at = (iso: string) => new Date(iso)
+
+  it('سال و ماه را با هم می‌گوید', () => {
+    expect(formatAge('2022-02-10', at('2026-03-11T09:00:00'))).toBe('۴ سال و ۱ ماه')
+  })
+
+  /*
+   * ماه صفر حذف می‌شود، نه اینکه «۴ سال و ۰ ماه» بنویسد.
+   */
+  it('در سالگرد، فقط سال می‌گوید', () => {
+    expect(formatAge('2022-03-11', at('2026-03-11T09:00:00'))).toBe('۴ سال')
+  })
+
+  it('زیر یک سال، فقط ماه می‌گوید', () => {
+    expect(formatAge('2025-09-11', at('2026-03-11T09:00:00'))).toBe('۶ ماه')
+  })
+
+  /*
+   * روزِ ماه هم حساب می‌شود: کودکی که فردا چهارساله می‌شود، امروز
+   * هنوز سه سال و یازده ماه است.
+   */
+  it('یک روز مانده به سالگرد، هنوز سال قبلی است', () => {
+    expect(formatAge('2022-03-12', at('2026-03-11T09:00:00'))).toBe('۳ سال و ۱۱ ماه')
+  })
+
+  it('بدون تاریخ تولد، چیزی نمی‌گوید — نه «۰ سال»', () => {
+    expect(formatAge(null)).toBeNull()
+    expect(formatAge('چیز نامعتبر')).toBeNull()
+  })
+
+  /*
+   * تاریخ تولد آینده یعنی داده اشتباه. عدد منفی ساخته نمی‌شود.
+   */
+  it('تاریخ تولد در آینده، عدد منفی نمی‌سازد', () => {
+    expect(formatAge('2027-01-01', at('2026-03-11T09:00:00'))).toBeNull()
   })
 })

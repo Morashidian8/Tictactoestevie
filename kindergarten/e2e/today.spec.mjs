@@ -331,12 +331,18 @@ const cardLayout = await page.evaluate(() => {
 check(cardLayout.columns === 2, `شبکه دو ستونه است (${cardLayout.columns})`)
 check(cardLayout.sameRow && cardLayout.nextRow, 'دو کارت در هر سطر، سومی سطر بعد')
 /*
- * سند بازطراحی ۸۸ تا ۹۶ خواسته. زیر ۸۸، سه سطر متن کارت به هم می‌چسبند؛
- * بالای ۹۶، یک ردیف از هر پرده کم می‌شود.
+ * سند بازطراحی ۸۸ تا ۹۶ خواسته بود، برای کارتی که نام و ساعت داشت.
+ * حالا سن و نام آلرژی هم روی کارت‌اند و کف واقعی بالاتر رفته:
+ *
+ *   بی آلرژی   ۸۹  — نام، سن، سطر فعالیت
+ *   با آلرژی  ۱۱۴  — به‌علاوه نوار آلرژی
+ *
+ * سقف ۱۲۰ است، نه بیشتر: آنچه واقعاً مهم است تعداد کودکِ هر پرده است،
+ * و گزاره «زیر یک‌ونیم پرده» پایین‌تر همان را می‌سنجد.
  */
 check(
-  cardLayout.height >= 88 && cardLayout.height <= 96,
-  `ارتفاع کارت در بازه ۸۸ تا ۹۶ است (${cardLayout.height})`,
+  cardLayout.height >= 88 && cardLayout.height <= 120,
+  `ارتفاع کارت در بازه ۸۸ تا ۱۲۰ است (${cardLayout.height})`,
 )
 check(cardLayout.bg === 'rgb(255, 255, 255)', 'کارت سفید خالص است')
 check(cardLayout.shadow !== 'none', 'و سایه دارد — همان چیزی که می‌گوید این را می‌شود زد')
@@ -381,7 +387,10 @@ const micro = await page.evaluate(() => {
   const card = [...document.querySelectorAll('ul li button[aria-label]')].find((b) =>
     (b.getAttribute('aria-label') ?? '').includes('سارا'),
   )
-  const acts = [...card.querySelectorAll('span[class*="activity"] > span')]
+  // فقط خانه‌های آیکون‌دار. سطر فعالیت، ساعت ورود را هم در خودش دارد.
+  const acts = [...card.querySelectorAll('span[class*="activity"] > span')].filter(
+    (el) => el.querySelector('svg') !== null,
+  )
   return {
     count: acts.length,
     // گلیف رنگی نمی‌شود: رنگ لحن روی تینت خودش برای ۱۲ پیکسل کافی نیست
@@ -937,7 +946,18 @@ await page.waitForSelector('text=با کدام حساب وارد می‌شوید
 await page.locator('button:has-text("مریم رضایی")').nth(1).click()
 await page.waitForTimeout(1200)
 const board = await page.evaluate(() => document.body.innerText)
-check(board.includes('حاضر'), 'کاشی حاضر آمد')
+/*
+ * بازطراحی: سه عدد خام جایش را به حلقه نسبت داد. «۱۸۸ از ۲۰۰» به مدیر
+ * نمی‌گفت امروز خوب است یا بد؛ درصد می‌گوید. عدد خام زیر حلقه ماند.
+ */
+check(board.includes('حضور امروز'), 'حلقه حضور امروز آمد')
+check(/٪/.test(board), 'و درصدش نوشته شده، نه فقط رنگ حلقه')
+check(board.includes('پراکندگی سنی'), 'پراکندگی سنی روی داشبورد است')
+// رنگ هرگز تنها حامل معنا نیست — هر قطعه عدد و درصد خودش را دارد.
+check(
+  (await page.locator('[class*="rowShare"]').count()) >= 2,
+  'و هر گروه سنی عدد و درصد خودش را دارد، نه فقط قطعه رنگی',
+)
 check(board.includes('وضعیت ثبت'), 'وضعیت ثبت کلاس‌ها آمد')
 check(board.includes('سهمیه پیامک'), 'سهمیه پیامک دیده می‌شود — بخش ۱۵.۴')
 // ارتقای ۴: یک عدد به مدیر نمی‌گفت که آیا فردا می‌تواند حادثه را خبر دهد.

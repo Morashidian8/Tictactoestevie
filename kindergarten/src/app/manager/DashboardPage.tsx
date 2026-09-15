@@ -1,8 +1,24 @@
 import { useCallback, useEffect, useState } from 'react'
 import { AlertIcon, EmptyState, QuickAction } from '../../design-system/index.ts'
-import { formatCount, formatJalali, formatTime, toIsoDate, toPersianDigits } from '../../i18n/index.ts'
+import {
+  formatCount,
+  formatJalali,
+  formatTime,
+  formatToman,
+  jalaliYearMonth,
+  toIsoDate,
+  toPersianDigits,
+} from '../../i18n/index.ts'
 import { ROLE_LABEL, useAuth, useData } from '../../core/auth/index.ts'
-import type { IncidentDecision, ManagerDashboard } from '../../core/data/index.ts'
+import type {
+  AuditReadiness,
+  Child,
+  FinanceOverview,
+  IncidentDecision,
+  ManagerDashboard,
+} from '../../core/data/index.ts'
+import { AgeDonut, type AgeBand } from './AgeDonut.tsx'
+import { StatRing } from './StatRing.tsx'
 import type { ManagerPage } from './ManagerApp.tsx'
 import styles from './DashboardPage.module.css'
 
@@ -72,17 +88,67 @@ export function DashboardPage({ onGo }: { onGo: (page: ManagerPage) => void }) {
    * بازرسی همان است: کارت واکسیناسیون ناقص، کد ملی ثبت‌نشده، و کارت
    * بهداشت نزدیک انقضا.
    */
-  const [gaps, setGaps] = useState(0)
+  const [ready, setReady] = useState<AuditReadiness | null>(null)
   useEffect(() => {
     data
       .getAuditReadiness()
-      .then((ready) =>
-        setGaps(
-          ready.incompleteVaccination + ready.missingNationalId + ready.expiringHealthCards,
-        ),
-      )
-      .catch(() => setGaps(0))
+      .then(setReady)
+      .catch(() => setReady(null))
   }, [data])
+  const gaps = ready
+    ? ready.incompleteVaccination + ready.missingNationalId + ready.expiringHealthCards
+    : 0
+
+  /*
+   * وصولی ماه و پراکندگی سنی.
+   *
+   * هیچ‌کدام داده تازه‌ای لازم ندارند: مالی از قبل در پنل مالی خوانده
+   * می‌شد و سن از تاریخ تولدی می‌آید که ستونش از مهاجرت ۰۰۰۳ در
+   * پایگاه داده بود و فقط پرونده بازرسی می‌خواندش.
+   */
+  const [finance, setFinance] = useState<FinanceOverview | null>(null)
+  const [roster, setRoster] = useState<Child[]>([])
+  useEffect(() => {
+    data
+      .getFinance(jalaliYearMonth(new Date()))
+      .then(setFinance)
+      .catch(() => setFinance(null))
+    data
+      .listCenterChildren()
+      .then(setRoster)
+      .catch(() => setRoster([]))
+  }, [data])
+
+  /*
+   * سه گروه سنی مهدکودک. مرزها از خودِ محصول می‌آیند، نه از داده:
+   * گروه‌بندی بر اساس داده، هر ماه مرزها را جابه‌جا می‌کرد و نمودار
+   * ماه پیش با این ماه قابل مقایسه نبود.
+   *
+   * کودکی که تاریخ تولد ندارد شمرده نمی‌شود، ولی گم هم نمی‌شود:
+   * پرونده بازرسی همان را به عنوان شکاف فهرست می‌کند.
+   */
+  const ageBands: AgeBand[] = (() => {
+    const now = new Date()
+    const bands: AgeBand[] = [
+      { id: 'b3', label: '۳ تا ۴ سال', count: 0 },
+      { id: 'b4', label: '۴ تا ۵ سال', count: 0 },
+      { id: 'b5', label: '۵ سال و بالاتر', count: 0 },
+    ]
+    for (const child of roster) {
+      if (!child.birthDate) continue
+      const born = new Date(child.birthDate)
+      if (Number.isNaN(born.getTime())) continue
+      let years = now.getFullYear() - born.getFullYear()
+      const beforeBirthday =
+        now.getMonth() < born.getMonth() ||
+        (now.getMonth() === born.getMonth() && now.getDate() < born.getDate())
+      if (beforeBirthday) years -= 1
+      const slot = years <= 3 ? 0 : years === 4 ? 1 : 2
+      const band = bands[slot]
+      if (band) band.count += 1
+    }
+    return bands.filter((band) => band.count > 0)
+  })()
 
   const decide = async (incidentId: string, decision: IncidentDecision) => {
     setBusy(incidentId)
@@ -99,8 +165,17 @@ export function DashboardPage({ onGo }: { onGo: (page: ManagerPage) => void }) {
   return (
     <div className={styles.page}>
       <header className={styles.header}>
-        <span className={`${styles.centerName} t-h2`}>مهد</span>
-        <span className={`${styles.date} t-body-sm`}>{formatJalali(new Date(), 'weekday')}</span>
+        {/*
+          سرصفحه سلام — بازطراحی.
+          پیش‌تر فقط «مهد» بود. مدیر روزش را با این صفحه شروع می‌کند و
+          سرصفحه باید بگوید امروز چه خبر است، نه اینکه کجاست.
+        */}
+        <span className={styles.greet}>
+          <span className={`${styles.centerName} t-h2`}>صبح بخیر</span>
+          <span className={`${styles.date} t-body-sm`}>
+            {formatJalali(new Date(), 'weekday')} · اینجا خلاصه امروز مهد است
+          </span>
+        </span>
         <div className={styles.accountWrap}>
           <button
             type="button"
@@ -172,15 +247,100 @@ export function DashboardPage({ onGo }: { onGo: (page: ManagerPage) => void }) {
 
         {board ? (
           <>
-            <div className={styles.tiles}>
-              <Tile big={`${toPersianDigits(board.present)}`} small={`از ${toPersianDigits(board.enrolled)} حاضر`} />
-              <Tile
-                big={toPersianDigits(board.unaccounted.length)}
-                small="بی‌خبر"
-                tone={board.unaccounted.length > 0 ? 'alert' : 'plain'}
-              />
-              <Tile big={toPersianDigits(board.classes.length)} small="کلاس" />
-            </div>
+            {/*
+              ردیف شاخص‌ها — بازطراحی.
+
+              سه عدد خام جایش را به دو نسبت و یک شمار داد. «۱۸۸ از ۲۰۰»
+              به مدیر نمی‌گفت امروز خوب است یا بد؛ «۹۴٪» می‌گوید. عدد
+              خام هم سر جایش زیر حلقه می‌ماند.
+            */}
+            <section className={styles.hero} aria-label="شاخص‌های امروز">
+              <StatRing value={board.present} total={board.enrolled} label="حضور امروز" />
+
+              <div className={styles.heroSide}>
+                {/*
+                  ماهی که هنوز صورتحسابی ندارد، کارت وصولی هم ندارد.
+                  «۰ از ۰ تومان» به مدیر چیزی نمی‌گوید و فقط جای یک
+                  سنجه واقعی را می‌گیرد.
+                */}
+                {finance && finance.issued > 0 ? (
+                  <div className={styles.metric}>
+                    <span className={`${styles.metricLabel} t-caption`}>وصولی این ماه</span>
+                    <span className={`${styles.metricValue} t-body-lg tabular`}>
+                      {formatToman(finance.collected)}
+                    </span>
+                    {/*
+                      نوار پیشرفت، نه نمودار: یک نسبت است و عددش کنارش
+                      نوشته شده، پس نوار فقط جای آن عدد را روی محور
+                      نشان می‌دهد.
+                    */}
+                    <span className={styles.barTrack} aria-hidden>
+                      <span
+                        className={styles.barFill}
+                        style={{
+                          inlineSize: `${
+                            finance.issued > 0
+                              ? Math.min(100, Math.round((finance.collected / finance.issued) * 100))
+                              : 0
+                          }%`,
+                        }}
+                      />
+                    </span>
+                    <span className={`${styles.metricFoot} t-caption tabular`}>
+                      از {formatToman(finance.issued)} صادرشده
+                    </span>
+                  </div>
+                ) : null}
+
+                <div className={styles.metric}>
+                  <span className={`${styles.metricLabel} t-caption`}>بی‌خبر</span>
+                  <span
+                    className={`${styles.metricValue} t-body-lg tabular ${
+                      board.unaccounted.length > 0 ? styles.partial : styles.ok
+                    }`}
+                  >
+                    {formatCount(board.unaccounted.length)} کودک
+                  </span>
+                  <span className={`${styles.metricFoot} t-caption`}>
+                    در {formatCount(board.classes.length)} کلاس
+                  </span>
+                </div>
+              </div>
+            </section>
+
+            {/*
+              ارتقای ۲: آمادگی بازرسی، روی داشبورد نه پشت یک دکمه.
+              روز بازرسی برای پر کردن پرونده دیر است.
+            */}
+            {ready && gaps > 0 ? (
+              <button
+                type="button"
+                className={styles.compliance}
+                onClick={() => onGo('audit')}
+              >
+                <span className={styles.complianceIcon} aria-hidden>
+                  <AlertIcon size={20} />
+                </span>
+                <span className={styles.complianceBody}>
+                  <span className={`${styles.complianceTitle} t-body-lg`}>
+                    پرونده بازرسی: {formatCount(gaps)} مورد ناقص
+                  </span>
+                  <span className={`${styles.complianceText} t-caption`}>
+                    {formatCount(ready.incompleteVaccination)} واکسن ·{' '}
+                    {formatCount(ready.missingNationalId)} کد ملی ·{' '}
+                    {formatCount(ready.expiringHealthCards)} کارت بهداشت
+                  </span>
+                </span>
+                <span className={`${styles.complianceGo} t-caption`}>بررسی</span>
+              </button>
+            ) : null}
+
+            {ageBands.length > 0 ? (
+              <section className={styles.card} aria-label="پراکندگی سنی">
+                <span className={`${styles.cardLabel} t-caption`}>پراکندگی سنی</span>
+                <AgeDonut bands={ageBands} />
+              </section>
+            ) : null}
 
             {board.unaccounted.length > 0 ? (
               <section className={styles.card} aria-label="کودکان بی‌خبر">
@@ -321,14 +481,6 @@ export function DashboardPage({ onGo }: { onGo: (page: ManagerPage) => void }) {
   )
 }
 
-function Tile({ big, small, tone }: { big: string; small: string; tone?: 'alert' | 'plain' }) {
-  return (
-    <div className={`${styles.tile} ${tone === 'alert' ? styles.tileAlert : ''}`}>
-      <span className={styles.tileBig}>{big}</span>
-      <span className={`${styles.tileSmall} t-caption`}>{small}</span>
-    </div>
-  )
-}
 
 /* آیکون‌های دو مقصد. غیرجهت‌دارند، پس قرینه نمی‌شوند — بخش ۱۲.۶. */
 function WalletIcon() {

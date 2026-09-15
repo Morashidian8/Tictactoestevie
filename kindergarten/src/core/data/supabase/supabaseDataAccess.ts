@@ -100,6 +100,7 @@ const asChild = (r: Row): Child => ({
   firstName: r.first_name as string,
   lastName: r.last_name as string,
   photoUrl: (r.photo_url as string | null) ?? null,
+  birthDate: (r.birth_date as string | null) ?? null,
 })
 
 const asAttendance = (r: Row): Attendance => ({
@@ -1478,6 +1479,14 @@ export function createSupabaseDataAccess(scope: AccessScope): DataAccess {
           cardState: r.card_state as AuditStaffRow['cardState'],
         })),
       }
+    },
+
+    async listCenterChildren() {
+      // دامنه مرکز از scope می‌آید، نه از فراخواننده — بند ۱۱.۱۰.
+      const rows = orThrow(
+        await from('child').is('left_at', null).order('first_name'),
+      ) as Row[]
+      return rows.map(asChild)
     },
 
     async decideIncident(incidentId, decision: IncidentDecision) {

@@ -1450,6 +1450,12 @@ export function createLocalDataAccess(scope: AccessScope): DataAccess {
       }
     },
 
+    /** بخش ۱۱.۱۰: دامنه مرکز را خودِ لایه می‌بندد، نه فراخواننده. */
+    async listCenterChildren() {
+      assertManager()
+      return CHILDREN.filter((child) => child.classId !== null)
+    },
+
     async decideIncident(incidentId, decision) {
       assertManager()
       for (const state of days.values()) {

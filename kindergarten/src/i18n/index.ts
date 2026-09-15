@@ -13,5 +13,6 @@ export {
   formatClock,
   jalaliParts,
   jalaliYearMonth,
+  formatAge,
   type JalaliFormat,
 } from './jalali.ts'

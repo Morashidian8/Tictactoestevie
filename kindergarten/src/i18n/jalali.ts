@@ -109,3 +109,35 @@ export function jalaliYearMonth(date: Date): string {
   const { year, month } = jalaliParts(date)
   return `${year}-${String(month).padStart(2, '0')}`
 }
+
+/**
+ * سن کودک، به سال و ماه — «۴ سال و ۱ ماه».
+ *
+ * چرا ماه هم می‌آید و فقط سال نه: در مهدکودک، فاصله سه‌سال‌و‌دو‌ماه با
+ * سه‌سال‌و‌یازده‌ماه بزرگ است. مربی از همین می‌فهمد چه انتظاری از این
+ * کودک می‌رود.
+ *
+ * حساب روی تقویم میلادی انجام می‌شود چون فاصله دو تاریخ، مستقل از
+ * تقویم است؛ خروجی با ارقام فارسی نوشته می‌شود (بخش ۱۲.۴).
+ *
+ * زیر یک ماه «تازه‌متولد» نمی‌شود: مهد کودک زیر یک ماه نمی‌گیرد و
+ * چنین مقداری یعنی تاریخ تولد اشتباه ثبت شده. همان «کمتر از یک ماه»
+ * را می‌گوید تا دیده شود.
+ */
+export function formatAge(birthDate: string | null, now: Date = new Date()): string | null {
+  if (!birthDate) return null
+  const born = new Date(birthDate)
+  if (Number.isNaN(born.getTime())) return null
+
+  let months =
+    (now.getFullYear() - born.getFullYear()) * 12 + (now.getMonth() - born.getMonth())
+  if (now.getDate() < born.getDate()) months -= 1
+  if (months < 0) return null
+  if (months < 1) return 'کمتر از یک ماه'
+
+  const years = Math.floor(months / 12)
+  const rest = months % 12
+  if (years === 0) return `${toPersianDigits(rest)} ماه`
+  if (rest === 0) return `${toPersianDigits(years)} سال`
+  return `${toPersianDigits(years)} سال و ${toPersianDigits(rest)} ماه`
+}
