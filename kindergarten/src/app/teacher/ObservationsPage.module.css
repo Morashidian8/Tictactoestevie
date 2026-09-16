@@ -1,0 +1,200 @@
+.page {
+  flex: 1;
+  min-block-size: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--paper);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+}
+
+.back {
+  flex: none;
+  min-inline-size: var(--touch-teacher);
+  min-block-size: var(--touch-teacher);
+  display: grid;
+  place-items: center;
+  border: none;
+  border-radius: var(--r-chip);
+  background: none;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.title { margin: 0; color: var(--ink); font-weight: var(--weight-black); }
+.period { margin-inline-start: auto; color: var(--ink-muted); }
+
+.body {
+  flex: 1;
+  min-block-size: 0;
+  padding: 0 var(--space-4) var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  background: var(--surface);
+  border: 1px solid var(--card-border);
+  border-radius: var(--r-card);
+}
+
+.cardLabel { color: var(--ink-muted); }
+.muted { margin: 0; color: var(--ink-muted); }
+
+.note {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  padding: var(--space-3);
+  background: var(--mint-tint);
+  border-radius: var(--r-input);
+  color: var(--ink);
+}
+.note svg { color: var(--mint-deep); flex: none; }
+
+/* ── شش عدسی ────────────────────────────────────────────────── */
+
+/*
+ * شش دکمه، نه یک فرم.
+ *
+ * چیزی که مربی در بیست ثانیه بین دو کار می‌نویسد، فرم پر کردنی نیست.
+ */
+.lenses { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-2); }
+
+.lens {
+  min-block-size: var(--touch-teacher);
+  border: 1px solid var(--border-input);
+  border-radius: var(--r-input);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+}
+.lens:active { background: var(--coral-tint); }
+
+/* ── مشاهده‌ها ──────────────────────────────────────────────── */
+
+.group { display: flex; flex-direction: column; gap: var(--space-1); }
+.group + .group { margin-block-start: var(--space-3); }
+.groupTitle { margin: 0; color: var(--ink); font-weight: var(--weight-bold); }
+
+.observation { margin: 0; color: var(--ink); overflow-wrap: anywhere; }
+.obsDate { color: var(--ink-muted); margin-inline-end: var(--space-2); }
+.peers { color: var(--ink-muted); }
+
+.row { display: flex; justify-content: space-between; gap: var(--space-3); margin: 0; color: var(--ink); }
+.row + .row { border-block-start: 1px solid var(--border); padding-block-start: var(--space-2); }
+
+/* ── پیش‌نویس و جمع‌بندی ─────────────────────────────────────── */
+
+/*
+ * پیش‌نویس ماشین، زمینه زرد دارد و جمع‌بندی سفید.
+ *
+ * تفاوت رنگ تنها نشانه نیست — برچسبش هم می‌گوید پیش‌نویس است. ولی
+ * دیدنی بودنِ مرز، همان چیزی است که جلوی امضای دست‌نخورده را می‌گیرد.
+ */
+.draft {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  background: var(--mango-tint);
+  border-radius: var(--r-input);
+}
+.draftLabel { margin: 0; color: var(--ink); font-weight: var(--weight-bold); }
+.draftBody { margin: 0; color: var(--ink); white-space: pre-wrap; }
+
+.textarea {
+  padding: var(--space-3);
+  border: 1px solid var(--border-input);
+  border-radius: var(--r-input);
+  background: var(--surface);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: var(--text-body-lg);
+  resize: vertical;
+}
+.textarea:focus { border-color: var(--coral); outline: none; }
+
+.actions { display: flex; gap: var(--space-2); }
+.actions > * { flex: 1; }
+
+.action {
+  min-block-size: var(--touch-teacher);
+  padding-inline: var(--space-3);
+  border: 1px solid var(--border-input);
+  border-radius: var(--r-input);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+}
+.action:active { background: var(--coral-tint); }
+.action:disabled { color: var(--disabled-fg); background: var(--disabled-bg); }
+
+.primary { background: var(--coral); border-color: transparent; font-weight: var(--weight-bold); }
+
+.warn {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  color: var(--ink);
+}
+.warn svg { flex: none; }
+
+.shared { margin: 0; color: var(--mint-deep); }
+
+.error { margin: 0; color: var(--ink); }
+
+.monthBar { display: flex; gap: var(--space-2); }
+.monthBar > * { flex: 1; }
+
+/* ── شیت نوشتن ──────────────────────────────────────────────── */
+
+.sheetBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: grid;
+  place-items: end center;
+  background: rgb(15 23 42 / .45);
+}
+
+.sheet {
+  inline-size: 100%;
+  max-inline-size: 560px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-5) var(--space-4);
+  padding-block-end: calc(var(--space-5) + env(safe-area-inset-bottom));
+  background: var(--surface);
+  border-start-start-radius: var(--r-card);
+  border-start-end-radius: var(--r-card);
+}
+
+.sheetTitle { margin: 0; font-family: var(--font); font-weight: var(--weight-black); }
+.sheetActions { display: flex; gap: var(--space-2); margin-block-start: var(--space-2); }
+.sheetActions > * { flex: 1; }
+
+.secondary {
+  min-block-size: var(--touch-teacher);
+  border: 1px solid var(--border-input);
+  border-radius: var(--r-input);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+}

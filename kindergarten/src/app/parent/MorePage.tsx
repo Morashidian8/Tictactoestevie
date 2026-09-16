@@ -16,6 +16,7 @@ import type {
 } from '../../core/data/index.ts'
 import { ChildProfilePage } from './ChildProfilePage.tsx'
 import { FinancePage } from './FinancePage.tsx'
+import { MonthlyReportPage } from './MonthlyReportPage.tsx'
 import styles from './MorePage.module.css'
 
 /**
@@ -27,7 +28,7 @@ import styles from './MorePage.module.css'
  * مالی فقط برای سرپرست پرداخت‌کننده دیده می‌شود — بخش ۶.۵. سایر
  * سرپرستان این بخش را اصلاً نمی‌بینند، نه اینکه خالی ببینند.
  */
-type Tab = 'menu' | 'absence' | 'medication' | 'finance' | 'notices' | 'messages' | 'profile'
+type Tab = 'menu' | 'absence' | 'medication' | 'finance' | 'notices' | 'messages' | 'profile' | 'report'
 
 export function MorePage({ childId, childName, onBack, initialTab = 'menu' }: {
   childId: string
@@ -53,6 +54,9 @@ export function MorePage({ childId, childName, onBack, initialTab = 'menu' }: {
     if (tab === 'profile') {
       return <ChildProfilePage childId={childId} childName={childName} onBack={back} />
     }
+    if (tab === 'report') {
+      return <MonthlyReportPage childId={childId} childName={childName} onBack={back} />
+    }
     if (tab === 'notices') return <NoticesTab onBack={back} />
     return <MessagesTab childId={childId} onBack={back} />
   }
@@ -64,6 +68,11 @@ export function MorePage({ childId, childName, onBack, initialTab = 'menu' }: {
           label="پرونده کودک"
           hint="اطلاعات و آلرژی‌ها — با تأیید مهد"
           onClick={() => setTab('profile')}
+        />
+        <MenuItem
+          label="گزارش ماهانه"
+          hint="آنچه مربی این ماه دیده"
+          onClick={() => setTab('report')}
         />
         <MenuItem label="اعلام غیبت" hint="وقتی کودک فردا نمی‌آید" onClick={() => setTab('absence')} />
         <MenuItem

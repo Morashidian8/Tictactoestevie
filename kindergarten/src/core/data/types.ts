@@ -746,6 +746,118 @@ export type StaffNoteInput = {
   share: boolean
 }
 
+/* ── بایگانی حضور و غیاب — ماژول ۰۰۲۲ ───────────────────────── */
+
+/**
+ * یک روز از بایگانی حضور کودک.
+ *
+ * `minutes` وقتی خالی است که خروج ثبت نشده باشد. صفر گذاشتنش یعنی
+ * دروغ گفتن درباره ساعتی که کودک آنجا بود.
+ */
+export type AttendanceDay = {
+  date: string
+  checkInAt: string | null
+  checkOutAt: string | null
+  minutes: number | null
+  lateMinutes: number
+  absent: boolean
+  absenceReason: string | null
+  droppedBy: string | null
+  pickedUpBy: string | null
+}
+
+export type AttendanceMonth = {
+  days: AttendanceDay[]
+  presentDays: number
+  absentDays: number
+  totalMinutes: number
+  lateDays: number
+}
+
+/* ── مشاهده و گزارش ماهانه — ماژول ۰۰۲۵ و ۰۰۲۶ ──────────────── */
+
+/**
+ * شش عدسی مشاهده.
+ *
+ * عدسی، برچسبِ کودک نیست — زاویه نگاهِ مربی است. «چالش» یعنی جایی که
+ * امروز سخت بود، نه ویژگیِ کودک.
+ */
+export type ObservationLens =
+  | 'interest'
+  | 'challenge'
+  | 'social'
+  | 'skill'
+  | 'moment'
+  | 'care'
+
+export type Observation = {
+  id: string
+  date: string
+  lens: ObservationLens
+  body: string
+  staffName: string | null
+  /** فقط نام کوچک. گزارش یک کودک نباید مشخصات کودک دیگر را ببرد. */
+  peers: string[]
+}
+
+export type ObservationInput = {
+  childId: string
+  lens: ObservationLens
+  body: string
+  /** هم‌بازی‌ها، اگر مربی دیده باشد. حدس نیست. */
+  peerChildIds?: string[]
+}
+
+/**
+ * واقعیت‌های عددی ماه.
+ *
+ * هیچ‌کدام نمره نیستند و هیچ‌کدام با میانگین کلاس مقایسه نمی‌شوند: شمار
+ * روزهای حضور یک واقعیت است، «بالاتر از میانگین» یک قضاوت.
+ */
+export type MonthFacts = {
+  presentDays: number
+  absentDays: number
+  totalMinutes: number
+  lunchAll: number
+  lunchMost: number
+  lunchLittle: number
+  lunchNone: number
+  napDays: number
+  moodGood: number
+  moodNormal: number
+  moodRestless: number
+  moodSad: number
+  photos: number
+  observations: number
+}
+
+export type MonthlyReportStatus = 'draft' | 'ready' | 'shared'
+
+/**
+ * گزارش ماهانه یک کودک.
+ *
+ * `teacherSummary` تنها متن تحلیلی گزارش است و یک آدم نوشته‌اش. اپ
+ * مصالح را کنار هم می‌گذارد؛ نتیجه‌گیری کار کسی است که کودک را دیده.
+ */
+export type MonthlyReport = {
+  id: string | null
+  childId: string
+  childName: string
+  period: string
+  status: MonthlyReportStatus
+  teacherSummary: string | null
+  meetingNotes: string | null
+  /** مشاهده‌های ماه، دسته‌بندی‌شده به عدسی. */
+  observations: Observation[]
+  /** کودکانی که بیشتر با او بوده‌اند — از مشاهده، نه از هم‌کلاسی. */
+  peers: { firstName: string; times: number }[]
+  facts: MonthFacts
+  /** عدسی‌هایی که هنوز هیچ مشاهده‌ای ندارند. */
+  gaps: { lens: ObservationLens; seen: number }[]
+  /** پیش‌نویس ماشین، اگر ساخته شده باشد. */
+  assistedDraft: string | null
+}
+
 export type ReminderKind = 'due_soon' | 'due_today' | 'overdue'
 
 /**
@@ -1465,6 +1577,45 @@ export interface DataAccess {
 
   /** مربی: مدارک و یادداشت‌های خودش (فقط آن‌ها که با او در میان گذاشته شده). */
   getMyStaffFile(): Promise<StaffProfile>
+
+  /* ── بایگانی حضور و غیاب ──────────────────────────────────── */
+
+  /**
+   * روزهای حضور کودک در یک بازه، با ساعت ورود و خروج.
+   *
+   * خواسته مالک محصول: «آخر ماه پروفایل کودک مشخص باشه دقیقا چه روزها
+   * و ساعت‌هایی حضور داشته».
+   */
+  getAttendanceMonth(childId: string, from: string, to: string): Promise<AttendanceMonth>
+
+  /* ── مشاهده و گزارش ماهانه ────────────────────────────────── */
+
+  /** ثبت یک مشاهده. جمله خودِ مربی، بی هیچ ساختاری جز طول. */
+  addObservation(input: ObservationInput): Promise<void>
+
+  listObservations(childId: string, from: string, to: string): Promise<Observation[]>
+
+  /** گزارش ماه، با همه مصالحش. اگر هنوز ساخته نشده، پیش‌نویس خالی. */
+  getMonthlyReport(childId: string, period: string): Promise<MonthlyReport>
+
+  /**
+   * پیش‌نویس کمکی — گزینه (ب).
+   *
+   * مدل فقط جمله‌های خودِ مربی را می‌بیند: نه حضور، نه خلق، نه غذا، نه
+   * نام کودکان دیگر. خروجی پیش‌نویس است، نه گزارش؛ تا مربی ویرایشش
+   * نکند و جمع‌بندی ننویسد، چیزی به خانواده نمی‌رود.
+   */
+  buildAssistedDraft(childId: string, period: string): Promise<string>
+
+  /** ذخیره جمع‌بندی مربی. */
+  saveMonthlyReport(
+    childId: string,
+    period: string,
+    patch: { teacherSummary?: string; meetingNotes?: string },
+  ): Promise<void>
+
+  /** ارسال به خانواده. بی جمع‌بندی مربی، رد می‌شود. */
+  shareMonthlyReport(childId: string, period: string): Promise<void>
 
   /* ── دارو — بخش ۵.۳ ───────────────────────────────────────── */
 

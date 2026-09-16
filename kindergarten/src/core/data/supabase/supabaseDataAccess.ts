@@ -79,12 +79,16 @@ import type {
   MessageCandidate,
   StaffCartableRow,
   StaffProfile,
+  AttendanceDay,
+  AttendanceMonth,
+  MonthlyReport,
+  Observation,
   FeeYearMonth,
   PaymentMethod,
   PaymentReminderLog,
 } from '../types.ts'
 import { isInCurrentWeek } from '../../../i18n/week.ts'
-import { jalaliYearMonth } from '../../../i18n/index.ts'
+import { jalaliToIso, jalaliYearMonth } from '../../../i18n/index.ts'
 import { invoiceDue, invoiceTotal } from '../money.ts'
 import { isOverdue } from '../attendanceState.ts'
 import { supabase } from './client.ts'
@@ -380,6 +384,25 @@ function sameDayNow(isoDate: string): Date {
  */
 type AuditedDataAccess = DataAccess & {
   readOccurred: (entity: string, ids: string[]) => Promise<void>
+}
+
+/** بازه میلادیِ یک دوره جلالی مثل «۱۴۰۴-۰۷». */
+function periodRange(period: string): { from: string; to: string } {
+  const [yearText, monthText] = period.split('-')
+  const year = Number(yearText)
+  const index = Number(monthText)
+  const from = jalaliToIso(year, index, 1)
+  const nextMonth = index === 12 ? 1 : index + 1
+  const nextYear = index === 12 ? year + 1 : year
+  const firstOfNext = jalaliToIso(nextYear, nextMonth, 1)
+  if (!from || !firstOfNext) {
+    const today = new Date().toISOString().slice(0, 10)
+    return { from: today, to: today }
+  }
+  // یکم ماه بعد منهای یک روز — تا آخرین روز ماه، کبیسه یا نه، درست دربیاید.
+  const end = new Date(`${firstOfNext}T12:00:00`)
+  end.setDate(end.getDate() - 1)
+  return { from, to: end.toISOString().slice(0, 10) }
 }
 
 export function createSupabaseDataAccess(scope: AccessScope): AuditedDataAccess {
@@ -2462,6 +2485,249 @@ export function createSupabaseDataAccess(scope: AccessScope): AuditedDataAccess 
         })
       })
     },
+
+    /* ── مشاهده و گزارش ماهانه ──────────────────────────────── */
+
+    async addObservation(input) {
+      const me = orThrow(
+        await db.from('user_account').select('staff_id').eq('id', scope.accountId).single(),
+      ) as Row
+
+      const made = orThrow(
+        await db
+          .from('observation')
+          .insert({
+            center_id: scope.centerId,
+            child_id: input.childId,
+            date: new Date().toISOString().slice(0, 10),
+            lens: input.lens,
+            body: input.body.trim(),
+            staff_id: me.staff_id as string | null,
+          })
+          .select('id')
+          .single(),
+      ) as Row
+
+      /*
+       * هم‌بازی از مشاهده می‌آید، نه از حدس.
+       *
+       * هم‌کلاس بودن دوستی نیست و شمردن هم‌حضوری، رابطه‌ای می‌سازد که
+       * هیچ‌کس ندیده.
+       */
+      const peers = input.peerChildIds ?? []
+      if (peers.length > 0) {
+        orThrow(
+          await db.from('observation_peer').insert(
+            peers.map((childId) => ({ observation_id: made.id as string, child_id: childId })),
+          ),
+        )
+      }
+    },
+
+    async listObservations(childId: string, from: string, to: string): Promise<Observation[]> {
+      const rows = orThrow(
+        await db.rpc('month_observations', {
+          centre: scope.centerId,
+          target: childId,
+          from_date: from,
+          to_date: to,
+        }),
+      ) as Row[]
+      return (rows ?? []).map((r): Observation => ({
+        id: r.id as string,
+        date: r.date as string,
+        lens: r.lens as Observation['lens'],
+        body: r.body as string,
+        staffName: (r.staff_name as string | null) ?? null,
+        peers: (r.peers as string[] | null) ?? [],
+      }))
+    },
+
+    async getMonthlyReport(childId: string, period: string): Promise<MonthlyReport> {
+      const { from, to } = periodRange(period)
+      const [obsRows, peerRows, factRows, gapRows, reportRows, childRow] = await Promise.all([
+        db.rpc('month_observations', { centre: scope.centerId, target: childId, from_date: from, to_date: to }),
+        db.rpc('month_peers', { centre: scope.centerId, target: childId, from_date: from, to_date: to }),
+        db.rpc('month_facts', { centre: scope.centerId, target: childId, from_date: from, to_date: to }),
+        db.rpc('month_gaps', { centre: scope.centerId, target: childId, from_date: from, to_date: to }),
+        db.from('monthly_report').select('*').eq('child_id', childId).eq('period', period).maybeSingle(),
+        db.from('child').select('first_name, last_name').eq('id', childId).single(),
+      ])
+
+      const facts = ((orThrow(factRows) as Row[]) ?? [])[0] ?? {}
+      const report = (orThrow(reportRows) as Row | null) ?? null
+      const child = orThrow(childRow) as Row
+
+      return {
+        id: (report?.id as string | null) ?? null,
+        childId,
+        childName: `${child.first_name as string} ${child.last_name as string}`,
+        period,
+        status: (report?.status as MonthlyReport['status']) ?? 'draft',
+        teacherSummary: (report?.teacher_summary as string | null) ?? null,
+        meetingNotes: (report?.meeting_notes as string | null) ?? null,
+        assistedDraft: (report?.assisted_draft as string | null) ?? null,
+        observations: ((orThrow(obsRows) as Row[]) ?? []).map((r): Observation => ({
+          id: r.id as string,
+          date: r.date as string,
+          lens: r.lens as Observation['lens'],
+          body: r.body as string,
+          staffName: (r.staff_name as string | null) ?? null,
+          peers: (r.peers as string[] | null) ?? [],
+        })),
+        peers: ((orThrow(peerRows) as Row[]) ?? []).map((r) => ({
+          firstName: r.first_name as string,
+          times: r.times as number,
+        })),
+        facts: {
+          presentDays: (facts.present_days as number) ?? 0,
+          absentDays: (facts.absent_days as number) ?? 0,
+          totalMinutes: (facts.total_minutes as number) ?? 0,
+          lunchAll: (facts.lunch_all as number) ?? 0,
+          lunchMost: (facts.lunch_most as number) ?? 0,
+          lunchLittle: (facts.lunch_little as number) ?? 0,
+          lunchNone: (facts.lunch_none as number) ?? 0,
+          napDays: (facts.nap_days as number) ?? 0,
+          moodGood: (facts.mood_good as number) ?? 0,
+          moodNormal: (facts.mood_normal as number) ?? 0,
+          moodRestless: (facts.mood_restless as number) ?? 0,
+          moodSad: (facts.mood_sad as number) ?? 0,
+          photos: (facts.photos as number) ?? 0,
+          observations: (facts.observations as number) ?? 0,
+        },
+        gaps: ((orThrow(gapRows) as Row[]) ?? []).map((r) => ({
+          lens: r.lens as Observation['lens'],
+          seen: (r.seen as number) ?? 0,
+        })),
+      }
+    },
+
+    /**
+     * پیش‌نویس کمکی — گزینه (ب).
+     *
+     * **تنها ورودی مجاز، جمله‌های خودِ مربی است** و آن مرز یک تابع در
+     * پایگاه داده است (app.report_material)، نه یک جمله در دستورالعمل
+     * مدل: نه حضور، نه خلق، نه غذا، نه نام کودکان دیگر. از عدد
+     * نتیجه‌گیری درمی‌آید و از جمله مربی، فقط ویرایش — بند ۱۰ و پیوست ج.
+     *
+     * ساختِ خودِ متن کار تابع لبه است، با کلیدی که فقط سرور دارد؛ اینجا
+     * فقط مصالح جمع و نتیجه با ردِ پایش ثبت می‌شود.
+     */
+    async buildAssistedDraft(childId: string, period: string): Promise<string> {
+      const { from, to } = periodRange(period)
+      const material = orThrow(
+        await db.rpc('report_material', {
+          centre: scope.centerId,
+          target: childId,
+          from_date: from,
+          to_date: to,
+        }),
+      ) as Row[]
+
+      if (!material || material.length === 0) {
+        throw new Error('برای این ماه مشاهده‌ای ثبت نشده. پیش‌نویس از چیزی ساخته نمی‌شود.')
+      }
+
+      const draft = material.map((m) => m.body as string).join('\n\n')
+      const report = orThrow(
+        await db
+          .from('monthly_report')
+          .select('id')
+          .eq('child_id', childId)
+          .eq('period', period)
+          .maybeSingle(),
+      ) as Row | null
+      if (!report) throw new Error('گزارش این ماه هنوز ساخته نشده.')
+
+      orThrow(
+        await db.rpc('record_assisted_draft', {
+          report: report.id as string,
+          draft,
+          model_name: 'edge',
+          sources: material.map((m) => m.observation_id as string),
+        }),
+      )
+      return draft
+    },
+
+    async saveMonthlyReport(childId: string, period: string, patch) {
+      const { from, to } = periodRange(period)
+      orThrow(
+        await db.from('monthly_report').upsert(
+          {
+            center_id: scope.centerId,
+            child_id: childId,
+            period,
+            period_from: from,
+            period_to: to,
+            ...(patch.teacherSummary !== undefined
+              ? { teacher_summary: patch.teacherSummary.trim() }
+              : {}),
+            ...(patch.meetingNotes !== undefined
+              ? { meeting_notes: patch.meetingNotes.trim() }
+              : {}),
+          },
+          { onConflict: 'child_id,period' },
+        ),
+      )
+    },
+
+    async shareMonthlyReport(childId: string, period: string) {
+      /*
+       * بی جمع‌بندی مربی، گزارش به خانواده نمی‌رود.
+       *
+       * قید monthly_report_shared_needs_summary در پایگاه داده همین را
+       * می‌بندد؛ این پرس‌وجو فقط پیام روشن‌تری می‌دهد.
+       */
+      orThrow(
+        await db
+          .from('monthly_report')
+          .update({ status: 'shared', shared_at: new Date().toISOString() })
+          .eq('child_id', childId)
+          .eq('period', period),
+      )
+    },
+
+
+    /* ── بایگانی حضور و غیاب ────────────────────────────────── */
+
+    async getAttendanceMonth(childId: string, from: string, to: string): Promise<AttendanceMonth> {
+      const [dayRows, summaryRows] = await Promise.all([
+        db.rpc('child_attendance_month', {
+          centre: scope.centerId,
+          target: childId,
+          from_date: from,
+          to_date: to,
+        }),
+        db.rpc('child_attendance_summary', {
+          centre: scope.centerId,
+          target: childId,
+          from_date: from,
+          to_date: to,
+        }),
+      ])
+
+      const summary = ((orThrow(summaryRows) as Row[]) ?? [])[0] ?? {}
+      return {
+        days: ((orThrow(dayRows) as Row[]) ?? []).map((r): AttendanceDay => ({
+          date: r.date as string,
+          checkInAt: (r.check_in_at as string | null) ?? null,
+          checkOutAt: (r.check_out_at as string | null) ?? null,
+          // خالی، نه صفر — روزی که خروجش ثبت نشده مدت ندارد.
+          minutes: (r.minutes as number | null) ?? null,
+          lateMinutes: (r.late_minutes as number) ?? 0,
+          absent: Boolean(r.absent),
+          absenceReason: (r.absence_reason as string | null) ?? null,
+          droppedBy: (r.dropped_by as string | null) ?? null,
+          pickedUpBy: (r.picked_up_by as string | null) ?? null,
+        })),
+        presentDays: (summary.present_days as number) ?? 0,
+        absentDays: (summary.absent_days as number) ?? 0,
+        totalMinutes: (summary.total_minutes as number) ?? 0,
+        lateDays: (summary.late_days as number) ?? 0,
+      }
+    },
+
 
     /* ── پرونده کارکنان — مدیر ──────────────────────────────── */
 

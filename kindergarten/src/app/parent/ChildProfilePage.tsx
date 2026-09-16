@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { AlertIcon, CheckIcon, EmptyState } from '../../design-system/index.ts'
 import { useData } from '../../core/auth/index.ts'
 import type { ProfileField } from '../../core/data/index.ts'
+import { AttendanceArchive } from './AttendanceArchive.tsx'
 import { Shell } from './MorePage.tsx'
 import shared from './MorePage.module.css'
 import styles from './ChildProfilePage.module.css'
@@ -94,6 +95,18 @@ export function ChildProfilePage({ childId, childName, onBack }: {
       <p className={`${shared.hint} t-caption`}>
         کلاس، شهریه و سرپرست پرداخت‌کننده را مهد ثبت می‌کند و از اینجا تغییر نمی‌کند.
       </p>
+
+      {/*
+        بایگانی حضور، در همین پرونده.
+
+        خواسته مالک محصول: «آخر ماه پروفایل کودک مشخص باشه دقیقا چه
+        روزها و ساعت‌هایی حضور داشته». جایش همین‌جاست، نه یک صفحه جدا:
+        خانواده وقتی دنبال ساعت‌هاست، دنبال پرونده کودک می‌گردد.
+      */}
+      <section className={shared.card} aria-label="بایگانی حضور">
+        <span className={`${shared.cardLabel} t-caption`}>حضور و غیاب</span>
+        <AttendanceArchive childId={childId} />
+      </section>
 
       {editing ? (
         <EditSheet

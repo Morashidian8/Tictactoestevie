@@ -14,6 +14,7 @@ import { TodayPage } from './TodayPage.tsx'
 import { BulkEntryPage } from './BulkEntryPage.tsx'
 import { CloseDayPage } from './CloseDayPage.tsx'
 import { MessagesPage } from '../shared/MessagesPage.tsx'
+import { ObservationsPage } from './ObservationsPage.tsx'
 import { TeacherMorePage } from './TeacherMorePage.tsx'
 import styles from './TeacherApp.module.css'
 
@@ -27,7 +28,7 @@ import styles from './TeacherApp.module.css'
  * نشان مرجانی روی «پیام‌ها» وقتی می‌آید که خانواده‌ای پرسیده و جوابی
  * نرفته. نشانی که همیشه روشن باشد، خوانده نمی‌شود.
  */
-type Screen = 'today' | 'bulk' | 'close' | 'inbox' | 'more'
+type Screen = 'today' | 'bulk' | 'close' | 'inbox' | 'more' | 'observations'
 
 export function TeacherApp() {
   const data = useData()
@@ -43,6 +44,8 @@ export function TeacherApp() {
    * می‌کرد و بعد ثبت گروهی روی کلاس اول می‌نشست. یک حالت مشترک، این را
    * از ریشه می‌بندد.
    */
+  /** کودکی که مشاهده‌ها و گزارش ماهانه‌اش باز است. */
+  const [openChild, setOpenChild] = useState<{ id: string; name: string } | null>(null)
   const [classes, setClasses] = useState<ClassRoom[]>([])
   const [classId, setClassId] = useState<string | null>(null)
 
@@ -107,7 +110,7 @@ export function TeacherApp() {
    * «بستن روز» و «پیام‌ها» عنوان و کلید بازگشت خودشان را می‌آورند؛ دو
    * سرصفحه روی هم یعنی نصف صفحه سرصفحه است.
    */
-  const ownHeader = screen === 'close'
+  const ownHeader = screen === 'close' || screen === 'observations'
 
   return (
     <AppShell
@@ -167,8 +170,20 @@ export function TeacherApp() {
           // می‌کند، نه به فهرستی از خطا. بخش ۱۲.۱۰.
           onFixReports={() => setScreen('bulk')}
         />
+      ) : screen === 'observations' && openChild ? (
+        <ObservationsPage
+          childId={openChild.id}
+          childName={openChild.name}
+          onBack={() => setScreen('more')}
+        />
       ) : screen === 'more' ? (
-        <TeacherMorePage />
+        <TeacherMorePage
+          classId={classId}
+          onOpenChild={(id, name) => {
+            setOpenChild({ id, name })
+            setScreen('observations')
+          }}
+        />
       ) : (
         <TodayPage
           classId={classId}

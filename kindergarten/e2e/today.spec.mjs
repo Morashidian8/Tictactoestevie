@@ -1105,6 +1105,26 @@ await page.locator('nav button:has-text("بیشتر")').click()
 await page.waitForSelector('text=اعلام غیبت')
 check(true, 'فهرست «بیشتر» باز شد')
 
+console.log('▸ بایگانی حضور و غیاب، در پرونده کودک')
+await page.click('button:has-text("پرونده کودک")')
+await page.waitForSelector('text=حضور و غیاب')
+const archive = await page.evaluate(() => document.body.innerText)
+check(/روز حاضر/.test(archive), 'شمار روزهای حضور ماه می‌آید')
+check(/روز غایب/.test(archive), 'و شمار روزهای غیبت')
+check(/مجموع ساعت/.test(archive), 'و مجموع ساعت حضور')
+/*
+ * روزی که خروجش ثبت نشده «۰ ساعت» نمی‌شود.
+ *
+ * صفر گذاشتن یعنی دروغ گفتن درباره ساعتی که کودک آنجا بود — و همین
+ * عدد است که اگر روزی اختلافی پیش بیاید، به آن استناد می‌شود.
+ */
+check(
+  !/۰:۰۰/.test(archive) || /خروج ثبت نشده/.test(archive),
+  'روز بی‌خروج، مدت صفر نشان نمی‌دهد',
+)
+await page.locator('[aria-label="بازگشت"]').click()
+await page.waitForTimeout(400)
+
 /*
  * خانواده حالا انتخاب می‌کند به کدام مربی بنویسد.
  *
@@ -1921,6 +1941,124 @@ check(
 )
 await page.click('nav button:has-text("خانه")')
 await page.waitForTimeout(500)
+
+console.log('▸ مشاهده مربی تا گزارش ماهانه خانواده')
+await signIn('09120000001')
+await page.waitForSelector('text=ثبت گروهی امروز', { timeout: 8000 })
+await page.locator('nav button:has-text("بیشتر")').click()
+await page.waitForSelector('text=مشاهده و گزارش ماهانه')
+
+const teacherMore = await page.evaluate(() => document.body.innerText)
+check(/مدارک من/.test(teacherMore), 'مربی مدارک خودش را می‌بیند')
+check(/بازخورد مدیر/.test(teacherMore), 'و بازخوردی که مدیر با او در میان گذاشته')
+/*
+ * آنچه در پرونده مربی عمداً نیست: هیچ عددی درباره عملکرد خودش و هیچ
+ * مقایسه‌ای. اگر مربی ببیند ثبت رخداد به ضررش تمام می‌شود، کمتر ثبت
+ * می‌کند و آسیبش به کودک می‌رسد.
+ */
+check(
+  !/نمره|رتبه|امتیاز/.test(teacherMore),
+  'و هیچ نمره‌ای برای خودش نمی‌بیند',
+)
+
+await page.locator('[class*="childRow"]').first().click()
+await page.waitForSelector('text=مشاهده تازه')
+
+const obsPage = await page.evaluate(() => document.body.innerText)
+/*
+ * شش عدسی، و همه‌شان پرسش‌اند نه برچسب.
+ *
+ * «کجا سخت بود؟» درباره امروز می‌پرسد؛ «چالش‌های کودک» درباره خودِ
+ * کودک حرف می‌زند — و آن یکی همان چیزی است که بند ۱۰ ممنوع کرده.
+ */
+check(/علاقه/.test(obsPage) && /چالش/.test(obsPage), 'شش عدسی مشاهده روی صفحه‌اند')
+check(
+  /هنوز درباره .* چیزی ننوشته‌اید/.test(obsPage),
+  'عدسیِ خالی، کاستیِ مربی نوشته می‌شود نه کاستیِ کودک',
+)
+
+await page.click('button:has-text("چالش")')
+await page.waitForSelector('[role="dialog"]')
+const lensSheet = await page.locator('[role="dialog"]').innerText()
+check(/کجا سخت بود؟/.test(lensSheet), 'عدسی با پرسش می‌آید، نه با برچسب')
+await page.fill('textarea[aria-label="متن مشاهده"]', 'نوبت گرفتن سر تاب برایش سخت بود.')
+await page.click('[role="dialog"] button:has-text("ثبت")')
+await page.waitForSelector('text=/مشاهده ثبت شد/')
+
+await page.click('button:has-text("علاقه")')
+await page.waitForSelector('[role="dialog"]')
+await page.fill('textarea[aria-label="متن مشاهده"]', 'تمام صبح با خمیر بازی برج می‌ساخت.')
+await page.click('[role="dialog"] button:has-text("ثبت")')
+await page.waitForSelector('text=/مشاهده ثبت شد/')
+check(true, 'دو مشاهده ثبت شد')
+
+/*
+ * پیش‌نویس فقط از جمله‌های خودِ مربی ساخته می‌شود.
+ *
+ * نه حضور، نه خلق، نه غذا، نه نام کودکان دیگر: از عدد نتیجه‌گیری
+ * درمی‌آید و از جمله مربی، فقط ویرایش. این مرز یک تابع در پایگاه
+ * داده است، نه یک جمله در دستورالعمل مدل.
+ */
+await page.click('button:has-text("ساختن پیش‌نویس از مشاهده‌ها")')
+await page.waitForSelector('text=/پیش‌نویس ساخته شد/')
+const withDraft = await page.evaluate(() => document.body.innerText)
+check(/خمیر بازی/.test(withDraft), 'پیش‌نویس از جمله‌های خودِ مربی ساخته شد')
+check(
+  /هیچ عددی — حضور، خلق، غذا — و\s*هیچ نام کودک دیگری به آن داده نمی‌شود/.test(
+    withDraft.replace(/\s+/g, ' '),
+  ) || /هیچ نام کودک دیگری/.test(withDraft),
+  'و صفحه صریح می‌گوید چه چیزی به مدل داده نمی‌شود',
+)
+
+/*
+ * پیش‌نویس، گزارش نیست.
+ *
+ * تا مربی جمع‌بندی ننویسد، دکمه ارسال کار نمی‌کند — و پایگاه داده هم
+ * همین را می‌بندد، نه فقط این دکمه.
+ */
+check(
+  await page.locator('button:has-text("فرستادن به خانواده")').isDisabled(),
+  'تا جمع‌بندی نوشته نشود، ارسال به خانواده ممکن نیست',
+)
+
+await page.fill(
+  'textarea[aria-label="جمع‌بندی گزارش ماهانه"]',
+  'مهر برای سارا ماه خمیر و برج بود؛ صبر کردن سر تاب هنوز سخت است.',
+)
+await page.click('button:has-text("فرستادن به خانواده")')
+await page.waitForSelector('text=/برای خانواده فرستاده شد/')
+check(true, 'گزارش با جمع‌بندی مربی فرستاده شد')
+
+await page.locator('[aria-label="بازگشت"]').first().click()
+await page.waitForTimeout(400)
+await page.click('nav button:has-text("امروز")')
+await page.waitForTimeout(400)
+
+await signOutAny()
+await signIn('09120000003', { fresh: false })
+await page.waitForSelector('nav button:has-text("بیشتر")', { timeout: 8000 })
+await page.locator('nav button:has-text("بیشتر")').click()
+await page.waitForSelector('text=گزارش ماهانه')
+await page.click('button:has-text("گزارش ماهانه")')
+await page.waitForSelector('text=جمع‌بندی مربی')
+
+const familyReport = await page.evaluate(() => document.body.innerText)
+check(/ماه خمیر و برج بود/.test(familyReport), 'خانواده جمع‌بندی مربی را می‌بیند')
+check(/نوبت گرفتن سر تاب/.test(familyReport), 'و مشاهده‌های ماه را')
+/*
+ * جمله‌ای که این صفحه عمداً می‌گوید. بی آن، خانواده خودش مقایسه
+ * می‌سازد — با کودک همسایه، با خواهر بزرگ‌تر، با آنچه «طبیعی» می‌داند.
+ */
+check(
+  /با میانگین کلاس مقایسه نمی‌شوند/.test(familyReport),
+  'و صریح گفته می‌شود که با هیچ کودک دیگری مقایسه نشده',
+)
+check(
+  !/نمره|رتبه|امتیاز|درصد/.test(familyReport),
+  'گزارش خانواده هیچ نمره‌ای ندارد',
+)
+await page.locator('[aria-label="بازگشت"]').click()
+await page.waitForTimeout(400)
 
 console.log('▸ بخش ۱۲.۷: کف کیفیت')
 await signIn('09120000001')

@@ -49,6 +49,9 @@ import type {
   StaffDocument,
   StaffNote,
   StaffProfile,
+  AttendanceDay,
+  ObservationLens,
+  MonthlyReportStatus,
   InvoiceLine,
   FeeItem,
   FeeItemOffer,
@@ -82,7 +85,12 @@ import {
   HEALTH_CARDS,
 } from './fixture.ts'
 import { isOverdue } from '../attendanceState.ts'
-import { jalaliYearMonth, toIsoDate } from '../../../i18n/index.ts'
+import {
+  jalaliToIso,
+  jalaliYearMonth,
+  parseJalaliInput,
+  toIsoDate,
+} from '../../../i18n/index.ts'
 import { invoiceDue, invoiceTotal } from '../money.ts'
 import {
   applicableFields,
@@ -197,6 +205,8 @@ function save(): void {
       profileEdits: PROFILE_EDITS,
       conversations: CONVERSATIONS,
       chats: CHATS,
+      observations: OBSERVATIONS,
+      reports: REPORTS,
       staffDocs: STAFF_DOCS,
       staffNotes: STAFF_NOTES,
       payments: PAYMENTS,
@@ -235,6 +245,8 @@ function hydrate(): void {
       profileEdits?: Record<string, string>
       conversations?: ConversationRow[]
       chats?: ChatRow[]
+      observations?: ObservationRow[]
+      reports?: ReportRow[]
       staffDocs?: (StaffDocument & { staffId: string })[]
       staffNotes?: (StaffNote & { staffId: string })[]
       payments?: Payment[]
@@ -285,6 +297,8 @@ function hydrate(): void {
     restore(PROFILE_CHANGES, payload.profileChanges)
     restore(CONVERSATIONS, payload.conversations)
     restore(CHATS, payload.chats)
+    restore(OBSERVATIONS, payload.observations)
+    restore(REPORTS, payload.reports)
     restore(STAFF_DOCS, payload.staffDocs)
     restore(STAFF_NOTES, payload.staffNotes)
     /*
@@ -709,6 +723,78 @@ function staffFileOf(accountId: string): StaffProfile {
     },
   }
 }
+
+/**
+ * روزهای کاری یک بازه — شنبه تا چهارشنبه.
+ *
+ * پنجشنبه و جمعه ردیف نمی‌سازند: وگرنه «غیبت» شامل روزهایی می‌شود که
+ * مهد اصلاً باز نبوده، و آمار ماه غلط درمی‌آید.
+ */
+/** عنوان هر عدسی، برای چیدن پیش‌نویس. */
+const LENS_TITLE: Record<ObservationLens, string> = {
+  interest: 'علاقه‌ها',
+  challenge: 'چالش‌ها',
+  social: 'با دیگران',
+  skill: 'مهارت تازه',
+  moment: 'لحظه‌های ماه',
+  care: 'خواب و غذا',
+}
+
+/** بازه میلادیِ یک دوره جلالی مثل «۱۴۰۴-۰۷». */
+function periodRange(period: string): { from: string; to: string } {
+  const [yearText, monthText] = period.split('-')
+  const year = Number(yearText)
+  const index = Number(monthText)
+  const from = jalaliToIso(year, index, 1)
+  const nextMonth = index === 12 ? 1 : index + 1
+  const nextYear = index === 12 ? year + 1 : year
+  const firstOfNext = jalaliToIso(nextYear, nextMonth, 1)
+  if (!from || !firstOfNext) {
+    const today = toIsoDate(new Date())
+    return { from: today, to: today }
+  }
+  // یکم ماه بعد منهای یک روز — تا آخرین روز ماه، کبیسه یا نه، درست دربیاید.
+  const end = new Date(`${firstOfNext}T12:00:00`)
+  end.setDate(end.getDate() - 1)
+  return { from, to: toIsoDate(end) }
+}
+
+function workdaysBetween(from: string, to: string): string[] {
+  const out: string[] = []
+  const cursor = new Date(`${from}T12:00:00`)
+  const end = new Date(`${to}T12:00:00`)
+  while (cursor <= end) {
+    const dow = cursor.getDay() // ۴ پنجشنبه، ۵ جمعه
+    if (dow !== 4 && dow !== 5) out.push(toIsoDate(cursor))
+    cursor.setDate(cursor.getDate() + 1)
+  }
+  return out
+}
+
+/* ── مشاهده و گزارش ماهانه ──────────────────────────────────── */
+
+type ObservationRow = {
+  id: string
+  childId: string
+  date: string
+  lens: ObservationLens
+  body: string
+  staffName: string | null
+  peers: string[]
+}
+
+type ReportRow = {
+  childId: string
+  period: string
+  status: MonthlyReportStatus
+  teacherSummary: string | null
+  meetingNotes: string | null
+  assistedDraft: string | null
+}
+
+const OBSERVATIONS: ObservationRow[] = []
+const REPORTS: ReportRow[] = []
+let observationSeq = 0
 
 const CONVERSATIONS: ConversationRow[] = []
 const CHATS: ChatRow[] = []
@@ -1153,15 +1239,19 @@ function guardianName(accountId: string): string | null {
 }
 
 /**
- * تاریخ جلالی داده نمونه به ISO، فقط برای مقایسه.
+ * تاریخ جلالیِ داده نمونه به میلادی، برای مقایسه.
  *
- * داده نمونه تاریخ‌ها را جلالی نگه می‌دارد چون همان چیزی است که در
- * رابط دیده می‌شود. برای «منقضی شده یا نه» باید قابل مقایسه باشد، و
- * تفاوت ۶۲۱ سال برای همین مقایسه کافی است.
+ * پیش‌تر اینجا فقط ۶۲۱ سال به عدد سال اضافه می‌شد. برای مقایسه‌های
+ * درشت کار می‌کرد ولی نزدیک نوروز غلط بود: ۱۴۰۴-۰۱-۰۵ می‌شد
+ * ۲۰۲۵-۰۱-۰۵، یعنی سه ماه زودتر — و «کارت بهداشت منقضی» را زودتر از
+ * موعد اعلام می‌کرد. حالا از همان تبدیلی می‌آید که بقیه اپ استفاده
+ * می‌کند.
+ *
+ * تاریخی که خوانده نشود، دورترین تاریخ ممکن به حساب می‌آید تا سهواً
+ * «منقضی» علامت نخورد؛ کاستیِ داده، اتهام نیست.
  */
-function jalaliToIso(jalali: string): string {
-  const [year = '1400', month = '01', day = '01'] = jalali.split('-')
-  return `${Number(year) + 621}-${month}-${day}`
+function jalaliDateToIso(jalali: string): string {
+  return parseJalaliInput(jalali) ?? '9999-12-31'
 }
 
 /** درخواست‌های دارویی باز یک کودک در یک تاریخ. */
@@ -2094,7 +2184,7 @@ export function createLocalDataAccess(scope: AccessScope): DataAccess {
         missingNationalId: CHILDREN.filter((c) => !NATIONAL_IDS[c.id]).length,
         // منقضی، نزدیک انقضا، و ثبت‌نشده — هر سه یک کار لازم دارند.
         expiringHealthCards: Object.values(HEALTH_CARDS).filter(
-          (card) => !card.expiresAt || jalaliToIso(card.expiresAt) < limit,
+          (card) => !card.expiresAt || jalaliDateToIso(card.expiresAt) < limit,
         ).length,
       }
     },
@@ -2149,9 +2239,9 @@ export function createLocalDataAccess(scope: AccessScope): DataAccess {
           expiresAt: card.expiresAt,
           cardState: !card.expiresAt
             ? ('ثبت نشده' as const)
-            : jalaliToIso(card.expiresAt) < today
+            : jalaliDateToIso(card.expiresAt) < today
               ? ('منقضی' as const)
-              : jalaliToIso(card.expiresAt) < limit
+              : jalaliDateToIso(card.expiresAt) < limit
                 ? ('نزدیک انقضا' as const)
                 : ('معتبر' as const),
         })),
@@ -2733,6 +2823,244 @@ export function createLocalDataAccess(scope: AccessScope): DataAccess {
     async listPaymentClaims(status) {
       assertManager()
       return CLAIMS.filter((c) => c.status === status)
+    },
+
+    /* ── مشاهده و گزارش ماهانه ──────────────────────────────── */
+
+    /**
+     * ثبت یک مشاهده.
+     *
+     * هیچ ساختاری روی متن تحمیل نمی‌شود جز طول: چیزی که مربی در بیست
+     * ثانیه بین دو کار می‌نویسد، فرم پر کردنی نیست.
+     */
+    async addObservation(input) {
+      const text = input.body.trim()
+      if (text.length < 3) throw new Error('مشاهده خیلی کوتاه است.')
+      if (text.length > 600) throw new Error('مشاهده خیلی بلند است.')
+
+      OBSERVATIONS.push({
+        id: `obs-${(observationSeq += 1)}`,
+        childId: input.childId,
+        date: toIsoDate(new Date()),
+        lens: input.lens,
+        body: text,
+        staffName: entryOf(scope.accountId)?.name ?? null,
+        /*
+         * هم‌بازی از مشاهده می‌آید، نه از حدس.
+         *
+         * فقط نام کوچک نگه داشته می‌شود: گزارش یک کودک نباید مشخصات
+         * کودک دیگر را ببرد.
+         */
+        peers: (input.peerChildIds ?? [])
+          .map((id) => CHILDREN.find((c) => c.id === id)?.firstName)
+          .filter((n): n is string => Boolean(n)),
+      })
+      save()
+    },
+
+    async listObservations(childId, from, to) {
+      return OBSERVATIONS.filter(
+        (o) => o.childId === childId && o.date >= from && o.date <= to,
+      ).map((o) => ({
+        id: o.id,
+        date: o.date,
+        lens: o.lens,
+        body: o.body,
+        staffName: o.staffName,
+        peers: o.peers,
+      }))
+    },
+
+    async getMonthlyReport(childId, period) {
+      const { from, to } = periodRange(period)
+      const observations = OBSERVATIONS.filter(
+        (o) => o.childId === childId && o.date >= from && o.date <= to,
+      )
+      const row = REPORTS.find((r) => r.childId === childId && r.period === period)
+
+      // هم‌بازی‌ها از مشاهده شمرده می‌شوند، نه از هم‌کلاسی.
+      const peerCount = new Map<string, number>()
+      for (const o of observations) {
+        for (const name of o.peers) peerCount.set(name, (peerCount.get(name) ?? 0) + 1)
+      }
+
+      const attendance = await this.getAttendanceMonth(childId, from, to)
+      const lenses: ObservationLens[] = [
+        'interest', 'challenge', 'social', 'skill', 'moment', 'care',
+      ]
+
+      return {
+        id: row ? `${childId}:${period}` : null,
+        childId,
+        childName: childName(childId),
+        period,
+        status: row?.status ?? 'draft',
+        teacherSummary: row?.teacherSummary ?? null,
+        meetingNotes: row?.meetingNotes ?? null,
+        assistedDraft: row?.assistedDraft ?? null,
+        observations: observations.map((o) => ({
+          id: o.id,
+          date: o.date,
+          lens: o.lens,
+          body: o.body,
+          staffName: o.staffName,
+          peers: o.peers,
+        })),
+        peers: [...peerCount.entries()]
+          .map(([firstName, times]) => ({ firstName, times }))
+          .sort((a, b) => b.times - a.times),
+        facts: {
+          presentDays: attendance.presentDays,
+          absentDays: attendance.absentDays,
+          totalMinutes: attendance.totalMinutes,
+          lunchAll: 0,
+          lunchMost: 0,
+          lunchLittle: 0,
+          lunchNone: 0,
+          napDays: 0,
+          moodGood: 0,
+          moodNormal: 0,
+          moodRestless: 0,
+          moodSad: 0,
+          photos: 0,
+          observations: observations.length,
+        },
+        // عدسی‌های خالی، تا مربی بداند کجا را ندیده — نه اینکه کودک کم دارد.
+        gaps: lenses.map((lens) => ({
+          lens,
+          seen: observations.filter((o) => o.lens === lens).length,
+        })),
+      }
+    },
+
+    /**
+     * پیش‌نویس کمکی — گزینه (ب).
+     *
+     * **تنها ورودی مجاز، جمله‌های خودِ مربی است.** نه حضور، نه خلق، نه
+     * غذا، نه نام کودکان دیگر: از عدد نتیجه‌گیری درمی‌آید و از جمله
+     * مربی، فقط ویرایش. همین مرز است که گزارش را از تحلیل ماشینیِ کودک
+     * جدا می‌کند — بند ۱۰ و پیوست ج.
+     *
+     * در نسخه نمایشی، «مدل» فقط جمله‌ها را به‌ترتیب عدسی کنار هم
+     * می‌چیند. در نسخه واقعی همین ورودی به مدل می‌رود و خروجی‌اش با
+     * app.record_assisted_draft ثبت می‌شود.
+     */
+    async buildAssistedDraft(childId, period) {
+      const { from, to } = periodRange(period)
+      const material = OBSERVATIONS.filter(
+        (o) => o.childId === childId && o.date >= from && o.date <= to,
+      )
+      if (material.length === 0) {
+        throw new Error('برای این ماه مشاهده‌ای ثبت نشده. پیش‌نویس از چیزی ساخته نمی‌شود.')
+      }
+
+      const order: ObservationLens[] = [
+        'interest', 'skill', 'social', 'challenge', 'moment', 'care',
+      ]
+      const draft = order
+        .map((lens) => {
+          const lines = material.filter((o) => o.lens === lens)
+          if (lines.length === 0) return null
+          return `${LENS_TITLE[lens]}: ${lines.map((l) => l.body).join(' ')}`
+        })
+        .filter(Boolean)
+        .join('\n\n')
+
+      const row = REPORTS.find((r) => r.childId === childId && r.period === period)
+      if (row) row.assistedDraft = draft
+      else {
+        REPORTS.push({
+          childId,
+          period,
+          status: 'draft',
+          teacherSummary: null,
+          meetingNotes: null,
+          assistedDraft: draft,
+        })
+      }
+      save()
+      return draft
+    },
+
+    async saveMonthlyReport(childId, period, patch) {
+      let row = REPORTS.find((r) => r.childId === childId && r.period === period)
+      if (!row) {
+        row = {
+          childId,
+          period,
+          status: 'draft',
+          teacherSummary: null,
+          meetingNotes: null,
+          assistedDraft: null,
+        }
+        REPORTS.push(row)
+      }
+      if (patch.teacherSummary !== undefined) row.teacherSummary = patch.teacherSummary.trim()
+      if (patch.meetingNotes !== undefined) row.meetingNotes = patch.meetingNotes.trim()
+      save()
+    },
+
+    async shareMonthlyReport(childId, period) {
+      const row = REPORTS.find((r) => r.childId === childId && r.period === period)
+      /*
+       * بی جمع‌بندی مربی، گزارش به خانواده نمی‌رود.
+       *
+       * قید monthly_report_shared_needs_summary در پایگاه داده همین را
+       * می‌بندد. پیش‌نویس ماشین، هرچقدر هم پر، جای جمع‌بندی را نمی‌گیرد.
+       */
+      if (!row?.teacherSummary?.trim()) {
+        throw new Error('تا جمع‌بندی خودتان را ننویسید، گزارش به خانواده نمی‌رود.')
+      }
+      row.status = 'shared'
+      save()
+    },
+
+    /* ── بایگانی حضور و غیاب ────────────────────────────────── */
+
+    /**
+     * روزهای حضور کودک در یک بازه.
+     *
+     * فقط روزهای کاری می‌آیند: پنجشنبه و جمعه اصلاً ردیف نمی‌سازند،
+     * وگرنه «غیبت» شامل روزهایی می‌شود که مهد باز نبوده.
+     */
+    async getAttendanceMonth(childId, from, to) {
+      assertOwnChild(childId)
+      const rows: AttendanceDay[] = []
+
+      for (const date of workdaysBetween(from, to)) {
+        const state = days.get(date)
+        if (!state) continue
+        const row = state.attendance.get(childId)
+        const absence = state.absences.find((a) => a.childId === childId)
+        const minutes =
+          row?.checkInAt && row.checkOutAt
+            ? Math.round(
+                (new Date(row.checkOutAt).getTime() - new Date(row.checkInAt).getTime()) / 60_000,
+              )
+            : null
+
+        rows.push({
+          date,
+          checkInAt: row?.checkInAt ?? null,
+          checkOutAt: row?.checkOutAt ?? null,
+          // خالی، نه صفر: روزی که خروجش ثبت نشده مدت ندارد، و صفر
+          // گذاشتن یعنی دروغ گفتن درباره ساعتی که کودک آنجا بود.
+          minutes,
+          lateMinutes: row?.lateMinutes ?? 0,
+          absent: Boolean(absence) || !row?.checkInAt,
+          absenceReason: absence?.reason ?? null,
+          droppedBy: null,
+          pickedUpBy: row?.checkedOutByName ?? null,
+        })
+      }
+
+      return {
+        days: rows,
+        presentDays: rows.filter((r) => !r.absent && r.checkInAt).length,
+        absentDays: rows.filter((r) => r.absent).length,
+        totalMinutes: rows.reduce((sum, r) => sum + (r.minutes ?? 0), 0),
+        lateDays: rows.filter((r) => r.lateMinutes > 0).length,
+      }
     },
 
     /* ── پرونده کارکنان — مدیر ──────────────────────────────── */
