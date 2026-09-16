@@ -4,10 +4,12 @@ import {
   formatCount,
   formatJalali,
   formatPeriod,
+  jalaliToIso,
   jalaliYearMonth,
+  toIsoDate,
 } from '../../i18n/index.ts'
 import { useData } from '../../core/auth/index.ts'
-import type { MonthlyReport } from '../../core/data/index.ts'
+import type { InterestMap, MonthlyReport } from '../../core/data/index.ts'
 import { Shell } from './MorePage.tsx'
 import shared from './MorePage.module.css'
 import styles from './MonthlyReportPage.module.css'
@@ -30,6 +32,24 @@ import styles from './MonthlyReportPage.module.css'
  * ۳. **هیچ مقایسه‌ای.** نه با کودک دیگر، نه با میانگین کلاس. ارقام
  *    واقعیت‌اند، نه نمره.
  */
+/** بازه میلادیِ یک دوره جلالی. */
+function periodRange(period: string): { from: string; to: string } {
+  const [yearText, monthText] = period.split('-')
+  const year = Number(yearText)
+  const index = Number(monthText)
+  const from = jalaliToIso(year, index, 1)
+  const nextMonth = index === 12 ? 1 : index + 1
+  const nextYear = index === 12 ? year + 1 : year
+  const firstOfNext = jalaliToIso(nextYear, nextMonth, 1)
+  if (!from || !firstOfNext) {
+    const today = toIsoDate(new Date())
+    return { from: today, to: today }
+  }
+  const end = new Date(`${firstOfNext}T12:00:00`)
+  end.setDate(end.getDate() - 1)
+  return { from, to: toIsoDate(end) }
+}
+
 export function MonthlyReportPage({ childId, childName, onBack }: {
   childId: string
   childName: string
@@ -38,10 +58,13 @@ export function MonthlyReportPage({ childId, childName, onBack }: {
   const data = useData()
   const [period, setPeriod] = useState(() => jalaliYearMonth(new Date()))
   const [report, setReport] = useState<MonthlyReport | null>(null)
+  const [interest, setInterest] = useState<InterestMap | null>(null)
 
   const load = useCallback(async () => {
     try {
       setReport(await data.getMonthlyReport(childId, period))
+      const range = periodRange(period)
+      setInterest(await data.getInterestMap(childId, range.from, range.to))
     } catch {
       setReport(null)
     }
@@ -105,6 +128,50 @@ export function MonthlyReportPage({ childId, childName, onBack }: {
               ))}
             </section>
           ) : null}
+
+          {/* ── نقشه علایق ───────────────────────────────── */}
+          <section className={shared.card} aria-label="نقشه علایق">
+            <span className={`${shared.cardLabel} t-caption`}>چه چیزی را بیشتر انتخاب کرد</span>
+            {interest === null || interest.sample < (interest?.threshold ?? 8) ? (
+              /*
+                آستانه انتشار — بخش ۹.
+                نمودارِ سه‌نقطه‌ای الگو نیست؛ و خانواده آن را الگو
+                می‌خواند. پس به‌جایش همین جمله می‌آید.
+              */
+              <p className={`${shared.hint} t-body`}>
+                داده کافی برای این ماه ثبت نشده.
+              </p>
+            ) : (
+              <>
+                {interest.corners
+                  .filter((corner) => corner.times > 0)
+                  .map((corner) => (
+                    <p key={corner.id} className={`${shared.row} t-body`}>
+                      <span>
+                        {corner.glyph ? `${corner.glyph} ` : ''}
+                        {corner.title}
+                      </span>
+                      <b>{formatCount(corner.times)} بار</b>
+                    </p>
+                  ))}
+                {/*
+                  «هنوز نرفته» گفته می‌شود، ولی نه به‌عنوان کاستی.
+                  گوشه‌ای که کودک نرفته یعنی هنوز کشفش نکرده — نه اینکه
+                  چیزی کم دارد. متن عمداً دعوت است، نه گزارشِ نقص.
+                */}
+                {interest.corners.some((corner) => corner.times === 0) ? (
+                  <p className={`${shared.hint} t-caption`}>
+                    هنوز سراغ این‌ها نرفته:{' '}
+                    {interest.corners
+                      .filter((corner) => corner.times === 0)
+                      .map((corner) => corner.title)
+                      .join('، ')}
+                    . شاید در خانه امتحانشان کنید.
+                  </p>
+                ) : null}
+              </>
+            )}
+          </section>
 
           {report.peers.length > 0 ? (
             <section className={shared.card} aria-label="هم‌بازی‌ها">

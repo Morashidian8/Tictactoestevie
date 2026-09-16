@@ -87,6 +87,9 @@ import type {
   InspectionFile,
   InspectionRequirement,
   InspectionVisit,
+  ActivityCorner,
+  InterestMap,
+  PlaySession,
   FeeYearMonth,
   PaymentMethod,
   PaymentReminderLog,
@@ -1543,6 +1546,173 @@ export function createSupabaseDataAccess(scope: AccessScope): AuditedDataAccess 
         smsQuota: await smsQuota(),
       }
     },
+
+    /* ── بازی آزاد — ماژول M8 ───────────────────────────────── */
+
+    async getFreePlayBoard(classId: string, date: string, session: PlaySession) {
+      const [cornerRows, choiceRows, pairRows, day] = await Promise.all([
+        db
+          .from('activity_corner')
+          .select('id, title, glyph')
+          .eq('center_id', scope.centerId)
+          .eq('active', true)
+          .order('sort_order'),
+        db
+          .from('free_choice_log')
+          .select('child_id, corner_id')
+          .eq('center_id', scope.centerId)
+          .eq('date', date)
+          .eq('session', session),
+        db
+          .from('play_pair')
+          .select('child_a, child_b')
+          .eq('center_id', scope.centerId)
+          .eq('date', date),
+        this.getClassDay(classId, date),
+      ])
+
+      const placed: Record<string, string> = {}
+      for (const row of (orThrow(choiceRows) as Row[]) ?? []) {
+        placed[row.child_id as string] = row.corner_id as string
+      }
+
+      return {
+        corners: ((orThrow(cornerRows) as Row[]) ?? []).map((c): ActivityCorner => ({
+          id: c.id as string,
+          title: c.title as string,
+          glyph: (c.glyph as string | null) ?? null,
+        })),
+        placed,
+        // همه کودکان نوبت؛ «ثبت‌نشده» مشتقِ رابط است — بخش ۵.۴.
+        children: day.children.map((c) => ({
+          id: c.id,
+          firstName: c.firstName,
+          photoUrl: c.photoUrl ?? null,
+        })),
+        pairs: ((orThrow(pairRows) as Row[]) ?? []).map((p) => ({
+          a: p.child_a as string,
+          b: p.child_b as string,
+        })),
+      }
+    },
+
+    async setFreeChoice(childId: string, date: string, session: PlaySession, cornerId: string) {
+      const me = orThrow(
+        await db.from('user_account').select('staff_id').eq('id', scope.accountId).single(),
+      ) as Row
+
+      /*
+       * نظر عوض کردن، نه انتخاب دوم.
+       *
+       * قید free_choice_once یک ردیف برای هر کودک و نوبت می‌گذارد؛
+       * upsert همان ردیف را جابه‌جا می‌کند.
+       */
+      orThrow(
+        await db.from('free_choice_log').upsert(
+          {
+            center_id: scope.centerId,
+            child_id: childId,
+            corner_id: cornerId,
+            date,
+            session,
+            staff_id: me.staff_id as string | null,
+          },
+          { onConflict: 'child_id,date,session' },
+        ),
+      )
+    },
+
+    async clearFreeChoice(childId: string, date: string, session: PlaySession) {
+      orThrow(
+        await db
+          .from('free_choice_log')
+          .delete()
+          .eq('center_id', scope.centerId)
+          .eq('child_id', childId)
+          .eq('date', date)
+          .eq('session', session),
+      )
+    },
+
+    async setPlayPair(date: string, childA: string, childB: string, paired: boolean) {
+      // جفت مرتب‌شده: «الف با ب» و «ب با الف» یکی‌اند — قید در جدول هم هست.
+      const [a, b] = childA < childB ? [childA, childB] : [childB, childA]
+      if (paired) {
+        orThrow(
+          await db
+            .from('play_pair')
+            .upsert(
+              { center_id: scope.centerId, date, child_a: a, child_b: b },
+              { onConflict: 'date,child_a,child_b' },
+            ),
+        )
+        return
+      }
+      orThrow(
+        await db
+          .from('play_pair')
+          .delete()
+          .eq('center_id', scope.centerId)
+          .eq('date', date)
+          .eq('child_a', a)
+          .eq('child_b', b),
+      )
+    },
+
+    async getInterestMap(childId: string, from: string, to: string): Promise<InterestMap> {
+      const [mapRows, sample, partnerRows] = await Promise.all([
+        db.rpc('interest_map', {
+          centre: scope.centerId,
+          target: childId,
+          from_date: from,
+          to_date: to,
+        }),
+        db.rpc('interest_sample', {
+          centre: scope.centerId,
+          target: childId,
+          from_date: from,
+          to_date: to,
+        }),
+        db.rpc('play_partners', {
+          centre: scope.centerId,
+          target: childId,
+          from_date: from,
+          to_date: to,
+        }),
+      ])
+
+      return {
+        // همه گوشه‌ها، حتی صفرها: «انتخاب‌نشده» خودش یک خط گزارش است.
+        corners: ((orThrow(mapRows) as Row[]) ?? []).map((r) => ({
+          id: r.corner_id as string,
+          title: r.title as string,
+          glyph: (r.glyph as string | null) ?? null,
+          times: (r.times as number) ?? 0,
+        })),
+        sample: (orThrow(sample) as number) ?? 0,
+        threshold: 8,
+        partners: ((orThrow(partnerRows) as Row[]) ?? []).map((r) => ({
+          childId: r.child_id as string,
+          firstName: r.first_name as string,
+          times: (r.times as number) ?? 0,
+        })),
+      }
+    },
+
+    async listUnpairedChildren(from: string, to: string) {
+      const rows = orThrow(
+        await db.rpc('unpaired_children', {
+          centre: scope.centerId,
+          from_date: from,
+          to_date: to,
+        }),
+      ) as Row[]
+      return (rows ?? []).map((r) => ({
+        childId: r.child_id as string,
+        fullName: r.full_name as string,
+      }))
+    },
+
 
     /* ── پرونده بازرسی — ارتقای ۲ ───────────────────────────── */
 

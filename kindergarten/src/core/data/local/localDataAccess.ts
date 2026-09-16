@@ -55,6 +55,8 @@ import type {
   DocumentState,
   InspectionVisit,
   RequirementSource,
+  ActivityCorner,
+  PlaySession,
   MonthlyReportStatus,
   InvoiceLine,
   FeeItem,
@@ -214,6 +216,8 @@ function save(): void {
       requirements: REQUIREMENTS,
       centerDocs: CENTER_DOCS,
       visits: VISITS,
+      choices: CHOICES,
+      pairs: PAIRS,
       staffDocs: STAFF_DOCS,
       staffNotes: STAFF_NOTES,
       payments: PAYMENTS,
@@ -257,6 +261,8 @@ function hydrate(): void {
       requirements?: RequirementRow[]
       centerDocs?: CenterDocument[]
       visits?: InspectionVisit[]
+      choices?: ChoiceRow[]
+      pairs?: PairRow[]
       staffDocs?: (StaffDocument & { staffId: string })[]
       staffNotes?: (StaffNote & { staffId: string })[]
       payments?: Payment[]
@@ -312,6 +318,8 @@ function hydrate(): void {
     restore(REQUIREMENTS, payload.requirements)
     restore(CENTER_DOCS, payload.centerDocs)
     restore(VISITS, payload.visits)
+    restore(CHOICES, payload.choices)
+    restore(PAIRS, payload.pairs)
     restore(STAFF_DOCS, payload.staffDocs)
     restore(STAFF_NOTES, payload.staffNotes)
     /*
@@ -869,6 +877,35 @@ function documentState(expiresAt: string | null, today: string): DocumentState {
   soon.setDate(soon.getDate() + 60)
   return expiresAt <= toIsoDate(soon) ? 'expiring' : 'valid'
 }
+
+/* ── بازی آزاد ──────────────────────────────────────────────── */
+
+/** گوشه‌های پیش‌فرض — پیوست الف سند، «قابل تغییر توسط مهد». */
+const CORNERS: ActivityCorner[] = [
+  { id: 'corner-blocks', title: 'بلوک و ساخت‌وساز', glyph: '🧱' },
+  { id: 'corner-art', title: 'نقاشی و کاردستی', glyph: '🎨' },
+  { id: 'corner-books', title: 'کتاب و قصه', glyph: '📖' },
+  { id: 'corner-home', title: 'خانه‌بازی', glyph: '🏠' },
+  { id: 'corner-sand', title: 'شن و آب', glyph: '🪣' },
+  { id: 'corner-music', title: 'موسیقی', glyph: '🥁' },
+  { id: 'corner-puzzle', title: 'پازل و بازی فکری', glyph: '🧩' },
+  { id: 'corner-yard', title: 'حیاط', glyph: '🌳' },
+]
+
+type ChoiceRow = {
+  childId: string
+  cornerId: string
+  date: string
+  session: PlaySession
+}
+
+type PairRow = { date: string; a: string; b: string }
+
+const CHOICES: ChoiceRow[] = []
+const PAIRS: PairRow[] = []
+
+/** آستانه انتشار نقشه علایق — بخش ۹. */
+const INTEREST_THRESHOLD = 8
 
 const CONVERSATIONS: ConversationRow[] = []
 const CHATS: ChatRow[] = []
@@ -2897,6 +2934,106 @@ export function createLocalDataAccess(scope: AccessScope): DataAccess {
     async listPaymentClaims(status) {
       assertManager()
       return CLAIMS.filter((c) => c.status === status)
+    },
+
+    /* ── بازی آزاد — ماژول M8 ───────────────────────────────── */
+
+    async getFreePlayBoard(classId, date, session) {
+      const day = await this.getClassDay(classId, date)
+      const mine = CHOICES.filter((c) => c.date === date && c.session === session)
+      const placed: Record<string, string> = {}
+      for (const row of mine) placed[row.childId] = row.cornerId
+
+      return {
+        corners: CORNERS,
+        placed,
+        /*
+         * همه کودکان نوبت. «ثبت‌نشده» را رابط از این منهای `placed`
+         * درمی‌آورد — بخش ۵.۴: کودکِ جابه‌جانشده خطا نیست، و داده
+         * ناقص بهتر از داده جعلی است.
+         */
+        children: day.children.map((c) => ({
+          id: c.id,
+          firstName: c.firstName,
+          photoUrl: c.photoUrl ?? null,
+        })),
+        pairs: PAIRS.filter((p) => p.date === date).map((p) => ({ a: p.a, b: p.b })),
+      }
+    },
+
+    async setFreeChoice(childId, date, session, cornerId) {
+      if (!CORNERS.some((c) => c.id === cornerId)) throw new Error('گوشه پیدا نشد.')
+      // نظر عوض کردن، نه انتخاب دوم: ردیف جابه‌جا می‌شود.
+      const at = CHOICES.findIndex(
+        (c) => c.childId === childId && c.date === date && c.session === session,
+      )
+      if (at >= 0) CHOICES.splice(at, 1)
+      CHOICES.push({ childId, cornerId, date, session })
+      save()
+    },
+
+    async clearFreeChoice(childId, date, session) {
+      const at = CHOICES.findIndex(
+        (c) => c.childId === childId && c.date === date && c.session === session,
+      )
+      if (at >= 0) CHOICES.splice(at, 1)
+      save()
+    },
+
+    async setPlayPair(date, childA, childB, paired) {
+      // جفت مرتب‌شده: «الف با ب» و «ب با الف» یکی‌اند.
+      const [a, b] = childA < childB ? [childA, childB] : [childB, childA]
+      const at = PAIRS.findIndex((p) => p.date === date && p.a === a && p.b === b)
+      if (paired && at < 0) PAIRS.push({ date, a, b })
+      if (!paired && at >= 0) PAIRS.splice(at, 1)
+      save()
+    },
+
+    async getInterestMap(childId, from, to) {
+      assertOwnChild(childId)
+      const mine = CHOICES.filter(
+        (c) => c.childId === childId && c.date >= from && c.date <= to,
+      )
+
+      const partnerCount = new Map<string, number>()
+      for (const pair of PAIRS.filter((p) => p.date >= from && p.date <= to)) {
+        const other = pair.a === childId ? pair.b : pair.b === childId ? pair.a : null
+        if (other) partnerCount.set(other, (partnerCount.get(other) ?? 0) + 1)
+      }
+
+      return {
+        /*
+         * همه گوشه‌ها می‌آیند، حتی صفرها.
+         *
+         * «گوشه‌های انتخاب‌نشده» خودش یک خط گزارش است (بخش ۹): جایی
+         * که کودک هنوز نرفته، به‌اندازه جایی که رفته معنا دارد.
+         */
+        corners: CORNERS.map((corner) => ({
+          ...corner,
+          times: mine.filter((c) => c.cornerId === corner.id).length,
+        })).sort((a, b) => b.times - a.times),
+        sample: mine.length,
+        threshold: INTEREST_THRESHOLD,
+        partners: [...partnerCount.entries()]
+          .map(([id, times]) => ({
+            childId: id,
+            firstName: CHILDREN.find((c) => c.id === id)?.firstName ?? '—',
+            times,
+          }))
+          .sort((a, b) => b.times - a.times),
+      }
+    },
+
+    async listUnpairedChildren(from, to) {
+      const paired = new Set<string>()
+      for (const pair of PAIRS.filter((p) => p.date >= from && p.date <= to)) {
+        paired.add(pair.a)
+        paired.add(pair.b)
+      }
+      return CHILDREN.filter((c) => !paired.has(c.id)).map((c) => ({
+        childId: c.id,
+        fullName: `${c.firstName} ${c.lastName}`,
+      }))
     },
 
     /* ── پرونده بازرسی ──────────────────────────────────────── */

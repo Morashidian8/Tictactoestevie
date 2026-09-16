@@ -63,3 +63,18 @@
 }
 .childRow + .childRow { border-block-start: 1px solid var(--border); }
 .childRow:active { background: var(--coral-tint); }
+
+/* کنش، نه ردیف کودک — کلاسش عمداً جداست. */
+.actionRow {
+  inline-size: 100%;
+  min-block-size: var(--touch-teacher);
+  padding-inline: var(--space-3);
+  text-align: start;
+  background: var(--surface);
+  border: 1px solid var(--border-input);
+  border-radius: var(--r-input);
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+}
+.actionRow:active { background: var(--coral-tint); }

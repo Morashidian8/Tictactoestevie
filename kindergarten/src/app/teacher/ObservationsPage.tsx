@@ -4,10 +4,12 @@ import {
   formatCount,
   formatJalali,
   formatPeriod,
+  jalaliToIso,
   jalaliYearMonth,
+  toIsoDate,
 } from '../../i18n/index.ts'
 import { useData } from '../../core/auth/index.ts'
-import type { MonthlyReport, ObservationLens } from '../../core/data/index.ts'
+import type { InterestMap, MonthlyReport, ObservationLens } from '../../core/data/index.ts'
 import styles from './ObservationsPage.module.css'
 
 /**
@@ -54,6 +56,7 @@ export function ObservationsPage({ childId, childName, onBack }: {
   const data = useData()
   const [period, setPeriod] = useState(() => jalaliYearMonth(new Date()))
   const [report, setReport] = useState<MonthlyReport | null>(null)
+  const [interest, setInterest] = useState<InterestMap | null>(null)
   const [writing, setWriting] = useState<ObservationLens | null>(null)
   const [summary, setSummary] = useState('')
   const [note, setNote] = useState<string | null>(null)
@@ -65,6 +68,8 @@ export function ObservationsPage({ childId, childName, onBack }: {
       const next = await data.getMonthlyReport(childId, period)
       setReport(next)
       setSummary(next.teacherSummary ?? '')
+      const range = periodRange(period)
+      setInterest(await data.getInterestMap(childId, range.from, range.to))
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'خوانده نشد.')
     }
@@ -170,6 +175,51 @@ export function ObservationsPage({ childId, childName, onBack }: {
                 </div>
               )
             })
+          )}
+        </section>
+
+        {/* ── نقشه علایق ───────────────────────────────────── */}
+        <section className={styles.card}>
+          <span className={`${styles.cardLabel} t-caption`}>نقشه علایق</span>
+          {interest === null ? (
+            <p className={`${styles.muted} t-body`}>در حال خواندن…</p>
+          ) : interest.sample < interest.threshold ? (
+            /*
+              آستانه انتشار — بخش ۹.
+              نمودارِ سه‌نقطه‌ای الگو نیست؛ نویز است. و خانواده آن را
+              الگو می‌خواند، پس اصلاً ساخته نمی‌شود.
+            */
+            <p className={`${styles.muted} t-body`}>
+              داده کافی برای این ماه ثبت نشده — {formatCount(interest.sample)} ثبت از{' '}
+              {formatCount(interest.threshold)} لازم. در «بازی آزاد» ثبت کنید.
+            </p>
+          ) : (
+            <>
+              {interest.corners
+                .filter((corner) => corner.times > 0)
+                .map((corner) => (
+                  <p key={corner.id} className={`${styles.row} t-body`}>
+                    <span>
+                      {corner.glyph ? `${corner.glyph} ` : ''}
+                      {corner.title}
+                    </span>
+                    <b>{formatCount(corner.times)} بار</b>
+                  </p>
+                ))}
+              {/*
+                گوشه‌های انتخاب‌نشده، خودشان یک خط گزارش‌اند (بخش ۹):
+                جایی که کودک هنوز نرفته، به‌اندازه جایی که رفته معنا دارد.
+              */}
+              {interest.corners.some((corner) => corner.times === 0) ? (
+                <p className={`${styles.muted} t-caption`}>
+                  هنوز نرفته:{' '}
+                  {interest.corners
+                    .filter((corner) => corner.times === 0)
+                    .map((corner) => corner.title)
+                    .join('، ')}
+                </p>
+              ) : null}
+            </>
           )}
         </section>
 
@@ -341,6 +391,24 @@ export function ObservationsPage({ childId, childName, onBack }: {
       ) : null}
     </div>
   )
+}
+
+/** بازه میلادیِ یک دوره جلالی. */
+function periodRange(period: string): { from: string; to: string } {
+  const [yearText, monthText] = period.split('-')
+  const year = Number(yearText)
+  const index = Number(monthText)
+  const from = jalaliToIso(year, index, 1)
+  const nextMonth = index === 12 ? 1 : index + 1
+  const nextYear = index === 12 ? year + 1 : year
+  const firstOfNext = jalaliToIso(nextYear, nextMonth, 1)
+  if (!from || !firstOfNext) {
+    const today = toIsoDate(new Date())
+    return { from: today, to: today }
+  }
+  const end = new Date(`${firstOfNext}T12:00:00`)
+  end.setDate(end.getDate() - 1)
+  return { from, to: toIsoDate(end) }
 }
 
 function shiftPeriod(period: string, by: number): string {

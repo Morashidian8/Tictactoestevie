@@ -943,6 +943,53 @@ export type InspectionFile = {
   openActions: number
 }
 
+/* ── بازی آزاد و نقشه علایق — ماژول M8 ──────────────────────── */
+
+export type ActivityCorner = {
+  id: string
+  title: string
+  glyph: string | null
+}
+
+export type PlaySession = 'morning' | 'afternoon'
+
+/**
+ * وضعیت یک نوبت بازی آزاد.
+ *
+ * `unplaced` کودکانی‌اند که هنوز جابه‌جا نشده‌اند — و **خطا نیستند**.
+ * بخش ۵.۴: داده ناقص بهتر از داده جعلی است.
+ */
+export type FreePlayBoard = {
+  corners: ActivityCorner[]
+  /** شناسه کودک → شناسه گوشه. کودکِ بی‌مدخل، ثبت نشده. */
+  placed: Record<string, string>
+  /**
+   * همه کودکان نوبت — نه فقط ثبت‌نشده‌ها.
+   *
+   * «ثبت‌نشده» از این فهرست منهای `placed` درمی‌آید. یک فهرست، یک
+   * مشتق: اگر دو فهرست جدا بود، ثبت جفتی فقط کودکانِ ثبت‌نشده را
+   * می‌دید و کودکی که گوشه‌اش ثبت شده از فهرست جفت‌ها می‌افتاد.
+   */
+  children: { id: string; firstName: string; photoUrl: string | null }[]
+  /** جفت‌های ثبت‌شده امروز. */
+  pairs: { a: string; b: string }[]
+}
+
+/**
+ * نقشه علایق یک کودک.
+ *
+ * منبع **منحصراً** ثبت بازی آزاد است — نه خلق، نه غذا، نه مشاهده.
+ * `sample` زیر آستانه یعنی نمودار نشان داده نمی‌شود.
+ */
+export type InterestMap = {
+  corners: { id: string; title: string; glyph: string | null; times: number }[]
+  sample: number
+  /** آستانه انتشار — بخش ۹. زیر این، نمودار معنا ندارد. */
+  threshold: number
+  /** هم‌بازی‌ها، از ثبت جفتی نه از هم‌گوشه بودن. */
+  partners: { childId: string; firstName: string; times: number }[]
+}
+
 export type ReminderKind = 'due_soon' | 'due_today' | 'overdue'
 
 /**
@@ -1672,6 +1719,39 @@ export interface DataAccess {
    * و ساعت‌هایی حضور داشته».
    */
   getAttendanceMonth(childId: string, from: string, to: string): Promise<AttendanceMonth>
+
+  /* ── بازی آزاد — ماژول M8 ─────────────────────────────────── */
+
+  getFreePlayBoard(classId: string, date: string, session: PlaySession): Promise<FreePlayBoard>
+
+  /**
+   * ثبت انتخاب یک کودک.
+   *
+   * دوباره زدن، نظر عوض کردن است نه انتخاب دوم — ردیف را جابه‌جا
+   * می‌کند، ردیف دوم نمی‌سازد.
+   */
+  setFreeChoice(
+    childId: string,
+    date: string,
+    session: PlaySession,
+    cornerId: string,
+  ): Promise<void>
+
+  /** برداشتن یک ثبت. کودک به فهرست «ثبت‌نشده» برمی‌گردد. */
+  clearFreeChoice(childId: string, date: string, session: PlaySession): Promise<void>
+
+  /** ثبت جفت بازی — پرسش اختیاری پایان روز. */
+  setPlayPair(date: string, childA: string, childB: string, paired: boolean): Promise<void>
+
+  getInterestMap(childId: string, from: string, to: string): Promise<InterestMap>
+
+  /**
+   * کودکانی که در بازه، جفتی برایشان ثبت نشده.
+   *
+   * برای مربی و مدیر، نه خانواده — و عمداً «منزوی» نامش نیست: نبودِ
+   * ثبت یعنی کسی ننوشته، نه اینکه کودک تنها بوده.
+   */
+  listUnpairedChildren(from: string, to: string): Promise<{ childId: string; fullName: string }[]>
 
   /* ── پرونده بازرسی ────────────────────────────────────────── */
 

@@ -2024,6 +2024,89 @@ check(
 await page.click('nav button:has-text("خانه")')
 await page.waitForTimeout(500)
 
+console.log('▸ بازی آزاد و نقشه علایق')
+await signIn('09120000001')
+await page.waitForSelector('text=ثبت گروهی امروز', { timeout: 8000 })
+await page.locator('nav button:has-text("بیشتر")').click()
+await page.waitForSelector('text=بازی آزاد')
+await page.click('button:has-text("ثبت انتخاب گوشه‌ها")')
+await page.waitForSelector('text=/روی کودک بزنید/')
+
+const play = await page.evaluate(() => document.body.innerText)
+/*
+ * هشت گوشه پیش‌فرض — پیوست الف سند، «قابل تغییر توسط مهد».
+ */
+check(/بلوک و ساخت‌وساز/.test(play), 'گوشه‌های فعالیت روی صفحه‌اند')
+check(/صبح/.test(play) && /بعدازظهر/.test(play), 'دو نوبت روز جدا هستند')
+/*
+ * مدت زمان پرسیده نمی‌شود — بخش ۵.۴.
+ *
+ * پرسیدنش ثبت را از بیست ثانیه به دو دقیقه می‌برد و این ماژول، که
+ * شکننده‌ترین بخش محصول است، رها می‌شود.
+ */
+check(
+  !/دقیقه|مدت زمان|چند ساعت/.test(play),
+  'هیچ‌جا مدت بازی پرسیده نمی‌شود',
+)
+/*
+ * «ثبت‌نشده» خطا نیست و صفحه سرزنشش نمی‌کند.
+ * داده ناقص بهتر از داده جعلی است.
+ */
+check(/ثبت‌نشده/.test(play), 'کودکان ثبت‌نشده پایین می‌مانند')
+check(
+  !/خطا|فراموش|ناقص است/.test(play),
+  'و هیچ‌جا خطا یا سرزنش نوشته نمی‌شود',
+)
+
+const firstFace = page.locator('[class*="face"]').first()
+const faceName = await firstFace.innerText()
+await firstFace.click()
+await page.waitForTimeout(300)
+check(
+  (await page.locator('text=/حالا گوشه‌اش را بزنید/').count()) === 1,
+  'با انتخاب کودک، صفحه می‌گوید گام بعدی چیست',
+)
+await page.locator('button:has-text("بلوک و ساخت‌وساز")').click()
+await page.waitForTimeout(500)
+check(
+  (await page.locator('[class*="dot"]').count()) >= 1,
+  'انتخاب کودک روی گوشه ثبت شد',
+)
+
+/*
+ * ثبت جفتی، جدا از گوشه‌ها و صریحاً اختیاری.
+ *
+ * دو کودک در یک گوشه لزوماً با هم نبوده‌اند؛ تنها راهِ دانستن این است
+ * که مربی دیده باشد و بگوید.
+ */
+await page.click('button:has-text("کدام‌ها بیشتر با هم بودند؟")')
+await page.waitForSelector('text=/دو کودک را پشت هم بزنید/')
+const pairPage = await page.evaluate(() => document.body.innerText)
+check(/اختیاری است/.test(pairPage), 'ثبت جفتی صریحاً اختیاری است')
+/*
+ * کودکی که گوشه‌اش ثبت شده هم باید در فهرست جفت باشد.
+ *
+ * این یک باگ واقعی بود: فهرست فقط ثبت‌نشده‌ها را می‌داد و بیشترِ
+ * جفت‌ها اصلاً قابل ثبت نبودند.
+ */
+check(
+  pairPage.includes(faceName.trim().split('\n')[0]),
+  'کودکی که گوشه‌اش ثبت شده هم در فهرست جفت هست',
+)
+await page.locator('[class*="face"]').nth(0).click()
+await page.locator('[class*="face"]').nth(1).click()
+await page.waitForTimeout(500)
+check(
+  (await page.locator('text=/جفت‌های امروز/').count()) === 1,
+  'جفت ثبت شد و در فهرست امروز آمد',
+)
+await page.locator('[aria-label="بازگشت"]').first().click()
+await page.waitForTimeout(300)
+await page.locator('[aria-label="بازگشت"]').first().click()
+await page.waitForTimeout(400)
+await page.click('nav button:has-text("امروز")')
+await page.waitForTimeout(400)
+
 console.log('▸ مشاهده مربی تا گزارش ماهانه خانواده')
 await signIn('09120000001')
 await page.waitForSelector('text=ثبت گروهی امروز', { timeout: 8000 })
@@ -2085,6 +2168,17 @@ await page.click('button:has-text("ساختن پیش‌نویس از مشاهد�
 await page.waitForSelector('text=/پیش‌نویس ساخته شد/')
 const withDraft = await page.evaluate(() => document.body.innerText)
 check(/خمیر بازی/.test(withDraft), 'پیش‌نویس از جمله‌های خودِ مربی ساخته شد')
+/*
+ * نقشه علایق، با آستانه انتشار — بخش ۹.
+ *
+ * یک ثبت از هشتِ لازم: نمودار ساخته نمی‌شود و به‌جایش گفته می‌شود چرا.
+ * نمودارِ سه‌نقطه‌ای الگو نیست؛ و خانواده آن را الگو می‌خواند.
+ */
+check(/نقشه علایق/.test(withDraft), 'نقشه علایق در گزارش ماهانه هست')
+check(
+  /داده کافی برای این ماه ثبت نشده/.test(withDraft),
+  'و زیر آستانه، نمودار ساخته نمی‌شود — دلیلش گفته می‌شود',
+)
 check(
   /هیچ عددی — حضور، خلق، غذا — و\s*هیچ نام کودک دیگری به آن داده نمی‌شود/.test(
     withDraft.replace(/\s+/g, ' '),

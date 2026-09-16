@@ -1984,6 +1984,17 @@ begin
   select id into acc_teacher from user_account
    where center_id = centre and role = 'teacher' and phone = '09120000001';
 
+  /*
+   * پنجره پیام باز، برای همین بلوک.
+   *
+   * بی این، تست به ساعتِ اجرا وابسته بود: پیامی که بعد از ۱۶:۳۰ فرستاده
+   * شود در صف ساعت کاری می‌نشیند و `sent_at` ندارد، پس «نخوانده» شمرده
+   * نمی‌شود — و همان گزاره صبح سبز بود و عصر قرمز. صفِ ساعت کاری خودش
+   * در بلوک بعدی جداگانه آزموده می‌شود.
+   */
+  update center set parent_message_start = '00:00', parent_message_end = '23:59'
+   where id = centre;
+
   perform login_as('aa000000-0000-0000-0000-0000000000f1', '09120000001');
 
   /*
@@ -2076,5 +2087,178 @@ begin
     (select count(*) from information_schema.columns
       where table_name = 'message' and column_name = 'queued_until') = 1,
     'پیامِ بیرون از ساعت، نوشته می‌شود و رسیدنش صبر می‌کند'
+  );
+end $$;
+
+\echo ''
+\echo '── بازی آزاد و نقشه علایق ──'
+do $$
+declare
+  centre uuid := '11111111-1111-1111-1111-111111111111';
+  sara   uuid := 'd1111111-1111-1111-1111-111111111111';
+  amir   uuid := 'd2222222-2222-2222-2222-222222222222';
+  blocks uuid;
+  books  uuid;
+  f date := date '2025-09-23';
+  t date := date '2025-10-22';
+  line   record;
+  n      integer;
+begin
+  select id into blocks from activity_corner
+   where center_id = centre and title = 'بلوک و ساخت‌وساز';
+  select id into books from activity_corner
+   where center_id = centre and title = 'کتاب و قصه';
+
+  -- ۱. هر مرکز گوشه‌های پیش‌فرض را می‌گیرد — پیوست الف.
+  perform assert(
+    (select count(*) from activity_corner where center_id = centre) = 8,
+    'مرکز هشت گوشه فعالیت پیش‌فرض دارد'
+  );
+
+  insert into free_choice_log (center_id, child_id, corner_id, date, session)
+  values (centre, sara, blocks, f + 1, 'morning');
+
+  /*
+   * ۲. یک انتخاب برای هر کودک در هر نوبت.
+   *
+   * مربی‌ای که دوباره می‌کشد نظرش را عوض کرده، نه اینکه انتخاب دوم
+   * کرده باشد. بی این قید، کودکی که سه بار جابه‌جا شده در نقشه سه
+   * انتخاب دارد و نقشه غلط می‌شود.
+   */
+  perform assert_rejects(format($x$
+    insert into free_choice_log (center_id, child_id, corner_id, date, session)
+    values (%L, %L, %L, %L, 'morning')
+  $x$, centre, sara, books, f + 1), 'دو انتخاب در یک نوبت ثبت نمی‌شود');
+
+  -- ۳. ولی صبح و بعدازظهر دو انتخاب جدایند.
+  insert into free_choice_log (center_id, child_id, corner_id, date, session)
+  values (centre, sara, books, f + 1, 'afternoon');
+  perform assert(
+    (select count(*) from free_choice_log where child_id = sara and date = f + 1) = 2,
+    'صبح و بعدازظهر دو انتخاب جدا هستند'
+  );
+
+  /*
+   * ۴. مدت زمان ثبت نمی‌شود — بخش ۵.۴.
+   *
+   * پرسیدنِ مدت، ثبت را از بیست ثانیه به دو دقیقه می‌برد و این ماژول
+   * رها می‌شود. فراوانی انتخاب برای نقشه علایق کافی است.
+   */
+  perform assert(
+    (select count(*) from information_schema.columns
+      where table_name = 'free_choice_log'
+        and column_name ~ '(minute|duration|seconds|length)') = 0,
+    'جدول بازی آزاد هیچ ستون مدت زمانی ندارد'
+  );
+
+  -- ۵. نقشه، همه گوشه‌ها را می‌آورد — از جمله انتخاب‌نشده‌ها.
+  select count(*) into n from app.interest_map(centre, sara, f, t);
+  perform assert(n = 8, 'نقشه علایق هر هشت گوشه را می‌آورد، حتی صفرها');
+
+  select * into line from app.interest_map(centre, sara, f, t) limit 1;
+  perform assert(line.times = 1, 'و پرتکرارترین گوشه اول می‌آید');
+
+  /*
+   * ۶. گوشه‌ای که انتخاب نشده، صفر می‌گیرد نه غیبت.
+   *
+   * «گوشه‌های انتخاب‌نشده» خودش یک خط گزارش است (بخش ۹): جایی که
+   * کودک هنوز نرفته، به‌اندازه جایی که رفته معنا دارد.
+   */
+  perform assert(
+    (select times from app.interest_map(centre, sara, f, t)
+      where title = 'موسیقی') = 0,
+    'گوشه انتخاب‌نشده با صفر می‌آید، نه اینکه از فهرست بیفتد'
+  );
+end $$;
+
+do $$
+declare
+  centre uuid := '11111111-1111-1111-1111-111111111111';
+  sara   uuid := 'd1111111-1111-1111-1111-111111111111';
+  amir   uuid := 'd2222222-2222-2222-2222-222222222222';
+  blocks uuid;
+  f date := date '2025-09-23';
+  t date := date '2025-10-22';
+  line   record;
+begin
+  select id into blocks from activity_corner
+   where center_id = centre and title = 'بلوک و ساخت‌وساز';
+
+  /*
+   * ۷. آستانه انتشار — بخش ۹.
+   *
+   * کمتر از هشت ثبت در ماه یعنی نمودار نشان داده نمی‌شود. نمودارِ
+   * سه‌نقطه‌ای الگو نیست؛ نویز است — و خانواده آن را الگو می‌خواند.
+   */
+  perform assert(app.interest_sample(centre, sara, f, t) < 8,
+    'با دو ثبت، نمونه زیر آستانه هشت است');
+
+  for i in 2..10 loop
+    insert into free_choice_log (center_id, child_id, corner_id, date, session)
+    values (centre, sara, blocks, f + i, 'morning');
+  end loop;
+  perform assert(app.interest_sample(centre, sara, f, t) >= 8,
+    'و با ثبت بیشتر، از آستانه رد می‌شود');
+
+  /*
+   * ۸. هم‌بازی از ثبت جفتی می‌آید، نه از هم‌گوشه بودن.
+   *
+   * سارا و امیر هر دو بارها گوشه بلوک بوده‌اند؛ تا وقتی مربی جفتشان
+   * را ثبت نکرده، هم‌بازی نیستند. دو کودک در یک گوشه لزوماً با هم
+   * نبوده‌اند، و شمردن هم‌حضوری رابطه‌ای می‌سازد که هیچ‌کس ندیده.
+   */
+  insert into free_choice_log (center_id, child_id, corner_id, date, session)
+  values (centre, amir, blocks, f + 2, 'morning')
+  on conflict do nothing;
+
+  perform assert(
+    (select count(*) from app.play_partners(centre, sara, f, t)) = 0,
+    'هم‌گوشه بودن، هم‌بازی نمی‌سازد'
+  );
+
+  insert into play_pair (center_id, date, child_a, child_b)
+  values (centre, f + 2, least(sara, amir), greatest(sara, amir));
+
+  select * into line from app.play_partners(centre, sara, f, t) limit 1;
+  perform assert(line.child_id = amir, 'ولی ثبت جفتی، هم‌بازی می‌سازد');
+
+  -- ۹. جفت مرتب‌شده: «الف با ب» و «ب با الف» یکی‌اند.
+  perform assert_rejects(format($x$
+    insert into play_pair (center_id, date, child_a, child_b)
+    values (%L, %L, %L, %L)
+  $x$, centre, f + 2, greatest(sara, amir), least(sara, amir)),
+    'جفت برعکس، ردیف دوم نمی‌سازد');
+
+  /*
+   * ۱۰. کودکی که جفتی برایش ثبت نشده، «منزوی» نامیده نمی‌شود.
+   *
+   * نبودِ ثبت یعنی کسی ننوشته، نه اینکه کودک تنها بوده. اپ نباید از
+   * سکوتِ داده، نتیجه‌ای درباره کودک بگیرد — بند ۱۰.
+   */
+  perform assert(
+    (select count(*) from information_schema.routines
+      where routine_schema = 'app' and routine_name ~ '(isolated|lonely|منزوی)') = 0,
+    'هیچ تابعی کودک را «منزوی» نمی‌نامد'
+  );
+  /*
+   * کودک سوم، عمداً بی هیچ ثبت جفتی.
+   *
+   * سارا و امیر حالا جفت دارند؛ بی یک کودک سوم، این فهرست خالی است و
+   * تست چیزی را نمی‌سنجد.
+   */
+  insert into child (id, center_id, class_id, first_name, last_name)
+  values ('d3333333-3333-3333-3333-333333333333', centre,
+          'c1111111-1111-1111-1111-111111111111', 'هستی', 'ج.')
+  on conflict (id) do nothing;
+
+  perform assert(
+    (select count(*) from app.unpaired_children(centre, f, t)
+      where child_id = 'd3333333-3333-3333-3333-333333333333') = 1,
+    'ولی فهرست «جفتی ثبت نشده» برای مربی هست'
+  );
+  perform assert(
+    (select count(*) from app.unpaired_children(centre, f, t)
+      where child_id = sara) = 0,
+    'و کودکی که جفت دارد، در آن فهرست نیست'
   );
 end $$;

@@ -23,10 +23,11 @@ const NOTE_LABEL: Record<string, string> = {
   concern: 'نکته‌ای برای بهتر شدن',
 }
 
-export function TeacherMorePage({ classId, onOpenChild }: {
+export function TeacherMorePage({ classId, onOpenChild, onOpenPlay }: {
   classId: string | null
   /** رفتن به مشاهده‌ها و گزارش ماهانه یک کودک. */
   onOpenChild: (childId: string, childName: string) => void
+  onOpenPlay: () => void
 }) {
   const data = useData()
   const { session } = useAuth()
@@ -71,6 +72,26 @@ export function TeacherMorePage({ classId, onOpenChild }: {
         عمداً روی خودِ شبکه کودکانِ «امروز» ننشست: آنجا ضربه یعنی ثبت
         ورود یا خروج، و آن مسیر باید سریع‌ترین چیز پنل بماند.
       */}
+      {/*
+        بازی آزاد، بالای فهرست.
+        روزی یک ثبتِ بیست‌ثانیه‌ای است و خوراک نقشه علایقِ گزارش ماهانه؛
+        پنهان کردنش ته فهرست یعنی رها شدنش.
+      */}
+      <section className={styles.card}>
+        <span className={`${styles.label} t-caption`}>بازی آزاد</span>
+        {/*
+          کلاس جدا از ردیف کودکان، و عمدی: این یک کنش است نه یک کودک.
+          هم‌کلاس بودنشان یک بار باعث شد تست، دکمه بازی آزاد را به‌جای
+          اولین کودک بزند.
+        */}
+        <button type="button" className={`${styles.actionRow} t-body`} onClick={onOpenPlay}>
+          ثبت انتخاب گوشه‌ها
+        </button>
+        <p className={`${styles.muted} t-caption`}>
+          روزی یک ثبت کافی است. همین داده، نقشه علایقِ گزارش ماهانه را می‌سازد.
+        </p>
+      </section>
+
       <section className={styles.card}>
         <span className={`${styles.label} t-caption`}>مشاهده و گزارش ماهانه</span>
         {children.length === 0 ? (

@@ -1,0 +1,168 @@
+/*
+ * بازی آزاد.
+ *
+ * شکننده‌ترین بخش محصول (بخش ۵.۴): اگر سنگین به نظر برسد، رها می‌شود.
+ * پس یک صفحه، بی گام، با هدف لمسی بزرگِ پنل مربی.
+ */
+
+.page {
+  flex: 1;
+  min-block-size: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--paper);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+}
+
+.back {
+  flex: none;
+  min-inline-size: var(--touch-teacher);
+  min-block-size: var(--touch-teacher);
+  display: grid;
+  place-items: center;
+  border: none;
+  border-radius: var(--r-chip);
+  background: none;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.title { margin: 0; color: var(--ink); font-weight: var(--weight-black); }
+
+.sessions { margin-inline-start: auto; display: flex; gap: var(--space-1); }
+
+.session {
+  min-block-size: var(--touch-manager);
+  padding-inline: var(--space-3);
+  border: 1px solid var(--border-input);
+  border-radius: var(--r-input);
+  background: var(--surface);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: var(--text-body-sm);
+  cursor: pointer;
+}
+.session[aria-pressed='true'] {
+  background: var(--coral-tint);
+  border-color: var(--coral);
+  font-weight: var(--weight-bold);
+}
+
+.body {
+  flex: 1;
+  min-block-size: 0;
+  padding: 0 var(--space-4) var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.hint { margin: 0; color: var(--ink-muted); }
+
+/* ── گوشه‌ها ────────────────────────────────────────────────── */
+
+.corners { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--space-2); }
+
+.corner {
+  min-block-size: 96px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  padding: var(--space-3) var(--space-2);
+  border: 1px solid var(--card-border);
+  border-radius: var(--r-card);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+}
+.corner:disabled { cursor: default; }
+
+/*
+ * وقتی کودکی در دست است، گوشه‌ها آماده می‌شوند.
+ *
+ * مرز مرجانی، نه فقط سایه: مربی وسط کار و با یک دست، باید بی دقت کردن
+ * ببیند کجا می‌تواند رها کند.
+ */
+.cornerReady { border-color: var(--coral); background: var(--coral-tint); }
+
+.cornerGlyph { font-size: 26px; line-height: 1; }
+.cornerTitle { color: var(--ink); text-align: center; }
+
+.cornerKids { display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; min-block-size: 10px; }
+
+/* نقطه، نه چهره: داخل گوشه فقط شمار مهم است و جا تنگ. */
+.dot {
+  inline-size: 10px;
+  block-size: 10px;
+  border-radius: var(--r-chip);
+  background: var(--mint);
+  cursor: pointer;
+}
+
+/* ── سینی کودکان ────────────────────────────────────────────── */
+
+/*
+ * «ثبت‌نشده» هیچ رنگ هشداری ندارد و عدد قرمز نمی‌گیرد.
+ * کودکی که جابه‌جا نشده خطا نیست — بخش ۵.۴.
+ */
+.tray {
+  padding: var(--space-3);
+  background: var(--surface);
+  border: 1px solid var(--card-border);
+  border-radius: var(--r-card);
+}
+
+.trayLabel { margin: 0 0 var(--space-2); color: var(--ink-muted); }
+
+.faces { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+
+.face {
+  inline-size: 72px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: var(--space-1);
+  border: 2px solid transparent;
+  border-radius: var(--r-card);
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+}
+.faceOn { border-color: var(--coral); background: var(--coral-tint); }
+
+.faceArt {
+  inline-size: 52px;
+  block-size: 52px;
+  border-radius: var(--r-chip);
+  overflow: hidden;
+  background: var(--neutral-fill);
+}
+
+.faceName { color: var(--ink); text-align: center; }
+
+.pair { margin: 0; color: var(--ink); }
+.pair + .pair { border-block-start: 1px solid var(--border); padding-block-start: var(--space-2); }
+
+.action {
+  min-block-size: var(--touch-teacher);
+  border: 1px solid var(--border-input);
+  border-radius: var(--r-input);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+}
+.action:active { background: var(--coral-tint); }
+
+.error { margin: 0; color: var(--ink); }
