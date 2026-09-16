@@ -66,11 +66,15 @@ const signIn = async (phone, { fresh = true } = {}) => {
   await page.click('button:has-text("ورود")')
 }
 
-/** خروج از هر پنلی. سرصفحه هر سه پنل کلید حساب دارد، با کلاس‌های جدا. */
+/**
+ * خروج از هر پنلی.
+ *
+ * یک انتخابگر برای هر سه نقش: از وقتی پوسته مشترک شد، کلید حساب در هر
+ * سه پنل یکی است. اگر روزی یکی از پنل‌ها کلید خودش را بسازد، همین‌جا
+ * می‌افتد.
+ */
 const signOutAny = async () => {
-  const teacher = page.locator('header [class*="accountButton"]')
-  if (await teacher.count()) await teacher.first().click()
-  else await page.locator('header [class*="account"]').first().click()
+  await page.locator('header button[aria-label="حساب کاربری"]').first().click()
   await page.waitForTimeout(350)
   await page.click('button:has-text("خروج")')
   await page.waitForSelector('#phone')
@@ -545,7 +549,7 @@ await page.waitForTimeout(300)
 check((await page.locator('[role="dialog"]').count()) === 0, 'Escape شیت را می‌بندد')
 
 console.log('▸ بخش ۳.۲: جابه‌جایی حساب بدون خروج و ورود مجدد')
-await page.click('header [class*="accountButton"]')
+await page.click('header button[aria-label="حساب کاربری"]')
 await page.waitForSelector('text=رفتن به حساب مدیر')
 await page.click('button:has-text("رفتن به حساب مدیر")')
 // پیش‌تر اینجا «پنل این نقش هنوز ساخته نشده» می‌آمد. حالا داشبورد مدیر
@@ -822,7 +826,7 @@ await page.waitForTimeout(300)
 
 // از حساب مربی بیرون می‌رویم بدون پاک کردن داده، تا همان روزی که تازه
 // ارسال شد از دید خانواده دیده شود.
-await page.click('header [class*="accountButton"]')
+await page.click('header button[aria-label="حساب کاربری"]')
 await page.click('button:has-text("خروج")')
 await page.waitForSelector('#phone')
 await page.fill('#phone', '09120000003')
@@ -983,7 +987,7 @@ check(
 )
 
 console.log('▸ بخش ۱۵.۳: اطلاع‌رسانی با تأیید دو مرحله‌ای')
-await page.click('button:has-text("اطلاع‌رسانی به خانواده‌ها")')
+await page.locator('nav button[aria-label="اطلاع‌رسانی به خانواده‌ها"]').click()
 await page.waitForSelector('text=چه چیزی')
 const auto = await page.locator('textarea[aria-label="متن اطلاعیه"]').inputValue()
 check(/بازگشایی می‌شود/.test(auto), `متن از قالب ساخته شد: ${auto.slice(0, 40)}…`)
@@ -1068,12 +1072,37 @@ await page.locator('[aria-label="بازگشت به داشبورد"]').click()
 await page.waitForSelector('text=وضعیت ثبت')
 await signOutAny()
 await signIn('09120000003', { fresh: false })
-await page.waitForSelector('[class*="cardDate"]', { timeout: 8000 })
-await page.click('button:has-text("بیشتر")')
+
+/*
+ * نوار پایین نباید منتظر داده بماند.
+ *
+ * تا اینجا شرط رفتن به هر مقصد، آمدنِ گزارش روز بود. یعنی تا وقتی آن
+ * درخواست برنگشته — و پس از هر جابه‌جایی کودک دوباره برنگشته — زدن روی
+ * خانه‌های نوار هیچ کاری نمی‌کرد: کاربر می‌زد، رنگ تب عوض می‌شد، صفحه
+ * همان می‌ماند. همان چیزی که کاربر «گیر کردن نوار» می‌نامیدش.
+ *
+ * پس اینجا عمداً منتظر گزارش روز نمی‌مانیم؛ به محض آمدن نوار، می‌زنیم.
+ */
+await page.waitForSelector('nav button:has-text("بیشتر")', { timeout: 8000 })
+await page.locator('nav button:has-text("بیشتر")').click()
+await page.waitForSelector('text=اعلام غیبت', { timeout: 8000 })
+check(true, 'نوار پیش از آمدن گزارش روز هم کار می‌کند')
+
+/*
+ * دکمه گرد وسط هم یک خانه نوار است و همان مسیر را می‌رود.
+ *
+ * چون متن دیده‌شدنی ندارد، با برچسب دسترس‌پذیری‌اش زده می‌شود — و اگر
+ * روزی آن برچسب برود، همین‌جا می‌افتد.
+ */
+await page.locator('nav button[aria-label="پیام به مربی"]').click()
+await page.waitForSelector('text=ساعت کاری پیام', { timeout: 8000 })
+check(true, 'دکمه گرد وسط، صفحه پیام را باز می‌کند')
+
+await page.locator('nav button:has-text("بیشتر")').click()
 await page.waitForSelector('text=اعلام غیبت')
 check(true, 'فهرست «بیشتر» باز شد')
 
-await page.click('button:has-text("پیام به مربی")')
+await page.locator('nav button[aria-label="پیام به مربی"]').click()
 await page.waitForSelector('text=ساعت کاری پیام')
 check(true, 'ساعت کاری پیام به خانواده گفته می‌شود — بخش ۶.۶')
 await page.fill('textarea[aria-label="متن پیام"]', 'سلام، سارا امروز کمی سرما خورده.')
@@ -1089,8 +1118,11 @@ check(
   'و متنش همان است که نوشته شد',
 )
 
+// «بازگشت» از یک مقصدِ نوار، یک‌راست خانه است — نه فهرست «بیشتر».
 await page.locator('[aria-label="بازگشت"]').click()
 await page.waitForTimeout(400)
+await page.locator('nav button:has-text("بیشتر")').click()
+await page.waitForSelector('text=اعلام غیبت')
 await page.click('button:has-text("اعلام غیبت")')
 await page.waitForSelector('text=/علت، اگر/')
 await page.fill('textarea[aria-label="علت غیبت"]', 'سرماخوردگی')
@@ -1242,11 +1274,20 @@ await page.waitForSelector('text=با کدام حساب وارد می‌شوید
 await page.locator('button:has-text("مریم رضایی")').nth(1).click()
 await page.waitForSelector('text=وضعیت ثبت', { timeout: 10000 })
 
-const navBox = await page.locator('[class*="navItem"]').first().boundingBox()
-check(navBox.height >= 56, `دکمه‌های مالی و کودکان درشت‌اند (${Math.round(navBox.height)})`)
+/*
+ * نوار پایین، مشترک بین هر سه پنل.
+ *
+ * کفِ اندازه از سخت‌گیرانه‌ترین نقش برداشته شده، نه از نقش جاری: نوار
+ * یکی است و نمی‌شود برای مدیر کوچک و برای مربی بزرگ باشد.
+ */
+const navBox = await page.locator('nav button:has-text("مالی")').first().boundingBox()
+check(navBox.height >= 56, `خانه‌های نوار پایین درشت‌اند (${Math.round(navBox.height)})`)
 check(
-  (await page.locator('[class*="navItem"]').first().evaluate((el) => getComputedStyle(el).fontWeight)) === '700',
-  'و پررنگ',
+  (await page
+    .locator('nav button[aria-current="page"] [class*="label"]')
+    .first()
+    .evaluate((el) => getComputedStyle(el).fontWeight)) === '700',
+  'و خانه فعال پررنگ است',
 )
 
 await page.click('button:has-text("مالی")')
@@ -1290,7 +1331,7 @@ if (await page.locator('button:has-text("مریم رضایی")').count()) {
 await page.waitForSelector('text=وضعیت ثبت', { timeout: 10000 })
 check(
   // دکمه بازرسی هم نشان دارد، پس دقیقاً همین یکی سنجیده می‌شود.
-  (await page.locator('button:has-text("مالی") [class*="navBadge"]').count()) === 1,
+  (await page.locator('nav button:has-text("مالی") [class*="dot"]').count()) === 1,
   'شمار اعلام‌های در انتظار روی دکمه مالی دیده می‌شود',
 )
 
@@ -1441,11 +1482,16 @@ await page.waitForSelector('text=با کدام حساب وارد می‌شوید
 await page.locator('button:has-text("مریم رضایی")').nth(1).click()
 await page.waitForSelector('text=وضعیت ثبت', { timeout: 10000 })
 await page.waitForTimeout(800)
+/*
+ * نشان، نه عدد.
+ *
+ * نوار مشترک نقطه می‌گذارد نه رقم: عدد روی یک نشان ۹ پیکسلی خوانده
+ * نمی‌شود و مدیر برای دیدن شمار، خودش وارد صفحه می‌شود.
+ */
 const auditBadge = await page
-  .locator('button:has-text("بازرسی") [class*="navBadge"]')
-  .innerText()
-  .catch(() => '')
-check(auditBadge.length > 0, `نشان آمادگی روی دکمه بازرسی می‌آید: ${auditBadge}`)
+  .locator('nav button:has-text("بازرسی") [class*="dot"]')
+  .count()
+check(auditBadge === 1, 'نشان آمادگی روی خانه بازرسی می‌آید')
 
 await page.click('button:has-text("بازرسی")')
 await page.waitForSelector('text=آمادگی بازرسی')

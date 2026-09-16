@@ -22,8 +22,14 @@
 .tab {
   flex: 1;
   min-inline-size: 0;
-  /* هدف لمسی پنل والد — بخش ۱۲.۷ */
-  min-block-size: var(--touch-parent);
+  /*
+   * بزرگ‌ترین هدف لمسی هر سه نقش — بخش ۱۲.۷.
+   *
+   * نوار یکی است و هر سه پنل از آن استفاده می‌کنند، پس کفِ سخت‌گیرانه‌تر
+   * (۵۶ پیکسلِ مربی) برای همه برداشته می‌شود. این پرضربه‌ترین کنترل اپ
+   * است؛ کوچک کردنش برای مدیر، چیزی جز چند پیکسل فضا نمی‌دهد.
+   */
+  min-block-size: var(--touch-teacher);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -56,6 +62,15 @@
   position: relative;
   display: inline-grid;
   place-items: center;
+  /*
+   * جا برای نشان، داخل خودِ جعبه.
+   *
+   * نشان پیش از این بیرون از مرز جعبه می‌نشست و جعبه را سرریز می‌کرد.
+   * دیده نمی‌شد ولی تست «هیچ چیزی بریده نمی‌شود» را می‌شکست — همان
+   * تستی که یک بار جلوی نمایش «۰۹٬۱۸۰٬۰۰۰» به‌جای «۱۰۹٬۱۸۰٬۰۰۰» را
+   * گرفت. سرریزِ بی‌ضرر، آن محافظ را کور می‌کند.
+   */
+  padding: 3px;
 }
 
 .label {
@@ -68,8 +83,8 @@
 /* نشان «چیز تازه‌ای هست». عدد نمی‌گیرد؛ در نوار پایین عدد خوانده نمی‌شود. */
 .dot {
   position: absolute;
-  inset-block-start: -2px;
-  inset-inline-end: -3px;
+  inset-block-start: 0;
+  inset-inline-end: 0;
   inline-size: 7px;
   block-size: 7px;
   border-radius: var(--r-chip);

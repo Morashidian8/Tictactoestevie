@@ -1,15 +1,14 @@
 import { useCallback, useEffect, useState } from 'react'
-import { AlertIcon, EmptyState, QuickAction } from '../../design-system/index.ts'
+import { AlertIcon, EmptyState } from '../../design-system/index.ts'
 import {
   formatCount,
-  formatJalali,
   formatTime,
   formatToman,
   jalaliYearMonth,
   toIsoDate,
   toPersianDigits,
 } from '../../i18n/index.ts'
-import { ROLE_LABEL, useAuth, useData } from '../../core/auth/index.ts'
+import { useData } from '../../core/auth/index.ts'
 import type {
   AuditReadiness,
   Child,
@@ -55,12 +54,19 @@ const LOCATION_TEXT: Record<string, string> = {
   other: 'جای دیگر',
 }
 
-export function DashboardPage({ onGo }: { onGo: (page: ManagerPage) => void }) {
+export function DashboardPage({ onGo, onCounts }: {
+  onGo: (page: ManagerPage) => void
+  /**
+   * نشان‌های نوار پایین را به پوسته می‌دهد.
+   *
+   * داشبورد این دو عدد را برای خودش می‌خواند؛ خواندن دوباره‌شان در
+   * پوسته یعنی دو درخواست برای یک حقیقت، که می‌توانند با هم نخوانند.
+   */
+  onCounts?: (counts: { claims: number; gaps: number }) => void
+}) {
   const data = useData()
-  const { session, signOut } = useAuth()
   const [board, setBoard] = useState<ManagerDashboard | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [menuOpen, setMenuOpen] = useState(false)
   const [busy, setBusy] = useState<string | null>(null)
   const [showAll, setShowAll] = useState(false)
 
@@ -98,6 +104,11 @@ export function DashboardPage({ onGo }: { onGo: (page: ManagerPage) => void }) {
   const gaps = ready
     ? ready.incompleteVaccination + ready.missingNationalId + ready.expiringHealthCards
     : 0
+
+  const claims = board?.pendingClaims ?? 0
+  useEffect(() => {
+    onCounts?.({ claims, gaps })
+  }, [claims, gaps, onCounts])
 
   /*
    * وصولی ماه و پراکندگی سنی.
@@ -164,37 +175,6 @@ export function DashboardPage({ onGo }: { onGo: (page: ManagerPage) => void }) {
 
   return (
     <div className={styles.page}>
-      <header className={styles.header}>
-        {/*
-          سرصفحه سلام — بازطراحی.
-          پیش‌تر فقط «مهد» بود. مدیر روزش را با این صفحه شروع می‌کند و
-          سرصفحه باید بگوید امروز چه خبر است، نه اینکه کجاست.
-        */}
-        <span className={styles.greet}>
-          <span className={`${styles.centerName} t-h2`}>صبح بخیر</span>
-          <span className={`${styles.date} t-body-sm`}>
-            {formatJalali(new Date(), 'weekday')} · اینجا خلاصه امروز مهد است
-          </span>
-        </span>
-        <div className={styles.accountWrap}>
-          <button
-            type="button"
-            className={`${styles.account} t-caption`}
-            onClick={() => setMenuOpen((open) => !open)}
-            aria-expanded={menuOpen}
-          >
-            {session?.active ? ROLE_LABEL[session.active.role] : '—'}
-          </button>
-          {menuOpen ? (
-            <div className={styles.menu}>
-              <button type="button" className={styles.menuItem} onClick={() => void signOut()}>
-                خروج
-              </button>
-            </div>
-          ) : null}
-        </div>
-      </header>
-
       <div className={styles.body}>
         {/* بنر رویداد همیشه بالاتر از همه‌چیز — بخش ۱۳.۳ */}
         {board && board.pendingIncidents.length > 0 ? (
@@ -444,75 +424,7 @@ export function DashboardPage({ onGo }: { onGo: (page: ManagerPage) => void }) {
         {error ? <p className={`${styles.error} t-body`}>{error}</p> : null}
       </div>
 
-      {/*
-        سه مقصد پنل مدیر. «اطلاع‌رسانی» کنش اصلی است چون تنها کاری است
-        که فوریت دارد؛ بقیه رفتن به صفحه‌اند، نه انجام دادن کاری.
-      */}
-      <QuickAction
-        onClick={() => onGo('notice')}
-        aside={
-          <div className={styles.nav}>
-            <button type="button" className={styles.navItem} onClick={() => onGo('finance')}>
-              <WalletIcon />
-              <span>مالی</span>
-              {board && board.pendingClaims > 0 ? (
-                <span className={styles.navBadge}>{formatCount(board.pendingClaims)}</span>
-              ) : null}
-            </button>
-            <button type="button" className={styles.navItem} onClick={() => onGo('children')}>
-              <PeopleIcon />
-              <span>کودکان</span>
-            </button>
-            {/*
-              ارتقای ۲: پرونده بازرسی.
-              نشان عددی وقتی می‌آید که کاری هست — روز بازرسی دیر است.
-            */}
-            <button type="button" className={styles.navItem} onClick={() => onGo('audit')}>
-              <FolderIcon />
-              <span>بازرسی</span>
-              {gaps > 0 ? <span className={styles.navBadge}>{formatCount(gaps)}</span> : null}
-            </button>
-          </div>
-        }
-      >
-        اطلاع‌رسانی به خانواده‌ها
-      </QuickAction>
     </div>
   )
 }
 
-
-/* آیکون‌های دو مقصد. غیرجهت‌دارند، پس قرینه نمی‌شوند — بخش ۱۲.۶. */
-function WalletIcon() {
-  return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-      strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      <path d="M3 8a2 2 0 0 1 2-2h13a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z" />
-      <path d="M3 10h18" />
-      <circle cx="16.5" cy="14.5" r="1.2" />
-    </svg>
-  )
-}
-
-/** پوشه پرونده. برای مدخل بازرسی — ارتقای ۲. */
-function FolderIcon() {
-  return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-      strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      <path d="M3 7a2 2 0 0 1 2-2h4l2 2.5h6a2 2 0 0 1 2 2V17a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z" />
-      <path d="M3 11h18" />
-    </svg>
-  )
-}
-
-function PeopleIcon() {
-  return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-      strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      <circle cx="9" cy="8" r="3.2" />
-      <path d="M3.5 19a5.5 5.5 0 0 1 11 0" />
-      <path d="M16 5.5a3 3 0 0 1 0 5.6" />
-      <path d="M17.5 19a5.4 5.4 0 0 0-2.2-4.3" />
-    </svg>
-  )
-}

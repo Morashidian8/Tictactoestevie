@@ -21,13 +21,16 @@ import styles from './CloseDayPage.module.css'
 /** ساعت ارسال خودکار. پیش‌فرض سند، تا تنظیمات مهد وصل شود. */
 const AUTO_SEND_AT = '17:30'
 
-type Props = { onBack: () => void; onFixReports: () => void }
+type Props = {
+  /** کلاس از پوسته می‌آید تا سه صفحه مربی روی یک کلاس بمانند. */
+  classId: string | null
+  onBack: () => void
+  onFixReports: () => void
+}
 
-export function CloseDayPage({ onBack, onFixReports }: Props) {
+export function CloseDayPage({ classId, onBack, onFixReports }: Props) {
   const data = useData()
   const { queue } = useAuth()
-
-  const [classId, setClassId] = useState<string | null>(null)
   const [children, setChildren] = useState<Child[]>([])
   const [summary, setSummary] = useState<DaySummary | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -42,13 +45,6 @@ export function CloseDayPage({ onBack, onFixReports }: Props) {
   const [amendments, setAmendments] = useState<Amendment[]>([])
 
   const date = useMemo(() => toIsoDate(new Date()), [])
-
-  useEffect(() => {
-    data
-      .listClasses()
-      .then((list) => setClassId((current) => current ?? list[0]?.id ?? null))
-      .catch((cause: unknown) => setError(messageOf(cause)))
-  }, [data])
 
   const load = useCallback(async () => {
     if (!classId) return

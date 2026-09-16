@@ -677,3 +677,15 @@
   place-items: center;
   color: var(--ink-muted);
 }
+
+/*
+ * نشان همگام‌سازی، بالای شبکه کودکان.
+ *
+ * به نوار مشترک نرفت: چیزی که می‌گوید «همین شبکه زنده است یا نه» باید
+ * کنار همان شبکه باشد، نه کنار نام مربی.
+ */
+.syncRow {
+  display: flex;
+  justify-content: flex-end;
+  padding: 0 var(--space-4) var(--space-2);
+}

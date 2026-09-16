@@ -1,0 +1,127 @@
+/*
+ * پوسته مشترک هر سه پنل.
+ *
+ * تا اینجا هر نقش قالب خودش را داشت: والد سرصفحه سلام و نوار پایین،
+ * مربی نوار پایینِ دوخانه‌ای بی سرصفحه، و مدیر نه این و نه آن — یک
+ * داشبورد با دکمه‌هایی که به صفحه‌های تمام‌صفحه می‌رفتند و راه برگشتشان
+ * فقط فلشِ بالا بود.
+ *
+ * حالا یک قالب است و سه پیکربندی. آنچه عوض می‌شود فقط نام و نشان
+ * خانه‌هاست، نه ساختار — چون سه ساختار یعنی سه‌بار یاد گرفتن، و مربی و
+ * مدیر گاهی یک نفرند.
+ *
+ * تراکم هر نقش با --touch-* فرق می‌کند، نه با چیدمان: مربی ایستاده و
+ * عجله دارد، مدیر پشت میز است. همان جدول بخش ۱۲.۷.
+ */
+
+.shell {
+  min-block-size: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background: var(--paper);
+}
+
+.body {
+  flex: 1;
+  min-block-size: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── سرصفحه ─────────────────────────────────────────────────── */
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-5) var(--space-4) var(--space-3);
+}
+
+/*
+ * نشان مهد. دایره تینت نعنایی با گلیف --ink — پرکننده رنگ دارد، گلیف
+ * نه (بخش ۱۲.۲).
+ */
+.brand {
+  flex: none;
+  display: grid;
+  place-items: center;
+  inline-size: 44px;
+  block-size: 44px;
+  border-radius: var(--r-chip);
+  background: var(--mint-tint);
+  color: var(--ink);
+}
+
+.greet { flex: 1; min-inline-size: 0; }
+
+.hello { margin: 0; color: var(--ink); font-weight: var(--weight-black); }
+.helloSub { margin: 2px 0 0; color: var(--ink-muted); }
+
+.headerEnd { position: relative; flex: none; }
+
+.account {
+  min-inline-size: var(--touch-parent);
+  min-block-size: var(--touch-parent);
+  display: grid;
+  place-items: center;
+  border-radius: var(--r-chip);
+  background: none;
+  border: none;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+/* نشان روی حساب: شمار نیست، فقط «چیزی هست». عدد اینجا خوانده نمی‌شود. */
+.accountDot {
+  position: absolute;
+  inset-block-start: 10px;
+  inset-inline-end: 10px;
+  inline-size: 9px;
+  block-size: 9px;
+  border-radius: var(--r-chip);
+  background: var(--coral);
+  border: 2px solid var(--paper);
+}
+
+.menu {
+  position: absolute;
+  inset-block-start: calc(100% + var(--space-2));
+  inset-inline-end: 0;
+  z-index: 20;
+  min-inline-size: 160px;
+  padding: var(--space-2);
+  background: var(--surface);
+  border: 1px solid var(--card-border);
+  border-radius: var(--r-card);
+  box-shadow: var(--shadow-lg);
+}
+
+.menuRole {
+  margin: 0 0 var(--space-1);
+  padding-inline: var(--space-2);
+  color: var(--ink-muted);
+}
+
+.menuItem {
+  inline-size: 100%;
+  min-block-size: var(--touch-parent);
+  padding-inline: var(--space-2);
+  text-align: start;
+  background: none;
+  border: none;
+  border-radius: var(--r-input);
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+}
+.menuItem:active { background: var(--coral-tint); }
+
+/* ── ردیف کنترل‌های ویژه نقش ────────────────────────────────── */
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 0 var(--space-4) var(--space-3);
+  flex-wrap: wrap;
+}

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   AlertIcon,
-  BellIcon,
+  AppShell,
   CheckIcon,
   ChevronIcon,
   ChildFace,
@@ -9,9 +9,8 @@ import {
   ChatIcon,
   HomeIcon,
   ImageIcon,
-  LeafIcon,
   WalletIcon,
-  PersonIcon,
+  MoreIcon,
   ShieldCheckIcon,
   TabBar,
   type TabItem,
@@ -83,7 +82,6 @@ export function ParentTodayPage() {
   const [day, setDay] = useState<ParentDay | null>(null)
   const [meds, setMeds] = useState<MedicationRequest[]>([])
   const [error, setError] = useState<string | null>(null)
-  const [menuOpen, setMenuOpen] = useState(false)
   /**
    * مقصد نوار پایین.
    *
@@ -202,16 +200,25 @@ export function ParentTodayPage() {
       اطلاعیه به فهرست «بیشتر» برگشت.
     */
     { id: 'finance', label: 'مالی', icon: <WalletIcon size={22} /> },
-    { id: 'more', label: 'بیشتر', icon: <PersonIcon size={22} /> },
+    { id: 'more', label: 'بیشتر', icon: <MoreIcon size={22} /> },
   ]
   const CENTER: TabItem = { id: 'messages', label: 'پیام به مربی', icon: <ChatIcon size={24} /> }
 
   /*
    * هر مقصدی جز خانه، همان صفحه «بیشتر» است با تب از پیش انتخاب‌شده.
    * نوار پایین زیرشان می‌ماند تا برگشتن یک ضربه باشد.
+   *
+   * شرط عمداً فقط childId است و نه day.
+   *
+   * پیش از این `day` هم در شرط بود و نتیجه‌اش این می‌شد: تا وقتی گزارش
+   * روز نیامده — و پس از هر جابه‌جایی کودک دوباره نیامده — زدن روی
+   * خانه‌های نوار هیچ کاری نمی‌کرد. کاربر می‌زد، رنگ تب عوض می‌شد و
+   * صفحه همان می‌ماند؛ یعنی «گیر کردن» نوار. ناوبری هرگز نباید منتظر
+   * یک درخواست شبکه بماند: هر مقصد داده خودش را خودش می‌خواند.
    */
-  if (nav !== 'home' && childId && day) {
+  if (nav !== 'home' && childId) {
     const tab = nav === 'more' ? 'menu' : nav === 'tomorrow' ? 'absence' : nav
+    const name = children.find((c) => c.id === childId)?.firstName ?? ''
     return (
       <div className={styles.shell}>
         <div className={styles.shellBody}>
@@ -223,9 +230,9 @@ export function ParentTodayPage() {
             را می‌دید.
           */}
           <MorePage
-            key={tab}
+            key={`${childId}-${tab}`}
             childId={childId}
-            childName={day.child.firstName}
+            childName={name}
             onBack={() => setNav('home')}
             initialTab={tab}
           />
@@ -238,52 +245,17 @@ export function ParentTodayPage() {
   const greeting = session?.active?.displayName ?? 'خوش آمدید'
 
   return (
-    <div className={styles.shell}>
+    <AppShell
+      greeting={`سلام ${greeting}!`}
+      subtitle="امروز هم روز خوبی برایش آرزو می‌کنیم."
+      roleLabel={session?.active ? ROLE_LABEL[session.active.role] : '—'}
+      onSignOut={() => void signOut()}
+      nav={NAV}
+      center={CENTER}
+      active={nav}
+      onSelect={(id: string) => setNav(id as typeof nav)}
+    >
       <div className={styles.page}>
-      {/*
-        سرصفحه سلام — بازطراحی.
-        پیش‌تر فقط نام کودک بود. والد صبح اپ را باز می‌کند و اولین چیزی
-        که می‌بیند باید بگوید «حال کودکت خوب است»، نه یک برچسب.
-      */}
-      <header className={styles.header}>
-        <span className={styles.brand} aria-hidden>
-          <LeafIcon size={22} />
-        </span>
-
-        <div className={styles.greet}>
-          <p className={`${styles.hello} t-h2`}>سلام {greeting}!</p>
-          <p className={`${styles.helloSub} t-body`}>
-            امروز هم روز خوبی برایش آرزو می‌کنیم.
-          </p>
-        </div>
-
-        <div className={styles.headerEnd}>
-          <button
-            type="button"
-            className={styles.accountBell}
-            onClick={() => setMenuOpen((open) => !open)}
-            aria-expanded={menuOpen}
-            aria-label="حساب و اعلان‌ها"
-          >
-            <BellIcon size={22} />
-          </button>
-          {menuOpen ? (
-            <div className={styles.menu}>
-              <p className={`${styles.menuRole} t-caption`}>
-                {session?.active ? ROLE_LABEL[session.active.role] : '—'}
-              </p>
-              <button
-                type="button"
-                className={`${styles.menuItem} t-body`}
-                onClick={() => void signOut()}
-              >
-                خروج
-              </button>
-            </div>
-          ) : null}
-        </div>
-      </header>
-
       {/*
         بخش ۶.۵: خانواده ممکن است بیش از یک کودک در مهد داشته باشد.
 
@@ -621,9 +593,7 @@ export function ParentTodayPage() {
 
       {error ? <p className={`${styles.loadError} t-body`}>{error}</p> : null}
       </div>
-
-      <TabBar items={NAV} center={CENTER} active={nav} onSelect={(id: string) => setNav(id as typeof nav)} />
-    </div>
+    </AppShell>
   )
 }
 

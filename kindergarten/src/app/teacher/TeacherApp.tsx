@@ -1,33 +1,72 @@
 import { useCallback, useEffect, useState } from 'react'
-import { ChatIcon, HomeIcon, TabBar, type TabItem } from '../../design-system/index.ts'
-import { useData } from '../../core/auth/index.ts'
+import {
+  AppShell,
+  ChatIcon,
+  CheckIcon,
+  HomeIcon,
+  MoreIcon,
+  type TabItem,
+} from '../../design-system/index.ts'
+import { ROLE_LABEL, useAuth, useData } from '../../core/auth/index.ts'
+import { formatJalali } from '../../i18n/index.ts'
+import type { ClassRoom } from '../../core/data/index.ts'
 import { TodayPage } from './TodayPage.tsx'
 import { BulkEntryPage } from './BulkEntryPage.tsx'
 import { CloseDayPage } from './CloseDayPage.tsx'
 import { InboxPage } from './InboxPage.tsx'
+import { TeacherMorePage } from './TeacherMorePage.tsx'
 import styles from './TeacherApp.module.css'
 
 /**
  * پوسته پنل مربی.
  *
- * دو مقصد در نوار پایین: «امروز» و «پیام‌ها». ثبت گروهی و بستن روز
- * مقصد نیستند، کنش‌اند — از دکمه‌های خودِ صفحه امروز باز می‌شوند و
- * جای خانه در نوار را نمی‌گیرند.
+ * همان قالب پنل والد: سرصفحه سلام، کلید حساب کاربری، و نوار پنج‌خانه‌ای
+ * پایین. آنچه فرق می‌کند نام و نشان خانه‌هاست، نه جایشان — مربی و مدیر
+ * گاهی یک نفرند و نباید دو ساختار یاد بگیرند.
  *
  * نشان مرجانی روی «پیام‌ها» وقتی می‌آید که خانواده‌ای پرسیده و جوابی
  * نرفته. نشانی که همیشه روشن باشد، خوانده نمی‌شود.
  */
-type Screen = 'today' | 'bulk' | 'close' | 'inbox'
+type Screen = 'today' | 'bulk' | 'close' | 'inbox' | 'more'
 
 export function TeacherApp() {
   const data = useData()
+  const { session, signOut, selectAccount } = useAuth()
   const [screen, setScreen] = useState<Screen>('today')
   const [waiting, setWaiting] = useState(0)
 
   /*
+   * کلاس جاری، در پوسته — نه در هر صفحه.
+   *
+   * تا اینجا «امروز»، «ثبت گروهی» و «بستن روز» هرکدام خودشان اولین کلاس
+   * فهرست را برمی‌داشتند. مربیِ دو کلاسه روی «امروز» کلاس دوم را انتخاب
+   * می‌کرد و بعد ثبت گروهی روی کلاس اول می‌نشست. یک حالت مشترک، این را
+   * از ریشه می‌بندد.
+   */
+  const [classes, setClasses] = useState<ClassRoom[]>([])
+  const [classId, setClassId] = useState<string | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    data
+      .listClasses()
+      .then((list) => {
+        if (cancelled) return
+        setClasses(list)
+        setClassId((current) => current ?? list[0]?.id ?? null)
+      })
+      .catch(() => {
+        if (!cancelled) setClasses([])
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [data])
+
+  /*
    * شمار گفتگوهای منتظر جواب.
    *
-   * با هر برگشت به «امروز» دوباره خوانده می‌شود، نه با یک تایمر: مربی
+   * با هر جابه‌جایی صفحه دوباره خوانده می‌شود، نه با یک تایمر: مربی
    * صبح شلوغ نباید برای عددی که عوض نشده، درخواست شبکه بدهد.
    */
   const refresh = useCallback(() => {
@@ -43,48 +82,101 @@ export function TeacherApp() {
 
   const NAV: TabItem[] = [
     { id: 'today', label: 'امروز', icon: <HomeIcon size={22} /> },
+    { id: 'close', label: 'بستن روز', icon: <CheckIcon size={22} /> },
     { id: 'inbox', label: 'پیام‌ها', icon: <ChatIcon size={22} />, badge: waiting },
+    { id: 'more', label: 'بیشتر', icon: <MoreIcon size={22} /> },
   ]
+  const CENTER: TabItem = { id: 'bulk', label: 'ثبت گروهی امروز', icon: <PenIcon /> }
 
-  // ثبت گروهی و بستن روز تمام‌صفحه‌اند: کار متمرکز، بی نوار ناوبری.
-  if (screen === 'bulk') return <BulkEntryPage onBack={() => setScreen('today')} />
-  if (screen === 'close') {
-    return (
-      <CloseDayPage
-        onBack={() => setScreen('today')}
-        // «تکمیل» مربی را به همان صفحه‌ای می‌برد که گزارش ناقص را پر
-        // می‌کند، نه به فهرستی از خطا. بخش ۱۲.۱۰: حالت خالی و هشدار
-        // دعوت به کنش‌اند.
-        onFixReports={() => setScreen('bulk')}
-      />
-    )
+  /*
+   * ثبت گروهی تمام‌صفحه است: کار متمرکز، بی نوار ناوبری.
+   *
+   * «بستن روز» برعکس، مقصد نوار شد — مربی پایان شیفت بارها بینش و
+   * «امروز» می‌رود و نباید هر بار از فلش برگشت استفاده کند.
+   */
+  if (screen === 'bulk') {
+    return <BulkEntryPage classId={classId} onBack={() => setScreen('today')} />
   }
 
+  const activeClass = classes.find((c) => c.id === classId)
+  const greeting = session?.active?.displayName ?? 'خوش آمدید'
+
+  /*
+   * سرصفحه سلام فقط روی مقصدهایی که سرصفحه خودشان را ندارند.
+   *
+   * «بستن روز» و «پیام‌ها» عنوان و کلید بازگشت خودشان را می‌آورند؛ دو
+   * سرصفحه روی هم یعنی نصف صفحه سرصفحه است.
+   */
+  const ownHeader = screen === 'close' || screen === 'inbox'
+
   return (
-    <div className={styles.shell}>
-      <div className={styles.body}>
-        {/*
+    <AppShell
+      greeting={ownHeader ? undefined : `سلام ${greeting}!`}
+      subtitle={formatJalali(new Date(), 'full')}
+      roleLabel={session?.active ? ROLE_LABEL[session.active.role] : '—'}
+      onSignOut={() => void signOut()}
+      hasAlert={waiting > 0}
+      menuExtra={
+        /* بخش ۳.۲: جابه‌جایی بین حساب‌ها از منو، بدون خروج و ورود مجدد. */
+        session?.accounts
+          .filter((account) => account.id !== session.active?.id)
+          .map((account) => (
+            <button
+              key={account.id}
+              type="button"
+              className={`${styles.switchAccount} t-body`}
+              onClick={() => void selectAccount(account.id)}
+            >
+              رفتن به حساب {ROLE_LABEL[account.role]}
+            </button>
+          ))
+      }
+      toolbar={
+        screen !== 'today' ? null : classes.length > 1 ? (
+          <button
+            type="button"
+            className={`${styles.classSwitch} t-body-lg`}
+            onClick={() => {
+              const index = classes.findIndex((c) => c.id === classId)
+              setClassId(classes[(index + 1) % classes.length]?.id ?? null)
+            }}
+          >
+            {activeClass?.name ?? '—'} · تعویض کلاس
+          </button>
+        ) : (
+          <span className={`${styles.classQuiet} t-body-lg`}>{activeClass?.name ?? '—'}</span>
+        )
+      }
+      nav={NAV}
+      center={CENTER}
+      active={screen}
+      onSelect={(id: string) => setScreen(id as Screen)}
+    >
+      {screen === 'inbox' ? (
+        /*
           onChanged: پس از فرستادن جواب، شمار «منتظر جواب» بی‌درنگ تازه
           می‌شود. بی این، مربی جواب می‌داد و نشان روی تب می‌ماند تا وقتی
           به «امروز» برگردد — یعنی اپ می‌گفت کاری مانده که انجام شده.
-        */}
-        {screen === 'inbox' ? (
-          <InboxPage onBack={() => setScreen('today')} onChanged={refresh} />
-        ) : (
-          <TodayPage
-            onOpenBulk={() => setScreen('bulk')}
-            onCloseDay={() => setScreen('close')}
-          />
-        )}
-      </div>
-
-      <TabBar
-        items={NAV}
-        center={{ id: 'bulk', label: 'ثبت گروهی امروز', icon: <PenIcon /> }}
-        active={screen}
-        onSelect={(id: string) => setScreen(id as Screen)}
-      />
-    </div>
+        */
+        <InboxPage onBack={() => setScreen('today')} onChanged={refresh} />
+      ) : screen === 'close' ? (
+        <CloseDayPage
+          classId={classId}
+          onBack={() => setScreen('today')}
+          // «تکمیل» مربی را به همان صفحه‌ای می‌برد که گزارش ناقص را پر
+          // می‌کند، نه به فهرستی از خطا. بخش ۱۲.۱۰.
+          onFixReports={() => setScreen('bulk')}
+        />
+      ) : screen === 'more' ? (
+        <TeacherMorePage />
+      ) : (
+        <TodayPage
+          classId={classId}
+          onOpenBulk={() => setScreen('bulk')}
+          onCloseDay={() => setScreen('close')}
+        />
+      )}
+    </AppShell>
   )
 }
 

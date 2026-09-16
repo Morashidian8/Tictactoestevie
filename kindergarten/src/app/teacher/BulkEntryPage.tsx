@@ -45,13 +45,15 @@ const LUNCH: MealAmount[] = ['all', 'most', 'little', 'none']
  */
 const BULK_MOOD: Mood[] = ['good', 'normal', 'restless']
 
-type Props = { onBack: () => void }
+type Props = {
+  /** کلاس از پوسته می‌آید تا سه صفحه مربی روی یک کلاس بمانند. */
+  classId: string | null
+  onBack: () => void
+}
 
-export function BulkEntryPage({ onBack }: Props) {
+export function BulkEntryPage({ classId, onBack }: Props) {
   const data = useData()
   const { queue } = useAuth()
-
-  const [classId, setClassId] = useState<string | null>(null)
   const [day, setDay] = useState<ClassDay | null>(null)
   const [lunch, setLunch] = useState<MealAmount | null>(null)
   const [mood, setMood] = useState<Mood | null>(null)
@@ -77,13 +79,6 @@ export function BulkEntryPage({ onBack }: Props) {
   const date = useMemo(() => toIsoDate(new Date()), [])
 
   useEffect(() => queue.subscribe((status) => setPending(status.pending)), [queue])
-
-  useEffect(() => {
-    data
-      .listClasses()
-      .then((list) => setClassId((current) => current ?? list[0]?.id ?? null))
-      .catch((cause: unknown) => setError(messageOf(cause)))
-  }, [data])
 
   const load = useCallback(async () => {
     if (!classId) return

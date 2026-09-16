@@ -16,11 +16,10 @@ import {
   formatAge,
   formatClock,
   formatCount,
-  formatJalali,
   formatTime,
   toIsoDate,
 } from '../../i18n/index.ts'
-import { ROLE_LABEL, useAuth, useData } from '../../core/auth/index.ts'
+import { useAuth, useData } from '../../core/auth/index.ts'
 import type { Child, ChildInSession, PickupPlan } from '../../core/data/index.ts'
 import {
   indexAbsences,
@@ -28,7 +27,6 @@ import {
   resolveState,
   tally,
   type ClassDay,
-  type ClassRoom,
 } from '../../core/data/index.ts'
 import {
   announceLocal,
@@ -53,21 +51,26 @@ import styles from './TodayPage.module.css'
  * نبود، پس فعلاً فقط اعلام می‌کند که کجاست.
  */
 export function TodayPage({
+  classId,
   onOpenBulk,
   onCloseDay,
 }: {
+  /**
+   * کلاس از پوسته می‌آید، نه از خودِ صفحه.
+   *
+   * پیش از این هر سه صفحه مربی خودشان `listClasses()[0]` را برمی‌داشتند.
+   * مربیِ دو کلاسه روی «امروز» کلاس دوم را انتخاب می‌کرد و «ثبت گروهی»
+   * همچنان کلاس اول را نشان می‌داد — یعنی ثبت روی کلاس اشتباه.
+   */
+  classId: string | null
   onOpenBulk: () => void
   onCloseDay: () => void
 }) {
   const data = useData()
-  const { queue, session, signOut, selectAccount } = useAuth()
-
-  const [classes, setClasses] = useState<ClassRoom[]>([])
-  const [classId, setClassId] = useState<string | null>(null)
+  const { queue } = useAuth()
   const [day, setDay] = useState<ClassDay | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [pending, setPending] = useState(0)
-  const [menuOpen, setMenuOpen] = useState(false)
   // کودکی که شیت استثناهایش باز است، به‌علاوه سرپرستانش که با باز شدن
   // شیت خوانده می‌شوند نه پیش از آن.
   const [sheetFor, setSheetFor] = useState<string | null>(null)
@@ -112,23 +115,6 @@ export function TodayPage({
   }, [])
 
   useEffect(() => queue.subscribe((status) => setPending(status.pending)), [queue])
-
-  useEffect(() => {
-    let cancelled = false
-    data
-      .listClasses()
-      .then((list) => {
-        if (cancelled) return
-        setClasses(list)
-        setClassId((current) => current ?? list[0]?.id ?? null)
-      })
-      .catch((cause: unknown) => {
-        if (!cancelled) setError(messageOf(cause))
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [data])
 
   const date = toIsoDate(now)
 
@@ -488,71 +474,16 @@ export function TodayPage({
    * می‌نشینند تا مربی صبح که خانواده دم در است بداند چه بخواهد.
    */
   const awaitingHandover = (day?.medicationRequests ?? []).filter((r) => !r.receivedAt)
-  const activeClass = classes.find((c) => c.id === classId)
 
   return (
     <div className={styles.page}>
-      <header className={styles.header}>
-        <div className={styles.headerStart}>
-          {classes.length > 1 ? (
-            <button
-              type="button"
-              className={`${styles.classSwitch} t-body-lg`}
-              onClick={() => {
-                const index = classes.findIndex((c) => c.id === classId)
-                setClassId(classes[(index + 1) % classes.length]!.id)
-              }}
-            >
-              {activeClass?.name ?? '—'}
-            </button>
-          ) : (
-            <span className={`${styles.className} t-body-lg`}>{activeClass?.name ?? '—'}</span>
-          )}
-        </div>
-
-        <span className={`${styles.date} t-body-lg`}>{formatJalali(now, 'short')}</span>
+      {/*
+        نشان همگام‌سازی اینجا می‌ماند و به نوار مشترک نمی‌رود: چیزی که
+        می‌گوید «همین شبکه زنده است یا نه»، باید کنار همان شبکه باشد.
+      */}
+      <div className={styles.syncRow}>
         <SyncBadge pending={pending} live={liveStatus.state} />
-
-        {/* بخش ۳.۲: جابه‌جایی بین حساب‌ها از منو، بدون خروج و ورود مجدد. */}
-        <div className={styles.account}>
-          <button
-            type="button"
-            className={`${styles.accountButton} t-caption`}
-            onClick={() => setMenuOpen((open) => !open)}
-            aria-expanded={menuOpen}
-          >
-            {session?.active ? ROLE_LABEL[session.active.role] : '—'}
-          </button>
-
-          {menuOpen && session?.active ? (
-            <div className={styles.menu}>
-              <p className={`${styles.menuName} t-caption`}>{session.active.displayName}</p>
-              {session.accounts
-                .filter((account) => account.id !== session.active!.id)
-                .map((account) => (
-                  <button
-                    key={account.id}
-                    type="button"
-                    className={`${styles.menuItem} t-body`}
-                    onClick={() => {
-                      setMenuOpen(false)
-                      void selectAccount(account.id)
-                    }}
-                  >
-                    رفتن به حساب {ROLE_LABEL[account.role]}
-                  </button>
-                ))}
-              <button
-                type="button"
-                className={`${styles.menuItem} t-body`}
-                onClick={() => void signOut()}
-              >
-                خروج
-              </button>
-            </div>
-          ) : null}
-        </div>
-      </header>
+      </div>
 
       {/*
         بخش ۴ سند تازه: سرصفحه می‌گوید الان کدام بازه است و چند کودک در

@@ -1,18 +1,34 @@
 /*
- * پوسته پنل مربی: محتوای اسکرول‌شونده، به‌علاوه نوار ناوبری چسبیده
- * پایین.
+ * پوسته پنل مربی.
  *
- * نوار بیرون از ناحیه اسکرول است، نه داخلش — همان قاعده‌ای که پنل
- * والد از آن پیروی می‌کند.
+ * چیدمان از AppShell می‌آید؛ اینجا فقط کنترل‌های ویژه مربی می‌مانند.
  */
-.shell {
-  min-block-size: 100dvh;
-  display: flex;
-  flex-direction: column;
-  background: var(--paper);
-}
 
-.body {
-  flex: 1;
-  min-block-size: 0;
+/* تعویض کلاس — هدف لمسی پنل مربی، بخش ۱۲.۷. */
+.classSwitch {
+  min-block-size: var(--touch-teacher);
+  padding-inline: var(--space-4);
+  border: 1px solid var(--border-input);
+  border-radius: var(--r-input);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
 }
+.classSwitch:active { background: var(--coral-tint); }
+
+.classQuiet { color: var(--ink); font-weight: var(--weight-bold); }
+
+.switchAccount {
+  inline-size: 100%;
+  min-block-size: var(--touch-parent);
+  padding-inline: var(--space-2);
+  text-align: start;
+  background: none;
+  border: none;
+  border-radius: var(--r-input);
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+}
+.switchAccount:active { background: var(--coral-tint); }

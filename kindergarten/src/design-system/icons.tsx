@@ -170,6 +170,55 @@ export function WalletIcon({ size = 16 }: IconProps) {
   )
 }
 
+/**
+ * آدمک در دایره — حساب کاربری در سرصفحه.
+ *
+ * چرا زنگوله نبود: زنگ یعنی «خبری هست»، نه «حساب من». کاربر دنبال
+ * خروج و پروفایل می‌گشت و زیر زنگ پیدایش نمی‌کرد. دایره دور آدمک، این
+ * را از آدمکِ ساده تب «بیشتر» هم جدا می‌کند.
+ */
+export function AccountIcon({ size = 16 }: IconProps) {
+  return (
+    <svg {...frame(size)}>
+      <circle cx="12" cy="12" r="9" />
+      <circle cx="12" cy="10" r="3" />
+      <path d="M6.5 19a6 6 0 0 1 11 0" />
+    </svg>
+  )
+}
+
+/** سه نقطه — «بیشتر». آدمک را برای حساب کاربری آزاد می‌کند. */
+export function MoreIcon({ size = 16 }: IconProps) {
+  return (
+    <svg {...frame(size)}>
+      <circle cx="5" cy="12" r="1.4" />
+      <circle cx="12" cy="12" r="1.4" />
+      <circle cx="19" cy="12" r="1.4" />
+    </svg>
+  )
+}
+
+/** دو آدمک — فهرست کودکان در پنل مدیر. */
+export function PeopleIcon({ size = 16 }: IconProps) {
+  return (
+    <svg {...frame(size)}>
+      <circle cx="9" cy="8" r="3.4" />
+      <path d="M3 20a6 6 0 0 1 12 0" />
+      <path d="M16 5.5a3.4 3.4 0 0 1 0 6.6" />
+      <path d="M17.5 14.4A6 6 0 0 1 21 20" />
+    </svg>
+  )
+}
+
+/** پوشه پرونده — مدخل بازرسی. */
+export function FolderIcon({ size = 16 }: IconProps) {
+  return (
+    <svg {...frame(size)}>
+      <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z" />
+    </svg>
+  )
+}
+
 /** آدمک — «بیشتر» و پروفایل. */
 export function PersonIcon({ size = 16 }: IconProps) {
   return (
