@@ -13,7 +13,7 @@ import type { ClassRoom } from '../../core/data/index.ts'
 import { TodayPage } from './TodayPage.tsx'
 import { BulkEntryPage } from './BulkEntryPage.tsx'
 import { CloseDayPage } from './CloseDayPage.tsx'
-import { InboxPage } from './InboxPage.tsx'
+import { MessagesPage } from '../shared/MessagesPage.tsx'
 import { TeacherMorePage } from './TeacherMorePage.tsx'
 import styles from './TeacherApp.module.css'
 
@@ -71,8 +71,8 @@ export function TeacherApp() {
    */
   const refresh = useCallback(() => {
     data
-      .listThreads()
-      .then((list) => setWaiting(list.filter((t) => t.awaitingReply).length))
+      .listConversations()
+      .then((list) => setWaiting(list.reduce((sum, c) => sum + c.unread, 0)))
       .catch(() => setWaiting(0))
   }, [data])
 
@@ -107,7 +107,7 @@ export function TeacherApp() {
    * «بستن روز» و «پیام‌ها» عنوان و کلید بازگشت خودشان را می‌آورند؛ دو
    * سرصفحه روی هم یعنی نصف صفحه سرصفحه است.
    */
-  const ownHeader = screen === 'close' || screen === 'inbox'
+  const ownHeader = screen === 'close'
 
   return (
     <AppShell
@@ -154,11 +154,11 @@ export function TeacherApp() {
     >
       {screen === 'inbox' ? (
         /*
-          onChanged: پس از فرستادن جواب، شمار «منتظر جواب» بی‌درنگ تازه
-          می‌شود. بی این، مربی جواب می‌داد و نشان روی تب می‌ماند تا وقتی
-          به «امروز» برگردد — یعنی اپ می‌گفت کاری مانده که انجام شده.
+          onCountChanged: پس از خواندن یا جواب دادن، شمار نخوانده بی‌درنگ
+          تازه می‌شود. بی این، مربی جواب می‌داد و نشان روی تب می‌ماند تا
+          وقتی به «امروز» برگردد — یعنی اپ می‌گفت کاری مانده که انجام شده.
         */
-        <InboxPage onBack={() => setScreen('today')} onChanged={refresh} />
+        <MessagesPage onCountChanged={setWaiting} />
       ) : screen === 'close' ? (
         <CloseDayPage
           classId={classId}

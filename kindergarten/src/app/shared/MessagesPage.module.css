@@ -1,0 +1,204 @@
+/*
+ * صندوق پیام مشترک.
+ *
+ * یک چیدمان برای هر سه نقش. تراکم از --touch-* هر نقش نمی‌آید چون این
+ * صفحه در هر سه پنل یکی است و هدف لمسی‌اش باید بزرگ‌ترینِ سه‌تا باشد.
+ */
+
+.page {
+  flex: 1;
+  min-block-size: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 0 var(--space-4) var(--space-4);
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding-block: var(--space-2) var(--space-3);
+}
+
+.title { margin: 0; color: var(--ink); font-weight: var(--weight-black); }
+
+.newChat {
+  margin-inline-start: auto;
+  min-block-size: var(--touch-parent);
+  padding-inline: var(--space-4);
+  border: none;
+  border-radius: var(--r-input);
+  background: var(--coral);
+  color: var(--ink);
+  font-weight: var(--weight-bold);
+  cursor: pointer;
+}
+
+/* ── فهرست ──────────────────────────────────────────────────── */
+
+.list { list-style: none; margin: 0; padding: 0; }
+
+.row {
+  inline-size: 100%;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-block-size: var(--touch-teacher);
+  padding: var(--space-3) 0;
+  background: none;
+  border: none;
+  font: inherit;
+  color: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+.list li + li .row { border-block-start: 1px solid var(--border); }
+.row:active { background: var(--coral-tint); }
+
+.avatar {
+  flex: none;
+  display: grid;
+  place-items: center;
+  inline-size: 40px;
+  block-size: 40px;
+  border-radius: var(--r-chip);
+  background: var(--mint-tint);
+  color: var(--ink);
+}
+
+.main { flex: 1; min-inline-size: 0; display: flex; flex-direction: column; gap: 2px; }
+
+.name {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--ink);
+  font-weight: var(--weight-bold);
+}
+
+/* نقش، کنار نام: دو نفر می‌توانند هم‌نام باشند. */
+.role {
+  padding: 1px var(--space-2);
+  border-radius: var(--r-chip);
+  background: var(--surface-warm);
+  color: var(--ink-muted);
+  font-size: var(--text-caption);
+  font-weight: var(--weight-regular);
+}
+
+.about { color: var(--ink-muted); }
+
+.preview {
+  color: var(--ink-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.end { flex: none; display: flex; flex-direction: column; align-items: flex-end; gap: var(--space-1); }
+.when { color: var(--ink-muted); }
+
+/* شمار نخوانده. اینجا عدد خوانده می‌شود، برخلاف نشان نوار پایین. */
+.unread {
+  min-inline-size: 22px;
+  padding: 0 6px;
+  border-radius: var(--r-chip);
+  background: var(--coral);
+  color: var(--ink);
+  font-size: var(--text-caption);
+  font-weight: var(--weight-bold);
+  text-align: center;
+}
+
+/* ── انتخاب طرف گفتگو ───────────────────────────────────────── */
+
+.group { margin-block-end: var(--space-4); }
+.groupTitle { margin: 0 0 var(--space-1); color: var(--ink-muted); font-weight: var(--weight-bold); }
+
+/* ── گفتگو ──────────────────────────────────────────────────── */
+
+.chatHead {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding-block: var(--space-2) var(--space-3);
+}
+
+.back {
+  flex: none;
+  min-inline-size: var(--touch-parent);
+  min-block-size: var(--touch-parent);
+  display: grid;
+  place-items: center;
+  border: none;
+  border-radius: var(--r-chip);
+  background: none;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.chatWho { display: flex; flex-direction: column; gap: 2px; min-inline-size: 0; }
+
+.hours {
+  margin: 0 0 var(--space-3);
+  padding: var(--space-3);
+  background: var(--mango-tint);
+  border-radius: var(--r-input);
+  color: var(--ink);
+}
+
+.thread {
+  flex: 1;
+  min-block-size: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding-block-end: var(--space-3);
+}
+
+.empty { margin: var(--space-5) 0; color: var(--ink-muted); text-align: center; }
+
+.bubble {
+  align-self: flex-start;
+  max-inline-size: 85%;
+  padding: var(--space-3);
+  border-radius: var(--r-card);
+  background: var(--surface);
+  border: 1px solid var(--card-border);
+}
+/* پیام خودم، نعنایی و در سمت دیگر. رنگ تنها تفاوت نیست — جا هم هست. */
+.bubbleMine { align-self: flex-end; background: var(--mint-tint); border-color: transparent; }
+
+.bubbleBody { margin: 0; color: var(--ink); overflow-wrap: anywhere; }
+.bubbleMeta { margin: var(--space-1) 0 0; color: var(--ink-muted); }
+
+/* ── نوشتن ──────────────────────────────────────────────────── */
+
+.composer { display: flex; flex-direction: column; gap: var(--space-2); }
+
+.input {
+  inline-size: 100%;
+  padding: var(--space-3);
+  border: 1px solid var(--border-input);
+  border-radius: var(--r-input);
+  background: var(--surface);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: var(--text-body);
+  resize: vertical;
+}
+.input:focus { border-color: var(--coral); outline: none; }
+
+.send {
+  min-block-size: var(--touch-teacher);
+  border: none;
+  border-radius: var(--r-input);
+  background: var(--coral);
+  color: var(--ink);
+  font-weight: var(--weight-bold);
+  cursor: pointer;
+}
+.send:disabled { background: var(--disabled-bg); color: var(--disabled-fg); }
+
+.error { margin: 0 0 var(--space-2); color: var(--ink); }

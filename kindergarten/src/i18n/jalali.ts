@@ -20,7 +20,7 @@ export function toIsoDate(date: Date): string {
   return `${y}-${m}-${d}`
 }
 
-import { toPersianDigits } from './digits.ts'
+import { toLatinDigits, toPersianDigits } from './digits.ts'
 
 const CALENDAR = 'fa-IR-u-ca-persian'
 
@@ -167,4 +167,73 @@ export function formatPeriod(period: string, withYear = true): string {
   const name = JALALI_MONTHS[index - 1]
   if (!year || !name) return toPersianDigits(period)
   return withYear ? `${name} ${toPersianDigits(year)}` : name
+}
+
+/**
+ * تاریخ جلالی به میلادی — وارونِ `jalaliParts`.
+ *
+ * چرا لازم است: مدیر تاریخ انقضای مدرک را جلالی می‌نویسد، ولی ستونش در
+ * پایگاه داده از نوع `date` است و با `current_date` مقایسه می‌شود. اگر
+ * رشته جلالی را همان‌طور ذخیره کنیم، «مدرک منقضی» هرگز درست درنمی‌آید —
+ * و کل ارزش آن ستون همین مقایسه است.
+ *
+ * روش: تبدیلِ میلادی به جلالی از `Intl` می‌آید و دقیق است، پس به‌جای
+ * پیاده‌سازی دوباره تقویم، همان تابع وارونه می‌شود: یک حدس اولیه، و بعد
+ * تصحیح تا وقتی اجزا دقیقاً بخوانند. هم کوتاه‌تر است، هم قواعد کبیسه را
+ * از همان منبعی می‌گیرد که بقیه اپ می‌گیرد.
+ *
+ * ورودی نامعتبر `null` می‌دهد، نه یک تاریخ حدسی: تاریخی که کاربر
+ * نگفته، ساختنی نیست.
+ */
+export function jalaliToIso(year: number, month: number, day: number): string | null {
+  if (!Number.isInteger(year) || year < 1000 || year > 2000) return null
+  if (!Number.isInteger(month) || month < 1 || month > 12) return null
+  if (!Number.isInteger(day) || day < 1 || day > 31) return null
+
+  /*
+   * جست‌وجوی دودویی، نه تصحیحِ گام‌به‌گام.
+   *
+   * تصحیح با تخمینِ «هر ماه سی روز» روی ماه‌های سی‌ویک‌روزه نوسان
+   * می‌کرد و هرگز نمی‌نشست — سی‌وشش تاریخ از شش سال را `null`
+   * برمی‌گرداند. سه‌تایی (سال، ماه، روز) با تاریخ یکنواخت بالا می‌رود،
+   * پس جست‌وجوی دودویی هم دقیق است و هم کوتاه: حدود ده گام.
+   */
+  const target = year * 10000 + month * 100 + day
+  const key = (at: Date): number => {
+    const p = jalaliParts(at)
+    return p.year * 10000 + p.month * 100 + p.day
+  }
+
+  let lo = Date.UTC(year + 620, 0, 1, 12)
+  let hi = Date.UTC(year + 622, 11, 31, 12)
+  const DAY = 86_400_000
+
+  while (lo <= hi) {
+    const mid = lo + Math.floor((hi - lo) / DAY / 2) * DAY
+    const here = key(new Date(mid))
+    if (here === target) return toIsoDate(new Date(mid))
+    if (here < target) lo = mid + DAY
+    else hi = mid - DAY
+  }
+
+  // روزی که وجود ندارد — مثل ۳۰ اسفند در سال غیرکبیسه — ساخته نمی‌شود.
+  return null
+}
+
+/**
+ * رشته‌ای که کاربر نوشته، به تاریخ میلادی.
+ *
+ * ارقام فارسی و جداکننده‌های رایج (`-`، `/`، `.`) را می‌پذیرد، چون
+ * کاربر همان‌طور می‌نویسد که در شناسنامه دیده.
+ */
+export function parseJalaliInput(text: string): string | null {
+  const parts = toLatinDigits(text)
+    .split(/[^0-9]+/)
+    .filter(Boolean)
+    .map(Number)
+  const [year, month, day] = parts
+  if (parts.length !== 3 || year === undefined || month === undefined || day === undefined) {
+    return null
+  }
+  return jalaliToIso(year, month, day)
 }

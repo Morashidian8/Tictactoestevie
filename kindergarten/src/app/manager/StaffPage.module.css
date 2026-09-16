@@ -1,0 +1,362 @@
+.page { min-block-size: 100dvh; display: flex; flex-direction: column; background: var(--paper); }
+
+.header {
+  position: sticky; inset-block-start: 0; z-index: 2;
+  display: flex; align-items: center; gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: var(--surface); border-block-end: 1px solid var(--border);
+}
+
+.back {
+  min-inline-size: var(--touch-manager); min-block-size: var(--touch-manager);
+  display: grid; place-items: center; border: none; background: none; color: var(--ink);
+}
+
+.title { font-family: var(--font); font-weight: var(--weight-black); }
+.count { color: var(--ink-muted); margin-inline-start: auto; }
+
+.body {
+  flex: 1; display: flex; flex-direction: column; gap: var(--space-3);
+  padding: var(--space-3) var(--space-4) var(--space-7);
+}
+
+.search {
+  min-block-size: var(--touch-manager); padding-inline: var(--space-3);
+  border: 1px solid var(--border-input); border-radius: var(--r-input);
+  background: var(--surface); color: var(--ink);
+  font-family: inherit; font-size: var(--text-body-sm);
+}
+.search:focus { border-color: var(--coral); outline: none; }
+
+.list {
+  list-style: none; margin: 0; padding: 0;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r-card); overflow: hidden;
+}
+
+.item {
+  inline-size: 100%; min-block-size: var(--touch-teacher);
+  display: flex; align-items: center; gap: var(--space-3);
+  padding-inline: var(--space-4);
+  border: none; background: var(--surface); color: var(--ink);
+  font-family: inherit; font-size: var(--text-body-sm); text-align: start;
+}
+
+.list li + li .item { border-block-start: 1px solid var(--border); }
+.item:active { background: var(--coral-tint);
+  color: var(--ink);
+}
+.item svg { color: var(--ink-muted); flex: none; }
+
+.avatar {
+  inline-size: var(--avatar-sm); block-size: var(--avatar-sm);
+  border-radius: var(--r-chip); overflow: hidden; flex: none;
+}
+
+.itemName { flex: 1; min-inline-size: 0; }
+
+/*
+ * آلرژی آجری است چون بخش ۷.۱ آن را موضوع ایمنی نامیده، و آجر در بخش
+ * ۱۲.۲ رنگ ایمنی است. تنها جای پرونده که رنگ هشدار می‌گیرد.
+ */
+.allergy {
+  padding: var(--space-4); border-radius: var(--r-card);
+  background: var(--brick-tint);
+  display: flex; flex-direction: column; gap: var(--space-1);
+  color: var(--ink);
+}
+
+.allergyHead {
+  margin: 0; display: flex; align-items: center; gap: var(--space-2);
+  color: var(--ink); font-weight: var(--weight-bold);
+}
+.allergyHead svg { color: var(--brick); flex: none; }
+.allergyList { margin: 0; color: var(--ink); font-weight: var(--weight-medium); }
+
+.card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r-card); padding: var(--space-4);
+  display: flex; flex-direction: column; gap: var(--space-2);
+}
+
+.cardLabel { color: var(--ink-muted); }
+.muted { color: var(--ink-muted); margin: 0; }
+
+.row {
+  margin: 0; min-block-size: var(--touch-manager);
+  display: flex; align-items: center; gap: var(--space-3);
+  flex-wrap: wrap; color: var(--ink);
+}
+.row + .row { border-block-start: 1px solid var(--border); }
+
+.tag {
+  padding: var(--space-1) var(--space-2); border-radius: var(--r-chip);
+  background: var(--coral-tint); color: var(--ink);
+}
+
+.phone {
+  margin-inline-start: auto; color: var(--ink);
+  font-variant-numeric: tabular-nums; text-decoration: none;
+  font-weight: var(--weight-bold);
+}
+
+.noPhone {
+  margin-inline-start: auto;
+  padding-block: 1px;
+  padding-inline: var(--space-2);
+  border-radius: var(--r-chip);
+  border: 1px solid var(--brick);
+  background: var(--brick-tint);
+  color: var(--ink);
+  font-weight: var(--weight-bold);
+  white-space: nowrap;
+}
+.granted {
+  margin-inline-start: auto;
+  padding-block: 1px;
+  padding-inline: var(--space-2);
+  border-radius: var(--r-chip);
+  border: 1px solid var(--mint);
+  background: var(--mint-tint);
+  color: var(--ink);
+  font-weight: var(--weight-bold);
+  white-space: nowrap;
+}
+.notGranted { margin-inline-start: auto; color: var(--ink-muted); }
+.error { margin: 0; color: var(--ink); }
+
+/* ── درخواست‌های تغییر پرونده ───────────────────────────────── */
+
+.note {
+  margin: 0 0 var(--space-3);
+  padding: var(--space-3);
+  background: var(--mint-tint);
+  border-radius: var(--r-input);
+  color: var(--ink);
+}
+
+.changes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-block-end: var(--space-4);
+  padding: var(--space-4);
+  background: var(--mango-tint);
+  border-radius: var(--r-card);
+}
+
+.changesHead {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  font-weight: var(--weight-bold);
+  color: var(--ink);
+}
+.changesHead svg { color: var(--ink); flex: none; }
+
+.change {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-3);
+  background: var(--surface);
+  border-radius: var(--r-input);
+}
+
+.changeTop { display: flex; align-items: center; gap: var(--space-2); margin: 0; color: var(--ink); }
+.muted { color: var(--ink-muted); }
+
+/* نشان میدان ایمنی. متن، نه فقط رنگ — بخش ۱۲.۲. */
+.safety {
+  margin-inline-start: auto;
+  padding: 1px var(--space-2);
+  border-radius: var(--r-chip);
+  background: var(--brick-tint);
+  color: var(--ink);
+  font-size: var(--text-caption);
+}
+
+.changeDiff { margin: 0; color: var(--ink); overflow-wrap: anywhere; }
+/* مقدار قبلی خط‌خورده نیست: هنوز مقدار معتبر پرونده است. */
+.was { color: var(--ink-muted); }
+
+.changeActions { display: flex; gap: var(--space-2); margin-block-start: var(--space-2); }
+
+.decide {
+  flex: 1;
+  min-block-size: var(--touch-manager);
+  border: 1px solid var(--border-input);
+  border-radius: var(--r-input);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+}
+.decidePrimary { flex: 2; background: var(--coral); border-color: transparent; font-weight: var(--weight-bold); }
+
+.sheetBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: grid;
+  place-items: end center;
+  background: rgb(15 23 42 / .45);
+}
+
+.sheet {
+  inline-size: 100%;
+  max-inline-size: 520px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-5) var(--space-4);
+  padding-block-end: calc(var(--space-5) + env(safe-area-inset-bottom));
+  background: var(--surface);
+  border-start-start-radius: var(--r-card);
+  border-start-end-radius: var(--r-card);
+}
+
+.sheetTitle { margin: 0; font-family: var(--font); font-weight: var(--weight-black); }
+
+.field { display: flex; flex-direction: column; gap: var(--space-1); color: var(--ink-muted); }
+
+.input {
+  min-block-size: var(--touch-manager);
+  padding-inline: var(--space-3);
+  border: 1px solid var(--border-input);
+  border-radius: var(--r-input);
+  background: var(--surface);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: var(--text-body-sm);
+}
+.input:focus { border-color: var(--coral); outline: none; }
+
+.sheetActions { display: flex; gap: var(--space-2); margin-block-start: var(--space-2); }
+
+.secondary {
+  flex: 1;
+  min-block-size: var(--touch-manager);
+  border: 1px solid var(--border-input);
+  border-radius: var(--r-input);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+}
+
+.primary {
+  flex: 2;
+  min-block-size: var(--touch-manager);
+  border: none;
+  border-radius: var(--r-input);
+  background: var(--coral);
+  color: var(--ink);
+  font-family: inherit;
+  font-weight: var(--weight-bold);
+  cursor: pointer;
+}
+.primary:disabled { background: var(--disabled-bg); color: var(--disabled-fg); }
+
+/* ── کارتابل کارکنان ────────────────────────────────────────── */
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-block-end: var(--space-4);
+  padding: var(--space-4);
+  background: var(--surface);
+  border: 1px solid var(--card-border);
+  border-radius: var(--r-card);
+}
+
+.cardLabel { color: var(--ink-muted); }
+
+.stats { color: var(--ink); font-variant-numeric: tabular-nums; }
+
+/* «هنوز ارزیابی نشده» هشدار نیست، یک کارِ مانده است. */
+.needsReview { color: var(--ink); font-weight: var(--weight-medium); }
+
+.flag {
+  flex: none;
+  padding: 2px var(--space-2);
+  border-radius: var(--r-chip);
+  background: var(--mango-tint);
+  color: var(--ink);
+  font-size: var(--text-caption);
+}
+/* مدرک منقضی، تنها هشدار این فهرست است. */
+.flagBad { background: var(--brick-tint); font-weight: var(--weight-bold); }
+
+.expired { color: var(--ink); font-weight: var(--weight-bold); }
+
+.action {
+  min-block-size: var(--touch-manager);
+  margin-block-start: var(--space-2);
+  border: 1px solid var(--border-input);
+  border-radius: var(--r-input);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+}
+.action:active { background: var(--coral-tint); }
+
+.noteRow {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding-block: var(--space-2);
+}
+.noteRow + .noteRow { border-block-start: 1px solid var(--border); }
+
+.noteTop { display: flex; align-items: center; gap: var(--space-2); margin: 0; color: var(--ink); }
+.noteBody { margin: 0; color: var(--ink); overflow-wrap: anywhere; }
+
+.shared { color: var(--mint-deep); }
+/* متن، نه فقط رنگ — بخش ۱۲.۲. */
+.unshared { color: var(--ink); font-weight: var(--weight-medium); }
+
+.warn {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  color: var(--ink);
+}
+.warn svg { flex: none; }
+
+.check { display: flex; align-items: center; gap: var(--space-2); color: var(--ink); }
+
+.textarea {
+  padding: var(--space-3);
+  border: 1px solid var(--border-input);
+  border-radius: var(--r-input);
+  background: var(--surface);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: var(--text-body-sm);
+  resize: vertical;
+}
+.textarea:focus { border-color: var(--coral); outline: none; }
+
+.export {
+  margin-block-start: var(--space-3);
+  padding: var(--space-3);
+  background: var(--surface-warm);
+  border-radius: var(--r-input);
+}
+
+/*
+ * خروجی متنی: چیدمانش باید همان باشد که کپی می‌شود، پس pre.
+ * جهت چپ‌به‌راست نمی‌شود — متن فارسی است و فقط تورفتگی‌اش ثابت می‌ماند.
+ */
+.exportText {
+  margin: 0;
+  white-space: pre-wrap;
+  font-family: inherit;
+  font-size: var(--text-caption);
+  color: var(--ink);
+}

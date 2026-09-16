@@ -43,6 +43,12 @@ import type {
   PaymentIntent,
   PaymentResult,
   PaymentReminderLog,
+  Conversation,
+  ConversationSummary,
+  MessageCandidate,
+  StaffDocument,
+  StaffNote,
+  StaffProfile,
   InvoiceLine,
   FeeItem,
   FeeItemOffer,
@@ -189,6 +195,10 @@ function save(): void {
       reminders: REMINDERS,
       profileChanges: PROFILE_CHANGES,
       profileEdits: PROFILE_EDITS,
+      conversations: CONVERSATIONS,
+      chats: CHATS,
+      staffDocs: STAFF_DOCS,
+      staffNotes: STAFF_NOTES,
       payments: PAYMENTS,
       messages: MESSAGES,
       amendments: AMENDMENTS,
@@ -223,6 +233,10 @@ function hydrate(): void {
       reminders?: PaymentReminderLog[]
       profileChanges?: ProfileChangeRow[]
       profileEdits?: Record<string, string>
+      conversations?: ConversationRow[]
+      chats?: ChatRow[]
+      staffDocs?: (StaffDocument & { staffId: string })[]
+      staffNotes?: (StaffNote & { staffId: string })[]
       payments?: Payment[]
       messages?: Message[]
       amendments?: Amendment[]
@@ -269,6 +283,10 @@ function hydrate(): void {
     restore(INVOICE_LINES, payload.invoiceLines)
     restore(REMINDERS, payload.reminders)
     restore(PROFILE_CHANGES, payload.profileChanges)
+    restore(CONVERSATIONS, payload.conversations)
+    restore(CHATS, payload.chats)
+    restore(STAFF_DOCS, payload.staffDocs)
+    restore(STAFF_NOTES, payload.staffNotes)
     /*
      * تغییرهای تأییدشده دوباره روی فیکسچر می‌نشینند.
      *
@@ -516,6 +534,186 @@ const GUARDIAN_CHILDREN: Record<string, string[]> = {
   'acc-parent': ['child-1', 'child-9'],
 }
 
+/* ── گفتگوی نفر به نفر ──────────────────────────────────────── */
+
+/**
+ * دفترچه حساب‌های نسخه نمایشی.
+ *
+ * آینه ACCOUNTS در آداپتور ورود است. لایه داده باید بداند چه کسانی در
+ * مهد حساب دارند تا بتواند بگوید چه کسی به چه کسی می‌تواند پیام بدهد —
+ * و آن قاعده در نسخه واقعی تابعی در پایگاه داده است (app.may_message)،
+ * نه فهرستی در مرورگر.
+ */
+type DirectoryEntry = {
+  id: string
+  name: string
+  role: 'manager' | 'teacher' | 'guardian'
+  classIds: string[]
+  /** برای سرپرست: کودکانش. برای کارکنان خالی. */
+  childIds: string[]
+}
+
+const DIRECTORY: DirectoryEntry[] = [
+  { id: 'acc-teacher-golha', name: 'زهرا محمدی', role: 'teacher', classIds: ['class-golha'], childIds: [] },
+  { id: 'staff-maryam', name: 'مریم رضایی', role: 'teacher', classIds: ['class-golha'], childIds: [] },
+  { id: 'staff-nasrin', name: 'نسرین کاظمی', role: 'teacher', classIds: ['class-golha'], childIds: [] },
+  { id: 'staff-elham', name: 'الهام نوری', role: 'teacher', classIds: ['class-setareha'], childIds: [] },
+  {
+    id: 'acc-teacher-both',
+    name: 'مریم رضایی',
+    role: 'teacher',
+    classIds: ['class-golha', 'class-setareha'],
+    childIds: [],
+  },
+  { id: 'acc-manager', name: 'مریم رضایی (مدیر)', role: 'manager', classIds: [], childIds: [] },
+  { id: 'acc-parent', name: 'مادر سارا', role: 'guardian', classIds: [], childIds: ['child-1', 'child-9'] },
+]
+
+const entryOf = (accountId: string): DirectoryEntry | undefined =>
+  DIRECTORY.find((d) => d.id === accountId)
+
+/**
+ * چه کسی می‌تواند به چه کسی پیام بدهد.
+ *
+ * آینه app.may_message. سرپرست فقط به مربیانِ کلاسِ کودک خودش و به
+ * مدیر؛ مربی به سرپرستانِ کودکانِ کلاسش و به مدیر؛ مدیر به همه.
+ */
+function mayMessage(fromId: string, toId: string): boolean {
+  if (fromId === toId) return false
+  const from = entryOf(fromId)
+  const to = entryOf(toId)
+  if (!from || !to) return false
+  if (from.role === 'manager' || to.role === 'manager') return true
+
+  const [guardian, staff] =
+    from.role === 'guardian' ? [from, to] : to.role === 'guardian' ? [to, from] : [null, null]
+  if (!guardian || !staff || staff.role !== 'teacher') return false
+
+  // کلاسِ مشترک: کودکی از این خانواده در کلاسی که این مربی دارد.
+  return guardian.childIds.some((childId) => {
+    const child = CHILDREN.find((c) => c.id === childId)
+    return child?.classId ? staff.classIds.includes(child.classId) : false
+  })
+}
+
+type ConversationRow = {
+  id: string
+  members: [string, string]
+  childId: string | null
+  createdAt: string
+  lastAt: string | null
+  /** آخرین باری که هر عضو گفتگو را باز کرد. */
+  readAt: Record<string, string>
+}
+
+type ChatRow = {
+  id: string
+  conversationId: string
+  senderId: string
+  body: string
+  sentAt: string | null
+  queuedUntil: string | null
+}
+
+/* ── پرونده کارکنان ─────────────────────────────────────────── */
+
+const STAFF_DOCS: (StaffDocument & { staffId: string })[] = []
+const STAFF_NOTES: (StaffNote & { staffId: string })[] = []
+let staffSeq = 0
+
+/** مدرکی که گذشته یا کمتر از شصت روز تا انقضایش مانده. */
+function documentGaps(staffId: string, now: Date): { expired: number; expiring: number } {
+  const today = toIsoDate(now)
+  const soon = new Date(now)
+  soon.setDate(soon.getDate() + 60)
+  const soonIso = toIsoDate(soon)
+  const mine = STAFF_DOCS.filter((d) => d.staffId === staffId && d.expiresAt)
+  return {
+    expired: mine.filter((d) => (d.expiresAt ?? '') < today).length,
+    expiring: mine.filter((d) => (d.expiresAt ?? '') >= today && (d.expiresAt ?? '') <= soonIso)
+      .length,
+  }
+}
+
+/*
+ * فعالیت مربی، از روی همان ثبت‌هایی که خودش کرده.
+ *
+ * در داده نمونه، حضور و غیاب نام مربی را نگه می‌دارد نه شناسه‌اش، پس
+ * تطبیق با نام است. در داده واقعی app.staff_activity شناسه را می‌خواند.
+ */
+function forEachDayInRange(from: string, to: string, run: (state: DayState, date: string) => void): void {
+  for (const [date, state] of days.entries()) {
+    if (date >= from && date <= to) run(state, date)
+  }
+}
+
+function countActiveDays(accountId: string, from: string, to: string): number {
+  const name = entryOf(accountId)?.name
+  if (!name) return 0
+  let count = 0
+  forEachDayInRange(from, to, (state) => {
+    const touched = [...state.attendance.values()].some(
+      (a) => a.checkedInByName === name || a.checkedOutByName === name,
+    )
+    if (touched) count += 1
+  })
+  return count
+}
+
+function countCheckIns(accountId: string, from: string, to: string): number {
+  const name = entryOf(accountId)?.name
+  if (!name) return 0
+  let count = 0
+  forEachDayInRange(from, to, (state) => {
+    count += [...state.attendance.values()].filter((a) => a.checkedInByName === name).length
+  })
+  return count
+}
+
+function countCheckOuts(accountId: string, from: string, to: string): number {
+  const name = entryOf(accountId)?.name
+  if (!name) return 0
+  let count = 0
+  forEachDayInRange(from, to, (state) => {
+    count += [...state.attendance.values()].filter((a) => a.checkedOutByName === name).length
+  })
+  return count
+}
+
+/** پرونده یک مربی — مدارک، یادداشت‌ها، و فعالیت ماه گذشته. */
+function staffFileOf(accountId: string): StaffProfile {
+  const entry = entryOf(accountId)
+  const to = toIsoDate(new Date())
+  const from = new Date()
+  from.setDate(from.getDate() - 30)
+  const fromIso = toIsoDate(from)
+
+  return {
+    staffId: accountId,
+    fullName: entry?.name ?? '—',
+    role: entry?.role === 'manager' ? 'مدیر' : 'مربی',
+    // شماره تلفن عمداً خالی است: پرونده کارکنان جای افشای شماره نیست.
+    phone: null,
+    classNames: (entry?.classIds ?? [])
+      .map((id) => CLASSES.find((c) => c.id === id)?.name)
+      .filter((n): n is string => Boolean(n)),
+    documents: STAFF_DOCS.filter((d) => d.staffId === accountId),
+    notes: STAFF_NOTES.filter((n) => n.staffId === accountId),
+    activity: {
+      daysActive: countActiveDays(accountId, fromIso, to),
+      checkIns: countCheckIns(accountId, fromIso, to),
+      checkOuts: countCheckOuts(accountId, fromIso, to),
+      reportsWritten: 0,
+      reportsSent: 0,
+      medicationsReceived: 0,
+    },
+  }
+}
+
+const CONVERSATIONS: ConversationRow[] = []
+const CHATS: ChatRow[] = []
+let chatSeq = 0
+
 
 /* ── حالت‌های تازه برای برنامه فردا و اطلاع‌رسانی ─────────────── */
 
@@ -567,6 +765,12 @@ function makeCode(): string {
 
 /** ساعت کاری پیام مهد — بخش ۶.۶. در داده واقعی از ستون center می‌آید. */
 const MESSAGE_HOURS = { start: '08:00', end: '16:30' }
+
+/** آیا همین حالا داخل ساعت کاری پیام است — بخش ۶.۶. */
+function insideMessageHours(now: Date): boolean {
+  const clock = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
+  return clock >= MESSAGE_HOURS.start && clock <= MESSAGE_HOURS.end
+}
 
 /** آغاز ساعت کاری روز بعد. پیام صف‌شده همان موقع تحویل می‌شود. */
 function nextMorning(from: Date): Date {
@@ -2418,8 +2622,7 @@ export function createLocalDataAccess(scope: AccessScope): DataAccess {
       if (!text) throw new Error('پیام خالی است.')
 
       const now = new Date()
-      const clock = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
-      const inHours = clock >= MESSAGE_HOURS.start && clock <= MESSAGE_HOURS.end
+      const inHours = insideMessageHours(now)
 
       const message: Message = {
         id: `msg-${MESSAGES.length + 1}`,
@@ -2530,6 +2733,251 @@ export function createLocalDataAccess(scope: AccessScope): DataAccess {
     async listPaymentClaims(status) {
       assertManager()
       return CLAIMS.filter((c) => c.status === status)
+    },
+
+    /* ── پرونده کارکنان — مدیر ──────────────────────────────── */
+
+    /**
+     * کارتابل.
+     *
+     * آنچه عمداً اینجا نیست: هیچ نمره، رتبه یا مقایسه‌ای. شمار رخداد هم
+     * نمی‌آید — اگر مربی ببیند ثبت رخداد به ضررش تمام می‌شود، کمتر ثبت
+     * می‌کند و آسیب به کودک می‌رسد.
+     */
+    async getStaffCartable(from, to) {
+      assertManager()
+      const now = new Date()
+      return DIRECTORY.filter((d) => d.role === 'teacher').map((d) => {
+        const gaps = documentGaps(d.id, now)
+        const notes = STAFF_NOTES.filter((n) => n.staffId === d.id)
+        return {
+          staffId: d.id,
+          fullName: d.name,
+          role: 'مربی',
+          photoUrl: null,
+          // «روز فعال» یعنی روزی که این مربی دست‌کم یک ثبت کرده.
+          daysActive: countActiveDays(d.id, from, to),
+          checkIns: countCheckIns(d.id, from, to),
+          documentsExpired: gaps.expired,
+          documentsExpiring: gaps.expiring,
+          lastReview:
+            notes
+              .filter((n) => n.kind === 'review')
+              .map((n) => n.writtenAt)
+              .sort()
+              .at(-1) ?? null,
+          openConcerns: notes.filter((n) => n.kind === 'concern' && !n.sharedAt).length,
+        }
+      })
+    },
+
+    async getStaffProfile(staffId) {
+      assertManager()
+      return staffFileOf(staffId)
+    },
+
+    async uploadStaffDocument(input) {
+      assertManager()
+      if (!input.title.trim()) throw new Error('عنوان مدرک لازم است.')
+      STAFF_DOCS.push({
+        id: `doc-${(staffSeq += 1)}`,
+        staffId: input.staffId,
+        kind: input.kind,
+        title: input.title.trim(),
+        fileUrl: input.fileUrl,
+        issuedAt: input.issuedAt ?? null,
+        expiresAt: input.expiresAt ?? null,
+        uploadedAt: new Date().toISOString(),
+      })
+      save()
+    },
+
+    async addStaffNote(input) {
+      assertManager()
+      if (!input.body.trim()) throw new Error('متن یادداشت لازم است.')
+      STAFF_NOTES.push({
+        id: `note-${(staffSeq += 1)}`,
+        staffId: input.staffId,
+        kind: input.kind,
+        body: input.body.trim(),
+        writtenAt: new Date().toISOString(),
+        /*
+         * ارزیابی‌ای که مربی هرگز نمی‌بیند، ارزیابی نیست؛ پرونده‌سازی
+         * است. اپ مدیر را وادار نمی‌کند، ولی سکوت را ثبت می‌کند.
+         */
+        sharedAt: input.share ? new Date().toISOString() : null,
+      })
+      save()
+    },
+
+    async exportStaffFile() {
+      assertManager()
+      const lines: string[] = ['پرونده کارکنان — ' + toIsoDate(new Date()), '']
+      for (const d of DIRECTORY.filter((x) => x.role === 'teacher')) {
+        const file = staffFileOf(d.id)
+        lines.push(`— ${file.fullName} (${file.role})`)
+        lines.push(`  کلاس‌ها: ${file.classNames.join('، ') || '—'}`)
+        if (file.documents.length === 0) {
+          lines.push('  مدارک: هیچ مدرکی بارگذاری نشده.')
+        } else {
+          for (const doc of file.documents) {
+            lines.push(
+              `  • ${doc.title}${doc.expiresAt ? ` — اعتبار تا ${doc.expiresAt}` : ''}`,
+            )
+          }
+        }
+        lines.push('')
+      }
+      return lines.join('\n')
+    },
+
+    async getMyStaffFile() {
+      const file = staffFileOf(scope.accountId)
+      // مربی فقط یادداشت‌هایی را می‌بیند که با او در میان گذاشته شده.
+      return { ...file, notes: file.notes.filter((n) => n.sharedAt !== null) }
+    },
+
+    /* ── گفتگوی نفر به نفر ──────────────────────────────────── */
+
+    async listConversations() {
+      const me = scope.accountId
+      return CONVERSATIONS.filter((c) => c.members.includes(me))
+        .map((c) => {
+          const otherId = c.members.find((m) => m !== me) ?? ''
+          const other = entryOf(otherId)
+          const seen = c.readAt[me]
+          const mine = CHATS.filter((m) => m.conversationId === c.id && m.sentAt)
+          const last = mine.at(-1)
+          return {
+            id: c.id,
+            otherAccountId: otherId,
+            otherName: other?.name ?? '—',
+            otherRole: (other?.role ?? 'guardian') as ConversationSummary['otherRole'],
+            childId: c.childId,
+            childName: c.childId ? childName(c.childId) : null,
+            lastBody: last?.body ?? null,
+            lastAt: c.lastAt,
+            // نخوانده یعنی «از طرف مقابل، پس از آخرین بازدید من».
+            unread: mine.filter(
+              (m) => m.senderId !== me && (!seen || (m.sentAt ?? '') > seen),
+            ).length,
+          }
+        })
+        .sort((a, b) => (b.lastAt ?? '').localeCompare(a.lastAt ?? ''))
+    },
+
+    async listMessageCandidates() {
+      const me = scope.accountId
+      return DIRECTORY.filter((d) => mayMessage(me, d.id)).map((d) => ({
+        accountId: d.id,
+        fullName: d.name,
+        role: d.role as MessageCandidate['role'],
+        /*
+         * زمینه، تا انتخاب حدس نباشد.
+         *
+         * دو مربی می‌توانند هم‌نام باشند؛ نام کلاس است که می‌گوید کدام.
+         */
+        context:
+          d.role === 'teacher'
+            ? d.classIds
+                .map((id) => CLASSES.find((c) => c.id === id)?.name)
+                .filter(Boolean)
+                .join('، ') || null
+            : d.role === 'guardian'
+              ? d.childIds.map(childName).join('، ') || null
+              : null,
+      }))
+    },
+
+    /** باز یا پیدا می‌کند. دوباره‌اجراپذیر — گفتگوی دوم نمی‌سازد. */
+    async openConversation(otherAccountId, aboutChildId) {
+      const me = scope.accountId
+      if (!mayMessage(me, otherAccountId)) {
+        throw new Error('شما نمی‌توانید به این حساب پیام بدهید.')
+      }
+      const about = aboutChildId ?? null
+      if (about) assertOwnChild(about)
+
+      const found = CONVERSATIONS.find(
+        (c) =>
+          c.members.includes(me) && c.members.includes(otherAccountId) && c.childId === about,
+      )
+      if (found) return found.id
+
+      const made: ConversationRow = {
+        id: `conv-${(chatSeq += 1)}`,
+        members: [me, otherAccountId],
+        childId: about,
+        createdAt: new Date().toISOString(),
+        lastAt: null,
+        readAt: {},
+      }
+      CONVERSATIONS.push(made)
+      save()
+      return made.id
+    },
+
+    async getConversation(conversationId) {
+      const me = scope.accountId
+      const row = CONVERSATIONS.find((c) => c.id === conversationId)
+      if (!row || !row.members.includes(me)) throw new Error('گفتگو پیدا نشد.')
+      const otherId = row.members.find((m) => m !== me) ?? ''
+      const other = entryOf(otherId)
+
+      /*
+       * ساعت کاری فقط وقتی یک سرِ گفتگو خانواده است — بخش ۶.۶.
+       *
+       * قاعده ساعت کاری برای محافظت از خانواده است، نه یک قاعده عمومی:
+       * مدیری که شب یازده به مربی می‌نویسد نباید تا صبح صبر کند.
+       */
+      const withFamily = row.members.some((m) => entryOf(m)?.role === 'guardian')
+
+      return {
+        id: row.id,
+        otherName: other?.name ?? '—',
+        otherRole: (other?.role ?? 'guardian') as Conversation['otherRole'],
+        childName: row.childId ? childName(row.childId) : null,
+        hours: withFamily ? { ...MESSAGE_HOURS } : null,
+        messages: CHATS.filter((m) => m.conversationId === conversationId).map((m) => ({
+          id: m.id,
+          body: m.body,
+          mine: m.senderId === me,
+          senderName: entryOf(m.senderId)?.name ?? '—',
+          sentAt: m.sentAt,
+          queuedUntil: m.queuedUntil,
+        })),
+      }
+    },
+
+    async sendToConversation(conversationId, body) {
+      const me = scope.accountId
+      const row = CONVERSATIONS.find((c) => c.id === conversationId)
+      if (!row || !row.members.includes(me)) throw new Error('شما عضو این گفتگو نیستید.')
+      const text = body.trim()
+      if (!text) throw new Error('پیام خالی فرستاده نمی‌شود.')
+
+      const withFamily = row.members.some((m) => entryOf(m)?.role === 'guardian')
+      const now = new Date()
+      // نوشتن همیشه آزاد است؛ رسیدن است که صبر می‌کند.
+      const queued = withFamily && !insideMessageHours(now) ? nextMorning(now) : null
+
+      CHATS.push({
+        id: `chat-${(chatSeq += 1)}`,
+        conversationId,
+        senderId: me,
+        body: text,
+        sentAt: queued ? null : now.toISOString(),
+        queuedUntil: queued ? queued.toISOString() : null,
+      })
+      row.lastAt = now.toISOString()
+      save()
+    },
+
+    async markConversationRead(conversationId) {
+      const row = CONVERSATIONS.find((c) => c.id === conversationId)
+      if (!row) return
+      row.readAt[scope.accountId] = new Date().toISOString()
+      save()
     },
 
     /* ── ویرایش پرونده کودک ─────────────────────────────────── */

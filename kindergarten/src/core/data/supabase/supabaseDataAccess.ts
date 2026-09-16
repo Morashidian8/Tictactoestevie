@@ -74,6 +74,11 @@ import type {
   FeeItemOffer,
   ProfileChange,
   ProfileField,
+  Conversation,
+  ConversationSummary,
+  MessageCandidate,
+  StaffCartableRow,
+  StaffProfile,
   FeeYearMonth,
   PaymentMethod,
   PaymentReminderLog,
@@ -378,6 +383,62 @@ type AuditedDataAccess = DataAccess & {
 }
 
 export function createSupabaseDataAccess(scope: AccessScope): AuditedDataAccess {
+  /**
+   * پرونده یک مربی.
+   *
+   * `sharedOnly` برای وقتی است که خودِ مربی می‌خواند: یادداشتی که با او
+   * در میان گذاشته نشده، در پرونده‌اش دیده نمی‌شود. سیاست سطر-محور هم
+   * همین را می‌بندد؛ این فیلتر فقط صریحش می‌کند.
+   */
+  const readStaffFile = async (staffId: string, sharedOnly: boolean): Promise<StaffProfile> => {
+    const [person, docs, notes, classes] = await Promise.all([
+      db.from('staff').select('id, full_name, role').eq('id', staffId).single(),
+      db.from('staff_document').select('*').eq('staff_id', staffId).order('uploaded_at', { ascending: false }),
+      db.from('staff_note').select('*').eq('staff_id', staffId).order('written_at', { ascending: false }),
+      db.from('staff_class').select('class:class_id(name)').eq('staff_id', staffId),
+    ])
+
+    const row = orThrow(person) as Row
+    const noteRows = ((orThrow(notes) as Row[]) ?? []).filter(
+      (n) => !sharedOnly || n.shared_at !== null,
+    )
+
+    return {
+      staffId,
+      fullName: row.full_name as string,
+      role: row.role as string,
+      // شماره تلفن عمداً خوانده نمی‌شود: پرونده کارکنان جای افشای شماره نیست.
+      phone: null,
+      classNames: ((orThrow(classes) as Row[]) ?? [])
+        .map((c) => (c.class as Row | null)?.name as string | undefined)
+        .filter((n): n is string => Boolean(n)),
+      documents: ((orThrow(docs) as Row[]) ?? []).map((d) => ({
+        id: d.id as string,
+        kind: d.kind as StaffProfile['documents'][number]['kind'],
+        title: d.title as string,
+        fileUrl: d.file_url as string,
+        issuedAt: (d.issued_at as string | null) ?? null,
+        expiresAt: (d.expires_at as string | null) ?? null,
+        uploadedAt: d.uploaded_at as string,
+      })),
+      notes: noteRows.map((n) => ({
+        id: n.id as string,
+        kind: n.kind as StaffProfile['notes'][number]['kind'],
+        body: n.body as string,
+        writtenAt: n.written_at as string,
+        sharedAt: (n.shared_at as string | null) ?? null,
+      })),
+      activity: {
+        daysActive: 0,
+        checkIns: 0,
+        checkOuts: 0,
+        reportsWritten: 0,
+        reportsSent: 0,
+        medicationsReceived: 0,
+      },
+    }
+  }
+
   const db = supabase()
 
   /**
@@ -2401,6 +2462,219 @@ export function createSupabaseDataAccess(scope: AccessScope): AuditedDataAccess 
         })
       })
     },
+
+    /* ── پرونده کارکنان — مدیر ──────────────────────────────── */
+
+    async getStaffCartable(from: string, to: string): Promise<StaffCartableRow[]> {
+      const rows = orThrow(
+        await db.rpc('staff_cartable', {
+          centre: scope.centerId,
+          from_date: from,
+          to_date: to,
+        }),
+      ) as Row[]
+      return (rows ?? []).map((r): StaffCartableRow => ({
+        staffId: r.staff_id as string,
+        fullName: r.full_name as string,
+        role: r.role as string,
+        photoUrl: (r.photo_url as string | null) ?? null,
+        daysActive: (r.days_active as number) ?? 0,
+        checkIns: (r.check_ins as number) ?? 0,
+        documentsExpired: (r.documents_expired as number) ?? 0,
+        documentsExpiring: (r.documents_expiring as number) ?? 0,
+        lastReview: (r.last_review as string | null) ?? null,
+        openConcerns: (r.open_concerns as number) ?? 0,
+      }))
+    },
+
+    async getStaffProfile(staffId: string): Promise<StaffProfile> {
+      return readStaffFile(staffId, false)
+    },
+
+    async uploadStaffDocument(input) {
+      orThrow(
+        await db.from('staff_document').insert({
+          center_id: scope.centerId,
+          staff_id: input.staffId,
+          kind: input.kind,
+          title: input.title.trim(),
+          file_url: input.fileUrl,
+          issued_at: input.issuedAt ?? null,
+          expires_at: input.expiresAt ?? null,
+        }),
+      )
+    },
+
+    async addStaffNote(input) {
+      orThrow(
+        await db.from('staff_note').insert({
+          center_id: scope.centerId,
+          staff_id: input.staffId,
+          kind: input.kind,
+          body: input.body.trim(),
+          /*
+           * ارزیابی‌ای که مربی هرگز نمی‌بیند، ارزیابی نیست؛ پرونده‌سازی
+           * است. اپ مدیر را وادار نمی‌کند، ولی سکوت را ثبت می‌کند.
+           */
+          shared_at: input.share ? new Date().toISOString() : null,
+        }),
+      )
+    },
+
+    async exportStaffFile(): Promise<string> {
+      const staff = orThrow(
+        await db
+          .from('staff')
+          .select('id, full_name, role')
+          .eq('center_id', scope.centerId)
+          .eq('active', true)
+          .order('full_name'),
+      ) as Row[]
+
+      const lines: string[] = ['پرونده کارکنان', '']
+      for (const person of staff ?? []) {
+        const file = await readStaffFile(person.id as string, false)
+        lines.push(`— ${file.fullName} (${file.role})`)
+        lines.push(`  کلاس‌ها: ${file.classNames.join('، ') || '—'}`)
+        if (file.documents.length === 0) {
+          lines.push('  مدارک: هیچ مدرکی بارگذاری نشده.')
+        } else {
+          for (const doc of file.documents) {
+            lines.push(`  • ${doc.title}${doc.expiresAt ? ` — اعتبار تا ${doc.expiresAt}` : ''}`)
+          }
+        }
+        lines.push('')
+      }
+      return lines.join('\n')
+    },
+
+    async getMyStaffFile(): Promise<StaffProfile> {
+      const me = orThrow(
+        await db
+          .from('user_account')
+          .select('staff_id')
+          .eq('id', scope.accountId)
+          .single(),
+      ) as Row
+      // مربی فقط یادداشت‌هایی را می‌بیند که با او در میان گذاشته شده.
+      return readStaffFile(me.staff_id as string, true)
+    },
+
+
+    /* ── گفتگوی نفر به نفر ──────────────────────────────────── */
+
+    async listConversations(): Promise<ConversationSummary[]> {
+      const rows = orThrow(await db.rpc('my_conversations')) as Row[]
+      return (rows ?? []).map((r): ConversationSummary => ({
+        id: r.conversation_id as string,
+        otherAccountId: r.other_account_id as string,
+        otherName: r.other_name as string,
+        otherRole: r.other_role as ConversationSummary['otherRole'],
+        childId: (r.child_id as string | null) ?? null,
+        childName: (r.child_name as string | null) ?? null,
+        lastBody: (r.last_body as string | null) ?? null,
+        lastAt: (r.last_message_at as string | null) ?? null,
+        unread: (r.unread as number) ?? 0,
+      }))
+    },
+
+    /**
+     * فهرست انتخاب، از همان قاعده‌ای که مجوز فرستادن را می‌دهد.
+     *
+     * پس فهرست و مجوز نمی‌توانند با هم فرق کنند — و اگر روزی فرق
+     * کردند، کاربر کسی را در فهرست می‌بیند که پیامش رد می‌شود.
+     */
+    async listMessageCandidates(): Promise<MessageCandidate[]> {
+      const rows = orThrow(await db.rpc('message_candidates')) as Row[]
+      return (rows ?? []).map((r): MessageCandidate => ({
+        accountId: r.account_id as string,
+        fullName: r.full_name as string,
+        role: r.account_role as MessageCandidate['role'],
+        context: (r.context as string | null) ?? null,
+      }))
+    },
+
+    async openConversation(otherAccountId: string, aboutChildId?: string): Promise<string> {
+      return orThrow(
+        await db.rpc('open_conversation', {
+          other: otherAccountId,
+          about: aboutChildId ?? null,
+        }),
+      ) as string
+    },
+
+    async getConversation(conversationId: string): Promise<Conversation> {
+      const [summary, msgRows] = await Promise.all([
+        db.rpc('my_conversations'),
+        db
+          .from('message')
+          .select('id, body, sender_id, sent_at, queued_until, sender:sender_id(id, role, staff:staff_id(full_name), guardian:guardian_id(full_name))')
+          .eq('conversation_id', conversationId)
+          .order('created_at'),
+      ])
+
+      const line = ((orThrow(summary) as Row[]) ?? []).find(
+        (r) => r.conversation_id === conversationId,
+      )
+      if (!line) throw new Error('گفتگو پیدا نشد.')
+
+      const messages = ((orThrow(msgRows) as Row[]) ?? []).map((m) => {
+        const sender = m.sender as Row | null
+        const staff = sender?.staff as Row | null
+        const guardian = sender?.guardian as Row | null
+        return {
+          id: m.id as string,
+          body: m.body as string,
+          mine: m.sender_id !== line.other_account_id,
+          senderName:
+            (staff?.full_name as string | undefined) ??
+            (guardian?.full_name as string | undefined) ??
+            '—',
+          sentAt: (m.sent_at as string | null) ?? null,
+          queuedUntil: (m.queued_until as string | null) ?? null,
+        }
+      })
+
+      /*
+       * ساعت کاری فقط وقتی یک سرِ گفتگو خانواده است — بخش ۶.۶.
+       *
+       * قاعده ساعت کاری برای محافظت از خانواده است، نه یک قاعده عمومی:
+       * مدیری که شب یازده به مربی می‌نویسد نباید تا صبح صبر کند.
+       */
+      const withFamily = scope.role === 'guardian' || line.other_role === 'guardian'
+      const centre = withFamily
+        ? ((orThrow(
+            await db
+              .from('center')
+              .select('parent_message_start, parent_message_end')
+              .eq('id', scope.centerId)
+              .single(),
+          ) as Row) ?? null)
+        : null
+
+      return {
+        id: conversationId,
+        otherName: line.other_name as string,
+        otherRole: line.other_role as Conversation['otherRole'],
+        childName: (line.child_name as string | null) ?? null,
+        hours: centre
+          ? {
+              start: (centre.parent_message_start as string).slice(0, 5),
+              end: (centre.parent_message_end as string).slice(0, 5),
+            }
+          : null,
+        messages,
+      }
+    },
+
+    async sendToConversation(conversationId: string, body: string) {
+      orThrow(await db.rpc('send_message', { chat: conversationId, body }))
+    },
+
+    async markConversationRead(conversationId: string) {
+      orThrow(await db.rpc('mark_conversation_read', { chat: conversationId }))
+    },
+
 
     /* ── ویرایش پرونده کودک ─────────────────────────────────── */
 

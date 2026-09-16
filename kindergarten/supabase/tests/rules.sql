@@ -1759,6 +1759,23 @@ insert into active_account (auth_user_id, user_account_id)
 values ('aa000000-0000-0000-0000-0000000000f2', '66666666-6666-6666-6666-666666666666')
 on conflict (auth_user_id) do update set user_account_id = excluded.user_account_id;
 
+/*
+ * همان شماره، با حساب مربی — بخش ۳.۲.
+ *
+ * یک نفر می‌تواند هم مربی باشد هم سرپرست، و آن دو دو حساب جدا و دو
+ * صندوق جدا دارند. تست گفتگو به هر دو نیاز دارد.
+ */
+insert into auth.users (id, phone)
+values ('aa000000-0000-0000-0000-0000000000f3', '09120000001')
+on conflict (id) do nothing;
+
+insert into active_account (auth_user_id, user_account_id)
+select 'aa000000-0000-0000-0000-0000000000f3', id
+  from user_account
+ where phone = '09120000001' and role = 'teacher'
+   and center_id = '11111111-1111-1111-1111-111111111111'
+on conflict (auth_user_id) do update set user_account_id = excluded.user_account_id;
+
 select login_as('aa000000-0000-0000-0000-0000000000f1', '09120000001');
 
 do $$
@@ -1878,5 +1895,186 @@ begin
   perform assert(
     app.profile_value(sara, 'doctor_name') is null,
     'و مقدار رد‌شده هرگز روی پرونده نمی‌نشیند'
+  );
+end $$;
+
+\echo ''
+\echo '── گفتگوی نفر به نفر بین سه نقش ──'
+do $$
+declare
+  centre  uuid := '11111111-1111-1111-1111-111111111111';
+  golha   uuid := 'c1111111-1111-1111-1111-111111111111';
+  stars   uuid := 'c2222222-2222-2222-2222-222222222222';
+  sara    uuid := 'd1111111-1111-1111-1111-111111111111';
+  zahra   uuid := '51111111-1111-1111-1111-111111111111';
+  other_t uuid;
+  acc_parent  uuid;
+  acc_teacher uuid;
+  acc_manager uuid := '66666666-6666-6666-6666-666666666666';
+  acc_other   uuid;
+begin
+  -- زهرا مربی کلاس گل‌هاست؛ کودک سارا هم در همان کلاس.
+  insert into staff_class (staff_id, class_id) values (zahra, golha)
+  on conflict do nothing;
+
+  -- و یک مربی دیگر، در کلاسی که سارا در آن نیست.
+  insert into staff (id, center_id, full_name, role)
+  values ('57777777-7777-7777-7777-777777777777', centre, 'نگار پ.', 'teacher')
+  on conflict (id) do nothing
+  returning id into other_t;
+  other_t := '57777777-7777-7777-7777-777777777777';
+  insert into staff_class (staff_id, class_id) values (other_t, stars)
+  on conflict do nothing;
+
+  insert into user_account (id, center_id, phone, role, staff_id)
+  values ('77777777-7777-7777-7777-777777777777', centre, '09120000088', 'teacher', other_t)
+  on conflict (id) do nothing;
+  acc_other := '77777777-7777-7777-7777-777777777777';
+
+  select id into acc_parent from user_account
+   where center_id = centre and role = 'guardian' and phone = '09120000001';
+  select id into acc_teacher from user_account
+   where center_id = centre and role = 'teacher' and phone = '09120000001';
+
+  /*
+   * ۱. سرپرست فقط به مربیِ کلاسِ کودک خودش.
+   *
+   * این فهرست در پایگاه داده است نه در کلاینت: فهرست سمت کلاینت فقط
+   * رابط را می‌سازد و اگر تنها مرجع باشد، یک درخواست دستی از آن رد
+   * می‌شود.
+   */
+  perform assert(app.may_message(acc_parent, acc_teacher),
+    'سرپرست به مربی کلاسِ کودکش پیام می‌دهد');
+  perform assert(not app.may_message(acc_parent, acc_other),
+    'ولی به مربی کلاسی که کودکش در آن نیست، نه');
+
+  -- ۲. مدیر با همه، و همه با مدیر.
+  perform assert(app.may_message(acc_manager, acc_other),
+    'مدیر به هر مربی‌ای پیام می‌دهد');
+  perform assert(app.may_message(acc_manager, acc_parent),
+    'و به هر سرپرستی');
+  perform assert(app.may_message(acc_parent, acc_manager),
+    'و سرپرست هم می‌تواند به مدیر بنویسد');
+
+  -- ۳. مربی به سرپرستِ کودکِ کلاس خودش.
+  perform assert(app.may_message(acc_teacher, acc_parent),
+    'مربی به سرپرستِ کودکِ کلاسش پیام می‌دهد');
+  perform assert(not app.may_message(acc_other, acc_parent),
+    'مربی کلاس دیگر، به این سرپرست پیام نمی‌دهد');
+
+  -- ۴. هیچ‌کس به خودش.
+  perform assert(not app.may_message(acc_parent, acc_parent),
+    'کسی به خودش گفتگو باز نمی‌کند');
+end $$;
+
+do $$
+declare
+  centre uuid := '11111111-1111-1111-1111-111111111111';
+  sara   uuid := 'd1111111-1111-1111-1111-111111111111';
+  acc_parent  uuid;
+  acc_teacher uuid;
+  first_id  uuid;
+  second_id uuid;
+  about_id  uuid;
+  msg    uuid;
+  line   record;
+begin
+  select id into acc_parent from user_account
+   where center_id = centre and role = 'guardian' and phone = '09120000001';
+  select id into acc_teacher from user_account
+   where center_id = centre and role = 'teacher' and phone = '09120000001';
+
+  perform login_as('aa000000-0000-0000-0000-0000000000f1', '09120000001');
+
+  /*
+   * ۵. باز کردن گفتگو دوباره‌اجراپذیر است.
+   *
+   * بی این، هر بار که کسی «پیام تازه» می‌زد گفتگوی دومی ساخته می‌شد و
+   * تاریخچه دو تکه می‌شد — و هیچ‌کدام کامل نبود.
+   */
+  first_id := app.open_conversation(acc_teacher);
+  second_id := app.open_conversation(acc_teacher);
+  perform assert(first_id = second_id, 'باز کردن دوباره، گفتگوی دوم نمی‌سازد');
+
+  /*
+   * ۶. کودک، زمینه است نه طرف گفتگو.
+   *
+   * همان دو نفر درباره دو کودک، دو گفتگوی جدا دارند — وگرنه پیام درباره
+   * سارا و پیام درباره هستی در یک اتاق قاطی می‌شوند.
+   */
+  about_id := app.open_conversation(acc_teacher, sara);
+  perform assert(about_id <> first_id, 'گفتگو درباره یک کودک، از گفتگوی بی‌زمینه جداست');
+
+  -- ۷. عضویت لازم است؛ صرفِ داشتن شناسه کافی نیست.
+  msg := app.send_message(first_id, 'سلام، سارا امروز کمی سرما خورده.');
+  perform assert(msg is not null, 'عضو گفتگو می‌تواند پیام بفرستد');
+  perform assert_rejects(
+    format('select app.send_message(%L, %L)', first_id, '   '),
+    'پیام خالی فرستاده نمی‌شود');
+
+  -- ۸. صندوق، طرف مقابل و نخوانده‌ها را با هم می‌دهد.
+  perform login_as('aa000000-0000-0000-0000-0000000000f3', '09120000001');
+  select * into line from app.my_conversations() where conversation_id = first_id;
+  perform assert(line.other_account_id = acc_parent,
+    'مربی در صندوقش، سرپرست را طرف مقابل می‌بیند');
+  perform assert(line.unread = 1, 'و پیام نخوانده شمرده می‌شود');
+
+  perform app.mark_conversation_read(first_id);
+  select * into line from app.my_conversations() where conversation_id = first_id;
+  perform assert(line.unread = 0, 'پس از خواندن، شمار نخوانده صفر می‌شود');
+
+  /*
+   * ۹. گفتگوی دیگران خصوصی است — مدیر هم استثنا نیست.
+   *
+   * مدیر می‌تواند با هر کسی گفتگو باز کند، ولی حق مدیریت، حق خواندنِ
+   * مکالمه مربی و خانواده نیست.
+   */
+  perform login_as('aa000000-0000-0000-0000-0000000000f2', '09120000077');
+  perform assert(
+    (select count(*) from app.my_conversations() where conversation_id = first_id) = 0,
+    'مدیر گفتگوی مربی و سرپرست را در صندوقش نمی‌بیند'
+  );
+end $$;
+
+do $$
+declare
+  centre uuid := '11111111-1111-1111-1111-111111111111';
+  acc_parent  uuid;
+  acc_teacher uuid;
+  acc_manager uuid := '66666666-6666-6666-6666-666666666666';
+  chat   uuid;
+  queued timestamptz;
+begin
+  select id into acc_parent from user_account
+   where center_id = centre and role = 'guardian' and phone = '09120000001';
+  select id into acc_teacher from user_account
+   where center_id = centre and role = 'teacher' and phone = '09120000001';
+
+  update center set parent_message_start = '08:00', parent_message_end = '16:30'
+   where id = centre;
+
+  /*
+   * ۱۰. ساعت کاری فقط وقتی یک سرِ گفتگو خانواده باشد — بخش ۶.۶.
+   *
+   * قاعده ساعت کاری برای محافظت از خانواده است، نه یک قاعده عمومی.
+   * مدیری که شب یازده به مربی می‌نویسد، پیامش نباید تا صبح در صف بماند.
+   */
+  perform login_as('aa000000-0000-0000-0000-0000000000f2', '09120000077');
+  chat := app.open_conversation(acc_teacher);
+  perform app.send_message(chat, 'فردا جلسه ساعت ۸.');
+  select queued_until into queued from message
+   where conversation_id = chat order by created_at desc limit 1;
+  perform assert(queued is null, 'پیام مدیر به مربی در صف ساعت کاری نمی‌نشیند');
+
+  /*
+   * ۱۱. و نوشتن هرگز بسته نمی‌شود.
+   *
+   * جلوگیری از نوشتن یعنی والدی که نصفه‌شب نگران است هیچ راهی ندارد.
+   * آنچه صبر می‌کند رسیدن است، نه نوشتن.
+   */
+  perform assert(
+    (select count(*) from information_schema.columns
+      where table_name = 'message' and column_name = 'queued_until') = 1,
+    'پیامِ بیرون از ساعت، نوشته می‌شود و رسیدنش صبر می‌کند'
   );
 end $$;

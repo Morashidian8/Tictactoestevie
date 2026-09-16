@@ -987,7 +987,10 @@ check(
 )
 
 console.log('▸ بخش ۱۵.۳: اطلاع‌رسانی با تأیید دو مرحله‌ای')
-await page.locator('nav button[aria-label="اطلاع‌رسانی به خانواده‌ها"]').click()
+// اطلاع‌رسانی به «بیشتر» رفت؛ جای کنش مرکزی مالِ کارِ روزانه است.
+await page.locator('nav button:has-text("بیشتر")').click()
+await page.waitForSelector('button:has-text("اطلاع‌رسانی به خانواده‌ها")')
+await page.click('button:has-text("اطلاع‌رسانی به خانواده‌ها")')
 await page.waitForSelector('text=چه چیزی')
 const auto = await page.locator('textarea[aria-label="متن اطلاعیه"]').inputValue()
 check(/بازگشایی می‌شود/.test(auto), `متن از قالب ساخته شد: ${auto.slice(0, 40)}…`)
@@ -1094,17 +1097,35 @@ check(true, 'نوار پیش از آمدن گزارش روز هم کار می‌
  * چون متن دیده‌شدنی ندارد، با برچسب دسترس‌پذیری‌اش زده می‌شود — و اگر
  * روزی آن برچسب برود، همین‌جا می‌افتد.
  */
-await page.locator('nav button[aria-label="پیام به مربی"]').click()
-await page.waitForSelector('text=ساعت کاری پیام', { timeout: 8000 })
-check(true, 'دکمه گرد وسط، صفحه پیام را باز می‌کند')
+await page.locator('nav button[aria-label="پیام‌ها"]').click()
+await page.waitForSelector('text=گفتگوی تازه', { timeout: 8000 })
+check(true, 'دکمه گرد وسط، صندوق پیام را باز می‌کند')
 
 await page.locator('nav button:has-text("بیشتر")').click()
 await page.waitForSelector('text=اعلام غیبت')
 check(true, 'فهرست «بیشتر» باز شد')
 
-await page.locator('nav button[aria-label="پیام به مربی"]').click()
-await page.waitForSelector('text=ساعت کاری پیام')
-check(true, 'ساعت کاری پیام به خانواده گفته می‌شود — بخش ۶.۶')
+/*
+ * خانواده حالا انتخاب می‌کند به کدام مربی بنویسد.
+ *
+ * تا اینجا یک اتاق برای هر کودک بود و همه مربیانِ کلاس در آن — نمی‌شد
+ * گفت این پیام برای کدام مربی است.
+ */
+await page.locator('nav button[aria-label="پیام‌ها"]').click()
+await page.waitForSelector('text=گفتگوی تازه')
+await page.click('button:has-text("گفتگوی تازه")')
+await page.waitForSelector('text=مربیان')
+const picker = await page.evaluate(() => document.body.innerText)
+check(/زهرا محمدی/.test(picker), 'فهرست مربیانِ کلاسِ کودک برای انتخاب می‌آید')
+check(/گل‌ها/.test(picker), 'و نام کلاس هم هست، تا انتخاب حدس نباشد')
+check(!/09\d{9}/.test(picker), 'و هیچ شماره‌ای در فهرست انتخاب نیست')
+
+await page.click('button:has-text("زهرا محمدی")')
+await page.waitForSelector('textarea[aria-label="متن پیام"]')
+check(
+  (await page.locator('text=ساعت کاری پیام').count()) === 1,
+  'ساعت کاری پیام به خانواده گفته می‌شود — بخش ۶.۶',
+)
 await page.fill('textarea[aria-label="متن پیام"]', 'سلام، سارا امروز کمی سرما خورده.')
 await page.click('button:has-text("فرستادن")')
 await page.waitForTimeout(700)
@@ -1118,9 +1139,6 @@ check(
   'و متنش همان است که نوشته شد',
 )
 
-// «بازگشت» از یک مقصدِ نوار، یک‌راست خانه است — نه فهرست «بیشتر».
-await page.locator('[aria-label="بازگشت"]').click()
-await page.waitForTimeout(400)
 await page.locator('nav button:has-text("بیشتر")').click()
 await page.waitForSelector('text=اعلام غیبت')
 await page.click('button:has-text("اعلام غیبت")')
@@ -1578,11 +1596,13 @@ await page.waitForTimeout(800)
  * نمی‌شود و مدیر برای دیدن شمار، خودش وارد صفحه می‌شود.
  */
 const auditBadge = await page
-  .locator('nav button:has-text("بازرسی") [class*="dot"]')
+  .locator('nav button:has-text("بیشتر") [class*="dot"]')
   .count()
-check(auditBadge === 1, 'نشان آمادگی روی خانه بازرسی می‌آید')
+check(auditBadge === 1, 'نشان آمادگی روی خانه «بیشتر» می‌آید')
 
-await page.click('button:has-text("بازرسی")')
+await page.locator('nav button:has-text("بیشتر")').click()
+await page.waitForSelector('button:has-text("پرونده بازرسی")')
+await page.click('button:has-text("پرونده بازرسی")')
 await page.waitForSelector('text=آمادگی بازرسی')
 await page.waitForTimeout(500)
 check(
@@ -1609,7 +1629,9 @@ check(
   (await page.locator('[class*="rowMarked"]').count()) > 0,
   'ردیفی که کار دارد علامت می‌خورد — تنها رنگ فایل',
 )
+// بازگشت از بازرسی به «بیشتر» است، چون از آنجا باز شده.
 await page.locator('[aria-label="بازگشت به داشبورد"]').click()
+await page.locator('nav button:has-text("خانه")').click()
 await page.waitForSelector('text=وضعیت ثبت')
 
 console.log('▸ ارتقای ۳: درخواست دارو از خانه، تا ثبت مصرف')
@@ -1691,7 +1713,18 @@ console.log('▸ بخش ۶.۶: پیام خانواده تا صندوق مربی 
 await signOutAny()
 await signIn('09120000003', { fresh: false })
 await page.waitForSelector('[class*="cardDate"]', { timeout: 8000 })
-await page.click('[aria-label="پیام به مربی"]')
+await page.locator('nav button[aria-label="پیام‌ها"]').click()
+await page.waitForSelector('text=گفتگوی تازه')
+/*
+ * از راه انتخاب، نه از فهرست.
+ *
+ * open_conversation دوباره‌اجراپذیر است: اگر گفتگو با همین مربی باشد
+ * همان برمی‌گردد، و اگر نباشد ساخته می‌شود. پس تست به وضعیت قبلی
+ * مرورگر وابسته نیست.
+ */
+await page.click('button:has-text("گفتگوی تازه")')
+await page.waitForSelector('text=مربیان')
+await page.click('button:has-text("زهرا محمدی")')
 await page.waitForSelector('textarea[aria-label="متن پیام"]')
 await page.fill('textarea[aria-label="متن پیام"]', 'سارا امروز کمی سرفه داشت.')
 await page.click('button:has-text("فرستادن")')
@@ -1717,21 +1750,20 @@ await page.waitForSelector('text=ثبت گروهی امروز', { timeout: 8000 
 const inboxTab = page.locator('nav button:has-text("پیام‌ها")')
 check(
   (await inboxTab.locator('span[class*="dot"]').count()) === 1,
-  'نشان «منتظر جواب» روی تب پیام‌ها می‌آید، بی باز کردن صندوق',
+  'نشان نخوانده روی تب پیام‌ها می‌آید، بی باز کردن صندوق',
 )
 
 await inboxTab.click()
 await page.waitForTimeout(800)
 const inbox = await page.evaluate(() => document.body.innerText)
-check(inbox.includes('سارا'), 'صندوق مربی گفتگو را نشان می‌دهد')
-check(inbox.includes('منتظر جواب'), 'و علامت می‌زند که جوابی نرفته')
+check(inbox.includes('مادر سارا'), 'صندوق مربی، خودِ سرپرست را طرف گفتگو نشان می‌دهد')
 /*
- * شماره هیچ‌کس در این مسیر نیست: گفتگو با شناسه کودک کلید می‌خورد و
+ * شماره هیچ‌کس در این مسیر نیست: گفتگو با شناسه حساب کلید می‌خورد و
  * پیام‌ها نام فرستنده را حمل می‌کنند، نه شماره‌اش.
  */
 check(!/09\d{9}/.test(inbox), 'و هیچ شماره تلفنی در صندوق دیده نمی‌شود')
 
-await page.click('[class*="row"]')
+await page.locator('[class*="row"]').first().click()
 await page.waitForTimeout(700)
 await page.fill('textarea[aria-label="متن پیام"]', 'حواسمان هست، خبر می‌دهیم.')
 await page.click('button:has-text("فرستادن")')
@@ -1741,14 +1773,154 @@ check(chat.includes('حواسمان هست'), 'مربی جواب داد')
 check(chat.includes('سارا امروز کمی سرفه داشت.'), 'و هر دو پیام در یک گفتگو هستند')
 check(!/09\d{9}/.test(chat), 'در گفتگو هم شماره‌ای نیست')
 
-await page.click('[aria-label="بازگشت به پیام‌ها"]')
+await page.locator('[aria-label="بازگشت"]').first().click()
 await page.waitForTimeout(600)
 check(
   (await page.locator('nav button:has-text("پیام‌ها") span[class*="dot"]').count()) === 0,
-  'پس از جواب، نشان «منتظر جواب» می‌رود',
+  'پس از خواندن، نشان نخوانده می‌رود',
 )
+
+/*
+ * و مربی می‌تواند خودش گفتگوی تازه شروع کند — با هر سرپرستی که کودکش
+ * در کلاس اوست. تا اینجا فقط می‌توانست جواب بدهد.
+ */
+await page.click('button:has-text("گفتگوی تازه")')
+await page.waitForSelector('text=خانواده‌ها')
+const teacherPicker = await page.evaluate(() => document.body.innerText)
+check(/مادر سارا/.test(teacherPicker), 'مربی فهرست خانواده‌های کلاسش را برای گفتگو می‌بیند')
+check(/مدیر/.test(teacherPicker), 'و مدیر هم در فهرستش هست')
+check(!/09\d{9}/.test(teacherPicker), 'باز هم بی هیچ شماره‌ای')
+await page.locator('[aria-label="بازگشت"]').first().click()
+await page.waitForTimeout(400)
 await page.click('nav button:has-text("امروز")')
 await page.waitForTimeout(600)
+
+console.log('▸ پیام مدیر: جداگانه به هر مربی یا سرپرست')
+await signIn('09120000002')
+await page.waitForSelector('text=با کدام حساب وارد می‌شوید؟')
+await page.locator('button:has-text("مریم رضایی")').nth(1).click()
+await page.waitForSelector('text=وضعیت ثبت', { timeout: 10000 })
+await page.locator('nav button[aria-label="پیام‌ها"]').click()
+await page.waitForSelector('text=گفتگوی تازه')
+await page.click('button:has-text("گفتگوی تازه")')
+await page.waitForSelector('text=مربیان')
+
+const managerPicker = await page.evaluate(() => document.body.innerText)
+/*
+ * مدیر با همه، جداگانه.
+ *
+ * هم مربیان و هم خانواده‌ها در یک فهرست‌اند ولی زیر دو عنوان — تا
+ * انتخاب اشتباه یک ضربه نباشد.
+ */
+check(/مربیان/.test(managerPicker), 'مدیر فهرست مربیان را می‌بیند')
+check(/خانواده‌ها/.test(managerPicker), 'و فهرست خانواده‌ها را')
+check(/الهام نوری/.test(managerPicker), 'مربی کلاس دیگر هم در فهرست مدیر هست')
+check(!/09\d{9}/.test(managerPicker), 'و هیچ شماره‌ای در فهرست مدیر نیست')
+
+await page.click('button:has-text("الهام نوری")')
+await page.waitForSelector('textarea[aria-label="متن پیام"]')
+/*
+ * ساعت کاری فقط وقتی یک سرِ گفتگو خانواده است — بخش ۶.۶.
+ *
+ * قاعده ساعت کاری برای محافظت از خانواده است، نه یک قاعده عمومی:
+ * مدیری که به مربی می‌نویسد نباید تا صبح صبر کند.
+ */
+check(
+  (await page.locator('text=ساعت کاری پیام').count()) === 0,
+  'گفتگوی مدیر و مربی قید ساعت کاری ندارد',
+)
+await page.fill('textarea[aria-label="متن پیام"]', 'فردا جلسه ساعت ۸ صبح.')
+await page.click('button:has-text("فرستادن")')
+await page.waitForTimeout(700)
+check(
+  (await page.locator('text=فردا جلسه ساعت ۸ صبح.').count()) > 0,
+  'مدیر مستقیم به یک مربی پیام داد',
+)
+
+await page.locator('[aria-label="بازگشت"]').first().click()
+await page.waitForTimeout(500)
+await page.click('nav button:has-text("خانه")')
+await page.waitForTimeout(500)
+
+console.log('▸ کارتابل کارکنان: مدرک، ارزیابی، و خروجی بازرس')
+await page.locator('nav button:has-text("بیشتر")').click()
+await page.waitForSelector('button:has-text("کارکنان")')
+await page.click('button:has-text("کارکنان")')
+await page.waitForSelector('text=/فعالیت سی روز گذشته|روز فعال/')
+
+const cartable = await page.evaluate(() => document.body.innerText)
+/*
+ * قاعده‌ای که این صفحه نمی‌شکند: هیچ نمره، رتبه یا مقایسه‌ای بین
+ * مربیان. اگر روزی کسی «امتیاز مربی» اضافه کند، همین‌جا می‌افتد.
+ */
+check(
+  !/نمره|امتیاز|رتبه|رده‌بندی/.test(cartable),
+  'کارتابل هیچ نمره یا رتبه‌ای برای مربی ندارد',
+)
+check(
+  /مقایسه نمی‌شوند/.test(cartable),
+  'و صریح می‌گوید بین مربیان مقایسه نمی‌شود',
+)
+check(/هنوز ارزیابی نشده/.test(cartable), 'مربی بدون ارزیابی علامت می‌خورد')
+
+await page.locator('[class*="item"]').first().click()
+await page.waitForSelector('text=مدارک')
+await page.click('button:has-text("بارگذاری مدرک")')
+await page.waitForSelector('[role="dialog"]')
+await page.fill('input[aria-label="عنوان مدرک"]', 'کارت بهداشت ۱۴۰۵')
+await page.fill('input[aria-label="تاریخ انقضای مدرک"]', '۱۴۰۵-۱۲-۲۹')
+/*
+ * تاریخ نامعتبر رد می‌شود، نه حدس زده.
+ *
+ * ستون انقضا با تاریخ امروز مقایسه می‌شود؛ تاریخی که خوانده نشده یعنی
+ * «مدرک منقضی» هرگز درست درنمی‌آید.
+ */
+await page.fill('input[aria-label="تاریخ انقضای مدرک"]', '۱۴۰۴-۱۲-۳۰')
+await page.click('[role="dialog"] button:has-text("بارگذاری")')
+await page.waitForTimeout(400)
+check(
+  (await page.locator('text=تاریخ خوانده نشد').count()) === 1,
+  '۳۰ اسفندِ سال غیرکبیسه رد می‌شود',
+)
+
+await page.fill('input[aria-label="تاریخ انقضای مدرک"]', '۱۴۰۵-۱۲-۲۹')
+await page.click('[role="dialog"] button:has-text("بارگذاری")')
+await page.waitForSelector('text=/بارگذاری شد/')
+check(true, 'مدرک مربی بارگذاری شد، با تاریخ انقضا')
+
+await page.click('button:has-text("ثبت یادداشت یا ارزیابی")')
+await page.waitForSelector('[role="dialog"]')
+await page.fill('textarea[aria-label="متن یادداشت"]', 'با کودکان صبور است و گزارش‌هایش دقیق.')
+/*
+ * ارزیابی‌ای که مربی هرگز نمی‌بیند، ارزیابی نیست؛ پرونده‌سازی است.
+ * پیش‌فرض «در میان گذاشته شود» است، و برداشتنش هشدار خودش را دارد.
+ */
+await page.uncheck('[role="dialog"] input[type="checkbox"]')
+const unshared = await page.locator('[role="dialog"]').innerText()
+check(
+  /فرصت پاسخ یا اصلاح ندارد/.test(unshared),
+  'برداشتن تیکِ «در میان گذاشته شود» هشدارش را می‌گوید',
+)
+await page.check('[role="dialog"] input[type="checkbox"]')
+await page.click('[role="dialog"] button:has-text("ثبت")')
+await page.waitForSelector('text=/در میان گذاشته شد/')
+check(
+  (await page.locator('text=با مربی در میان گذاشته شده').count()) >= 1,
+  'یادداشت ثبت و با مربی در میان گذاشته شد',
+)
+
+await page.locator('[aria-label="بازگشت به فهرست کارکنان"]').click()
+await page.waitForTimeout(500)
+await page.click('button:has-text("خروجی پرونده کارکنان برای بازرس")')
+await page.waitForSelector('[aria-label="خروجی پرونده کارکنان"]')
+const staffExport = await page.locator('[aria-label="خروجی پرونده کارکنان"]').innerText()
+check(/کارت بهداشت ۱۴۰۵/.test(staffExport), 'خروجی بازرس، مدرک بارگذاری‌شده را دارد')
+check(
+  !/نمره|امتیاز|رتبه/.test(staffExport),
+  'و در خروجی هم هیچ نمره‌ای برای مربی نیست',
+)
+await page.click('nav button:has-text("خانه")')
+await page.waitForTimeout(500)
 
 console.log('▸ بخش ۱۲.۷: کف کیفیت')
 await signIn('09120000001')

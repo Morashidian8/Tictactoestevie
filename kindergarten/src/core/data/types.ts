@@ -645,6 +645,107 @@ export type ProfileChange = {
   requestedAt: string
 }
 
+/* ── پرونده کارکنان — ماژول ۰۰۲۲ و ۰۰۲۴ ─────────────────────── */
+
+export type StaffDocumentKind =
+  | 'health_card'
+  | 'degree'
+  | 'training'
+  | 'national_id'
+  | 'criminal_record'
+  | 'contract'
+  | 'other'
+
+export type StaffDocument = {
+  id: string
+  kind: StaffDocumentKind
+  title: string
+  fileUrl: string
+  issuedAt: string | null
+  /**
+   * تاریخ انقضا.
+   *
+   * کل ارزش این ستون همین است: مدرکی که تاریخ انقضا دارد و کسی نگاهش
+   * نمی‌کند، روز بازرسی تبدیل به تخلف می‌شود.
+   */
+  expiresAt: string | null
+  uploadedAt: string
+}
+
+export type StaffNoteKind = 'commendation' | 'concern' | 'review' | 'training'
+
+/**
+ * یادداشت مدیر درباره یک مربی.
+ *
+ * `sharedAt` عمداً هست: ارزیابی‌ای که مربی هرگز نمی‌بیند، ارزیابی نیست؛
+ * پرونده‌سازی است. این ستون مدیر را وادار نمی‌کند، ولی سکوت را ثبت
+ * می‌کند.
+ */
+export type StaffNote = {
+  id: string
+  kind: StaffNoteKind
+  body: string
+  writtenAt: string
+  sharedAt: string | null
+}
+
+/**
+ * یک ردیف کارتابل مدیر.
+ *
+ * آنچه عمداً اینجا **نیست**: هیچ نمره، رتبه یا مقایسه‌ای بین مربیان.
+ * `incidentsLogged` هم در این نما نمی‌آید — اگر مربی ببیند ثبت رخداد به
+ * ضررش تمام می‌شود، کمتر ثبت می‌کند و آسیب به کودک می‌رسد.
+ */
+export type StaffCartableRow = {
+  staffId: string
+  fullName: string
+  role: string
+  photoUrl: string | null
+  /** روزی که دست‌کم یک ثبت کرده. جایگزین حضور و غیاب پرسنل نیست. */
+  daysActive: number
+  checkIns: number
+  documentsExpired: number
+  documentsExpiring: number
+  lastReview: string | null
+  openConcerns: number
+}
+
+/** پرونده کامل یک مربی، از دید مدیر. */
+export type StaffProfile = {
+  staffId: string
+  fullName: string
+  role: string
+  phone: string | null
+  classNames: string[]
+  documents: StaffDocument[]
+  notes: StaffNote[]
+  activity: {
+    daysActive: number
+    checkIns: number
+    checkOuts: number
+    reportsWritten: number
+    reportsSent: number
+    medicationsReceived: number
+  }
+}
+
+export type StaffDocumentInput = {
+  staffId: string
+  kind: StaffDocumentKind
+  title: string
+  fileUrl: string
+  issuedAt?: string | null
+  expiresAt?: string | null
+}
+
+export type StaffNoteInput = {
+  staffId: string
+  kind: StaffNoteKind
+  body: string
+  /** با مربی در میان گذاشته شود یا نه. */
+  share: boolean
+}
+
 export type ReminderKind = 'due_soon' | 'due_today' | 'overdue'
 
 /**
@@ -763,6 +864,62 @@ export type MessageThread = {
   messages: Message[]
   /** ساعت کاری پیام مهد، برای نوشتن روی صفحه. */
   hours: { start: string; end: string }
+}
+
+/* ── گفتگوی نفر به نفر ──────────────────────────────────────── */
+
+/**
+ * یک گفتگو در صندوق، از دید یک عضو.
+ *
+ * «طرف مقابل» یک نفر است، نه یک طرف: مدیر با مربیِ مشخص حرف می‌زند و
+ * سرپرست با مربیِ مشخص. شماره هیچ‌کس اینجا نیست — فقط شناسه حساب و نام.
+ */
+export type ConversationSummary = {
+  id: string
+  otherAccountId: string
+  otherName: string
+  otherRole: AccountRole
+  /** کودکِ زمینه، اگر گفتگو درباره کودکی باشد. گفتگوی مدیر و مربی ندارد. */
+  childId: string | null
+  childName: string | null
+  lastBody: string | null
+  lastAt: string | null
+  unread: number
+}
+
+/** کسی که می‌شود با او گفتگوی تازه باز کرد. */
+export type MessageCandidate = {
+  accountId: string
+  fullName: string
+  role: AccountRole
+  /** مربی: نام کلاس‌هایش. سرپرست: نام کودکانش. تا انتخاب، حدس نباشد. */
+  context: string | null
+}
+
+/** یک پیام در گفتگوی نفر به نفر. */
+export type ChatMessage = {
+  id: string
+  body: string
+  mine: boolean
+  senderName: string
+  sentAt: string | null
+  /** بیرون از ساعت کاری، پیام تا این زمان در صف می‌ماند — بخش ۶.۶. */
+  queuedUntil: string | null
+}
+
+export type Conversation = {
+  id: string
+  otherName: string
+  otherRole: AccountRole
+  childName: string | null
+  messages: ChatMessage[]
+  /**
+   * ساعت کاری، فقط وقتی یک سرِ گفتگو خانواده است.
+   *
+   * خالی یعنی این گفتگو صفِ ساعت کاری ندارد — مدیر و مربی هر ساعتی
+   * می‌نویسند و پیام همان لحظه می‌رسد.
+   */
+  hours: { start: string; end: string } | null
 }
 
 /* ── بازه روز، دوره حضور، و شیفت ─────────────────────────────── */
@@ -1263,6 +1420,51 @@ export interface DataAccess {
   getThread(childId: string): Promise<MessageThread>
 
   sendMessage(childId: string, body: string): Promise<Message>
+
+  /* ── گفتگوی نفر به نفر ────────────────────────────────────── */
+
+  /** صندوق من — همه گفتگوهایی که عضوشانم، تازه‌ترین اول. */
+  listConversations(): Promise<ConversationSummary[]>
+
+  /**
+   * با چه کسانی می‌توانم گفتگوی تازه باز کنم.
+   *
+   * فهرست از سرور می‌آید و همان قاعده‌ای را می‌خواند که اجازه فرستادن
+   * را می‌دهد — پس فهرست و مجوز نمی‌توانند با هم فرق کنند.
+   */
+  listMessageCandidates(): Promise<MessageCandidate[]>
+
+  /** گفتگو را باز یا پیدا می‌کند. دوباره‌اجراپذیر. */
+  openConversation(otherAccountId: string, aboutChildId?: string): Promise<string>
+
+  getConversation(conversationId: string): Promise<Conversation>
+
+  sendToConversation(conversationId: string, body: string): Promise<void>
+
+  /** خواندن گفتگو. شمار نخوانده‌ها از همین‌جا صفر می‌شود. */
+  markConversationRead(conversationId: string): Promise<void>
+
+  /* ── پرونده کارکنان — مدیر ────────────────────────────────── */
+
+  /** کارتابل مدیر. بدون نمره و بدون مقایسه — فقط فعالیت و کاستی مدرک. */
+  getStaffCartable(from: string, to: string): Promise<StaffCartableRow[]>
+
+  getStaffProfile(staffId: string): Promise<StaffProfile>
+
+  uploadStaffDocument(input: StaffDocumentInput): Promise<void>
+
+  addStaffNote(input: StaffNoteInput): Promise<void>
+
+  /**
+   * خروجی متنی پرونده کارکنان، برای بازرس.
+   *
+   * همان چیزی که روی صفحه است، نه بیشتر: خروجی‌ای که چیزی را نشان دهد
+   * که مدیر خودش ندیده، یعنی دو حقیقت.
+   */
+  exportStaffFile(): Promise<string>
+
+  /** مربی: مدارک و یادداشت‌های خودش (فقط آن‌ها که با او در میان گذاشته شده). */
+  getMyStaffFile(): Promise<StaffProfile>
 
   /* ── دارو — بخش ۵.۳ ───────────────────────────────────────── */
 

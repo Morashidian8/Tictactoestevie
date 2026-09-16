@@ -25,6 +25,7 @@ import type {
   ParentDay,
 } from '../../core/data/index.ts'
 import { DayTimeline, type DayStep } from './DayTimeline.tsx'
+import { MessagesPage } from '../shared/MessagesPage.tsx'
 import { MorePage } from './MorePage.tsx'
 import { TomorrowCard } from './TomorrowCard.tsx'
 import styles from './TodayPage.module.css'
@@ -202,7 +203,7 @@ export function ParentTodayPage() {
     { id: 'finance', label: 'مالی', icon: <WalletIcon size={22} /> },
     { id: 'more', label: 'بیشتر', icon: <MoreIcon size={22} /> },
   ]
-  const CENTER: TabItem = { id: 'messages', label: 'پیام به مربی', icon: <ChatIcon size={24} /> }
+  const CENTER: TabItem = { id: 'messages', label: 'پیام‌ها', icon: <ChatIcon size={24} /> }
 
   /*
    * هر مقصدی جز خانه، همان صفحه «بیشتر» است با تب از پیش انتخاب‌شده.
@@ -216,6 +217,23 @@ export function ParentTodayPage() {
    * صفحه همان می‌ماند؛ یعنی «گیر کردن» نوار. ناوبری هرگز نباید منتظر
    * یک درخواست شبکه بماند: هر مقصد داده خودش را خودش می‌خواند.
    */
+  /*
+   * پیام‌ها دیگر یک تبِ «بیشتر» نیست — صندوق مشترک هر سه نقش است.
+   *
+   * خانواده حالا انتخاب می‌کند به کدام مربی بنویسد؛ پیش از این یک اتاق
+   * برای هر کودک بود و همه مربیان در آن.
+   */
+  if (nav === 'messages') {
+    return (
+      <div className={styles.shell}>
+        <div className={styles.shellBody}>
+          <MessagesPage />
+        </div>
+        <TabBar items={NAV} center={CENTER} active={nav} onSelect={(id: string) => setNav(id as typeof nav)} />
+      </div>
+    )
+  }
+
   if (nav !== 'home' && childId) {
     const tab = nav === 'more' ? 'menu' : nav === 'tomorrow' ? 'absence' : nav
     const name = children.find((c) => c.id === childId)?.firstName ?? ''
