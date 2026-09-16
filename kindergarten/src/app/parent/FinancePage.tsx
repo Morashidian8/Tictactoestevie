@@ -106,6 +106,21 @@ export function FinancePage({ childId, onBack }: { childId: string; onBack: () =
     .at(0)
   const waiting = finance.offers.filter((o) => o.optional && o.answer === null)
 
+  /*
+   * سه دسته، از وضعیت خودِ ماه — نه از تاریخ.
+   *
+   * «الان» یعنی صورتحساب صادر شده و تسویه نشده. «پیش رو» یعنی هنوز
+   * صادر نشده. تکیه بر مقایسه تاریخ به‌جای وضعیت، ماهی را که مدیر دیر
+   * صادر کرده در دسته اشتباه می‌نشاند.
+   */
+  const bucket = {
+    now: finance.year.filter(
+      (m) => m.issued && m.status !== 'paid' && m.status !== 'cancelled',
+    ),
+    ahead: finance.year.filter((m) => !m.issued),
+    past: finance.year.filter((m) => m.issued && m.status === 'paid'),
+  }
+
   return (
     <Shell title="مالی" onBack={onBack}>
       {/* ── مانده ─────────────────────────────────────────── */}
@@ -142,31 +157,51 @@ export function FinancePage({ childId, onBack }: { childId: string; onBack: () =
         </section>
       ) : null}
 
-      {/* ── برنامه شهریه سال ───────────────────────────────── */}
+      {/* ── برنامه شهریه سال، در سه دسته ───────────────────── */}
+      {/*
+        گذشته، الان، پیش رو.
+
+        یک فهرست دوازده‌تایی به خانواده نمی‌گوید کدامش کارِ امروز است.
+        سه دسته می‌گوید: چه داده‌ام، چه بدهکارم، چه در راه است — همان سه
+        سؤالی که خانواده با آن‌ها این صفحه را باز می‌کند.
+      */}
       <section className={shared.card} aria-label="برنامه شهریه سال">
         <span className={`${shared.cardLabel} t-caption`}>
           شهریه سال {toPersianDigits(finance.yearLabel)}
         </span>
-        <ul className={styles.year}>
-          {finance.year.map((month) => (
-            <MonthRow
-              key={month.period}
-              month={month}
-              open={openMonth === month.period}
-              invoice={finance.invoices.find((i) => i.period === month.period) ?? null}
-              onToggle={() =>
-                setOpenMonth(openMonth === month.period ? null : month.period)
-              }
-            />
-          ))}
-        </ul>
+
+        <MonthGroup
+          title="بدهی الان"
+          empty="بدهی سررسیدشده‌ای ندارید."
+          months={bucket.now}
+          finance={finance}
+          openMonth={openMonth}
+          onToggle={setOpenMonth}
+        />
+        <MonthGroup
+          title="پیش رو"
+          empty="ماه دیگری در این سال نمانده."
+          months={bucket.ahead}
+          finance={finance}
+          openMonth={openMonth}
+          onToggle={setOpenMonth}
+        />
+        <MonthGroup
+          title="پرداخت‌شده"
+          empty="هنوز ماهی تسویه نشده."
+          months={bucket.past}
+          finance={finance}
+          openMonth={openMonth}
+          onToggle={setOpenMonth}
+        />
+
         {/*
           مجموع سال عمداً نوشته نمی‌شود.
           جمع ماه‌های صادرنشده با صادرشده، عددی می‌سازد که نه بدهی است
           نه قرارداد — و همان عدد است که خانواده یادش می‌ماند.
         */}
         <p className={`${shared.hint} t-caption`}>
-          ماه‌هایی که هنوز صورتحساب ندارند، برآوردند و بدهی به حساب نمی‌آیند.
+          ماه‌های «پیش رو» که هنوز صورتحساب ندارند، برآوردند و بدهی به حساب نمی‌آیند.
         </p>
       </section>
 
@@ -203,14 +238,14 @@ export function FinancePage({ childId, onBack }: { childId: string; onBack: () =
                       className={`${shared.payOnline} t-body`}
                       onClick={() => setPaying(invoice)}
                     >
-                      پرداخت آنلاین
+                      پرداخت با شاپرک
                     </button>
                     <button
                       type="button"
                       className={`${shared.declare} t-caption`}
                       onClick={() => setDeclaring(invoice)}
                     >
-                      پرداخت کردم، ولی نه از اینجا
+                      کارت به کارت — با ثبت رسید
                     </button>
                   </>
                 )}
@@ -315,6 +350,45 @@ export function FinancePage({ childId, onBack }: { childId: string; onBack: () =
         />
       ) : null}
     </Shell>
+  )
+}
+
+/* ── یک دسته از سال ─────────────────────────────────────────── */
+
+/**
+ * یک دسته و ماه‌هایش.
+ *
+ * دسته خالی هم نوشته می‌شود و پنهان نمی‌ماند: «بدهی سررسیدشده‌ای
+ * ندارید» خبرِ خوبی است که خانواده باید ببیند، نه چیزی که با ناپدید
+ * شدن دسته از آن سر دربیاورد.
+ */
+function MonthGroup({ title, empty, months, finance, openMonth, onToggle }: {
+  title: string
+  empty: string
+  months: FeeYearMonth[]
+  finance: ParentFinance
+  openMonth: string | null
+  onToggle: (period: string | null) => void
+}) {
+  return (
+    <div className={styles.group}>
+      <p className={`${styles.groupTitle} t-caption`}>{title}</p>
+      {months.length === 0 ? (
+        <p className={`${shared.hint} t-caption`}>{empty}</p>
+      ) : (
+        <ul className={styles.year}>
+          {months.map((month) => (
+            <MonthRow
+              key={month.period}
+              month={month}
+              open={openMonth === month.period}
+              invoice={finance.invoices.find((i) => i.period === month.period) ?? null}
+              onToggle={() => onToggle(openMonth === month.period ? null : month.period)}
+            />
+          ))}
+        </ul>
+      )}
+    </div>
   )
 }
 
@@ -499,7 +573,7 @@ function Document({ method, trackingCode, receiptNo, receiptUrl }: {
     return (
       <p className={`${styles.doc} t-caption`}>
         <CheckIcon size={14} />
-        {method ?? 'پرداخت آنلاین'} · کد رهگیری{' '}
+        {method ?? 'شاپرک'} · کد رهگیری{' '}
         <span className={shared.trackingCode}>{toLatinDigits(trackingCode)}</span>
       </p>
     )
@@ -599,9 +673,9 @@ function OnlinePaySheet({
   }, [phase, key, data])
 
   return (
-    <div className={shared.sheetBackdrop} role="dialog" aria-label="پرداخت آنلاین">
+    <div className={shared.sheetBackdrop} role="dialog" aria-label="پرداخت با شاپرک">
       <div className={shared.sheet}>
-        <h2 className={`${shared.sheetTitle} t-h2`}>پرداخت آنلاین</h2>
+        <h2 className={`${shared.sheetTitle} t-h2`}>پرداخت با شاپرک</h2>
 
         {phase === 'start' ? (
           <>
@@ -610,7 +684,7 @@ function OnlinePaySheet({
               شهریه {invoice.period} · {invoice.childName}
             </p>
             <p className={`${shared.hint} t-caption`}>
-              به درگاه بانکی منتقل می‌شوید. پس از پرداخت، رسید با کد رهگیری
+              به درگاه بانکی شاپرک منتقل می‌شوید. پس از پرداخت، رسید با کد رهگیری
               همین‌جا صادر می‌شود.
             </p>
             {error ? <p className={`${shared.error} t-body`}>{error}</p> : null}
@@ -725,10 +799,19 @@ function DeclareSheet({
   return (
     <div className={shared.sheetBackdrop} role="dialog" aria-label="اعلام پرداخت">
       <div className={shared.sheet}>
-        <p className={`${shared.sheetTitle} t-h2`}>پرداخت کردم</p>
+        <p className={`${shared.sheetTitle} t-h2`}>کارت به کارت</p>
         <p className={`${shared.hint} t-body`}>
-          {toPersianDigits(invoice.period)} · باقی‌مانده{' '}
+          {formatPeriod(invoice.period)} · باقی‌مانده{' '}
           <b className={shared.amount}>{formatRial(remaining)}</b>
+        </p>
+        {/*
+          مسیر دوم، و صریح می‌گوید چرا دوم است.
+          شاپرک همان لحظه تسویه می‌کند؛ این یکی تا وقتی مدیر رسید را
+          ندیده، هیچ ریالی در دفتر مالی ثبت نمی‌شود.
+        */}
+        <p className={`${shared.hint} t-caption`}>
+          پس از واریز، تصویر رسید را اینجا بگذارید. تا مدیر تأییدش نکند،
+          صورتحساب همچنان پرداخت‌نشده می‌ماند.
         </p>
 
         <label className={`${shared.field} t-caption`}>

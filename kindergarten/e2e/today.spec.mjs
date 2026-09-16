@@ -1159,6 +1159,18 @@ check(
   /صادر نشده/.test(parentMoney),
   'ماه‌هایی که هنوز صورتحساب ندارند، «صادر نشده» علامت می‌خورند',
 )
+
+/*
+ * سه دسته، به همان ترتیبی که خانواده می‌پرسد:
+ * چه بدهکارم، چه در راه است، چه داده‌ام.
+ */
+check(/بدهی الان/.test(parentMoney), 'بدهی الان دسته خودش را دارد')
+check(/پیش رو/.test(parentMoney), 'پرداخت‌های پیش رو دسته خودش را دارد')
+check(/پرداخت‌شده/.test(parentMoney), 'پرداخت‌های گذشته دسته خودش را دارد')
+check(
+  /پرداخت‌های ثبت‌شده/.test(parentMoney),
+  'و سابقه پرداخت، جدا از برنامه سال، با سند هر پرداخت',
+)
 check(
   /بدهی به حساب نمی‌آیند/.test(parentMoney),
   'و صریح گفته می‌شود که برآوردند، نه بدهی',
@@ -1302,7 +1314,7 @@ await signIn('09120000003', { fresh: false })
 await page.waitForSelector('[class*="cardDate"]', { timeout: 8000 })
 await page.locator('nav button:has-text("مالی")').click()
 await page.waitForSelector('text=مانده')
-await page.click('button:has-text("پرداخت کردم")')
+await page.click('button:has-text("کارت به کارت")')
 await page.waitForSelector('[role="dialog"]')
 check(
   (await page.locator('button:has-text("عکس رسید را بگذارید")').count()) === 1,
@@ -1382,16 +1394,16 @@ await page.locator('nav button:has-text("مالی")').click()
 await page.waitForSelector('text=مانده')
 await page.waitForTimeout(500)
 check(
-  (await page.locator('button:has-text("پرداخت آنلاین")').count()) >= 1,
-  'پرداخت آنلاین کنش اصلی کارت صورتحساب است',
+  (await page.locator('button:has-text("پرداخت با شاپرک")').count()) >= 1,
+  'شاپرک کنش اصلی کارت صورتحساب است، و به اسم خودش',
 )
 check(
-  (await page.locator('button:has-text("پرداخت کردم، ولی نه از اینجا")').count()) >= 1,
-  'و ثبت دستی فیش به مسیر فرعی تبدیل شده، نه حذف',
+  (await page.locator('button:has-text("کارت به کارت")').count()) >= 1,
+  'و کارت‌به‌کارت مسیر دوم است، نه حذف',
 )
 
-const payableBefore = await page.locator('button:has-text("پرداخت آنلاین")').count()
-await page.locator('button:has-text("پرداخت آنلاین")').first().click()
+const payableBefore = await page.locator('button:has-text("پرداخت با شاپرک")').count()
+await page.locator('button:has-text("پرداخت با شاپرک")').first().click()
 await page.waitForSelector('[role="dialog"]')
 await page.click('button:has-text("رفتن به درگاه")')
 await page.waitForTimeout(400)
@@ -1414,7 +1426,7 @@ await page.click('button:has-text("بستن")')
 await page.waitForTimeout(800)
 // یکی کم‌تر، نه صفر: صورتحساب‌های باز دیگری هم روی صفحه هست.
 check(
-  (await page.locator('button:has-text("پرداخت آنلاین")').count()) === payableBefore - 1,
+  (await page.locator('button:has-text("پرداخت با شاپرک")').count()) === payableBefore - 1,
   'و صورتحساب تسویه‌شده دیگر دکمه پرداخت ندارد',
 )
 await page.locator('[aria-label="بازگشت"]').first().click()
