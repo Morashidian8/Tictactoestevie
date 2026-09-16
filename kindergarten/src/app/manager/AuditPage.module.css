@@ -188,3 +188,182 @@
   .tableScroll { overflow: visible; }
   .builtHead { margin: 0; }
 }
+
+/* ── چک‌لیست بازرسی ─────────────────────────────────────────── */
+
+.note {
+  margin: 0 0 var(--space-3);
+  padding: var(--space-3);
+  background: var(--mint-tint);
+  border-radius: var(--r-input);
+  color: var(--ink);
+}
+
+.muted { margin: 0; color: var(--ink-muted); }
+
+.checklist { list-style: none; margin: 0; padding: 0; }
+
+.requirement {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding-block: var(--space-2);
+}
+.requirement + .requirement { border-block-start: 1px solid var(--border); }
+
+/*
+ * نشان تأمین، با گلیف و نه فقط رنگ — بخش ۱۲.۲.
+ * خطِ تیره برای تأمین‌نشده، چون «خالی» هم یک حالت است.
+ */
+.mark {
+  flex: none;
+  display: grid;
+  place-items: center;
+  inline-size: 22px;
+  block-size: 22px;
+  border-radius: var(--r-chip);
+  font-size: var(--text-caption);
+}
+.markOk { background: var(--mint-tint); color: var(--mint-deep); }
+.markGap { background: var(--brick-tint); color: var(--ink); }
+
+.reqMain { flex: 1; min-inline-size: 0; display: flex; flex-direction: column; gap: 2px; }
+.reqTitle { color: var(--ink); }
+.reqState { color: var(--ink-muted); }
+
+.hide {
+  flex: none;
+  padding: 0;
+  background: none;
+  border: none;
+  color: var(--ink-muted);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.action {
+  min-block-size: var(--touch-manager);
+  margin-block-start: var(--space-2);
+  border: 1px solid var(--border-input);
+  border-radius: var(--r-input);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+}
+.action:active { background: var(--coral-tint); }
+
+.row { display: flex; align-items: center; gap: var(--space-2); margin: 0; color: var(--ink); }
+.row + .row { border-block-start: 1px solid var(--border); padding-block-start: var(--space-2); }
+.row b { margin-inline-start: auto; white-space: nowrap; }
+
+.expired { color: var(--ink); font-weight: var(--weight-bold); }
+
+/* ── دفتر بازدید ────────────────────────────────────────────── */
+
+.visit { display: flex; flex-direction: column; gap: var(--space-1); padding-block: var(--space-2); }
+.visit + .visit { border-block-start: 1px solid var(--border); }
+
+.visitTop { display: flex; align-items: center; gap: var(--space-2); margin: 0; color: var(--ink); }
+.visitBody { margin: 0; color: var(--ink); overflow-wrap: anywhere; }
+
+/* اقدام باز، زمینه زرد — یک کارِ مانده است، نه یک هشدار ایمنی. */
+.required {
+  margin: 0;
+  padding: var(--space-2);
+  background: var(--mango-tint);
+  border-radius: var(--r-input);
+  color: var(--ink);
+}
+
+.resolved { margin: 0; color: var(--mint-deep); }
+
+/* ── شیت‌ها ─────────────────────────────────────────────────── */
+
+.sheetBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: grid;
+  place-items: end center;
+  background: rgb(15 23 42 / .45);
+  overflow-y: auto;
+}
+
+.sheet {
+  inline-size: 100%;
+  max-inline-size: 560px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-5) var(--space-4);
+  padding-block-end: calc(var(--space-5) + env(safe-area-inset-bottom));
+  background: var(--surface);
+  border-start-start-radius: var(--r-card);
+  border-start-end-radius: var(--r-card);
+}
+
+.sheetTitle { margin: 0; font-family: var(--font); font-weight: var(--weight-black); }
+
+.choices { display: flex; flex-wrap: wrap; gap: var(--space-2); margin: 0; padding: 0; border: none; }
+.choices legend { padding: 0; margin-block-end: var(--space-1); }
+
+.choice {
+  min-block-size: var(--touch-manager);
+  padding-inline: var(--space-3);
+  border: 1px solid var(--border-input);
+  border-radius: var(--r-input);
+  background: var(--surface);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: var(--text-body-sm);
+  cursor: pointer;
+}
+.choice[aria-pressed='true'] {
+  background: var(--coral-tint);
+  border-color: var(--coral);
+  font-weight: var(--weight-medium);
+}
+
+.field { display: flex; flex-direction: column; gap: var(--space-1); color: var(--ink-muted); }
+
+.input,
+.textarea {
+  min-block-size: var(--touch-manager);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border-input);
+  border-radius: var(--r-input);
+  background: var(--surface);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: var(--text-body-sm);
+}
+.textarea { resize: vertical; }
+.input:focus, .textarea:focus { border-color: var(--coral); outline: none; }
+
+.sheetActions { display: flex; gap: var(--space-2); margin-block-start: var(--space-2); }
+
+.secondary {
+  flex: 1;
+  min-block-size: var(--touch-manager);
+  border: 1px solid var(--border-input);
+  border-radius: var(--r-input);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+}
+
+.primary {
+  flex: 2;
+  min-block-size: var(--touch-manager);
+  border: none;
+  border-radius: var(--r-input);
+  background: var(--coral);
+  color: var(--ink);
+  font-family: inherit;
+  font-weight: var(--weight-bold);
+  cursor: pointer;
+}
+.primary:disabled { background: var(--disabled-bg); color: var(--disabled-fg); }

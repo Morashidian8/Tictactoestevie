@@ -51,6 +51,10 @@ import type {
   StaffProfile,
   AttendanceDay,
   ObservationLens,
+  CenterDocument,
+  DocumentState,
+  InspectionVisit,
+  RequirementSource,
   MonthlyReportStatus,
   InvoiceLine,
   FeeItem,
@@ -207,6 +211,9 @@ function save(): void {
       chats: CHATS,
       observations: OBSERVATIONS,
       reports: REPORTS,
+      requirements: REQUIREMENTS,
+      centerDocs: CENTER_DOCS,
+      visits: VISITS,
       staffDocs: STAFF_DOCS,
       staffNotes: STAFF_NOTES,
       payments: PAYMENTS,
@@ -247,6 +254,9 @@ function hydrate(): void {
       chats?: ChatRow[]
       observations?: ObservationRow[]
       reports?: ReportRow[]
+      requirements?: RequirementRow[]
+      centerDocs?: CenterDocument[]
+      visits?: InspectionVisit[]
       staffDocs?: (StaffDocument & { staffId: string })[]
       staffNotes?: (StaffNote & { staffId: string })[]
       payments?: Payment[]
@@ -299,6 +309,9 @@ function hydrate(): void {
     restore(CHATS, payload.chats)
     restore(OBSERVATIONS, payload.observations)
     restore(REPORTS, payload.reports)
+    restore(REQUIREMENTS, payload.requirements)
+    restore(CENTER_DOCS, payload.centerDocs)
+    restore(VISITS, payload.visits)
     restore(STAFF_DOCS, payload.staffDocs)
     restore(STAFF_NOTES, payload.staffNotes)
     /*
@@ -795,6 +808,67 @@ type ReportRow = {
 const OBSERVATIONS: ObservationRow[] = []
 const REPORTS: ReportRow[] = []
 let observationSeq = 0
+
+/* ── پرونده بازرسی ──────────────────────────────────────────── */
+
+/**
+ * چک‌لیست آغازین — آینه app.seed_inspection_checklist.
+ *
+ * **مرجع قانونی نیست.** نقطه شروعی است از اقلامی که مهدها معمولاً نگه
+ * می‌دارند و اپ از قبل داده‌شان را دارد؛ باید با الزامات بهزیستی و
+ * شبکه بهداشتِ همان استان تطبیق داده شود — و به همین دلیل مهد
+ * می‌تواند ردیف اضافه کند یا غیرفعالش کند.
+ */
+const SEED_REQUIREMENTS: {
+  title: string
+  source: RequirementSource
+  key: string | null
+  note: string | null
+}[] = [
+  { title: 'مجوز فعالیت مهدکودک', source: 'center_document', key: 'operating_licence', note: 'با تاریخ انقضا' },
+  { title: 'بیمه مسئولیت مدنی', source: 'center_document', key: 'liability_insurance', note: null },
+  { title: 'تأییدیه ایمنی و اطفاء حریق', source: 'center_document', key: 'fire_safety', note: null },
+  { title: 'تأییدیه بهداشت محیط', source: 'center_document', key: 'health_permit', note: null },
+  { title: 'سند یا اجاره‌نامه محل', source: 'center_document', key: 'lease', note: null },
+  { title: 'کارت بهداشت همه مربیان', source: 'staff_document', key: 'health_card', note: 'برای هر مربی فعال' },
+  { title: 'گواهی عدم سوءپیشینه', source: 'staff_document', key: 'criminal_record', note: 'برای هر مربی فعال' },
+  { title: 'مدرک تحصیلی مربیان', source: 'staff_document', key: 'degree', note: null },
+  { title: 'دفتر آمار کودکان', source: 'app_report', key: null, note: 'خروجی مستقیم از اپ' },
+  { title: 'پرونده سلامت و واکسیناسیون', source: 'app_report', key: null, note: 'خروجی مستقیم از اپ' },
+  { title: 'دفتر حضور و غیاب', source: 'app_report', key: null, note: 'خروجی مستقیم از اپ' },
+  { title: 'دفتر حوادث', source: 'app_report', key: null, note: 'خروجی مستقیم از اپ' },
+  { title: 'دفتر دارو', source: 'app_report', key: null, note: 'خروجی مستقیم از اپ' },
+  { title: 'رضایت‌نامه‌های والدین', source: 'app_report', key: null, note: 'خروجی مستقیم از اپ' },
+  { title: 'نسبت مربی به کودک', source: 'app_report', key: null, note: 'خروجی مستقیم از اپ' },
+]
+
+type RequirementRow = {
+  id: string
+  title: string
+  source: RequirementSource
+  sourceKey: string | null
+  note: string | null
+  active: boolean
+}
+
+const REQUIREMENTS: RequirementRow[] = []
+const CENTER_DOCS: CenterDocument[] = []
+const VISITS: InspectionVisit[] = []
+let inspectionSeq = 0
+
+/**
+ * وضعیت انقضا — آینه app.document_state.
+ *
+ * شصت روز پیش از انقضا «نزدیک انقضا» می‌شود، چون تمدید مجوز و بیمه در
+ * ایران هفته‌ها طول می‌کشد و هشدارِ روز آخر، هشدار نیست.
+ */
+function documentState(expiresAt: string | null, today: string): DocumentState {
+  if (!expiresAt) return 'none'
+  if (expiresAt < today) return 'expired'
+  const soon = new Date(`${today}T12:00:00`)
+  soon.setDate(soon.getDate() + 60)
+  return expiresAt <= toIsoDate(soon) ? 'expiring' : 'valid'
+}
 
 const CONVERSATIONS: ConversationRow[] = []
 const CHATS: ChatRow[] = []
@@ -2823,6 +2897,181 @@ export function createLocalDataAccess(scope: AccessScope): DataAccess {
     async listPaymentClaims(status) {
       assertManager()
       return CLAIMS.filter((c) => c.status === status)
+    },
+
+    /* ── پرونده بازرسی ──────────────────────────────────────── */
+
+    async getInspectionFile() {
+      assertManager()
+      const today = toIsoDate(new Date())
+
+      const requirements = REQUIREMENTS.filter((r) => r.active).map((r) => {
+        /*
+         * قلم app_report همیشه تأمین‌شده است.
+         *
+         * عمدی: داده‌اش در اپ هست و خروجی‌اش ساختنی. قلمی که اپ خودش
+         * تولیدش می‌کند نباید مدیر را نگران کند.
+         */
+        if (r.source === 'app_report') {
+          return {
+            id: r.id,
+            title: r.title,
+            source: r.source,
+            satisfied: true,
+            expiresAt: null,
+            state: 'none' as DocumentState,
+            note: r.note,
+          }
+        }
+
+        if (r.source === 'center_document') {
+          const mine = CENTER_DOCS.filter((d) => d.kind === r.sourceKey)
+          const valid = mine.filter((d) => !d.expiresAt || d.expiresAt >= today)
+          const soonest = mine
+            .map((d) => d.expiresAt)
+            .filter((e): e is string => Boolean(e))
+            .sort()[0] ?? null
+          return {
+            id: r.id,
+            title: r.title,
+            source: r.source,
+            satisfied: valid.length > 0,
+            expiresAt: soonest,
+            state: documentState(soonest, today),
+            note: r.note,
+          }
+        }
+
+        /*
+         * مدرک پرسنل: یک مربیِ بی‌کارت، کل قلم را ناقص می‌کند.
+         *
+         * «هشتاد درصد مربیان کارت دارند» برای بازرس یعنی بیست درصدشان
+         * ندارند — و همان یکی است که پرونده را می‌بندد.
+         */
+        const teachers = DIRECTORY.filter((d) => d.role === 'teacher')
+        const missing = teachers.filter(
+          (t) =>
+            !STAFF_DOCS.some(
+              (doc) =>
+                doc.staffId === t.id &&
+                doc.kind === r.sourceKey &&
+                (!doc.expiresAt || doc.expiresAt >= today),
+            ),
+        )
+        const soonest = STAFF_DOCS.filter((d) => d.kind === r.sourceKey && d.expiresAt)
+          .map((d) => d.expiresAt as string)
+          .sort()[0] ?? null
+        return {
+          id: r.id,
+          title: r.title,
+          source: r.source,
+          satisfied: teachers.length > 0 && missing.length === 0,
+          expiresAt: soonest,
+          state: documentState(soonest, today),
+          note: r.note,
+        }
+      })
+
+      return {
+        requirements,
+        documents: [...CENTER_DOCS],
+        visits: [...VISITS].sort((a, b) => b.visitedOn.localeCompare(a.visitedOn)),
+        ready: requirements.filter((r) => r.satisfied).length,
+        total: requirements.length,
+        expiring: requirements.filter((r) => r.state === 'expiring' || r.state === 'expired')
+          .length,
+        openActions: VISITS.filter((v) => v.actionRequired && !v.resolvedAt).length,
+      }
+    },
+
+    async seedInspectionChecklist() {
+      assertManager()
+      let added = 0
+      for (const item of SEED_REQUIREMENTS) {
+        // دوباره‌اجراپذیر: صدا زدن دوباره‌اش قلم تکراری نمی‌سازد.
+        if (REQUIREMENTS.some((r) => r.title === item.title)) continue
+        REQUIREMENTS.push({
+          id: `req-${(inspectionSeq += 1)}`,
+          title: item.title,
+          source: item.source,
+          sourceKey: item.key,
+          note: item.note,
+          active: true,
+        })
+        added += 1
+      }
+      save()
+      return added
+    },
+
+    async addInspectionRequirement(title, note) {
+      assertManager()
+      if (!title.trim()) throw new Error('عنوان قلم لازم است.')
+      REQUIREMENTS.push({
+        id: `req-${(inspectionSeq += 1)}`,
+        title: title.trim(),
+        /*
+         * قلمی که مهد خودش اضافه می‌کند، «دستی» است.
+         *
+         * اپ نمی‌تواند بداند چطور ثابتش کند، پس ادعا نمی‌کند که
+         * تأمین شده — فقط یادآوری‌اش می‌کند.
+         */
+        source: 'manual',
+        sourceKey: null,
+        note: note?.trim() || null,
+        active: true,
+      })
+      save()
+    },
+
+    async setRequirementActive(requirementId, active) {
+      assertManager()
+      const row = REQUIREMENTS.find((r) => r.id === requirementId)
+      if (!row) throw new Error('قلم پیدا نشد.')
+      // غیرفعال، نه حذف: مهدی که نظرش عوض شود، تاریخچه‌اش را نمی‌بازد.
+      row.active = active
+      save()
+    },
+
+    async uploadCenterDocument(input) {
+      assertManager()
+      if (!input.title.trim()) throw new Error('عنوان مدرک لازم است.')
+      CENTER_DOCS.push({
+        id: `cdoc-${(inspectionSeq += 1)}`,
+        kind: input.kind,
+        title: input.title.trim(),
+        issuer: input.issuer?.trim() || null,
+        referenceNo: input.referenceNo?.trim() || null,
+        issuedAt: null,
+        expiresAt: input.expiresAt ?? null,
+        note: input.note?.trim() || null,
+      })
+      save()
+    },
+
+    async recordInspectionVisit(input) {
+      assertManager()
+      if (!input.authority.trim()) throw new Error('نام مرجع بازرسی لازم است.')
+      VISITS.push({
+        id: `visit-${(inspectionSeq += 1)}`,
+        visitedOn: input.visitedOn,
+        authority: input.authority.trim(),
+        inspectorName: input.inspectorName?.trim() || null,
+        findings: input.findings?.trim() || null,
+        actionRequired: input.actionRequired?.trim() || null,
+        resolvedAt: null,
+      })
+      save()
+    },
+
+    async resolveInspectionAction(visitId) {
+      assertManager()
+      const row = VISITS.find((v) => v.id === visitId)
+      if (!row) throw new Error('بازدید پیدا نشد.')
+      if (!row.actionRequired) throw new Error('این بازدید اقدام لازمی نداشت.')
+      // تاریخ رفع، نه یک تیک: بازرسِ بعدی می‌پرسد کِی رفع شد.
+      row.resolvedAt = toIsoDate(new Date())
+      save()
     },
 
     /* ── مشاهده و گزارش ماهانه ──────────────────────────────── */

@@ -1,8 +1,22 @@
 import { useCallback, useEffect, useState } from 'react'
 import { AlertIcon, EmptyState } from '../../design-system/index.ts'
-import { formatCount, formatJalali, toPersianDigits } from '../../i18n/index.ts'
+import {
+  formatCount,
+  formatJalali,
+  parseJalaliInput,
+  toIsoDate,
+  toPersianDigits,
+} from '../../i18n/index.ts'
+import { CheckIcon } from '../../design-system/index.ts'
 import { useData } from '../../core/auth/index.ts'
-import type { AuditFile, AuditReadiness } from '../../core/data/index.ts'
+import type {
+  AuditFile,
+  AuditReadiness,
+  CenterDocumentInput,
+  CenterDocumentKind,
+  InspectionFile,
+  InspectionVisitInput,
+} from '../../core/data/index.ts'
 import styles from './AuditPage.module.css'
 
 /**
@@ -18,6 +32,35 @@ import styles from './AuditPage.module.css'
  *           فایل روز بازرسی دیر است؛ این نما هفته‌ها زودتر کار دارد.
  *   پایین — ساختن خودِ فایل.
  */
+const CENTER_DOC_KINDS: { value: CenterDocumentKind; label: string }[] = [
+  { value: 'operating_licence', label: 'مجوز فعالیت' },
+  { value: 'liability_insurance', label: 'بیمه مسئولیت' },
+  { value: 'fire_safety', label: 'ایمنی و اطفاء حریق' },
+  { value: 'building_safety', label: 'ایمنی ساختمان' },
+  { value: 'health_permit', label: 'بهداشت محیط' },
+  { value: 'lease', label: 'سند یا اجاره‌نامه' },
+  { value: 'other', label: 'سایر' },
+]
+
+const CENTER_DOC_TEXT: Record<string, string> = Object.fromEntries(
+  CENTER_DOC_KINDS.map((k) => [k.value, k.label]),
+)
+
+/** از کجا این قلم ثابت می‌شود. */
+const SOURCE_TEXT: Record<string, string> = {
+  center_document: 'مدرک مهد',
+  staff_document: 'مدرک مربیان',
+  app_report: 'خروجی اپ',
+  manual: 'دست مهد',
+}
+
+const STATE_TEXT: Record<string, string> = {
+  valid: 'اعتبار تا',
+  expiring: 'نزدیک انقضا،',
+  expired: 'منقضی شد',
+  none: '',
+}
+
 const VACCINATION_TEXT: Record<string, string> = {
   complete: 'کامل',
   incomplete: 'ناقص',
@@ -30,10 +73,19 @@ export function AuditPage({ onBack }: { onBack: () => void }) {
   const [file, setFile] = useState<AuditFile | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  /** پرونده بازرسی: چک‌لیست، مدارک مهد، و دفتر بازدید. */
+  const [inspection, setInspection] = useState<InspectionFile | null>(null)
+  const [sheet, setSheet] = useState<'document' | 'visit' | 'requirement' | null>(null)
+  const [note, setNote] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     try {
-      setReady(await data.getAuditReadiness())
+      const [readiness, inspectionFile] = await Promise.all([
+        data.getAuditReadiness(),
+        data.getInspectionFile(),
+      ])
+      setReady(readiness)
+      setInspection(inspectionFile)
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'خوانده نشد.')
     }
@@ -42,6 +94,22 @@ export function AuditPage({ onBack }: { onBack: () => void }) {
   useEffect(() => {
     void load()
   }, [load])
+
+  /** یک کار، با پیام و تازه‌سازی. */
+  const run = async (job: () => Promise<void>) => {
+    setBusy(true)
+    setError(null)
+    try {
+      await job()
+      await load()
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'انجام نشد.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const today = toIsoDate(new Date())
 
   const build = async () => {
     setBusy(true)
@@ -114,6 +182,185 @@ export function AuditPage({ onBack }: { onBack: () => void }) {
           ) : (
             <EmptyState text="در حال خواندن…" />
           )}
+        </section>
+
+        {note ? <p className={`${styles.note} t-body-sm`}>{note}</p> : null}
+
+        {/* ── چک‌لیست الزامات ────────────────────────────── */}
+        <section className={styles.card} aria-label="چک‌لیست بازرسی">
+          <span className={`${styles.cardLabel} t-caption`}>
+            چک‌لیست بازرسی
+            {inspection ? ` — ${formatCount(inspection.ready)} از ${formatCount(inspection.total)} آماده` : ''}
+          </span>
+
+          {inspection === null ? (
+            <EmptyState text="در حال خواندن…" />
+          ) : inspection.total === 0 ? (
+            /*
+              چک‌لیست خالی، دعوت به کنش است نه یک جمله خبری — بخش ۱۲.۱۰.
+            */
+            <>
+              <p className={`${styles.muted} t-body-sm`}>
+                هنوز چک‌لیستی ندارید. از یک سیاهه آغازین شروع کنید و بعد با الزامات
+                بهزیستی استان خودتان تطبیقش بدهید.
+              </p>
+              <button
+                type="button"
+                className={styles.action}
+                disabled={busy}
+                onClick={() =>
+                  void run(async () => {
+                    const added = await data.seedInspectionChecklist()
+                    setNote(`${formatCount(added)} قلم به چک‌لیست اضافه شد.`)
+                  })
+                }
+              >
+                ساختن چک‌لیست آغازین
+              </button>
+            </>
+          ) : (
+            <>
+              <ul className={styles.checklist}>
+                {inspection.requirements.map((item) => (
+                  <li key={item.id} className={`${styles.requirement} t-body-sm`}>
+                    <span
+                      className={`${styles.mark} ${item.satisfied ? styles.markOk : styles.markGap}`}
+                      aria-hidden
+                    >
+                      {item.satisfied ? <CheckIcon size={14} /> : '—'}
+                    </span>
+                    <span className={styles.reqMain}>
+                      <span className={styles.reqTitle}>{item.title}</span>
+                      {/*
+                        وضعیت با متن گفته می‌شود، نه فقط با رنگ — بخش ۱۲.۲.
+                      */}
+                      <span className={`${styles.reqState} t-caption`}>
+                        {item.satisfied ? SOURCE_TEXT[item.source] : 'تأمین نشده'}
+                        {item.expiresAt
+                          ? ` · ${STATE_TEXT[item.state]} ${formatJalali(new Date(item.expiresAt), 'short')}`
+                          : ''}
+                        {item.note ? ` · ${item.note}` : ''}
+                      </span>
+                    </span>
+                    <button
+                      type="button"
+                      className={`${styles.hide} t-caption`}
+                      onClick={() =>
+                        void run(async () => {
+                          await data.setRequirementActive(item.id, false)
+                          setNote(`«${item.title}» از چک‌لیست برداشته شد.`)
+                        })
+                      }
+                    >
+                      لازم ندارم
+                    </button>
+                  </li>
+                ))}
+              </ul>
+              {/*
+                فهرست، مرجع قانونی نیست و صفحه همین را می‌گوید.
+                مقررات از استانی به استان دیگر فرق دارد و بازرسِ امسال
+                چیزی می‌خواهد که پارسال نمی‌خواست.
+              */}
+              <p className={`${styles.muted} t-caption`}>
+                این سیاهه نقطه شروع است، نه فهرست قانونی. با الزامات بهزیستی و شبکه
+                بهداشتِ استان خودتان تطبیقش بدهید.
+              </p>
+              <button type="button" className={styles.action} onClick={() => setSheet('requirement')}>
+                افزودن قلم تازه
+              </button>
+            </>
+          )}
+        </section>
+
+        {/* ── مدارک مهد ──────────────────────────────────── */}
+        <section className={styles.card} aria-label="مدارک مهد">
+          <span className={`${styles.cardLabel} t-caption`}>مدارک مهد</span>
+          {inspection && inspection.documents.length > 0 ? (
+            inspection.documents.map((doc) => {
+              const expired = doc.expiresAt !== null && doc.expiresAt < today
+              return (
+                <p key={doc.id} className={`${styles.row} t-body-sm`}>
+                  <span>{doc.title}</span>
+                  <span className={styles.muted}>{CENTER_DOC_TEXT[doc.kind] ?? doc.kind}</span>
+                  <b className={expired ? styles.expired : styles.muted}>
+                    {doc.expiresAt
+                      ? `${expired ? 'منقضی ' : 'تا '}${formatJalali(new Date(doc.expiresAt), 'short')}`
+                      : 'بدون انقضا'}
+                  </b>
+                </p>
+              )
+            })
+          ) : (
+            <p className={`${styles.muted} t-body-sm`}>
+              هنوز مدرکی ثبت نشده. مجوز فعالیت، بیمه مسئولیت و تأییدیه ایمنی، اولین‌هایی
+              هستند که بازرس می‌خواهد.
+            </p>
+          )}
+          <button type="button" className={styles.action} onClick={() => setSheet('document')}>
+            ثبت مدرک مهد
+          </button>
+        </section>
+
+        {/* ── دفتر بازدید ────────────────────────────────── */}
+        <section className={styles.card} aria-label="دفتر بازدید">
+          <span className={`${styles.cardLabel} t-caption`}>
+            دفتر بازدید
+            {inspection && inspection.openActions > 0
+              ? ` — ${formatCount(inspection.openActions)} اقدام باز`
+              : ''}
+          </span>
+          {/*
+            بازرسِ بعدی اول می‌پرسد بازرسِ قبلی چه گفت. مهدی که جوابش را
+            ندارد، از همان اول عقب است.
+          */}
+          {inspection && inspection.visits.length > 0 ? (
+            inspection.visits.map((visit) => (
+              <article key={visit.id} className={styles.visit}>
+                <p className={`${styles.visitTop} t-body-sm`}>
+                  <b>{visit.authority}</b>
+                  <span className={styles.muted}>
+                    {formatJalali(new Date(visit.visitedOn), 'short')}
+                  </span>
+                </p>
+                {visit.findings ? (
+                  <p className={`${styles.visitBody} t-body-sm`}>{visit.findings}</p>
+                ) : null}
+                {visit.actionRequired ? (
+                  <>
+                    <p className={`${styles.required} t-body-sm`}>
+                      اقدام لازم: {visit.actionRequired}
+                    </p>
+                    {visit.resolvedAt ? (
+                      <p className={`${styles.resolved} t-caption`}>
+                        رفع شد — {formatJalali(new Date(visit.resolvedAt), 'short')}
+                      </p>
+                    ) : (
+                      <button
+                        type="button"
+                        className={styles.action}
+                        onClick={() =>
+                          void run(async () => {
+                            await data.resolveInspectionAction(visit.id)
+                            setNote('اقدام لازم، رفع‌شده ثبت شد.')
+                          })
+                        }
+                      >
+                        رفع شد
+                      </button>
+                    )}
+                  </>
+                ) : null}
+              </article>
+            ))
+          ) : (
+            <p className={`${styles.muted} t-body-sm`}>
+              هنوز بازدیدی ثبت نشده.
+            </p>
+          )}
+          <button type="button" className={styles.action} onClick={() => setSheet('visit')}>
+            ثبت بازدید
+          </button>
         </section>
 
         {/* ── هشدار پیش از ساخت ── */}
@@ -194,6 +441,332 @@ export function AuditPage({ onBack }: { onBack: () => void }) {
             />
           </>
         )}
+      </div>
+
+      {sheet === 'document' ? (
+        <CenterDocumentSheet
+          onClose={() => setSheet(null)}
+          onDone={async (input) => {
+            setSheet(null)
+            await run(async () => {
+              await data.uploadCenterDocument(input)
+              setNote(`«${input.title}» ثبت شد.`)
+            })
+          }}
+        />
+      ) : null}
+
+      {sheet === 'visit' ? (
+        <VisitSheet
+          onClose={() => setSheet(null)}
+          onDone={async (input) => {
+            setSheet(null)
+            await run(async () => {
+              await data.recordInspectionVisit(input)
+              setNote('بازدید ثبت شد.')
+            })
+          }}
+        />
+      ) : null}
+
+      {sheet === 'requirement' ? (
+        <RequirementSheet
+          onClose={() => setSheet(null)}
+          onDone={async (title, reqNote) => {
+            setSheet(null)
+            await run(async () => {
+              await data.addInspectionRequirement(title, reqNote)
+              setNote(`«${title}» به چک‌لیست اضافه شد.`)
+            })
+          }}
+        />
+      ) : null}
+    </div>
+  )
+}
+
+/* ── ثبت مدرک مهد ───────────────────────────────────────────── */
+
+function CenterDocumentSheet({ onClose, onDone }: {
+  onClose: () => void
+  onDone: (input: CenterDocumentInput) => Promise<void>
+}) {
+  const [kind, setKind] = useState<CenterDocumentKind>('operating_licence')
+  const [title, setTitle] = useState('')
+  const [issuer, setIssuer] = useState('')
+  const [reference, setReference] = useState('')
+  const [expires, setExpires] = useState('')
+  const [error, setError] = useState<string | null>(null)
+
+  const submit = () => {
+    /*
+     * تاریخ جلالی، میلادی می‌شود — پیش از ذخیره.
+     *
+     * وضعیت انقضا با تاریخ امروز مقایسه می‌شود؛ رشته جلالیِ خام یعنی
+     * «مجوز منقضی» هرگز درست درنمی‌آید، و آن یکی مهد را تعطیل می‌کند.
+     */
+    const typed = expires.trim()
+    const iso = typed ? parseJalaliInput(typed) : null
+    if (typed && iso === null) {
+      setError('تاریخ خوانده نشد. به شکل ۱۴۰۵-۱۲-۲۹ بنویسید.')
+      return
+    }
+    void onDone({
+      kind,
+      title: title.trim() || (CENTER_DOC_TEXT[kind] ?? 'مدرک'),
+      issuer,
+      referenceNo: reference,
+      expiresAt: iso,
+    })
+  }
+
+  return (
+    <div className={styles.sheetBackdrop} role="dialog" aria-label="ثبت مدرک مهد">
+      <div className={styles.sheet}>
+        <p className={`${styles.sheetTitle} t-h2`}>مدرک مهد</p>
+
+        <fieldset className={styles.choices}>
+          <legend className={`${styles.muted} t-caption`}>نوع مدرک</legend>
+          {CENTER_DOC_KINDS.map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              className={styles.choice}
+              aria-pressed={kind === option.value}
+              onClick={() => setKind(option.value)}
+            >
+              {option.label}
+            </button>
+          ))}
+        </fieldset>
+
+        <label className={`${styles.field} t-caption`}>
+          عنوان
+          <input
+            className={styles.input}
+            value={title}
+            aria-label="عنوان مدرک مهد"
+            placeholder={CENTER_DOC_TEXT[kind]}
+            onChange={(event) => setTitle(event.target.value)}
+          />
+        </label>
+
+        <label className={`${styles.field} t-caption`}>
+          مرجع صادرکننده
+          <input
+            className={styles.input}
+            value={issuer}
+            aria-label="مرجع صادرکننده"
+            placeholder="مثلاً: بهزیستی استان"
+            onChange={(event) => setIssuer(event.target.value)}
+          />
+        </label>
+
+        <label className={`${styles.field} t-caption`}>
+          شماره مدرک
+          <input
+            className={styles.input}
+            value={reference}
+            aria-label="شماره مدرک"
+            onChange={(event) => setReference(event.target.value)}
+          />
+        </label>
+
+        <label className={`${styles.field} t-caption`}>
+          اعتبار تا (۱۴۰۵-۱۲-۲۹)
+          <input
+            className={styles.input}
+            value={expires}
+            inputMode="numeric"
+            aria-label="تاریخ انقضای مدرک مهد"
+            onChange={(event) => setExpires(event.target.value)}
+          />
+        </label>
+
+        {error ? <p className={`${styles.error} t-caption`}>{error}</p> : null}
+
+        <div className={styles.sheetActions}>
+          <button type="button" className={styles.secondary} onClick={onClose}>
+            انصراف
+          </button>
+          <button type="button" className={`${styles.primary} t-body-sm`} onClick={submit}>
+            ثبت
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/* ── ثبت بازدید ─────────────────────────────────────────────── */
+
+function VisitSheet({ onClose, onDone }: {
+  onClose: () => void
+  onDone: (input: InspectionVisitInput) => Promise<void>
+}) {
+  const [authority, setAuthority] = useState('')
+  const [inspector, setInspector] = useState('')
+  const [findings, setFindings] = useState('')
+  const [action, setAction] = useState('')
+  const [visited, setVisited] = useState('')
+  const [error, setError] = useState<string | null>(null)
+
+  const submit = () => {
+    const typed = visited.trim()
+    const iso = typed ? parseJalaliInput(typed) : toIsoDate(new Date())
+    if (iso === null) {
+      setError('تاریخ خوانده نشد. به شکل ۱۴۰۵-۰۶-۳۱ بنویسید.')
+      return
+    }
+    void onDone({
+      visitedOn: iso,
+      authority,
+      inspectorName: inspector,
+      findings,
+      actionRequired: action,
+    })
+  }
+
+  return (
+    <div className={styles.sheetBackdrop} role="dialog" aria-label="ثبت بازدید">
+      <div className={styles.sheet}>
+        <p className={`${styles.sheetTitle} t-h2`}>بازدید بازرس</p>
+
+        <label className={`${styles.field} t-caption`}>
+          مرجع بازرسی
+          <input
+            className={styles.input}
+            value={authority}
+            aria-label="مرجع بازرسی"
+            placeholder="بهزیستی، شبکه بهداشت، آتش‌نشانی…"
+            onChange={(event) => setAuthority(event.target.value)}
+          />
+        </label>
+
+        <label className={`${styles.field} t-caption`}>
+          تاریخ بازدید — خالی یعنی امروز
+          <input
+            className={styles.input}
+            value={visited}
+            inputMode="numeric"
+            aria-label="تاریخ بازدید"
+            placeholder="۱۴۰۵-۰۶-۳۱"
+            onChange={(event) => setVisited(event.target.value)}
+          />
+        </label>
+
+        <label className={`${styles.field} t-caption`}>
+          نام بازرس
+          <input
+            className={styles.input}
+            value={inspector}
+            aria-label="نام بازرس"
+            onChange={(event) => setInspector(event.target.value)}
+          />
+        </label>
+
+        <label className={`${styles.field} t-caption`}>
+          آنچه گفت
+          <textarea
+            className={styles.textarea}
+            value={findings}
+            rows={3}
+            aria-label="یافته‌های بازرس"
+            onChange={(event) => setFindings(event.target.value)}
+          />
+        </label>
+
+        {/*
+          اقدام لازم، جدا از یافته‌ها.
+          بازرسِ بعدی اول می‌پرسد قبلی چه خواست و آیا رفع شد — و آن
+          سؤال با یک پاراگراف آزاد جواب داده نمی‌شود.
+        */}
+        <label className={`${styles.field} t-caption`}>
+          اقدام لازم — اگر چیزی خواست
+          <textarea
+            className={styles.textarea}
+            value={action}
+            rows={2}
+            aria-label="اقدام لازم"
+            onChange={(event) => setAction(event.target.value)}
+          />
+        </label>
+
+        {error ? <p className={`${styles.error} t-caption`}>{error}</p> : null}
+
+        <div className={styles.sheetActions}>
+          <button type="button" className={styles.secondary} onClick={onClose}>
+            انصراف
+          </button>
+          <button
+            type="button"
+            className={`${styles.primary} t-body-sm`}
+            disabled={authority.trim().length === 0}
+            onClick={submit}
+          >
+            ثبت
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/* ── افزودن قلم به چک‌لیست ───────────────────────────────────── */
+
+function RequirementSheet({ onClose, onDone }: {
+  onClose: () => void
+  onDone: (title: string, note?: string) => Promise<void>
+}) {
+  const [title, setTitle] = useState('')
+  const [note, setNote] = useState('')
+
+  return (
+    <div className={styles.sheetBackdrop} role="dialog" aria-label="افزودن قلم چک‌لیست">
+      <div className={styles.sheet}>
+        <p className={`${styles.sheetTitle} t-h2`}>قلم تازه چک‌لیست</p>
+        {/*
+          قلمی که مهد خودش اضافه می‌کند «دستی» است: اپ نمی‌تواند بداند
+          چطور ثابتش کند، پس هرگز خودش تیک نمی‌زند — فقط یادآوری می‌کند.
+        */}
+        <p className={`${styles.muted} t-caption`}>
+          این قلم را اپ نمی‌تواند خودش بررسی کند؛ فقط در فهرست می‌ماند تا یادتان بماند.
+        </p>
+
+        <label className={`${styles.field} t-caption`}>
+          عنوان
+          <input
+            className={styles.input}
+            value={title}
+            aria-label="عنوان قلم چک‌لیست"
+            placeholder="مثلاً: تأییدیه سیستم گرمایشی"
+            onChange={(event) => setTitle(event.target.value)}
+          />
+        </label>
+
+        <label className={`${styles.field} t-caption`}>
+          توضیح — اختیاری
+          <input
+            className={styles.input}
+            value={note}
+            aria-label="توضیح قلم چک‌لیست"
+            onChange={(event) => setNote(event.target.value)}
+          />
+        </label>
+
+        <div className={styles.sheetActions}>
+          <button type="button" className={styles.secondary} onClick={onClose}>
+            انصراف
+          </button>
+          <button
+            type="button"
+            className={`${styles.primary} t-body-sm`}
+            disabled={title.trim().length === 0}
+            onClick={() => void onDone(title, note)}
+          >
+            افزودن
+          </button>
+        </div>
       </div>
     </div>
   )

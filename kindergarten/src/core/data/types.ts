@@ -858,6 +858,91 @@ export type MonthlyReport = {
   assistedDraft: string | null
 }
 
+/* ── پرونده بازرسی — ماژول ۰۰۲۳ ─────────────────────────────── */
+
+export type CenterDocumentKind =
+  | 'operating_licence'
+  | 'liability_insurance'
+  | 'fire_safety'
+  | 'building_safety'
+  | 'health_permit'
+  | 'lease'
+  | 'other'
+
+export type CenterDocument = {
+  id: string
+  kind: CenterDocumentKind
+  title: string
+  issuer: string | null
+  referenceNo: string | null
+  issuedAt: string | null
+  /** مجوز فعالیتِ منقضی یعنی مهد حق کار ندارد — مهم‌ترین ستون. */
+  expiresAt: string | null
+  note: string | null
+}
+
+export type CenterDocumentInput = {
+  kind: CenterDocumentKind
+  title: string
+  issuer?: string | null
+  referenceNo?: string | null
+  expiresAt?: string | null
+  note?: string | null
+}
+
+/** از کجا باید این قلم را ثابت کرد. */
+export type RequirementSource = 'center_document' | 'staff_document' | 'app_report' | 'manual'
+
+/** وضعیت انقضا: معتبر، نزدیک انقضا، منقضی، یا بی‌تاریخ. */
+export type DocumentState = 'valid' | 'expiring' | 'expired' | 'none'
+
+/**
+ * یک قلم از چک‌لیست بازرسی.
+ *
+ * فهرست **داده است، نه کد**: مقررات از استانی به استان دیگر فرق دارد و
+ * بازرسِ امسال چیزی می‌خواهد که پارسال نمی‌خواست. مهد ردیف اضافه
+ * می‌کند؛ اپ فقط سازوکار را می‌دهد.
+ */
+export type InspectionRequirement = {
+  id: string
+  title: string
+  source: RequirementSource
+  satisfied: boolean
+  expiresAt: string | null
+  state: DocumentState
+  note: string | null
+}
+
+export type InspectionVisit = {
+  id: string
+  visitedOn: string
+  authority: string
+  inspectorName: string | null
+  findings: string | null
+  /** آنچه باید رفع شود. تا `resolvedAt` پر نشود، باز است. */
+  actionRequired: string | null
+  resolvedAt: string | null
+}
+
+export type InspectionVisitInput = {
+  visitedOn: string
+  authority: string
+  inspectorName?: string | null
+  findings?: string | null
+  actionRequired?: string | null
+}
+
+/** پرونده بازرسی، یک‌جا. */
+export type InspectionFile = {
+  requirements: InspectionRequirement[]
+  documents: CenterDocument[]
+  visits: InspectionVisit[]
+  ready: number
+  total: number
+  expiring: number
+  openActions: number
+}
+
 export type ReminderKind = 'due_soon' | 'due_today' | 'overdue'
 
 /**
@@ -1587,6 +1672,25 @@ export interface DataAccess {
    * و ساعت‌هایی حضور داشته».
    */
   getAttendanceMonth(childId: string, from: string, to: string): Promise<AttendanceMonth>
+
+  /* ── پرونده بازرسی ────────────────────────────────────────── */
+
+  getInspectionFile(): Promise<InspectionFile>
+
+  /** چک‌لیست آغازین. نقطه شروع است، نه فهرست قانونی. */
+  seedInspectionChecklist(): Promise<number>
+
+  addInspectionRequirement(title: string, note?: string): Promise<void>
+
+  /** غیرفعال کردن قلمی که این مهد لازمش ندارد. حذف نمی‌شود. */
+  setRequirementActive(requirementId: string, active: boolean): Promise<void>
+
+  uploadCenterDocument(input: CenterDocumentInput): Promise<void>
+
+  recordInspectionVisit(input: InspectionVisitInput): Promise<void>
+
+  /** بستن یک اقدام لازم. تاریخ رفع ثبت می‌شود، نه فقط یک تیک. */
+  resolveInspectionAction(visitId: string): Promise<void>
 
   /* ── مشاهده و گزارش ماهانه ────────────────────────────────── */
 

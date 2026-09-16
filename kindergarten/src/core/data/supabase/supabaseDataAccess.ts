@@ -83,6 +83,10 @@ import type {
   AttendanceMonth,
   MonthlyReport,
   Observation,
+  CenterDocument,
+  InspectionFile,
+  InspectionRequirement,
+  InspectionVisit,
   FeeYearMonth,
   PaymentMethod,
   PaymentReminderLog,
@@ -2485,6 +2489,128 @@ export function createSupabaseDataAccess(scope: AccessScope): AuditedDataAccess 
         })
       })
     },
+
+    /* ── پرونده بازرسی ──────────────────────────────────────── */
+
+    async getInspectionFile(): Promise<InspectionFile> {
+      const [reqRows, scoreRows, docRows, visitRows] = await Promise.all([
+        db.rpc('inspection_readiness', { centre: scope.centerId }),
+        db.rpc('inspection_score', { centre: scope.centerId }),
+        db.from('center_document').select('*').eq('center_id', scope.centerId).order('kind'),
+        db
+          .from('inspection_visit')
+          .select('*')
+          .eq('center_id', scope.centerId)
+          .order('visited_on', { ascending: false }),
+      ])
+
+      const score = ((orThrow(scoreRows) as Row[]) ?? [])[0] ?? {}
+      return {
+        requirements: ((orThrow(reqRows) as Row[]) ?? []).map((r): InspectionRequirement => ({
+          id: r.requirement_id as string,
+          title: r.title as string,
+          source: r.source as InspectionRequirement['source'],
+          satisfied: Boolean(r.satisfied),
+          expiresAt: (r.expires_at as string | null) ?? null,
+          state: (r.state as InspectionRequirement['state']) ?? 'none',
+          note: (r.note as string | null) ?? null,
+        })),
+        documents: ((orThrow(docRows) as Row[]) ?? []).map((d): CenterDocument => ({
+          id: d.id as string,
+          kind: d.kind as CenterDocument['kind'],
+          title: d.title as string,
+          issuer: (d.issuer as string | null) ?? null,
+          referenceNo: (d.reference_no as string | null) ?? null,
+          issuedAt: (d.issued_at as string | null) ?? null,
+          expiresAt: (d.expires_at as string | null) ?? null,
+          note: (d.note as string | null) ?? null,
+        })),
+        visits: ((orThrow(visitRows) as Row[]) ?? []).map((v): InspectionVisit => ({
+          id: v.id as string,
+          visitedOn: v.visited_on as string,
+          authority: v.authority as string,
+          inspectorName: (v.inspector_name as string | null) ?? null,
+          findings: (v.findings as string | null) ?? null,
+          actionRequired: (v.action_required as string | null) ?? null,
+          resolvedAt: (v.resolved_at as string | null) ?? null,
+        })),
+        ready: (score.ready as number) ?? 0,
+        total: (score.total as number) ?? 0,
+        expiring: (score.expiring as number) ?? 0,
+        openActions: (score.open_actions as number) ?? 0,
+      }
+    },
+
+    async seedInspectionChecklist(): Promise<number> {
+      return (orThrow(
+        await db.rpc('seed_inspection_checklist', { centre: scope.centerId }),
+      ) as number) ?? 0
+    },
+
+    async addInspectionRequirement(title: string, note?: string) {
+      orThrow(
+        await db.from('inspection_requirement').insert({
+          center_id: scope.centerId,
+          title: title.trim(),
+          /*
+           * قلمی که مهد خودش اضافه می‌کند «دستی» است: اپ نمی‌تواند
+           * بداند چطور ثابتش کند، پس ادعا نمی‌کند تأمین شده.
+           */
+          source: 'manual',
+          note: note?.trim() || null,
+        }),
+      )
+    },
+
+    async setRequirementActive(requirementId: string, active: boolean) {
+      // غیرفعال، نه حذف: مهدی که نظرش عوض شود، تاریخچه‌اش را نمی‌بازد.
+      orThrow(
+        await db
+          .from('inspection_requirement')
+          .update({ active })
+          .eq('id', requirementId)
+          .eq('center_id', scope.centerId),
+      )
+    },
+
+    async uploadCenterDocument(input) {
+      orThrow(
+        await db.from('center_document').insert({
+          center_id: scope.centerId,
+          kind: input.kind,
+          title: input.title.trim(),
+          issuer: input.issuer?.trim() || null,
+          reference_no: input.referenceNo?.trim() || null,
+          expires_at: input.expiresAt ?? null,
+          note: input.note?.trim() || null,
+        }),
+      )
+    },
+
+    async recordInspectionVisit(input) {
+      orThrow(
+        await db.from('inspection_visit').insert({
+          center_id: scope.centerId,
+          visited_on: input.visitedOn,
+          authority: input.authority.trim(),
+          inspector_name: input.inspectorName?.trim() || null,
+          findings: input.findings?.trim() || null,
+          action_required: input.actionRequired?.trim() || null,
+        }),
+      )
+    },
+
+    async resolveInspectionAction(visitId: string) {
+      // تاریخ رفع، نه یک تیک: بازرسِ بعدی می‌پرسد کِی رفع شد.
+      orThrow(
+        await db
+          .from('inspection_visit')
+          .update({ resolved_at: new Date().toISOString().slice(0, 10) })
+          .eq('id', visitId)
+          .eq('center_id', scope.centerId),
+      )
+    },
+
 
     /* ── مشاهده و گزارش ماهانه ──────────────────────────────── */
 

@@ -1649,6 +1649,88 @@ check(
   (await page.locator('[class*="rowMarked"]').count()) > 0,
   'ردیفی که کار دارد علامت می‌خورد — تنها رنگ فایل',
 )
+
+console.log('▸ پرونده بازرسی: چک‌لیست، مدارک مهد، دفتر بازدید')
+/*
+ * چک‌لیست خالی شروع می‌شود و مدیر خودش می‌سازدش.
+ *
+ * عمدی: سیاهه‌ای که اپ از پیش بگذارد، شبیه فهرست قانونی به نظر
+ * می‌رسد — و نیست.
+ */
+const emptyList = await page.evaluate(() => document.body.innerText)
+check(/هنوز چک‌لیستی ندارید/.test(emptyList), 'چک‌لیست خالی شروع می‌شود')
+await page.click('button:has-text("ساختن چک‌لیست آغازین")')
+await page.waitForSelector('text=/قلم به چک‌لیست اضافه شد/')
+
+const inspection = await page.evaluate(() => document.body.innerText)
+check(/چک‌لیست بازرسی/.test(inspection), 'چک‌لیست بازرسی روی صفحه است')
+check(/مدارک مهد/.test(inspection), 'و بخش مدارک مهد')
+check(/دفتر بازدید/.test(inspection), 'و دفتر بازدید')
+/*
+ * فهرست، مرجع قانونی نیست و صفحه همین را می‌گوید.
+ *
+ * مقررات از استانی به استان دیگر فرق دارد و بازرسِ امسال چیزی
+ * می‌خواهد که پارسال نمی‌خواست. ادعای «کامل است» خطرناک‌تر از نداشتن
+ * فهرست است.
+ */
+check(
+  /نقطه شروع است، نه فهرست قانونی/.test(inspection),
+  'و صریح می‌گوید مرجع قانونی نیست',
+)
+check(/آماده/.test(inspection), 'شمار اقلام آماده از کل، نوشته می‌شود')
+
+/*
+ * قلم «خروجی اپ» همیشه تأمین‌شده است — عمدی.
+ *
+ * داده‌اش در اپ هست و خروجی‌اش ساختنی؛ قلمی که اپ خودش تولیدش می‌کند
+ * نباید مدیر را نگران کند.
+ */
+check(/خروجی اپ/.test(inspection), 'اقلامی که از خود اپ درمی‌آیند علامت خورده‌اند')
+/*
+ * ولی مدرکی که هنوز نیامده، «تأمین نشده» است.
+ * مهدی که مجوز فعالیتش را ثبت نکرده نباید فهرست سبز ببیند.
+ */
+check(/تأمین نشده/.test(inspection), 'و مدرکی که هنوز ثبت نشده، تأمین‌نشده است')
+
+await page.click('button:has-text("ثبت مدرک مهد")')
+await page.waitForSelector('[role="dialog"]')
+await page.fill('input[aria-label="عنوان مدرک مهد"]', 'مجوز فعالیت ۱۴۰۵')
+await page.fill('input[aria-label="مرجع صادرکننده"]', 'بهزیستی استان')
+await page.fill('input[aria-label="تاریخ انقضای مدرک مهد"]', '۱۴۰۴-۱۲-۳۰')
+await page.click('[role="dialog"] button:has-text("ثبت")')
+await page.waitForTimeout(400)
+check(
+  (await page.locator('text=تاریخ خوانده نشد').count()) === 1,
+  'تاریخ نامعتبر مدرک مهد رد می‌شود',
+)
+await page.fill('input[aria-label="تاریخ انقضای مدرک مهد"]', '۱۴۰۶-۰۳-۳۱')
+await page.click('[role="dialog"] button:has-text("ثبت")')
+await page.waitForSelector('text=/«مجوز فعالیت ۱۴۰۵» ثبت شد/')
+const afterDoc = await page.evaluate(() => document.body.innerText)
+check(/مجوز فعالیت ۱۴۰۵/.test(afterDoc), 'مدرک مهد ثبت و در فهرست دیده شد')
+
+await page.click('button:has-text("ثبت بازدید")')
+await page.waitForSelector('[role="dialog"]')
+await page.fill('input[aria-label="مرجع بازرسی"]', 'بهزیستی')
+await page.fill('textarea[aria-label="یافته‌های بازرس"]', 'کپسول آتش‌نشانی راهرو شارژ نبود.')
+await page.fill('textarea[aria-label="اقدام لازم"]', 'شارژ کپسول تا پایان ماه.')
+await page.click('[role="dialog"] button:has-text("ثبت")')
+await page.waitForSelector('text=/بازدید ثبت شد/')
+const afterVisit = await page.evaluate(() => document.body.innerText)
+check(/کپسول آتش‌نشانی/.test(afterVisit), 'بازدید و یافته‌اش ثبت شد')
+check(/اقدام باز/.test(afterVisit), 'و اقدامِ رفع‌نشده شمرده می‌شود')
+
+/*
+ * تاریخ رفع، نه یک تیک.
+ * بازرسِ بعدی می‌پرسد کِی رفع شد؛ «بله» جوابش نیست.
+ */
+await page.click('button:has-text("رفع شد")')
+await page.waitForSelector('text=/اقدام لازم، رفع‌شده ثبت شد/')
+check(
+  (await page.locator('text=/رفع شد —/').count()) >= 1,
+  'رفع با تاریخش ثبت می‌شود، نه فقط یک تیک',
+)
+
 // بازگشت از بازرسی به «بیشتر» است، چون از آنجا باز شده.
 await page.locator('[aria-label="بازگشت به داشبورد"]').click()
 await page.locator('nav button:has-text("خانه")').click()
