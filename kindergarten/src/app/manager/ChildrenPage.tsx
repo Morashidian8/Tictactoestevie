@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { AlertIcon, ChildFace, EmptyState } from '../../design-system/index.ts'
 import { formatCount, toPersianDigits } from '../../i18n/index.ts'
 import { useData } from '../../core/auth/index.ts'
-import type { Child, ChildProfile, ConsentType } from '../../core/data/index.ts'
+import type { Child, ChildProfile, ConsentType, ProfileChange } from '../../core/data/index.ts'
 import styles from './ChildrenPage.module.css'
 
 /**
@@ -11,8 +11,9 @@ import styles from './ChildrenPage.module.css'
  * بخش ۷.۱: «آلرژی غذایی باید همیشه در دید مربی باشد». پس آلرژی اولین
  * چیز پرونده است، نه یک ردیف در ته فهرست اطلاعات پزشکی.
  *
- * پرونده فقط خوانده می‌شود. ویرایشش ثبت‌نام و قرارداد است و در این
- * مرحله از پنل انجام نمی‌شود؛ سند هم آن را جای دیگری نگذاشته.
+ * ویرایش پرونده از این صفحه انجام نمی‌شود؛ درخواست‌های خانواده بالای
+ * همین فهرست می‌نشینند و مدیر آن‌ها را تأیید یا رد می‌کند. تا آن تصمیم،
+ * پرونده کودک دست‌نخورده می‌ماند و مربی مقدار قبلی را می‌بیند.
  */
 
 const CONSENT_TEXT: Record<ConsentType, string> = {
@@ -30,6 +31,38 @@ export function ChildrenPage({ onBack }: { onBack: () => void }) {
   const [profile, setProfile] = useState<ChildProfile | null>(null)
   const [query, setQuery] = useState('')
   const [error, setError] = useState<string | null>(null)
+  /** درخواست‌های تغییر پرونده از سوی خانواده‌ها. */
+  const [changes, setChanges] = useState<ProfileChange[]>([])
+  const [rejecting, setRejecting] = useState<ProfileChange | null>(null)
+  const [reason, setReason] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [note, setNote] = useState<string | null>(null)
+
+  const loadChanges = useCallback(() => {
+    data.listProfileChanges().then(setChanges).catch(() => setChanges([]))
+  }, [data])
+
+  useEffect(() => {
+    loadChanges()
+  }, [loadChanges])
+
+  const decide = async (change: ProfileChange, approve: boolean, why?: string) => {
+    setBusy(true)
+    try {
+      await data.decideProfileChange(change.id, approve, why)
+      setNote(
+        approve
+          ? `«${change.label}» برای ${change.childName} ثبت شد.`
+          : `درخواست رد شد و دلیلش برای خانواده رفت.`,
+      )
+      setRejecting(null)
+      loadChanges()
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'ثبت نشد.')
+    } finally {
+      setBusy(false)
+    }
+  }
 
   useEffect(() => {
     data
@@ -83,6 +116,65 @@ export function ChildrenPage({ onBack }: { onBack: () => void }) {
       </header>
 
       <div className={styles.body}>
+        {note ? <p className={`${styles.note} t-body`}>{note}</p> : null}
+
+        {/*
+          درخواست‌های خانواده، بالای فهرست.
+
+          میدان‌های ایمنی اول صف‌اند و این ترتیب از سرور می‌آید، نه از
+          اینجا: تا مدیر آلرژی تازه را تأیید نکرده، مربی فهرست قدیمی را
+          می‌بیند و آن فاصله باید کوتاه بماند.
+        */}
+        {changes.length > 0 ? (
+          <section className={styles.changes} aria-label="درخواست‌های تغییر پرونده">
+            <p className={`${styles.changesHead} t-body`}>
+              <AlertIcon size={20} />
+              {formatCount(changes.length)} درخواست تغییر پرونده از خانواده‌ها
+            </p>
+            {changes.map((change) => (
+              <article key={change.id} className={styles.change}>
+                <p className={`${styles.changeTop} t-body`}>
+                  <b>{change.childName}</b>
+                  <span className={styles.muted}>{change.label}</span>
+                  {change.safetyCritical ? (
+                    <span className={styles.safety}>ایمنی</span>
+                  ) : null}
+                </p>
+                {/*
+                  از چه، به چه. مدیر بی این نمی‌داند چه چیزی را از دست
+                  می‌دهد و فقط «تأیید» را می‌زند.
+                */}
+                <p className={`${styles.changeDiff} t-caption`}>
+                  <span className={styles.was}>{change.oldValue ?? 'ثبت نشده'}</span>
+                  {' ← '}
+                  <b>{change.newValue ?? 'پاک شود'}</b>
+                </p>
+                <div className={styles.changeActions}>
+                  <button
+                    type="button"
+                    className={`${styles.decide} ${styles.decidePrimary} t-body`}
+                    disabled={busy}
+                    onClick={() => void decide(change, true)}
+                  >
+                    تأیید و ثبت
+                  </button>
+                  <button
+                    type="button"
+                    className={`${styles.decide} t-body`}
+                    disabled={busy}
+                    onClick={() => {
+                      setRejecting(change)
+                      setReason('')
+                    }}
+                  >
+                    رد
+                  </button>
+                </div>
+              </article>
+            ))}
+          </section>
+        ) : null}
+
         <input
           className={styles.search}
           value={query}
@@ -90,6 +182,47 @@ export function ChildrenPage({ onBack }: { onBack: () => void }) {
           aria-label="جست‌وجوی نام کودک"
           onChange={(event) => setQuery(event.target.value)}
         />
+
+        {/*
+          رد بدون دلیل، خانواده را سردرگم می‌گذارد — همان قاعده اعلام
+          پرداخت. پایگاه داده هم بی دلیل ردش نمی‌کند.
+        */}
+        {rejecting ? (
+          <div className={styles.sheetBackdrop} role="dialog" aria-label="رد درخواست تغییر">
+            <div className={styles.sheet}>
+              <p className={`${styles.sheetTitle} t-h2`}>
+                رد «{rejecting.label}» — {rejecting.childName}
+              </p>
+              <label className={`${styles.field} t-caption`}>
+                دلیل، تا خانواده بداند چه شد
+                <input
+                  className={styles.input}
+                  value={reason}
+                  aria-label="دلیل رد"
+                  placeholder="مثلاً: کد ملی با شناسنامه نمی‌خواند."
+                  onChange={(event) => setReason(event.target.value)}
+                />
+              </label>
+              <div className={styles.sheetActions}>
+                <button
+                  type="button"
+                  className={styles.secondary}
+                  onClick={() => setRejecting(null)}
+                >
+                  انصراف
+                </button>
+                <button
+                  type="button"
+                  className={`${styles.primary} t-body`}
+                  disabled={reason.trim().length === 0 || busy}
+                  onClick={() => void decide(rejecting, false, reason)}
+                >
+                  رد درخواست
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : null}
 
         {shown.length === 0 ? (
           <EmptyState text="کودکی با این نام پیدا نشد." />

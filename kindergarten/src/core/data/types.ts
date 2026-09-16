@@ -606,6 +606,45 @@ export type FeeItemInput = {
   scope: { kind: 'center' } | { kind: 'class'; classId: string }
 }
 
+/* ── ویرایش پرونده کودک به دست خانواده ─────────────────────── */
+
+/**
+ * میدانی از پرونده که خانواده می‌تواند ویرایشش کند.
+ *
+ * فهرست از پایگاه داده می‌آید، نه از کلاینت: فهرست سمت کلاینت دور
+ * زدنی است و خانواده نباید بتواند کلاس کودک یا طرح شهریه را عوض کند.
+ */
+export type ProfileField = {
+  key: string
+  label: string
+  /**
+   * میدان ایمنی.
+   *
+   * تا تأیید مدیر، مربی همچنان مقدار قدیمی را می‌بیند — و برای آلرژی،
+   * آن فاصله خطر دارد. رابط باید این را صریح بگوید.
+   */
+  safetyCritical: boolean
+  /** مقدار فعلیِ ثبت‌شده در پرونده. */
+  value: string
+  /** اگر درخواست بازی برای این میدان هست، مقدار پیشنهادی خانواده. */
+  pending: string | null
+}
+
+export type ProfileChangeState = 'pending' | 'approved' | 'rejected'
+
+/** درخواست تغییر، از دید مدیر. */
+export type ProfileChange = {
+  id: string
+  childId: string
+  childName: string
+  field: string
+  label: string
+  oldValue: string | null
+  newValue: string | null
+  safetyCritical: boolean
+  requestedAt: string
+}
+
 export type ReminderKind = 'due_soon' | 'due_today' | 'overdue'
 
 /**
@@ -1247,6 +1286,25 @@ export interface DataAccess {
 
   /** اعلام‌های در انتظار تصمیم مدیر. */
   listPaymentClaims(status: ClaimStatus): Promise<PaymentClaim[]>
+
+  /* ── ویرایش پرونده کودک ───────────────────────────────────── */
+
+  /** میدان‌های قابل ویرایش، با مقدار فعلی و درخواست بازِ هر کدام. */
+  listProfileFields(childId: string): Promise<ProfileField[]>
+
+  /**
+   * درخواست تغییر از سوی خانواده.
+   *
+   * **هیچ ستونی را عوض نمی‌کند.** تا مدیر تأیید نکند، پرونده کودک
+   * دست‌نخورده می‌ماند و مربی مقدار قبلی را می‌بیند.
+   */
+  requestProfileChange(childId: string, field: string, value: string): Promise<void>
+
+  /** صف مدیر. میدان‌های ایمنی اول. */
+  listProfileChanges(): Promise<ProfileChange[]>
+
+  /** تصمیم مدیر. رد، دلیل می‌خواهد تا خانواده بداند چه شد. */
+  decideProfileChange(requestId: string, approve: boolean, reason?: string): Promise<void>
 
   /* ── اقلام هزینه — مدیر ───────────────────────────────────── */
 

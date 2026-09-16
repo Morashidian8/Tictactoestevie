@@ -1707,3 +1707,176 @@ begin
   perform assert((select receipt_url from payment where id = pay) = 'blob:receipt-1',
     'با تأیید اعلام، تصویر رسید روی خودِ پرداخت می‌نشیند');
 end $$;
+
+\echo ''
+\echo '── ویرایش پرونده کودک به دست خانواده ──'
+
+/*
+ * این بلوک، برخلاف بقیه این فایل، با هویت واقعی اجرا می‌شود.
+ *
+ * `request_profile_change` عمداً `app.can_see_child` را صدا می‌زند —
+ * خانواده‌ای نباید بتواند پرونده کودک دیگری را ویرایش کند. آزمودن آن
+ * قاعده بدون هویت ممکن نیست، و ضعیف کردن تابع برای راحتی تست، همان
+ * چیزی است که بعداً به یک رخنه تبدیل می‌شود.
+ */
+insert into auth.users (id, phone)
+values ('aa000000-0000-0000-0000-0000000000f1', '09120000001')
+on conflict (id) do nothing;
+
+insert into active_account (auth_user_id, user_account_id)
+select 'aa000000-0000-0000-0000-0000000000f1', id
+  from user_account
+ where phone = '09120000001' and role = 'guardian'
+   and center_id = '11111111-1111-1111-1111-111111111111'
+on conflict (auth_user_id) do update set user_account_id = excluded.user_account_id;
+
+-- و یک مدیر، چون تأیید تغییر فقط کار اوست.
+insert into staff (id, center_id, full_name, role)
+values ('55555555-5555-5555-5555-555555555555',
+        '11111111-1111-1111-1111-111111111111', 'مریم ر.', 'manager')
+on conflict (id) do nothing;
+
+insert into user_account (id, center_id, phone, role, staff_id)
+values ('66666666-6666-6666-6666-666666666666',
+        '11111111-1111-1111-1111-111111111111', '09120000077', 'manager',
+        '55555555-5555-5555-5555-555555555555')
+on conflict (id) do nothing;
+
+insert into auth.users (id, phone)
+values ('aa000000-0000-0000-0000-0000000000f2', '09120000077')
+on conflict (id) do nothing;
+
+/** جابه‌جایی بین هویت‌ها، مثل همان کاری که rls.sql می‌کند. */
+create or replace function login_as(auth_id uuid, phone text)
+returns void language plpgsql as $$
+begin
+  perform set_config('request.jwt.claim.sub', auth_id::text, false);
+  perform set_config('request.jwt.claims',
+    json_build_object('sub', auth_id, 'phone', phone)::text, false);
+end $$;
+
+insert into active_account (auth_user_id, user_account_id)
+values ('aa000000-0000-0000-0000-0000000000f2', '66666666-6666-6666-6666-666666666666')
+on conflict (auth_user_id) do update set user_account_id = excluded.user_account_id;
+
+select login_as('aa000000-0000-0000-0000-0000000000f1', '09120000001');
+
+do $$
+declare
+  centre uuid := '11111111-1111-1111-1111-111111111111';
+  sara   uuid := 'd1111111-1111-1111-1111-111111111111';
+  req    uuid;
+  line   record;
+  before text;
+begin
+  insert into medical_profile (child_id, center_id, allergies_json)
+  values (sara, centre, '["بادام‌زمینی"]'::jsonb)
+  on conflict (child_id) do update set allergies_json = '["بادام‌زمینی"]'::jsonb;
+
+  /*
+   * ۱. مقدار پیش از تغییر از پایگاه داده خوانده می‌شود، نه از کلاینت.
+   *
+   * اگر کلاینت old_value را می‌فرستاد، می‌شد مدیر را وادار کرد تغییری
+   * را تأیید کند که هرگز آن نبوده.
+   */
+  perform assert(app.profile_value(sara, 'allergies') = 'بادام‌زمینی',
+    'مقدار فعلی میدان از خود پایگاه داده خوانده می‌شود');
+
+  req := app.request_profile_change(sara, 'allergies', 'بادام‌زمینی، تخم‌مرغ');
+
+  /*
+   * ۲. مهم‌ترین قاعده این مهاجرت: تا تأیید مدیر، هیچ ستونی عوض نمی‌شود.
+   *
+   * اگر مقدار تازه را می‌نوشتیم و «تأییدنشده» علامتش می‌زدیم، اولین
+   * کوئری‌ای که این علامت را فراموش می‌کرد، داده تأییدنشده را به مربی
+   * نشان می‌داد.
+   */
+  perform assert(app.profile_value(sara, 'allergies') = 'بادام‌زمینی',
+    'تا تأیید مدیر، پرونده کودک دست‌نخورده می‌ماند');
+
+  -- ۳. میدان ایمنی بالای صف مدیر می‌نشیند.
+  select * into line from app.pending_profile_changes(centre) limit 1;
+  perform assert(line.safety_critical, 'درخواست میدان ایمنی اول صف مدیر است');
+  perform assert(line.old_value = 'بادام‌زمینی' and line.new_value = 'بادام‌زمینی، تخم‌مرغ',
+    'مدیر می‌بیند چه چیزی جای چه چیزی می‌نشیند');
+
+  -- ۴. با تأیید مدیر، مقدار واقعاً می‌نشیند — و آرایه می‌شود، نه رشته.
+  perform login_as('aa000000-0000-0000-0000-0000000000f2', '09120000077');
+  perform app.decide_profile_change(req, true);
+  perform assert(
+    (select allergies_json from medical_profile where child_id = sara)
+      = '["بادام‌زمینی", "تخم‌مرغ"]'::jsonb,
+    'با تأیید، آلرژی‌ها به آرایه تبدیل و ثبت می‌شوند'
+  );
+  perform assert(
+    (select count(*) from app.pending_profile_changes(centre)) = 0,
+    'و درخواست از صف مدیر بیرون می‌رود'
+  );
+end $$;
+
+do $$
+declare
+  centre uuid := '11111111-1111-1111-1111-111111111111';
+  sara   uuid := 'd1111111-1111-1111-1111-111111111111';
+  req    uuid;
+begin
+  perform login_as('aa000000-0000-0000-0000-0000000000f1', '09120000001');
+  /*
+   * ۵. فهرست میدان‌های قابل ویرایش در پایگاه داده است، نه در کلاینت.
+   *
+   * خانواده نباید بتواند کلاس کودک یا مرکزش را عوض کند — نه با رابط و
+   * نه با یک درخواست دستی. فهرست سمت کلاینت دور زدنی است.
+   */
+  perform assert_rejects(
+    format('select app.request_profile_change(%L, %L, %L)', sara, 'class_id', 'x'),
+    'میدانی که در فهرست نیست، اصلاً درخواست نمی‌شود');
+  perform assert_rejects(
+    format('select app.request_profile_change(%L, %L, %L)', sara, 'center_id', 'x'),
+    'مرکز کودک از این راه عوض نمی‌شود');
+
+  -- ۶. تغییرِ بی‌تغییر، درخواست نیست.
+  perform assert_rejects(
+    format('select app.request_profile_change(%L, %L, %L)', sara, 'first_name', 'سارا'),
+    'مقدار تکراری، درخواست تازه نمی‌سازد');
+
+  -- ۷. یک درخواست باز برای هر میدان: دومی جای اولی را می‌گیرد.
+  perform app.request_profile_change(sara, 'doctor_name', 'دکتر الف');
+  perform app.request_profile_change(sara, 'doctor_name', 'دکتر ب');
+  perform assert(
+    (select count(*) from profile_change_request
+      where child_id = sara and field = 'doctor_name' and state = 'pending') = 1,
+    'برای هر میدان فقط یک درخواست باز می‌ماند'
+  );
+  perform assert(
+    (select new_value from profile_change_request
+      where child_id = sara and field = 'doctor_name' and state = 'pending') = 'دکتر ب',
+    'و تازه‌ترین است که می‌ماند'
+  );
+
+  /*
+   * ۸. رد بدون دلیل، خانواده را سردرگم می‌گذارد — همان قاعده اعلام
+   * پرداخت.
+   */
+  select id into req from profile_change_request
+   where child_id = sara and field = 'doctor_name' and state = 'pending';
+
+  -- خانواده تصمیم نمی‌گیرد؛ تأیید و رد فقط کار مدیر است.
+  perform assert_rejects(
+    format('select app.decide_profile_change(%L, true)', req),
+    'خانواده نمی‌تواند درخواست خودش را تأیید کند');
+
+  perform login_as('aa000000-0000-0000-0000-0000000000f2', '09120000077');
+  perform assert_rejects(
+    format('select app.decide_profile_change(%L, false, null)', req),
+    'رد درخواست بدون دلیل ممکن نیست');
+
+  perform app.decide_profile_change(req, false, 'نام پزشک با نسخه نمی‌خواند.');
+  perform assert(
+    (select state from profile_change_request where id = req) = 'rejected',
+    'رد با دلیل ثبت می‌شود'
+  );
+  perform assert(
+    app.profile_value(sara, 'doctor_name') is null,
+    'و مقدار رد‌شده هرگز روی پرونده نمی‌نشیند'
+  );
+end $$;

@@ -124,3 +124,137 @@
 }
 .notGranted { margin-inline-start: auto; color: var(--ink-muted); }
 .error { margin: 0; color: var(--ink); }
+
+/* ── درخواست‌های تغییر پرونده ───────────────────────────────── */
+
+.note {
+  margin: 0 0 var(--space-3);
+  padding: var(--space-3);
+  background: var(--mint-tint);
+  border-radius: var(--r-input);
+  color: var(--ink);
+}
+
+.changes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-block-end: var(--space-4);
+  padding: var(--space-4);
+  background: var(--mango-tint);
+  border-radius: var(--r-card);
+}
+
+.changesHead {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  font-weight: var(--weight-bold);
+  color: var(--ink);
+}
+.changesHead svg { color: var(--ink); flex: none; }
+
+.change {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-3);
+  background: var(--surface);
+  border-radius: var(--r-input);
+}
+
+.changeTop { display: flex; align-items: center; gap: var(--space-2); margin: 0; color: var(--ink); }
+.muted { color: var(--ink-muted); }
+
+/* نشان میدان ایمنی. متن، نه فقط رنگ — بخش ۱۲.۲. */
+.safety {
+  margin-inline-start: auto;
+  padding: 1px var(--space-2);
+  border-radius: var(--r-chip);
+  background: var(--brick-tint);
+  color: var(--ink);
+  font-size: var(--text-caption);
+}
+
+.changeDiff { margin: 0; color: var(--ink); overflow-wrap: anywhere; }
+/* مقدار قبلی خط‌خورده نیست: هنوز مقدار معتبر پرونده است. */
+.was { color: var(--ink-muted); }
+
+.changeActions { display: flex; gap: var(--space-2); margin-block-start: var(--space-2); }
+
+.decide {
+  flex: 1;
+  min-block-size: var(--touch-manager);
+  border: 1px solid var(--border-input);
+  border-radius: var(--r-input);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+}
+.decidePrimary { flex: 2; background: var(--coral); border-color: transparent; font-weight: var(--weight-bold); }
+
+.sheetBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: grid;
+  place-items: end center;
+  background: rgb(15 23 42 / .45);
+}
+
+.sheet {
+  inline-size: 100%;
+  max-inline-size: 520px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-5) var(--space-4);
+  padding-block-end: calc(var(--space-5) + env(safe-area-inset-bottom));
+  background: var(--surface);
+  border-start-start-radius: var(--r-card);
+  border-start-end-radius: var(--r-card);
+}
+
+.sheetTitle { margin: 0; font-family: var(--font); font-weight: var(--weight-black); }
+
+.field { display: flex; flex-direction: column; gap: var(--space-1); color: var(--ink-muted); }
+
+.input {
+  min-block-size: var(--touch-manager);
+  padding-inline: var(--space-3);
+  border: 1px solid var(--border-input);
+  border-radius: var(--r-input);
+  background: var(--surface);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: var(--text-body-sm);
+}
+.input:focus { border-color: var(--coral); outline: none; }
+
+.sheetActions { display: flex; gap: var(--space-2); margin-block-start: var(--space-2); }
+
+.secondary {
+  flex: 1;
+  min-block-size: var(--touch-manager);
+  border: 1px solid var(--border-input);
+  border-radius: var(--r-input);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+}
+
+.primary {
+  flex: 2;
+  min-block-size: var(--touch-manager);
+  border: none;
+  border-radius: var(--r-input);
+  background: var(--coral);
+  color: var(--ink);
+  font-family: inherit;
+  font-weight: var(--weight-bold);
+  cursor: pointer;
+}
+.primary:disabled { background: var(--disabled-bg); color: var(--disabled-fg); }

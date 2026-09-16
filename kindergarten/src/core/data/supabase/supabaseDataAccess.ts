@@ -72,6 +72,8 @@ import type {
   InvoiceLine,
   FeeItem,
   FeeItemOffer,
+  ProfileChange,
+  ProfileField,
   FeeYearMonth,
   PaymentMethod,
   PaymentReminderLog,
@@ -2398,6 +2400,94 @@ export function createSupabaseDataAccess(scope: AccessScope): AuditedDataAccess 
           period: invoice.period as string,
         })
       })
+    },
+
+    /* ── ویرایش پرونده کودک ─────────────────────────────────── */
+
+    /**
+     * میدان‌های قابل ویرایش، با مقدار فعلی و درخواست بازِ هر کدام.
+     *
+     * فهرست میدان‌ها از جدول می‌آید نه از کلاینت — خانواده نباید بتواند
+     * کلاس کودک یا طرح شهریه را به فهرست اضافه کند.
+     */
+    async listProfileFields(childId: string): Promise<ProfileField[]> {
+      const [fieldRows, openRows] = await Promise.all([
+        db.from('profile_field').select('*').order('sort_order'),
+        db
+          .from('profile_change_request')
+          .select('field, new_value')
+          .eq('center_id', scope.centerId)
+          .eq('child_id', childId)
+          .eq('state', 'pending'),
+      ])
+
+      const open = new Map(
+        ((orThrow(openRows) as Row[]) ?? []).map((r) => [
+          r.field as string,
+          (r.new_value as string | null) ?? null,
+        ]),
+      )
+
+      const fields = orThrow(fieldRows) as Row[]
+      const values = await Promise.all(
+        fields.map((f) =>
+          db.rpc('profile_value', { target: childId, field_key: f.key as string }),
+        ),
+      )
+
+      return fields.map((f, i): ProfileField => {
+        const answer = values[i]
+        return {
+          key: f.key as string,
+          label: f.label as string,
+          safetyCritical: f.safety_critical as boolean,
+          value: answer ? ((orThrow(answer) as string | null) ?? '') : '',
+          pending: open.get(f.key as string) ?? null,
+        }
+      })
+    },
+
+    /**
+     * درخواست تغییر. **هیچ ستونی را عوض نمی‌کند.**
+     *
+     * مقدار قبلی را خودِ تابع سمت سرور می‌خواند؛ اگر کلاینت می‌فرستادش،
+     * می‌شد مدیر را وادار کرد تغییری را تأیید کند که هرگز آن نبوده.
+     */
+    async requestProfileChange(childId: string, field: string, value: string) {
+      orThrow(
+        await db.rpc('request_profile_change', {
+          target: childId,
+          field_key: field,
+          value,
+        }),
+      )
+    },
+
+    async listProfileChanges(): Promise<ProfileChange[]> {
+      const rows = orThrow(
+        await db.rpc('pending_profile_changes', { centre: scope.centerId }),
+      ) as Row[]
+      return (rows ?? []).map((r): ProfileChange => ({
+        id: r.request_id as string,
+        childId: r.child_id as string,
+        childName: r.child_name as string,
+        field: r.field as string,
+        label: r.label as string,
+        oldValue: (r.old_value as string | null) ?? null,
+        newValue: (r.new_value as string | null) ?? null,
+        safetyCritical: r.safety_critical as boolean,
+        requestedAt: r.requested_at as string,
+      }))
+    },
+
+    async decideProfileChange(requestId: string, approve: boolean, reason?: string) {
+      orThrow(
+        await db.rpc('decide_profile_change', {
+          request: requestId,
+          approve,
+          reason: reason ?? null,
+        }),
+      )
     },
 
     /* ── اقلام هزینه — مدیر ─────────────────────────────────── */

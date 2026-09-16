@@ -1488,6 +1488,83 @@ check(
 await page.locator('[aria-label="بازگشت"]').click()
 await page.waitForTimeout(400)
 
+console.log('▸ ویرایش پرونده کودک: از خانواده تا تأیید مدیر')
+await signIn('09120000003')
+await page.waitForSelector('nav button:has-text("بیشتر")', { timeout: 8000 })
+await page.locator('nav button:has-text("بیشتر")').click()
+await page.waitForSelector('text=پرونده کودک')
+await page.click('button:has-text("پرونده کودک")')
+await page.waitForSelector('text=اطلاعات کودک')
+
+const profileText = await page.evaluate(() => document.body.innerText)
+check(/آلرژی/.test(profileText), 'خانواده میدان‌های پرونده را می‌بیند')
+check(
+  /کلاس، شهریه و سرپرست پرداخت‌کننده را مهد ثبت می‌کند/.test(profileText),
+  'و صریح گفته می‌شود چه چیزهایی از اینجا عوض نمی‌شوند',
+)
+
+/*
+ * میدان ایمنی علامت دارد.
+ *
+ * نه برای ترساندن: خانواده باید بداند چرا آلرژی مهم‌تر است و چرا تا
+ * تأیید مدیر باید تلفنی هم خبر بدهد.
+ */
+check(
+  (await page.locator('[class*="safety"]').count()) >= 1,
+  'میدان‌های ایمنی علامت دارند',
+)
+
+await page.locator('button:has-text("آلرژی")').first().click()
+await page.waitForSelector('[role="dialog"]')
+const sheetText = await page.locator('[role="dialog"]').innerText()
+check(
+  /تا تأیید او اعمال نمی‌شود/.test(sheetText),
+  'شیت وعده «ذخیره شد» نمی‌دهد — می‌گوید درخواست فرستاده می‌شود',
+)
+await page.fill('[role="dialog"] input[aria-label*="آلرژی"]', 'بادام‌زمینی، تخم‌مرغ')
+await page.click('button:has-text("فرستادن برای تأیید")')
+await page.waitForSelector('text=/برای تأیید مهد فرستاده شد/')
+
+/*
+ * مهم‌ترین گزاره این بخش: نوشتن، عوض شدن نیست.
+ *
+ * مقدار فعلی سر جایش می‌ماند و مقدار پیشنهادی زیرش می‌نشیند. اگر روزی
+ * مقدار تازه جای قبلی را بگیرد، خانواده فکر می‌کند اعمال شده و بعد
+ * می‌بیند رد شده.
+ */
+const afterRequest = await page.evaluate(() => document.body.innerText)
+check(/منتظر تأیید/.test(afterRequest), 'مقدار پیشنهادی «منتظر تأیید» علامت می‌خورد')
+check(
+  /مربی همان اطلاعات قبلی را می‌بیند/.test(afterRequest),
+  'و به خانواده گفته می‌شود که تا تأیید، مربی مقدار قبلی را می‌بیند',
+)
+
+// کلید حساب در سرصفحه سلام است، نه روی مقصدهایی که سرصفحه خودشان را دارند.
+await page.locator('[aria-label="بازگشت"]').click()
+await page.waitForTimeout(400)
+await page.locator('nav button:has-text("خانه")').click()
+await page.waitForTimeout(600)
+await signOutAny()
+await signIn('09120000002', { fresh: false })
+await page.waitForTimeout(1200)
+if (await page.locator('button:has-text("مریم رضایی")').count()) {
+  await page.locator('button:has-text("مریم رضایی")').nth(1).click()
+}
+await page.waitForSelector('text=وضعیت ثبت', { timeout: 10000 })
+await page.locator('nav button:has-text("کودکان")').click()
+await page.waitForSelector('text=/درخواست تغییر پرونده از خانواده‌ها/')
+const queueText = await page.evaluate(() => document.body.innerText)
+check(/بادام‌زمینی، تخم‌مرغ/.test(queueText), 'درخواست خانواده به صف مدیر می‌رسد')
+check(/←/.test(queueText), 'و مدیر می‌بیند چه چیزی جای چه چیزی می‌نشیند')
+
+await page.click('button:has-text("تأیید و ثبت")')
+await page.waitForSelector('text=/ثبت شد/')
+check(
+  (await page.locator('text=/درخواست تغییر پرونده از خانواده‌ها/').count()) === 0,
+  'با تأیید، درخواست از صف مدیر بیرون می‌رود',
+)
+
+
 console.log('▸ ارتقای ۲: پرونده بازرسی')
 await signIn('09120000002')
 await page.waitForSelector('text=با کدام حساب وارد می‌شوید؟')

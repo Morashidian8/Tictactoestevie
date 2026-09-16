@@ -187,6 +187,8 @@ function save(): void {
       feeItemChildren: FEE_ITEM_CHILDREN,
       invoiceLines: INVOICE_LINES,
       reminders: REMINDERS,
+      profileChanges: PROFILE_CHANGES,
+      profileEdits: PROFILE_EDITS,
       payments: PAYMENTS,
       messages: MESSAGES,
       amendments: AMENDMENTS,
@@ -219,6 +221,8 @@ function hydrate(): void {
       feeItemChildren?: FeeItemChildRow[]
       invoiceLines?: InvoiceLineRow[]
       reminders?: PaymentReminderLog[]
+      profileChanges?: ProfileChangeRow[]
+      profileEdits?: Record<string, string>
       payments?: Payment[]
       messages?: Message[]
       amendments?: Amendment[]
@@ -264,6 +268,19 @@ function hydrate(): void {
     restore(FEE_ITEM_CHILDREN, payload.feeItemChildren)
     restore(INVOICE_LINES, payload.invoiceLines)
     restore(REMINDERS, payload.reminders)
+    restore(PROFILE_CHANGES, payload.profileChanges)
+    /*
+     * تغییرهای تأییدشده دوباره روی فیکسچر می‌نشینند.
+     *
+     * فیکسچر یک ماژول ثابت است و ذخیره نمی‌شود؛ بی این حلقه، مدیر
+     * تغییری را تأیید می‌کرد و با اولین نوسازی صفحه، مقدار قدیمی
+     * برمی‌گشت — بدتر از اینکه اصلاً تأیید نشده باشد.
+     */
+    for (const [key, value] of Object.entries(payload.profileEdits ?? {})) {
+      const split = key.indexOf(':')
+      if (split < 0) continue
+      applyProfileValue(key.slice(0, split), key.slice(split + 1), value)
+    }
     restore(PAYMENTS, payload.payments)
     restore(MESSAGES, payload.messages)
     restore(AMENDMENTS, payload.amendments)
@@ -609,6 +626,115 @@ const FEE_ITEMS: FeeItemRow[] = []
 const FEE_ITEM_CHILDREN: FeeItemChildRow[] = []
 const INVOICE_LINES: InvoiceLineRow[] = []
 const REMINDERS: PaymentReminderLog[] = []
+
+/*
+ * میدان‌های قابل ویرایش — آینه جدول profile_field در پایگاه داده.
+ *
+ * فهرست در هر دو سمت هست ولی مرجع، سمت سرور است: تابع
+ * request_profile_change میدان ناشناخته را رد می‌کند، پس دست‌کاری این
+ * فهرست در مرورگر راهی باز نمی‌کند.
+ */
+const PROFILE_FIELDS: {
+  key: string
+  label: string
+  safetyCritical: boolean
+}[] = [
+  { key: 'first_name', label: 'نام', safetyCritical: false },
+  { key: 'last_name', label: 'نام خانوادگی', safetyCritical: false },
+  { key: 'birth_date', label: 'تاریخ تولد', safetyCritical: false },
+  { key: 'national_id', label: 'کد ملی', safetyCritical: false },
+  { key: 'blood_type', label: 'گروه خونی', safetyCritical: true },
+  { key: 'allergies', label: 'آلرژی‌ها', safetyCritical: true },
+  { key: 'chronic_conditions', label: 'بیماری زمینه‌ای', safetyCritical: true },
+  { key: 'daily_medication', label: 'داروی روزانه', safetyCritical: true },
+  { key: 'doctor_name', label: 'نام پزشک', safetyCritical: false },
+  { key: 'doctor_phone', label: 'تلفن پزشک', safetyCritical: false },
+]
+
+type ProfileChangeRow = {
+  id: string
+  childId: string
+  field: string
+  oldValue: string | null
+  newValue: string | null
+  state: 'pending' | 'approved' | 'rejected'
+  requestedAt: string
+  rejectReason: string | null
+}
+
+const PROFILE_CHANGES: ProfileChangeRow[] = []
+
+/*
+ * شمارنده، نه فقط ساعت.
+ *
+ * شناسه‌ای که از Date.now() ساخته می‌شود، وقتی ساعت ثابت است (تست، یا
+ * دو درخواست در یک میلی‌ثانیه) تکراری درمی‌آید — و آن وقت «تصمیم روی
+ * درخواست دوم» روی درخواست اول می‌نشیند.
+ */
+let profileChangeSeq = 0
+
+/** مقدار فعلی یک میدان، از همان‌جایی که پرونده می‌خواندش. */
+function profileValue(childId: string, field: string): string {
+  const child = CHILDREN.find((c) => c.id === childId)
+  const medical = MEDICAL[childId]
+  switch (field) {
+    case 'first_name': return child?.firstName ?? ''
+    case 'last_name': return child?.lastName ?? ''
+    case 'birth_date': return child?.birthDate ?? ''
+    case 'national_id': return PROFILE_EDITS[`${childId}:national_id`] ?? ''
+    // بقیه میدان‌ها از خود فیکسچر خوانده می‌شوند، چون اعمال، همان‌جا
+    // می‌نشیند تا مربی و پرونده کودک هم تازه‌اش را ببینند.
+    case 'blood_type': return medical?.bloodType ?? ''
+    // آرایه در داده، رشته با «،» در رابط. تبدیل یک‌جاست تا دو سمت یک
+    // متن ببینند.
+    case 'allergies': return (medical?.allergies ?? []).join('، ')
+    case 'chronic_conditions': return medical?.chronicConditions ?? ''
+    case 'daily_medication': return medical?.dailyMedication ?? ''
+    case 'doctor_name': return medical?.doctorName ?? ''
+    case 'doctor_phone': return medical?.doctorPhone ?? ''
+    default: throw new Error(`میدان «${field}» قابل ویرایش نیست.`)
+  }
+}
+
+/**
+ * مقدارهای تأییدشده، به کلید «شناسه کودک:میدان».
+ *
+ * دو کار می‌کند. یکی: میدان‌هایی مثل کد ملی که فیکسچر نمونه ستونشان را
+ * ندارد. دو — و مهم‌تر: اعمال تغییر، شیء فیکسچر را دست‌کاری می‌کند و آن
+ * شیء ذخیره نمی‌شود؛ بی این نقشه، تغییری که مدیر تأیید کرده بود با
+ * اولین بارگذاری دوباره صفحه از بین می‌رفت. تست واحد همین را گرفت.
+ */
+const PROFILE_EDITS: Record<string, string> = {}
+
+/**
+ * اعمال مقدار تأییدشده روی داده نمونه.
+ *
+ * هم روی شیء فیکسچر می‌نشیند — تا مربی و پرونده کودک تازه‌اش را ببینند —
+ * و هم در PROFILE_EDITS ثبت می‌شود تا بارگذاری دوباره صفحه از بینش
+ * نبرد.
+ */
+function applyProfileValue(childId: string, field: string, value: string): void {
+  PROFILE_EDITS[`${childId}:${field}`] = value
+  const child = CHILDREN.find((c) => c.id === childId)
+  const medical = MEDICAL[childId]
+  switch (field) {
+    case 'first_name': if (child) child.firstName = value; break
+    case 'last_name': if (child) child.lastName = value; break
+    case 'birth_date': if (child) child.birthDate = value || null; break
+    case 'national_id': PROFILE_EDITS[`${childId}:national_id`] = value; break
+    case 'blood_type': if (medical) medical.bloodType = value || null; break
+    case 'allergies':
+      if (medical) {
+        medical.allergies = value.split('،').map((p) => p.trim()).filter(Boolean)
+      }
+      break
+    case 'chronic_conditions': if (medical) medical.chronicConditions = value || null; break
+    case 'daily_medication': if (medical) medical.dailyMedication = value || null; break
+    case 'doctor_name': if (medical) medical.doctorName = value || null; break
+    case 'doctor_phone': if (medical) medical.doctorPhone = value || null; break
+    default: throw new Error(`میدان «${field}» قابل اعمال نیست.`)
+  }
+}
 const PAYMENTS: Payment[] = []
 const MESSAGES: Message[] = []
 const AMENDMENTS: Amendment[] = []
@@ -2404,6 +2530,102 @@ export function createLocalDataAccess(scope: AccessScope): DataAccess {
     async listPaymentClaims(status) {
       assertManager()
       return CLAIMS.filter((c) => c.status === status)
+    },
+
+    /* ── ویرایش پرونده کودک ─────────────────────────────────── */
+
+    async listProfileFields(childId) {
+      assertOwnChild(childId)
+      return PROFILE_FIELDS.map((f) => ({
+        ...f,
+        value: profileValue(childId, f.key),
+        pending:
+          PROFILE_CHANGES.find(
+            (c) => c.childId === childId && c.field === f.key && c.state === 'pending',
+          )?.newValue ?? null,
+      }))
+    },
+
+    /**
+     * درخواست تغییر. **هیچ ستونی را عوض نمی‌کند.**
+     *
+     * مقدار قبلی از خودِ داده خوانده می‌شود نه از ورودی: اگر کلاینت
+     * old_value را می‌فرستاد، می‌شد مدیر را وادار کرد تغییری را تأیید
+     * کند که هرگز آن نبوده.
+     */
+    async requestProfileChange(childId, field, value) {
+      assertOwnChild(childId)
+      if (!PROFILE_FIELDS.some((f) => f.key === field)) {
+        throw new Error(`میدان «${field}» قابل ویرایش نیست.`)
+      }
+      const current = profileValue(childId, field).trim()
+      const next = value.trim()
+      if (current === next) throw new Error('مقدار تازه با مقدار فعلی فرقی ندارد.')
+
+      // یک درخواست باز برای هر میدان: تازه، جای قبلی را می‌گیرد.
+      const open = PROFILE_CHANGES.findIndex(
+        (c) => c.childId === childId && c.field === field && c.state === 'pending',
+      )
+      if (open >= 0) PROFILE_CHANGES.splice(open, 1)
+
+      PROFILE_CHANGES.push({
+        id: `pc-${(profileChangeSeq += 1)}-${field}`,
+        childId,
+        field,
+        oldValue: current || null,
+        newValue: next || null,
+        state: 'pending',
+        requestedAt: new Date().toISOString(),
+        rejectReason: null,
+      })
+      save()
+    },
+
+    async listProfileChanges() {
+      assertManager()
+      // میدان‌های ایمنی اول: تا تأیید نشوند، مربی مقدار قدیمی را می‌بیند.
+      return PROFILE_CHANGES.filter((c) => c.state === 'pending')
+        .map((c) => {
+          const field = PROFILE_FIELDS.find((f) => f.key === c.field)
+          return {
+            id: c.id,
+            childId: c.childId,
+            childName: childName(c.childId),
+            field: c.field,
+            label: field?.label ?? c.field,
+            oldValue: c.oldValue,
+            newValue: c.newValue,
+            safetyCritical: field?.safetyCritical ?? false,
+            requestedAt: c.requestedAt,
+          }
+        })
+        .sort((a, b) =>
+          a.safetyCritical === b.safetyCritical
+            ? a.requestedAt.localeCompare(b.requestedAt)
+            : a.safetyCritical
+              ? -1
+              : 1,
+        )
+    },
+
+    async decideProfileChange(requestId, approve, reason) {
+      assertManager()
+      const change = PROFILE_CHANGES.find((c) => c.id === requestId)
+      if (!change) throw new Error('درخواست پیدا نشد.')
+      if (change.state !== 'pending') throw new Error('این درخواست قبلاً بررسی شده.')
+
+      if (!approve) {
+        // رد بدون دلیل، خانواده را سردرگم می‌گذارد.
+        if (!reason?.trim()) throw new Error('رد درخواست بدون دلیل ممکن نیست.')
+        change.state = 'rejected'
+        change.rejectReason = reason.trim()
+        save()
+        return
+      }
+
+      applyProfileValue(change.childId, change.field, change.newValue ?? '')
+      change.state = 'approved'
+      save()
     },
 
     /* ── اقلام هزینه — مدیر ─────────────────────────────────── */
