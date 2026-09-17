@@ -1,10 +1,18 @@
 import { useCallback, useEffect, useState } from 'react'
-import { AlertIcon, EmptyState } from '../../design-system/index.ts'
-import { formatCount, formatJalali, parseJalaliInput, toIsoDate } from '../../i18n/index.ts'
+import {
+  AlertIcon,
+  ChoiceGroup,
+  EmptyState,
+  FileField,
+  JalaliDateField,
+} from '../../design-system/index.ts'
+import { formatAge, formatCount, formatJalali, toIsoDate, toPersianDigits } from '../../i18n/index.ts'
 import { useData } from '../../core/auth/index.ts'
 import type {
+  NewStaff,
   StaffCartableRow,
   StaffDocumentKind,
+  StaffField,
   StaffNoteKind,
   StaffProfile,
 } from '../../core/data/index.ts'
@@ -54,10 +62,15 @@ const DOC_LABEL: Record<string, string> = Object.fromEntries(
   DOC_KINDS.map((k) => [k.value, k.label]),
 )
 
-export function StaffPage({ onBack }: { onBack: () => void }) {
+export function StaffPage({ openStaffId, onBack }: {
+  /** پرونده‌ای که باید همان اول باز باشد — مثلاً از داشبورد مدیر. */
+  openStaffId?: string | null
+  onBack: () => void
+}) {
   const data = useData()
   const [rows, setRows] = useState<StaffCartableRow[] | null>(null)
-  const [openId, setOpenId] = useState<string | null>(null)
+  const [openId, setOpenId] = useState<string | null>(openStaffId ?? null)
+  const [addingStaff, setAddingStaff] = useState(false)
   const [exported, setExported] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
@@ -154,6 +167,17 @@ export function StaffPage({ onBack }: { onBack: () => void }) {
           </ul>
         )}
 
+        {/*
+          افزودن مربی، بالای خروجی.
+
+          تا امروز هیچ راهی نبود: ردیف کارکن فقط با دست در پایگاه داده
+          ساخته می‌شد. مدیری که مربی تازه استخدام کرده، همان روز اول به
+          آن نیاز دارد.
+        */}
+        <button type="button" className={styles.action} onClick={() => setAddingStaff(true)}>
+          افزودن مربی
+        </button>
+
         <button
           type="button"
           className={styles.action}
@@ -170,6 +194,118 @@ export function StaffPage({ onBack }: { onBack: () => void }) {
 
         {error ? <p className={`${styles.error} t-body`}>{error}</p> : null}
       </div>
+
+      {addingStaff ? (
+        <NewStaffSheet
+          onClose={() => setAddingStaff(false)}
+          onDone={async (id) => {
+            setAddingStaff(false)
+            await load()
+            // پرونده‌اش همان‌جا باز می‌شود: مدیری که تازه مربی را اضافه
+            // کرده، کار بعدی‌اش پر کردن همان پرونده است.
+            setOpenId(id)
+          }}
+        />
+      ) : null}
+    </div>
+  )
+}
+
+/* ── شیت افزودن مربی ────────────────────────────────────────── */
+
+const STAFF_ROLES: { value: NewStaff['role']; label: string }[] = [
+  { value: 'teacher', label: 'مربی' },
+  { value: 'assistant', label: 'کمک‌مربی' },
+  { value: 'manager', label: 'مدیر' },
+]
+
+function NewStaffSheet({ onClose, onDone }: {
+  onClose: () => void
+  onDone: (staffId: string) => Promise<void>
+}) {
+  const data = useData()
+  const [firstName, setFirstName] = useState('')
+  const [lastName, setLastName] = useState('')
+  const [role, setRole] = useState<NewStaff['role']>('teacher')
+  const [phone, setPhone] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const submit = async () => {
+    setBusy(true)
+    setError(null)
+    try {
+      await onDone(await data.addStaff({ firstName, lastName, role, phone }))
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'ثبت نشد.')
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className={styles.sheetBackdrop} role="dialog" aria-label="افزودن مربی">
+      <div className={styles.sheet}>
+        <p className={`${styles.sheetTitle} t-h2`}>مربی تازه</p>
+
+        <label className={`${styles.field} t-caption`}>
+          نام
+          <input
+            className={styles.input}
+            value={firstName}
+            aria-label="نام مربی"
+            onChange={(event) => setFirstName(event.target.value)}
+            autoFocus
+          />
+        </label>
+
+        <label className={`${styles.field} t-caption`}>
+          نام خانوادگی
+          <input
+            className={styles.input}
+            value={lastName}
+            aria-label="نام خانوادگی مربی"
+            onChange={(event) => setLastName(event.target.value)}
+          />
+        </label>
+
+        <ChoiceGroup label="نقش" options={STAFF_ROLES} value={role} onChange={setRole} />
+
+        <label className={`${styles.field} t-caption`}>
+          شماره تماس
+          <input
+            className={styles.input}
+            value={phone}
+            inputMode="numeric"
+            aria-label="شماره تماس مربی"
+            onChange={(event) => setPhone(event.target.value)}
+          />
+        </label>
+
+        {/*
+          آنچه اینجا نیست: ساختن حساب کاربری و دسترسی.
+          آن، تصمیم جداگانه‌ای است (بخش ۷.۴) و از فرمِ «مربی تازه»
+          بیرون می‌ماند.
+        */}
+        <p className={`${styles.muted} t-caption`}>
+          بقیه مشخصات را در پرونده‌اش وارد کنید. دسترسی به اپ جداگانه داده می‌شود.
+        </p>
+
+        {error ? <p className={`${styles.error} t-caption`}>{error}</p> : null}
+
+        <div className={styles.sheetActions}>
+          <button type="button" className={styles.secondary} onClick={onClose}>
+            انصراف
+          </button>
+          <button
+            type="button"
+            className={`${styles.primary} t-body-sm`}
+            onClick={() => void submit()}
+            disabled={busy || !firstName.trim()}
+          >
+            افزودن
+          </button>
+        </div>
+      </div>
     </div>
   )
 }
@@ -179,7 +315,7 @@ export function StaffPage({ onBack }: { onBack: () => void }) {
 function StaffFile({ staffId, onBack }: { staffId: string; onBack: () => void }) {
   const data = useData()
   const [file, setFile] = useState<StaffProfile | null>(null)
-  const [adding, setAdding] = useState<'doc' | 'note' | null>(null)
+  const [adding, setAdding] = useState<'doc' | 'note' | 'profile' | null>(null)
   const [note, setNote] = useState<string | null>(null)
 
   const load = useCallback(async () => {
@@ -222,20 +358,57 @@ function StaffFile({ staffId, onBack }: { staffId: string; onBack: () => void })
       <div className={styles.body}>
         {note ? <p className={`${styles.note} t-body`}>{note}</p> : null}
 
+        {/*
+          مشخصات — نام، سن، تماس، سکونت، تحصیلات و سوابق.
+
+          تا امروز اینجا فقط نقش و کلاس بود. پرونده پرسنلیِ مهدکودک این
+          نیست: بازرس بهزیستی رزومه و کد ملی می‌خواهد، و مدیری که شب
+          باید به مربی زنگ بزند نشانی و شماره می‌خواهد.
+
+          شماره تماس اینجا **هست**. پیش‌تر عمداً نبود تا فهرست پرسنل جای
+          افشای شماره نباشد — ولی این فهرست نیست؛ پرونده یک نفر است و
+          فقط مدیر بازش می‌کند.
+
+          آنچه همچنان نیست: هیچ نمره، رتبه یا مقایسه‌ای. «سوابق» متن
+          آزاد است نه عددی که بشود رویش مرتب کرد.
+        */}
         <section className={styles.card}>
           <span className={`${styles.cardLabel} t-caption`}>مشخصات</span>
-          <p className={`${styles.row} t-body`}>
-            <span>نقش</span>
-            <b>{file.role}</b>
-          </p>
-          <p className={`${styles.row} t-body`}>
-            <span>کلاس‌ها</span>
-            <b>{file.classNames.join('، ') || '—'}</b>
-          </p>
+          <Fact label="نام و نام خانوادگی" value={file.fullName} />
+          <Fact label="نقش" value={file.role} />
+          <Fact label="کلاس‌ها" value={file.classNames.join('، ')} />
           {/*
-            شماره تلفن عمداً نیست. پرونده کارکنان جای افشای شماره نیست؛
-            برای تماس، گفتگوی درون‌اپ هست.
+            سن از تاریخ تولد حساب می‌شود، ذخیره نمی‌شود: سنِ ذخیره‌شده
+            هر سال یک بار بی‌صدا غلط می‌شود.
           */}
+          <Fact
+            label="تاریخ تولد"
+            value={
+              file.birthDate
+                ? `${formatJalali(new Date(file.birthDate), 'short')}${
+                    formatAge(file.birthDate) ? ` · ${formatAge(file.birthDate)}` : ''
+                  }`
+                : ''
+            }
+          />
+          <Fact label="کد ملی" value={file.nationalId ? toPersianDigits(file.nationalId) : ''} />
+          <Fact label="شماره تماس" value={file.phone ? toPersianDigits(file.phone) : ''} />
+          <Fact label="آدرس سکونت" value={file.address} />
+          <Fact label="تحصیلات" value={file.education} />
+          <Fact label="سوابق کاری" value={file.resume} />
+          <Fact
+            label="تماس اضطراری"
+            value={
+              file.emergencyName || file.emergencyPhone
+                ? [file.emergencyName, file.emergencyPhone ? toPersianDigits(file.emergencyPhone) : null]
+                    .filter(Boolean)
+                    .join(' · ')
+                : ''
+            }
+          />
+          <button type="button" className={styles.action} onClick={() => setAdding('profile')}>
+            ویرایش مشخصات
+          </button>
         </section>
 
         <section className={styles.card}>
@@ -343,6 +516,150 @@ function StaffFile({ staffId, onBack }: { staffId: string; onBack: () => void })
           }}
         />
       ) : null}
+
+      {adding === 'profile' ? (
+        <ProfileSheet
+          staffId={staffId}
+          onClose={() => setAdding(null)}
+          onDone={async (changed) => {
+            setAdding(null)
+            setNote(
+              changed === 0
+                ? 'چیزی عوض نشد.'
+                : `${formatCount(changed)} مورد از مشخصات ثبت شد.`,
+            )
+            await load()
+          }}
+        />
+      ) : null}
+    </div>
+  )
+}
+
+/**
+ * یک قلم مشخصات.
+ *
+ * قلم خالی هم نوشته می‌شود، با «—». حذفش یعنی مدیر نمی‌بیند چه چیزی
+ * جا مانده — و روز بازرسی، همان جامانده‌ها مشکل‌اند.
+ */
+function Fact({ label, value }: { label: string; value: string | null | undefined }) {
+  return (
+    <p className={`${styles.row} t-body`}>
+      <span>{label}</span>
+      <b>{value?.trim() ? value : '—'}</b>
+    </p>
+  )
+}
+
+/* ── شیت ویرایش مشخصات ──────────────────────────────────────── */
+
+/**
+ * فرم از روی فهرست بسته پایگاه داده ساخته می‌شود، نه از روی کدی که
+ * اینجا نوشته شده. اگر میدانی اضافه یا کم شود، این فرم بی هیچ تغییری
+ * همراهش می‌آید — و میدانی که فهرست نمی‌شناسد، اصلاً فرستاده نمی‌شود.
+ */
+function ProfileSheet({ staffId, onClose, onDone }: {
+  staffId: string
+  onClose: () => void
+  onDone: (changed: number) => Promise<void>
+}) {
+  const data = useData()
+  const [fields, setFields] = useState<StaffField[] | null>(null)
+  const [draft, setDraft] = useState<Record<string, string>>({})
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    data
+      .listStaffFields(staffId)
+      .then((list) => {
+        setFields(list)
+        setDraft(Object.fromEntries(list.map((f) => [f.key, f.value])))
+      })
+      .catch((cause: unknown) => setError(cause instanceof Error ? cause.message : 'خوانده نشد.'))
+  }, [data, staffId])
+
+  const submit = async () => {
+    if (!fields) return
+    setBusy(true)
+    setError(null)
+    try {
+      // فقط آنچه واقعاً عوض شده فرستاده می‌شود؛ وگرنه دفتر رویداد پر
+      // می‌شود از «تغییر»هایی که چیزی را عوض نکرده‌اند.
+      const changed = fields.filter((f) => (draft[f.key] ?? '') !== f.value)
+      for (const f of changed) {
+        await data.editStaffField(staffId, f.key, draft[f.key] ?? '')
+      }
+      await onDone(changed.length)
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'ثبت نشد.')
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className={styles.sheetBackdrop} role="dialog" aria-label="ویرایش مشخصات مربی">
+      <div className={styles.sheet}>
+        <p className={`${styles.sheetTitle} t-h2`}>مشخصات مربی</p>
+
+        {fields === null ? (
+          <EmptyState text="در حال خواندن…" />
+        ) : (
+          fields.map((f) =>
+            f.input === 'date' ? (
+              <JalaliDateField
+                key={f.key}
+                label={f.label}
+                value={draft[f.key] || null}
+                onChange={(iso) => setDraft((d) => ({ ...d, [f.key]: iso ?? '' }))}
+              />
+            ) : f.input === 'text' ? (
+              <label key={f.key} className={`${styles.field} t-caption`}>
+                {f.label}
+                <textarea
+                  className={styles.textarea}
+                  rows={3}
+                  value={draft[f.key] ?? ''}
+                  aria-label={f.label}
+                  onChange={(event) => setDraft((d) => ({ ...d, [f.key]: event.target.value }))}
+                />
+              </label>
+            ) : (
+              <label key={f.key} className={`${styles.field} t-caption`}>
+                {f.label}
+                <input
+                  className={styles.input}
+                  value={draft[f.key] ?? ''}
+                  aria-label={f.label}
+                  /*
+                   * رقم لاتین فقط در همین میدان‌ها — بخش ۱۲.۱. کد ملی و
+                   * شماره تلفن جایی می‌روند که با رقم فارسی خوانده
+                   * نمی‌شوند.
+                   */
+                  inputMode={f.input === 'digits' ? 'numeric' : 'text'}
+                  onChange={(event) => setDraft((d) => ({ ...d, [f.key]: event.target.value }))}
+                />
+              </label>
+            ),
+          )
+        )}
+
+        {error ? <p className={`${styles.error} t-caption`}>{error}</p> : null}
+
+        <div className={styles.sheetActions}>
+          <button type="button" className={styles.secondary} onClick={onClose}>
+            انصراف
+          </button>
+          <button
+            type="button"
+            className={`${styles.primary} t-body-sm`}
+            onClick={() => void submit()}
+            disabled={busy || fields === null}
+          >
+            ثبت
+          </button>
+        </div>
+      </div>
     </div>
   )
 }
@@ -357,27 +674,14 @@ function DocumentSheet({ staffId, onClose, onDone }: {
   const data = useData()
   const [kind, setKind] = useState<StaffDocumentKind>('health_card')
   const [title, setTitle] = useState('')
-  const [expires, setExpires] = useState('')
+  const [expires, setExpires] = useState<string | null>(null)
+  const [file, setFile] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const needsExpiry = DOC_KINDS.find((k) => k.value === kind)?.needsExpiry ?? false
 
   const submit = async () => {
-    /*
-     * تاریخ جلالی، میلادی می‌شود — پیش از ذخیره.
-     *
-     * ستون انقضا با تاریخ امروز مقایسه می‌شود؛ رشته جلالیِ خام یعنی
-     * «مدرک منقضی» هرگز درست درنمی‌آید، و کل ارزش آن ستون همین مقایسه
-     * است. تاریخی که خوانده نشود، رد می‌شود نه حدس زده.
-     */
-    const typed = expires.trim()
-    const iso = typed ? parseJalaliInput(typed) : null
-    if (typed && iso === null) {
-      setError('تاریخ خوانده نشد. به شکل ۱۴۰۵-۱۲-۲۹ بنویسید.')
-      return
-    }
-
     setBusy(true)
     setError(null)
     try {
@@ -385,9 +689,9 @@ function DocumentSheet({ staffId, onClose, onDone }: {
         staffId,
         kind,
         title: title.trim() || (DOC_LABEL[kind] ?? 'مدرک'),
-        // تا وصل شدن استوریج، نشانی محلی مرورگر است.
-        fileUrl: 'demo-document',
-        expiresAt: iso,
+        // تصویر خودِ مدرک. تا وصل شدن استوریج، نشانی محلی مرورگر است.
+        fileUrl: file ?? 'demo-document',
+        expiresAt: expires,
       })
       await onDone(title.trim() || (DOC_LABEL[kind] ?? 'مدرک'))
     } catch (cause) {
@@ -401,20 +705,12 @@ function DocumentSheet({ staffId, onClose, onDone }: {
       <div className={styles.sheet}>
         <p className={`${styles.sheetTitle} t-h2`}>بارگذاری مدرک</p>
 
-        <fieldset className={styles.choices}>
-          <legend className={`${styles.muted} t-caption`}>نوع مدرک</legend>
-          {DOC_KINDS.map((option) => (
-            <button
-              key={option.value}
-              type="button"
-              className={styles.choice}
-              aria-pressed={kind === option.value}
-              onClick={() => setKind(option.value)}
-            >
-              {option.label}
-            </button>
-          ))}
-        </fieldset>
+        <ChoiceGroup
+          label="نوع مدرک"
+          options={DOC_KINDS.map((k) => ({ value: k.value, label: k.label }))}
+          value={kind}
+          onChange={setKind}
+        />
 
         <label className={`${styles.field} t-caption`}>
           عنوان
@@ -428,21 +724,26 @@ function DocumentSheet({ staffId, onClose, onDone }: {
         </label>
 
         {/*
-          تاریخ انقضا برای مدرکی که دارد، اجباری نیست ولی خواسته می‌شود.
-          کل ارزش این جدول همین ستون است: مدرکی که تاریخ انقضا دارد و
-          کسی نگاهش نمی‌کند، روز بازرسی تبدیل به تخلف می‌شود.
+          تصویر خودِ مدرک.
+          بازرس کاغذ می‌خواهد؛ ردیفی که فقط عنوان دارد، مدرک نیست.
         */}
-        <label className={`${styles.field} t-caption`}>
-          {needsExpiry ? 'اعتبار تا (۱۴۰۵-۰۶-۳۱)' : 'اعتبار تا — اختیاری'}
-          <input
-            className={styles.input}
-            value={expires}
-            inputMode="numeric"
-            aria-label="تاریخ انقضای مدرک"
-            placeholder="۱۴۰۵-۰۶-۳۱"
-            onChange={(event) => setExpires(event.target.value)}
-          />
-        </label>
+        <FileField
+          label="تصویر مدرک"
+          value={file}
+          onChange={setFile}
+          hint="تا وصل شدن فضای ذخیره‌سازی، تصویر فقط در همین مرورگر می‌ماند."
+        />
+
+        {/*
+          تاریخ از تقویم، نه تایپ.
+          کل ارزش این ستون مقایسه با امروز است؛ تاریخی که خوانده نشود
+          یعنی «مدرک منقضی» هرگز درست درنمی‌آید.
+        */}
+        <JalaliDateField
+          label={needsExpiry ? 'اعتبار تا' : 'اعتبار تا — اختیاری'}
+          value={expires}
+          onChange={setExpires}
+        />
 
         {error ? <p className={`${styles.error} t-caption`}>{error}</p> : null}
 
@@ -495,20 +796,7 @@ function NoteSheet({ staffId, onClose, onDone }: {
       <div className={styles.sheet}>
         <p className={`${styles.sheetTitle} t-h2`}>یادداشت یا ارزیابی</p>
 
-        <fieldset className={styles.choices}>
-          <legend className={`${styles.muted} t-caption`}>نوع</legend>
-          {NOTE_KINDS.map((option) => (
-            <button
-              key={option.value}
-              type="button"
-              className={styles.choice}
-              aria-pressed={kind === option.value}
-              onClick={() => setKind(option.value)}
-            >
-              {option.label}
-            </button>
-          ))}
-        </fieldset>
+        <ChoiceGroup label="نوع" options={NOTE_KINDS} value={kind} onChange={setKind} />
 
         <label className={`${styles.field} t-caption`}>
           متن

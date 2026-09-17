@@ -215,6 +215,16 @@
   background: var(--surface);
   border-start-start-radius: var(--r-card);
   border-start-end-radius: var(--r-card);
+  /*
+   * شیتِ بلند، درونش می‌لغزد — نه بیرونِ قاب.
+   *
+   * وقتی فرمِ مدرک، تقویم و بارگذاری فایل گرفت، دکمه «بارگذاری» روی
+   * گوشیِ ۸۴۴ پیکسلی زیر لبه صفحه افتاد و اصلاً قابل زدن نبود. دو تا
+   * از شش شیتِ این اپ همین دو خط را داشتند و چهارتای دیگر نه — یعنی
+   * قاعده‌ای که کپی شده بود و جا افتاد.
+   */
+  max-block-size: 90dvh;
+  overflow-y: auto;
 }
 
 .sheetTitle { margin: 0; font-family: var(--font); font-weight: var(--weight-black); }
@@ -258,3 +268,40 @@
   cursor: pointer;
 }
 .primary:disabled { background: var(--disabled-bg); color: var(--disabled-fg); }
+
+/* ── ویرایش مدیر ────────────────────────────────────────────── */
+
+.action {
+  inline-size: 100%;
+  min-block-size: var(--touch-manager);
+  margin-block-end: var(--space-4);
+  border: 1px solid var(--border-input);
+  border-radius: var(--r-input);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+}
+.action:active { background: var(--coral-tint); }
+
+/* درخواست بازِ خانواده، کنار همان میدان. */
+.pendingHint {
+  padding: 2px var(--space-2);
+  border-radius: var(--r-chip);
+  background: var(--mango-tint);
+  color: var(--ink);
+  font-size: var(--text-caption);
+}
+
+.textarea { resize: vertical; }
+
+/*
+ * ردیف کنش، چسبیده به پایینِ شیتِ لغزان.
+ * وگرنه کاربر باید تا ته فرم بلغزد تا دکمه را ببیند.
+ */
+.sheetActions {
+  position: sticky;
+  inset-block-end: 0;
+  background: var(--surface);
+  padding-block-start: var(--space-2);
+}

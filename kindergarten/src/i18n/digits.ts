@@ -42,6 +42,15 @@ export function formatCount(value: number): string {
  * واحد اینجا چسبیده است تا هیچ صفحه‌ای خودش «تومان» را دستی ننویسد.
  */
 export function formatToman(value: number): string {
+  /*
+   * عددی که عدد نیست، مبلغ نشان داده نمی‌شود.
+   *
+   * `Intl` برای NaN رشته «ناعدد» می‌سازد و خانواده‌ای در مرورگرش
+   * «ناعدد تومان» دید. ریشه‌اش جای دیگری بود و آنجا بسته شد، ولی این
+   * نگهبان می‌ماند: هر باگی که روزی مبلغِ خراب بسازد، باید به «—»
+   * برسد نه به عددی که خانواده باورش کند.
+   */
+  if (!Number.isFinite(value)) return '—'
   return `${amountFormatter.format(value)} تومان`
 }
 
@@ -53,5 +62,6 @@ export function formatToman(value: number): string {
  * کار را نکند و هیچ‌جا ده برابر نشود.
  */
 export function formatRial(value: number): string {
+  if (!Number.isFinite(value)) return '—'
   return formatToman(Math.round(value / 10))
 }

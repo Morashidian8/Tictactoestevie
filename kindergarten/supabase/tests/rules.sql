@@ -37,8 +37,8 @@ insert into class (id, center_id, name) values
   ('c1111111-1111-1111-1111-111111111111', '11111111-1111-1111-1111-111111111111', 'گل‌ها'),
   ('c2222222-2222-2222-2222-222222222222', '11111111-1111-1111-1111-111111111111', 'ستاره‌ها');
 
-insert into staff (id, center_id, full_name, role) values
-  ('51111111-1111-1111-1111-111111111111', '11111111-1111-1111-1111-111111111111', 'زهرا م.', 'teacher');
+insert into staff (id, center_id, first_name, last_name, role) values
+  ('51111111-1111-1111-1111-111111111111', '11111111-1111-1111-1111-111111111111', 'زهرا', 'م.', 'teacher');
 
 insert into child (id, center_id, class_id, first_name, last_name) values
   ('d1111111-1111-1111-1111-111111111111', '11111111-1111-1111-1111-111111111111', 'c1111111-1111-1111-1111-111111111111', 'سارا', 'ا.'),
@@ -75,8 +75,8 @@ end $$;
 do $$
 declare other_staff uuid;
 begin
-  insert into staff (center_id, full_name, role)
-  values ('22222222-2222-2222-2222-222222222222', 'زهرا م.', 'teacher') returning id into other_staff;
+  insert into staff (center_id, first_name, last_name, role)
+  values ('22222222-2222-2222-2222-222222222222', 'زهرا', 'م.', 'teacher') returning id into other_staff;
   insert into user_account (center_id, phone, role, staff_id)
   values ('22222222-2222-2222-2222-222222222222', '09120000001', 'teacher', other_staff);
   perform assert(true, 'همان شماره می‌تواند مربی مهد دوم هم باشد');
@@ -1074,8 +1074,8 @@ begin
    * ۴. یک مربیِ بی‌مدرک، کل قلم را ناقص می‌کند — بازرس هم همین‌طور
    * نگاه می‌کند. «نُه نفر از ده نفر» جواب قابل قبولی نیست.
    */
-  insert into staff (id, center_id, full_name, role)
-  values ('52222222-2222-2222-2222-222222222222', centre, 'مربی تازه', 'teacher');
+  insert into staff (id, center_id, first_name, last_name, role)
+  values ('52222222-2222-2222-2222-222222222222', centre, 'مربی', 'تازه', 'teacher');
 
   select * into line from app.inspection_readiness(centre)
    where title = 'کارت بهداشت همه مربیان';
@@ -1731,9 +1731,9 @@ select 'aa000000-0000-0000-0000-0000000000f1', id
 on conflict (auth_user_id) do update set user_account_id = excluded.user_account_id;
 
 -- و یک مدیر، چون تأیید تغییر فقط کار اوست.
-insert into staff (id, center_id, full_name, role)
+insert into staff (id, center_id, first_name, last_name, role)
 values ('55555555-5555-5555-5555-555555555555',
-        '11111111-1111-1111-1111-111111111111', 'مریم ر.', 'manager')
+        '11111111-1111-1111-1111-111111111111', 'مریم', 'ر.', 'manager')
 on conflict (id) do nothing;
 
 insert into user_account (id, center_id, phone, role, staff_id)
@@ -1918,8 +1918,8 @@ begin
   on conflict do nothing;
 
   -- و یک مربی دیگر، در کلاسی که سارا در آن نیست.
-  insert into staff (id, center_id, full_name, role)
-  values ('57777777-7777-7777-7777-777777777777', centre, 'نگار پ.', 'teacher')
+  insert into staff (id, center_id, first_name, last_name, role)
+  values ('57777777-7777-7777-7777-777777777777', centre, 'نگار', 'پ.', 'teacher')
   on conflict (id) do nothing
   returning id into other_t;
   other_t := '57777777-7777-7777-7777-777777777777';
@@ -2262,3 +2262,454 @@ begin
     'و کودکی که جفت دارد، در آن فهرست نیست'
   );
 end $$;
+
+\echo ''
+\echo '── منو، تقویم، نظرسنجی و هزینه ──'
+do $$
+declare
+  centre uuid := '11111111-1111-1111-1111-111111111111';
+  sara   uuid := 'd1111111-1111-1111-1111-111111111111';
+  amir   uuid := 'd2222222-2222-2222-2222-222222222222';
+  d date := date '2025-10-05';
+  line record;
+begin
+  update medical_profile set allergies_json = '["تخم‌مرغ", "بادام‌زمینی"]'::jsonb
+   where child_id = sara;
+  insert into medical_profile (child_id, center_id, allergies_json)
+  values (amir, centre, '[]'::jsonb)
+  on conflict (child_id) do update set allergies_json = '[]'::jsonb;
+
+  insert into menu_day (center_id, date, slot, title, ingredients)
+  values (centre, d, 'lunch', 'کوکوی سبزی',
+          array['تخم‌مرغ آب‌پز', 'سبزی', 'آرد']);
+
+  /*
+   * ۱. تقاطع منو با آلرژی — تنها دلیلِ واقعیِ بودنِ این ماژول.
+   *
+   * خانواده‌ای که کودکش به تخم‌مرغ حساس است باید پیش از روزِ کوکو
+   * بداند. بی این تقاطع، منو یک تابلوی تزئینی است.
+   */
+  select * into line from app.menu_for_child(centre, sara, d, d);
+  perform assert(array_length(line.allergy_hits, 1) = 1,
+    'منو با آلرژی کودک تقاطع می‌خورد');
+  perform assert(line.allergy_hits[1] = 'تخم‌مرغ آب‌پز',
+    'و ماده‌ای که می‌خواند نام برده می‌شود');
+
+  /*
+   * ۲. تطبیق دوطرفه.
+   *
+   * «تخم‌مرغ» در «تخم‌مرغ آب‌پز» پیدا می‌شود. یک‌طرفه بودنش یعنی نصف
+   * هشدارها اصلاً نمی‌آیند — و آن نصف، همان‌هایی‌اند که خطر دارند.
+   */
+  select * into line from app.menu_for_child(centre, amir, d, d);
+  perform assert(coalesce(array_length(line.allergy_hits, 1), 0) = 0,
+    'کودک بی‌آلرژی هیچ هشداری نمی‌گیرد');
+
+  -- ۳. منو به روز بسته است، نه به هفته.
+  perform assert_rejects(format($x$
+    insert into menu_day (center_id, date, slot, title)
+    values (%L, %L, 'lunch', 'چیز دیگری')
+  $x$, centre, d), 'یک روز و یک وعده، دو منو نمی‌گیرد');
+end $$;
+
+do $$
+declare
+  centre uuid := '11111111-1111-1111-1111-111111111111';
+  poll   uuid;
+  acc    uuid := '66666666-6666-6666-6666-666666666666';
+  n      integer;
+  line   record;
+begin
+  insert into survey (center_id, question, options)
+  values (centre, 'اردوی باغ پرندگان برگزار شود؟', array['بله', 'خیر', 'فرقی ندارد'])
+  returning id into poll;
+
+  /*
+   * ۴. نتیجه، پیش‌فرض به خانواده نشان داده نمی‌شود.
+   *
+   * «۸۰٪ مخالف اردو» یعنی ۲۰٪ موافق، و آن ۲۰٪ خودشان را در اقلیت
+   * می‌بینند. انتشار نتیجه یک تصمیم است، نه پیش‌فرض.
+   */
+  perform assert(
+    (select not show_results from survey where id = poll),
+    'نظرسنجی تازه، نتیجه‌اش را به خانواده نشان نمی‌دهد'
+  );
+
+  -- ۵. نظرسنجی دست‌کم دو گزینه دارد.
+  perform assert_rejects(format($x$
+    insert into survey (center_id, question, options)
+    values (%L, 'فقط یک گزینه؟', array['بله'])
+  $x$, centre), 'نظرسنجی تک‌گزینه‌ای ساخته نمی‌شود');
+
+  insert into survey_response (survey_id, user_account_id, center_id, choice)
+  values (poll, acc, centre, 0);
+
+  -- ۶. یک رأی برای هر حساب؛ نظر عوض کردن رأی دوم نمی‌سازد.
+  perform assert_rejects(format($x$
+    insert into survey_response (survey_id, user_account_id, center_id, choice)
+    values (%L, %L, %L, 1)
+  $x$, poll, acc, centre), 'یک حساب دو بار رأی نمی‌دهد');
+
+  /*
+   * ۷. نتیجه فقط شمار است، هرگز نام.
+   *
+   * خانواده‌ای که بداند رأیش دیده می‌شود، رأی واقعی نمی‌دهد — و
+   * نظرسنجی‌ای که رأی واقعی نگیرد، بدتر از نبودنش است.
+   */
+  perform assert(
+    (select string_agg(column_name, ',' order by column_name)
+       from information_schema.columns
+      where table_schema = 'app' and table_name = 'survey_tally')
+      = 'choice,label,votes',
+    'خروجی نتیجه فقط گزینه و شمار است، بی هیچ نامی'
+  );
+
+  select * into line from app.survey_tally(centre, poll) where choice = 0;
+  perform assert(line.votes = 1, 'و رأی داده‌شده شمرده می‌شود');
+  perform assert(line.label = 'بله', 'با متن خودِ گزینه');
+end $$;
+
+do $$
+declare
+  centre uuid := '11111111-1111-1111-1111-111111111111';
+  line   record;
+begin
+  /*
+   * ۸. «درآمد» یعنی پولی که واقعاً وصول شده، نه مبلغ صادرشده.
+   *
+   * صورتحسابِ صادرشده هنوز پول نیست، و مهدی که آن را درآمد بخواند،
+   * ماه بعد حقوق پرداخت نمی‌کند.
+   */
+  insert into expense (center_id, date, amount, category, note)
+  values (centre, date '2025-10-05', 5000000, 'food', 'خرید هفتگی');
+
+  select * into line from app.income_vs_expense(centre, '1404-07');
+  perform assert(line.spent = 5000000, 'هزینه ماه جمع می‌شود');
+  perform assert(
+    line.collected <= (select coalesce(sum(amount - discount), 0) from invoice
+                        where center_id = centre and period = '1404-07'),
+    'و درآمد هرگز از مبلغ صادرشده بیشتر نیست'
+  );
+
+  -- ۹. دسته‌بندی هزینه، همان شش دسته پیوست الف است.
+  perform assert(
+    (select count(*) from pg_enum e
+      join pg_type t on t.oid = e.enumtypid
+     where t.typname = 'expense_category') = 6,
+    'شش دسته هزینه، همان فهرست پیوست الف'
+  );
+
+  /*
+   * ۱۰. آنچه ساخته نمی‌شود — بخش ۸.۴.
+   *
+   * انبارداری، سفارش خرید، تأمین‌کننده، حسابداری. اگر روزی جدولی با
+   * این نام‌ها اضافه شود، این تست می‌افتد و کسی باید توضیح بدهد چرا.
+   */
+  perform assert(
+    (select count(*) from information_schema.tables
+      where table_schema = 'public'
+        and table_name ~ '(inventory|purchase_order|supplier|ledger|contractor)') = 0,
+    'انبارداری و سفارش خرید و تأمین‌کننده ساخته نشده‌اند'
+  );
+end $$;
+
+-- ============================================================
+-- مشخصات مربی — مهاجرت ۰۰۳۳
+-- ============================================================
+
+select login_as('aa000000-0000-0000-0000-0000000000f2', '09120000077');  -- مدیر
+
+do $$
+declare
+  centre uuid := '11111111-1111-1111-1111-111111111111';
+  zahra  uuid := '51111111-1111-1111-1111-111111111111';
+  made   uuid;
+  bad    boolean;
+begin
+  /*
+   * ۱. نام کامل نوشتنی نیست؛ از دو تکه ساخته می‌شود.
+   *
+   * این تست بیش از یک جزئیات نحوی است: تا دیروز نام کامل و نام و نام
+   * خانوادگی می‌توانستند سه چیز متفاوت بگویند.
+   */
+  perform assert(
+    (select full_name from staff where id = zahra) = 'زهرا م.',
+    'نام کامل از نام و نام خانوادگی ساخته می‌شود'
+  );
+
+  begin
+    update staff set full_name = 'کس دیگر' where id = zahra;
+    bad := true;
+  exception when others then
+    bad := false;
+  end;
+  perform assert(not bad, 'و نوشتن مستقیم در نام کامل ممکن نیست');
+
+  -- ۲. ویرایش میدان، از همان فهرست بسته.
+  perform app.edit_staff_field(zahra, 'last_name', 'مرادی');
+  perform assert(
+    (select full_name from staff where id = zahra) = 'زهرا مرادی',
+    'تغییر نام خانوادگی، نام کامل را هم عوض می‌کند'
+  );
+
+  perform app.edit_staff_field(zahra, 'address', 'تهران، خیابان شریعتی، پلاک ۱۲');
+  perform app.edit_staff_field(zahra, 'resume', 'کارشناسی آموزش ابتدایی، شش سال کار در مهد.');
+  perform assert(app.staff_value(zahra, 'address') like 'تهران%', 'آدرس ذخیره می‌شود');
+  perform assert(app.staff_value(zahra, 'resume') like 'کارشناسی%', 'رزومه ذخیره می‌شود');
+
+  -- ۳. میدانی بیرون فهرست، رد می‌شود. نام ستون هرگز از ورودی نمی‌آید.
+  begin
+    perform app.edit_staff_field(zahra, 'role', 'manager');
+    bad := true;
+  exception when others then
+    bad := false;
+  end;
+  perform assert(not bad, 'نقش از راه فرم مشخصات عوض نمی‌شود');
+
+  begin
+    perform app.edit_staff_field(zahra, 'active', 'false');
+    bad := true;
+  exception when others then
+    bad := false;
+  end;
+  perform assert(not bad, 'و دسترسی هم نه');
+
+  -- ۴. نام خالی نمی‌ماند.
+  begin
+    perform app.edit_staff_field(zahra, 'first_name', '   ');
+    bad := true;
+  exception when others then
+    bad := false;
+  end;
+  perform assert(not bad, 'نام مربی خالی نمی‌شود');
+
+  /*
+   * ۵. سن ذخیره نمی‌شود، تاریخ تولد می‌شود — و تاریخ محال رد می‌شود.
+   *
+   * مربیِ شش ساله یعنی سال را اشتباه تایپ کرده‌اند. اگر می‌نشست،
+   * سالِ بعد کسی به عددِ سن تکیه می‌کرد.
+   */
+  perform app.edit_staff_field(zahra, 'birth_date', '1990-03-21');
+  perform assert(app.staff_value(zahra, 'birth_date') = '1990-03-21', 'تاریخ تولد ذخیره می‌شود');
+
+  begin
+    perform app.edit_staff_field(zahra, 'birth_date', (current_date - 2000)::text);
+    bad := true;
+  exception when others then
+    bad := false;
+  end;
+  perform assert(not bad, 'مربیِ شش ساله ثبت نمی‌شود');
+
+  perform assert(
+    (select count(*) from information_schema.columns
+      where table_schema = 'public' and table_name = 'staff' and column_name = 'age') = 0,
+    'ستون سن وجود ندارد — سن هر سال بی‌صدا غلط می‌شود'
+  );
+
+  -- ۶. کد ملی، ده رقم.
+  begin
+    perform app.edit_staff_field(zahra, 'national_id', '12345');
+    bad := true;
+  exception when others then
+    bad := false;
+  end;
+  perform assert(not bad, 'کد ملی کوتاه رد می‌شود');
+  perform app.edit_staff_field(zahra, 'national_id', '0012345678');
+  perform assert(app.staff_value(zahra, 'national_id') = '0012345678', 'و کد ده‌رقمی می‌نشیند');
+
+  -- ۷. هر ویرایش ردِ پا دارد. پرونده پرسنلی در دعوای کاری استناد می‌شود.
+  perform assert(
+    (select count(*) from audit_log
+      where action = 'staff_edited' and entity_id = zahra) = 5,
+    'هر ویرایش پرونده مربی در دفتر رویداد ثبت می‌شود'
+  );
+  perform assert(
+    (select meta_json->>'from' from audit_log
+      where action = 'staff_edited' and entity_id = zahra
+        and meta_json->>'field' = 'last_name' limit 1) = 'م.',
+    'و مقدار پیش از تغییر هم ثبت می‌شود'
+  );
+
+  -- ۸. افزودن مربی تازه.
+  made := app.add_staff('نگار', 'صادقی', 'teacher', '09121110000');
+  perform assert(
+    (select full_name from staff where id = made) = 'نگار صادقی',
+    'مربی تازه با نام کامل ساخته می‌شود'
+  );
+  perform assert(
+    (select count(*) from audit_log where action = 'staff_added' and entity_id = made) = 1,
+    'و افزودنش ثبت می‌شود'
+  );
+end $$;
+
+do $$
+declare
+  zahra uuid := '51111111-1111-1111-1111-111111111111';
+  bad   boolean;
+begin
+  -- ۹. سرپرست پرونده پرسنلی را ویرایش نمی‌کند.
+  perform login_as('aa000000-0000-0000-0000-0000000000f1', '09120000001');
+  begin
+    perform app.edit_staff_field(zahra, 'address', 'هرجا');
+    bad := true;
+  exception when others then
+    bad := false;
+  end;
+  perform assert(not bad, 'سرپرست پرونده مربی را ویرایش نمی‌کند');
+
+  begin
+    perform app.add_staff('کس', 'دیگر', 'teacher', null);
+    bad := true;
+  exception when others then
+    bad := false;
+  end;
+  perform assert(not bad, 'و مربی هم اضافه نمی‌کند');
+end $$;
+
+select login_as('aa000000-0000-0000-0000-0000000000f2', '09120000077');
+
+-- ============================================================
+-- درخواست مرخصی مربی — مهاجرت ۰۰۳۴
+-- ============================================================
+
+do $$
+declare
+  centre uuid := '11111111-1111-1111-1111-111111111111';
+  zahra  uuid := '51111111-1111-1111-1111-111111111111';
+  req    uuid;
+  line   record;
+  bad    boolean;
+begin
+  -- مربی درخواست می‌دهد.
+  perform login_as('aa000000-0000-0000-0000-0000000000f3', '09120000001');
+  req := app.request_leave('personal', date '2026-04-20', date '2026-04-22', 'سفر خانوادگی');
+  /* نام پارامترها starts/ends است — `to_date` هم ستون است هم تابع درونی. */
+
+  /*
+   * ۱. بازه یک ردیف است، نه سه.
+   *
+   * سه ردیف یعنی مدیر سه بار تصمیم می‌گیرد و می‌تواند دوتایش را تأیید
+   * و یکی را رد کند — حالتی که هیچ معنای واقعی ندارد.
+   */
+  select * into line from app.my_leave() where id = req;
+  perform assert(line.days = 3, 'مرخصی سه‌روزه یک ردیف با سه روز است');
+  perform assert(line.state = 'pending', 'و تا تصمیم مدیر، در انتظار می‌ماند');
+
+  -- ۲. درخواست بازِ هم‌پوشان، دوباره ساخته نمی‌شود.
+  begin
+    perform app.request_leave('personal', date '2026-04-21', date '2026-04-25', null);
+    bad := true;
+  exception when others then
+    bad := false;
+  end;
+  perform assert(not bad, 'درخواست بازِ هم‌پوشان دو بار ثبت نمی‌شود');
+
+  -- ۳. بازه وارونه رد می‌شود.
+  begin
+    perform app.request_leave('sick', date '2026-06-10', date '2026-06-01', null);
+    bad := true;
+  exception when others then
+    bad := false;
+  end;
+  perform assert(not bad, 'روز پایانِ پیش از روز شروع ثبت نمی‌شود');
+
+  -- ۴. مربی خودش تصمیم نمی‌گیرد.
+  begin
+    perform app.decide_leave(req, true, null);
+    bad := true;
+  exception when others then
+    bad := false;
+  end;
+  perform assert(not bad, 'مربی درخواست خودش را تأیید نمی‌کند');
+
+  -- ۵. تا تأیید نشده، مرخصی نیست.
+  perform assert(
+    (select count(*) from app.staff_on_leave(centre, date '2026-04-21')) = 0,
+    'درخواست در انتظار، مرخصی حساب نمی‌شود'
+  );
+
+  -- ۶. مدیر می‌بیند و تأیید می‌کند.
+  perform login_as('aa000000-0000-0000-0000-0000000000f2', '09120000077');
+  select * into line from app.pending_leave(centre) where id = req;
+  perform assert(line.full_name is not null, 'درخواست با نام مربی در صف مدیر می‌آید');
+  perform assert(line.reason = 'سفر خانوادگی', 'و دلیلی که مربی نوشته');
+
+  -- ۷. رد بی دلیل ممکن نیست.
+  begin
+    perform app.decide_leave(req, false, '   ');
+    bad := true;
+  exception when others then
+    bad := false;
+  end;
+  perform assert(not bad, 'رد درخواست بی دلیل ثبت نمی‌شود');
+
+  perform app.decide_leave(req, true, null);
+  perform assert(
+    (select state from leave_request where id = req) = 'approved',
+    'مدیر تأیید کرد'
+  );
+
+  /*
+   * ۸. مرخصیِ تأییدشده در برنامه همان روز دیده می‌شود.
+   *
+   * وگرنه تأیید فقط یک ردیف در پایگاه داده است و مدیری که صبح شیفت را
+   * می‌چیند هنوز نمی‌داند چه کسی نیست.
+   */
+  select * into line from app.staff_on_leave(centre, date '2026-04-21');
+  perform assert(line.staff_id = zahra, 'روزِ میانِ بازه هم مرخصی است');
+  perform assert(
+    (select count(*) from app.staff_on_leave(centre, date '2026-04-23')) = 0,
+    'و روز پس از بازه، نه'
+  );
+
+  -- ۹. تصمیم دوباره روی همان درخواست، ممکن نیست.
+  begin
+    perform app.decide_leave(req, false, 'نظرم عوض شد');
+    bad := true;
+  exception when others then
+    bad := false;
+  end;
+  perform assert(not bad, 'درخواستِ تصمیم‌گرفته‌شده دوباره تصمیم نمی‌گیرد');
+
+  -- ۱۰. هر تصمیم ردِ پا دارد.
+  perform assert(
+    (select count(*) from audit_log
+      where action = 'leave_approved' and entity_id = req) = 1,
+    'تأیید مرخصی در دفتر رویداد ثبت می‌شود'
+  );
+
+  /*
+   * ۱۱. آنچه ساخته نمی‌شود — پیوست ج و خط قرمز ۱۰.
+   *
+   * نه سهمیه مرخصی، نه مانده، نه حقوق. اگر روزی ستونی با این نام‌ها
+   * اضافه شود، این تست می‌افتد و کسی باید توضیح بدهد چرا.
+   */
+  perform assert(
+    (select count(*) from information_schema.columns
+      where table_schema = 'public' and table_name = 'leave_request'
+        and column_name ~ '(balance|quota|remaining|entitlement|salary|score)') = 0,
+    'سهمیه و مانده مرخصی ساخته نشده‌اند'
+  );
+end $$;
+
+do $$
+declare
+  bad boolean;
+begin
+  -- ۱۲. سرپرست نه درخواست می‌دهد، نه صف را می‌بیند.
+  perform login_as('aa000000-0000-0000-0000-0000000000f1', '09120000001');
+  begin
+    perform app.request_leave('personal', date '2026-05-01', date '2026-05-02', null);
+    bad := true;
+  exception when others then
+    bad := false;
+  end;
+  perform assert(not bad, 'سرپرست درخواست مرخصی نمی‌دهد');
+
+  perform assert(
+    (select count(*) from app.pending_leave('11111111-1111-1111-1111-111111111111')) = 0,
+    'و صف مرخصی کارکنان را نمی‌بیند'
+  );
+end $$;
+
+select login_as('aa000000-0000-0000-0000-0000000000f2', '09120000077');

@@ -921,9 +921,20 @@ check(parentText.includes('پیش‌بند'), 'درخواست اول به خان
 check(parentText.includes('لباس گرم'), 'درخواست دوم هم رسید')
 
 console.log('▸ بخش ۵.۸ و ۶.۴: برنامه فردا')
+/*
+ * یک تصمیم، نه دو.
+ *
+ * «چه کسی می‌آورد» برداشته شد: مربی صبح کودک را از هر که بیاورد تحویل
+ * می‌گیرد و رفتارش عوض نمی‌شود. تحویل دادن است که تصمیم دارد — و کد و
+ * فهرست مجاز برای همان است.
+ */
 check(
-  (await page.locator('section:has-text("چه کسی می‌آورد")').count()) === 1,
-  'کارت فردا دو تصمیم جدا دارد: آوردن و بردن',
+  (await page.locator('text=چه کسی می‌آورد').count()) === 0,
+  'کارت فردا فقط تصمیم تحویل دادن را می‌پرسد',
+)
+check(
+  (await page.locator('text=چه کسی می‌برد').count()) === 1,
+  'و همان یکی را صریح می‌پرسد',
 )
 await page.locator('button:has-text("تغییر برای فردا")').first().click()
 await page.waitForTimeout(400)
@@ -1696,14 +1707,27 @@ await page.click('button:has-text("ثبت مدرک مهد")')
 await page.waitForSelector('[role="dialog"]')
 await page.fill('input[aria-label="عنوان مدرک مهد"]', 'مجوز فعالیت ۱۴۰۵')
 await page.fill('input[aria-label="مرجع صادرکننده"]', 'بهزیستی استان')
-await page.fill('input[aria-label="تاریخ انقضای مدرک مهد"]', '۱۴۰۴-۱۲-۳۰')
-await page.click('[role="dialog"] button:has-text("ثبت")')
-await page.waitForTimeout(400)
+
+/*
+ * تاریخ فقط از تقویم — و همین تست نگهبانش است.
+ *
+ * پیش‌تر اینجا ورودی متنی بود و تست، تاریخِ محالِ «۱۴۰۴-۱۲-۳۰» را
+ * می‌فرستاد تا ببیند رد می‌شود. حالا اصلاً ساختنش ممکن نیست: تقویم
+ * اسفندِ غیرکبیسه را با ۲۹ روز می‌کشد، پس روزِ سی‌ام دکمه‌ای ندارد.
+ * این، جای آن اعتبارسنجی را گرفته.
+ */
 check(
-  (await page.locator('text=تاریخ خوانده نشد').count()) === 1,
-  'تاریخ نامعتبر مدرک مهد رد می‌شود',
+  (await page.locator('[role="dialog"] input[aria-label="تاریخ انقضای مدرک مهد"]').count()) === 0,
+  'تاریخ انقضا دیگر تایپ نمی‌شود',
 )
-await page.fill('input[aria-label="تاریخ انقضای مدرک مهد"]', '۱۴۰۶-۰۳-۳۱')
+await page.click('[role="dialog"] button[aria-label="اعتبار تا"]')
+await page.waitForTimeout(300)
+check(
+  (await page.locator('[role="dialog"] button:has-text("امروز")').count()) === 1,
+  'تقویم جلالی باز شد',
+)
+await page.locator('[role="dialog"] button:has-text("امروز")').click()
+await page.waitForTimeout(300)
 await page.click('[role="dialog"] button:has-text("ثبت")')
 await page.waitForSelector('text=/«مجوز فعالیت ۱۴۰۵» ثبت شد/')
 const afterDoc = await page.evaluate(() => document.body.innerText)
@@ -1970,22 +1994,41 @@ await page.waitForSelector('text=مدارک')
 await page.click('button:has-text("بارگذاری مدرک")')
 await page.waitForSelector('[role="dialog"]')
 await page.fill('input[aria-label="عنوان مدرک"]', 'کارت بهداشت ۱۴۰۵')
-await page.fill('input[aria-label="تاریخ انقضای مدرک"]', '۱۴۰۵-۱۲-۲۹')
+
 /*
- * تاریخ نامعتبر رد می‌شود، نه حدس زده.
+ * نوع مدرک، دکمه‌های خوانا — نه یک بلوکِ به‌هم‌چسبیده.
  *
- * ستون انقضا با تاریخ امروز مقایسه می‌شود؛ تاریخی که خوانده نشده یعنی
- * «مدرک منقضی» هرگز درست درنمی‌آید.
+ * این تست از یک باگ واقعی آمد: کلاس‌های `choices`/`choice` در CSS این
+ * صفحه وجود نداشتند و CSS Modules برای کلاس ناموجود `undefined`
+ * می‌دهد، پس دکمه‌ها بی‌استایل کنار هم نشستند و «کارت بهداشتمدرک
+ * تحصیلیگواهی دوره» خوانده می‌شد. نه تایپ‌اسکریپت می‌گرفتش نه تست،
+ * چون صفحه سالم رندر می‌شد.
  */
-await page.fill('input[aria-label="تاریخ انقضای مدرک"]', '۱۴۰۴-۱۲-۳۰')
-await page.click('[role="dialog"] button:has-text("بارگذاری")')
-await page.waitForTimeout(400)
+const kindButtons = page.locator('[role="dialog"] fieldset button')
+check((await kindButtons.count()) >= 3, 'نوع مدرک، دکمه‌های جدا دارد')
+const firstKind = await kindButtons.first().boundingBox()
+const secondKind = await kindButtons.nth(1).boundingBox()
 check(
-  (await page.locator('text=تاریخ خوانده نشد').count()) === 1,
-  '۳۰ اسفندِ سال غیرکبیسه رد می‌شود',
+  firstKind.x + firstKind.width <= secondKind.x || secondKind.x + secondKind.width <= firstKind.x
+    || firstKind.y !== secondKind.y,
+  'و دکمه‌ها روی هم نیفتاده‌اند',
 )
 
-await page.fill('input[aria-label="تاریخ انقضای مدرک"]', '۱۴۰۵-۱۲-۲۹')
+/*
+ * تاریخ فقط از تقویم.
+ *
+ * پیش‌تر متن تایپ می‌شد و تست، «۳۰ اسفندِ سال غیرکبیسه» را می‌فرستاد تا
+ * ببیند رد می‌شود. حالا تقویم اصلاً اجازه ساختنش را نمی‌دهد — که از
+ * پیام خطا بهتر است.
+ */
+check(
+  (await page.locator('[role="dialog"] input[aria-label="تاریخ انقضای مدرک"]').count()) === 0,
+  'تاریخ انقضای مدرک مربی دیگر تایپ نمی‌شود',
+)
+await page.click('[role="dialog"] button[aria-label="اعتبار تا"]')
+await page.waitForTimeout(300)
+await page.locator('[role="dialog"] button:has-text("امروز")').click()
+await page.waitForTimeout(300)
 await page.click('[role="dialog"] button:has-text("بارگذاری")')
 await page.waitForSelector('text=/بارگذاری شد/')
 check(true, 'مدرک مربی بارگذاری شد، با تاریخ انقضا')
@@ -2235,6 +2278,112 @@ check(
 )
 await page.locator('[aria-label="بازگشت"]').click()
 await page.waitForTimeout(400)
+
+console.log('▸ مرخصی مربی: درخواست، تصمیم مدیر، جوابی که مربی می‌بیند')
+await signIn('09120000001')
+await page.waitForSelector('text=ثبت گروهی امروز')
+await page.locator('nav button:has-text("بیشتر")').click()
+await page.waitForSelector('button:has-text("درخواست مرخصی")')
+await page.click('button:has-text("درخواست مرخصی")')
+await page.waitForSelector('[role="dialog"]')
+/*
+ * تاریخ فقط از تقویم. شیت هیچ ورودی متنیِ تاریخ ندارد و همین تست
+ * نگهبانش است: بازگشتِ ورودی متنی، سه راه خطا را برمی‌گرداند.
+ */
+check(
+  (await page.locator('[role="dialog"] input[inputmode="numeric"]').count()) === 0,
+  'تاریخ مرخصی فقط از تقویم انتخاب می‌شود، نه با تایپ',
+)
+await page.locator('textarea[aria-label="توضیح مرخصی"]').fill('عروسی خواهرم است.')
+await page.click('button:has-text("فرستادن برای مدیر")')
+await page.waitForTimeout(900)
+const askedLeave = await page.evaluate(() => document.body.innerText)
+check(/در انتظار تأیید مدیر/.test(askedLeave), 'درخواست ثبت شد و در انتظار ماند')
+check(
+  !/تأیید شد/.test(askedLeave.slice(askedLeave.indexOf('مرخصی'))),
+  'و تا تصمیم مدیر، مرخصی حساب نمی‌شود',
+)
+
+/*
+ * خروج، نه ورودِ تازه: `signIn` حافظه مرورگر را پاک می‌کند و با آن،
+ * درخواستی که مربی همین حالا ثبت کرد از بین می‌رود.
+ */
+await signOutAny()
+await page.waitForSelector('#phone')
+await page.fill('#phone', '09120000002')
+await page.click('button:has-text("فرستادن کد")')
+await page.waitForSelector('#code')
+await page.fill('#code', '11111')
+await page.click('button:has-text("ورود")')
+await page.waitForTimeout(900)
+const asManager = page.locator('button:has-text("مدیر")')
+if (await asManager.count()) await asManager.first().click()
+await page.waitForSelector('[aria-label="درخواست‌های مرخصی"]', { timeout: 10000 })
+const leaveQueue = page.locator('[aria-label="درخواست‌های مرخصی"]')
+check(/زهرا/.test(await leaveQueue.innerText()), 'درخواست با نام مربی در صف مدیر آمد')
+check(/عروسی خواهرم/.test(await leaveQueue.innerText()), 'و دلیلی که مربی نوشت')
+
+await leaveQueue.locator('button:has-text("رد با دلیل")').first().click()
+await page.waitForSelector('textarea[aria-label="دلیل رد مرخصی"]')
+check(
+  await page.locator('button:has-text("ثبت رد")').isDisabled(),
+  'رد بی دلیل ثبت نمی‌شود — مربی‌ای که «نه»ی بی‌توضیح بشنود، دفعه بعد غیبت می‌کند',
+)
+await page.locator('textarea[aria-label="دلیل رد مرخصی"]').fill('آن روز فقط دو مربی داریم.')
+await page.click('button:has-text("ثبت رد")')
+await page.waitForTimeout(1200)
+check(
+  (await page.locator('[aria-label="درخواست‌های مرخصی"]').count()) === 0,
+  'پس از تصمیم، درخواست از صف مدیر می‌رود',
+)
+
+console.log('▸ از داشبورد مدیر، یک ضربه تا پرونده مربی')
+const statusCard = page.locator('[aria-label="وضعیت ثبت کلاس‌ها"]')
+const staffLink = statusCard.locator('button').first()
+check(await staffLink.count() > 0, 'نام مربیِ شیفت زیر کلاس نوشته شده')
+const staffName = await staffLink.innerText()
+await staffLink.click()
+await page.waitForTimeout(1200)
+const staffFile = await page.evaluate(() => document.body.innerText)
+check(staffFile.includes(staffName), `پرونده ${staffName} با یک ضربه باز شد`)
+check(/آدرس سکونت/.test(staffFile), 'و مشخصاتش را دارد — نشانی، تماس، سوابق')
+check(/سوابق کاری/.test(staffFile), 'سوابق کاری در پرونده هست')
+check(
+  !/نمره|رتبه|امتیاز/.test(staffFile),
+  'و هیچ نمره یا رتبه‌ای در پرونده مربی نیست',
+)
+
+await page.click('button:has-text("ویرایش مشخصات")')
+await page.waitForSelector('[role="dialog"], [aria-label="ویرایش مشخصات مربی"]')
+const editSheet = page.locator('[aria-label="ویرایش مشخصات مربی"]')
+await editSheet.locator('input[aria-label="کد ملی"]').fill('0012345678')
+await editSheet.locator('textarea[aria-label="آدرس سکونت"]').fill('تهران، خیابان آزادی')
+// داخلِ شیت، نه هر دکمه‌ای که «ثبت» در متنش هست — «ثبت یادداشت یا
+// ارزیابی» پشتِ همین شیت است و has-text زیررشته می‌گیرد.
+await editSheet.locator('button:has-text("ثبت")').last().click()
+await page.waitForTimeout(1200)
+const edited = await page.evaluate(() => document.body.innerText)
+check(/تهران، خیابان آزادی/.test(edited), 'مدیر مشخصات را وارد کرد و ذخیره شد')
+
+// پرونده مربی سرصفحه خودش را دارد؛ کلید حساب کاربری پشت آن است.
+await page.locator('[aria-label="بازگشت به فهرست کارکنان"]').click()
+await page.waitForTimeout(500)
+await page.locator('nav button:has-text("خانه")').click()
+await page.waitForSelector('text=وضعیت ثبت')
+
+await signOutAny()
+await page.waitForSelector('#phone')
+await page.fill('#phone', '09120000001')
+await page.click('button:has-text("فرستادن کد")')
+await page.waitForSelector('#code')
+await page.fill('#code', '11111')
+await page.click('button:has-text("ورود")')
+await page.waitForSelector('text=ثبت گروهی امروز')
+await page.locator('nav button:has-text("بیشتر")').click()
+await page.waitForTimeout(900)
+const answered = await page.evaluate(() => document.body.innerText)
+check(/رد شد/.test(answered), 'مربی جواب مدیر را می‌بیند')
+check(/آن روز فقط دو مربی داریم/.test(answered), 'و دلیلش را، نه فقط یک «نه»')
 
 console.log('▸ بخش ۱۲.۷: کف کیفیت')
 await signIn('09120000001')

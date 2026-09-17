@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useState } from 'react'
-import { AlertIcon, EmptyState } from '../../design-system/index.ts'
 import {
-  formatCount,
-  formatJalali,
-  parseJalaliInput,
-  toIsoDate,
-  toPersianDigits,
-} from '../../i18n/index.ts'
+  AlertIcon,
+  ChoiceGroup,
+  EmptyState,
+  FileField,
+  JalaliDateField,
+} from '../../design-system/index.ts'
+import { formatCount, formatJalali, toIsoDate, toPersianDigits } from '../../i18n/index.ts'
 import { CheckIcon } from '../../design-system/index.ts'
 import { useData } from '../../core/auth/index.ts'
 import type {
@@ -281,6 +281,14 @@ export function AuditPage({ onBack }: { onBack: () => void }) {
               const expired = doc.expiresAt !== null && doc.expiresAt < today
               return (
                 <p key={doc.id} className={`${styles.row} t-body-sm`}>
+                  {/*
+                    بندانگشتیِ خودِ برگه. مدیری که ده مدرک بارگذاری کرده
+                    باید بی باز کردن هیچ‌چیز ببیند کدام‌یک واقعاً تصویر
+                    دارد و کدام فقط یک عنوان است.
+                  */}
+                  {doc.fileUrl ? (
+                    <img className={styles.thumb} src={doc.fileUrl} alt="" />
+                  ) : null}
                   <span>{doc.title}</span>
                   <span className={styles.muted}>{CENTER_DOC_TEXT[doc.kind] ?? doc.kind}</span>
                   <b className={expired ? styles.expired : styles.muted}>
@@ -495,28 +503,30 @@ function CenterDocumentSheet({ onClose, onDone }: {
   const [title, setTitle] = useState('')
   const [issuer, setIssuer] = useState('')
   const [reference, setReference] = useState('')
-  const [expires, setExpires] = useState('')
+  const [expires, setExpires] = useState<string | null>(null)
+  const [fileUrl, setFileUrl] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   const submit = () => {
     /*
-     * تاریخ جلالی، میلادی می‌شود — پیش از ذخیره.
+     * تاریخ همیشه میلادیِ ISO از تقویم می‌آید — بخش ۱۲.
      *
-     * وضعیت انقضا با تاریخ امروز مقایسه می‌شود؛ رشته جلالیِ خام یعنی
-     * «مجوز منقضی» هرگز درست درنمی‌آید، و آن یکی مهد را تعطیل می‌کند.
+     * پیش‌تر اینجا ورودی متنی بود و رشته جلالی تجزیه می‌شد. وضعیت انقضا
+     * با `current_date` مقایسه می‌شود؛ یک تجزیه ناموفق یعنی «مجوز
+     * منقضی» هرگز درست درنمی‌آید، و آن یکی مهد را تعطیل می‌کند. تقویم
+     * اصلاً اجازه نوشتن تاریخ نامعتبر را نمی‌دهد.
      */
-    const typed = expires.trim()
-    const iso = typed ? parseJalaliInput(typed) : null
-    if (typed && iso === null) {
-      setError('تاریخ خوانده نشد. به شکل ۱۴۰۵-۱۲-۲۹ بنویسید.')
+    if (!title.trim() && !CENTER_DOC_TEXT[kind]) {
+      setError('عنوان مدرک لازم است.')
       return
     }
     void onDone({
       kind,
       title: title.trim() || (CENTER_DOC_TEXT[kind] ?? 'مدرک'),
+      fileUrl,
       issuer,
       referenceNo: reference,
-      expiresAt: iso,
+      expiresAt: expires,
     })
   }
 
@@ -525,20 +535,12 @@ function CenterDocumentSheet({ onClose, onDone }: {
       <div className={styles.sheet}>
         <p className={`${styles.sheetTitle} t-h2`}>مدرک مهد</p>
 
-        <fieldset className={styles.choices}>
-          <legend className={`${styles.muted} t-caption`}>نوع مدرک</legend>
-          {CENTER_DOC_KINDS.map((option) => (
-            <button
-              key={option.value}
-              type="button"
-              className={styles.choice}
-              aria-pressed={kind === option.value}
-              onClick={() => setKind(option.value)}
-            >
-              {option.label}
-            </button>
-          ))}
-        </fieldset>
+        <ChoiceGroup
+          label="نوع مدرک"
+          options={CENTER_DOC_KINDS}
+          value={kind}
+          onChange={setKind}
+        />
 
         <label className={`${styles.field} t-caption`}>
           عنوان
@@ -572,16 +574,14 @@ function CenterDocumentSheet({ onClose, onDone }: {
           />
         </label>
 
-        <label className={`${styles.field} t-caption`}>
-          اعتبار تا (۱۴۰۵-۱۲-۲۹)
-          <input
-            className={styles.input}
-            value={expires}
-            inputMode="numeric"
-            aria-label="تاریخ انقضای مدرک مهد"
-            onChange={(event) => setExpires(event.target.value)}
-          />
-        </label>
+        <JalaliDateField label="اعتبار تا" value={expires} onChange={setExpires} />
+
+        <FileField
+          label="تصویر مدرک"
+          value={fileUrl}
+          onChange={setFileUrl}
+          hint="بازرس خودِ برگه را می‌خواهد، نه فهرست عنوان‌ها."
+        />
 
         {error ? <p className={`${styles.error} t-caption`}>{error}</p> : null}
 
@@ -608,18 +608,20 @@ function VisitSheet({ onClose, onDone }: {
   const [inspector, setInspector] = useState('')
   const [findings, setFindings] = useState('')
   const [action, setAction] = useState('')
-  const [visited, setVisited] = useState('')
+  const [visited, setVisited] = useState<string | null>(toIsoDate(new Date()))
   const [error, setError] = useState<string | null>(null)
 
   const submit = () => {
-    const typed = visited.trim()
-    const iso = typed ? parseJalaliInput(typed) : toIsoDate(new Date())
-    if (iso === null) {
-      setError('تاریخ خوانده نشد. به شکل ۱۴۰۵-۰۶-۳۱ بنویسید.')
+    if (visited === null) {
+      setError('تاریخ بازدید لازم است. از تقویم انتخابش کنید.')
+      return
+    }
+    if (!authority.trim()) {
+      setError('نام مرجع بازرسی لازم است.')
       return
     }
     void onDone({
-      visitedOn: iso,
+      visitedOn: visited,
       authority,
       inspectorName: inspector,
       findings,
@@ -643,17 +645,12 @@ function VisitSheet({ onClose, onDone }: {
           />
         </label>
 
-        <label className={`${styles.field} t-caption`}>
-          تاریخ بازدید — خالی یعنی امروز
-          <input
-            className={styles.input}
-            value={visited}
-            inputMode="numeric"
-            aria-label="تاریخ بازدید"
-            placeholder="۱۴۰۵-۰۶-۳۱"
-            onChange={(event) => setVisited(event.target.value)}
-          />
-        </label>
+        <JalaliDateField
+          label="تاریخ بازدید"
+          value={visited}
+          onChange={setVisited}
+          allowClear={false}
+        />
 
         <label className={`${styles.field} t-caption`}>
           نام بازرس

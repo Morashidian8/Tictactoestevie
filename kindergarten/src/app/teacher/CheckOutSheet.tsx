@@ -2,7 +2,13 @@ import { useEffect, useState } from 'react'
 import { AlertIcon, AvatarFace, BottomSheet, CheckIcon } from '../../design-system/index.ts'
 import { formatCount, formatTime, toIsoDate, toLatinDigits } from '../../i18n/index.ts'
 import { useData } from '../../core/auth/index.ts'
-import type { Attendance, Child, PickupCodeCheck, PickupOption } from '../../core/data/index.ts'
+import type {
+  Attendance,
+  Child,
+  PickupCodeCheck,
+  PickupOption,
+  PickupPlan,
+} from '../../core/data/index.ts'
 import styles from './CheckOutSheet.module.css'
 
 /**
@@ -22,6 +28,14 @@ type Props = {
   child: Child
   /** ردیف حضور امروز، برای نشان دادن اینکه چه کسی تحویلش گرفته بود. */
   attendance: Attendance | null
+  /**
+   * اعلام خانواده برای امروز — بخش ۵.۸.
+   *
+   * اینجا می‌آید نه در بنر بالای صفحه: با بیست کودک آن بنر نیمی از
+   * صفحه می‌شد و مربی صبح از رویش رد می‌شد. اینجا همان لحظه‌ای است که
+   * مربی تصمیم می‌گیرد کودک را به دست چه کسی بدهد.
+   */
+  plan: PickupPlan | null
   onClose: () => void
   onDone: () => void
 }
@@ -29,7 +43,7 @@ type Props = {
 /** ساعت پایان مهد. تا وصل شدن تنظیمات مرکز، پیش‌فرض سند. */
 const WORK_END = { hour: 16, minute: 30 }
 
-export function CheckOutSheet({ child, attendance, onClose, onDone }: Props) {
+export function CheckOutSheet({ child, attendance, plan, onClose, onDone }: Props) {
   const data = useData()
   const [options, setOptions] = useState<PickupOption[]>([])
   const [personId, setPersonId] = useState<string | null>(null)
@@ -110,6 +124,26 @@ export function CheckOutSheet({ child, attendance, onClose, onDone }: Props) {
         </>
       }
     >
+      {/*
+        اعلام خانواده، بالای همه‌چیز و پیش از فهرست مجاز.
+
+        مربی اول باید بداند امروز قرار است چه کسی بیاید؛ بعد فهرست را
+        ببیند. برعکسش یعنی مربی اسم اول فهرست را می‌زند و بعد می‌فهمد
+        امروز فرق داشت.
+      */}
+      {plan ? (
+        <div className={styles.plan}>
+          <p className={`${styles.planWho} t-body-lg`}>
+            امروز {plan.personName} می‌بَرَدش.
+          </p>
+          <p className={`${styles.planHow} t-body`}>
+            {plan.code
+              ? 'با کد تحویل — کد را از او بگیرید و پایین وارد کنید.'
+              : 'در فهرست مجاز است — از همین فهرست انتخابش کنید.'}
+          </p>
+        </div>
+      ) : null}
+
       {/*
         مربیِ صبح و مربیِ عصر یک نفر نیستند. کسی که الان تحویل می‌دهد
         باید ببیند صبح چه کسی تحویلش گرفته بود؛ اگر سؤالی پیش بیاید،

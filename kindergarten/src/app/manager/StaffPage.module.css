@@ -215,6 +215,16 @@
   background: var(--surface);
   border-start-start-radius: var(--r-card);
   border-start-end-radius: var(--r-card);
+  /*
+   * شیتِ بلند، درونش می‌لغزد — نه بیرونِ قاب.
+   *
+   * وقتی فرمِ مدرک، تقویم و بارگذاری فایل گرفت، دکمه «بارگذاری» روی
+   * گوشیِ ۸۴۴ پیکسلی زیر لبه صفحه افتاد و اصلاً قابل زدن نبود. دو تا
+   * از شش شیتِ این اپ همین دو خط را داشتند و چهارتای دیگر نه — یعنی
+   * قاعده‌ای که کپی شده بود و جا افتاد.
+   */
+  max-block-size: 90dvh;
+  overflow-y: auto;
 }
 
 .sheetTitle { margin: 0; font-family: var(--font); font-weight: var(--weight-black); }
@@ -359,4 +369,15 @@
   font-family: inherit;
   font-size: var(--text-caption);
   color: var(--ink);
+}
+
+/*
+ * ردیف کنش، چسبیده به پایینِ شیتِ لغزان.
+ * وگرنه کاربر باید تا ته فرم بلغزد تا دکمه را ببیند.
+ */
+.sheetActions {
+  position: sticky;
+  inset-block-end: 0;
+  background: var(--surface);
+  padding-block-start: var(--space-2);
 }

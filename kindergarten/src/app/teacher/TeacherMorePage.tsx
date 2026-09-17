@@ -1,8 +1,14 @@
-import { useEffect, useState } from 'react'
-import { AlertIcon, EmptyState } from '../../design-system/index.ts'
+import { useCallback, useEffect, useState } from 'react'
+import {
+  AlertIcon,
+  BottomSheet,
+  ChoiceGroup,
+  EmptyState,
+  JalaliDateField,
+} from '../../design-system/index.ts'
 import { formatCount, formatJalali, toIsoDate } from '../../i18n/index.ts'
 import { ROLE_LABEL, useAuth, useData } from '../../core/auth/index.ts'
-import type { StaffProfile } from '../../core/data/index.ts'
+import type { LeaveKind, LeaveRequest, StaffProfile } from '../../core/data/index.ts'
 import styles from './TeacherMorePage.module.css'
 
 /**
@@ -23,6 +29,23 @@ const NOTE_LABEL: Record<string, string> = {
   concern: 'نکته‌ای برای بهتر شدن',
 }
 
+const LEAVE_KINDS: { value: LeaveKind; label: string }[] = [
+  { value: 'personal', label: 'شخصی' },
+  { value: 'sick', label: 'بیماری' },
+  { value: 'family', label: 'خانوادگی' },
+  { value: 'other', label: 'سایر' },
+]
+
+const LEAVE_KIND_TEXT: Record<string, string> = Object.fromEntries(
+  LEAVE_KINDS.map((k) => [k.value, k.label]),
+)
+
+const LEAVE_STATE_TEXT: Record<LeaveRequest['state'], string> = {
+  pending: 'در انتظار تأیید مدیر',
+  approved: 'تأیید شد',
+  rejected: 'رد شد',
+}
+
 export function TeacherMorePage({ classId, onOpenChild, onOpenPlay }: {
   classId: string | null
   /** رفتن به مشاهده‌ها و گزارش ماهانه یک کودک. */
@@ -33,10 +56,20 @@ export function TeacherMorePage({ classId, onOpenChild, onOpenPlay }: {
   const { session } = useAuth()
   const [file, setFile] = useState<StaffProfile | null>(null)
   const [children, setChildren] = useState<{ id: string; name: string }[]>([])
+  const [leave, setLeave] = useState<LeaveRequest[] | null>(null)
+  const [asking, setAsking] = useState(false)
 
   useEffect(() => {
     data.getMyStaffFile().then(setFile).catch(() => setFile(null))
   }, [data])
+
+  const loadLeave = useCallback(() => {
+    data.listMyLeave().then(setLeave).catch(() => setLeave([]))
+  }, [data])
+
+  useEffect(() => {
+    loadLeave()
+  }, [loadLeave])
 
   useEffect(() => {
     if (!classId) return
@@ -106,6 +139,55 @@ export function TeacherMorePage({ classId, onOpenChild, onOpenPlay }: {
             >
               {child.name}
             </button>
+          ))
+        )}
+      </section>
+
+      {/*
+        مرخصی — درخواست و تاریخچه.
+
+        تا امروز راهش تلگرام و تماس بود: هیچ ردی نمی‌ماند، و مدیری که
+        صبح شیفت را می‌چیند نمی‌دانست چند نفر کم دارد.
+
+        «درخواست» است نه «اعلام»: تا مدیر تأیید نکند، مرخصی نیست و
+        هیچ‌جای برنامه دیده نمی‌شود. متن وضعیت همین را می‌گوید تا مربی
+        فردا غافلگیر نشود.
+      */}
+      <section className={styles.card}>
+        <span className={`${styles.label} t-caption`}>مرخصی</span>
+        <button type="button" className={`${styles.actionRow} t-body`} onClick={() => setAsking(true)}>
+          درخواست مرخصی
+        </button>
+        {leave === null ? (
+          <p className={`${styles.muted} t-body`}>در حال خواندن…</p>
+        ) : leave.length === 0 ? (
+          <p className={`${styles.muted} t-body`}>هنوز درخواستی نداده‌اید.</p>
+        ) : (
+          leave.map((row) => (
+            <article key={row.id} className={styles.note}>
+              <p className={`${styles.noteTop} t-body`}>
+                <b>
+                  {formatJalali(new Date(row.starts), 'short')}
+                  {row.days > 1 ? ` تا ${formatJalali(new Date(row.ends), 'short')}` : ''}
+                </b>
+                <span
+                  className={row.state === 'rejected' ? styles.expired : styles.muted}
+                >
+                  {LEAVE_STATE_TEXT[row.state]}
+                </span>
+              </p>
+              <p className={`${styles.muted} t-caption`}>
+                {LEAVE_KIND_TEXT[row.kind] ?? row.kind} · {formatCount(row.days)} روز
+              </p>
+              {/*
+                دلیلِ رد، همین‌جا و کنار خودِ درخواست.
+                مربی‌ای که بی دلیل «نه» می‌شنود، دفعه بعد اصلاً درخواست
+                نمی‌دهد و همان روز غیبت می‌کند.
+              */}
+              {row.decisionNote ? (
+                <p className={`${styles.row} t-body`}>{row.decisionNote}</p>
+              ) : null}
+            </article>
           ))
         )}
       </section>
@@ -199,6 +281,92 @@ export function TeacherMorePage({ classId, onOpenChild, onOpenPlay }: {
       <p className={`${styles.muted} t-caption`}>
         برای خروج از حساب، کلید حساب کاربری در بالای صفحه.
       </p>
+
+      {asking ? (
+        <LeaveSheet
+          onClose={() => setAsking(false)}
+          onDone={() => {
+            setAsking(false)
+            loadLeave()
+          }}
+        />
+      ) : null}
     </div>
+  )
+}
+
+/* ── شیت درخواست مرخصی ──────────────────────────────────────── */
+
+function LeaveSheet({ onClose, onDone }: { onClose: () => void; onDone: () => void }) {
+  const data = useData()
+  const [kind, setKind] = useState<LeaveKind>('personal')
+  const [starts, setStarts] = useState<string | null>(toIsoDate(new Date()))
+  /* پایان عمداً خالی می‌ماند: خالی یعنی همان یک روز، که حالت غالب است. */
+  const [ends, setEnds] = useState<string | null>(null)
+  const [reason, setReason] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const submit = async () => {
+    if (!starts) {
+      setError('روز مرخصی را از تقویم انتخاب کنید.')
+      return
+    }
+    setBusy(true)
+    setError(null)
+    try {
+      await data.requestLeave({ kind, starts, ends: ends ?? starts, reason })
+      onDone()
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'ثبت نشد.')
+      setBusy(false)
+    }
+  }
+
+  return (
+    /*
+     * شیتِ مشترک، نه پس‌زمینه و کارتِ ساختِ همین صفحه.
+     *
+     * نسخه اولِ همین فایل کلاس‌های `sheet`/`field`/`primary` را صدا زد
+     * که در CSS این صفحه وجود ندارند — و CSS Modules برای کلاس ناموجود
+     * `undefined` می‌دهد، یعنی شیتی بی‌استایل که نه تایپ‌اسکریپت
+     * می‌گیردش نه تست. همان باگی که در فرم مدرک مربی دیده شد.
+     */
+    <BottomSheet
+      title="درخواست مرخصی"
+      onClose={onClose}
+      footer={
+        <button
+          type="button"
+          className={`${styles.actionRow} t-body-lg`}
+          onClick={() => void submit()}
+          disabled={busy}
+        >
+          فرستادن برای مدیر
+        </button>
+      }
+    >
+      <ChoiceGroup label="نوع" options={LEAVE_KINDS} value={kind} onChange={setKind} />
+
+      <JalaliDateField label="از روز" value={starts} onChange={setStarts} allowClear={false} />
+      <JalaliDateField label="تا روز — خالی یعنی همان یک روز" value={ends} onChange={setEnds} />
+
+      <label className={`${styles.leaveField} t-caption`}>
+        توضیح برای مدیر
+        <textarea
+          className={styles.leaveText}
+          rows={3}
+          value={reason}
+          aria-label="توضیح مرخصی"
+          onChange={(event) => setReason(event.target.value)}
+        />
+      </label>
+
+      <p className={`${styles.muted} t-caption`}>
+        تا تأیید مدیر، این مرخصی نیست. جوابش را همین‌جا می‌بینید.
+      </p>
+
+      {error ? <p className={`${styles.warn} t-caption`}>{error}</p> : null}
+    </BottomSheet>
   )
 }

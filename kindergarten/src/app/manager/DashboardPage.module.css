@@ -448,3 +448,51 @@
   text-decoration-color: var(--brick);
   text-underline-offset: 3px;
 }
+
+/*
+ * مربیانِ شیفت، زیر ردیف کلاس.
+ *
+ * ظاهرش پیوند است نه دکمه: کنشِ اصلیِ این کارت نیست، راهِ میان‌بر است.
+ */
+.onDuty {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-2);
+  margin: 0 0 var(--space-2);
+}
+
+.staffLink {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--ink-muted);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  font-family: inherit;
+  cursor: pointer;
+  /* هدف لمسی، بی آنکه ردیف بلندتر شود. */
+  min-block-size: 28px;
+}
+
+.staffLink:active { color: var(--ink); }
+
+/* میدان متنِ شیت رد مرخصی. */
+.rejectField {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  color: var(--ink-muted);
+}
+
+.rejectText {
+  font-family: inherit;
+  font-size: var(--text-body);
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  padding: var(--space-2);
+  resize: vertical;
+}
+
+.rejectText:focus { border-color: var(--coral); outline: none; }

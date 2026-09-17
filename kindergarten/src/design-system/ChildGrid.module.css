@@ -197,3 +197,27 @@
 .alert .actLunch {
   background: var(--mint-tint);
 }
+
+/*
+ * تحویل امروز فرق دارد — بخش ۵.۸.
+ *
+ * زرد، نه قرمز: این یک خطر نیست، یک تفاوت است. قرمز را برای آلرژی
+ * نگه می‌داریم، وگرنه هر دو به یک اندازه دیده می‌شوند و آن یکی که
+ * واقعاً خطر دارد، گم می‌شود.
+ */
+.pickup {
+  inline-size: 100%;
+  margin-block-start: var(--space-1);
+  padding: 0 var(--space-2);
+  border-radius: var(--r-chip);
+  background: var(--mango-tint);
+  border: 1px solid var(--mango);
+  color: var(--ink);
+  font-weight: var(--weight-bold);
+  font-size: 10px;
+  line-height: 1.9;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: center;
+}

@@ -21,6 +21,16 @@ import styles from './TomorrowCard.module.css'
  * خانواده سر در گم نشود و مربی دم در معطل نماند.
  */
 
+/*
+ * فقط «چه کسی می‌برد».
+ *
+ * «چه کسی می‌آورد» برداشته شد چون هیچ‌کس با آن کاری نمی‌کرد: مربی صبح
+ * کودک را از هر که بیاورد تحویل می‌گیرد و رفتارش عوض نمی‌شود. تحویل
+ * دادن است که تصمیم دارد — و کد و فهرست مجاز برای همان است.
+ *
+ * ستون `direction` در پایگاه داده می‌ماند: اعلام‌های ثبت‌شده پاک
+ * نمی‌شوند، فقط دیگر ساخته نمی‌شوند.
+ */
 const DIRECTION_LABEL: Record<PlanDirection, string> = {
   drop_off: 'چه کسی می‌آورد',
   pickup: 'چه کسی می‌برد',
@@ -89,7 +99,7 @@ export function TomorrowCard({ childId, childName }: Props) {
         </span>
       </header>
 
-      {(['drop_off', 'pickup'] as const).map((direction) => {
+      {(['pickup'] as const).map((direction) => {
         const plan = planFor(direction)
         return (
           <div key={direction} className={styles.row}>

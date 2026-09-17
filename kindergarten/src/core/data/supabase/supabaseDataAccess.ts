@@ -78,6 +78,12 @@ import type {
   ConversationSummary,
   MessageCandidate,
   StaffCartableRow,
+  LeaveInput,
+  LeaveKind,
+  LeaveRequest,
+  NewStaff,
+  PendingLeave,
+  StaffField,
   StaffProfile,
   AttendanceDay,
   AttendanceMonth,
@@ -90,6 +96,11 @@ import type {
   ActivityCorner,
   InterestMap,
   PlaySession,
+  CalendarEvent,
+  Expense,
+  IncomeVsExpense,
+  MenuEntry,
+  Survey,
   FeeYearMonth,
   PaymentMethod,
   PaymentReminderLog,
@@ -422,7 +433,11 @@ export function createSupabaseDataAccess(scope: AccessScope): AuditedDataAccess 
    */
   const readStaffFile = async (staffId: string, sharedOnly: boolean): Promise<StaffProfile> => {
     const [person, docs, notes, classes] = await Promise.all([
-      db.from('staff').select('id, full_name, role').eq('id', staffId).single(),
+      db
+        .from('staff')
+        .select('id, full_name, first_name, last_name, role, phone, birth_date, national_id, address, education, resume, emergency_name, emergency_phone')
+        .eq('id', staffId)
+        .single(),
       db.from('staff_document').select('*').eq('staff_id', staffId).order('uploaded_at', { ascending: false }),
       db.from('staff_note').select('*').eq('staff_id', staffId).order('written_at', { ascending: false }),
       db.from('staff_class').select('class:class_id(name)').eq('staff_id', staffId),
@@ -436,9 +451,24 @@ export function createSupabaseDataAccess(scope: AccessScope): AuditedDataAccess 
     return {
       staffId,
       fullName: row.full_name as string,
+      firstName: row.first_name as string,
+      lastName: row.last_name as string,
       role: row.role as string,
-      // شماره تلفن عمداً خوانده نمی‌شود: پرونده کارکنان جای افشای شماره نیست.
-      phone: null,
+      /*
+       * شماره تماس اینجا **هست**.
+       *
+       * پیش‌تر عمداً خوانده نمی‌شد تا فهرست پرسنل جای افشای شماره نباشد.
+       * ولی این فهرست نیست؛ پرونده یک نفر است، و سیاست سطر-محور جدول
+       * `staff` همین حالا فقط مدیر و خودِ مربی را می‌گذارد بخواندش.
+       */
+      phone: (row.phone as string | null) ?? null,
+      birthDate: (row.birth_date as string | null) ?? null,
+      nationalId: (row.national_id as string | null) ?? null,
+      address: (row.address as string | null) ?? null,
+      education: (row.education as string | null) ?? null,
+      resume: (row.resume as string | null) ?? null,
+      emergencyName: (row.emergency_name as string | null) ?? null,
+      emergencyPhone: (row.emergency_phone as string | null) ?? null,
       classNames: ((orThrow(classes) as Row[]) ?? [])
         .map((c) => (c.class as Row | null)?.name as string | undefined)
         .filter((n): n is string => Boolean(n)),
@@ -640,7 +670,18 @@ export function createSupabaseDataAccess(scope: AccessScope): AuditedDataAccess 
         return enrollment ? enrolledOn(enrollment, at) : false
       }).length
 
-      const onDuty = staffOnDutyIds((orThrow(shiftRows) as Row[]).map(asShift), at, date)
+      const shifts = (orThrow(shiftRows) as Row[]).map(asShift)
+      const onDuty = staffOnDutyIds(shifts, at, date)
+      /*
+       * نام مربیانِ شیفت، برای اینکه داشبورد مدیر یک ضربه تا پرونده
+       * همان مربی فاصله داشته باشد. شناسه‌ای که نامش خوانده نشد ردیف
+       * نمی‌سازد؛ نامِ نداشته بدتر از نبودن ردیف است.
+       */
+      const onDutyRows = onDuty.length
+        ? ((orThrow(
+            await db.from('staff').select('id, full_name').in('id', onDuty),
+          ) as Row[]) ?? [])
+        : []
       const centreRows = orThrow(await from('center').eq('id', scope.centerId)) as Row[]
       const maxAllowed = (centreRows[0]?.max_children_per_staff as number | undefined) ?? 15
       // نسبت فقط از کودکان بازه جاری؛ پنجره انتقال در آن سهمی ندارد.
@@ -650,6 +691,10 @@ export function createSupabaseDataAccess(scope: AccessScope): AuditedDataAccess 
         staff: onDuty.length,
         maxAllowed,
         breached: inSession.length > maxAllowed * Math.max(onDuty.length, 1),
+        onDuty: onDutyRows.map((r) => ({
+          staffId: r.id as string,
+          fullName: r.full_name as string,
+        })),
       }
       const upcoming = upcomingPeriodAt(periods, at)
 
@@ -1546,6 +1591,236 @@ export function createSupabaseDataAccess(scope: AccessScope): AuditedDataAccess 
         smsQuota: await smsQuota(),
       }
     },
+
+    /* ── منو، تقویم، نظرسنجی — ماژول M14 ────────────────────── */
+
+    async getMenu(childId: string, from: string, to: string): Promise<MenuEntry[]> {
+      /*
+       * تقاطع آلرژی سمت سرور است، نه اینجا.
+       *
+       * فهرست آلرژی کودک اصلاً به مرورگر نمی‌آید مگر لازم باشد، و
+       * منطق تطبیق یک جا می‌ماند — دو پیاده‌سازی یعنی دو جواب.
+       */
+      const rows = orThrow(
+        await db.rpc('menu_for_child', {
+          centre: scope.centerId,
+          target: childId,
+          from_date: from,
+          to_date: to,
+        }),
+      ) as Row[]
+      return (rows ?? []).map((r): MenuEntry => ({
+        date: r.date as string,
+        slot: r.slot as MenuEntry['slot'],
+        title: r.title as string,
+        ingredients: (r.ingredients as string[] | null) ?? [],
+        note: (r.note as string | null) ?? null,
+        allergyHits: (r.allergy_hits as string[] | null) ?? [],
+      }))
+    },
+
+    async setMenuDay(input) {
+      // یک روز و یک وعده، یک منو — قید menu_day_once در جدول هم هست.
+      orThrow(
+        await db.from('menu_day').upsert(
+          {
+            center_id: scope.centerId,
+            date: input.date,
+            slot: input.slot,
+            title: input.title.trim(),
+            ingredients: input.ingredients.map((i) => i.trim()).filter(Boolean),
+            note: input.note?.trim() || null,
+          },
+          { onConflict: 'center_id,date,slot' },
+        ),
+      )
+    },
+
+    async listCalendar(from: string, to: string): Promise<CalendarEvent[]> {
+      /*
+       * رویداد نامرئی را سیاست سطر-محور می‌بندد، نه این پرس‌وجو.
+       * فیلتر اینجا فقط تکرارِ همان قاعده بود و می‌توانست با آن نخواند.
+       */
+      const rows = orThrow(
+        await db
+          .from('calendar_event')
+          .select('*')
+          .eq('center_id', scope.centerId)
+          .gte('date', from)
+          .lte('date', to)
+          .order('date'),
+      ) as Row[]
+      return (rows ?? []).map((r): CalendarEvent => ({
+        id: r.id as string,
+        date: r.date as string,
+        endDate: (r.end_date as string | null) ?? null,
+        kind: r.kind as CalendarEvent['kind'],
+        title: r.title as string,
+        note: (r.note as string | null) ?? null,
+        visibleToFamily: Boolean(r.visible_to_family),
+      }))
+    },
+
+    async addCalendarEvent(input) {
+      orThrow(
+        await db.from('calendar_event').insert({
+          center_id: scope.centerId,
+          date: input.date,
+          end_date: input.endDate ?? null,
+          kind: input.kind,
+          title: input.title.trim(),
+          note: input.note?.trim() || null,
+          visible_to_family: input.visibleToFamily ?? true,
+        }),
+      )
+    },
+
+    async listSurveys(): Promise<Survey[]> {
+      const [surveyRows, mineRows] = await Promise.all([
+        db
+          .from('survey')
+          .select('*')
+          .eq('center_id', scope.centerId)
+          .order('opens_at', { ascending: false }),
+        db.from('survey_response').select('survey_id, choice'),
+      ])
+
+      const mine = new Map(
+        ((orThrow(mineRows) as Row[]) ?? []).map((r) => [
+          r.survey_id as string,
+          r.choice as number,
+        ]),
+      )
+      const rows = (orThrow(surveyRows) as Row[]) ?? []
+      const manager = scope.role === 'manager'
+
+      return Promise.all(
+        rows.map(async (r): Promise<Survey> => {
+          const show = Boolean(r.show_results)
+          /*
+           * شمار فقط وقتی مدیریم یا انتشار روشن است — و هرگز نام.
+           *
+           * app.survey_tally فقط عدد برمی‌گرداند؛ سطرهای رأی را سیاست
+           * سطر-محور جز برای خودِ رأی‌دهنده نمی‌دهد.
+           */
+          const tally =
+            manager || show
+              ? ((orThrow(
+                  await db.rpc('survey_tally', {
+                    centre: scope.centerId,
+                    target: r.id as string,
+                  }),
+                ) as Row[]) ?? []).map((t) => ({
+                  choice: t.choice as number,
+                  label: t.label as string,
+                  votes: (t.votes as number) ?? 0,
+                }))
+              : null
+
+          return {
+            id: r.id as string,
+            question: r.question as string,
+            options: (r.options as string[] | null) ?? [],
+            closesAt: (r.closes_at as string | null) ?? null,
+            showResults: show,
+            myChoice: mine.get(r.id as string) ?? null,
+            tally,
+          }
+        }),
+      )
+    },
+
+    async createSurvey(input) {
+      const options = input.options.map((o) => o.trim()).filter(Boolean)
+      if (options.length < 2) throw new Error('نظرسنجی دست‌کم دو گزینه می‌خواهد.')
+      orThrow(
+        await db.from('survey').insert({
+          center_id: scope.centerId,
+          question: input.question.trim(),
+          options,
+          closes_at: input.closesAt ?? null,
+          // پیش‌فرض: نتیجه به خانواده نشان داده نمی‌شود.
+          show_results: input.showResults ?? false,
+        }),
+      )
+    },
+
+    async answerSurvey(surveyId: string, choice: number) {
+      // یک رأی برای هر حساب — کلید اصلی جدول همین را می‌بندد.
+      orThrow(
+        await db.from('survey_response').upsert(
+          {
+            survey_id: surveyId,
+            user_account_id: scope.accountId,
+            center_id: scope.centerId,
+            choice,
+          },
+          { onConflict: 'survey_id,user_account_id' },
+        ),
+      )
+    },
+
+    async setSurveyResultsVisible(surveyId: string, visible: boolean) {
+      orThrow(
+        await db
+          .from('survey')
+          .update({ show_results: visible })
+          .eq('id', surveyId)
+          .eq('center_id', scope.centerId),
+      )
+    },
+
+    /* ── هزینه و درآمد — ماژول M16 ──────────────────────────── */
+
+    async getIncomeVsExpense(period: string): Promise<IncomeVsExpense> {
+      const [summaryRows, expenseRows] = await Promise.all([
+        db.rpc('income_vs_expense', { centre: scope.centerId, span: period }),
+        db
+          .from('expense')
+          .select('*')
+          .eq('center_id', scope.centerId)
+          .order('date', { ascending: false })
+          .limit(100),
+      ])
+
+      const summary = ((orThrow(summaryRows) as Row[]) ?? [])[0] ?? {}
+      const byCategory = (summary.by_category as Record<string, number> | null) ?? {}
+
+      return {
+        period,
+        // «وصول‌شده»، نه «صادرشده» — تابع سرور همین را می‌دهد.
+        collected: (summary.collected as number) ?? 0,
+        spent: (summary.spent as number) ?? 0,
+        byCategory: Object.entries(byCategory)
+          .map(([category, total]) => ({
+            category: category as IncomeVsExpense['byCategory'][number]['category'],
+            total,
+          }))
+          .sort((a, b) => b.total - a.total),
+        expenses: ((orThrow(expenseRows) as Row[]) ?? []).map((e): Expense => ({
+          id: e.id as string,
+          date: e.date as string,
+          amount: e.amount as number,
+          category: e.category as Expense['category'],
+          note: (e.note as string | null) ?? null,
+          receiptUrl: (e.receipt_url as string | null) ?? null,
+        })),
+      }
+    },
+
+    async addExpense(input) {
+      orThrow(
+        await db.from('expense').insert({
+          center_id: scope.centerId,
+          date: input.date,
+          amount: input.amount,
+          category: input.category,
+          note: input.note?.trim() || null,
+          receipt_url: input.receiptUrl ?? null,
+        }),
+      )
+    },
+
 
     /* ── بازی آزاد — ماژول M8 ───────────────────────────────── */
 
@@ -2689,6 +2964,7 @@ export function createSupabaseDataAccess(scope: AccessScope): AuditedDataAccess 
           id: d.id as string,
           kind: d.kind as CenterDocument['kind'],
           title: d.title as string,
+          fileUrl: (d.file_url as string | null) ?? null,
           issuer: (d.issuer as string | null) ?? null,
           referenceNo: (d.reference_no as string | null) ?? null,
           issuedAt: (d.issued_at as string | null) ?? null,
@@ -2749,6 +3025,7 @@ export function createSupabaseDataAccess(scope: AccessScope): AuditedDataAccess 
           center_id: scope.centerId,
           kind: input.kind,
           title: input.title.trim(),
+          file_url: input.fileUrl ?? null,
           issuer: input.issuer?.trim() || null,
           reference_no: input.referenceNo?.trim() || null,
           expires_at: input.expiresAt ?? null,
@@ -3314,6 +3591,144 @@ export function createSupabaseDataAccess(scope: AccessScope): AuditedDataAccess 
         safetyCritical: r.safety_critical as boolean,
         requestedAt: r.requested_at as string,
       }))
+    },
+
+    /**
+     * ویرایش مستقیم، به دست مدیر.
+     *
+     * از همان فهرست بسته می‌گذرد که خانواده از آن می‌گذرد، و درخواستِ
+     * بازِ همان میدان را می‌بندد — وگرنه تأییدِ بعدی، مقدارِ درست را با
+     * مقدارِ قدیمی عوض می‌کند.
+     */
+    async editProfileField(childId: string, field: string, value: string) {
+      orThrow(
+        await db.rpc('edit_profile_field', {
+          target: childId,
+          field_key: field,
+          value,
+        }),
+      )
+    },
+
+    /* ── پرونده مربی ──────────────────────────────────────── */
+
+    async listStaffFields(staffId: string) {
+      const [fields, person] = await Promise.all([
+        db.from('staff_field').select('*').order('sort_order'),
+        db
+          .from('staff')
+          .select('first_name, last_name, birth_date, national_id, phone, address, education, resume, emergency_name, emergency_phone')
+          .eq('id', staffId)
+          .eq('center_id', scope.centerId)
+          .single(),
+      ])
+      const row = orThrow(person) as Row
+      /* آینه `app.staff_value`: نگاشت صریح کلید به ستون، نه ساختِ نام. */
+      const column: Record<string, string> = {
+        first_name: 'first_name',
+        last_name: 'last_name',
+        birth_date: 'birth_date',
+        national_id: 'national_id',
+        phone: 'phone',
+        address: 'address',
+        education: 'education',
+        resume: 'resume',
+        emergency_name: 'emergency_name',
+        emergency_phone: 'emergency_phone',
+      }
+      return ((orThrow(fields) as Row[]) ?? []).map((f): StaffField => {
+        const key = f.key as string
+        const at = column[key]
+        return {
+          key,
+          label: f.label as string,
+          input: f.input as StaffField['input'],
+          value: at ? ((row[at] as string | null) ?? '') : '',
+        }
+      })
+    },
+
+    async editStaffField(staffId: string, field: string, value: string) {
+      orThrow(
+        await db.rpc('edit_staff_field', { target: staffId, field_key: field, value }),
+      )
+    },
+
+    /* ── مرخصی مربی ───────────────────────────────────────── */
+
+    async requestLeave(input: LeaveInput) {
+      orThrow(
+        await db.rpc('request_leave', {
+          kind: input.kind,
+          starts: input.starts,
+          ends: input.ends,
+          reason: input.reason?.trim() || null,
+        }),
+      )
+    },
+
+    async listMyLeave(): Promise<LeaveRequest[]> {
+      const rows = (orThrow(await db.rpc('my_leave')) as Row[]) ?? []
+      return rows.map((r) => ({
+        id: r.id as string,
+        kind: r.kind as LeaveKind,
+        starts: r.starts as string,
+        ends: r.ends as string,
+        days: r.days as number,
+        reason: (r.reason as string | null) ?? null,
+        state: r.state as LeaveRequest['state'],
+        decisionNote: (r.decision_note as string | null) ?? null,
+        requestedAt: r.requested_at as string,
+        reviewedAt: (r.reviewed_at as string | null) ?? null,
+      }))
+    },
+
+    async listPendingLeave(): Promise<PendingLeave[]> {
+      const rows =
+        (orThrow(await db.rpc('pending_leave', { centre: scope.centerId })) as Row[]) ?? []
+      return rows.map((r) => ({
+        id: r.id as string,
+        staffId: r.staff_id as string,
+        fullName: r.full_name as string,
+        kind: r.kind as LeaveKind,
+        starts: r.starts as string,
+        ends: r.ends as string,
+        days: r.days as number,
+        reason: (r.reason as string | null) ?? null,
+        requestedAt: r.requested_at as string,
+      }))
+    },
+
+    async decideLeave(requestId: string, approve: boolean, note?: string) {
+      orThrow(
+        await db.rpc('decide_leave', {
+          request: requestId,
+          approve,
+          note: note?.trim() || null,
+        }),
+      )
+    },
+
+    async listStaffOnLeave(date: string) {
+      const rows =
+        (orThrow(await db.rpc('staff_on_leave', { centre: scope.centerId, day: date })) as Row[]) ??
+        []
+      return rows.map((r) => ({
+        staffId: r.staff_id as string,
+        fullName: r.full_name as string,
+      }))
+    },
+
+    async addStaff(input: NewStaff) {
+      const made = orThrow(
+        await db.rpc('add_staff', {
+          first_name: input.firstName.trim(),
+          last_name: input.lastName.trim(),
+          staff_role: input.role,
+          phone: input.phone?.trim() || null,
+        }),
+      )
+      return made as unknown as string
     },
 
     async decideProfileChange(requestId: string, approve: boolean, reason?: string) {

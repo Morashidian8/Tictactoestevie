@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
-import { AlertIcon, EmptyState } from '../../design-system/index.ts'
+import { AlertIcon, BottomSheet, EmptyState } from '../../design-system/index.ts'
 import {
   formatCount,
+  formatJalali,
   formatTime,
   formatToman,
   jalaliYearMonth,
@@ -13,6 +14,7 @@ import type {
   AuditReadiness,
   Child,
   FinanceOverview,
+  PendingLeave,
   IncidentDecision,
   ManagerDashboard,
 } from '../../core/data/index.ts'
@@ -45,6 +47,13 @@ const INCIDENT_TEXT: Record<string, string> = {
   other: 'رویداد',
 }
 
+const LEAVE_KIND_TEXT: Record<string, string> = {
+  personal: 'شخصی',
+  sick: 'بیماری',
+  family: 'خانوادگی',
+  other: 'سایر',
+}
+
 const LOCATION_TEXT: Record<string, string> = {
   classroom: 'کلاس',
   yard: 'حیاط',
@@ -54,8 +63,10 @@ const LOCATION_TEXT: Record<string, string> = {
   other: 'جای دیگر',
 }
 
-export function DashboardPage({ onGo, onCounts }: {
+export function DashboardPage({ onGo, onCounts, onOpenStaff }: {
   onGo: (page: ManagerPage) => void
+  /** رفتن مستقیم به پرونده یک مربی، بی گذر از فهرست کارکنان. */
+  onOpenStaff?: (staffId: string) => void
   /**
    * نشان‌های نوار پایین را به پوسته می‌دهد.
    *
@@ -66,6 +77,9 @@ export function DashboardPage({ onGo, onCounts }: {
 }) {
   const data = useData()
   const [board, setBoard] = useState<ManagerDashboard | null>(null)
+  const [leave, setLeave] = useState<PendingLeave[]>([])
+  const [onLeave, setOnLeave] = useState<{ staffId: string; fullName: string }[]>([])
+  const [rejecting, setRejecting] = useState<PendingLeave | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState<string | null>(null)
   const [showAll, setShowAll] = useState(false)
@@ -80,6 +94,17 @@ export function DashboardPage({ onGo, onCounts }: {
       setError(null)
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'خوانده نشد.')
+    }
+    // صف مرخصی جدا خوانده می‌شود: نبودش نباید کل داشبورد را خالی کند.
+    try {
+      setLeave(await data.listPendingLeave())
+    } catch {
+      setLeave([])
+    }
+    try {
+      setOnLeave(await data.listStaffOnLeave(date))
+    } catch {
+      setOnLeave([])
     }
   }, [data, date])
 
@@ -173,6 +198,19 @@ export function DashboardPage({ onGo, onCounts }: {
     }
   }
 
+  const decideLeave = async (requestId: string, approve: boolean, note?: string) => {
+    setBusy(requestId)
+    try {
+      await data.decideLeave(requestId, approve, note)
+      setRejecting(null)
+      await load()
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'ثبت نشد.')
+    } finally {
+      setBusy(null)
+    }
+  }
+
   return (
     <div className={styles.page}>
       <div className={styles.body}>
@@ -219,6 +257,65 @@ export function DashboardPage({ onGo, onCounts }: {
                       {choice.label}
                     </button>
                   ))}
+                </div>
+              </article>
+            ))}
+          </section>
+        ) : null}
+
+        {/*
+          صف مرخصی، زیر رویدادها و بالای شاخص‌ها.
+
+          جایش عمدی است: رویداد کودک همیشه اولِ همه‌چیز می‌ماند (بخش
+          ۱۳.۳)، ولی مرخصیِ فردا پیش از آمارِ امروز تصمیم می‌خواهد —
+          مدیری که صبح شیفت را می‌چیند باید بداند چند نفر کم دارد.
+
+          «نزدیک‌ترین روزِ شروع اول» است نه «تازه‌ترین درخواست»: مرخصیِ
+          فردا از مرخصیِ ماه بعد فوری‌تر است، هرچند دیرتر ثبت شده باشد.
+        */}
+        {leave.length > 0 ? (
+          <section className={styles.queue} aria-label="درخواست‌های مرخصی">
+            <p className={`${styles.queueHead} t-body-lg`}>
+              {formatCount(leave.length)} درخواست مرخصی
+            </p>
+            {leave.map((row) => (
+              <article key={row.id} className={styles.incident}>
+                <p className={`${styles.incidentTop} t-body`}>
+                  <b>{row.fullName}</b>
+                  <span>
+                    {formatJalali(new Date(row.starts), 'short')}
+                    {row.days > 1 ? ` تا ${formatJalali(new Date(row.ends), 'short')}` : ''}
+                  </span>
+                  <span>{formatCount(row.days)} روز</span>
+                </p>
+                <p className={`${styles.incidentKind} t-body`}>
+                  {LEAVE_KIND_TEXT[row.kind] ?? row.kind}
+                </p>
+                {row.reason ? (
+                  <blockquote className={`${styles.incidentText} t-body`}>{row.reason}</blockquote>
+                ) : null}
+                <div className={styles.decisions}>
+                  <button
+                    type="button"
+                    className={`${styles.decide} ${styles.decidePrimary} t-body`}
+                    disabled={busy === row.id}
+                    onClick={() => void decideLeave(row.id, true)}
+                  >
+                    تأیید
+                  </button>
+                  {/*
+                    رد، شیت باز می‌کند نه ثبتِ مستقیم: دلیل لازم است و
+                    مربی‌ای که بی دلیل «نه» می‌شنود، دفعه بعد اصلاً
+                    درخواست نمی‌دهد و همان روز غیبت می‌کند.
+                  */}
+                  <button
+                    type="button"
+                    className={`${styles.decide} t-body`}
+                    disabled={busy === row.id}
+                    onClick={() => setRejecting(row)}
+                  >
+                    رد با دلیل
+                  </button>
                 </div>
               </article>
             ))}
@@ -356,17 +453,70 @@ export function DashboardPage({ onGo, onCounts }: {
               </section>
             ) : null}
 
+            {/*
+              وضعیت ثبت، با نامِ مربیِ شیفت زیر هر کلاس.
+
+              مدیری که می‌بیند «گل‌ها: ۳ از ۸ کامل»، سؤال بعدی‌اش «چه
+              کسی امروز گل‌هاست؟» است. تا امروز جواب سه ضربه دورتر بود —
+              بیشتر، کارکنان، گشتن در فهرست. حالا خودِ نام اینجاست و یک
+              ضربه پرونده‌اش را باز می‌کند.
+
+              نام، کنار عددِ ثبت می‌نشیند ولی به آن **چسبیده نیست**:
+              «۳ از ۸» کارِ کلاس است نه کارنامه آن مربی، و خط قرمز ۱۰
+              می‌گوید هیچ عددی به نام یک مربی وصل نمی‌شود.
+            */}
+            {/*
+              مرخصی‌های امروز، کنارِ وضعیت ثبت.
+
+              بی این، تأیید مرخصی فقط یک ردیف در پایگاه داده است که
+              هیچ‌جا دیده نمی‌شود — و مدیری که صبح شیفت را می‌چیند هنوز
+              نمی‌داند چه کسی نیست.
+            */}
+            {onLeave.length > 0 ? (
+              <section className={styles.card} aria-label="مرخصی امروز">
+                <span className={`${styles.cardLabel} t-caption`}>امروز مرخصی‌اند</span>
+                {onLeave.map((person) => (
+                  <p key={person.staffId} className={`${styles.row} t-body`}>
+                    <span>{person.fullName}</span>
+                    <button
+                      type="button"
+                      className={`${styles.staffLink} t-caption`}
+                      onClick={() => onOpenStaff?.(person.staffId)}
+                    >
+                      پرونده
+                    </button>
+                  </p>
+                ))}
+              </section>
+            ) : null}
+
             <section className={styles.card} aria-label="وضعیت ثبت کلاس‌ها">
               <span className={`${styles.cardLabel} t-caption`}>وضعیت ثبت</span>
               {board.classes.map((room) => (
-                <p key={room.classId} className={`${styles.row} t-body`}>
-                  <span>{room.name}</span>
-                  <span className={room.complete === room.total ? styles.ok : styles.partial}>
-                    {room.sent
-                      ? 'فرستاده شد'
-                      : `${toPersianDigits(room.complete)} از ${toPersianDigits(room.total)} کامل`}
-                  </span>
-                </p>
+                <div key={room.classId}>
+                  <p className={`${styles.row} t-body`}>
+                    <span>{room.name}</span>
+                    <span className={room.complete === room.total ? styles.ok : styles.partial}>
+                      {room.sent
+                        ? 'فرستاده شد'
+                        : `${toPersianDigits(room.complete)} از ${toPersianDigits(room.total)} کامل`}
+                    </span>
+                  </p>
+                  {room.ratio.onDuty.length > 0 ? (
+                    <p className={styles.onDuty}>
+                      {room.ratio.onDuty.map((person) => (
+                        <button
+                          key={person.staffId}
+                          type="button"
+                          className={`${styles.staffLink} t-caption`}
+                          onClick={() => onOpenStaff?.(person.staffId)}
+                        >
+                          {person.fullName}
+                        </button>
+                      ))}
+                    </p>
+                  ) : null}
+                </div>
               ))}
             </section>
 
@@ -424,7 +574,66 @@ export function DashboardPage({ onGo, onCounts }: {
         {error ? <p className={`${styles.error} t-body`}>{error}</p> : null}
       </div>
 
+      {rejecting ? (
+        <RejectLeaveSheet
+          request={rejecting}
+          busy={busy === rejecting.id}
+          onClose={() => setRejecting(null)}
+          onDone={(note) => void decideLeave(rejecting.id, false, note)}
+        />
+      ) : null}
     </div>
+  )
+}
+
+/* ── شیت رد مرخصی ───────────────────────────────────────────── */
+
+/**
+ * رد، دلیل می‌خواهد — و دلیل، شیت می‌خواهد.
+ *
+ * ردِ یک‌ضربه‌ای بی متن، مربی را با «نه»ی بی‌توضیح تنها می‌گذارد؛ دفعه
+ * بعد اصلاً درخواست نمی‌دهد و همان روز غیبت می‌کند. پس دکمه ثبت تا
+ * وقتی چیزی نوشته نشده کار نمی‌کند.
+ */
+function RejectLeaveSheet({ request, busy, onClose, onDone }: {
+  request: PendingLeave
+  busy: boolean
+  onClose: () => void
+  onDone: (note: string) => void
+}) {
+  const [note, setNote] = useState('')
+
+  return (
+    <BottomSheet
+      title={`رد مرخصی ${request.fullName}`}
+      onClose={onClose}
+      footer={
+        <button
+          type="button"
+          className={`${styles.decide} ${styles.decidePrimary} t-body-lg`}
+          disabled={busy || note.trim() === ''}
+          onClick={() => onDone(note)}
+        >
+          ثبت رد
+        </button>
+      }
+    >
+      <p className={`${styles.incidentKind} t-body`}>
+        {formatJalali(new Date(request.starts), 'short')}
+        {request.days > 1 ? ` تا ${formatJalali(new Date(request.ends), 'short')}` : ''}
+      </p>
+      <label className={`${styles.rejectField} t-caption`}>
+        چرا نمی‌شود؟ مربی همین را می‌بیند.
+        <textarea
+          className={styles.rejectText}
+          rows={3}
+          value={note}
+          aria-label="دلیل رد مرخصی"
+          onChange={(event) => setNote(event.target.value)}
+          autoFocus
+        />
+      </label>
+    </BottomSheet>
   )
 }
 

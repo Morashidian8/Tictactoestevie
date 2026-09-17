@@ -47,7 +47,10 @@ import type {
   ConversationSummary,
   MessageCandidate,
   StaffDocument,
+  LeaveRequest,
+  StaffField,
   StaffNote,
+  StaffRatio,
   StaffProfile,
   AttendanceDay,
   ObservationLens,
@@ -57,6 +60,10 @@ import type {
   RequirementSource,
   ActivityCorner,
   PlaySession,
+  CalendarEvent,
+  Expense,
+  ExpenseCategory,
+  MealSlot,
   MonthlyReportStatus,
   InvoiceLine,
   FeeItem,
@@ -96,6 +103,7 @@ import {
   jalaliYearMonth,
   parseJalaliInput,
   toIsoDate,
+  toLatinDigits,
 } from '../../../i18n/index.ts'
 import { invoiceDue, invoiceTotal } from '../money.ts'
 import {
@@ -135,6 +143,21 @@ const days = new Map<string, DayState>()
  * این فقط برای اجرای بدون سرور است. با وصل شدن Supabase کنار می‌رود.
  */
 const STORE_KEY = 'kg.dev.days'
+
+/**
+ * نسخه شکلِ داده ذخیره‌شده.
+ *
+ * چرا لازم شد: یک خانواده در مرورگرش «ناعدد تومان» دید. حافظه‌اش پیش
+ * از افزوده شدن `overdueFee` ذخیره شده بود و بازیابی همان سطرِ ناقص
+ * را برمی‌گرداند؛ `amount - discount + lateFee + undefined` می‌شود
+ * NaN و از آنجا به مانده، به وضعیت صورتحساب، و به هر ماهِ سال سرایت
+ * می‌کرد.
+ *
+ * هر بار که شکل سطرهای ذخیره‌شده عوض شود — ستون تازه، نام تازه — این
+ * عدد یک واحد بالا می‌رود و حافظه قدیمی دور انداخته می‌شود. از دست
+ * رفتن داده نمایشی هزینه‌ای ندارد؛ عدد غلط جلوی چشم خانواده دارد.
+ */
+const STORE_VERSION = 2
 let hydrated = false
 
 type StoredDay = {
@@ -184,6 +207,7 @@ const GATEWAY: PendingPayment[] = []
 function save(): void {
   try {
     const payload = {
+      version: STORE_VERSION,
       days: Object.fromEntries(
         [...days.entries()].map(([date, state]) => [
           date,
@@ -218,8 +242,13 @@ function save(): void {
       visits: VISITS,
       choices: CHOICES,
       pairs: PAIRS,
+      menu: MENU,
+      calendar: CALENDAR,
+      surveys: SURVEYS,
+      expenses: EXPENSES,
       staffDocs: STAFF_DOCS,
       staffNotes: STAFF_NOTES,
+      leaves: LEAVES,
       payments: PAYMENTS,
       messages: MESSAGES,
       amendments: AMENDMENTS,
@@ -242,6 +271,7 @@ function hydrate(): void {
     const raw = localStorage.getItem(STORE_KEY)
     if (!raw) return
     const payload = JSON.parse(raw) as {
+      version?: number
       days: Record<string, StoredDay>
       needs: [string, { id: string; text: string; done: boolean }[]][]
       codes: typeof PICKUP_CODES
@@ -263,8 +293,13 @@ function hydrate(): void {
       visits?: InspectionVisit[]
       choices?: ChoiceRow[]
       pairs?: PairRow[]
+      menu?: MenuRow[]
+      calendar?: CalendarEvent[]
+      surveys?: SurveyRow[]
+      expenses?: Expense[]
       staffDocs?: (StaffDocument & { staffId: string })[]
       staffNotes?: (StaffNote & { staffId: string })[]
+      leaves?: LeaveRow[]
       payments?: Payment[]
       messages?: Message[]
       amendments?: Amendment[]
@@ -274,6 +309,17 @@ function hydrate(): void {
       extras?: [string, string[]][]
       smsUsed?: number
     }
+    /*
+     * حافظه‌ای که با نسخه دیگری از شکل داده نوشته شده، باز نمی‌شود.
+     *
+     * نه تلاشی برای مهاجرتش: مهاجرتِ داده نمایشی کدی است که هیچ‌وقت
+     * آزموده نمی‌شود و اولین بارِ اجرایش، همان بارِ خراب‌کردن است.
+     */
+    if (payload.version !== STORE_VERSION) {
+      localStorage.removeItem(STORE_KEY)
+      return
+    }
+
     for (const [date, stored] of Object.entries(payload.days ?? {})) {
       days.set(date, {
         attendance: new Map(stored.attendance),
@@ -320,8 +366,13 @@ function hydrate(): void {
     restore(VISITS, payload.visits)
     restore(CHOICES, payload.choices)
     restore(PAIRS, payload.pairs)
+    restore(MENU, payload.menu)
+    restore(CALENDAR, payload.calendar)
+    restore(SURVEYS, payload.surveys)
+    restore(EXPENSES, payload.expenses)
     restore(STAFF_DOCS, payload.staffDocs)
     restore(STAFF_NOTES, payload.staffNotes)
+    restore(LEAVES, payload.leaves)
     /*
      * تغییرهای تأییدشده دوباره روی فیکسچر می‌نشینند.
      *
@@ -581,28 +632,130 @@ const GUARDIAN_CHILDREN: Record<string, string[]> = {
  */
 type DirectoryEntry = {
   id: string
-  name: string
+  /*
+   * نام دو تکه است، درست مثل ستون پایگاه داده.
+   *
+   * `name` عمداً نیست: اگر هم نام کامل ذخیره می‌شد و هم دو تکه‌اش،
+   * یک حقیقت دو جا می‌نشست و روزی از هم می‌افتادند. نام کامل با
+   * `fullNameOf` ساخته می‌شود، همان‌طور که در پایگاه داده ستون تولیدشده
+   * است.
+   */
+  firstName: string
+  lastName: string
   role: 'manager' | 'teacher' | 'guardian'
   classIds: string[]
   /** برای سرپرست: کودکانش. برای کارکنان خالی. */
   childIds: string[]
+
+  /* ── مشخصات پرسنلی، فقط برای کارکنان ───────────────────── */
+  birthDate?: string | null
+  nationalId?: string | null
+  phone?: string | null
+  address?: string | null
+  education?: string | null
+  resume?: string | null
+  emergencyName?: string | null
+  emergencyPhone?: string | null
 }
 
 const DIRECTORY: DirectoryEntry[] = [
-  { id: 'acc-teacher-golha', name: 'زهرا محمدی', role: 'teacher', classIds: ['class-golha'], childIds: [] },
-  { id: 'staff-maryam', name: 'مریم رضایی', role: 'teacher', classIds: ['class-golha'], childIds: [] },
-  { id: 'staff-nasrin', name: 'نسرین کاظمی', role: 'teacher', classIds: ['class-golha'], childIds: [] },
-  { id: 'staff-elham', name: 'الهام نوری', role: 'teacher', classIds: ['class-setareha'], childIds: [] },
+  {
+    id: 'acc-teacher-golha',
+    firstName: 'زهرا',
+    lastName: 'محمدی',
+    role: 'teacher',
+    classIds: ['class-golha'],
+    childIds: [],
+    birthDate: '1992-05-14',
+    nationalId: '0064829175',
+    phone: '09121234567',
+    address: 'تهران، خیابان ستارخان، کوچه بهار، پلاک ۱۴',
+    education: 'کارشناسی آموزش و پرورش پیش‌دبستانی',
+    resume: 'شش سال مربی گروه سنی ۴ تا ۶ سال. دوره کمک‌های اولیه کودک، ۱۴۰۲.',
+    emergencyName: 'حسین محمدی',
+    emergencyPhone: '09127654321',
+  },
+  {
+    id: 'staff-maryam',
+    firstName: 'مریم',
+    lastName: 'رضایی',
+    role: 'teacher',
+    classIds: ['class-golha'],
+    childIds: [],
+    phone: '09122223344',
+    education: 'کاردانی تربیت کودک',
+  },
+  {
+    id: 'staff-nasrin',
+    firstName: 'نسرین',
+    lastName: 'کاظمی',
+    role: 'teacher',
+    classIds: ['class-golha'],
+    childIds: [],
+  },
+  {
+    id: 'staff-elham',
+    firstName: 'الهام',
+    lastName: 'نوری',
+    role: 'teacher',
+    classIds: ['class-setareha'],
+    childIds: [],
+  },
   {
     id: 'acc-teacher-both',
-    name: 'مریم رضایی',
+    firstName: 'مریم',
+    lastName: 'رضایی',
     role: 'teacher',
     classIds: ['class-golha', 'class-setareha'],
     childIds: [],
   },
-  { id: 'acc-manager', name: 'مریم رضایی (مدیر)', role: 'manager', classIds: [], childIds: [] },
-  { id: 'acc-parent', name: 'مادر سارا', role: 'guardian', classIds: [], childIds: ['child-1', 'child-9'] },
+  {
+    id: 'acc-manager',
+    firstName: 'مریم',
+    lastName: 'رضایی (مدیر)',
+    role: 'manager',
+    classIds: [],
+    childIds: [],
+    phone: '09120000077',
+  },
+  {
+    id: 'acc-parent',
+    firstName: 'مادر',
+    lastName: 'سارا',
+    role: 'guardian',
+    classIds: [],
+    childIds: ['child-1', 'child-9'],
+  },
 ]
+
+/**
+ * میدان‌های پرونده مربی — آینه جدول `staff_field`.
+ *
+ * فهرست بسته: `role` و دسترسی در آن نیستند و از راه فرم مشخصات عوض
+ * نمی‌شوند.
+ */
+const STAFF_FIELDS: { key: keyof DirectoryEntry; label: string; input: StaffField['input'] }[] = [
+  { key: 'firstName', label: 'نام', input: 'line' },
+  { key: 'lastName', label: 'نام خانوادگی', input: 'line' },
+  { key: 'birthDate', label: 'تاریخ تولد', input: 'date' },
+  { key: 'nationalId', label: 'کد ملی', input: 'digits' },
+  { key: 'phone', label: 'شماره تماس', input: 'digits' },
+  { key: 'address', label: 'آدرس سکونت', input: 'text' },
+  { key: 'education', label: 'تحصیلات', input: 'line' },
+  { key: 'resume', label: 'سوابق کاری', input: 'text' },
+  { key: 'emergencyName', label: 'تماس اضطراری — نام', input: 'line' },
+  { key: 'emergencyPhone', label: 'تماس اضطراری — شماره', input: 'digits' },
+]
+
+/** مربیانِ شیفت با نامشان. شناسه‌ای که نامی ندارد، ردیف نمی‌سازد. */
+const onDutyNames = (ids: string[]): StaffRatio['onDuty'] =>
+  ids
+    .map((id) => ({ staffId: id, fullName: fullNameOf(entryOf(id)) ?? '' }))
+    .filter((person) => person.fullName !== '')
+
+/** نام کامل از دو تکه — آینه ستون تولیدشده `staff.full_name`. */
+const fullNameOf = (entry: DirectoryEntry | undefined): string | undefined =>
+  entry ? `${entry.firstName} ${entry.lastName}`.trim() : undefined
 
 const entryOf = (accountId: string): DirectoryEntry | undefined =>
   DIRECTORY.find((d) => d.id === accountId)
@@ -652,6 +805,9 @@ type ChatRow = {
 
 /* ── پرونده کارکنان ─────────────────────────────────────────── */
 
+type LeaveRow = LeaveRequest & { staffId: string }
+const LEAVES: LeaveRow[] = []
+
 const STAFF_DOCS: (StaffDocument & { staffId: string })[] = []
 const STAFF_NOTES: (StaffNote & { staffId: string })[] = []
 let staffSeq = 0
@@ -683,7 +839,7 @@ function forEachDayInRange(from: string, to: string, run: (state: DayState, date
 }
 
 function countActiveDays(accountId: string, from: string, to: string): number {
-  const name = entryOf(accountId)?.name
+  const name = fullNameOf(entryOf(accountId))
   if (!name) return 0
   let count = 0
   forEachDayInRange(from, to, (state) => {
@@ -696,7 +852,7 @@ function countActiveDays(accountId: string, from: string, to: string): number {
 }
 
 function countCheckIns(accountId: string, from: string, to: string): number {
-  const name = entryOf(accountId)?.name
+  const name = fullNameOf(entryOf(accountId))
   if (!name) return 0
   let count = 0
   forEachDayInRange(from, to, (state) => {
@@ -706,7 +862,7 @@ function countCheckIns(accountId: string, from: string, to: string): number {
 }
 
 function countCheckOuts(accountId: string, from: string, to: string): number {
-  const name = entryOf(accountId)?.name
+  const name = fullNameOf(entryOf(accountId))
   if (!name) return 0
   let count = 0
   forEachDayInRange(from, to, (state) => {
@@ -725,10 +881,25 @@ function staffFileOf(accountId: string): StaffProfile {
 
   return {
     staffId: accountId,
-    fullName: entry?.name ?? '—',
+    fullName: fullNameOf(entry) ?? '—',
+    firstName: entry?.firstName ?? '',
+    lastName: entry?.lastName ?? '',
     role: entry?.role === 'manager' ? 'مدیر' : 'مربی',
-    // شماره تلفن عمداً خالی است: پرونده کارکنان جای افشای شماره نیست.
-    phone: null,
+    /*
+     * شماره تماس اینجا **هست**.
+     *
+     * پیش‌تر عمداً خالی بود تا فهرست پرسنل جای افشای شماره نباشد. ولی
+     * این صفحه فهرست نیست؛ پرونده یک نفر است و فقط مدیر بازش می‌کند —
+     * همان مدیری که شب باید به مربی زنگ بزند.
+     */
+    phone: entry?.phone ?? null,
+    birthDate: entry?.birthDate ?? null,
+    nationalId: entry?.nationalId ?? null,
+    address: entry?.address ?? null,
+    education: entry?.education ?? null,
+    resume: entry?.resume ?? null,
+    emergencyName: entry?.emergencyName ?? null,
+    emergencyPhone: entry?.emergencyPhone ?? null,
     classNames: (entry?.classIds ?? [])
       .map((id) => CLASSES.find((c) => c.id === id)?.name)
       .filter((n): n is string => Boolean(n)),
@@ -778,6 +949,12 @@ function periodRange(period: string): { from: string; to: string } {
   const end = new Date(`${firstOfNext}T12:00:00`)
   end.setDate(end.getDate() - 1)
   return { from, to: toIsoDate(end) }
+}
+
+/** شمار روزهای بازه، دو سرش هم حساب. آینه `to_date - from_date + 1`. */
+function daysBetween(from: string, to: string): number {
+  const ms = new Date(`${to}T12:00:00`).getTime() - new Date(`${from}T12:00:00`).getTime()
+  return Math.round(ms / 86400000) + 1
 }
 
 function workdaysBetween(from: string, to: string): string[] {
@@ -906,6 +1083,46 @@ const PAIRS: PairRow[] = []
 
 /** آستانه انتشار نقشه علایق — بخش ۹. */
 const INTEREST_THRESHOLD = 8
+
+/* ── منو، تقویم، نظرسنجی، هزینه ─────────────────────────────── */
+
+type MenuRow = {
+  date: string
+  slot: MealSlot
+  title: string
+  ingredients: string[]
+  note: string | null
+}
+
+type SurveyRow = {
+  id: string
+  question: string
+  options: string[]
+  closesAt: string | null
+  showResults: boolean
+  /** شناسه حساب → اندیس گزینه. یک رأی برای هر حساب. */
+  votes: Record<string, number>
+}
+
+const MENU: MenuRow[] = []
+const CALENDAR: CalendarEvent[] = []
+const SURVEYS: SurveyRow[] = []
+const EXPENSES: Expense[] = []
+let m14Seq = 0
+
+/**
+ * آیا این ماده با این آلرژی می‌خواند.
+ *
+ * تطبیق دوطرفه: «تخم‌مرغ» در «تخم‌مرغ آب‌پز» پیدا شود، و «شیر» در
+ * آلرژیِ «شیر گاو» هم. یک‌طرفه بودنش یعنی نصف هشدارها نمی‌آیند — و
+ * آن نصف، همان‌هایی‌اند که خطر دارند.
+ */
+function allergyMatches(ingredient: string, allergy: string): boolean {
+  const i = ingredient.trim().toLowerCase()
+  const a = allergy.trim().toLowerCase()
+  if (!i || !a) return false
+  return i.includes(a) || a.includes(i)
+}
 
 const CONVERSATIONS: ConversationRow[] = []
 const CHATS: ChatRow[] = []
@@ -1598,6 +1815,7 @@ export function createLocalDataAccess(scope: AccessScope): DataAccess {
           staff: onDuty.length,
           maxAllowed: MAX_CHILDREN_PER_STAFF,
           breached: inSession.length > MAX_CHILDREN_PER_STAFF * Math.max(onDuty.length, 1),
+          onDuty: onDutyNames(onDuty),
         },
         attendance: [...state.attendance.values()].filter((a) => ids.has(a.childId)),
         absences: state.absences.filter((a) => ids.has(a.childId)),
@@ -2273,6 +2491,7 @@ export function createLocalDataAccess(scope: AccessScope): DataAccess {
               staff: onDuty.length,
               maxAllowed: MAX_CHILDREN_PER_STAFF,
               breached: inSession.length > MAX_CHILDREN_PER_STAFF * Math.max(onDuty.length, 1),
+              onDuty: onDutyNames(onDuty),
             },
           }
         }),
@@ -2936,6 +3155,192 @@ export function createLocalDataAccess(scope: AccessScope): DataAccess {
       return CLAIMS.filter((c) => c.status === status)
     },
 
+    /* ── منو، تقویم، نظرسنجی — ماژول M14 ────────────────────── */
+
+    async getMenu(childId, from, to) {
+      assertOwnChild(childId)
+      const allergies = MEDICAL[childId]?.allergies ?? []
+      return MENU.filter((m) => m.date >= from && m.date <= to)
+        .sort((a, b) => a.date.localeCompare(b.date))
+        .map((row) => ({
+          ...row,
+          /*
+           * تقاطع در لایه داده، نه در رابط.
+           *
+           * خانواده‌ای که فهرست آلرژی کودکش را دارد و منو را هم
+           * می‌بیند، نباید خودش تطبیق بدهد — همان کاری که اپ برای آن
+           * ساخته شده.
+           */
+          allergyHits: row.ingredients.filter((i) =>
+            allergies.some((a) => allergyMatches(i, a)),
+          ),
+        }))
+    },
+
+    async setMenuDay(input) {
+      assertManager()
+      if (!input.title.trim()) throw new Error('نام غذا لازم است.')
+      // یک روز و یک وعده، یک منو: نوشتن دوباره جایگزینش می‌کند.
+      const at = MENU.findIndex((m) => m.date === input.date && m.slot === input.slot)
+      if (at >= 0) MENU.splice(at, 1)
+      MENU.push({
+        date: input.date,
+        slot: input.slot,
+        title: input.title.trim(),
+        ingredients: input.ingredients.map((i) => i.trim()).filter(Boolean),
+        note: input.note?.trim() || null,
+      })
+      save()
+    },
+
+    async listCalendar(from, to) {
+      return CALENDAR.filter((e) => e.date >= from && e.date <= to)
+        /*
+         * رویداد نامرئی فقط برای کارکنان.
+         * مدیر جلسه داخلی هم در تقویم می‌گذارد و آن به خانواده مربوط
+         * نیست.
+         */
+        .filter((e) => e.visibleToFamily || scope.role !== 'guardian')
+        .sort((a, b) => a.date.localeCompare(b.date))
+    },
+
+    async addCalendarEvent(input) {
+      assertManager()
+      if (!input.title.trim()) throw new Error('عنوان رویداد لازم است.')
+      CALENDAR.push({
+        id: `cal-${(m14Seq += 1)}`,
+        date: input.date,
+        endDate: input.endDate ?? null,
+        kind: input.kind,
+        title: input.title.trim(),
+        note: input.note?.trim() || null,
+        visibleToFamily: input.visibleToFamily ?? true,
+      })
+      save()
+    },
+
+    async listSurveys() {
+      const me = scope.accountId
+      const manager = scope.role === 'manager'
+      return SURVEYS.map((row) => ({
+        id: row.id,
+        question: row.question,
+        options: row.options,
+        closesAt: row.closesAt,
+        showResults: row.showResults,
+        myChoice: row.votes[me] ?? null,
+        /*
+         * شمار فقط وقتی مدیریم یا انتشار روشن است.
+         *
+         * و هرگز نام: خانواده‌ای که بداند رأیش دیده می‌شود، رأی واقعی
+         * نمی‌دهد — و نظرسنجی‌ای که رأی واقعی نگیرد، بدتر از نبودنش است.
+         */
+        tally:
+          manager || row.showResults
+            ? row.options.map((label, choice) => ({
+                choice,
+                label,
+                votes: Object.values(row.votes).filter((v) => v === choice).length,
+              }))
+            : null,
+      }))
+    },
+
+    async createSurvey(input) {
+      assertManager()
+      const options = input.options.map((o) => o.trim()).filter(Boolean)
+      if (!input.question.trim()) throw new Error('متن پرسش لازم است.')
+      if (options.length < 2) throw new Error('نظرسنجی دست‌کم دو گزینه می‌خواهد.')
+      SURVEYS.push({
+        id: `poll-${(m14Seq += 1)}`,
+        question: input.question.trim(),
+        options,
+        closesAt: input.closesAt ?? null,
+        // پیش‌فرض: نتیجه به خانواده نشان داده نمی‌شود.
+        showResults: input.showResults ?? false,
+        votes: {},
+      })
+      save()
+    },
+
+    async answerSurvey(surveyId, choice) {
+      const row = SURVEYS.find((s) => s.id === surveyId)
+      if (!row) throw new Error('نظرسنجی پیدا نشد.')
+      if (choice < 0 || choice >= row.options.length) throw new Error('گزینه نامعتبر است.')
+      if (row.closesAt && new Date(row.closesAt) < new Date()) {
+        throw new Error('مهلت این نظرسنجی تمام شده.')
+      }
+      // یک رأی برای هر حساب؛ نظر عوض کردن جایگزینش می‌کند.
+      row.votes[scope.accountId] = choice
+      save()
+    },
+
+    async setSurveyResultsVisible(surveyId, visible) {
+      assertManager()
+      const row = SURVEYS.find((s) => s.id === surveyId)
+      if (!row) throw new Error('نظرسنجی پیدا نشد.')
+      row.showResults = visible
+      save()
+    },
+
+    /* ── هزینه و درآمد — ماژول M16 ──────────────────────────── */
+
+    async getIncomeVsExpense(period) {
+      assertManager()
+      const invoices = INVOICES.filter((r) => r.period === period).map(invoiceOf)
+      const ids = new Set(invoices.map((i) => i.id))
+      /*
+       * درآمد یعنی پولی که واقعاً وصول شده، نه مبلغ صادرشده.
+       *
+       * صورتحسابِ صادرشده هنوز پول نیست، و مهدی که آن را درآمد بخواند،
+       * ماه بعد حقوق پرداخت نمی‌کند.
+       */
+      const collected = PAYMENTS.filter((p) => ids.has(p.invoiceId)).reduce(
+        (sum, p) => sum + p.amount,
+        0,
+      )
+
+      const dues = invoices.map((i) => i.dueDate).sort()
+      const first = dues[0]
+      const last = dues.at(-1)
+      const window = first && last
+        ? EXPENSES.filter((e) => {
+            const start = new Date(`${first}T12:00:00`)
+            start.setMonth(start.getMonth() - 1)
+            return e.date >= toIsoDate(start) && e.date <= last
+          })
+        : []
+
+      const byCategory = new Map<ExpenseCategory, number>()
+      for (const e of window) {
+        byCategory.set(e.category, (byCategory.get(e.category) ?? 0) + e.amount)
+      }
+
+      return {
+        period,
+        collected,
+        spent: window.reduce((sum, e) => sum + e.amount, 0),
+        byCategory: [...byCategory.entries()]
+          .map(([category, total]) => ({ category, total }))
+          .sort((a, b) => b.total - a.total),
+        expenses: [...window].sort((a, b) => b.date.localeCompare(a.date)),
+      }
+    },
+
+    async addExpense(input) {
+      assertManager()
+      if (input.amount <= 0) throw new Error('مبلغ باید بیشتر از صفر باشد.')
+      EXPENSES.push({
+        id: `exp-${(m14Seq += 1)}`,
+        date: input.date,
+        amount: input.amount,
+        category: input.category,
+        note: input.note?.trim() || null,
+        receiptUrl: input.receiptUrl ?? null,
+      })
+      save()
+    },
+
     /* ── بازی آزاد — ماژول M8 ───────────────────────────────── */
 
     async getFreePlayBoard(classId, date, session) {
@@ -3177,6 +3582,7 @@ export function createLocalDataAccess(scope: AccessScope): DataAccess {
         id: `cdoc-${(inspectionSeq += 1)}`,
         kind: input.kind,
         title: input.title.trim(),
+        fileUrl: input.fileUrl ?? null,
         issuer: input.issuer?.trim() || null,
         referenceNo: input.referenceNo?.trim() || null,
         issuedAt: null,
@@ -3230,7 +3636,7 @@ export function createLocalDataAccess(scope: AccessScope): DataAccess {
         date: toIsoDate(new Date()),
         lens: input.lens,
         body: text,
-        staffName: entryOf(scope.accountId)?.name ?? null,
+        staffName: fullNameOf(entryOf(scope.accountId)) ?? null,
         /*
          * هم‌بازی از مشاهده می‌آید، نه از حدس.
          *
@@ -3466,7 +3872,7 @@ export function createLocalDataAccess(scope: AccessScope): DataAccess {
         const notes = STAFF_NOTES.filter((n) => n.staffId === d.id)
         return {
           staffId: d.id,
-          fullName: d.name,
+          fullName: fullNameOf(d) ?? '—',
           role: 'مربی',
           photoUrl: null,
           // «روز فعال» یعنی روزی که این مربی دست‌کم یک ثبت کرده.
@@ -3565,7 +3971,7 @@ export function createLocalDataAccess(scope: AccessScope): DataAccess {
           return {
             id: c.id,
             otherAccountId: otherId,
-            otherName: other?.name ?? '—',
+            otherName: fullNameOf(other) ?? '—',
             otherRole: (other?.role ?? 'guardian') as ConversationSummary['otherRole'],
             childId: c.childId,
             childName: c.childId ? childName(c.childId) : null,
@@ -3584,7 +3990,7 @@ export function createLocalDataAccess(scope: AccessScope): DataAccess {
       const me = scope.accountId
       return DIRECTORY.filter((d) => mayMessage(me, d.id)).map((d) => ({
         accountId: d.id,
-        fullName: d.name,
+        fullName: fullNameOf(d) ?? '—',
         role: d.role as MessageCandidate['role'],
         /*
          * زمینه، تا انتخاب حدس نباشد.
@@ -3648,7 +4054,7 @@ export function createLocalDataAccess(scope: AccessScope): DataAccess {
 
       return {
         id: row.id,
-        otherName: other?.name ?? '—',
+        otherName: fullNameOf(other) ?? '—',
         otherRole: (other?.role ?? 'guardian') as Conversation['otherRole'],
         childName: row.childId ? childName(row.childId) : null,
         hours: withFamily ? { ...MESSAGE_HOURS } : null,
@@ -3656,7 +4062,7 @@ export function createLocalDataAccess(scope: AccessScope): DataAccess {
           id: m.id,
           body: m.body,
           mine: m.senderId === me,
-          senderName: entryOf(m.senderId)?.name ?? '—',
+          senderName: fullNameOf(entryOf(m.senderId)) ?? '—',
           sentAt: m.sentAt,
           queuedUntil: m.queuedUntil,
         })),
@@ -3768,6 +4174,177 @@ export function createLocalDataAccess(scope: AccessScope): DataAccess {
               ? -1
               : 1,
         )
+    },
+
+    /**
+     * ویرایش مستقیم، به دست مدیر.
+     *
+     * از همان فهرست بسته می‌گذرد که خانواده از آن می‌گذرد: مدیر هم
+     * نمی‌تواند میدانی را عوض کند که فهرست نمی‌شناسد.
+     */
+    async editProfileField(childId, field, value) {
+      assertManager()
+      if (!PROFILE_FIELDS.some((f) => f.key === field)) {
+        throw new Error(`میدان «${field}» قابل ویرایش نیست.`)
+      }
+      applyProfileValue(childId, field, value.trim())
+
+      /*
+       * درخواست بازِ خانواده برای همین میدان بسته می‌شود.
+       *
+       * وگرنه مدیر مقدار را دستی درست می‌کند و درخواست خانواده در صف
+       * می‌ماند — و بعداً تأییدش، مقدار درست را با مقدار قدیمی عوض
+       * می‌کند.
+       */
+      const open = PROFILE_CHANGES.find(
+        (c) => c.childId === childId && c.field === field && c.state === 'pending',
+      )
+      if (open) open.state = 'approved'
+      save()
+    },
+
+    /* ── پرونده مربی ──────────────────────────────────────── */
+
+    async listStaffFields(staffId) {
+      assertManager()
+      const entry = entryOf(staffId)
+      if (!entry) throw new Error('مربی پیدا نشد.')
+      return STAFF_FIELDS.map((f) => ({
+        key: f.key,
+        label: f.label,
+        input: f.input,
+        value: typeof entry[f.key] === 'string' ? (entry[f.key] as string) : '',
+      }))
+    },
+
+    async editStaffField(staffId, field, value) {
+      assertManager()
+      const known = STAFF_FIELDS.find((f) => f.key === field)
+      if (!known) throw new Error(`میدان «${field}» قابل ویرایش نیست.`)
+      const entry = entryOf(staffId)
+      if (!entry) throw new Error('مربی پیدا نشد.')
+
+      const clean = value.trim()
+      if (known.key === 'firstName' && !clean) throw new Error('نام مربی خالی نمی‌ماند.')
+      if (known.key === 'nationalId' && clean && !/^\d{10}$/.test(toLatinDigits(clean))) {
+        throw new Error('کد ملی ده رقم است.')
+      }
+
+      // آینه `case` صریحِ پایگاه داده: هیچ کلیدی از ورودی ساخته نمی‌شود.
+      switch (known.key) {
+        case 'firstName': entry.firstName = clean; break
+        case 'lastName': entry.lastName = clean; break
+        case 'birthDate': entry.birthDate = clean || null; break
+        case 'nationalId': entry.nationalId = clean ? toLatinDigits(clean) : null; break
+        case 'phone': entry.phone = clean ? toLatinDigits(clean) : null; break
+        case 'address': entry.address = clean || null; break
+        case 'education': entry.education = clean || null; break
+        case 'resume': entry.resume = clean || null; break
+        case 'emergencyName': entry.emergencyName = clean || null; break
+        case 'emergencyPhone': entry.emergencyPhone = clean ? toLatinDigits(clean) : null; break
+        default: throw new Error(`میدان «${field}» قابل اعمال نیست.`)
+      }
+      save()
+    },
+
+    /* ── مرخصی مربی ───────────────────────────────────────── */
+
+    async requestLeave(input) {
+      const me = entryOf(scope.accountId)
+      if (!me || me.role === 'guardian') {
+        throw new Error('فقط کارکنان مهد می‌توانند درخواست مرخصی بدهند.')
+      }
+      if (input.ends < input.starts) {
+        throw new Error('روز پایان نمی‌تواند پیش از روز شروع باشد.')
+      }
+      // درخواست بازِ هم‌پوشان، دوباره ساخته نمی‌شود: وگرنه مربی‌ای که
+      // دکمه را دو بار زد، دو ردیف در صف مدیر می‌سازد.
+      const clash = LEAVES.some(
+        (l) =>
+          l.staffId === scope.accountId &&
+          l.state === 'pending' &&
+          l.starts <= input.ends &&
+          l.ends >= input.starts,
+      )
+      if (clash) throw new Error('برای همین روزها درخواست بازی دارید.')
+
+      LEAVES.push({
+        id: `leave-${(staffSeq += 1)}`,
+        staffId: scope.accountId,
+        kind: input.kind,
+        starts: input.starts,
+        ends: input.ends,
+        days: daysBetween(input.starts, input.ends),
+        reason: input.reason?.trim() || null,
+        state: 'pending',
+        decisionNote: null,
+        requestedAt: new Date().toISOString(),
+        reviewedAt: null,
+      })
+      save()
+    },
+
+    async listMyLeave() {
+      return LEAVES.filter((l) => l.staffId === scope.accountId)
+        .map(({ staffId: _staffId, ...rest }) => rest)
+        .sort((a, b) => b.starts.localeCompare(a.starts))
+    },
+
+    async listPendingLeave() {
+      assertManager()
+      return LEAVES.filter((l) => l.state === 'pending')
+        .sort((a, b) => a.starts.localeCompare(b.starts) || a.requestedAt.localeCompare(b.requestedAt))
+        .map((l) => ({
+          id: l.id,
+          staffId: l.staffId,
+          fullName: fullNameOf(entryOf(l.staffId)) ?? '—',
+          kind: l.kind,
+          starts: l.starts,
+          ends: l.ends,
+          days: l.days,
+          reason: l.reason,
+          requestedAt: l.requestedAt,
+        }))
+    },
+
+    async decideLeave(requestId, approve, note) {
+      assertManager()
+      const row = LEAVES.find((l) => l.id === requestId)
+      if (!row) throw new Error('درخواست پیدا نشد.')
+      if (row.state !== 'pending') throw new Error('این درخواست قبلاً بررسی شده.')
+      const clean = note?.trim() || null
+      // مربی‌ای که بی دلیل «نه» می‌شنود، دفعه بعد اصلاً درخواست نمی‌دهد
+      // و همان روز غیبت می‌کند.
+      if (!approve && !clean) throw new Error('برای رد درخواست، دلیلش را بنویسید.')
+      row.state = approve ? 'approved' : 'rejected'
+      row.decisionNote = clean
+      row.reviewedAt = new Date().toISOString()
+      save()
+    },
+
+    async listStaffOnLeave(date) {
+      if (scope.role === 'guardian') return []
+      return LEAVES.filter((l) => l.state === 'approved' && l.starts <= date && l.ends >= date).map(
+        (l) => ({ staffId: l.staffId, fullName: fullNameOf(entryOf(l.staffId)) ?? '—' }),
+      )
+    },
+
+    async addStaff(input) {
+      assertManager()
+      const firstName = input.firstName.trim()
+      if (!firstName) throw new Error('نام مربی لازم است.')
+      const id = `staff-${(staffSeq += 1)}`
+      DIRECTORY.push({
+        id,
+        firstName,
+        lastName: input.lastName.trim(),
+        role: input.role === 'manager' ? 'manager' : 'teacher',
+        classIds: [],
+        childIds: [],
+        phone: input.phone?.trim() || null,
+      })
+      save()
+      return id
     },
 
     async decideProfileChange(requestId, approve, reason) {

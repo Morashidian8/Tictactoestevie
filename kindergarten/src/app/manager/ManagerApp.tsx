@@ -44,6 +44,13 @@ export function ManagerApp() {
   const { session, signOut } = useAuth()
   const [page, setPage] = useState<ManagerPage>('dashboard')
   /*
+   * پرونده‌ای که باید مستقیم باز شود.
+   *
+   * مدیر از داشبورد روی نام مربیِ شیفت می‌زند و می‌خواهد همان پرونده
+   * را ببیند، نه فهرست کارکنان را و بعد گشتن در آن.
+   */
+  const [openStaff, setOpenStaff] = useState<string | null>(null)
+  /*
    * نشان‌های نوار از داشبورد بالا می‌آیند، نه از یک خواندن دوم.
    *
    * داشبورد این دو عدد را برای خودش می‌خواند؛ خواندن دوباره‌شان اینجا
@@ -125,7 +132,13 @@ export function ManagerApp() {
       ) : page === 'more' ? (
         <ManagerMorePage onGo={setPage} gaps={counts.gaps} />
       ) : page === 'staff' ? (
-        <StaffPage onBack={() => setPage('more')} />
+        <StaffPage
+          openStaffId={openStaff}
+          onBack={() => {
+            setOpenStaff(null)
+            setPage('more')
+          }}
+        />
       ) : page === 'finance' ? (
         <FinancePage onBack={back} />
       ) : page === 'children' ? (
@@ -133,7 +146,14 @@ export function ManagerApp() {
       ) : page === 'audit' ? (
         <AuditPage onBack={() => setPage('more')} />
       ) : (
-        <DashboardPage onGo={setPage} onCounts={setCounts} />
+        <DashboardPage
+          onGo={setPage}
+          onCounts={setCounts}
+          onOpenStaff={(id) => {
+            setOpenStaff(id)
+            setPage('staff')
+          }}
+        />
       )}
     </AppShell>
   )

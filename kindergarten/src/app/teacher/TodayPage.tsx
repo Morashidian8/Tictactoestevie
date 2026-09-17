@@ -272,6 +272,16 @@ export function TodayPage({
                 : `${child.allergies[0]} +${formatCount(child.allergies.length - 1)}`,
           lunchLogged: report?.lunch != null,
           napLogged: report?.napStart != null,
+          /*
+           * تحویل امروز فرق دارد — بخش ۵.۸.
+           *
+           * فقط `pickup`: «چه کسی می‌آورد» برای مربی کنشی ندارد. او با
+           * دانستنش هیچ کار متفاوتی نمی‌کند، و هر خطِ بی‌کنش، خطِ
+           * باکنشِ کنارش را کم‌رنگ می‌کند.
+           */
+          pickupBy:
+            plans.find((p) => p.childId === child.id && p.direction === 'pickup')
+              ?.personName ?? null,
           actionLabel:
             state === 'present'
               ? `ثبت خروج ${child.firstName}`
@@ -280,7 +290,7 @@ export function TodayPage({
                 : `ثبت ورود ${child.firstName}`,
         }
       }),
-    [attendance, absences, now, reports],
+    [attendance, absences, now, reports, plans],
   )
 
   /*
@@ -594,30 +604,20 @@ export function TodayPage({
       ) : null}
 
       {/*
-        بخش ۵.۸: اعلام خانواده برای امروز. بالای شبکه می‌نشیند چون اگر
-        مربی آن را ساعت چهار ببیند دیر است.
-      */}
-      {plans.length > 0 ? (
-        <div className={styles.plans}>
-          <span className={`${styles.plansLabel} t-caption`}>امروز فرق دارد</span>
-          {plans.map((plan) => {
-            const child = day?.children.find((c) => c.id === plan.childId)
-            return (
-              <p key={plan.id} className={`${styles.plan} t-body-lg`}>
-                <b className={styles.planChild}>{child?.firstName ?? '—'}</b>
-                <span>
-                  {plan.direction === 'drop_off' ? 'را می‌آورد: ' : 'را می‌برد: '}
-                  {plan.personName}
-                </span>
-                <span className={`${styles.planHow} t-caption`}>
-                  {plan.code ? 'با کد تحویل' : 'در فهرست مجاز'}
-                </span>
-              </p>
-            )
-          })}
-        </div>
-      ) : null}
+        بنر «امروز فرق دارد» برداشته شد — و دو دلیل داشت.
+        بخش ۵.۸ همچنان برقرار است؛ فقط جایش عوض شد.
 
+        یک: با بیست کودک، این بنر نیمی از صفحه می‌شد و مربی صبح شلوغ
+        از رویش رد می‌شد — یعنی دقیقاً همان چیزی که قرار بود جلویش را
+        بگیرد.
+
+        دو: نامِ کودک از کودکانِ **بازه جاری** خوانده می‌شد، پس اعلامِ
+        کودک صبحانه‌ای در بعدازظهر «—» نشان می‌داد. یک باگ واقعی که
+        همین شلوغی پنهانش کرده بود.
+
+        حالا نشانِ کوچک روی کارت خودِ کودک می‌نشیند و متن کامل در شیت
+        تحویل می‌آید — همان لحظه‌ای که مربی واقعاً تصمیم می‌گیرد.
+      */}
       {/*
         بخش ۵.۳: یادآور دارو باید بگوید چه ساعتی، نه فقط چند تا. نزدیک‌ترین
         ساعت روی خود نوار می‌آید و بقیه با یک ضربه باز می‌شوند؛ مربی وسط
@@ -911,6 +911,9 @@ export function TodayPage({
         <CheckOutSheet
           child={checkOutChild}
           attendance={attendance.get(checkOutFor) ?? null}
+          plan={
+            plans.find((p) => p.childId === checkOutFor && p.direction === 'pickup') ?? null
+          }
           onClose={() => setCheckOutFor(null)}
           onDone={() => void reload('attendance')}
         />

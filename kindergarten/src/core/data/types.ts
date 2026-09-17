@@ -710,12 +710,48 @@ export type StaffCartableRow = {
   openConcerns: number
 }
 
+/**
+ * میدان قابل ویرایش پرونده مربی.
+ *
+ * فهرست بسته‌ای که در پایگاه داده **داده** است نه کد (`staff_field`)،
+ * تا فرم از روی همان ساخته شود و نام ستون هرگز از ورودی کاربر نیاید.
+ *
+ * `role` و دسترسی عمداً در آن نیستند: نقش مربی جای دیگری تصمیم خودش
+ * را دارد و از راه یک فرم مشخصات عوض نمی‌شود.
+ */
+export type StaffField = {
+  key: string
+  label: string
+  /** چطور گرفته می‌شود: خط، متن بلند، تاریخ، یا رقم. */
+  input: 'line' | 'text' | 'date' | 'digits'
+  value: string
+}
+
+export type NewStaff = {
+  firstName: string
+  lastName: string
+  role: 'teacher' | 'assistant' | 'manager'
+  phone?: string | null
+}
+
 /** پرونده کامل یک مربی، از دید مدیر. */
 export type StaffProfile = {
   staffId: string
   fullName: string
+  /** نام و نام خانوادگی جدا — `fullName` از همین دو ساخته می‌شود. */
+  firstName: string
+  lastName: string
   role: string
   phone: string | null
+  /** تاریخ تولد میلادیِ ISO. سن از آن حساب می‌شود، ذخیره نمی‌شود. */
+  birthDate: string | null
+  nationalId: string | null
+  address: string | null
+  education: string | null
+  /** سوابق کاری، متن آزاد. نه نمره، نه رتبه — خط قرمز ۱۰. */
+  resume: string | null
+  emergencyName: string | null
+  emergencyPhone: string | null
   classNames: string[]
   documents: StaffDocument[]
   notes: StaffNote[]
@@ -727,6 +763,56 @@ export type StaffProfile = {
     reportsSent: number
     medicationsReceived: number
   }
+}
+
+/* ── مرخصی مربی — ماژول ۰۰۳۴ ────────────────────────────────── */
+
+export type LeaveKind = 'personal' | 'sick' | 'family' | 'other'
+
+export type LeaveState = 'pending' | 'approved' | 'rejected'
+
+/**
+ * یک درخواست مرخصی.
+ *
+ * بازه است نه یک روز: مرخصی سه‌روزه یک تصمیم است، نه سه تصمیم که مدیر
+ * بتواند دوتایش را تأیید و یکی را رد کند.
+ *
+ * آنچه عمداً **نیست**: سهمیه، مانده، و شمارشِ مقایسه‌ای بین مربیان.
+ * مرخصی استحقاقی کارِ دفتر حسابداری است، نه این اپ (پیوست ج).
+ */
+export type LeaveRequest = {
+  id: string
+  kind: LeaveKind
+  /** تاریخ میلادیِ ISO. */
+  starts: string
+  ends: string
+  days: number
+  reason: string | null
+  state: LeaveState
+  /** دلیل رد. تأیید دلیل نمی‌خواهد؛ رد می‌خواهد. */
+  decisionNote: string | null
+  requestedAt: string
+  reviewedAt: string | null
+}
+
+/** یک ردیف صف مدیر — همان درخواست، با نام مربی. */
+export type PendingLeave = {
+  id: string
+  staffId: string
+  fullName: string
+  kind: LeaveKind
+  starts: string
+  ends: string
+  days: number
+  reason: string | null
+  requestedAt: string
+}
+
+export type LeaveInput = {
+  kind: LeaveKind
+  starts: string
+  ends: string
+  reason?: string | null
 }
 
 export type StaffDocumentInput = {
@@ -873,6 +959,8 @@ export type CenterDocument = {
   id: string
   kind: CenterDocumentKind
   title: string
+  /** نشانی تصویر خودِ مدرک. بازرس کاغذ می‌خواهد، نه فهرست عنوان‌ها. */
+  fileUrl: string | null
   issuer: string | null
   referenceNo: string | null
   issuedAt: string | null
@@ -884,6 +972,7 @@ export type CenterDocument = {
 export type CenterDocumentInput = {
   kind: CenterDocumentKind
   title: string
+  fileUrl?: string | null
   issuer?: string | null
   referenceNo?: string | null
   expiresAt?: string | null
@@ -988,6 +1077,123 @@ export type InterestMap = {
   threshold: number
   /** هم‌بازی‌ها، از ثبت جفتی نه از هم‌گوشه بودن. */
   partners: { childId: string; firstName: string; times: number }[]
+}
+
+/* ── منو، تقویم، نظرسنجی — ماژول M14 ─────────────────────────── */
+
+export type MealSlot = 'snack_morning' | 'lunch' | 'snack_afternoon'
+
+/**
+ * یک وعده از منوی یک روز.
+ *
+ * `allergyHits` تقاطعِ مواد با آلرژی همین کودک است و **در سرور** حساب
+ * می‌شود — تنها دلیلِ واقعیِ بودنِ این ماژول. بی آن، منو یک تابلوی
+ * تزئینی است و خانواده باید خودش تطبیق بدهد.
+ */
+export type MenuEntry = {
+  date: string
+  slot: MealSlot
+  title: string
+  ingredients: string[]
+  note: string | null
+  allergyHits: string[]
+}
+
+export type MenuInput = {
+  date: string
+  slot: MealSlot
+  title: string
+  ingredients: string[]
+  note?: string | null
+}
+
+export type CalendarKind = 'holiday' | 'trip' | 'ceremony' | 'meeting' | 'photo_day' | 'other'
+
+export type CalendarEvent = {
+  id: string
+  date: string
+  endDate: string | null
+  kind: CalendarKind
+  title: string
+  note: string | null
+  /** رویداد نامرئی فقط برای کارکنان — جلسه داخلی به خانواده مربوط نیست. */
+  visibleToFamily: boolean
+}
+
+export type CalendarEventInput = {
+  date: string
+  endDate?: string | null
+  kind: CalendarKind
+  title: string
+  note?: string | null
+  visibleToFamily?: boolean
+}
+
+/**
+ * یک نظرسنجی.
+ *
+ * `showResults` پیش‌فرض false است و عمدی: «۸۰٪ مخالف اردو» یعنی ۲۰٪
+ * موافق، و آن ۲۰٪ خودشان را در اقلیت می‌بینند.
+ */
+export type Survey = {
+  id: string
+  question: string
+  options: string[]
+  closesAt: string | null
+  showResults: boolean
+  /** رأی خودِ این حساب، اگر داده باشد. */
+  myChoice: number | null
+  /** شمار آرا. فقط وقتی مدیریم یا `showResults` روشن است. */
+  tally: { choice: number; label: string; votes: number }[] | null
+}
+
+export type SurveyInput = {
+  question: string
+  options: string[]
+  closesAt?: string | null
+  showResults?: boolean
+}
+
+/* ── هزینه‌ها — ماژول M16، بخش ۸.۳ ───────────────────────────── */
+
+export type ExpenseCategory =
+  | 'repair'
+  | 'equipment'
+  | 'food'
+  | 'utilities'
+  | 'supplies'
+  | 'other'
+
+export type Expense = {
+  id: string
+  date: string
+  amount: number
+  category: ExpenseCategory
+  note: string | null
+  receiptUrl: string | null
+}
+
+export type ExpenseInput = {
+  date: string
+  amount: number
+  category: ExpenseCategory
+  note?: string | null
+  receiptUrl?: string | null
+}
+
+/**
+ * درآمد در برابر هزینه.
+ *
+ * `collected` یعنی پولی که **واقعاً وصول شده**، نه مبلغ صادرشده.
+ * صورتحسابِ صادرشده هنوز پول نیست، و مهدی که آن را درآمد بخواند، ماه
+ * بعد حقوق پرداخت نمی‌کند.
+ */
+export type IncomeVsExpense = {
+  period: string
+  collected: number
+  spent: number
+  byCategory: { category: ExpenseCategory; total: number }[]
+  expenses: Expense[]
 }
 
 export type ReminderKind = 'due_soon' | 'due_today' | 'overdue'
@@ -1260,6 +1466,15 @@ export type StaffRatio = {
   staff: number
   maxAllowed: number
   breached: boolean
+  /**
+   * مربیانِ همین شیفت، با شناسه.
+   *
+   * تا امروز فقط شمارششان بود. شناسه هست تا از داشبورد مدیر یک ضربه به
+   * پرونده همان مربی برسد — پیش‌تر مدیر می‌دید «گل‌ها: ۳ از ۸ کامل» و
+   * برای رسیدن به مربی‌اش باید «بیشتر ← کارکنان ← گشتن در فهرست»
+   * می‌رفت، سه ضربه دورتر از جایی که سؤال در ذهنش ساخته شده بود.
+   */
+  onDuty: { staffId: string; fullName: string }[]
 }
 
 /* ── برنامه فردا — بخش ۵.۸ و ۶.۴ ───────────────────────────── */
@@ -1720,6 +1935,33 @@ export interface DataAccess {
    */
   getAttendanceMonth(childId: string, from: string, to: string): Promise<AttendanceMonth>
 
+  /* ── منو، تقویم، نظرسنجی — ماژول M14 ──────────────────────── */
+
+  /** منوی بازه، با هشدار آلرژی برای همین کودک. */
+  getMenu(childId: string, from: string, to: string): Promise<MenuEntry[]>
+
+  setMenuDay(input: MenuInput): Promise<void>
+
+  listCalendar(from: string, to: string): Promise<CalendarEvent[]>
+
+  addCalendarEvent(input: CalendarEventInput): Promise<void>
+
+  listSurveys(): Promise<Survey[]>
+
+  createSurvey(input: SurveyInput): Promise<void>
+
+  /** رأی دادن. نظر عوض کردن، رأی دوم نمی‌سازد. */
+  answerSurvey(surveyId: string, choice: number): Promise<void>
+
+  /** انتشار نتیجه برای خانواده‌ها — یک تصمیم، نه پیش‌فرض. */
+  setSurveyResultsVisible(surveyId: string, visible: boolean): Promise<void>
+
+  /* ── هزینه و درآمد — ماژول M16 ────────────────────────────── */
+
+  getIncomeVsExpense(period: string): Promise<IncomeVsExpense>
+
+  addExpense(input: ExpenseInput): Promise<void>
+
   /* ── بازی آزاد — ماژول M8 ─────────────────────────────────── */
 
   getFreePlayBoard(classId: string, date: string, session: PlaySession): Promise<FreePlayBoard>
@@ -1842,6 +2084,55 @@ export interface DataAccess {
 
   /** تصمیم مدیر. رد، دلیل می‌خواهد تا خانواده بداند چه شد. */
   decideProfileChange(requestId: string, approve: boolean, reason?: string): Promise<void>
+
+  /**
+   * ویرایش مستقیم پرونده، به دست مدیر.
+   *
+   * چرا بی تأیید: مدیر خودش تأییدکننده است. گذاشتنِ درخواست در صف
+   * خودش، یک حلقه بی‌معنی می‌سازد.
+   *
+   * همان فهرست بسته میدان‌های `listProfileFields` — مدیر هم نمی‌تواند
+   * ستونی را عوض کند که فهرست نمی‌شناسد. تغییر در `audit_log` می‌نشیند.
+   */
+  editProfileField(childId: string, field: string, value: string): Promise<void>
+
+  /* ── ویرایش پرونده مربی — مدیر ────────────────────────────── */
+
+  /** میدان‌های قابل ویرایش پرونده مربی، با مقدار فعلی هر کدام. */
+  listStaffFields(staffId: string): Promise<StaffField[]>
+
+  /**
+   * ویرایش یک میدان پرونده مربی. فقط مدیر، و فقط از همان فهرست بسته.
+   *
+   * صف تأیید ندارد — مدیر خودش تأییدکننده است — ولی ردِ پا دارد:
+   * پرونده پرسنلی چیزی است که در دعوای کاری به آن استناد می‌شود.
+   */
+  editStaffField(staffId: string, field: string, value: string): Promise<void>
+
+  /** افزودن مربی تازه. شناسه‌اش برمی‌گردد تا پرونده‌اش باز شود. */
+  addStaff(input: NewStaff): Promise<string>
+
+  /* ── مرخصی مربی ───────────────────────────────────────────── */
+
+  /**
+   * درخواست مرخصی، به دست خودِ مربی.
+   *
+   * **مرخصی نمی‌دهد.** تا مدیر تصمیم نگیرد، درخواست در انتظار می‌ماند و
+   * هیچ‌جای برنامه شیفت دیده نمی‌شود.
+   */
+  requestLeave(input: LeaveInput): Promise<void>
+
+  /** تاریخچه مرخصی خودِ مربی، تازه‌ترین بازه اول. */
+  listMyLeave(): Promise<LeaveRequest[]>
+
+  /** صف مدیر. نزدیک‌ترین روزِ شروع اول، نه تازه‌ترین درخواست. */
+  listPendingLeave(): Promise<PendingLeave[]>
+
+  /** تصمیم مدیر. رد، دلیل می‌خواهد تا مربی بداند چه شد. */
+  decideLeave(requestId: string, approve: boolean, note?: string): Promise<void>
+
+  /** چه کسی این روز مرخصی تأییدشده دارد — برای برنامه شیفت مدیر. */
+  listStaffOnLeave(date: string): Promise<{ staffId: string; fullName: string }[]>
 
   /* ── اقلام هزینه — مدیر ───────────────────────────────────── */
 

@@ -2,7 +2,13 @@ import { useCallback, useEffect, useState } from 'react'
 import { AlertIcon, ChildFace, EmptyState } from '../../design-system/index.ts'
 import { formatCount, toPersianDigits } from '../../i18n/index.ts'
 import { useData } from '../../core/auth/index.ts'
-import type { Child, ChildProfile, ConsentType, ProfileChange } from '../../core/data/index.ts'
+import type {
+  Child,
+  ChildProfile,
+  ConsentType,
+  ProfileChange,
+  ProfileField,
+} from '../../core/data/index.ts'
 import styles from './ChildrenPage.module.css'
 
 /**
@@ -101,6 +107,7 @@ export function ChildrenPage({ onBack }: { onBack: () => void }) {
           setOpenId(null)
           setProfile(null)
         }}
+        onChanged={() => void open(openId)}
       />
     )
   }
@@ -250,8 +257,13 @@ export function ChildrenPage({ onBack }: { onBack: () => void }) {
   )
 }
 
-function Profile({ profile, onBack }: { profile: ChildProfile; onBack: () => void }) {
+function Profile({ profile, onBack, onChanged }: {
+  profile: ChildProfile
+  onBack: () => void
+  onChanged: () => void
+}) {
   const { child, medical } = profile
+  const [editing, setEditing] = useState(false)
   return (
     <div className={styles.page}>
       <header className={styles.header}>
@@ -267,6 +279,17 @@ function Profile({ profile, onBack }: { profile: ChildProfile; onBack: () => voi
       </header>
 
       <div className={styles.body}>
+        {/*
+          ویرایش، بالای پرونده.
+
+          تا اینجا پرونده فقط خواندنی بود و مدیر هیچ راهی برای وارد
+          کردن داده نداشت — پرونده بازرسی می‌گفت «۳ کودک کد ملی
+          ثبت‌نشده دارند» و هیچ جای اپ نمی‌شد کد ملی را نوشت.
+        */}
+        <button type="button" className={styles.action} onClick={() => setEditing(true)}>
+          ویرایش اطلاعات کودک
+        </button>
+
         {/* بخش ۷.۱: آلرژی اول از همه، حتی پیش از نام سرپرستان. */}
         {medical.allergies.length > 0 ? (
           <section className={styles.allergy} aria-label="آلرژی">
@@ -340,6 +363,17 @@ function Profile({ profile, onBack }: { profile: ChildProfile; onBack: () => voi
           ))}
         </section>
       </div>
+
+      {editing ? (
+        <EditSheet
+          childId={child.id}
+          onClose={() => setEditing(false)}
+          onDone={async () => {
+            setEditing(false)
+            onChanged()
+          }}
+        />
+      ) : null}
     </div>
   )
 }
@@ -354,6 +388,125 @@ function Fact({ label, value }: { label: string; value: string | null }) {
 }
 
 /** پیکان جهت‌دار — بخش ۱۲.۶: قرینه می‌شود. */
+/* ── ویرایش مدیر ────────────────────────────────────────────── */
+
+/**
+ * ویرایش پرونده، به دست مدیر.
+ *
+ * دو چیزی که این شیت از ویرایش خانواده جدایش می‌کند:
+ *
+ * ۱. **صف تأیید ندارد.** مدیر خودش تأییدکننده است؛ گذاشتنِ درخواستِ او
+ *    در صفِ خودش یک حلقه بی‌معنی است.
+ * ۲. **همان فهرست بسته.** کلاس و شهریه از این راه عوض نمی‌شوند — نه
+ *    برای خانواده و نه برای مدیر. آن‌ها جای دیگری تصمیم خودشان را
+ *    دارند.
+ */
+function EditSheet({ childId, onClose, onDone }: {
+  childId: string
+  onClose: () => void
+  onDone: () => Promise<void>
+}) {
+  const data = useData()
+  const [fields, setFields] = useState<ProfileField[] | null>(null)
+  const [draft, setDraft] = useState<Record<string, string>>({})
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    data
+      .listProfileFields(childId)
+      .then((list) => {
+        setFields(list)
+        setDraft(Object.fromEntries(list.map((f) => [f.key, f.value])))
+      })
+      .catch(() => setFields([]))
+  }, [data, childId])
+
+  const submit = async () => {
+    if (!fields) return
+    setBusy(true)
+    setError(null)
+    try {
+      /*
+       * فقط میدان‌هایی که واقعاً عوض شده‌اند.
+       *
+       * فرستادن همه، یازده سطر بی‌معنی در لاگ دسترسی می‌گذارد — و آن
+       * لاگ وقتی به درد می‌خورد که بشود خواندش.
+       */
+      for (const field of fields) {
+        const next = (draft[field.key] ?? '').trim()
+        if (next === field.value.trim()) continue
+        await data.editProfileField(childId, field.key, next)
+      }
+      await onDone()
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'ذخیره نشد.')
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className={styles.sheetBackdrop} role="dialog" aria-label="ویرایش اطلاعات کودک">
+      <div className={styles.sheet}>
+        <p className={`${styles.sheetTitle} t-h2`}>ویرایش اطلاعات کودک</p>
+
+        {fields === null ? (
+          <p className={`${styles.muted} t-body-sm`}>در حال خواندن…</p>
+        ) : (
+          fields.map((field) => (
+            <label key={field.key} className={`${styles.field} t-caption`}>
+              {field.label}
+              {/*
+                درخواست بازِ خانواده، همین‌جا دیده می‌شود.
+                مدیری که نداند خانواده چیزی خواسته، ممکن است مقداری
+                بنویسد که فردا دوباره درخواست شود.
+              */}
+              {field.pending !== null ? (
+                <span className={styles.pendingHint}>
+                  خانواده پیشنهاد داده: {field.pending || '—'}
+                </span>
+              ) : null}
+              <input
+                className={styles.input}
+                value={draft[field.key] ?? ''}
+                aria-label={field.label}
+                onChange={(event) =>
+                  setDraft((current) => ({ ...current, [field.key]: event.target.value }))
+                }
+              />
+            </label>
+          ))
+        )}
+
+        {/*
+          آنچه از این راه عوض نمی‌شود، صریح گفته می‌شود.
+          وگرنه مدیر دنبال «کلاس» می‌گردد و فکر می‌کند اپ ناقص است.
+        */}
+        <p className={`${styles.muted} t-caption`}>
+          کلاس، شهریه و سرپرست پرداخت‌کننده از این فرم عوض نمی‌شوند؛ هرکدام جای خودشان را
+          دارند.
+        </p>
+
+        {error ? <p className={`${styles.error} t-body-sm`}>{error}</p> : null}
+
+        <div className={styles.sheetActions}>
+          <button type="button" className={styles.secondary} onClick={onClose}>
+            انصراف
+          </button>
+          <button
+            type="button"
+            className={`${styles.primary} t-body-sm`}
+            disabled={busy || fields === null}
+            onClick={() => void submit()}
+          >
+            ذخیره
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function Chevron({ flip }: { flip?: boolean }) {
   return (
     <svg className="mirror" width="20" height="20" viewBox="0 0 24 24" fill="none"

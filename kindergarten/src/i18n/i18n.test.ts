@@ -4,6 +4,7 @@ import {
   formatCount,
   formatJalali,
   formatTime,
+  formatRial,
   formatToman,
   jalaliParts,
   jalaliYearMonth,
@@ -31,6 +32,18 @@ describe('ارقام', () => {
 
   it('مبلغ را با جداکننده و واحد می‌دهد', () => {
     expect(formatToman(1234567)).toBe('۱٬۲۳۴٬۵۶۷ تومان')
+  })
+
+  /*
+   * یک خانواده در مرورگرش «ناعدد تومان» دید — چیزی که Intl برای NaN
+   * می‌سازد. ریشه‌اش حافظه ذخیره‌شده با شکل قدیمی بود و آنجا بسته شد،
+   * ولی نگهبانش اینجا می‌ماند: مبلغی که عدد نیست، مبلغ نشان داده
+   * نمی‌شود.
+   */
+  it('مبلغی که عدد نیست را «ناعدد» نمی‌نویسد', () => {
+    expect(formatToman(Number.NaN)).toBe('—')
+    expect(formatToman(Number.POSITIVE_INFINITY)).toBe('—')
+    expect(formatRial(Number.NaN)).toBe('—')
   })
 })
 
