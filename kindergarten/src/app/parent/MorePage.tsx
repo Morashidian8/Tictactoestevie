@@ -17,6 +17,7 @@ import type {
 import { ChildProfilePage } from './ChildProfilePage.tsx'
 import { FinancePage } from './FinancePage.tsx'
 import { MonthlyReportPage } from './MonthlyReportPage.tsx'
+import { ProgramPage } from './ProgramPage.tsx'
 import styles from './MorePage.module.css'
 
 /**
@@ -28,7 +29,16 @@ import styles from './MorePage.module.css'
  * مالی فقط برای سرپرست پرداخت‌کننده دیده می‌شود — بخش ۶.۵. سایر
  * سرپرستان این بخش را اصلاً نمی‌بینند، نه اینکه خالی ببینند.
  */
-type Tab = 'menu' | 'absence' | 'medication' | 'finance' | 'notices' | 'messages' | 'profile' | 'report'
+type Tab =
+  | 'menu'
+  | 'absence'
+  | 'medication'
+  | 'finance'
+  | 'notices'
+  | 'messages'
+  | 'profile'
+  | 'report'
+  | 'program'
 
 export function MorePage({ childId, childName, onBack, initialTab = 'menu' }: {
   childId: string
@@ -57,6 +67,13 @@ export function MorePage({ childId, childName, onBack, initialTab = 'menu' }: {
     if (tab === 'report') {
       return <MonthlyReportPage childId={childId} childName={childName} onBack={back} />
     }
+    if (tab === 'program') {
+      return (
+        <Shell title="برنامه مهد" onBack={back}>
+          <ProgramPage childId={childId} />
+        </Shell>
+      )
+    }
     if (tab === 'notices') return <NoticesTab onBack={back} />
     return <MessagesTab childId={childId} onBack={back} />
   }
@@ -79,6 +96,18 @@ export function MorePage({ childId, childName, onBack, initialTab = 'menu' }: {
           label="درخواست مصرف دارو"
           hint="از شب قبل بنویسید، مربی صبح تحویل می‌گیرد"
           onClick={() => setTab('medication')}
+        />
+        {/*
+          برنامه مهد — منو، تقویم، نظرسنجی.
+
+          بالای «اطلاعیه‌ها» می‌نشیند چون کارِ هفتگیِ خانواده است، نه
+          خبرِ گذشته: منوی فردا و اردوی پنجشنبه تصمیم امروز را عوض
+          می‌کنند.
+        */}
+        <MenuItem
+          label="برنامه مهد"
+          hint="منوی غذایی، تقویم و نظرسنجی"
+          onClick={() => setTab('program')}
         />
         <MenuItem label="پیام به مربی" hint="در ساعت کاری مهد" onClick={() => setTab('messages')} />
         {/*

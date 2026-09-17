@@ -3,7 +3,16 @@ import { AlertIcon, CheckIcon, EmptyState } from '../../design-system/index.ts'
 import { formatCount, formatRial, jalaliYearMonth, toIsoDate, toLatinDigits, toPersianDigits } from '../../i18n/index.ts'
 import { useData } from '../../core/auth/index.ts'
 import { invoiceDue } from '../../core/data/index.ts'
-import type { ClassRoom, FeeItem, FinanceOverview, Invoice, PaymentClaim } from '../../core/data/index.ts'
+import { ChoiceGroup, JalaliDateField } from '../../design-system/index.ts'
+import type {
+  ClassRoom,
+  ExpenseCategory,
+  FeeItem,
+  FinanceOverview,
+  IncomeVsExpense,
+  Invoice,
+  PaymentClaim,
+} from '../../core/data/index.ts'
 import styles from './FinancePage.module.css'
 
 /**
@@ -32,6 +41,9 @@ export function FinancePage({ onBack }: { onBack: () => void }) {
   const [claims, setClaims] = useState<PaymentClaim[]>([])
   /** اقلام هزینه این دوره — ناهار، اردو، کاردستی. */
   const [items, setItems] = useState<FeeItem[]>([])
+  /** هزینه‌های همین دوره، در برابر وصولی — ماژول M16، بخش ۸.۳. */
+  const [books, setBooks] = useState<IncomeVsExpense | null>(null)
+  const [spending, setSpending] = useState(false)
   const [defining, setDefining] = useState(false)
   const [rejecting, setRejecting] = useState<PaymentClaim | null>(null)
   const [rejectReason, setRejectReason] = useState('')
@@ -54,6 +66,12 @@ export function FinancePage({ onBack }: { onBack: () => void }) {
       setError(null)
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'خوانده نشد.')
+    }
+    // دفتر هزینه جدا خوانده می‌شود: نبودش نباید کل صفحه مالی را خالی کند.
+    try {
+      setBooks(await data.getIncomeVsExpense(period))
+    } catch {
+      setBooks(null)
     }
   }, [data, period])
 
@@ -314,6 +332,68 @@ export function FinancePage({ onBack }: { onBack: () => void }) {
               </section>
             ) : null}
 
+            {/*
+              درآمد در برابر هزینه — ماژول M16.
+
+              «درآمد» یعنی پولی که واقعاً وصول شده، نه مبلغی که صادر
+              شده. صورتحسابِ صادرشده هنوز پول نیست، و مهدی که آن را
+              درآمد بخواند ماه بعد حقوق پرداخت نمی‌کند — پس عنوانش
+              «وصول‌شده» است، نه «درآمد».
+
+              آنچه اینجا ساخته نمی‌شود (پیوست ج): انبارداری، سفارش
+              خرید، تأمین‌کننده، حسابداری. این یک دفترِ ساده است تا
+              مدیر ته ماه بداند چه ماند، نه یک سامانه مالی.
+            */}
+            <section className={styles.card} aria-label="وصولی و هزینه">
+              <span className={`${styles.cardLabel} t-caption`}>وصولی و هزینه این ماه</span>
+              {books === null ? (
+                <p className={`${styles.muted} t-body`}>در حال خواندن…</p>
+              ) : (
+                <>
+                  <p className={`${styles.row} t-body`}>
+                    <span>وصولی</span>
+                    <b className="tabular">{formatRial(books.collected)}</b>
+                  </p>
+                  <p className={`${styles.row} t-body`}>
+                    <span>هزینه</span>
+                    <b className="tabular">{formatRial(books.spent)}</b>
+                  </p>
+                  {/*
+                    «مانده» و نه «سود»: مهدکودک سود و زیان حساب نمی‌کند
+                    و اینجا حقوق و اجاره و بیمه نیامده. کلمه‌ای که
+                    بیش از داده‌اش ادعا کند، تصمیم غلط می‌سازد.
+                  */}
+                  <p className={`${styles.row} t-body`}>
+                    <span>مانده</span>
+                    <b
+                      className={`tabular ${
+                        books.collected - books.spent < 0 ? styles.warnText : ''
+                      }`}
+                    >
+                      {formatRial(books.collected - books.spent)}
+                    </b>
+                  </p>
+
+                  {books.byCategory.length > 0 ? (
+                    <>
+                      <span className={`${styles.cardLabel} t-caption`}>هزینه به تفکیک</span>
+                      {books.byCategory.map((line) => (
+                        <p key={line.category} className={`${styles.row} t-body`}>
+                          <span>{EXPENSE_TEXT[line.category] ?? line.category}</span>
+                          <b className="tabular">{formatRial(line.total)}</b>
+                        </p>
+                      ))}
+                    </>
+                  ) : (
+                    <p className={`${styles.muted} t-body`}>هزینه‌ای برای این ماه ثبت نشده.</p>
+                  )}
+                </>
+              )}
+              <button type="button" className={styles.action} onClick={() => setSpending(true)}>
+                ثبت هزینه
+              </button>
+            </section>
+
             <section className={styles.card} aria-label="صورتحساب‌های تسویه‌نشده">
               <span className={`${styles.cardLabel} t-caption`}>تسویه‌نشده</span>
               {view.unpaid.length === 0 ? (
@@ -335,6 +415,17 @@ export function FinancePage({ onBack }: { onBack: () => void }) {
 
         {error ? <p className={`${styles.error} t-body`}>{error}</p> : null}
       </div>
+
+      {spending ? (
+        <ExpenseSheet
+          onClose={() => setSpending(false)}
+          onDone={async (message) => {
+            setSpending(false)
+            setNote(message)
+            await load()
+          }}
+        />
+      ) : null}
 
       {zoom ? (
         <button
@@ -685,6 +776,126 @@ function Tile({ label, value, tone }: { label: string; value: number; tone?: 'ok
     <div className={`${styles.tile} ${tone === 'warn' ? styles.tileWarn : ''}`}>
       <span className={`${styles.tileLabel} t-body-sm`}>{label}</span>
       <span className={`${styles.tileValue} ${tone === 'ok' ? styles.ok : ''}`}>{formatRial(value)}</span>
+    </div>
+  )
+}
+
+
+/* ── ثبت هزینه — ماژول M16 ──────────────────────────────────── */
+
+const EXPENSE_CATEGORIES: { value: ExpenseCategory; label: string }[] = [
+  { value: 'food', label: 'خوراک' },
+  { value: 'supplies', label: 'ملزومات' },
+  { value: 'equipment', label: 'تجهیزات' },
+  { value: 'repair', label: 'تعمیر' },
+  { value: 'utilities', label: 'قبوض' },
+  { value: 'other', label: 'سایر' },
+]
+
+const EXPENSE_TEXT: Record<string, string> = Object.fromEntries(
+  EXPENSE_CATEGORIES.map((c) => [c.value, c.label]),
+)
+
+/**
+ * ثبت یک هزینه.
+ *
+ * مبلغ به **تومان** گرفته می‌شود و به ریال ذخیره — همان قاعده‌ای که
+ * بقیه این صفحه دارد. مردم به تومان حرف می‌زنند و ستون پایگاه داده
+ * ریال است؛ ضربدر ده فقط یک جا انجام می‌شود.
+ *
+ * آنچه اینجا نیست و عمدی است (پیوست ج): تأمین‌کننده، سفارش خرید،
+ * انبار. این یک دفترِ ساده است تا مدیر ته ماه بداند چه ماند، نه یک
+ * سامانه حسابداری.
+ */
+function ExpenseSheet({ onClose, onDone }: {
+  onClose: () => void
+  onDone: (message: string) => Promise<void>
+}) {
+  const data = useData()
+  const [date, setDate] = useState<string | null>(toIsoDate(new Date()))
+  const [category, setCategory] = useState<ExpenseCategory>('food')
+  const [amount, setAmount] = useState('')
+  const [note, setNote] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const rial = Number(toLatinDigits(amount).replace(/\D/g, '')) * 10
+
+  const submit = async () => {
+    if (!date) {
+      setError('روز هزینه را از تقویم انتخاب کنید.')
+      return
+    }
+    if (rial <= 0) {
+      setError('مبلغ را بنویسید.')
+      return
+    }
+    setBusy(true)
+    setError(null)
+    try {
+      await data.addExpense({ date, amount: rial, category, note })
+      await onDone(`هزینه ${EXPENSE_TEXT[category]} ثبت شد.`)
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'ثبت نشد.')
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className={styles.sheetBackdrop} role="dialog" aria-label="ثبت هزینه">
+      <div className={styles.sheet}>
+        <p className={`${styles.sheetTitle} t-h2`}>هزینه تازه</p>
+
+        <ChoiceGroup
+          label="دسته"
+          options={EXPENSE_CATEGORIES}
+          value={category}
+          onChange={setCategory}
+        />
+
+        <JalaliDateField label="روز" value={date} onChange={setDate} allowClear={false} />
+
+        <label className={`${styles.field} t-caption`}>
+          مبلغ به تومان
+          <input
+            className={styles.input}
+            value={amount}
+            inputMode="numeric"
+            aria-label="مبلغ هزینه"
+            onChange={(event) => setAmount(event.target.value)}
+          />
+        </label>
+        {rial > 0 ? (
+          <p className={`${styles.muted} t-caption`}>{formatRial(rial)}</p>
+        ) : null}
+
+        <label className={`${styles.field} t-caption`}>
+          بابت چه
+          <input
+            className={styles.input}
+            value={note}
+            aria-label="توضیح هزینه"
+            placeholder="خرید هفتگی میوه"
+            onChange={(event) => setNote(event.target.value)}
+          />
+        </label>
+
+        {error ? <p className={`${styles.error} t-caption`}>{error}</p> : null}
+
+        <div className={styles.sheetActions}>
+          <button type="button" className={styles.secondary} onClick={onClose}>
+            انصراف
+          </button>
+          <button
+            type="button"
+            className={`${styles.primary} t-body-sm`}
+            onClick={() => void submit()}
+            disabled={busy || rial <= 0}
+          >
+            ثبت
+          </button>
+        </div>
+      </div>
     </div>
   )
 }

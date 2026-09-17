@@ -1065,6 +1065,67 @@ check(true, 'پرداخت دستی ثبت شد')
 const afterPay = await page.evaluate(() => document.body.innerText)
 check(/وصول‌شده/.test(afterPay), 'وصولی به‌روز شد')
 
+console.log('▸ ماژول M16: هزینه‌ها، در برابر وصولی')
+const books = page.locator('[aria-label="وصولی و هزینه"]')
+await books.scrollIntoViewIfNeeded()
+check(
+  /وصولی/.test(await books.innerText()),
+  'دفتر وصولی و هزینه روی صفحه مالی هست',
+)
+/*
+ * «وصولی» است نه «درآمد»: صورتحسابِ صادرشده هنوز پول نیست، و مهدی که
+ * آن را درآمد بخواند ماه بعد حقوق پرداخت نمی‌کند.
+ */
+check(
+  !/درآمد|سود|زیان/.test(await books.innerText()),
+  'کلمه «درآمد» و «سود» به کار نمی‌رود — چیزی که نداریم ادعا نمی‌شود',
+)
+await books.locator('button:has-text("ثبت هزینه")').click()
+await page.waitForSelector('[aria-label="ثبت هزینه"]')
+await page.fill('input[aria-label="مبلغ هزینه"]', '۵۰۰۰۰۰')
+await page.fill('input[aria-label="توضیح هزینه"]', 'خرید هفتگی میوه')
+await page.locator('[aria-label="ثبت هزینه"] button:has-text("ثبت")').click()
+await page.waitForTimeout(1200)
+const booksText = await page.locator('[aria-label="وصولی و هزینه"]').innerText()
+check(/۵۰۰٬۰۰۰ تومان/.test(booksText), 'هزینه ثبت شد، به تومان')
+check(/هزینه به تفکیک/.test(booksText), 'و به تفکیک دسته شمرده می‌شود')
+/*
+ * مانده = وصولی − هزینه، همان‌جا و با همان ارقام.
+ * جمعی که کاربر خودش نتواند بررسی کند، جمعی است که کسی باورش نمی‌کند.
+ */
+const collected = booksText.match(/وصولی\s*\n?\s*([۰-۹٬]+)/)?.[1]
+const left = booksText.match(/مانده\s*\n?\s*([۰-۹٬]+)/)?.[1]
+check(collected !== left, 'مانده پس از هزینه کمتر از وصولی است')
+/*
+ * «انبارداری و سفارش خرید و تأمین‌کننده ساخته نشده‌اند» را تست پایگاه
+ * داده نگه می‌دارد، نه این تست. تضمین درباره شِماست نه درباره اینکه
+ * این کلمه‌ها هرگز روی صفحه نیایند — وگرنه روزی که مدیری در توضیح یک
+ * هزینه «سفارش خرید» بنویسد، همین‌جا می‌افتد.
+ */
+
+/*
+ * همان عدد، در دو صفحه.
+ *
+ * این تست از یک باگ واقعی آمد: داشبورد `formatToman` را روی ستونی
+ * می‌زد که ریال است و صفحه مالی `formatRial` — یعنی مدیر در خانه
+ * رقمی ده برابر می‌دید. «دو جا، دو عدد»، همان دسته‌ای که جمعِ
+ * صورتحساب را هم یک بار شکسته بود.
+ */
+const financeCollected = (await page.evaluate(() => document.body.innerText)).match(
+  /وصول‌شده\s*\n?\s*([۰-۹٬]+)/,
+)?.[1]
+await page.click('[aria-label="بازگشت به داشبورد"]')
+await page.waitForSelector('text=وضعیت ثبت')
+const homeCollected = (await page.evaluate(() => document.body.innerText)).match(
+  /وصولی این ماه\s*\n?\s*([۰-۹٬]+)/,
+)?.[1]
+check(
+  Boolean(financeCollected) && financeCollected === homeCollected,
+  `وصولیِ داشبورد و صفحه مالی یکی است: ${homeCollected ?? '—'}`,
+)
+await page.click('button:has-text("مالی")')
+await page.waitForSelector('text=شهریه‌ها')
+
 console.log('▸ ماژول M1: پرونده کودک')
 await page.click('[aria-label="بازگشت به داشبورد"]')
 await page.waitForSelector('text=وضعیت ثبت')
@@ -2278,6 +2339,109 @@ check(
 )
 await page.locator('[aria-label="بازگشت"]').click()
 await page.waitForTimeout(400)
+
+console.log('▸ ماژول M14: منوی غذایی، تقویم، نظرسنجی')
+await signIn('09120000002')
+await page.waitForTimeout(600)
+const asManagerForProgram = page.locator('button:has-text("مدیر")')
+if (await asManagerForProgram.count()) await asManagerForProgram.first().click()
+await page.waitForSelector('text=وضعیت ثبت', { timeout: 10000 })
+await page.locator('nav button:has-text("بیشتر")').click()
+await page.waitForSelector('button:has-text("برنامه مهد")')
+await page.click('button:has-text("برنامه مهد")')
+await page.waitForSelector('[aria-label="منوی غذایی"]')
+
+await page.click('button:has-text("نوشتن منوی یک روز")')
+await page.waitForSelector('[role="dialog"]')
+await page.fill('input[aria-label="نام غذا"]', 'قرمه‌سبزی')
+/*
+ * مواد اولیه جدا از نام غذا گرفته می‌شود، و این تنها دلیلِ واقعیِ
+ * وجود این ماژول است: «قرمه‌سبزی» به سامانه نمی‌گوید تخم‌مرغ دارد
+ * یا نه، پس هشدار آلرژی از فهرست مواد ساخته می‌شود نه از نام.
+ */
+await page.fill('textarea[aria-label="مواد اولیه"]', 'لوبیا، سبزی، گوشت، تخم‌مرغ')
+await page.locator('[role="dialog"] button:has-text("ثبت منو")').click()
+await page.waitForTimeout(900)
+check(
+  /قرمه‌سبزی/.test(await page.locator('[aria-label="منوی غذایی"]').innerText()),
+  'منوی روز ثبت شد',
+)
+
+await page.click('button:has-text("افزودن رویداد")')
+await page.waitForSelector('[role="dialog"]')
+await page.fill('input[aria-label="عنوان رویداد"]', 'جلسه کارکنان')
+await page.uncheck('[role="dialog"] input[type="checkbox"]')
+check(
+  /جلسه داخلی به خانواده مربوط نیست/.test(await page.locator('[role="dialog"]').innerText()),
+  'برداشتن تیکِ «خانواده‌ها ببینند» می‌گوید یعنی چه',
+)
+// داخلِ شیت: «افزودن رویداد» پشتِ آن هم «افزودن» در متنش دارد.
+await page.locator('[role="dialog"] button:has-text("افزودن")').click()
+await page.waitForTimeout(900)
+check(
+  /داخلی/.test(await page.locator('[aria-label="تقویم مهد"]').innerText()),
+  'رویداد داخلی در تقویم مهد، «داخلی» علامت می‌خورد',
+)
+
+await page.click('button:has-text("نظرسنجی تازه")')
+await page.waitForSelector('[role="dialog"]')
+await page.fill('textarea[aria-label="پرسش نظرسنجی"]', 'اردوی باغ پرندگان پنجشنبه برگزار شود؟')
+check(
+  await page.locator('[role="dialog"] button:has-text("ساختن")').isDisabled(),
+  'نظرسنجی بی گزینه ساخته نمی‌شود',
+)
+await page.fill('input[aria-label="گزینه 1"]', 'بله')
+await page.fill('input[aria-label="گزینه 2"]', 'خیر')
+await page.locator('[role="dialog"] button:has-text("ساختن")').click()
+await page.waitForTimeout(900)
+const surveyCard = await page.locator('[aria-label="نظرسنجی‌ها"]').innerText()
+check(/اردوی باغ پرندگان/.test(surveyCard), 'نظرسنجی ساخته شد')
+/*
+ * نتیجه پیش‌فرض پنهان است: «۸۰٪ مخالف اردو» یعنی ۲۰٪ موافق، و آن ۲۰٪
+ * خودشان را در اقلیت می‌بینند. انتشار یک تصمیم است، نه پیش‌فرض.
+ */
+check(
+  /انتشار نتیجه برای خانواده/.test(surveyCard),
+  'نتیجه تا وقتی مدیر منتشر نکند پنهان است',
+)
+
+await page.locator('[aria-label="بازگشت به داشبورد"]').click()
+await page.waitForTimeout(400)
+await page.locator('nav button:has-text("خانه")').click()
+await page.waitForSelector('text=وضعیت ثبت')
+await signOutAny()
+await page.waitForSelector('#phone')
+await page.fill('#phone', '09120000003')
+await page.click('button:has-text("فرستادن کد")')
+await page.waitForSelector('#code')
+await page.fill('#code', '11111')
+await page.click('button:has-text("ورود")')
+await page.waitForTimeout(1500)
+await page.locator('nav button:has-text("بیشتر")').click()
+await page.waitForSelector('button:has-text("برنامه مهد")')
+await page.click('button:has-text("برنامه مهد")')
+await page.waitForSelector('[aria-label="منوی غذایی"]')
+const familyProgram = await page.evaluate(() => document.body.innerText)
+check(/قرمه‌سبزی/.test(familyProgram), 'خانواده منوی همان روز را می‌بیند')
+/*
+ * هشدار آلرژی — تنها دلیلِ واقعیِ وجود این ماژول.
+ * نامِ خودِ ماده نوشته می‌شود نه برچسب «آلرژی»: «آلرژی» به خانواده
+ * نمی‌گوید غذا بفرستد یا نه؛ «تخم‌مرغ» می‌گوید.
+ */
+check(
+  /تخم‌مرغ — با آلرژی ثبت‌شده کودک شما می‌خورد/.test(familyProgram),
+  'و هشدار آلرژی با نامِ خودِ ماده می‌آید',
+)
+check(
+  !/جلسه کارکنان/.test(familyProgram),
+  'ولی رویداد داخلی مهد به خانواده نمی‌رسد',
+)
+
+await page.click('button:has-text("بله")')
+await page.waitForTimeout(1000)
+const voted = await page.evaluate(() => document.body.innerText)
+check(/رأی داده‌اید/.test(voted), 'خانواده رأی داد')
+check(/نتیجه هنوز منتشر نشده/.test(voted), 'و نتیجه تا انتشار مدیر پنهان می‌ماند')
 
 console.log('▸ مرخصی مربی: درخواست، تصمیم مدیر، جوابی که مربی می‌بیند')
 await signIn('09120000001')

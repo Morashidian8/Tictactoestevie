@@ -1,0 +1,59 @@
+.page {
+  display: flex; flex-direction: column; gap: var(--space-3);
+  padding-block-end: var(--space-6);
+}
+
+.card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r-card); padding: var(--space-4);
+  display: flex; flex-direction: column; gap: var(--space-2);
+}
+
+.cardLabel { color: var(--ink-muted); }
+.muted { color: var(--ink-muted); margin: 0; }
+
+.row {
+  margin: 0; display: flex; align-items: baseline; gap: var(--space-2);
+  padding-block: var(--space-2);
+}
+.row + .row { border-block-start: 1px solid var(--border); }
+.row b { margin-inline-start: auto; text-align: end; }
+
+.day { display: flex; flex-direction: column; gap: var(--space-2); padding-block: var(--space-2); }
+.day + .day { border-block-start: 1px solid var(--border); }
+.dayName { margin: 0; color: var(--ink); font-weight: var(--weight-bold); }
+
+.meal { display: flex; flex-direction: column; gap: 2px; }
+.mealTop { margin: 0; display: flex; align-items: baseline; gap: var(--space-2); }
+.mealTop b { margin-inline-start: auto; }
+
+/*
+ * هشدار آلرژی — بخش ۷.۱ و ۱۲.۲.
+ *
+ * تنها جای این صفحه که رنگ هشدار می‌گیرد. اگر چیز دیگری هم آجری شود،
+ * این یکی دیده نمی‌شود.
+ */
+.hit {
+  margin: 0; display: flex; align-items: flex-start; gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--r-input);
+  background: var(--brick-tint); color: var(--ink);
+  font-weight: var(--weight-medium);
+}
+.hit svg { color: var(--brick); flex: none; }
+
+.survey { display: flex; flex-direction: column; gap: var(--space-2); padding-block: var(--space-2); }
+.survey + .survey { border-block-start: 1px solid var(--border); }
+.surveyQ { margin: 0; color: var(--ink); font-weight: var(--weight-bold); }
+
+.options { display: flex; flex-direction: column; gap: var(--space-2); }
+
+.option {
+  min-block-size: var(--touch-parent);
+  padding-inline: var(--space-3);
+  border: 1px solid var(--border-input); border-radius: var(--r-input);
+  background: var(--surface); color: var(--ink);
+  font-family: inherit; text-align: start;
+}
+.option:active { background: var(--mint-tint); }
+.option:disabled { color: var(--disabled-fg); }

@@ -10,6 +10,7 @@ import {
 } from '../../design-system/index.ts'
 import { ROLE_LABEL, useAuth, useData } from '../../core/auth/index.ts'
 import { formatJalali } from '../../i18n/index.ts'
+import { ProgramPage } from './ProgramPage.tsx'
 import { AuditPage } from './AuditPage.tsx'
 import { ChildrenPage } from './ChildrenPage.tsx'
 import { DashboardPage } from './DashboardPage.tsx'
@@ -36,6 +37,7 @@ export type ManagerPage =
   | 'notice'
   | 'audit'
   | 'staff'
+  | 'program'
   | 'messages'
   | 'more'
 
@@ -143,6 +145,8 @@ export function ManagerApp() {
         <FinancePage onBack={back} />
       ) : page === 'children' ? (
         <ChildrenPage onBack={back} />
+      ) : page === 'program' ? (
+        <ProgramPage onBack={() => setPage('more')} />
       ) : page === 'audit' ? (
         <AuditPage onBack={() => setPage('more')} />
       ) : (

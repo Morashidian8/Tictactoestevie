@@ -321,3 +321,11 @@
   border: none;
 }
 .choices legend { padding: 0; margin-block-end: var(--space-1); }
+
+/*
+ * مانده منفی — ماهی که هزینه‌اش از وصولی گذشته.
+ *
+ * تنها عددِ این کارت که رنگ می‌گیرد. اگر همه ارقام رنگ داشتند، این
+ * یکی دیده نمی‌شد.
+ */
+.warnText { color: var(--brick); }

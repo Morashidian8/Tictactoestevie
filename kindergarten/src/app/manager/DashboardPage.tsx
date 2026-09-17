@@ -4,7 +4,7 @@ import {
   formatCount,
   formatJalali,
   formatTime,
-  formatToman,
+  formatRial,
   jalaliYearMonth,
   toIsoDate,
   toPersianDigits,
@@ -344,7 +344,7 @@ export function DashboardPage({ onGo, onCounts, onOpenStaff }: {
                   <div className={styles.metric}>
                     <span className={`${styles.metricLabel} t-caption`}>وصولی این ماه</span>
                     <span className={`${styles.metricValue} t-body-lg tabular`}>
-                      {formatToman(finance.collected)}
+                      {formatRial(finance.collected)}
                     </span>
                     {/*
                       نوار پیشرفت، نه نمودار: یک نسبت است و عددش کنارش
@@ -364,7 +364,7 @@ export function DashboardPage({ onGo, onCounts, onOpenStaff }: {
                       />
                     </span>
                     <span className={`${styles.metricFoot} t-caption tabular`}>
-                      از {formatToman(finance.issued)} صادرشده
+                      از {formatRial(finance.issued)} صادرشده
                     </span>
                   </div>
                 ) : null}
