@@ -43,6 +43,7 @@ export function TeacherMorePage({ onGo }: { onGo: (id: string) => void }) {
     {
       title: 'مهد',
       items: [
+        { id: 'meals', label: 'غذای امروز', hint: 'چند بشقاب و برای چه کسانی', icon: <SpoonIcon size={20} />, tone: 'coral' },
         { id: 'loans', label: 'دفتر امانت', hint: 'چه کودکی چه چیزی برده', icon: <LayersIcon size={20} />, tone: 'mango' },
         { id: 'account', label: 'حساب من', hint: 'مرخصی، مدارک، بازخورد', icon: <PersonIcon size={20} />, tone: 'grape' },
       ],

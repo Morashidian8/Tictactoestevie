@@ -2848,3 +2848,244 @@ begin
 end $$;
 
 select login_as('aa000000-0000-0000-0000-0000000000f2', '09120000077');
+
+-- ============================================================
+-- رزرو غذا — مهاجرت ۰۰۳۶
+-- ============================================================
+
+do $$
+declare
+  centre uuid := '11111111-1111-1111-1111-111111111111';
+  sara   uuid := 'd1111111-1111-1111-1111-111111111111';
+  amir   uuid := 'd2222222-2222-2222-2222-222222222222';
+  soon   date := current_date + 3;
+  late   date := current_date;
+  d_soon uuid;
+  d_late uuid;
+  d_free uuid;
+  pay    uuid;
+  line   record;
+  bad    boolean;
+begin
+  perform login_as('aa000000-0000-0000-0000-0000000000f2', '09120000077');  -- مدیر
+
+  insert into medical_profile (child_id, center_id, allergies_json)
+  values (sara, centre, '["تخم‌مرغ"]'::jsonb)
+  on conflict (child_id) do update set allergies_json = '["تخم‌مرغ"]'::jsonb;
+
+  insert into menu_day (center_id, date, slot, title, ingredients, price, capacity)
+  values (centre, soon, 'lunch', 'کوکو سبزی', array['سبزی','تخم‌مرغ','آرد'], 850000, 2)
+  returning id into d_soon;
+
+  /* روزی که مهلتش امروز تمام شده — آشپزخانه صبح خرید کرده. */
+  insert into menu_day (center_id, date, slot, title, ingredients, price, order_by)
+  values (centre, late, 'lunch', 'قرمه‌سبزی', array['لوبیا','گوشت'], 900000, current_date - 1)
+  returning id into d_late;
+
+  /* وعده‌ای بی قیمت: داخل شهریه است و اصلاً رزروی نیست. */
+  insert into menu_day (center_id, date, slot, title, ingredients)
+  values (centre, soon, 'snack_morning', 'شیر و بیسکویت', array['شیر'])
+  returning id into d_free;
+
+  perform login_as('aa000000-0000-0000-0000-0000000000f1', '09120000001');  -- خانواده
+
+  /*
+   * ۱. منو با هشدار آلرژیِ همین کودک می‌آید.
+   *
+   * تنها دلیلِ واقعیِ وجود منو در سامانه همین است؛ بی آن، یک تصویر
+   * تزئینی است و خانواده باید خودش مواد را با آلرژی بچه‌اش مقابله کند.
+   */
+  select * into line from app.meal_menu(sara, current_date, current_date + 7)
+   where menu_day_id = d_soon;
+  perform assert(line.allergy_hits @> array['تخم‌مرغ'], 'هشدار آلرژی با نامِ خودِ ماده می‌آید');
+  perform assert(line.orderable, 'وعده قیمت‌دارِ در مهلت، رزروشدنی است');
+  perform assert(line.order_state is null, 'و هنوز رزرو نشده');
+
+  -- ۲. وعده بی قیمت رزروی نیست.
+  select * into line from app.meal_menu(sara, current_date, current_date + 7)
+   where menu_day_id = d_free;
+  perform assert(not line.orderable, 'وعده بی قیمت رزروی نیست — داخل شهریه است');
+
+  -- ۳. مهلت گذشته، رزرو نمی‌شود.
+  begin
+    perform app.reserve_meal(sara, d_late);
+    bad := true;
+  exception when others then
+    bad := false;
+  end;
+  perform assert(not bad, 'رزرو پس از مهلت ثبت نمی‌شود — آشپزخانه صبح خرید کرده');
+
+  -- ۴. رزرو، و دو بار زدن دکمه دو بشقاب نمی‌سازد.
+  perform app.reserve_meal(sara, d_soon);
+  begin
+    perform app.reserve_meal(sara, d_soon);
+    bad := true;
+  exception when others then
+    bad := false;
+  end;
+  perform assert(not bad, 'دو بار زدن دکمه، دو رزرو نمی‌سازد');
+
+  /*
+   * ۵. رزروِ پرداخت‌نشده، غذا نیست.
+   *
+   * همان قاعده سفتِ درگاه: تا پول ننشسته، هیچ‌جا به عنوان غذای کودک
+   * دیده نمی‌شود — نه در پنل خانواده، نه در فهرست آشپزخانه.
+   */
+  perform assert(
+    (select count(*) from app.meals_for_day(centre, soon)) = 0,
+    'رزروِ پرداخت‌نشده در فهرست آشپزخانه نمی‌آید'
+  );
+
+  -- ۶. سبد، همان چیزی است که رزرو شده.
+  select * into line from app.meal_basket(sara);
+  perform assert(line.price = 850000, 'سبد قیمتِ لحظه رزرو را دارد');
+
+  -- ۷. پرداخت آنلاین، همان‌جا نهایی می‌کند.
+  pay := app.pay_meal_basket(sara, 'online', null);
+  select * into line from app.meal_menu(sara, current_date, current_date + 7)
+   where menu_day_id = d_soon;
+  perform assert(line.order_state = 'confirmed', 'پس از پرداخت، رزرو نهایی می‌شود');
+  perform assert(
+    (select count(*) from app.meal_basket(sara)) = 0,
+    'و سبد خالی می‌شود'
+  );
+  perform assert(
+    (select tracking_code from meal_payment where id = pay) is not null,
+    'پرداخت آنلاین کد رهگیری می‌گیرد'
+  );
+
+  -- ۸. سبد خالی پرداخت نمی‌شود.
+  begin
+    perform app.pay_meal_basket(sara, 'online', null);
+    bad := true;
+  exception when others then
+    bad := false;
+  end;
+  perform assert(not bad, 'سبد خالی پرداخت نمی‌شود');
+
+  -- ۹. رزروِ پرداخت‌شده با یک دکمه لغو نمی‌شود.
+  begin
+    perform app.cancel_meal_order(
+      (select id from meal_order where child_id = sara and menu_day_id = d_soon));
+    bad := true;
+  exception when others then
+    bad := false;
+  end;
+  perform assert(not bad, 'رزروِ پرداخت‌شده از پنل خانواده لغو نمی‌شود — پول جابه‌جا شده');
+
+  /*
+   * ۱۰. قیمت در لحظه رزرو قفل است.
+   *
+   * مهد قیمت را بالا می‌برد؛ رزروِ پرداخت‌شده گران نمی‌شود.
+   */
+  perform login_as('aa000000-0000-0000-0000-0000000000f2', '09120000077');
+  update menu_day set price = 1200000 where id = d_soon;
+  perform assert(
+    (select price from meal_order where child_id = sara and menu_day_id = d_soon) = 850000,
+    'گران شدن منو، رزروِ قبلی را گران نمی‌کند'
+  );
+
+  -- ۱۱. فهرست آشپزخانه، با هشدار آلرژی کنار نام کودک.
+  select * into line from app.meals_for_day(centre, soon);
+  perform assert(line.child_name like 'سارا%', 'فهرست آشپزخانه نام کودک را می‌گوید');
+  perform assert(line.allergy_hits @> array['تخم‌مرغ'], 'و هشدار آلرژی همان‌جا هست');
+end $$;
+
+do $$
+declare
+  centre uuid := '11111111-1111-1111-1111-111111111111';
+  amir   uuid := 'd2222222-2222-2222-2222-222222222222';
+  soon   date := current_date + 3;
+  d_soon uuid;
+  pay    uuid;
+  bad    boolean;
+begin
+  select id into d_soon from menu_day where date = soon and slot = 'lunch';
+
+  -- ۱۲. ظرفیت: دومی می‌نشیند، سومی نه.
+  perform login_as('aa000000-0000-0000-0000-0000000000f2', '09120000077');
+  perform app.reserve_meal(amir, d_soon);
+  perform assert(
+    (select count(*) from meal_order where menu_day_id = d_soon and state <> 'cancelled') = 2,
+    'ظرفیت دو نفره، دو رزرو را می‌پذیرد'
+  );
+  begin
+    perform app.reserve_meal('d3333333-3333-3333-3333-333333333333', d_soon);
+    bad := true;
+  exception when others then
+    bad := false;
+  end;
+  perform assert(not bad, 'و سومی را رد می‌کند');
+
+  /*
+   * ۱۳. کارت‌به‌کارت بی رسید ثبت نمی‌شود، و تا تأیید مدیر نهایی نیست.
+   */
+  begin
+    perform app.pay_meal_basket(amir, 'manual_receipt', null);
+    bad := true;
+  exception when others then
+    bad := false;
+  end;
+  perform assert(not bad, 'کارت‌به‌کارت بی رسید ثبت نمی‌شود');
+
+  pay := app.pay_meal_basket(amir, 'manual_receipt', 'blob:receipt');
+  perform assert(
+    (select state from meal_order where child_id = amir and menu_day_id = d_soon) = 'pending',
+    'کارت‌به‌کارت تا تأیید مدیر، رزرو را نهایی نمی‌کند'
+  );
+  perform assert(
+    (select count(*) from app.pending_meal_payments(centre) where id = pay) = 1,
+    'و در صف مدیر می‌نشیند'
+  );
+
+  perform app.approve_meal_payment(pay);
+  perform assert(
+    (select state from meal_order where child_id = amir and menu_day_id = d_soon) = 'confirmed',
+    'با تأیید مدیر، نهایی می‌شود'
+  );
+
+  -- ۱۴. تأیید دوباره ممکن نیست.
+  begin
+    perform app.approve_meal_payment(pay);
+    bad := true;
+  exception when others then
+    bad := false;
+  end;
+  perform assert(not bad, 'پرداختِ تأییدشده دوباره تأیید نمی‌شود');
+
+  /*
+   * ۱۵. آنچه ساخته نمی‌شود — پیوست ج.
+   *
+   * رزروِ غذا به صورتحساب شهریه وصل نیست و نمی‌شود. اگر روزی ستونی
+   * به `invoice` وصل شود، این تست می‌افتد و کسی باید توضیح بدهد چرا:
+   * خانواده‌ای که شهریه عقب دارد، نباید ناهارش قطع شود.
+   */
+  perform assert(
+    (select count(*) from information_schema.columns
+      where table_schema = 'public' and table_name in ('meal_order', 'meal_payment')
+        and column_name like '%invoice%') = 0,
+    'رزرو غذا به صورتحساب شهریه گره نمی‌خورد'
+  );
+end $$;
+
+do $$
+declare
+  amir   uuid := 'd2222222-2222-2222-2222-222222222222';
+  bad    boolean;
+begin
+  -- ۱۶. خانواده برای کودک دیگری رزرو نمی‌کند.
+  perform login_as('aa000000-0000-0000-0000-0000000000f1', '09120000001');
+  perform assert(
+    (select count(*) from app.meal_menu(amir, current_date, current_date + 7)) = 0,
+    'خانواده منوی کودک دیگری را نمی‌بیند'
+  );
+  begin
+    perform app.reserve_meal(amir, (select id from menu_day limit 1));
+    bad := true;
+  exception when others then
+    bad := false;
+  end;
+  perform assert(not bad, 'و برایش رزرو نمی‌کند');
+end $$;
+
+select login_as('aa000000-0000-0000-0000-0000000000f2', '09120000077');

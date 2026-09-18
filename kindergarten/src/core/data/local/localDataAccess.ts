@@ -49,6 +49,12 @@ import type {
   StaffDocument,
   LeaveRequest,
   Loan,
+  MealBasketLine,
+  MealOffer,
+  MealOrderState,
+  MealPayMethod,
+  MealPlate,
+  PendingMealPayment,
   StaffField,
   StaffNote,
   StaffRatio,
@@ -244,6 +250,8 @@ function save(): void {
       choices: CHOICES,
       pairs: PAIRS,
       menu: MENU,
+      mealOrders: MEAL_ORDERS,
+      mealPayments: MEAL_PAYMENTS,
       calendar: CALENDAR,
       surveys: SURVEYS,
       expenses: EXPENSES,
@@ -296,6 +304,8 @@ function hydrate(): void {
       choices?: ChoiceRow[]
       pairs?: PairRow[]
       menu?: MenuRow[]
+      mealOrders?: MealOrderRow[]
+      mealPayments?: MealPaymentRow[]
       calendar?: CalendarEvent[]
       surveys?: SurveyRow[]
       expenses?: Expense[]
@@ -370,6 +380,8 @@ function hydrate(): void {
     restore(CHOICES, payload.choices)
     restore(PAIRS, payload.pairs)
     restore(MENU, payload.menu)
+    restore(MEAL_ORDERS, payload.mealOrders)
+    restore(MEAL_PAYMENTS, payload.mealPayments)
     restore(CALENDAR, payload.calendar)
     restore(SURVEYS, payload.surveys)
     restore(EXPENSES, payload.expenses)
@@ -411,6 +423,7 @@ function hydrate(): void {
     // پس از بازیابی، نه پیش از آن: اگر مدیر خودش صورتحساب صادر کرده
     // باشد، نمونه چیزی روی آن نمی‌نویسد.
     seedFinance()
+    seedMeals()
   }
 }
 
@@ -426,6 +439,47 @@ function hydrate(): void {
  * و ماه جاری باز است. حالت «همه‌چیز پرداخت‌شده» هیچ‌کدام از صفحه‌های
  * سررسید و جریمه و یادآوری را نشان نمی‌دهد.
  */
+/**
+ * منوی نمونهٔ قابل رزرو — فقط نسخه نمایشی.
+ *
+ * بی این، خانواده صفحه رزرو غذا را باز می‌کند و فهرست خالی می‌بیند؛
+ * یعنی دقیقاً چیزی که آمده ببیند را نمی‌بیند. مدیرِ یک مهد واقعی خودش
+ * منو را می‌نویسد و این تابع هیچ‌وقت کاری نمی‌کند، چون فقط وقتی
+ * می‌نویسد که هیچ منویی وجود نداشته باشد.
+ *
+ * تخم‌مرغ عمداً در یکی از روزها هست: سارا به آن آلرژی دارد و هشدار
+ * آلرژی باید در همان نگاه اول دیده شود.
+ */
+function seedMeals(): void {
+  if (MENU.length > 0) return
+  const dishes: { title: string; ingredients: string[]; price: number }[] = [
+    { title: 'قرمه‌سبزی با برنج', ingredients: ['لوبیا', 'سبزی', 'گوشت', 'لیمو عمانی'], price: 850000 },
+    { title: 'کوکو سبزی', ingredients: ['سبزی', 'تخم‌مرغ', 'آرد'], price: 700000 },
+    { title: 'عدس‌پلو', ingredients: ['عدس', 'برنج', 'کشمش'], price: 780000 },
+    { title: 'ماکارونی', ingredients: ['ماکارونی', 'گوشت چرخ‌کرده', 'رب'], price: 820000 },
+    { title: 'خورش کدو', ingredients: ['کدو', 'گوشت', 'گوجه'], price: 900000 },
+  ]
+  const at = new Date()
+  for (let day = 0; day < 20; day += 1) {
+    at.setDate(at.getDate() + (day === 0 ? 0 : 1))
+    // پنجشنبه و جمعه مهد بسته است.
+    if (at.getDay() === 4 || at.getDay() === 5) continue
+    const dish = dishes[day % dishes.length]
+    if (!dish) continue
+    MENU.push({
+      id: `menu-seed-${day}`,
+      date: toIsoDate(at),
+      slot: 'lunch',
+      title: dish.title,
+      ingredients: dish.ingredients,
+      note: null,
+      price: dish.price,
+      capacity: 20,
+      orderBy: null,
+    })
+  }
+}
+
 function seedFinance(): void {
   if (INVOICES.length > 0) return
   const now = new Date()
@@ -958,6 +1012,13 @@ function periodRange(period: string): { from: string; to: string } {
   return { from, to: toIsoDate(end) }
 }
 
+/** روزِ پیش از یک تاریخ ISO — مهلت پیش‌فرضِ رزرو. */
+function previousDay(date: string): string {
+  const at = new Date(`${date}T12:00:00`)
+  at.setDate(at.getDate() - 1)
+  return toIsoDate(at)
+}
+
 /** شمار روزهای بازه، دو سرش هم حساب. آینه `to_date - from_date + 1`. */
 function daysBetween(from: string, to: string): number {
   const ms = new Date(`${to}T12:00:00`).getTime() - new Date(`${from}T12:00:00`).getTime()
@@ -1094,11 +1155,37 @@ const INTEREST_THRESHOLD = 8
 /* ── منو، تقویم، نظرسنجی، هزینه ─────────────────────────────── */
 
 type MenuRow = {
+  /* شناسه لازم شد تا رزرو بتواند به یک وعده اشاره کند. */
+  id: string
   date: string
   slot: MealSlot
   title: string
   ingredients: string[]
   note: string | null
+  /** ریال. خالی یعنی رزروی نیست — داخل شهریه است. */
+  price: number | null
+  capacity: number | null
+  orderBy: string | null
+}
+
+type MealOrderRow = {
+  id: string
+  childId: string
+  menuDayId: string
+  state: MealOrderState
+  price: number
+  paymentId: string | null
+}
+
+type MealPaymentRow = {
+  id: string
+  childId: string
+  amount: number
+  method: MealPayMethod
+  receiptUrl: string | null
+  trackingCode: string | null
+  paidAt: string | null
+  createdAt: string
 }
 
 type SurveyRow = {
@@ -1112,6 +1199,8 @@ type SurveyRow = {
 }
 
 const MENU: MenuRow[] = []
+const MEAL_ORDERS: MealOrderRow[] = []
+const MEAL_PAYMENTS: MealPaymentRow[] = []
 const CALENDAR: CalendarEvent[] = []
 const SURVEYS: SurveyRow[] = []
 const EXPENSES: Expense[] = []
@@ -3182,6 +3271,7 @@ export function createLocalDataAccess(scope: AccessScope): DataAccess {
       return MENU.filter((m) => m.date >= from && m.date <= to)
         .sort((a, b) => a.date.localeCompare(b.date))
         .map((row) => ({
+          menuDayId: row.id,
           ...row,
           /*
            * تقاطع در لایه داده، نه در رابط.
@@ -3201,14 +3291,210 @@ export function createLocalDataAccess(scope: AccessScope): DataAccess {
       if (!input.title.trim()) throw new Error('نام غذا لازم است.')
       // یک روز و یک وعده، یک منو: نوشتن دوباره جایگزینش می‌کند.
       const at = MENU.findIndex((m) => m.date === input.date && m.slot === input.slot)
+      // قیمت و ظرفیت جدا تنظیم می‌شوند؛ بازنویسیِ منو نباید پاکشان کند،
+      // وگرنه مدیری که غلط املایی را درست می‌کند، رزروها را می‌خواباند.
+      const before = at >= 0 ? MENU[at] : undefined
       if (at >= 0) MENU.splice(at, 1)
       MENU.push({
+        id: before?.id ?? `menu-${(m14Seq += 1)}`,
         date: input.date,
         slot: input.slot,
         title: input.title.trim(),
         ingredients: input.ingredients.map((i) => i.trim()).filter(Boolean),
         note: input.note?.trim() || null,
+        price: before?.price ?? null,
+        capacity: before?.capacity ?? null,
+        orderBy: before?.orderBy ?? null,
       })
+      save()
+    },
+
+    /* ── رزرو غذا ─────────────────────────────────────────── */
+
+    async setMealPrice(input) {
+      assertManager()
+      const day = MENU.find((m) => m.id === input.menuDayId)
+      if (!day) throw new Error('این وعده پیدا نشد.')
+      if (input.price !== null && input.price < 0) throw new Error('قیمت منفی نمی‌شود.')
+      day.price = input.price
+      day.capacity = input.capacity ?? null
+      day.orderBy = input.orderBy ?? null
+      save()
+    },
+
+    async listMealOffers(childId, from, to) {
+      assertOwnChild(childId)
+      const allergies = MEDICAL[childId]?.allergies ?? []
+      const today = toIsoDate(new Date())
+      return MENU.filter((m) => m.date >= from && m.date <= to)
+        .sort((a, b) => a.date.localeCompare(b.date) || a.slot.localeCompare(b.slot))
+        .map((m): MealOffer => {
+          const deadline = m.orderBy ?? previousDay(m.date)
+          const taken = MEAL_ORDERS.filter(
+            (o) => o.menuDayId === m.id && o.state !== 'cancelled',
+          ).length
+          const mine = MEAL_ORDERS.find(
+            (o) => o.menuDayId === m.id && o.childId === childId && o.state !== 'cancelled',
+          )
+          return {
+            menuDayId: m.id,
+            date: m.date,
+            slot: m.slot,
+            title: m.title,
+            ingredients: m.ingredients,
+            price: m.price,
+            orderBy: deadline,
+            capacity: m.capacity,
+            taken,
+            allergyHits: m.ingredients.filter((i) =>
+              allergies.some((a) => allergyMatches(i, a)),
+            ),
+            orderState: mine?.state ?? null,
+            orderable:
+              m.price !== null &&
+              today <= deadline &&
+              (m.capacity === null || taken < m.capacity),
+          }
+        })
+    },
+
+    async reserveMeal(childId, menuDayId) {
+      assertOwnChild(childId)
+      const day = MENU.find((m) => m.id === menuDayId)
+      if (!day) throw new Error('این وعده پیدا نشد.')
+      if (day.price === null) throw new Error('این وعده رزروی نیست.')
+      const deadline = day.orderBy ?? previousDay(day.date)
+      // آشپزخانه صبح خرید می‌کند؛ رزروِ ساعت یازده یعنی بشقابی که نیست.
+      if (toIsoDate(new Date()) > deadline) throw new Error('مهلت رزرو این روز گذشته.')
+
+      const open = MEAL_ORDERS.filter((o) => o.menuDayId === menuDayId && o.state !== 'cancelled')
+      if (day.capacity !== null && open.length >= day.capacity) {
+        throw new Error('ظرفیت این روز پر شده.')
+      }
+      const existing = MEAL_ORDERS.find(
+        (o) => o.menuDayId === menuDayId && o.childId === childId,
+      )
+      if (existing && existing.state !== 'cancelled') {
+        throw new Error('این وعده قبلاً رزرو شده.')
+      }
+      if (existing) {
+        existing.state = 'pending'
+        existing.price = day.price
+        existing.paymentId = null
+      } else {
+        MEAL_ORDERS.push({
+          id: `meal-${(m14Seq += 1)}`,
+          childId,
+          menuDayId,
+          state: 'pending',
+          // قیمت در لحظه رزرو قفل می‌شود.
+          price: day.price,
+          paymentId: null,
+        })
+      }
+      save()
+    },
+
+    async cancelMealOrder(orderId) {
+      const row = MEAL_ORDERS.find((o) => o.id === orderId)
+      if (!row) throw new Error('رزرو پیدا نشد.')
+      assertOwnChild(row.childId)
+      if (row.state === 'confirmed') {
+        throw new Error('این رزرو پرداخت شده. برای لغوش با مدیر مهد صحبت کنید.')
+      }
+      row.state = 'cancelled'
+      save()
+    },
+
+    async listMealBasket(childId) {
+      assertOwnChild(childId)
+      return MEAL_ORDERS.filter((o) => o.childId === childId && o.state === 'pending')
+        .map((o): MealBasketLine => {
+          const day = MENU.find((m) => m.id === o.menuDayId)
+          return {
+            orderId: o.id,
+            date: day?.date ?? '',
+            slot: day?.slot ?? 'lunch',
+            title: day?.title ?? '—',
+            price: o.price,
+          }
+        })
+        .sort((a, b) => a.date.localeCompare(b.date))
+    },
+
+    async payMealBasket(childId, method, receiptUrl) {
+      assertOwnChild(childId)
+      const basket = MEAL_ORDERS.filter((o) => o.childId === childId && o.state === 'pending')
+      const total = basket.reduce((sum, o) => sum + o.price, 0)
+      if (total <= 0) throw new Error('سبد خالی است.')
+      if (method === 'manual_receipt' && !receiptUrl) {
+        throw new Error('برای کارت‌به‌کارت، تصویر رسید لازم است.')
+      }
+      const id = `mpay-${(m14Seq += 1)}`
+      MEAL_PAYMENTS.push({
+        id,
+        childId,
+        amount: total,
+        method,
+        receiptUrl: receiptUrl ?? null,
+        trackingCode: method === 'online' ? `MP${Date.now().toString(36).toUpperCase()}` : null,
+        paidAt: method === 'online' ? new Date().toISOString() : null,
+        createdAt: new Date().toISOString(),
+      })
+      for (const order of basket) {
+        order.paymentId = id
+        // کارت‌به‌کارت تا تأیید مدیر در انتظار می‌ماند.
+        if (method === 'online') order.state = 'confirmed'
+      }
+      save()
+    },
+
+    async listMealsForDay(date) {
+      const days = new Set(MENU.filter((m) => m.date === date).map((m) => m.id))
+      return MEAL_ORDERS.filter((o) => o.state === 'confirmed' && days.has(o.menuDayId))
+        .map((o): MealPlate => {
+          const day = MENU.find((m) => m.id === o.menuDayId)
+          const child = CHILDREN.find((c) => c.id === o.childId)
+          const allergies = MEDICAL[o.childId]?.allergies ?? []
+          return {
+            slot: day?.slot ?? 'lunch',
+            title: day?.title ?? '—',
+            childId: o.childId,
+            childName: child ? `${child.firstName} ${child.lastName}` : '—',
+            className: CLASSES.find((c) => c.id === child?.classId)?.name ?? null,
+            allergyHits: (day?.ingredients ?? []).filter((i) =>
+              allergies.some((a) => allergyMatches(i, a)),
+            ),
+          }
+        })
+        .sort((a, b) => a.slot.localeCompare(b.slot) || a.childName.localeCompare(b.childName))
+    },
+
+    async listPendingMealPayments() {
+      assertManager()
+      return MEAL_PAYMENTS.filter((p) => p.paidAt === null).map((p): PendingMealPayment => {
+        const child = CHILDREN.find((c) => c.id === p.childId)
+        return {
+          id: p.id,
+          childId: p.childId,
+          childName: child ? `${child.firstName} ${child.lastName}` : '—',
+          amount: p.amount,
+          receiptUrl: p.receiptUrl,
+          meals: MEAL_ORDERS.filter((o) => o.paymentId === p.id).length,
+          createdAt: p.createdAt,
+        }
+      })
+    },
+
+    async approveMealPayment(paymentId) {
+      assertManager()
+      const pay = MEAL_PAYMENTS.find((p) => p.id === paymentId)
+      if (!pay) throw new Error('پرداخت پیدا نشد.')
+      if (pay.paidAt) throw new Error('این پرداخت قبلاً تأیید شده.')
+      pay.paidAt = new Date().toISOString()
+      for (const order of MEAL_ORDERS) {
+        if (order.paymentId === paymentId && order.state === 'pending') order.state = 'confirmed'
+      }
       save()
     },
 

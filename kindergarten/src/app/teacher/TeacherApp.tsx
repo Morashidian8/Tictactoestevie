@@ -20,6 +20,7 @@ import { ObservationsPage } from './ObservationsPage.tsx'
 import { TeacherMorePage } from './TeacherMorePage.tsx'
 import { TeacherProfilePage } from './TeacherProfilePage.tsx'
 import { PickChildPage } from './PickChildPage.tsx'
+import { MealsTodayPage } from './MealsTodayPage.tsx'
 import styles from './TeacherApp.module.css'
 
 /**
@@ -34,7 +35,7 @@ import styles from './TeacherApp.module.css'
  */
 type Screen =
   | 'today' | 'bulk' | 'close' | 'inbox' | 'more'
-  | 'observations' | 'pickChild' | 'play' | 'loans' | 'account'
+  | 'observations' | 'pickChild' | 'play' | 'loans' | 'account' | 'meals'
 
 export function TeacherApp() {
   const data = useData()
@@ -120,7 +121,8 @@ export function TeacherApp() {
     screen === 'close' ||
     screen === 'observations' ||
     screen === 'play' ||
-    screen === 'pickChild'
+    screen === 'pickChild' ||
+    screen === 'meals'
 
   return (
     <AppShell
@@ -181,6 +183,8 @@ export function TeacherApp() {
           // می‌کند، نه به فهرستی از خطا. بخش ۱۲.۱۰.
           onFixReports={() => setScreen('bulk')}
         />
+      ) : screen === 'meals' ? (
+        <MealsTodayPage onBack={() => setScreen('more')} />
       ) : screen === 'loans' ? (
         <LoansPage />
       ) : screen === 'play' ? (

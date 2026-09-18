@@ -1,0 +1,97 @@
+.page { display: flex; flex-direction: column; gap: var(--space-3); padding-block-end: var(--space-6); }
+
+.note { margin: 0; color: var(--ink); }
+.muted { margin: 0; color: var(--ink-muted); }
+.error { margin: 0; color: var(--brick); }
+
+/*
+ * سبد، چسبان به بالای فهرست.
+ *
+ * خانواده‌ای که پنج روز تیک زده باید همیشه ببیند چقدر شده؛ ته یک فهرست
+ * سی‌روزه، دکمه پرداخت پیدا نمی‌شود.
+ */
+.basket {
+  position: sticky;
+  inset-block-start: var(--space-2);
+  z-index: 5;
+  display: flex; flex-direction: column; gap: var(--space-2);
+  padding: var(--space-4);
+  background: var(--mint-tint);
+  border: 1px solid #9FE8CE;
+  border-radius: var(--r-card);
+  box-shadow: var(--shadow-md);
+}
+
+.basketTop { margin: 0; display: flex; align-items: baseline; gap: var(--space-2); }
+.basketTop span { margin-inline-start: auto; font-weight: var(--weight-black); }
+
+.basketWarn {
+  margin: 0; display: flex; align-items: center; gap: var(--space-1);
+  color: var(--ink); font-weight: var(--weight-medium);
+}
+.basketWarn svg { color: var(--mango); flex: none; }
+
+.pay, .payPrimary {
+  min-block-size: var(--touch-parent);
+  border: none; border-radius: var(--r-action);
+  background: var(--grad-primary); color: var(--ink);
+  font-family: inherit; font-weight: var(--weight-bold);
+  box-shadow: var(--glow-primary);
+}
+.payPrimary { inline-size: 100%; }
+.payPrimary:disabled, .pay:disabled { background: var(--disabled-bg); color: var(--disabled-fg); box-shadow: none; }
+
+.paySecondary {
+  inline-size: 100%; min-block-size: var(--touch-parent);
+  border: 1px solid var(--border-input); border-radius: var(--r-action);
+  background: var(--surface); color: var(--ink);
+  font-family: inherit; font-weight: var(--weight-bold);
+}
+.paySecondary:disabled { color: var(--disabled-fg); }
+
+.or { margin: var(--space-2) 0; text-align: center; color: var(--ink-muted); }
+
+.day {
+  display: flex; flex-direction: column; gap: var(--space-2);
+  padding: var(--space-4);
+  background: var(--surface);
+  border: 1px solid var(--card-border);
+  border-radius: var(--r-card);
+  box-shadow: var(--shadow-md);
+}
+
+.dayName { margin: 0; font-weight: var(--weight-black); }
+
+.meal { display: flex; align-items: center; gap: var(--space-3); padding-block: var(--space-2); }
+.meal + .meal { border-block-start: 1px solid var(--border); }
+.mealMain { flex: 1; min-inline-size: 0; display: flex; flex-direction: column; gap: 2px; }
+.mealTop { margin: 0; display: flex; align-items: baseline; gap: var(--space-2); }
+.mealTop b { margin-inline-start: auto; }
+.price { margin: 0; color: var(--ink-muted); }
+
+/* تنها جای این صفحه که رنگ هشدار می‌گیرد — بخش ۱۲.۲. */
+.hit {
+  margin: var(--space-1) 0 0;
+  display: flex; align-items: flex-start; gap: var(--space-1);
+  padding: var(--space-2);
+  border-radius: var(--r-input);
+  background: var(--brick-tint);
+  color: var(--ink); font-weight: var(--weight-medium);
+}
+.hit svg { color: var(--brick); flex: none; }
+
+.add, .drop {
+  flex: none; min-block-size: var(--touch-parent); padding-inline: var(--space-4);
+  border: 1px solid var(--border-input); border-radius: var(--r-input);
+  background: var(--surface); color: var(--ink); font-family: inherit;
+}
+.add:active { background: var(--mint-tint); }
+.drop:active { background: var(--coral-tint); }
+.add:disabled, .drop:disabled { color: var(--disabled-fg); }
+
+.done {
+  flex: none; padding: var(--space-2) var(--space-3);
+  border-radius: var(--r-chip);
+  background: var(--mint-tint); color: var(--mint-deep);
+  font-weight: var(--weight-bold);
+}

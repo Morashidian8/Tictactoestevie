@@ -96,3 +96,13 @@
   font-family: inherit; font-weight: var(--weight-bold);
 }
 .primary:disabled { background: var(--disabled-bg); color: var(--disabled-fg); }
+
+/* تصویر رسید کارت‌به‌کارتِ غذا. */
+.receipt {
+  inline-size: 100%;
+  max-block-size: 190px;
+  object-fit: contain;
+  border-radius: var(--r-input);
+  border: 1px solid var(--border);
+  background: var(--paper);
+}

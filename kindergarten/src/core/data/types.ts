@@ -867,6 +867,77 @@ export type LoanInput = {
   lentOn?: string | null
 }
 
+/* ── رزرو غذا — ماژول ۰۰۳۶ ──────────────────────────────────── */
+
+export type MealOrderState = 'pending' | 'confirmed' | 'cancelled'
+
+/**
+ * یک وعده از منوی ماه، از دید یک کودک.
+ *
+ * هم منو است، هم هشدار آلرژی، هم وضعیت رزروِ همین کودک — در یک ردیف.
+ * سه پرس‌وجوی جدا یعنی رابط باید خودش به‌همشان بدوزد و یک جا از قلم
+ * بیفتد.
+ */
+export type MealOffer = {
+  menuDayId: string
+  /** تاریخ میلادیِ ISO. */
+  date: string
+  slot: MealSlot
+  title: string
+  ingredients: string[]
+  /** قیمت به ریال. خالی یعنی این وعده رزروی نیست — داخل شهریه است. */
+  price: number | null
+  /** آخرین روزِ رزرو. آشپزخانه صبح خرید می‌کند. */
+  orderBy: string
+  capacity: number | null
+  taken: number
+  /** تقاطع مواد با آلرژیِ همین کودک. در سرور حساب می‌شود، نه اینجا. */
+  allergyHits: string[]
+  orderState: MealOrderState | null
+  /** قیمت دارد، در مهلت است، و ظرفیت مانده. */
+  orderable: boolean
+}
+
+/** یک قلم سبد: رزروِ پرداخت‌نشده. */
+export type MealBasketLine = {
+  orderId: string
+  date: string
+  slot: MealSlot
+  title: string
+  price: number
+}
+
+/** یک بشقاب در فهرست آشپزخانه — فقط رزروهای نهایی‌شده. */
+export type MealPlate = {
+  slot: MealSlot
+  title: string
+  childId: string
+  childName: string
+  className: string | null
+  allergyHits: string[]
+}
+
+/** پرداخت کارت‌به‌کارتِ در انتظار تأیید مدیر. */
+export type PendingMealPayment = {
+  id: string
+  childId: string
+  childName: string
+  amount: number
+  receiptUrl: string | null
+  meals: number
+  createdAt: string
+}
+
+export type MealPayMethod = 'online' | 'manual_receipt'
+
+export type MealPriceInput = {
+  menuDayId: string
+  /** ریال. خالی یعنی این وعده رزروی نیست. */
+  price: number | null
+  capacity?: number | null
+  orderBy?: string | null
+}
+
 export type StaffDocumentInput = {
   staffId: string
   kind: StaffDocumentKind
@@ -1143,6 +1214,8 @@ export type MealSlot = 'snack_morning' | 'lunch' | 'snack_afternoon'
  * تزئینی است و خانواده باید خودش تطبیق بدهد.
  */
 export type MenuEntry = {
+  /** شناسه وعده — رزرو و قیمت‌گذاری به آن اشاره می‌کنند. */
+  menuDayId: string
   date: string
   slot: MealSlot
   title: string
@@ -2207,6 +2280,45 @@ export interface DataAccess {
 
   /** هرچه هنوز برنگشته، در کل مهد. قرارِ گذشته اول. */
   listOpenLoans(): Promise<OpenLoan[]>
+
+  /* ── رزرو غذا ─────────────────────────────────────────────── */
+
+  /** منوی بازه با قیمت، مهلت، هشدار آلرژی و وضعیت رزروِ همین کودک. */
+  listMealOffers(childId: string, from: string, to: string): Promise<MealOffer[]>
+
+  /** رزرو یک وعده. **غذا نمی‌شود** تا پولش پرداخت نشود. */
+  reserveMeal(childId: string, menuDayId: string): Promise<void>
+
+  /**
+   * لغو رزروِ پرداخت‌نشده.
+   *
+   * رزروِ پرداخت‌شده از این راه لغو نمی‌شود: پولی جابه‌جا شده و
+   * برگرداندنش تصمیم مدیر است، نه یک دکمه در پنل خانواده.
+   */
+  cancelMealOrder(orderId: string): Promise<void>
+
+  /** سبد: هرچه رزرو شده و هنوز پرداخت نشده. */
+  listMealBasket(childId: string): Promise<MealBasketLine[]>
+
+  /**
+   * پرداخت سبد.
+   *
+   * آنلاین همان‌جا نهایی می‌کند؛ کارت‌به‌کارت رسید می‌خواهد و تا تأیید
+   * مدیر، رزرو نهایی نیست.
+   */
+  payMealBasket(childId: string, method: MealPayMethod, receiptUrl?: string | null): Promise<void>
+
+  /** غذای یک روز — فهرست آشپزخانه و مربی. فقط رزروهای نهایی‌شده. */
+  listMealsForDay(date: string): Promise<MealPlate[]>
+
+  /** صف مدیر: پرداخت‌های کارت‌به‌کارتِ در انتظار. */
+  listPendingMealPayments(): Promise<PendingMealPayment[]>
+
+  /** تأیید پرداخت کارت‌به‌کارت. رزروهایش همان لحظه نهایی می‌شوند. */
+  approveMealPayment(paymentId: string): Promise<void>
+
+  /** قیمت و ظرفیت و مهلت یک وعده — مدیر. */
+  setMealPrice(input: MealPriceInput): Promise<void>
 
   /**
    * کودکانی که این حساب می‌تواند برایشان امانت ثبت کند.

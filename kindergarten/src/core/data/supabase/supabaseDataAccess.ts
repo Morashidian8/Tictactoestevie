@@ -82,6 +82,14 @@ import type {
   LeaveKind,
   LeaveRequest,
   Loan,
+  MealBasketLine,
+  MealSlot,
+  MealOffer,
+  MealOrderState,
+  MealPayMethod,
+  MealPlate,
+  MealPriceInput,
+  PendingMealPayment,
   LoanInput,
   LoanKind,
   NewStaff,
@@ -1614,6 +1622,7 @@ export function createSupabaseDataAccess(scope: AccessScope): AuditedDataAccess 
         }),
       ) as Row[]
       return (rows ?? []).map((r): MenuEntry => ({
+        menuDayId: r.menu_day_id as string,
         date: r.date as string,
         slot: r.slot as MenuEntry['slot'],
         title: r.title as string,
@@ -3789,6 +3798,104 @@ export function createSupabaseDataAccess(scope: AccessScope): AuditedDataAccess 
           .order('first_name'),
       ) as Row[]
       return rows.map(asChild)
+    },
+
+    /* ── رزرو غذا ─────────────────────────────────────────── */
+
+    async listMealOffers(childId: string, from: string, to: string): Promise<MealOffer[]> {
+      const rows =
+        (orThrow(
+          await db.rpc('meal_menu', { child: childId, from_date: from, to_date: to }),
+        ) as Row[]) ?? []
+      return rows.map((r) => ({
+        menuDayId: r.menu_day_id as string,
+        date: r.date as string,
+        slot: r.slot as MealSlot,
+        title: r.title as string,
+        ingredients: (r.ingredients as string[]) ?? [],
+        price: (r.price as number | null) ?? null,
+        orderBy: r.order_by as string,
+        capacity: (r.capacity as number | null) ?? null,
+        taken: (r.taken as number) ?? 0,
+        allergyHits: (r.allergy_hits as string[]) ?? [],
+        orderState: (r.order_state as MealOrderState | null) ?? null,
+        orderable: Boolean(r.orderable),
+      }))
+    },
+
+    async reserveMeal(childId: string, menuDayId: string) {
+      orThrow(await db.rpc('reserve_meal', { child: childId, day: menuDayId }))
+    },
+
+    async cancelMealOrder(orderId: string) {
+      orThrow(await db.rpc('cancel_meal_order', { order_id: orderId }))
+    },
+
+    async listMealBasket(childId: string): Promise<MealBasketLine[]> {
+      const rows = (orThrow(await db.rpc('meal_basket', { child: childId })) as Row[]) ?? []
+      return rows.map((r) => ({
+        orderId: r.order_id as string,
+        date: r.date as string,
+        slot: r.slot as MealSlot,
+        title: r.title as string,
+        price: r.price as number,
+      }))
+    },
+
+    async payMealBasket(childId: string, method: MealPayMethod, receiptUrl?: string | null) {
+      orThrow(
+        await db.rpc('pay_meal_basket', {
+          child: childId,
+          method,
+          receipt: receiptUrl ?? null,
+        }),
+      )
+    },
+
+    async listMealsForDay(date: string): Promise<MealPlate[]> {
+      const rows =
+        (orThrow(await db.rpc('meals_for_day', { centre: scope.centerId, day: date })) as Row[]) ??
+        []
+      return rows.map((r) => ({
+        slot: r.slot as MealSlot,
+        title: r.title as string,
+        childId: r.child_id as string,
+        childName: r.child_name as string,
+        className: (r.class_name as string | null) ?? null,
+        allergyHits: (r.allergy_hits as string[]) ?? [],
+      }))
+    },
+
+    async listPendingMealPayments(): Promise<PendingMealPayment[]> {
+      const rows =
+        (orThrow(await db.rpc('pending_meal_payments', { centre: scope.centerId })) as Row[]) ?? []
+      return rows.map((r) => ({
+        id: r.id as string,
+        childId: r.child_id as string,
+        childName: r.child_name as string,
+        amount: r.amount as number,
+        receiptUrl: (r.receipt_url as string | null) ?? null,
+        meals: (r.meals as number) ?? 0,
+        createdAt: r.created_at as string,
+      }))
+    },
+
+    async approveMealPayment(paymentId: string) {
+      orThrow(await db.rpc('approve_meal_payment', { payment: paymentId }))
+    },
+
+    async setMealPrice(input: MealPriceInput) {
+      orThrow(
+        await db
+          .from('menu_day')
+          .update({
+            price: input.price,
+            capacity: input.capacity ?? null,
+            order_by: input.orderBy ?? null,
+          })
+          .eq('id', input.menuDayId)
+          .eq('center_id', scope.centerId),
+      )
     },
 
     async addStaff(input: NewStaff) {

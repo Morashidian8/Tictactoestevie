@@ -2354,6 +2354,82 @@ check(
 await page.locator('[aria-label="بازگشت"]').click()
 await page.waitForTimeout(400)
 
+console.log('▸ رزرو غذا: منوی ماه، انتخاب خانواده، پرداخت، نهایی‌شدن')
+await signIn('09120000003')
+await page.waitForSelector('[class*="cardDate"]', { timeout: 8000 })
+await page.locator('nav button:has-text("منو")').click()
+await page.waitForSelector('button:has-text("رزرو غذا")')
+await page.click('button:has-text("رزرو غذا")')
+await page.waitForTimeout(1200)
+
+const menuText = await page.evaluate(() => document.body.innerText)
+/*
+ * مهلت رزرو، روزِ قبل است — آشپزخانه صبح خرید می‌کند.
+ * روزی که مهلتش گذشته بی‌صدا ناپدید نمی‌شود؛ می‌ماند و دلیلش نوشته
+ * می‌شود، وگرنه خانواده فکر می‌کند مهد آن روز غذا ندارد.
+ */
+check(/مهلت رزرو تا/.test(menuText), 'روزِ گذشته‌مهلت می‌ماند و دلیلش نوشته می‌شود')
+check(/تومان/.test(menuText), 'قیمت هر وعده نوشته می‌شود')
+
+const reserve = page.locator('button:has-text("رزرو")')
+check((await reserve.count()) > 0, 'روزهای در مهلت، دکمه رزرو دارند')
+await reserve.first().click()
+await page.waitForTimeout(800)
+await page.locator('button:has-text("رزرو")').first().click()
+await page.waitForTimeout(800)
+
+const cart = page.locator('[aria-label="سبد رزرو"]')
+check(/۲ وعده رزروشده/.test(await cart.innerText()), 'سبد دو وعده را جمع می‌کند')
+/*
+ * قاعده‌ای که این صفحه باید صادقانه بگوید و می‌گوید: رزروِ
+ * پرداخت‌نشده، غذا نیست. خانواده‌ای که فکر کند کارش تمام شده، فردا
+ * غافلگیر می‌شود.
+ */
+check(
+  /تا پرداخت نکنید، غذا برای کودکتان کنار گذاشته نمی‌شود/.test(await cart.innerText()),
+  'و صریح می‌گوید تا پرداخت نشود غذا کنار گذاشته نمی‌شود',
+)
+
+await cart.locator('button:has-text("پرداخت")').click()
+await page.waitForSelector('[role="dialog"]')
+await page.click('button:has-text("پرداخت اینترنتی")')
+await page.waitForTimeout(1400)
+const paid = await page.evaluate(() => document.body.innerText)
+check(/نهایی شد/.test(paid), 'پس از پرداخت، رزرو نهایی می‌شود')
+check(
+  (await page.locator('[aria-label="سبد رزرو"]').count()) === 0,
+  'و سبد خالی می‌شود',
+)
+
+/*
+ * مربی همان بشقاب را می‌بیند.
+ *
+ * سؤال سر ظهر «چند بشقاب؟» و «برای چه کسانی؟» است، پس هر دو باید
+ * آنجا باشند. ساعت به ۲۲ اسفند می‌رود تا «فردا» همان روزِ رزروشده
+ * باشد — ۲۱ و ۲۲ پنجشنبه و جمعه‌اند و مهد بسته است.
+ */
+await page.locator('nav button:has-text("خانه")').click()
+await page.waitForTimeout(600)
+await signOutAny()
+await page.waitForSelector('#phone')
+await page.fill('#phone', '09120000001')
+await page.click('button:has-text("فرستادن کد")')
+await page.waitForSelector('#code')
+await page.fill('#code', '11111')
+await page.click('button:has-text("ورود")')
+await page.waitForSelector('text=ثبت گروهی امروز')
+await page.locator('nav button:has-text("منو")').click()
+await page.waitForSelector('button:has-text("غذای امروز")')
+await page.clock.setFixedTime(new Date('2026-03-13T09:00:00'))
+await page.click('button:has-text("غذای امروز")')
+await page.waitForTimeout(900)
+await page.click('button:has-text("فردا")')
+await page.waitForTimeout(900)
+const kitchen = await page.evaluate(() => document.body.innerText)
+check(/بشقاب/.test(kitchen), 'مربی شمار بشقاب‌ها را می‌بیند')
+check(/سارا/.test(kitchen), 'و نام کودکی که غذا دارد')
+await setClock(9)
+
 console.log('▸ دفتر امانت: مربی ثبت می‌کند، خانواده می‌بیند، مهد تحویل می‌گیرد')
 await signIn('09120000001')
 await page.waitForSelector('text=ثبت گروهی امروز')

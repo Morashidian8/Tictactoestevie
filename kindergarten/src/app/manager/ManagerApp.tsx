@@ -41,6 +41,8 @@ export type ManagerPage =
   | 'staff'
   | 'program'
   | 'loans'
+  /* نامِ دومِ همان صفحه برنامه — کاشیِ «منوی غذایی» در منو. */
+  | 'meals'
   | 'messages'
   | 'more'
 
@@ -151,7 +153,7 @@ export function ManagerApp() {
         <ChildrenPage onBack={back} />
       ) : page === 'loans' ? (
         <LoanShell onBack={() => setPage('more')} />
-      ) : page === 'program' ? (
+      ) : page === 'program' || page === 'meals' ? (
         <ProgramPage onBack={() => setPage('more')} />
       ) : page === 'audit' ? (
         <AuditPage onBack={() => setPage('more')} />

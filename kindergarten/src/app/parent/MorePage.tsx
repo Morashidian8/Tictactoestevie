@@ -10,6 +10,7 @@ import {
   MegaphoneIcon,
   MenuGrid,
   PersonIcon,
+  SpoonIcon,
   PillIcon,
   WalletIcon,
   type MenuSection,
@@ -32,6 +33,7 @@ import { ChildProfilePage } from './ChildProfilePage.tsx'
 import { FinancePage } from './FinancePage.tsx'
 import { MonthlyReportPage } from './MonthlyReportPage.tsx'
 import { ProgramPage } from './ProgramPage.tsx'
+import { MealsPage } from './MealsPage.tsx'
 import styles from './MorePage.module.css'
 
 /**
@@ -53,6 +55,7 @@ type Tab =
   | 'profile'
   | 'report'
   | 'program'
+  | 'meals'
 
 export function MorePage({ childId, childName, onBack, initialTab = 'menu' }: {
   childId: string
@@ -80,6 +83,13 @@ export function MorePage({ childId, childName, onBack, initialTab = 'menu' }: {
     }
     if (tab === 'report') {
       return <MonthlyReportPage childId={childId} childName={childName} onBack={back} />
+    }
+    if (tab === 'meals') {
+      return (
+        <Shell title="رزرو غذا" onBack={back}>
+          <MealsPage childId={childId} />
+        </Shell>
+      )
     }
     if (tab === 'program') {
       return (
@@ -158,6 +168,13 @@ export function MorePage({ childId, childName, onBack, initialTab = 'menu' }: {
     {
       title: 'از مهد',
       items: [
+        {
+          id: 'meals',
+          label: 'رزرو غذا',
+          hint: 'منوی ماه، رزرو و پرداخت',
+          icon: <SpoonIcon size={20} />,
+          tone: 'mint',
+        },
         {
           id: 'program',
           label: 'برنامه مهد',

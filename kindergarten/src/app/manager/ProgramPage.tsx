@@ -1,12 +1,19 @@
 import { useCallback, useEffect, useState } from 'react'
 import { BottomSheet, ChoiceGroup, JalaliDateField } from '../../design-system/index.ts'
-import { formatCount, formatJalali, toIsoDate } from '../../i18n/index.ts'
+import {
+  formatCount,
+  formatJalali,
+  formatRial,
+  toIsoDate,
+  toLatinDigits,
+} from '../../i18n/index.ts'
 import { useData } from '../../core/auth/index.ts'
 import type {
   CalendarEvent,
   CalendarKind,
   MealSlot,
   MenuEntry,
+  PendingMealPayment,
   Survey,
 } from '../../core/data/index.ts'
 import styles from './ProgramPage.module.css'
@@ -55,6 +62,8 @@ export function ProgramPage({ onBack }: { onBack: () => void }) {
   const [menu, setMenu] = useState<MenuEntry[] | null>(null)
   const [events, setEvents] = useState<CalendarEvent[] | null>(null)
   const [surveys, setSurveys] = useState<Survey[] | null>(null)
+  const [mealPays, setMealPays] = useState<PendingMealPayment[]>([])
+  const [busy, setBusy] = useState<string | null>(null)
   const [sheet, setSheet] = useState<Sheet>(null)
   const [note, setNote] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -88,6 +97,11 @@ export function ProgramPage({ onBack }: { onBack: () => void }) {
     } catch {
       setSurveys([])
     }
+    try {
+      setMealPays(await data.listPendingMealPayments())
+    } catch {
+      setMealPays([])
+    }
   }, [data, from, to])
 
   useEffect(() => {
@@ -116,6 +130,49 @@ export function ProgramPage({ onBack }: { onBack: () => void }) {
 
       <div className={styles.body}>
         {note ? <p className={`${styles.note} t-body`}>{note}</p> : null}
+
+        {/*
+          رسیدهای کارت‌به‌کارتِ غذا، بالای منو.
+
+          تا مدیر تأیید نکند، غذای آن کودک کنار گذاشته نمی‌شود — پس
+          این صف کارِ امروز است، نه یک گزارش.
+        */}
+        {mealPays.length > 0 ? (
+          <section className={styles.card} aria-label="رسیدهای غذا">
+            <span className={`${styles.cardLabel} t-caption`}>
+              رسید غذا، در انتظار تأیید شما
+            </span>
+            {mealPays.map((pay) => (
+              <article key={pay.id} className={styles.survey}>
+                <p className={`${styles.row} t-body`}>
+                  <span>{pay.childName}</span>
+                  <span className={styles.muted}>{formatCount(pay.meals)} وعده</span>
+                  <b className="tabular">{formatRial(pay.amount)}</b>
+                </p>
+                {pay.receiptUrl ? (
+                  <img className={styles.receipt} src={pay.receiptUrl} alt="رسید پرداخت" />
+                ) : null}
+                <button
+                  type="button"
+                  className={styles.action}
+                  disabled={busy === pay.id}
+                  onClick={() => {
+                    setBusy(pay.id)
+                    void data
+                      .approveMealPayment(pay.id)
+                      .then(() => done(`غذای ${pay.childName} نهایی شد.`))
+                      .catch((cause: unknown) =>
+                        setError(cause instanceof Error ? cause.message : 'ثبت نشد.'),
+                      )
+                      .finally(() => setBusy(null))
+                  }}
+                >
+                  تأیید رسید
+                </button>
+              </article>
+            ))}
+          </section>
+        ) : null}
 
         {/* ── منوی غذایی ─────────────────────────────────── */}
         <section className={styles.card} aria-label="منوی غذایی">
@@ -258,8 +315,18 @@ function MenuSheet({ onClose, onDone }: {
   const [slot, setSlot] = useState<MealSlot>('lunch')
   const [title, setTitle] = useState('')
   const [ingredients, setIngredients] = useState('')
+  /*
+   * قیمت خالی یعنی این وعده رزروی نیست — مهدی که غذا را داخل شهریه
+   * حساب می‌کند منو را می‌نویسد و قیمت نمی‌گذارد، و هیچ دکمه رزروی
+   * هم ساخته نمی‌شود.
+   */
+  const [price, setPrice] = useState('')
+  const [capacity, setCapacity] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  const rial = Number(toLatinDigits(price).replace(/\D/g, '')) * 10
+  const seats = Number(toLatinDigits(capacity).replace(/\D/g, ''))
 
   const submit = async () => {
     if (!date) {
@@ -279,6 +346,20 @@ function MenuSheet({ onClose, onDone }: {
           .map((part) => part.trim())
           .filter((part) => part !== ''),
       })
+      /*
+       * قیمت جدا از منو ثبت می‌شود چون شناسه وعده تازه پس از نوشتنِ
+       * منو وجود دارد. فهرست دوباره خوانده می‌شود تا شناسه پیدا شود.
+       */
+      if (rial > 0) {
+        const written = (await data.getMenu('', date, date)).find((m) => m.slot === slot)
+        if (written?.menuDayId) {
+          await data.setMealPrice({
+            menuDayId: written.menuDayId,
+            price: rial,
+            capacity: seats > 0 ? seats : null,
+          })
+        }
+      }
       await onDone(`منوی ${SLOT_TEXT[slot]} ثبت شد.`)
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'ثبت نشد.')
@@ -330,6 +411,34 @@ function MenuSheet({ onClose, onDone }: {
       <p className={`${styles.muted} t-caption`}>
         هشدار آلرژی از همین فهرست ساخته می‌شود. نام غذا به‌تنهایی نمی‌گوید گردو دارد یا نه.
       </p>
+
+      <label className={`${styles.field} t-caption`}>
+        قیمت هر پرس، به تومان — خالی یعنی رزروی نیست
+        <input
+          className={styles.input}
+          value={price}
+          inputMode="numeric"
+          aria-label="قیمت غذا"
+          onChange={(event) => setPrice(event.target.value)}
+        />
+      </label>
+
+      <label className={`${styles.field} t-caption`}>
+        ظرفیت — خالی یعنی بی‌حد
+        <input
+          className={styles.input}
+          value={capacity}
+          inputMode="numeric"
+          aria-label="ظرفیت غذا"
+          onChange={(event) => setCapacity(event.target.value)}
+        />
+      </label>
+
+      {rial > 0 ? (
+        <p className={`${styles.muted} t-caption`}>
+          خانواده‌ها می‌توانند تا روزِ قبل رزرو کنند. رزروِ پرداخت‌نشده غذا حساب نمی‌شود.
+        </p>
+      ) : null}
 
       {error ? <p className={`${styles.error} t-caption`}>{error}</p> : null}
     </BottomSheet>

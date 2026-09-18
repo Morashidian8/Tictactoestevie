@@ -9,6 +9,7 @@ import {
   PeopleIcon,
   PersonIcon,
   ShieldCheckIcon,
+  SpoonIcon,
   WalletIcon,
 } from '../../design-system/icons.tsx'
 import type { ManagerPage } from './ManagerApp.tsx'
@@ -49,6 +50,12 @@ export function ManagerMorePage({ onGo, gaps, claims }: {
       title: 'برنامهٔ مهد',
       items: [
         { id: 'program', label: 'برنامه مهد', hint: 'تقویم و نظرسنجی', icon: <CalendarIcon size={20} />, tone: 'grape' },
+        /*
+          منوی غذایی و برنامه مهد یک صفحه‌اند ولی دو کارِ متفاوت: یکی
+          ماهی یک بار نوشتن منو و قیمت، دیگری تقویم و نظرسنجی. دو کاشی
+          با دو شناسه، چون مدیر با دو سؤال متفاوت دنبالشان می‌گردد.
+        */
+        { id: 'meals', label: 'منوی غذایی', hint: 'منوی ماه، قیمت، رسیدها', icon: <SpoonIcon size={20} />, tone: 'mango' },
         { id: 'loans', label: 'دفتر امانت', hint: 'چه کودکی چه چیزی برده', icon: <LayersIcon size={20} />, tone: 'sky' },
         { id: 'notice', label: 'اطلاع‌رسانی', hint: 'تعطیلی و خبر فوری', icon: <MegaphoneIcon size={20} />, tone: 'coral' },
       ],
