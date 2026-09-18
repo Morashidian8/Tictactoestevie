@@ -81,7 +81,7 @@ export function ManagerApp() {
     { id: 'dashboard', label: 'خانه', icon: <HomeIcon size={22} /> },
     { id: 'finance', label: 'مالی', icon: <WalletIcon size={22} />, badge: counts.claims },
     { id: 'children', label: 'کودکان', icon: <PeopleIcon size={22} /> },
-    { id: 'more', label: 'بیشتر', icon: <MoreIcon size={22} />, badge: counts.gaps },
+    { id: 'more', label: 'منو', icon: <MoreIcon size={22} />, badge: counts.gaps },
   ]
   /*
    * پیام‌ها کنش مرکزی هر سه پنل است.
@@ -136,7 +136,7 @@ export function ManagerApp() {
       {page === 'messages' ? (
         <MessagesPage onCountChanged={setUnread} />
       ) : page === 'more' ? (
-        <ManagerMorePage onGo={setPage} gaps={counts.gaps} />
+        <ManagerMorePage onGo={setPage} gaps={counts.gaps} claims={counts.claims} />
       ) : page === 'staff' ? (
         <StaffPage
           openStaffId={openStaff}

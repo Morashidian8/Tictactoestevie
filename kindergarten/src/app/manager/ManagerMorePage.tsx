@@ -1,101 +1,87 @@
-import { EmptyState } from '../../design-system/index.ts'
-import { formatCount } from '../../i18n/index.ts'
+import { MenuGrid, type MenuSection } from '../../design-system/index.ts'
+import {
+  AlertIcon,
+  CalendarIcon,
+  ChatIcon,
+  HomeIcon,
+  LayersIcon,
+  MegaphoneIcon,
+  PeopleIcon,
+  PersonIcon,
+  ShieldCheckIcon,
+  WalletIcon,
+} from '../../design-system/icons.tsx'
 import type { ManagerPage } from './ManagerApp.tsx'
-import styles from './ManagerMorePage.module.css'
 
 /**
- * «بیشتر» پنل مدیر.
+ * «منو» پنل مدیر — فهرست کامل کارها.
  *
- * پنج خانه نوار برای کارهای روزانه‌اند؛ اینجا کارهایی می‌نشینند که مدیر
- * هفته‌ای یا ماهی یک‌بار سراغشان می‌رود — اطلاع‌رسانی، پرونده کارکنان،
- * و پرونده بازرسی.
+ * تا اینجا نامش «بیشتر» بود و فقط سه چیزی در آن می‌نشست که جایی در
+ * نوار پایین نداشتند. یعنی مدیر برای هر کاری باید می‌دانست کدام‌یک در
+ * نوار است و کدام در فهرست.
  *
- * نشان عددی فقط وقتی می‌آید که کاری هست. نشانی که همیشه روشن باشد،
- * خوانده نمی‌شود.
+ * حالا **همه‌چیز** اینجاست، از جمله مقصدهایی که در نوار هم خانه دارند.
+ * دو راه به یک صفحه ایراد نیست وقتی یکی از آن دو «فهرستِ همه کارها»
+ * باشد؛ کسی که نمی‌داند دنبال چه می‌گردد، جایی لازم دارد که همه‌چیز را
+ * یک‌جا ببیند.
+ *
+ * ترتیب دسته‌ها از روی تناوب است، نه اهمیت: مدیر روزانه سراغ کودکان و
+ * مالی می‌رود، ماهی یک بار سراغ بازرسی.
  */
-export function ManagerMorePage({ onGo, gaps }: {
+export function ManagerMorePage({ onGo, gaps, claims }: {
   onGo: (page: ManagerPage) => void
   /** شمار کاستی‌های پرونده بازرسی. */
   gaps: number
+  /** اعلام‌های پرداخت در انتظار تصمیم. */
+  claims: number
 }) {
-  return (
-    <div className={styles.page}>
-      <ul className={styles.menu}>
-        <Item
-          label="اطلاع‌رسانی به خانواده‌ها"
-          hint="تعطیلی، تأخیر بازگشایی، و خبر فوری"
-          onClick={() => onGo('notice')}
-        />
-        <Item
-          label="کارکنان"
-          hint="پرونده مربیان، مدارک و کارتابل"
-          onClick={() => onGo('staff')}
-        />
-        {/*
-          برنامه مهد — منو، تقویم، نظرسنجی.
+  const sections: MenuSection[] = [
+    {
+      title: 'هر روز',
+      items: [
+        { id: 'dashboard', label: 'خانه', hint: 'خلاصه امروز مهد', icon: <HomeIcon size={20} />, tone: 'mint' },
+        { id: 'children', label: 'کودکان', hint: 'پرونده، آلرژی، سرپرستان', icon: <PeopleIcon size={20} />, tone: 'sky' },
+        { id: 'messages', label: 'پیام‌ها', hint: 'گفتگو با مربی و خانواده', icon: <ChatIcon size={20} />, tone: 'bubble' },
+        { id: 'finance', label: 'مالی', hint: 'شهریه، وصولی، هزینه', icon: <WalletIcon size={20} />, tone: 'mango', badge: claims },
+      ],
+    },
+    {
+      title: 'برنامهٔ مهد',
+      items: [
+        { id: 'program', label: 'برنامه مهد', hint: 'تقویم و نظرسنجی', icon: <CalendarIcon size={20} />, tone: 'grape' },
+        { id: 'loans', label: 'دفتر امانت', hint: 'چه کودکی چه چیزی برده', icon: <LayersIcon size={20} />, tone: 'sky' },
+        { id: 'notice', label: 'اطلاع‌رسانی', hint: 'تعطیلی و خبر فوری', icon: <MegaphoneIcon size={20} />, tone: 'coral' },
+      ],
+    },
+    {
+      title: 'مهد و کارکنان',
+      items: [
+        { id: 'staff', label: 'کارکنان', hint: 'پرونده، مدارک، مرخصی', icon: <PersonIcon size={20} />, tone: 'mint' },
+        {
+          id: 'audit',
+          label: 'پرونده بازرسی',
+          hint: 'آنچه بازرس می‌خواهد',
+          icon: <ShieldCheckIcon size={20} />,
+          tone: 'coral',
+          badge: gaps,
+        },
+      ],
+    },
+  ]
 
-          هر سه یک جنس‌اند: چیزی که مدیر می‌نویسد و خانواده می‌خواند، و
-          هفته‌ای یک بار سراغشان می‌رود. سه خانه جدا در نوار پایین
-          گرفتن برایشان، جای کارِ روزانه را می‌گرفت.
-        */}
-        <Item
-          label="دفتر امانت"
-          hint="چه کودکی چه وسیله‌ای برده و کِی"
-          onClick={() => onGo('loans')}
-        />
-        <Item
-          label="برنامه مهد"
-          hint="منوی غذایی، تقویم و نظرسنجی"
-          onClick={() => onGo('program')}
-        />
-        <Item
-          label="پرونده بازرسی"
-          hint="آنچه بازرس می‌خواهد، از پیش آماده"
-          badge={gaps}
-          onClick={() => onGo('audit')}
-        />
-      </ul>
+  return (
+    <>
+      <MenuGrid sections={sections} onSelect={(id) => onGo(id as ManagerPage)} />
 
       {/*
         آنچه اینجا نیست و عمدی است: هیچ گزینه‌ای برای حذف داده کودک.
-        بند ۱۱ سرصفحه — حذف واقعی ممنوع است، و دکمه‌ای که بعداً «نمی‌شود»
-        بگوید بدتر از نبودنش است.
+        بند ۱۱ سرصفحه — حذف واقعی ممنوع است، و دکمه‌ای که بعداً
+        «نمی‌شود» بگوید بدتر از نبودنش است.
       */}
-      <p className={`${styles.hint} t-caption`}>
+      <p className="menu-foot t-caption">
+        <span aria-hidden><AlertIcon size={14} /></span>{' '}
         برای خروج از حساب، کلید حساب کاربری در بالای صفحه.
       </p>
-    </div>
+    </>
   )
 }
-
-function Item({ label, hint, badge, onClick }: {
-  label: string
-  hint: string
-  badge?: number
-  onClick: () => void
-}) {
-  return (
-    <li>
-      <button type="button" className={styles.item} onClick={onClick}>
-        <span className={styles.main}>
-          <span className={`${styles.label} t-body`}>{label}</span>
-          <span className={`${styles.hintLine} t-caption`}>{hint}</span>
-        </span>
-        {badge ? <span className={styles.badge}>{formatCount(badge)}</span> : null}
-        <Chevron />
-      </button>
-    </li>
-  )
-}
-
-function Chevron() {
-  return (
-    <svg className="mirror" width="20" height="20" viewBox="0 0 24 24" fill="none"
-      stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      <path d="m9 18 6-6-6-6" />
-    </svg>
-  )
-}
-
-/** حالت خالی مشترک، برای صفحه‌هایی که هنوز داده‌ای ندارند. */
-export const NothingYet = EmptyState

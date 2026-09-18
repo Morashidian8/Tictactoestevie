@@ -53,7 +53,7 @@ const MEAL_TEXT: Record<MealAmount, string> = {
 /** همان چهار حالت، در دو کلمه — زیر یک نقطه خط زمان جا شود. */
 const MEAL_SHORT: Record<MealAmount, string> = {
   all: 'همه',
-  most: 'بیشتر',
+  most: 'منو',
   little: 'کمی',
   none: 'نخورد',
 }
@@ -201,7 +201,7 @@ export function ParentTodayPage() {
       اطلاعیه به فهرست «بیشتر» برگشت.
     */
     { id: 'finance', label: 'مالی', icon: <WalletIcon size={22} /> },
-    { id: 'more', label: 'بیشتر', icon: <MoreIcon size={22} /> },
+    { id: 'more', label: 'منو', icon: <MoreIcon size={22} /> },
   ]
   const CENTER: TabItem = { id: 'messages', label: 'پیام‌ها', icon: <ChatIcon size={24} /> }
 

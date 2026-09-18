@@ -1,5 +1,19 @@
 import { useCallback, useEffect, useState } from 'react'
-import { AlertIcon, CheckIcon, EmptyState } from '../../design-system/index.ts'
+import {
+  AlertIcon,
+  CalendarIcon,
+  ChatIcon,
+  CheckIcon,
+  EmptyState,
+  FolderIcon,
+  LeafIcon,
+  MegaphoneIcon,
+  MenuGrid,
+  PersonIcon,
+  PillIcon,
+  WalletIcon,
+  type MenuSection,
+} from '../../design-system/index.ts'
 import {
   formatClock,
   formatJalali,
@@ -78,61 +92,97 @@ export function MorePage({ childId, childName, onBack, initialTab = 'menu' }: {
     return <MessagesTab childId={childId} onBack={back} />
   }
 
-  return (
-    <Shell title="بیشتر" onBack={onBack}>
-      <ul className={styles.menu}>
-        <MenuItem
-          label="پرونده کودک"
-          hint="اطلاعات و آلرژی‌ها — با تأیید مهد"
-          onClick={() => setTab('profile')}
-        />
-        <MenuItem
-          label="گزارش ماهانه"
-          hint="آنچه مربی این ماه دیده"
-          onClick={() => setTab('report')}
-        />
-        <MenuItem label="اعلام غیبت" hint="وقتی کودک فردا نمی‌آید" onClick={() => setTab('absence')} />
-        <MenuItem
-          label="درخواست مصرف دارو"
-          hint="از شب قبل بنویسید، مربی صبح تحویل می‌گیرد"
-          onClick={() => setTab('medication')}
-        />
-        {/*
-          برنامه مهد — منو، تقویم، نظرسنجی.
+  /*
+    «منو» — فهرست کامل کارهای خانواده.
 
-          بالای «اطلاعیه‌ها» می‌نشیند چون کارِ هفتگیِ خانواده است، نه
-          خبرِ گذشته: منوی فردا و اردوی پنجشنبه تصمیم امروز را عوض
-          می‌کنند.
-        */}
-        <MenuItem
-          label="برنامه مهد"
-          hint="منوی غذایی، تقویم و نظرسنجی"
-          onClick={() => setTab('program')}
-        />
-        <MenuItem label="پیام به مربی" hint="در ساعت کاری مهد" onClick={() => setTab('messages')} />
-        {/*
-          مالی از این فهرست برداشته شد چون به نوار پایین رفت. ماندنش
-          اینجا یعنی دو راه به یک صفحه، و کاربر نمی‌داند کدام تازه‌تر است.
-        */}
-        <MenuItem label="اطلاعیه‌ها" hint="پیام‌های مهد" onClick={() => setTab('notices')} />
-      </ul>
+    تا اینجا نامش «بیشتر» بود و فقط چیزهایی در آن می‌نشست که جایی در
+    نوار پایین نداشتند. یعنی خانواده باید می‌دانست «مالی» در نوار است و
+    «پرونده کودک» در فهرست.
+
+    حالا همه‌چیز اینجاست، حتی مقصدهای نوار. کسی که نمی‌داند دنبال چه
+    می‌گردد، جایی لازم دارد که همه‌چیز را یک‌جا ببیند.
+  */
+  const sections: MenuSection[] = [
+    {
+      title: `کودک من — ${childName}`,
+      items: [
+        {
+          id: 'profile',
+          label: 'پرونده کودک',
+          hint: 'اطلاعات و آلرژی‌ها',
+          icon: <PersonIcon size={20} />,
+          tone: 'bubble',
+        },
+        {
+          id: 'report',
+          label: 'گزارش ماهانه',
+          hint: 'آنچه مربی این ماه دیده',
+          icon: <FolderIcon size={20} />,
+          tone: 'grape',
+        },
+      ],
+    },
+    {
+      title: 'کارهای روزمره',
+      items: [
+        {
+          id: 'absence',
+          label: 'اعلام غیبت',
+          hint: 'وقتی فردا نمی‌آید',
+          icon: <CalendarIcon size={20} />,
+          tone: 'mango',
+        },
+        {
+          id: 'medication',
+          label: 'درخواست دارو',
+          hint: 'از شب قبل بنویسید',
+          icon: <PillIcon size={20} />,
+          tone: 'coral',
+        },
+        {
+          id: 'messages',
+          label: 'پیام به مربی',
+          hint: 'در ساعت کاری مهد',
+          icon: <ChatIcon size={20} />,
+          tone: 'bubble',
+        },
+        {
+          id: 'finance',
+          label: 'مالی',
+          hint: 'شهریه و پرداخت‌ها',
+          icon: <WalletIcon size={20} />,
+          tone: 'mint',
+        },
+      ],
+    },
+    {
+      title: 'از مهد',
+      items: [
+        {
+          id: 'program',
+          label: 'برنامه مهد',
+          hint: 'منوی غذا، تقویم، نظرسنجی',
+          icon: <LeafIcon size={20} />,
+          tone: 'sky',
+        },
+        {
+          id: 'notices',
+          label: 'اطلاعیه‌ها',
+          hint: 'خبرهای مهد',
+          icon: <MegaphoneIcon size={20} />,
+          tone: 'mango',
+        },
+      ],
+    },
+  ]
+
+  return (
+    <Shell title="منو" onBack={onBack}>
+      <MenuGrid sections={sections} onSelect={(id) => setTab(id as Tab)} />
     </Shell>
   )
 }
 
-function MenuItem({ label, hint, onClick }: { label: string; hint: string; onClick: () => void }) {
-  return (
-    <li>
-      <button type="button" className={styles.menuItem} onClick={onClick}>
-        <span className={styles.menuMain}>
-          <span className={`${styles.menuLabel} t-body`}>{label}</span>
-          <span className={`${styles.menuHint} t-caption`}>{hint}</span>
-        </span>
-        <Chevron flip />
-      </button>
-    </li>
-  )
-}
 
 /* ── درخواست مصرف دارو — ارتقای ۳ سند بررسی طراحی ────────────── */
 

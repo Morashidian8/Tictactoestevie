@@ -18,6 +18,8 @@ import { LoansPage } from '../shared/LoansPage.tsx'
 import { FreePlayPage } from './FreePlayPage.tsx'
 import { ObservationsPage } from './ObservationsPage.tsx'
 import { TeacherMorePage } from './TeacherMorePage.tsx'
+import { TeacherProfilePage } from './TeacherProfilePage.tsx'
+import { PickChildPage } from './PickChildPage.tsx'
 import styles from './TeacherApp.module.css'
 
 /**
@@ -30,7 +32,9 @@ import styles from './TeacherApp.module.css'
  * نشان مرجانی روی «پیام‌ها» وقتی می‌آید که خانواده‌ای پرسیده و جوابی
  * نرفته. نشانی که همیشه روشن باشد، خوانده نمی‌شود.
  */
-type Screen = 'today' | 'bulk' | 'close' | 'inbox' | 'more' | 'observations' | 'play' | 'loans'
+type Screen =
+  | 'today' | 'bulk' | 'close' | 'inbox' | 'more'
+  | 'observations' | 'pickChild' | 'play' | 'loans' | 'account'
 
 export function TeacherApp() {
   const data = useData()
@@ -89,7 +93,7 @@ export function TeacherApp() {
     { id: 'today', label: 'امروز', icon: <HomeIcon size={22} /> },
     { id: 'close', label: 'بستن روز', icon: <CheckIcon size={22} /> },
     { id: 'inbox', label: 'پیام‌ها', icon: <ChatIcon size={22} />, badge: waiting },
-    { id: 'more', label: 'بیشتر', icon: <MoreIcon size={22} /> },
+    { id: 'more', label: 'منو', icon: <MoreIcon size={22} /> },
   ]
   const CENTER: TabItem = { id: 'bulk', label: 'ثبت گروهی امروز', icon: <PenIcon /> }
 
@@ -112,7 +116,11 @@ export function TeacherApp() {
    * «بستن روز» و «پیام‌ها» عنوان و کلید بازگشت خودشان را می‌آورند؛ دو
    * سرصفحه روی هم یعنی نصف صفحه سرصفحه است.
    */
-  const ownHeader = screen === 'close' || screen === 'observations' || screen === 'play'
+  const ownHeader =
+    screen === 'close' ||
+    screen === 'observations' ||
+    screen === 'play' ||
+    screen === 'pickChild'
 
   return (
     <AppShell
@@ -183,15 +191,25 @@ export function TeacherApp() {
           childName={openChild.name}
           onBack={() => setScreen('more')}
         />
-      ) : screen === 'more' ? (
-        <TeacherMorePage
+      ) : screen === 'account' ? (
+        <TeacherProfilePage />
+      ) : screen === 'pickChild' ? (
+        <PickChildPage
           classId={classId}
-          onOpenPlay={() => setScreen('play')}
-          onOpenLoans={() => setScreen('loans')}
-          onOpenChild={(id, name) => {
+          onBack={() => setScreen('more')}
+          onOpen={(id, name) => {
             setOpenChild({ id, name })
             setScreen('observations')
           }}
+        />
+      ) : screen === 'more' ? (
+        /*
+          «منو» فهرست است، نه مقصد: هر کاشی به همان صفحه‌ای می‌رود که
+          نوار پایین هم به آن می‌رود. `observe` تنها استثناست و اول
+          می‌پرسد کدام کودک.
+        */
+        <TeacherMorePage
+          onGo={(id) => setScreen(id === 'observe' ? 'pickChild' : (id as Screen))}
         />
       ) : (
         <TodayPage

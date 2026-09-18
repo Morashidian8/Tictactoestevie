@@ -1,0 +1,31 @@
+.page { min-block-size: 100dvh; display: flex; flex-direction: column; }
+
+.header {
+  display: flex; align-items: center; gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+}
+
+.back {
+  min-inline-size: var(--touch-teacher); min-block-size: var(--touch-teacher);
+  display: grid; place-items: center; border: none; background: none;
+  color: var(--ink); font-size: var(--text-h2);
+}
+
+.title { font-family: var(--font); font-weight: var(--weight-black); }
+
+.body { flex: 1; padding: 0 var(--space-4) var(--space-7); }
+
+.list {
+  list-style: none; margin: 0; padding: 0;
+  background: var(--surface); border: 1px solid var(--card-border);
+  border-radius: var(--r-card); box-shadow: var(--shadow-md); overflow: hidden;
+}
+
+.item {
+  inline-size: 100%; min-block-size: var(--touch-teacher);
+  padding-inline: var(--space-4);
+  border: none; background: none; color: var(--ink);
+  font: inherit; text-align: start;
+}
+.list li + li .item { border-block-start: 1px solid var(--border); }
+.item:active { background: var(--mint-tint); }
