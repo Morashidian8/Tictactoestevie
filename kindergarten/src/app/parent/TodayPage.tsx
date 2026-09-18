@@ -264,6 +264,7 @@ export function ParentTodayPage() {
 
   return (
     <AppShell
+      tone="parent"
       greeting={`سلام ${greeting}!`}
       subtitle="امروز هم روز خوبی برایش آرزو می‌کنیم."
       roleLabel={session?.active ? ROLE_LABEL[session.active.role] : '—'}

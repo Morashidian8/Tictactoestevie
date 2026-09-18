@@ -15,7 +15,8 @@
 /* هر سطر یک وضعیت. آیکون و متن و رنگ، هر سه — بخش ۱۲.۶ */
 .line {
   display: flex; align-items: center; gap: var(--space-3);
-  background: var(--surface); border: 1px solid var(--border);
+  background: var(--surface); border: 1px solid var(--card-border);
+  box-shadow: var(--shadow-md);
   border-radius: var(--r-card); padding: var(--space-4);
 }
 .lineIcon { flex: none; display: grid; place-items: center; }

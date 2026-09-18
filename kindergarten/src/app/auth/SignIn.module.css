@@ -94,7 +94,8 @@
   gap: var(--space-1);
   min-block-size: var(--touch-teacher);
   padding: var(--space-4);
-  border: 1px solid var(--border);
+  border: 1px solid var(--card-border);
+  box-shadow: var(--shadow-md);
   border-radius: var(--r-card);
   background: var(--surface);
   text-align: start;

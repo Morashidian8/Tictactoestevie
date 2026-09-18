@@ -21,6 +21,24 @@
   background: var(--paper);
 }
 
+/*
+ * محتوا ۱۶ پیکسل روی آسمان سوار می‌شود.
+ *
+ * همین همپوشانی است که به صفحه عمق می‌دهد؛ بی آن، آسمان و بدنه دو
+ * نوارِ چسبیده‌اند و طرح دوباره مسطح می‌شود.
+ *
+ * **بدون `position` و `z-index`.** نسخه اول این قاعده هر دو را داشت و
+ * روی هر فرزندِ بدنه یک بافتِ چینش می‌ساخت؛ شیت پایین‌رونده که داخل
+ * همان فرزند رندر می‌شود، `z-index: 40`ش در آن بافت حبس می‌شد و نوار
+ * ناوبری رویش می‌نشست — یعنی دکمه «ثبت ورود» اصلاً قابل زدن نبود.
+ *
+ * آسمان `isolation: isolate` دارد، پس عنصرِ بعدی به‌خاطر ترتیب DOM
+ * رویش می‌نشیند و به z-index نیازی نیست.
+ */
+.body > :not(.sky) {
+  margin-block-start: -16px;
+}
+
 .body {
   flex: 1;
   min-block-size: 0;
@@ -28,18 +46,61 @@
   flex-direction: column;
 }
 
-/* ── سرصفحه ─────────────────────────────────────────────────── */
+/* ── آسمانِ سرصفحه ──────────────────────────────────────────── */
+
+/*
+ * سرصفحه دیگر یک نوار سفید نیست؛ یک آسمانِ رنگیِ تصویرسازی‌شده است که
+ * با موج به بوم می‌رسد.
+ *
+ * چرا: نسخه پیشین کارتِ سفید روی بومِ تقریباً سفید بود و مالک محصول
+ * درست گفت که «مبتدیانه» دیده می‌شود — هیچ‌چیز در صفحه نمی‌گفت این اپِ
+ * مهدکودک است، نه یک فرم اداری.
+ *
+ * موج ۳۸ پیکسل پایین‌تر از انتهای گرادیان می‌نشیند، پس فضای داخلیِ
+ * پایینِ آسمان همان‌قدر است تا متن زیر موج نرود.
+ */
+.sky {
+  position: relative;
+  flex: none;
+  padding-block-end: 48px;
+  color: #fff;
+  isolation: isolate;
+}
+
+.teacher { background: var(--sky-teacher); }
+.parent { background: var(--sky-parent); }
+.manager { background: var(--sky-manager); }
+
+/* صحنه و موج هر دو پشت محتوا، با z-index منفیِ محدود به همین لایه. */
+.sky :global(.sky-scene) {
+  position: absolute;
+  inset: 0;
+  inline-size: 100%;
+  block-size: 100%;
+  z-index: -1;
+  pointer-events: none;
+}
+
+.sky :global(.sky-wave) {
+  position: absolute;
+  inset-inline: 0;
+  inset-block-end: -1px;
+  inline-size: 100%;
+  display: block;
+  pointer-events: none;
+}
 
 .header {
+  position: relative;
   display: flex;
   align-items: flex-start;
   gap: var(--space-3);
-  padding: var(--space-5) var(--space-4) var(--space-3);
+  padding: var(--space-4) var(--space-4) var(--space-2);
 }
 
 /*
- * نشان مهد. دایره تینت نعنایی با گلیف --ink — پرکننده رنگ دارد، گلیف
- * نه (بخش ۱۲.۲).
+ * شخصیت مهد. پیش‌تر یک برگ در دایره تینت بود؛ حالا خورشید/قلب/ستاره
+ * که در یک نگاه می‌گوید کدام حساب باز است.
  */
 .brand {
   flex: none;
@@ -47,15 +108,19 @@
   place-items: center;
   inline-size: 44px;
   block-size: 44px;
-  border-radius: var(--r-chip);
-  background: var(--mint-tint);
-  color: var(--ink);
 }
 
 .greet { flex: 1; min-inline-size: 0; }
 
-.hello { margin: 0; color: var(--ink); font-weight: var(--weight-black); }
-.helloSub { margin: 2px 0 0; color: var(--ink-muted); }
+/*
+ * متن سفید روی آسمان.
+ *
+ * تیره‌ترین پله هر سه گرادیان با سفید بالای ۴٫۵ است؛ روشن‌ترین پله
+ * فقط بالای قاب است و متنی رویش نمی‌نشیند. زیرعنوان opacity دارد نه
+ * رنگِ دیگر، تا همان نسبت را با شفافیت کمتر حفظ کند.
+ */
+.hello { margin: 0; color: #fff; font-weight: var(--weight-black); }
+.helloSub { margin: 2px 0 0; color: #fff; opacity: .92; }
 
 .headerEnd { position: relative; flex: none; }
 
@@ -64,10 +129,10 @@
   min-block-size: var(--touch-parent);
   display: grid;
   place-items: center;
-  border-radius: var(--r-chip);
-  background: none;
-  border: none;
-  color: var(--ink);
+  border-radius: var(--r-input);
+  background: rgb(255 255 255 / .2);
+  border: 1px solid rgb(255 255 255 / .28);
+  color: #fff;
   cursor: pointer;
 }
 
@@ -79,8 +144,8 @@
   inline-size: 9px;
   block-size: 9px;
   border-radius: var(--r-chip);
-  background: var(--coral);
-  border: 2px solid var(--paper);
+  background: #FFD166;
+  border: 2px solid rgb(255 255 255 / .5);
 }
 
 .menu {
@@ -118,10 +183,19 @@
 
 /* ── ردیف کنترل‌های ویژه نقش ────────────────────────────────── */
 
+/*
+ * حالا داخل آسمان است، نه زیرش.
+ *
+ * چیزهایی که اینجا می‌نشینند (کلاسِ جاری، وضعیت همگام‌سازی) خبرِ همین
+ * لحظه‌اند و به سرصفحه تعلق دارند؛ پایین‌تر بردنشان یعنی اولین کارت
+ * محتوا را هل می‌دهند.
+ */
 .toolbar {
+  position: relative;
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  padding: 0 var(--space-4) var(--space-3);
+  padding: 0 var(--space-4) var(--space-2);
   flex-wrap: wrap;
+  color: #fff;
 }

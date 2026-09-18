@@ -161,7 +161,8 @@
   text-align: center;
   color: var(--ink-muted);
   background: var(--surface);
-  border: 1px solid var(--border);
+  border: 1px solid var(--card-border);
+  box-shadow: var(--shadow-md);
   border-radius: var(--r-card);
 }
 
@@ -185,7 +186,8 @@
   justify-content: space-between;
   gap: var(--space-3);
   padding-inline: var(--space-4);
-  border: 1px solid var(--border);
+  border: 1px solid var(--card-border);
+  box-shadow: var(--shadow-md);
   border-radius: var(--r-card);
   background: var(--surface);
   color: var(--ink);

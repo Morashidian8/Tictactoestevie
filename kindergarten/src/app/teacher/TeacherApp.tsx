@@ -116,6 +116,7 @@ export function TeacherApp() {
 
   return (
     <AppShell
+      tone="teacher"
       greeting={ownHeader ? undefined : `سلام ${greeting}!`}
       subtitle={formatJalali(new Date(), 'full')}
       roleLabel={session?.active ? ROLE_LABEL[session.active.role] : '—'}

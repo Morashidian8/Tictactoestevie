@@ -122,6 +122,7 @@ export function ManagerApp() {
 
   return (
     <AppShell
+      tone="manager"
       greeting={onHome ? 'صبح بخیر' : undefined}
       subtitle={`${formatJalali(new Date(), 'weekday')} · اینجا خلاصه امروز مهد است`}
       roleLabel={session?.active ? ROLE_LABEL[session.active.role] : '—'}

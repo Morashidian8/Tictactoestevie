@@ -1,8 +1,12 @@
 /*
- * نوار ناوبری پایین — بازطراحی پنل والد.
+ * نوار ناوبری پایین — بازطراحی «آسمان».
  *
- * چسبیده به پایین قاب، با سایه رو به بالا: نوار پایین باید بگوید صفحه
- * زیرش ادامه دارد، نه اینکه تمام شده.
+ * حالا کارتِ شناور است، نه نواری که به لبه قاب چسبیده: از سه طرف
+ * فاصله دارد و سایه‌اش دورتادور است. چسبیدن به لبه، نوار را جزئی از
+ * قاب گوشی نشان می‌داد نه جزئی از اپ.
+ *
+ * `sticky` می‌ماند، پس محتوا زیرش می‌لغزد و همچنان می‌گوید صفحه ادامه
+ * دارد.
  */
 .bar {
   position: sticky;
@@ -12,11 +16,11 @@
   align-items: center;
   justify-content: space-around;
   gap: var(--space-1);
-  padding: var(--space-2) var(--space-3);
-  padding-block-end: calc(var(--space-2) + env(safe-area-inset-bottom));
+  margin: 0 var(--space-3) calc(var(--space-3) + env(safe-area-inset-bottom));
+  padding: var(--space-2);
   background: var(--surface);
-  border-block-start: 1px solid var(--card-border);
-  box-shadow: 0 -4px 16px -6px rgb(15 23 42 / .08);
+  border-radius: 26px;
+  box-shadow: var(--shadow-lg);
 }
 
 .tab {
@@ -45,13 +49,18 @@
 }
 
 /*
- * خانه فعال فقط رنگ عوض می‌کند، نه اندازه.
+ * خانه فعال: رنگ متن پررنگ‌تر، و یک قرصِ تینت زیر گلیف.
  *
- * پرکننده زیر خانه فعال امتحان شد و کنار دکمه گرد وسط، دو چیز رنگی در
- * یک نوار می‌شد و چشم نمی‌فهمید کدام کنش است.
+ * پیش‌تر پرکننده امتحان شده بود و رد شد چون کنار دکمه گرد وسط، دو چیزِ
+ * رنگی در یک نوار می‌شد. حالا تینت است نه رنگِ پر، و دکمه وسط گرادیانِ
+ * سیر دارد — دو وزنِ متفاوت، پس چشم همچنان می‌فهمد کدام کنش است.
  */
 .tabActive {
   color: var(--ink);
+}
+
+.tabActive .icon {
+  background: var(--surface-warm);
 }
 
 .tabActive .label {
@@ -71,6 +80,10 @@
    * گرفت. سرریزِ بی‌ضرر، آن محافظ را کور می‌کند.
    */
   padding: 3px;
+  /* قرصِ تینت زیر گلیفِ خانه فعال. */
+  inline-size: 42px;
+  block-size: 30px;
+  border-radius: 13px;
 }
 
 .label {
@@ -108,7 +121,14 @@
   display: grid;
   place-items: center;
   border: 3px solid var(--surface);
-  border-radius: var(--r-chip);
+  /*
+   * مربعِ گرد، نه دایره — بازطراحی «آسمان».
+   *
+   * رنگ عمداً نعنایی ماند و با نقش عوض نمی‌شود: گلیف روی این گرادیان
+   * ۷٫۰۴ می‌دهد و سنجیده شده. مرجانی و سرمه‌ایِ نقش‌های دیگر هر کدام
+   * سنجش خودشان را لازم دارند، و دکمه‌ای که خوانده نشود دکمه نیست.
+   */
+  border-radius: 21px;
   background: var(--grad-primary);
   box-shadow: var(--glow-primary);
   /* گلیف --ink روی نعنایی نسبت ۷٫۰۴ می‌دهد؛ سفید ۲٫۵۴ و مجاز نیست. */

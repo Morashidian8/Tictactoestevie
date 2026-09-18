@@ -347,7 +347,9 @@ check(
 )
 check(cardLayout.bg === 'rgb(255, 255, 255)', 'کارت سفید خالص است')
 check(cardLayout.shadow !== 'none', 'و سایه دارد — همان چیزی که می‌گوید این را می‌شود زد')
-check(cardLayout.radius === '18px', `گوشه‌های نرم ۱۸ پیکسلی (${cardLayout.radius})`)
+// بازطراحی «آسمان» شعاع کارت را از ۱۸ به ۲۴ برد؛ توکن یکی است و
+// همه کارت‌ها با هم عوض شدند.
+check(cardLayout.radius === '24px', `گوشه‌های نرم ۲۴ پیکسلی (${cardLayout.radius})`)
 // ماکت عکس دایره‌ای دارد. مربع گوشه‌نرم برای چیدمان افقی بود.
 check(
   cardLayout.photoRadius === '999px',

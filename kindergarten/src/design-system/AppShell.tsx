@@ -1,8 +1,24 @@
 import type { ReactNode } from 'react'
 import { useState } from 'react'
-import { AccountIcon, LeafIcon } from './icons.tsx'
+import { AccountIcon } from './icons.tsx'
+import { Mascot, type MascotKind } from './Mascot.tsx'
+import { SkyScene, SkyWave } from './SkyScene.tsx'
 import { TabBar, type TabItem } from './TabBar.tsx'
 import styles from './AppShell.module.css'
+
+/**
+ * لحن هر نقش — رنگِ آسمان و شکلِ شخصیت.
+ *
+ * تنها چیزی که بین سه پنل عوض می‌شود. ساختار یکی می‌ماند، چون مربی و
+ * مدیر گاهی یک نفرند و نباید دوبار یاد بگیرند کجا را بزنند.
+ */
+export type ShellTone = 'teacher' | 'parent' | 'manager'
+
+const MASCOT: Record<ShellTone, MascotKind> = {
+  teacher: 'sun',
+  parent: 'heart',
+  manager: 'star',
+}
 
 /**
  * پوسته مشترک هر سه پنل — سرصفحه سلام، بدنه، نوار پایین.
@@ -16,6 +32,7 @@ import styles from './AppShell.module.css'
  * نواری که به جای دیگری می‌برد فقط راهِ گم شدن است.
  */
 export function AppShell({
+  tone = 'teacher',
   greeting,
   subtitle,
   roleLabel,
@@ -29,6 +46,8 @@ export function AppShell({
   onSelect,
   children,
 }: {
+  /** لحن نقش: رنگ آسمان و شکل شخصیت. */
+  tone?: ShellTone
   /**
    * سرصفحه سلام. نبودنش یعنی مقصد، سرصفحه خودش را دارد.
    *
@@ -63,46 +82,59 @@ export function AppShell({
   return (
     <div className={styles.shell}>
       <div className={styles.body}>
+        {/*
+          آسمانِ سرصفحه.
+
+          سرصفحه و ردیف کنترل‌ها هر دو **داخل** گرادیان‌اند و موج پایینشان
+          به بوم می‌رسد. پیش‌تر سرصفحه سفید بود روی بومِ تقریباً سفید،
+          یعنی هیچ‌چیز صفحه را از یک فرم اداری جدا نمی‌کرد.
+        */}
         {greeting ? (
-        <header className={styles.header}>
-          <span className={styles.brand} aria-hidden>
-            <LeafIcon size={22} />
-          </span>
+          <div className={`${styles.sky} ${styles[tone]}`}>
+            <SkyScene />
 
-          <div className={styles.greet}>
-            <p className={`${styles.hello} t-h2`}>{greeting}</p>
-            <p className={`${styles.helloSub} t-body`}>{subtitle}</p>
-          </div>
+            <header className={styles.header}>
+              <span className={styles.brand} aria-hidden>
+                <Mascot kind={MASCOT[tone]} size={44} />
+              </span>
 
-          <div className={styles.headerEnd}>
-            <button
-              type="button"
-              className={styles.account}
-              onClick={() => setMenuOpen((open) => !open)}
-              aria-expanded={menuOpen}
-              aria-label="حساب کاربری"
-            >
-              <AccountIcon size={24} />
-              {hasAlert ? <span className={styles.accountDot} aria-hidden /> : null}
-            </button>
-            {menuOpen ? (
-              <div className={styles.menu}>
-                <p className={`${styles.menuRole} t-caption`}>{roleLabel ?? '—'}</p>
-                {menuExtra}
+              <div className={styles.greet}>
+                <p className={`${styles.hello} t-h2`}>{greeting}</p>
+                <p className={`${styles.helloSub} t-body`}>{subtitle}</p>
+              </div>
+
+              <div className={styles.headerEnd}>
                 <button
                   type="button"
-                  className={`${styles.menuItem} t-body`}
-                  onClick={() => onSignOut?.()}
+                  className={styles.account}
+                  onClick={() => setMenuOpen((open) => !open)}
+                  aria-expanded={menuOpen}
+                  aria-label="حساب کاربری"
                 >
-                  خروج
+                  <AccountIcon size={24} />
+                  {hasAlert ? <span className={styles.accountDot} aria-hidden /> : null}
                 </button>
+                {menuOpen ? (
+                  <div className={styles.menu}>
+                    <p className={`${styles.menuRole} t-caption`}>{roleLabel ?? '—'}</p>
+                    {menuExtra}
+                    <button
+                      type="button"
+                      className={`${styles.menuItem} t-body`}
+                      onClick={() => onSignOut?.()}
+                    >
+                      خروج
+                    </button>
+                  </div>
+                ) : null}
               </div>
-            ) : null}
-          </div>
-        </header>
-        ) : null}
+            </header>
 
-        {greeting && toolbar ? <div className={styles.toolbar}>{toolbar}</div> : null}
+            {toolbar ? <div className={styles.toolbar}>{toolbar}</div> : null}
+
+            <SkyWave />
+          </div>
+        ) : null}
 
         {children}
       </div>
