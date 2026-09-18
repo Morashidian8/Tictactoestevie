@@ -2713,3 +2713,138 @@ begin
 end $$;
 
 select login_as('aa000000-0000-0000-0000-0000000000f2', '09120000077');
+
+-- ============================================================
+-- دفتر امانت — مهاجرت ۰۰۳۵
+-- ============================================================
+
+do $$
+declare
+  centre uuid := '11111111-1111-1111-1111-111111111111';
+  sara   uuid := 'd1111111-1111-1111-1111-111111111111';
+  amir   uuid := 'd2222222-2222-2222-2222-222222222222';
+  book   uuid;
+  toy    uuid;
+  line   record;
+  bad    boolean;
+begin
+  perform login_as('aa000000-0000-0000-0000-0000000000f3', '09120000001');  -- مربی
+
+  /*
+   * ۱. ثبت کار مربی است، نه فقط مدیر.
+   *
+   * لحظه‌ای که کودک کتاب را برمی‌دارد، مربی کنارش ایستاده. اگر فقط
+   * مدیر می‌توانست ثبت کند، هیچ‌وقت ثبت نمی‌شد.
+   */
+  book := app.lend_item(sara, 'book', 'قصه‌های خوب برای بچه‌های خوب',
+                        current_date + 7, 'جلد دوم');
+  select * into line from app.child_loans(sara) where id = book;
+  perform assert(line.title = 'قصه‌های خوب برای بچه‌های خوب', 'نامِ خودِ وسیله ثبت می‌شود');
+  perform assert(line.lent_on = current_date, 'با روزی که برده');
+  perform assert(line.returned_on is null, 'و باز می‌ماند تا برگردد');
+  perform assert(not line.overdue, 'قرارِ هفته دیگر، هنوز گذشته نیست');
+
+  -- ۲. نام خالی، ثبت نمی‌شود. «کتاب» به کسی نمی‌گوید کدام کتاب.
+  begin
+    perform app.lend_item(sara, 'book', '   ', null, null, null);
+    bad := true;
+  exception when others then
+    bad := false;
+  end;
+  perform assert(not bad, 'امانت بی نام وسیله ثبت نمی‌شود');
+
+  -- ۳. آنچه هنوز برنگشته، با نام کودک — سؤال واقعی «دست کیست؟» است.
+  -- کتابی که ده روز پیش رفته و قرارش سه روز پیش گذشته.
+  toy := app.lend_item(amir, 'toy', 'پازل چوبی', current_date - 3, null, current_date - 10);
+  select * into line from app.open_loans(centre) where id = toy;
+  perform assert(line.child_name like 'امیر%', 'فهرست باز، نام کودک را می‌گوید');
+  perform assert(line.overdue, 'و قرارِ گذشته را علامت می‌زند');
+  perform assert(line.days_out = 10, 'و می‌گوید چند روز است بیرون مانده');
+  perform assert(
+    (select count(*) from app.open_loans(centre)) = 2,
+    'هر دو امانت باز شمرده می‌شوند'
+  );
+
+  /*
+   * ۴. بازگشت، تاریخ است نه تیک.
+   *
+   * «برگشت؟ بله» به سؤالِ «کِی پس داد؟» جواب نمی‌دهد — همان قاعده‌ای که
+   * برای «اقدام لازم» بازرسی هم گرفتیم.
+   */
+  perform app.return_item(book);
+  select * into line from app.child_loans(sara) where id = book;
+  perform assert(line.returned_on = current_date, 'بازگشت با تاریخش ثبت می‌شود');
+  perform assert(
+    (select count(*) from app.open_loans(centre)) = 1,
+    'و از فهرست باز بیرون می‌رود'
+  );
+
+  -- ۵. بازگشت دوباره، ممکن نیست.
+  begin
+    perform app.return_item(book);
+    bad := true;
+  exception when others then
+    bad := false;
+  end;
+  perform assert(not bad, 'وسیله‌ای که برگشته، دوباره برنمی‌گردد');
+
+  -- ۶. روز بازگشتِ پیش از روز امانت، محال است.
+  begin
+    perform app.return_item(toy, current_date - 30);
+    bad := true;
+  exception when others then
+    bad := false;
+  end;
+  perform assert(not bad, 'روز بازگشت پیش از روز امانت ثبت نمی‌شود');
+
+  /*
+   * ۷. تاریخچه می‌ماند، ولی باز اول می‌آید.
+   *
+   * آنچه هنوز دست کودک است کارِ امروز است؛ بقیه تاریخچه‌اند.
+   */
+  perform app.lend_item(sara, 'toy', 'ماشین قرمز', null, null, null);
+  select * into line from app.child_loans(sara) limit 1;
+  perform assert(line.returned_on is null, 'امانتِ باز، بالای فهرست کودک می‌آید');
+
+  /*
+   * ۸. آنچه ساخته نمی‌شود — پیوست ج و خط قرمز ۱۰.
+   *
+   * نه موجودی، نه ارزش ریالی، نه جریمه، نه امتیاز. اگر روزی ستونی با
+   * این نام‌ها اضافه شود، این تست می‌افتد و کسی باید توضیح بدهد چرا.
+   */
+  perform assert(
+    (select count(*) from information_schema.columns
+      where table_schema = 'public' and table_name = 'loan'
+        and column_name ~ '(price|amount|fee|fine|stock|quantity|score|rank)') = 0,
+    'امانت نه قیمت دارد نه جریمه نه امتیاز'
+  );
+end $$;
+
+do $$
+declare
+  sara uuid := 'd1111111-1111-1111-1111-111111111111';
+  amir uuid := 'd2222222-2222-2222-2222-222222222222';
+  bad  boolean;
+begin
+  -- ۹. خانواده امانت‌های کودک خودش را می‌بیند…
+  perform login_as('aa000000-0000-0000-0000-0000000000f1', '09120000001');
+  perform assert(
+    (select count(*) from app.child_loans(sara)) >= 2,
+    'خانواده امانت‌های کودک خودش را می‌بیند'
+  );
+
+  -- …ولی نه کودک دیگری را، و نه چیزی ثبت می‌کند.
+  perform assert(
+    (select count(*) from app.child_loans(amir)) = 0,
+    'و امانت کودک دیگری را نمی‌بیند'
+  );
+  begin
+    perform app.lend_item(sara, 'book', 'هرچه', null, null, null);
+    bad := true;
+  exception when others then
+    bad := false;
+  end;
+  perform assert(not bad, 'خانواده امانت ثبت نمی‌کند');
+end $$;
+
+select login_as('aa000000-0000-0000-0000-0000000000f2', '09120000077');

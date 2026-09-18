@@ -39,6 +39,11 @@ export function ManagerMorePage({ onGo, gaps }: {
           گرفتن برایشان، جای کارِ روزانه را می‌گرفت.
         */}
         <Item
+          label="دفتر امانت"
+          hint="چه کودکی چه وسیله‌ای برده و کِی"
+          onClick={() => onGo('loans')}
+        />
+        <Item
           label="برنامه مهد"
           hint="منوی غذایی، تقویم و نظرسنجی"
           onClick={() => onGo('program')}

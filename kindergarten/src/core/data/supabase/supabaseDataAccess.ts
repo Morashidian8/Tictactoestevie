@@ -81,7 +81,11 @@ import type {
   LeaveInput,
   LeaveKind,
   LeaveRequest,
+  Loan,
+  LoanInput,
+  LoanKind,
   NewStaff,
+  OpenLoan,
   PendingLeave,
   StaffField,
   StaffProfile,
@@ -3717,6 +3721,74 @@ export function createSupabaseDataAccess(scope: AccessScope): AuditedDataAccess 
         staffId: r.staff_id as string,
         fullName: r.full_name as string,
       }))
+    },
+
+    /* ── دفتر امانت ───────────────────────────────────────── */
+
+    async listChildLoans(childId: string): Promise<Loan[]> {
+      const rows = (orThrow(await db.rpc('child_loans', { child: childId })) as Row[]) ?? []
+      return rows.map((r) => ({
+        id: r.id as string,
+        kind: r.kind as LoanKind,
+        title: r.title as string,
+        lentOn: r.lent_on as string,
+        dueOn: (r.due_on as string | null) ?? null,
+        returnedOn: (r.returned_on as string | null) ?? null,
+        note: (r.note as string | null) ?? null,
+        overdue: Boolean(r.overdue),
+      }))
+    },
+
+    async lendItem(input: LoanInput) {
+      orThrow(
+        await db.rpc('lend_item', {
+          child: input.childId,
+          kind: input.kind,
+          title: input.title.trim(),
+          due: input.dueOn ?? null,
+          note: input.note?.trim() || null,
+          lent: input.lentOn ?? null,
+        }),
+      )
+    },
+
+    async returnItem(loanId: string, day?: string | null) {
+      orThrow(await db.rpc('return_item', { loan_id: loanId, day: day ?? null }))
+    },
+
+    async listOpenLoans(): Promise<OpenLoan[]> {
+      const rows =
+        (orThrow(await db.rpc('open_loans', { centre: scope.centerId })) as Row[]) ?? []
+      return rows.map((r) => ({
+        id: r.id as string,
+        childId: r.child_id as string,
+        childName: r.child_name as string,
+        className: (r.class_name as string | null) ?? null,
+        kind: r.kind as LoanKind,
+        title: r.title as string,
+        lentOn: r.lent_on as string,
+        dueOn: (r.due_on as string | null) ?? null,
+        daysOut: r.days_out as number,
+        overdue: Boolean(r.overdue),
+      }))
+    },
+
+    async listLendableChildren(): Promise<Child[]> {
+      /*
+       * سیاست سطر-محورِ `child` خودش کار را می‌کند: مربی فقط کودکان
+       * کلاس‌هایش را می‌بیند و مدیر کل مرکز. پس اینجا هیچ شرطی درباره
+       * نقش نوشته نمی‌شود — همان قاعده در دو جا، دو حقیقت می‌شود.
+       */
+      const rows = orThrow(
+        await db
+          .from('child')
+          .select('*')
+          .eq('center_id', scope.centerId)
+          .is('deleted_at', null)
+          .eq('status', 'active')
+          .order('first_name'),
+      ) as Row[]
+      return rows.map(asChild)
     },
 
     async addStaff(input: NewStaff) {

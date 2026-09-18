@@ -46,11 +46,12 @@ const LEAVE_STATE_TEXT: Record<LeaveRequest['state'], string> = {
   rejected: 'رد شد',
 }
 
-export function TeacherMorePage({ classId, onOpenChild, onOpenPlay }: {
+export function TeacherMorePage({ classId, onOpenChild, onOpenPlay, onOpenLoans }: {
   classId: string | null
   /** رفتن به مشاهده‌ها و گزارش ماهانه یک کودک. */
   onOpenChild: (childId: string, childName: string) => void
   onOpenPlay: () => void
+  onOpenLoans: () => void
 }) {
   const data = useData()
   const { session } = useAuth()
@@ -122,6 +123,23 @@ export function TeacherMorePage({ classId, onOpenChild, onOpenPlay }: {
         </button>
         <p className={`${styles.muted} t-caption`}>
           روزی یک ثبت کافی است. همین داده، نقشه علایقِ گزارش ماهانه را می‌سازد.
+        </p>
+      </section>
+
+      {/*
+        دفتر امانت.
+
+        کنار بازی آزاد می‌نشیند چون هم‌جنس است: ثبتِ کوتاهِ همان لحظه.
+        کودک کتاب را برمی‌دارد و مربی همان‌جا ایستاده — اگر این کار
+        پشت سه ضربه باشد، هیچ‌وقت انجام نمی‌شود.
+      */}
+      <section className={styles.card}>
+        <span className={`${styles.label} t-caption`}>دفتر امانت</span>
+        <button type="button" className={`${styles.actionRow} t-body`} onClick={onOpenLoans}>
+          امانت‌ها
+        </button>
+        <p className={`${styles.muted} t-caption`}>
+          کتاب و اسباب‌بازی‌ای که کودکان خانه برده‌اند — و آنچه هنوز برنگشته.
         </p>
       </section>
 

@@ -48,6 +48,7 @@ import type {
   MessageCandidate,
   StaffDocument,
   LeaveRequest,
+  Loan,
   StaffField,
   StaffNote,
   StaffRatio,
@@ -249,6 +250,7 @@ function save(): void {
       staffDocs: STAFF_DOCS,
       staffNotes: STAFF_NOTES,
       leaves: LEAVES,
+      loans: LOANS,
       payments: PAYMENTS,
       messages: MESSAGES,
       amendments: AMENDMENTS,
@@ -300,6 +302,7 @@ function hydrate(): void {
       staffDocs?: (StaffDocument & { staffId: string })[]
       staffNotes?: (StaffNote & { staffId: string })[]
       leaves?: LeaveRow[]
+      loans?: LoanRow[]
       payments?: Payment[]
       messages?: Message[]
       amendments?: Amendment[]
@@ -373,6 +376,7 @@ function hydrate(): void {
     restore(STAFF_DOCS, payload.staffDocs)
     restore(STAFF_NOTES, payload.staffNotes)
     restore(LEAVES, payload.leaves)
+    restore(LOANS, payload.loans)
     /*
      * تغییرهای تأییدشده دوباره روی فیکسچر می‌نشینند.
      *
@@ -804,6 +808,9 @@ type ChatRow = {
 }
 
 /* ── پرونده کارکنان ─────────────────────────────────────────── */
+
+type LoanRow = Loan & { childId: string }
+const LOANS: LoanRow[] = []
 
 type LeaveRow = LeaveRequest & { staffId: string }
 const LEAVES: LeaveRow[] = []
@@ -1737,6 +1744,18 @@ export function createLocalDataAccess(scope: AccessScope): DataAccess {
   const assertManager = () => {
     if (scope.role !== 'manager') {
       throw new Error('این کار فقط از حساب مدیر ممکن است')
+    }
+  }
+
+  /**
+   * کارِ کارکنان مهد، نه خانواده.
+   *
+   * ثبت امانت لحظه‌ای است که کودک کتاب را برمی‌دارد و مربی کنارش
+   * ایستاده؛ محدود کردنش به مدیر یعنی هیچ‌وقت ثبت نمی‌شود.
+   */
+  const assertStaff = () => {
+    if (scope.role === 'guardian') {
+      throw new Error('این کار از حساب کارکنان مهد انجام می‌شود')
     }
   }
 
@@ -4327,6 +4346,90 @@ export function createLocalDataAccess(scope: AccessScope): DataAccess {
       return LEAVES.filter((l) => l.state === 'approved' && l.starts <= date && l.ends >= date).map(
         (l) => ({ staffId: l.staffId, fullName: fullNameOf(entryOf(l.staffId)) ?? '—' }),
       )
+    },
+
+    /* ── دفتر امانت ───────────────────────────────────────── */
+
+    async listChildLoans(childId) {
+      assertOwnChild(childId)
+      const today = toIsoDate(new Date())
+      return LOANS.filter((l) => l.childId === childId)
+        .map(({ childId: _childId, ...rest }) => ({
+          ...rest,
+          // «قرارش گذشته» از تاریخ امروز حساب می‌شود، نه ذخیره؛ وگرنه
+          // هر شب باید کسی بازنویسی‌اش کند.
+          overdue: rest.returnedOn === null && rest.dueOn !== null && rest.dueOn < today,
+        }))
+        .sort((a, b) =>
+          Number(b.returnedOn === null) - Number(a.returnedOn === null) ||
+          b.lentOn.localeCompare(a.lentOn),
+        )
+    },
+
+    async lendItem(input) {
+      assertStaff()
+      const title = input.title.trim()
+      if (!title) throw new Error('نام وسیله لازم است.')
+      const lentOn = input.lentOn ?? toIsoDate(new Date())
+      if (input.dueOn && input.dueOn < lentOn) {
+        throw new Error('قرارِ برگرداندن پیش از روز امانت نمی‌شود.')
+      }
+      LOANS.push({
+        id: `loan-${(staffSeq += 1)}`,
+        childId: input.childId,
+        kind: input.kind,
+        title,
+        lentOn,
+        dueOn: input.dueOn ?? null,
+        returnedOn: null,
+        note: input.note?.trim() || null,
+        overdue: false,
+      })
+      save()
+    },
+
+    async returnItem(loanId, day) {
+      assertStaff()
+      const row = LOANS.find((l) => l.id === loanId)
+      if (!row) throw new Error('امانت پیدا نشد.')
+      if (row.returnedOn) throw new Error('این وسیله قبلاً برگشته.')
+      const when = day ?? toIsoDate(new Date())
+      if (when < row.lentOn) throw new Error('روز بازگشت پیش از روز امانت نمی‌شود.')
+      row.returnedOn = when
+      save()
+    },
+
+    async listOpenLoans() {
+      assertStaff()
+      const today = toIsoDate(new Date())
+      return LOANS.filter((l) => l.returnedOn === null)
+        .map((l) => {
+          const child = CHILDREN.find((c) => c.id === l.childId)
+          const overdue = l.dueOn !== null && l.dueOn < today
+          return {
+            id: l.id,
+            childId: l.childId,
+            childName: child ? `${child.firstName} ${child.lastName}` : '—',
+            className: CLASSES.find((c) => c.id === child?.classId)?.name ?? null,
+            kind: l.kind,
+            title: l.title,
+            lentOn: l.lentOn,
+            dueOn: l.dueOn,
+            daysOut: daysBetween(l.lentOn, today) - 1,
+            overdue,
+          }
+        })
+        .sort((a, b) =>
+          Number(b.overdue) - Number(a.overdue) || a.lentOn.localeCompare(b.lentOn),
+        )
+    },
+
+    async listLendableChildren() {
+      assertStaff()
+      if (scope.role === 'manager') return CHILDREN
+      // مربی فقط کلاس‌های خودش. قاعده اینجاست، نه در صفحه.
+      const mine = new Set(entryOf(scope.accountId)?.classIds ?? [])
+      return CHILDREN.filter((c) => c.classId !== null && mine.has(c.classId))
     },
 
     async addStaff(input) {

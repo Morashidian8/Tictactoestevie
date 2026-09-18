@@ -14,6 +14,7 @@ import { TodayPage } from './TodayPage.tsx'
 import { BulkEntryPage } from './BulkEntryPage.tsx'
 import { CloseDayPage } from './CloseDayPage.tsx'
 import { MessagesPage } from '../shared/MessagesPage.tsx'
+import { LoansPage } from '../shared/LoansPage.tsx'
 import { FreePlayPage } from './FreePlayPage.tsx'
 import { ObservationsPage } from './ObservationsPage.tsx'
 import { TeacherMorePage } from './TeacherMorePage.tsx'
@@ -29,7 +30,7 @@ import styles from './TeacherApp.module.css'
  * نشان مرجانی روی «پیام‌ها» وقتی می‌آید که خانواده‌ای پرسیده و جوابی
  * نرفته. نشانی که همیشه روشن باشد، خوانده نمی‌شود.
  */
-type Screen = 'today' | 'bulk' | 'close' | 'inbox' | 'more' | 'observations' | 'play'
+type Screen = 'today' | 'bulk' | 'close' | 'inbox' | 'more' | 'observations' | 'play' | 'loans'
 
 export function TeacherApp() {
   const data = useData()
@@ -171,6 +172,8 @@ export function TeacherApp() {
           // می‌کند، نه به فهرستی از خطا. بخش ۱۲.۱۰.
           onFixReports={() => setScreen('bulk')}
         />
+      ) : screen === 'loans' ? (
+        <LoansPage />
       ) : screen === 'play' ? (
         <FreePlayPage classId={classId} onBack={() => setScreen('more')} />
       ) : screen === 'observations' && openChild ? (
@@ -183,6 +186,7 @@ export function TeacherApp() {
         <TeacherMorePage
           classId={classId}
           onOpenPlay={() => setScreen('play')}
+          onOpenLoans={() => setScreen('loans')}
           onOpenChild={(id, name) => {
             setOpenChild({ id, name })
             setScreen('observations')

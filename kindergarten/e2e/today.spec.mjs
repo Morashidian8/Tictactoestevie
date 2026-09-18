@@ -2340,6 +2340,96 @@ check(
 await page.locator('[aria-label="بازگشت"]').click()
 await page.waitForTimeout(400)
 
+console.log('▸ دفتر امانت: مربی ثبت می‌کند، خانواده می‌بیند، مهد تحویل می‌گیرد')
+await signIn('09120000001')
+await page.waitForSelector('text=ثبت گروهی امروز')
+await page.locator('nav button:has-text("بیشتر")').click()
+await page.waitForSelector('button:has-text("امانت‌ها")')
+await page.click('button:has-text("امانت‌ها")')
+await page.waitForSelector('[aria-label="امانت‌های بیرون"]')
+check(
+  /هیچ وسیله‌ای بیرون نیست/.test(await page.locator('[aria-label="امانت‌های بیرون"]').innerText()),
+  'دفتر امانت خالی شروع می‌شود',
+)
+/*
+ * دفتر است، نه انبار — پیوست ج.
+ * اگر روزی موجودی و قیمت اضافه شود، همین‌جا می‌افتد.
+ */
+const ledger = await page.evaluate(() => document.body.innerText)
+check(
+  !/موجودی\s*:|قیمت\s*:|جریمه\s*:/.test(ledger) && /نه انبار/.test(ledger),
+  'صریح می‌گوید دفتر است نه انبار: نه موجودی، نه قیمت، نه جریمه',
+)
+
+await page.click('button:has-text("ثبت امانت تازه")')
+await page.waitForSelector('[role="dialog"]')
+await page.selectOption('[role="dialog"] select[aria-label="کودک"]', { index: 1 })
+await page.fill('input[aria-label="نام وسیله"]', 'قصه‌های خوب برای بچه‌های خوب')
+check(
+  (await page.locator('[role="dialog"] input[aria-label="روز امانت"]').count()) === 0,
+  'روز امانت هم فقط از تقویم انتخاب می‌شود',
+)
+await page.click('button:has-text("ثبت در دفتر")')
+await page.waitForTimeout(1000)
+const lent = await page.locator('[aria-label="امانت‌های بیرون"]').innerText()
+check(/قصه‌های خوب برای بچه‌های خوب/.test(lent), 'امانت با نامِ خودِ وسیله ثبت شد')
+/*
+ * سؤالِ این صفحه «این کتاب دست کیست؟» است، پس نام کودک کنار وسیله
+ * می‌آید — نه اینکه مربی باید پرونده بیست کودک را باز کند.
+ */
+check(/سارا/.test(lent), 'و نام کودکی که برده کنارش هست')
+check(/روز بیرون/.test(lent), 'و می‌گوید چند روز است بیرون مانده')
+
+await signOutAny()
+await page.waitForSelector('#phone')
+await page.fill('#phone', '09120000003')
+await page.click('button:has-text("فرستادن کد")')
+await page.waitForSelector('#code')
+await page.fill('#code', '11111')
+await page.click('button:has-text("ورود")')
+await page.waitForTimeout(1500)
+await page.locator('nav button:has-text("بیشتر")').click()
+await page.waitForSelector('button:has-text("پرونده کودک")')
+await page.click('button:has-text("پرونده کودک")')
+await page.waitForSelector('[aria-label="امانت‌های مهد"]')
+const famLoans = page.locator('[aria-label="امانت‌های مهد"]')
+check(
+  /قصه‌های خوب/.test(await famLoans.innerText()),
+  'خانواده می‌بیند کودکش چه چیزی خانه برده',
+)
+check(/هنوز خانه است/.test(await famLoans.innerText()), 'و اینکه هنوز برنگشته')
+/*
+ * دکمه «برگشت» نزد خانواده نیست: وسیله را مهد تحویل می‌گیرد و همان‌جا
+ * ثبت می‌کند. دکمه‌ای که خانواده بزند و وسیله هنوز خانه باشد، دفتر را
+ * از واقعیت جدا می‌کند.
+ */
+check(
+  (await famLoans.locator('button:has-text("برگشت")').count()) === 0,
+  'ولی خودش بازگشت را ثبت نمی‌کند — مهد تحویل می‌گیرد',
+)
+
+// پرونده کودک سرصفحه خودش را دارد؛ کلید حساب کاربری پشت آن است.
+await page.locator('nav button:has-text("خانه")').click()
+await page.waitForTimeout(600)
+await signOutAny()
+await page.waitForSelector('#phone')
+await page.fill('#phone', '09120000001')
+await page.click('button:has-text("فرستادن کد")')
+await page.waitForSelector('#code')
+await page.fill('#code', '11111')
+await page.click('button:has-text("ورود")')
+await page.waitForSelector('text=ثبت گروهی امروز')
+await page.locator('nav button:has-text("بیشتر")').click()
+await page.waitForSelector('button:has-text("امانت‌ها")')
+await page.click('button:has-text("امانت‌ها")')
+await page.waitForSelector('[aria-label="امانت‌های بیرون"]')
+await page.locator('[aria-label="امانت‌های بیرون"] button:has-text("برگشت")').first().click()
+await page.waitForTimeout(1000)
+check(
+  /هیچ وسیله‌ای بیرون نیست/.test(await page.locator('[aria-label="امانت‌های بیرون"]').innerText()),
+  'پس از بازگشت، از فهرست بیرون می‌رود',
+)
+
 console.log('▸ ماژول M14: منوی غذایی، تقویم، نظرسنجی')
 await signIn('09120000002')
 await page.waitForTimeout(600)

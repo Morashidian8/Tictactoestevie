@@ -11,6 +11,8 @@ import {
 import { ROLE_LABEL, useAuth, useData } from '../../core/auth/index.ts'
 import { formatJalali } from '../../i18n/index.ts'
 import { ProgramPage } from './ProgramPage.tsx'
+import { LoansPage } from '../shared/LoansPage.tsx'
+import shell from './ProgramPage.module.css'
 import { AuditPage } from './AuditPage.tsx'
 import { ChildrenPage } from './ChildrenPage.tsx'
 import { DashboardPage } from './DashboardPage.tsx'
@@ -38,6 +40,7 @@ export type ManagerPage =
   | 'audit'
   | 'staff'
   | 'program'
+  | 'loans'
   | 'messages'
   | 'more'
 
@@ -145,6 +148,8 @@ export function ManagerApp() {
         <FinancePage onBack={back} />
       ) : page === 'children' ? (
         <ChildrenPage onBack={back} />
+      ) : page === 'loans' ? (
+        <LoanShell onBack={() => setPage('more')} />
       ) : page === 'program' ? (
         <ProgramPage onBack={() => setPage('more')} />
       ) : page === 'audit' ? (
@@ -160,5 +165,33 @@ export function ManagerApp() {
         />
       )}
     </AppShell>
+  )
+}
+
+/**
+ * دفتر امانت با سرصفحه و کلید بازگشت.
+ *
+ * `LoansPage` خودش سرصفحه ندارد: پنل مربی آن را داخل پوسته مشترک
+ * می‌نشاند و آنجا سرصفحه از پیش هست. اینجا از «بیشتر» باز می‌شود و
+ * بی کلید بازگشت، مدیر در آن گیر می‌کند.
+ */
+function LoanShell({ onBack }: { onBack: () => void }) {
+  return (
+    <div className={shell.page}>
+      <header className={shell.header}>
+        <button
+          type="button"
+          className={shell.back}
+          onClick={onBack}
+          aria-label="بازگشت به داشبورد"
+        >
+          ‹
+        </button>
+        <span className={`${shell.title} t-h2`}>دفتر امانت</span>
+      </header>
+      <div className={shell.body}>
+        <LoansPage />
+      </div>
+    </div>
   )
 }

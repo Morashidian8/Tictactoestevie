@@ -9,6 +9,7 @@ import type {
   ProfileChange,
   ProfileField,
 } from '../../core/data/index.ts'
+import { ChildLoans } from '../shared/LoansPage.tsx'
 import styles from './ChildrenPage.module.css'
 
 /**
@@ -349,6 +350,17 @@ function Profile({ profile, onBack, onChanged }: {
               </a>
             </p>
           ) : null}
+        </section>
+
+        {/*
+          امانت‌های این کودک.
+
+          «این کودک چه چیزی خانه دارد؟» سؤالِ پرونده است؛ «این کتاب
+          دست کیست؟» سؤالِ دفتر امانت. دو سؤال، دو جا.
+        */}
+        <section className={styles.card} aria-label="امانت‌ها">
+          <span className={`${styles.cardLabel} t-caption`}>امانت‌ها</span>
+          <ChildLoans childId={child.id} canReturn />
         </section>
 
         <section className={styles.card} aria-label="رضایت‌نامه‌ها">

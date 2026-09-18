@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { AlertIcon, CheckIcon, EmptyState } from '../../design-system/index.ts'
 import { useData } from '../../core/auth/index.ts'
 import type { ProfileField } from '../../core/data/index.ts'
+import { ChildLoans } from '../shared/LoansPage.tsx'
 import { AttendanceArchive } from './AttendanceArchive.tsx'
 import { Shell } from './MorePage.tsx'
 import shared from './MorePage.module.css'
@@ -103,6 +104,18 @@ export function ChildProfilePage({ childId, childName, onBack }: {
         روزها و ساعت‌هایی حضور داشته». جایش همین‌جاست، نه یک صفحه جدا:
         خانواده وقتی دنبال ساعت‌هاست، دنبال پرونده کودک می‌گردد.
       */}
+      {/*
+        آنچه کودک از مهد خانه برده.
+
+        چرا خانواده باید ببیند: کتابی که برگشته و دوباره ازش پرسیده
+        می‌شود، و کتابی که خانه مانده و کسی یادش نیست. دکمه «برگشت»
+        اینجا نیست — وسیله را مهد تحویل می‌گیرد و همان‌جا ثبت می‌کند.
+      */}
+      <section className={shared.card} aria-label="امانت‌های مهد">
+        <span className={`${shared.cardLabel} t-caption`}>امانت‌های مهد</span>
+        <ChildLoans childId={childId} />
+      </section>
+
       <section className={shared.card} aria-label="بایگانی حضور">
         <span className={`${shared.cardLabel} t-caption`}>حضور و غیاب</span>
         <AttendanceArchive childId={childId} />

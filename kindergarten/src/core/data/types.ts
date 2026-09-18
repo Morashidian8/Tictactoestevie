@@ -815,6 +815,58 @@ export type LeaveInput = {
   reason?: string | null
 }
 
+/* ── دفتر امانت — ماژول ۰۰۳۵ ────────────────────────────────── */
+
+export type LoanKind = 'book' | 'toy' | 'clothing' | 'equipment' | 'other'
+
+/**
+ * یک وسیله که کودک خانه برده.
+ *
+ * دفتر است، نه انبار: پیوست ج انبارداری را صریح رد کرده، پس اینجا
+ * موجودی، قیمت و جریمه وجود ندارد — فقط «چه چیزی دست کیست».
+ *
+ * `returnedOn` تاریخ است نه پرچم: «برگشت؟ بله» به سؤالِ «کِی پس داد؟»
+ * جواب نمی‌دهد.
+ */
+export type Loan = {
+  id: string
+  kind: LoanKind
+  /** نامِ خودِ وسیله. «کتاب» به کسی نمی‌گوید کدام کتاب. */
+  title: string
+  /** تاریخ میلادیِ ISO. */
+  lentOn: string
+  /** قرارِ برگرداندن. خالی یعنی قراری گذاشته نشده. */
+  dueOn: string | null
+  returnedOn: string | null
+  note: string | null
+  /** قرارش گذشته و هنوز برنگشته. */
+  overdue: boolean
+}
+
+/** یک امانتِ باز، در نمای کل مهد. با نام کودک، چون سؤال «دست کیست؟» است. */
+export type OpenLoan = {
+  id: string
+  childId: string
+  childName: string
+  className: string | null
+  kind: LoanKind
+  title: string
+  lentOn: string
+  dueOn: string | null
+  daysOut: number
+  overdue: boolean
+}
+
+export type LoanInput = {
+  childId: string
+  kind: LoanKind
+  title: string
+  dueOn?: string | null
+  note?: string | null
+  /** روزِ امانت. خالی یعنی امروز — مربی همیشه همان لحظه ثبت نمی‌کند. */
+  lentOn?: string | null
+}
+
 export type StaffDocumentInput = {
   staffId: string
   kind: StaffDocumentKind
@@ -2133,6 +2185,41 @@ export interface DataAccess {
 
   /** چه کسی این روز مرخصی تأییدشده دارد — برای برنامه شیفت مدیر. */
   listStaffOnLeave(date: string): Promise<{ staffId: string; fullName: string }[]>
+
+  /* ── دفتر امانت ───────────────────────────────────────────── */
+
+  /**
+   * امانت‌های یک کودک. باز اول، بعد تاریخچه.
+   *
+   * خانواده هم می‌بیند — کودک خودش را: وسیله‌ای که خانه است، کارِ
+   * خانواده است نه مهد.
+   */
+  listChildLoans(childId: string): Promise<Loan[]>
+
+  /**
+   * ثبت امانت. کار کارکنان است، نه فقط مدیر: لحظه‌ای که کودک کتاب را
+   * برمی‌دارد، مربی کنارش ایستاده.
+   */
+  lendItem(input: LoanInput): Promise<void>
+
+  /** ثبت بازگشت. تاریخ می‌گیرد، نه تیک. خالی یعنی امروز. */
+  returnItem(loanId: string, day?: string | null): Promise<void>
+
+  /** هرچه هنوز برنگشته، در کل مهد. قرارِ گذشته اول. */
+  listOpenLoans(): Promise<OpenLoan[]>
+
+  /**
+   * کودکانی که این حساب می‌تواند برایشان امانت ثبت کند.
+   *
+   * چرا روش خودش را دارد و نه `listCenterChildren`: مربی فقط کلاس
+   * خودش را می‌بیند و مدیر کل مهد. اگر رابط خودش بین این دو انتخاب
+   * می‌کرد، قاعده دسترسی در دو جا می‌نشست — و بند ۱۱.۱۰ می‌گوید هر
+   * پرس‌وجو در لایه داده به مرکز بسته می‌شود، نه در صفحه.
+   *
+   * برخلاف `getClassDay`، به بازه امروز بسته نیست: کودکِ بعدازظهری
+   * ساعت نه صبح هم می‌تواند کتاب برگرداند.
+   */
+  listLendableChildren(): Promise<Child[]>
 
   /* ── اقلام هزینه — مدیر ───────────────────────────────────── */
 
