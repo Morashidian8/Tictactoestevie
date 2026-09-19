@@ -92,7 +92,7 @@ export function CloseDayPage({ classId, onBack, onFixReports }: Props) {
   return (
     <div className={styles.page}>
       <header className={styles.header}>
-        <button type="button" className={styles.back} onClick={onBack} aria-label="بازگشت به امروز">
+        <button type="button" className={styles.back} onClick={onBack} aria-label="بازگشت به ورود خروج">
           <svg className="mirror" width="22" height="22" viewBox="0 0 24 24" fill="none"
             stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
             <path d="m15 18-6-6 6-6" />
@@ -265,7 +265,7 @@ export function CloseDayPage({ classId, onBack, onFixReports }: Props) {
         که خبر باید باشد، نه روی دکمه.
       */}
       {sentAt ? (
-        <QuickAction onClick={onBack}>بازگشت به امروز</QuickAction>
+        <QuickAction onClick={onBack}>بازگشت به ورود خروج</QuickAction>
       ) : (
         <QuickAction onClick={send} disabled={busy}>
           ارسال گزارش‌های امروز

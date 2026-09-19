@@ -23,6 +23,20 @@ import styles from './IncidentSheet.module.css'
  *    یعنی مستقیم به خانواده می‌رود و «متوسط» یعنی اول به مدیر.
  * ۲. دسته‌بندی رویداد جزئی بسته است. متن آزاد خارج از این دسته‌ها شدت را
  *    خودکار بالا می‌برد، و مربی باید ببیند که این اتفاق افتاده.
+ *
+ * ── دو چیزی که مالک محصول گرفت و اصلاح شد ───────────────────
+ *
+ * **پرسش تکراری.** مرحله شدت دوباره می‌پرسید «کدام‌یک؟» با فهرستی که
+ * همان مرحله نوع بود: «زمین خوردن بدون آسیب» در برابر «زمین خوردن»،
+ * «دعوای کلامی» در برابر «درگیری». حالا دسته جزئی از نوعِ انتخاب‌شده
+ * **مشتق** می‌شود و پرسشی تکرار نمی‌شود.
+ *
+ * **بن‌بستِ «سایر».** قید پایگاه داده می‌گوید رویداد جزئی باید دسته
+ * داشته باشد و فهرست دسته‌ها بسته است؛ پس «سایر» هیچ دسته جزئی‌ای
+ * نداشت و دکمه ادامه خاموش می‌ماند — بی آنکه بگوید چرا. حالا برای
+ * نوع‌هایی که دسته جزئی ندارند، «جزئی» اصلاً پیشنهاد نمی‌شود و دلیلش
+ * نوشته می‌شود. این همان قاعده بخش ۵.۶ است: چیزی بیرون از فهرست بسته،
+ * رویداد روتین نیست.
  */
 
 const TYPES: { value: IncidentType; label: string }[] = [
@@ -43,13 +57,21 @@ const LOCATIONS: { value: IncidentLocation; label: string }[] = [
   { value: 'other', label: 'بیرون از مهد' },
 ]
 
-/** بخش ۵.۶: دسته‌بندی رویداد جزئی بسته و از پیش تعریف‌شده است. */
-const MINOR: { value: MinorCategory; label: string }[] = [
-  { value: 'fall_no_injury', label: 'زمین خوردن بدون آسیب' },
-  { value: 'surface_scratch', label: 'خراش سطحی' },
-  { value: 'verbal_dispute', label: 'دعوای کلامی' },
-  { value: 'food_spill', label: 'ریختن غذا روی لباس' },
-]
+/**
+ * دسته جزئی، مشتق از نوع — نه یک پرسش تازه.
+ *
+ * بخش ۵.۶ فهرست دسته‌های جزئی را بسته کرده، ولی همان فهرست تقریباً
+ * همان فهرست نوع‌هاست. پرسیدنش دو بار، از مربی می‌خواهد یک چیز را دو
+ * جور نام ببرد.
+ *
+ * نوعی که اینجا نیست (تب، استفراغ، سایر) دسته جزئی ندارد، پس اصلاً
+ * جزئی ثبت نمی‌شود — همان چیزی که قید پایگاه داده هم می‌گوید.
+ */
+const MINOR_OF: Partial<Record<IncidentType, MinorCategory>> = {
+  fall: 'fall_no_injury',
+  bite: 'surface_scratch',
+  conflict: 'verbal_dispute',
+}
 
 const SEVERITY: { value: IncidentSeverity; name: string; what: string }[] = [
   {
@@ -82,19 +104,28 @@ export function IncidentSheet({ children, onClose }: Props) {
   const [childId, setChildId] = useState<string | null>(null)
   const [type, setType] = useState<IncidentType | null>(null)
   const [severity, setSeverity] = useState<IncidentSeverity | null>(null)
-  const [minorCategory, setMinorCategory] = useState<MinorCategory | null>(null)
   const [location, setLocation] = useState<IncidentLocation | null>(null)
   const [description, setDescription] = useState('')
   const [action, setAction] = useState('')
-  const [headOrFace, setHeadOrFace] = useState(false)
   const [saved, setSaved] = useState<Incident | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const child = children.find((c) => c.id === childId) ?? null
 
-  // بخش ۵.۶: درگیری بین دو کودک هرگز جزئی محسوب نمی‌شود، حتی کلامی.
-  const severityChoices = type === 'conflict' ? SEVERITY.filter((s) => s.value !== 'minor') : SEVERITY
+  /* دسته جزئی از نوع مشتق می‌شود، نه از یک پرسش دوم. */
+  const minorCategory = type ? (MINOR_OF[type] ?? null) : null
+
+  /*
+   * «جزئی» فقط وقتی پیشنهاد می‌شود که دسته‌ای برایش وجود داشته باشد.
+   *
+   * درگیری بین دو کودک هرگز جزئی نیست (بخش ۵.۶). تب، استفراغ و «سایر»
+   * هم دسته جزئی ندارند، پس نمی‌شود جزئی ثبتشان کرد — و این همان
+   * قاعده است، نه یک محدودیت فنی: چیزی بیرون از فهرست بسته، رویداد
+   * روتین نیست.
+   */
+  const canBeMinor = type !== null && type !== 'conflict' && minorCategory !== null
+  const severityChoices = canBeMinor ? SEVERITY : SEVERITY.filter((s) => s.value !== 'minor')
 
   const submit = async () => {
     if (!childId || !type || !severity || !location) return
@@ -110,7 +141,6 @@ export function IncidentSheet({ children, onClose }: Props) {
         minorCategory: severity === 'minor' ? minorCategory : null,
         description: description.trim(),
         actionTaken: action.trim(),
-        headOrFace,
       })
       setSaved(incident)
       setStep('done')
@@ -167,28 +197,44 @@ export function IncidentSheet({ children, onClose }: Props) {
                 aria-pressed={type === item.value}
                 onClick={() => {
                   setType(item.value)
-                  // درگیری هرگز جزئی نیست، پس انتخاب قبلی پاک می‌شود.
-                  if (item.value === 'conflict' && severity === 'minor') setSeverity(null)
-                  setStep('severity')
+                  // نوعی که دسته جزئی ندارد، انتخابِ «جزئی» قبلی را باطل می‌کند.
+                  if (!MINOR_OF[item.value] && severity === 'minor') setSeverity(null)
+                  // «سایر» همین‌جا می‌پرسد چه بود؛ بقیه مستقیم جلو می‌روند.
+                  if (item.value !== 'other') setStep('severity')
                 }}
               >
                 {item.label}
               </button>
             ))}
           </div>
+
+          {/*
+            «سایر» بدون جای نوشتن، بن‌بست بود.
+
+            مربی گزینه را می‌زد و هیچ‌جا نمی‌توانست بگوید چه شد؛ فهرست
+            دسته‌ها هم چیزی برایش نداشت و دکمه ادامه خاموش می‌ماند.
+            حالا همین‌جا می‌نویسد و همان متن، توضیح رویداد می‌شود.
+          */}
+          {type === 'other' ? (
+            <>
+              <h3 className={`${styles.legend} t-caption`}>چه اتفاقی افتاد؟ بنویسید.</h3>
+              <textarea
+                className={styles.field}
+                rows={3}
+                value={description}
+                onChange={(event) => setDescription(event.target.value)}
+                placeholder="مثلاً: انگشتش لای در ماند."
+                aria-label="شرح رویداد"
+                autoFocus
+              />
+            </>
+          ) : null}
         </section>
       ) : null}
 
       {step === 'severity' ? (
         <section className={styles.step}>
           <h3 className={`${styles.legend} t-caption`}>چقدر جدی بود؟</h3>
-
-          {type === 'conflict' ? (
-            <p className={`${styles.escalated} t-body`}>
-              <span className={styles.escalatedIcon} aria-hidden><AlertIcon size={18} /></span>
-              <span>درگیری بین دو کودک هرگز جزئی ثبت نمی‌شود، حتی کلامی.</span>
-            </p>
-          ) : null}
 
           {severityChoices.map((item) => (
             <button
@@ -203,24 +249,21 @@ export function IncidentSheet({ children, onClose }: Props) {
             </button>
           ))}
 
-          {severity === 'minor' ? (
-            <>
-              <h3 className={`${styles.legend} t-caption`}>کدام‌یک؟</h3>
-              <div className={styles.grid}>
-                {MINOR.map((item) => (
-                  <button
-                    key={item.value}
-                    type="button"
-                    className={`${styles.option} t-body-lg`}
-                    aria-pressed={minorCategory === item.value}
-                    onClick={() => setMinorCategory(item.value)}
-                  >
-                    {item.label}
-                  </button>
-                ))}
-              </div>
-            </>
+          {/*
+            پرسشِ «کدام‌یک؟» برداشته شد: فهرستش تقریباً همان فهرست نوع
+            بود و از مربی می‌خواست یک چیز را دو جور نام ببرد.
+          */}
+          {!canBeMinor && type !== null ? (
+            <p className={`${styles.escalated} t-body`}>
+              <span className={styles.escalatedIcon} aria-hidden><AlertIcon size={18} /></span>
+              <span>
+                {type === 'conflict'
+                  ? 'درگیری بین دو کودک هرگز جزئی ثبت نمی‌شود، حتی کلامی.'
+                  : 'این نوع رویداد جزئی ثبت نمی‌شود؛ دست‌کم به اطلاع والد می‌رسد.'}
+              </span>
+            </p>
           ) : null}
+
         </section>
       ) : null}
 
@@ -261,21 +304,13 @@ export function IncidentSheet({ children, onClose }: Props) {
             aria-label="اقدام انجام‌شده"
           />
 
-          <button
-            type="button"
-            className={`${styles.option} t-body-lg`}
-            aria-pressed={headOrFace}
-            onClick={() => setHeadOrFace((on) => !on)}
-          >
-            ناحیه سر یا صورت بود
-          </button>
+          {/*
+            «ناحیه سر یا صورت» برداشته شد.
 
-          {severity === 'minor' && headOrFace ? (
-            <p className={`${styles.escalated} t-body`}>
-              <span className={styles.escalatedIcon} aria-hidden><AlertIcon size={18} /></span>
-              <span>چون ناحیه سر یا صورت است، شدت خودکار بالا می‌رود و اول برای مدیر می‌رود.</span>
-            </p>
-          ) : null}
+            یک کلید دوحالته بود که مربی باید کنار توضیحِ خودش هم می‌زد —
+            یعنی همان حرف، دو بار. مربی در «چه دیدید؟» می‌نویسد کجای
+            بدن بوده، و مدیر همان را می‌خواند.
+          */}
 
           {error ? (
             <p className={`${styles.escalated} t-body`}>
@@ -318,6 +353,19 @@ export function IncidentSheet({ children, onClose }: Props) {
       )
     }
 
+    if (step === 'type' && type === 'other') {
+      return (
+        <button
+          type="button"
+          className={`${styles.primary} t-body-lg`}
+          onClick={() => setStep('severity')}
+          disabled={!description.trim()}
+        >
+          ادامه
+        </button>
+      )
+    }
+
     if (step === 'severity') {
       return (
         <>
@@ -325,7 +373,7 @@ export function IncidentSheet({ children, onClose }: Props) {
             type="button"
             className={`${styles.primary} t-body-lg`}
             onClick={() => setStep('detail')}
-            disabled={!severity || (severity === 'minor' && !minorCategory)}
+            disabled={!severity}
           >
             ادامه
           </button>

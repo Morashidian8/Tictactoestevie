@@ -786,6 +786,32 @@ const DIRECTORY: DirectoryEntry[] = [
   },
 ]
 
+/*
+ * چند خانواده دیگر، تا فهرست «گفتگوی تازه» واقعی به نظر برسد.
+ *
+ * تا اینجا فقط یک حساب سرپرست در دفترچه بود، پس مدیر که «گفتگوی تازه»
+ * می‌زد زیر عنوان «خانواده‌ها» یک نام می‌دید — و این چیزی درباره
+ * سامانه نمی‌گفت، فقط درباره نازکی داده نمونه.
+ *
+ * نام‌ها از همان GUARDIANS برداشته می‌شود که پرونده کودک نشان می‌دهد،
+ * نه نام تازه‌ای: مدیر باید در صندوق پیام همان اسمی را ببیند که در
+ * پرونده دیده. این‌ها حساب ورود ندارند (آداپتور ورود جدا است) و فقط
+ * طرفِ گفتگو می‌شوند.
+ */
+for (const childId of ['child-2', 'child-5', 'child-26']) {
+  const mother = GUARDIANS[childId]?.[0]
+  if (!mother) continue
+  const [first = mother.fullName, ...rest] = mother.fullName.split(' ')
+  DIRECTORY.push({
+    id: `acc-guardian-${childId}`,
+    firstName: first,
+    lastName: rest.join(' '),
+    role: 'guardian',
+    classIds: [],
+    childIds: [childId],
+  })
+}
+
 /**
  * میدان‌های پرونده مربی — آینه جدول `staff_field`.
  *
@@ -830,6 +856,18 @@ function mayMessage(fromId: string, toId: string): boolean {
   const to = entryOf(toId)
   if (!from || !to) return false
   if (from.role === 'manager' || to.role === 'manager') return true
+  /*
+   * همکار با همکار.
+   *
+   * تا اینجا دو مربی هیچ راهی برای نوشتن به هم نداشتند و باید از مدیر
+   * رد می‌شدند. در مهدی که یک کلاس را دو مربی شیفتی می‌گردانند، یعنی
+   * تحویل شیفت بیرون از سامانه رد می‌شود و هیچ ردی نمی‌ماند.
+   *
+   * سرپرست با سرپرست عمداً باز نمی‌شود: نام و زمینه خانواده‌های دیگر
+   * به خانواده نشان داده نمی‌شود، و فهرست انتخاب گیرنده دقیقاً همان
+   * چیزی است که این قاعده را نقض می‌کند. مهاجرت ۰۰۳۷ همین را می‌گوید.
+   */
+  if (from.role === 'teacher' && to.role === 'teacher') return true
 
   const [guardian, staff] =
     from.role === 'guardian' ? [from, to] : to.role === 'guardian' ? [to, from] : [null, null]
@@ -5000,8 +5038,13 @@ function moodPatch(
 
 /**
  * ارتقای خودکار شدت — بخش ۵.۶.
- * سه حالت: عکس ضمیمه، ناحیه سر یا صورت، و بیش از دو رویداد جزئی در ۷ روز
- * گذشته برای همان کودک. همان منطقی که تریگر دیتابیس هم اجرا می‌کند.
+ * دو حالت خودکار: عکس ضمیمه، و بیش از دو رویداد جزئی در ۷ روز گذشته برای
+ * همان کودک. همان منطقی که تریگر دیتابیس هم اجرا می‌کند.
+ *
+ * حالت سوم سند — «ناحیه سر یا صورت» — ورودی جدا ندارد. پرسیدنش از مربی یک
+ * مرحله اضافه بود که همان چیزی را می‌پرسید که مربی در توضیح می‌نویسد، پس
+ * حذف شد. مقدار head_or_face در نوعِ escalationReason می‌ماند چون رکوردهای
+ * قدیمی دیتابیس ممکن است آن را داشته باشند.
  */
 function escalate(
   input: IncidentInput,
@@ -5011,7 +5054,6 @@ function escalate(
     return { severity: input.severity, escalationReason: null }
   }
   if (input.hasPhoto) return { severity: 'notify_parent', escalationReason: 'photo_attached' }
-  if (input.headOrFace) return { severity: 'notify_parent', escalationReason: 'head_or_face' }
 
   const cutoff = input.occurredAt.getTime() - 7 * 86_400_000
   let recent = 0

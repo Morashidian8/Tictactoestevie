@@ -138,6 +138,23 @@ check(
 await page.click('button:has-text("مریم رضایی") >> nth=0')
 await page.waitForSelector('text=ثبت گروهی امروز')
 
+/*
+ * روز با فهرست خالی شروع می‌شود.
+ *
+ * داده نمونه هشت کودک را از پیش وارد نشان می‌داد تا صفحه پر دیده شود.
+ * ولی حضور چیزی است که مربی یکی‌یکی ثبت می‌کند؛ نمایشِ ورودی که کسی
+ * ثبت نکرده، همان دروغی است که سامانه حضور نباید بگوید.
+ */
+console.log('▸ هیچ کودکی از پیش وارد نشده')
+check(
+  (await page.locator('[class*="tally"]').first().innerText()).includes('۰ حاضر'),
+  'شمار حاضران روز، صفر شروع می‌شود',
+)
+check(
+  (await page.locator('nav button:has-text("ورود خروج")').count()) === 1,
+  'تب «امروز» حالا «ورود خروج» نام دارد — همان کاری که می‌کند',
+)
+
 console.log('▸ بخش ۵.۳: ضربه کوتاه، ورود با پیش‌فرض و بدون صفحه واسط')
 const tallyText = () => page.locator('[class*="tally"]').first().innerText()
 const before = await tallyText()
@@ -447,9 +464,16 @@ check(
   (await page.locator('text=/کودک بدون اطلاع نیامده‌اند/').count()) === 0,
   'بنر قرمز تکراری حذف شد',
 )
+/*
+  دارو پیش‌فرض ندارد.
+
+  داده نمونه یک شربت برای یک کودک می‌گذاشت و بنر «دارو هنوز داده نشده»
+  همیشه روشن بود — یعنی مربی از روز اول یاد می‌گرفت این بنر را نبیند.
+  دارو فقط وقتی می‌آید که خانواده‌ای ثبتش کرده باشد.
+*/
 check(
-  (await page.locator('text=/دارو هنوز داده نشده/').count()) === 1,
-  'بنر دارو سر جایش ماند',
+  (await page.locator('text=/دارو هنوز داده نشده/').count()) === 0,
+  'بی درخواست خانواده، بنر دارو اصلاً نمی‌آید',
 )
 await page.click('[class*="tallyAction"]:not(:disabled)')
 await page.waitForTimeout(300)
@@ -482,27 +506,73 @@ check(
   (await page.locator('text=/مستقیم به خانواده اطلاع داده می‌شود/').count()) === 1,
   'پیامد هر شدت همان‌جا نوشته شده',
 )
-await page.click(D + '[class*="severity"]:has-text("جزئی")')
-await page.waitForTimeout(200)
+/*
+  مرحله «کدام‌یک؟» حذف شد.
+
+  فهرست دسته‌های جزئی تقریباً همان فهرست نوع بود — «زمین خوردن بدون
+  آسیب» در برابر «زمین خوردن» — و از مربی می‌خواست یک چیز را دو جور
+  نام ببرد. حالا دسته از نوع مشتق می‌شود.
+*/
 check(
-  (await page.locator(D + 'button:has-text("خراش سطحی")').count()) === 1,
-  'دسته‌های رویداد جزئی بسته و از پیش تعریف‌شده‌اند',
+  (await page.locator('[role="dialog"] >> text=/کدام‌یک/').count()) === 0,
+  'پرسش تکراری «کدام‌یک؟» دیگر نیست',
 )
-await page.click(D + 'button:has-text("خراش سطحی")')
+await page.click(D + '[class*="severity"]:has-text("جزئی")')
 await page.click(D + '[class*="primary"]:has-text("ادامه")')
 await page.click(D + 'button:has-text("کلاس")')
+/*
+  کلید «ناحیه سر یا صورت» هم رفت: مربی همان را در «چه دیدید؟»
+  می‌نویسد، و دو بار پرسیدن یعنی یک بارش اضافه است.
+*/
+check(
+  (await page.locator(D + 'button:has-text("ناحیه سر یا صورت")').count()) === 0,
+  'کلید «ناحیه سر یا صورت» برداشته شد',
+)
 await page.fill('textarea[aria-label="توضیح رویداد"]', 'به لبه میز خورد.')
-await page.click(D + 'button:has-text("ناحیه سر یا صورت بود")')
+await page.click(D + '[class*="primary"]:has-text("ثبت رویداد")')
+await page.waitForSelector('[class*="doneTitle"]')
+check(
+  (await page.locator('[class*="doneTitle"]').innerText()) === 'به خانواده اطلاع داده شد',
+  'رویداد جزئی مستقیم به خانواده می‌رود',
+)
+await page.click(D + '[class*="primary"]:has-text("بستن")')
+await page.waitForTimeout(300)
+
+/*
+  «سایر» بن‌بست بود.
+
+  قید پایگاه داده می‌گوید رویداد جزئی باید دسته داشته باشد و فهرست
+  دسته‌ها بسته است؛ پس «سایر» + «جزئی» دکمه ادامه را برای همیشه خاموش
+  می‌کرد، بی آنکه بگوید چرا. حالا «جزئی» اصلاً پیشنهاد نمی‌شود و مربی
+  همان‌جا می‌نویسد چه شد.
+*/
+console.log('▸ «سایر»: جای نوشتن، نه بن‌بست')
+await page.click('button:has-text("ثبت رویداد")')
+await page.waitForSelector('[role="dialog"]')
+await page.click(D + '[class*="childCell"] >> nth=2')
+await page.click(D + 'button:has-text("سایر")')
 await page.waitForTimeout(250)
 check(
-  (await page.locator('text=/شدت خودکار بالا می‌رود/').count()) === 1,
-  'پیش از ثبت، ارتقای خودکار شدت هشدار داده می‌شود',
+  (await page.locator(D + 'textarea[aria-label="شرح رویداد"]').count()) === 1,
+  '«سایر» جای نوشتن دارد',
 )
+check(
+  await page.locator(D + '[class*="primary"]:has-text("ادامه")').isDisabled(),
+  'تا مربی ننویسد، ادامه خاموش است',
+)
+await page.fill(D + 'textarea[aria-label="شرح رویداد"]', 'انگشتش لای در ماند.')
+await page.click(D + '[class*="primary"]:has-text("ادامه")')
+await page.waitForTimeout(250)
+const sevOther = await page.locator(D + '[class*="severityName"]').allInnerTexts()
+check(!sevOther.includes('جزئی'), 'برای «سایر» گزینه جزئی پیشنهاد نمی‌شود')
+await page.click(D + '[class*="severity"]:has-text("نیازمند اطلاع والد")')
+await page.click(D + '[class*="primary"]:has-text("ادامه")')
+await page.click(D + 'button:has-text("کلاس")')
 await page.click(D + '[class*="primary"]:has-text("ثبت رویداد")')
 await page.waitForSelector('[class*="doneTitle"]')
 check(
   (await page.locator('[class*="doneTitle"]').innerText()) === 'برای مدیر فرستاده شد',
-  'رویداد ارتقایافته اول برای مدیر می‌رود، نه خانواده',
+  'رویداد جدی‌تر اول برای مدیر می‌رود، نه خانواده',
 )
 await page.click(D + '[class*="primary"]:has-text("بستن")')
 await page.waitForTimeout(300)
@@ -686,7 +756,7 @@ check(
 await page.click(D + 'button:has-text("انصراف")')
 await page.waitForTimeout(300)
 
-await page.click('[aria-label="بازگشت به امروز"]')
+await page.click('[aria-label="بازگشت به ورود خروج"]')
 await page.waitForSelector('text=ثبت گروهی امروز')
 check(true, 'پیکان سرصفحه به «امروز» برمی‌گردد')
 
@@ -755,7 +825,7 @@ await page.click('[aria-label="ثبت یکجا برای کودکان این با
 await page.fill('input[aria-label="ساعت شروع خواب"]', '13:00')
 await page.click('[class*="applyInline"]')
 await page.waitForSelector('text=/اعمال شد/')
-await page.click('[aria-label="بازگشت به امروز"]')
+await page.click('[aria-label="بازگشت به ورود خروج"]')
 await page.waitForSelector('text=ثبت گروهی امروز')
 
 console.log('▸ بخش ۵.۹: بستن روز')
@@ -803,7 +873,7 @@ check(
   'به مربی گفته می‌شود از این پس فقط اصلاحیه ثبت می‌شود',
 )
 
-await page.click('[aria-label="بازگشت به امروز"]')
+await page.click('[aria-label="بازگشت به ورود خروج"]')
 await page.waitForSelector('text=ثبت گروهی امروز')
 
 console.log('▸ بخش ۶.۳: صفحه «امروز» پنل والد')
@@ -813,7 +883,6 @@ await page.click('button:has-text("ثبت رویداد")')
 await page.click(D + '[class*="childCell"]:has-text("سارا")')
 await page.click(D + 'button:has-text("زمین خوردن")')
 await page.click(D + '[class*="severity"]:has-text("جزئی")')
-await page.click(D + 'button:has-text("خراش سطحی")')
 await page.click(D + '[class*="primary"]:has-text("ادامه")')
 await page.click(D + 'button:has-text("حیاط")')
 await page.fill('textarea[aria-label="توضیح رویداد"]', 'هنگام دویدن زمین خورد.')
@@ -906,13 +975,13 @@ check(
   'مربی دو درخواست برای کل کلاس نوشت',
 )
 
-await page.click('[aria-label="بازگشت به امروز"]')
+await page.click('[aria-label="بازگشت به ورود خروج"]')
 await page.waitForSelector('text=ثبت گروهی امروز')
 await page.click('button:has-text("بستن روز")')
 await page.waitForSelector('text=ارسال گزارش‌های امروز')
 await page.click('[class*="bar"] button:has-text("ارسال گزارش‌های امروز")')
 await page.waitForSelector('[class*="sentTitle"]')
-await page.click('[aria-label="بازگشت به امروز"]')
+await page.click('[aria-label="بازگشت به ورود خروج"]')
 await page.waitForSelector('text=ثبت گروهی امروز')
 
 await signOutAny()
@@ -1902,6 +1971,35 @@ console.log('▸ بخش ۶.۶: پیام خانواده تا صندوق مربی 
 await signOutAny()
 await signIn('09120000003', { fresh: false })
 await page.waitForSelector('[class*="cardDate"]', { timeout: 8000 })
+
+/*
+ * کاشی «پیام‌ها» در منوی خانواده، همان صندوق مشترک را باز می‌کند.
+ *
+ * تا اینجا دو صفحه پیام وجود داشت: مقصدِ نوار پایین که صندوق مشترک بود
+ * و انتخاب گیرنده داشت، و کاشیِ منو که به صفحه نسل پیشین می‌رفت — یک
+ * رشته، بی هیچ انتخاب گیرنده‌ای. خانواده می‌نوشت و نمی‌دانست به کدام
+ * مربی می‌رسد. حالا هر دو یک جا می‌روند.
+ */
+await page.locator('nav button:has-text("منو")').click()
+await page.waitForTimeout(500)
+await page.locator('[class*="tile"]:has-text("پیام‌ها")').first().click()
+await page.waitForTimeout(700)
+check(
+  (await page.locator('button:has-text("گفتگوی تازه")').count()) === 1,
+  'کاشی «پیام‌ها» در منوی خانواده هم صندوق مشترک را باز می‌کند',
+)
+await page.click('button:has-text("گفتگوی تازه")')
+await page.waitForSelector('text=مربیان')
+const parentPicker = await page.evaluate(() => document.body.innerText)
+check(/مدیر/.test(parentPicker), 'خانواده مدیر را هم می‌تواند انتخاب کند')
+check(/زهرا محمدی/.test(parentPicker), 'و مربیانِ کلاسِ کودک خودش را')
+check(
+  !/مادر سارا|بیات|جعفری|وحیدی/.test(parentPicker.split('مربیان')[1] ?? ''),
+  'ولی هیچ خانواده دیگری در فهرستش نیست',
+)
+await page.locator('[aria-label="بازگشت"]').first().click()
+await page.waitForTimeout(400)
+
 await page.locator('nav button[aria-label="پیام‌ها"]').click()
 await page.waitForSelector('text=گفتگوی تازه')
 /*
@@ -1978,10 +2076,19 @@ await page.waitForSelector('text=خانواده‌ها')
 const teacherPicker = await page.evaluate(() => document.body.innerText)
 check(/مادر سارا/.test(teacherPicker), 'مربی فهرست خانواده‌های کلاسش را برای گفتگو می‌بیند')
 check(/مدیر/.test(teacherPicker), 'و مدیر هم در فهرستش هست')
+/*
+ * همکار هم در فهرست است — مهاجرت ۰۰۳۷.
+ *
+ * تا اینجا دو مربی هیچ راهی برای نوشتن به هم نداشتند و باید از مدیر رد
+ * می‌شدند؛ در مهدی که یک کلاس را دو نفر شیفتی می‌گردانند، یعنی تحویل
+ * شیفت از کانالی بیرون از سامانه رد می‌شد و هیچ ردی نمی‌ماند.
+ */
+check(/مربیان/.test(teacherPicker), 'و همکارانش هم — مربی به مربی پیام می‌دهد')
+check(/نسرین کاظمی/.test(teacherPicker), 'مربی دیگری از همان مرکز در فهرست است')
 check(!/09\d{9}/.test(teacherPicker), 'باز هم بی هیچ شماره‌ای')
 await page.locator('[aria-label="بازگشت"]').first().click()
 await page.waitForTimeout(400)
-await page.click('nav button:has-text("امروز")')
+await page.click('nav button:has-text("ورود خروج")')
 await page.waitForTimeout(600)
 
 console.log('▸ پیام مدیر: جداگانه به هر مربی یا سرپرست')
@@ -2210,7 +2317,7 @@ await page.locator('[aria-label="بازگشت"]').first().click()
 await page.waitForTimeout(300)
 await page.locator('[aria-label="بازگشت"]').first().click()
 await page.waitForTimeout(400)
-await page.click('nav button:has-text("امروز")')
+await page.click('nav button:has-text("ورود خروج")')
 await page.waitForTimeout(400)
 
 console.log('▸ مشاهده مربی تا گزارش ماهانه خانواده')
@@ -2244,7 +2351,17 @@ await page.locator('nav button:has-text("منو")').click()
 await page.waitForSelector('button:has-text("مشاهده‌ها")')
 await page.click('button:has-text("مشاهده‌ها")')
 await page.waitForSelector('text=مشاهده و گزارش ماهانه')
-await page.locator('[class*="item"]').first().click()
+/*
+  کودک با نام انتخاب می‌شود، نه با جایگاه.
+
+  فهرست حالا کل کلاس است و الفبایی مرتب — یعنی «اولین ردیف» دیگر همان
+  کودکی نیست که این تست بعدتر از دید خانواده‌اش می‌خواند.
+*/
+check(
+  (await page.locator('[class*="item"]').count()) >= 20,
+  'فهرست مشاهده‌ها کل کلاس را می‌آورد، نه فقط کودکانِ همین بازه',
+)
+await page.locator('[class*="item"]:has-text("سارا احمدی")').first().click()
 await page.waitForSelector('text=مشاهده تازه')
 
 const obsPage = await page.evaluate(() => document.body.innerText)
@@ -2325,7 +2442,7 @@ check(true, 'گزارش با جمع‌بندی مربی فرستاده شد')
 
 await page.locator('[aria-label="بازگشت"]').first().click()
 await page.waitForTimeout(400)
-await page.click('nav button:has-text("امروز")')
+await page.click('nav button:has-text("ورود خروج")')
 await page.waitForTimeout(400)
 
 await signOutAny()

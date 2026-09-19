@@ -334,7 +334,6 @@ export type IncidentInput = {
   description: string
   actionTaken: string
   hasPhoto?: boolean
-  headOrFace?: boolean
   otherChildId?: string | null
 }
 

@@ -31,9 +31,17 @@ import styles from './MessagesPage.module.css'
  * ۴. **بیرون از ساعت کاری، نوشتن آزاد است و رسیدن صبر می‌کند.** فقط در
  *    گفتگوهایی که یک سرشان خانواده است. مدیر و مربی هر ساعتی می‌نویسند.
  */
-export function MessagesPage({ onCountChanged }: {
+export function MessagesPage({ onCountChanged, onBack }: {
   /** شمار نخوانده‌ها، برای نشان روی نوار پایین. */
   onCountChanged?: (unread: number) => void
+  /**
+   * کلید بازگشت در سرصفحه.
+   *
+   * وقتی صندوق مقصدِ نوار پایین است لازم نیست — نوار خودش راه برگشت
+   * است. وقتی از فهرست «منو» باز می‌شود لازم است، وگرنه صفحه بن‌بست
+   * می‌شود.
+   */
+  onBack?: () => void
 }) {
   const data = useData()
   const [list, setList] = useState<ConversationSummary[] | null>(null)
@@ -82,6 +90,11 @@ export function MessagesPage({ onCountChanged }: {
   return (
     <div className={styles.page}>
       <div className={styles.head}>
+        {onBack ? (
+          <button type="button" className={styles.back} onClick={onBack} aria-label="بازگشت">
+            <BackIcon size={22} />
+          </button>
+        ) : null}
         <span className={`${styles.title} t-h2`}>پیام‌ها</span>
         <button type="button" className={`${styles.newChat} t-body`} onClick={() => setPicking(true)}>
           گفتگوی تازه

@@ -168,7 +168,7 @@ export function BulkEntryPage({ classId, onBack }: Props) {
   return (
     <div className={styles.page}>
       <header className={styles.header}>
-        <button type="button" className={styles.back} onClick={onBack} aria-label="بازگشت به امروز">
+        <button type="button" className={styles.back} onClick={onBack} aria-label="بازگشت به ورود خروج">
           {/* آیکون جهت‌دار، پس قرینه می‌شود — بخش ۱۲.۶ */}
           <svg
             className="mirror"

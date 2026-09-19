@@ -91,7 +91,7 @@ export function TeacherApp() {
   }, [screen, refresh])
 
   const NAV: TabItem[] = [
-    { id: 'today', label: 'امروز', icon: <HomeIcon size={22} /> },
+    { id: 'today', label: 'ورود خروج', icon: <HomeIcon size={22} /> },
     { id: 'close', label: 'بستن روز', icon: <CheckIcon size={22} /> },
     { id: 'inbox', label: 'پیام‌ها', icon: <ChatIcon size={22} />, badge: waiting },
     { id: 'more', label: 'منو', icon: <MoreIcon size={22} /> },
@@ -102,7 +102,7 @@ export function TeacherApp() {
    * ثبت گروهی تمام‌صفحه است: کار متمرکز، بی نوار ناوبری.
    *
    * «بستن روز» برعکس، مقصد نوار شد — مربی پایان شیفت بارها بینش و
-   * «امروز» می‌رود و نباید هر بار از فلش برگشت استفاده کند.
+   * «ورود خروج» می‌رود و نباید هر بار از فلش برگشت استفاده کند.
    */
   if (screen === 'bulk') {
     return <BulkEntryPage classId={classId} onBack={() => setScreen('today')} />
@@ -190,10 +190,15 @@ export function TeacherApp() {
       ) : screen === 'play' ? (
         <FreePlayPage classId={classId} onBack={() => setScreen('more')} />
       ) : screen === 'observations' && openChild ? (
+        /*
+          برگشت به فهرست کودکان، نه به منو.
+          مربی مشاهده‌ها را پشت سر هم می‌نویسد؛ اگر هر بار به منو
+          برگردد، برای کودک بعدی باید دو ضربه اضافه بزند.
+        */
         <ObservationsPage
           childId={openChild.id}
           childName={openChild.name}
-          onBack={() => setScreen('more')}
+          onBack={() => setScreen('pickChild')}
         />
       ) : screen === 'account' ? (
         <TeacherProfilePage />

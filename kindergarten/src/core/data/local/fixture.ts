@@ -200,27 +200,20 @@ export function seedPickupCodes(date: string): void {
   )
 }
 
-/** وضعیت شروع روز: چند کودک آمده‌اند، چند نفر غیبتشان اعلام شده. */
+/**
+ * وضعیت شروع روز: **هیچ کودکی وارد نشده**.
+ *
+ * نسخه اول هشت کودک را از پیش وارد نشان می‌داد تا صفحه پر دیده شود.
+ * ولی حضور، چیزی است که مربی یکی‌یکی ثبت می‌کند؛ نمایشِ ورودی که کسی
+ * ثبت نکرده، همان دروغی است که سامانه حضور نباید بگوید. روز با فهرست
+ * خالی شروع می‌شود و هر ورود، ثبت خودش را می‌خواهد.
+ *
+ * غیبت‌های اعلام‌شده (seedAbsences) می‌مانند، چون آن‌ها را خانواده
+ * اعلام کرده است، نه سامانه.
+ */
 export function seedAttendance(date: string): Attendance[] {
-  const arrived: [string, string][] = [
-    ['child-1', '08:05'], ['child-2', '08:12'], ['child-4', '08:20'],
-    ['child-6', '08:31'], ['child-7', '07:58'], ['child-9', '08:15'],
-    ['child-10', '08:22'], ['child-12', '08:03'],
-  ]
-  return arrived.map(([childId, time]) => ({
-    childId,
-    date,
-    checkInAt: `${date}T${time}:00`,
-    checkOutAt: null,
-    droppedByGuardianId: `${childId}-g1`,
-    arrivalCondition: 'normal' as const,
-    arrivalPhotoUrl: null,
-    pickedUpById: null,
-    pickupMethod: null,
-    checkedInByName: 'زهرا محمدی',
-    checkedOutByName: null,
-    lateMinutes: 0,
-  }))
+  void date
+  return []
 }
 
 export function seedAbsences(date: string): AbsenceNotice[] {
@@ -231,18 +224,17 @@ export function seedAbsences(date: string): AbsenceNotice[] {
   ]
 }
 
+/**
+ * دارو، **از پیش هیچ**.
+ *
+ * دارو فقط وقتی در برنامه روز می‌آید که سرپرست ثبتش کرده باشد
+ * (requestMedication ← receiveMedication). یک شربت پیش‌فرض یعنی مربی
+ * یادآوریِ دارویی را می‌بیند که هیچ خانواده‌ای نخواسته — و همان ابتدای
+ * کار به یادآوری‌های دارو بی‌اعتماد می‌شود.
+ */
 export function seedMedications(date: string): MedicationLog[] {
-  return [
-    {
-      id: 'med-1',
-      childId: 'child-2',
-      date,
-      name: 'شربت سرماخوردگی',
-      dose: 'یک قاشق',
-      scheduledTime: '12:00',
-      givenAt: null,
-    },
-  ]
+  void date
+  return []
 }
 
 

@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
 import {
-  AlertIcon,
   CalendarIcon,
   ChatIcon,
   CheckIcon,
@@ -18,7 +17,6 @@ import {
 import {
   formatClock,
   formatJalali,
-  formatTime,
   toIsoDate,
   toLatinDigits,
   toPersianDigits,
@@ -26,7 +24,6 @@ import {
 import { useData } from '../../core/auth/index.ts'
 import type {
   MedicationRequest,
-  MessageThread,
   Notice,
 } from '../../core/data/index.ts'
 import { ChildProfilePage } from './ChildProfilePage.tsx'
@@ -34,6 +31,7 @@ import { FinancePage } from './FinancePage.tsx'
 import { MonthlyReportPage } from './MonthlyReportPage.tsx'
 import { ProgramPage } from './ProgramPage.tsx'
 import { MealsPage } from './MealsPage.tsx'
+import { MessagesPage } from '../shared/MessagesPage.tsx'
 import styles from './MorePage.module.css'
 
 /**
@@ -99,7 +97,15 @@ export function MorePage({ childId, childName, onBack, initialTab = 'menu' }: {
       )
     }
     if (tab === 'notices') return <NoticesTab onBack={back} />
-    return <MessagesTab childId={childId} onBack={back} />
+    /*
+      صندوق مشترکِ هر سه نقش، نه رشته کودک‌محورِ نسل پیشین.
+
+      تا اینجا این کاشی به صفحه‌ای می‌رفت که فقط یک رشته داشت و هیچ
+      انتخاب گیرنده‌ای: خانواده می‌نوشت و نمی‌دانست به کدام مربی
+      می‌رسد. حالا همان صندوقی باز می‌شود که نوار پایین هم باز می‌کند،
+      با «گفتگوی تازه» و فهرست مدیر و مربیانِ کلاسِ کودک.
+    */
+    return <MessagesPage onBack={back} />
   }
 
   /*
@@ -151,8 +157,8 @@ export function MorePage({ childId, childName, onBack, initialTab = 'menu' }: {
         },
         {
           id: 'messages',
-          label: 'پیام به مربی',
-          hint: 'در ساعت کاری مهد',
+          label: 'پیام‌ها',
+          hint: 'گفتگو با مدیر و مربیان',
           icon: <ChatIcon size={20} />,
           tone: 'bubble',
         },
@@ -545,101 +551,6 @@ function NoticesTab({ onBack }: { onBack: () => void }) {
             ) : null}
           </article>
         ))
-      )}
-    </Shell>
-  )
-}
-
-/* ── پیام با ساعت کاری — بخش ۶.۶ ────────────────────────────── */
-
-function MessagesTab({ childId, onBack }: { childId: string; onBack: () => void }) {
-  const data = useData()
-  const [thread, setThread] = useState<MessageThread | null>(null)
-  const [draft, setDraft] = useState('')
-  const [error, setError] = useState<string | null>(null)
-
-  const load = useCallback(async () => {
-    try {
-      setThread(await data.getThread(childId))
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'خوانده نشد.')
-    }
-  }, [data, childId])
-
-  useEffect(() => {
-    void load()
-  }, [load])
-
-  const send = async () => {
-    try {
-      await data.sendMessage(childId, draft)
-      setDraft('')
-      setError(null)
-      await load()
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'فرستاده نشد.')
-    }
-  }
-
-  return (
-    <Shell title="پیام به مربی" onBack={onBack}>
-      {thread ? (
-        <>
-          <p className={`${styles.hint} t-caption`}>
-            ساعت کاری پیام: {toPersianDigits(thread.hours.start)} تا {toPersianDigits(thread.hours.end)}.
-            بیرون از این ساعت پیام فرستاده می‌شود ولی صبح تحویل می‌شود.
-          </p>
-
-          {thread.messages.length === 0 ? (
-            <EmptyState text="هنوز پیامی رد و بدل نشده." />
-          ) : (
-            <div className={styles.thread}>
-              {thread.messages.map((message) => (
-                <div
-                  key={message.id}
-                  className={`${styles.bubble} ${message.mine ? styles.bubbleMine : ''}`}
-                >
-                  <p className={`${styles.bubbleBody} t-body`}>{message.body}</p>
-                  <span className={`${styles.bubbleMeta} t-caption`}>
-                    {message.sentAt ? (
-                      formatTime(new Date(message.sentAt))
-                    ) : (
-                      <>
-                        <AlertIcon size={14} />
-                        در صف تا {message.queuedUntil
-                          ? formatTime(new Date(message.queuedUntil))
-                          : 'صبح'}
-                      </>
-                    )}
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {error ? <p className={`${styles.error} t-body`}>{error}</p> : null}
-
-          <div className={styles.composer}>
-            <textarea
-              className={styles.text}
-              rows={2}
-              value={draft}
-              aria-label="متن پیام"
-              placeholder="پیامتان را بنویسید"
-              onChange={(event) => setDraft(event.target.value)}
-            />
-            <button
-              type="button"
-              className={`${styles.primary} t-body`}
-              disabled={draft.trim().length === 0}
-              onClick={() => void send()}
-            >
-              فرستادن
-            </button>
-          </div>
-        </>
-      ) : (
-        <EmptyState text="در حال خواندن…" />
       )}
     </Shell>
   )

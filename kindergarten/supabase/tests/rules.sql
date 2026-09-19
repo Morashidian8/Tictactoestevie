@@ -1912,6 +1912,7 @@ declare
   acc_teacher uuid;
   acc_manager uuid := '66666666-6666-6666-6666-666666666666';
   acc_other   uuid;
+  acc_parent2 uuid;
 begin
   -- زهرا مربی کلاس گل‌هاست؛ کودک سارا هم در همان کلاس.
   insert into staff_class (staff_id, class_id) values (zahra, golha)
@@ -1962,7 +1963,34 @@ begin
   perform assert(not app.may_message(acc_other, acc_parent),
     'مربی کلاس دیگر، به این سرپرست پیام نمی‌دهد');
 
-  -- ۴. هیچ‌کس به خودش.
+  -- ۴. همکار با همکار — اصلاح ۰۰۳۷.
+  --
+  -- دو مربی، حتی از دو کلاس مختلف، همکارند. پیش از این باید از مدیر
+  -- رد می‌شدند؛ در مهدی که یک کلاس را دو نفر شیفتی می‌گردانند یعنی
+  -- تحویل شیفت بیرون از سامانه رد می‌شد.
+  perform assert(app.may_message(acc_teacher, acc_other),
+    'دو مربی همان مرکز به هم پیام می‌دهند');
+  perform assert(app.may_message(acc_other, acc_teacher),
+    'و از سمت دیگر هم');
+
+  -- ۵. ولی سرپرست به سرپرست، هرگز.
+  --
+  -- فهرست انتخاب گیرنده یعنی دیدن نام و زمینه خانواده‌های دیگر. همان
+  -- قاعده‌ای که نام کودک دوم را از گزارش رویداد بیرون می‌گذارد، این
+  -- در را هم بسته نگه می‌دارد.
+  insert into guardian (id, center_id, full_name, relation)
+  values ('a8888888-8888-8888-8888-888888888888', centre, 'پدر ایلیا', 'پدر')
+  on conflict (id) do nothing;
+  insert into user_account (id, center_id, phone, role, guardian_id)
+  values ('88888888-8888-8888-8888-888888888888', centre, '09120000099', 'guardian',
+          'a8888888-8888-8888-8888-888888888888')
+  on conflict (id) do nothing;
+  acc_parent2 := '88888888-8888-8888-8888-888888888888';
+
+  perform assert(not app.may_message(acc_parent, acc_parent2),
+    'سرپرست به سرپرست دیگر پیام نمی‌دهد');
+
+  -- ۶. هیچ‌کس به خودش.
   perform assert(not app.may_message(acc_parent, acc_parent),
     'کسی به خودش گفتگو باز نمی‌کند');
 end $$;

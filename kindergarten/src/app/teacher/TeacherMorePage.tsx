@@ -27,7 +27,7 @@ export function TeacherMorePage({ onGo }: { onGo: (id: string) => void }) {
     {
       title: 'کارِ امروز',
       items: [
-        { id: 'today', label: 'امروز', hint: 'ورود و خروج کودکان', icon: <HomeIcon size={20} />, tone: 'mint' },
+        { id: 'today', label: 'ورود خروج', hint: 'ثبت ورود و خروج کودکان', icon: <HomeIcon size={20} />, tone: 'mint' },
         { id: 'bulk', label: 'ثبت گروهی', hint: 'ناهار، خواب، حال روز', icon: <SpoonIcon size={20} />, tone: 'mango' },
         { id: 'close', label: 'بستن روز', hint: 'بررسی و ارسال گزارش‌ها', icon: <CheckIcon size={20} />, tone: 'sky' },
         { id: 'inbox', label: 'پیام‌ها', hint: 'گفتگو با خانواده و مدیر', icon: <ChatIcon size={20} />, tone: 'bubble' },

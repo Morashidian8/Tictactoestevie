@@ -1151,7 +1151,6 @@ export function createSupabaseDataAccess(scope: AccessScope): AuditedDataAccess 
             minor_category: input.minorCategory ?? null,
             description: input.description,
             action_taken: input.actionTaken,
-            escalation_reason: input.headOrFace ? 'head_or_face' : null,
             other_child_id: input.otherChildId ?? null,
           })
           .select()
