@@ -1231,6 +1231,36 @@ export type MenuInput = {
   note?: string | null
 }
 
+/**
+ * تولد یک کودک، در بازهٔ پیشِ رو.
+ *
+ * ── چرا رویداد تقویم نیست ───────────────────────────────────────
+ *
+ * تولد هر سال تکرار می‌شود. اگر به‌صورت `calendar_event` ذخیره شود،
+ * یا باید هر سال دستی ساخته شود — که یعنی یک سال فراموش می‌شود — یا
+ * باید سالانه تکثیر شود، که یعنی دو جا تاریخ تولد داریم و روزی از هم
+ * جدا می‌افتند. پس از `child.birth_date` **مشتق** می‌شود و هیچ‌جا
+ * ذخیره نمی‌شود.
+ *
+ * ── چیزی که عمداً اینجا نیست ────────────────────────────────────
+ *
+ * هیچ مقایسه‌ای: نه «بزرگ‌ترین کودک کلاس»، نه رتبهٔ سنی. `turning` یک
+ * واقعیت دربارهٔ همان کودک است، نه جایگاهش میان بقیه (بند ۱۰.۱).
+ */
+export type Birthday = {
+  childId: string
+  firstName: string
+  lastName: string
+  photoUrl: string | null
+  className: string | null
+  /** روزِ تولد در همین دور، به ISO. سالش امسال یا سال بعد است. */
+  date: string
+  /** چند ساله می‌شود. */
+  turning: number
+  /** چند روز مانده. صفر یعنی امروز، یک یعنی فردا. */
+  inDays: number
+}
+
 export type CalendarKind = 'holiday' | 'trip' | 'ceremony' | 'meeting' | 'photo_day' | 'other'
 
 export type CalendarEvent = {
@@ -2067,6 +2097,15 @@ export interface DataAccess {
   setMenuDay(input: MenuInput): Promise<void>
 
   listCalendar(from: string, to: string): Promise<CalendarEvent[]>
+
+  /**
+   * تولدهای پیشِ رو، تا `withinDays` روز آینده.
+   *
+   * دامنه‌اش همان دامنهٔ حساب است: مربی کودکان کلاس‌های خودش را
+   * می‌بیند و مدیر کل مرکز را. مثل هر خواندن دیگری، فیلتر در لایهٔ
+   * داده است نه در صفحه (بخش ۱۱.۱۰).
+   */
+  listBirthdays(withinDays: number): Promise<Birthday[]>
 
   addCalendarEvent(input: CalendarEventInput): Promise<void>
 

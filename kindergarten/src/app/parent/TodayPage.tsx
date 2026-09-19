@@ -198,10 +198,11 @@ export function ParentTodayPage() {
       هر روز؛ اطلاعیه برعکس، خوانده می‌شود و تمام. پس مالی مقصد شد و
       اطلاعیه به فهرست «بیشتر» برگشت.
     */
+    { id: 'messages', label: 'پیام‌ها', shape: 'bubble', tone: 'bubble' },
     { id: 'finance', label: 'مالی', shape: 'wallet', tone: 'mango' },
-    { id: 'more', label: 'منو', shape: 'grid', tone: 'neutral' },
   ]
-  const CENTER: TabItem = { id: 'messages', label: 'پیام‌ها', shape: 'bubble', tone: 'mango' }
+  /* «منو» وسط. ترتیب از راست: خانه، فردا، منو، پیام‌ها، مالی. */
+  const CENTER: TabItem = { id: 'more', label: 'منو', shape: 'grid', tone: 'mango' }
 
   /*
    * هر مقصدی جز خانه، همان صفحه «بیشتر» است با تب از پیش انتخاب‌شده.

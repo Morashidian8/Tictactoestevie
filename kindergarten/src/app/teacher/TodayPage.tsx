@@ -38,6 +38,7 @@ import {
 import { ArrivalSheet, type ArrivalResult } from './ArrivalSheet.tsx'
 import { CheckOutSheet } from './CheckOutSheet.tsx'
 import { IncidentSheet } from './IncidentSheet.tsx'
+import { BirthdayCard } from '../shared/BirthdayCard.tsx'
 import fab from './IncidentSheet.module.css'
 import styles from './TodayPage.module.css'
 
@@ -753,6 +754,15 @@ export function TodayPage({
         </button>
       ) : null}
 
+      {/*
+        تولدهای پیشِ رو — **بیرون** از شاخهٔ شبکه.
+
+        اول داخلش گذاشته شد و بیرون از ساعتِ بازه ناپدید می‌شد: همان
+        ساعتی که مربی می‌نشیند و برای فردا برنامه می‌چیند. تولد به
+        بازهٔ حضور ربطی ندارد.
+      */}
+      <BirthdayCard />
+
       <div className={styles.grid}>
         {day && day.children.length === 0 ? (
           <EmptyState
@@ -767,6 +777,7 @@ export function TodayPage({
             {counts.present === 0 && counts.unaccounted === 0 && items.length > 0 ? (
               <EmptyState text="هنوز کسی وارد نشده. با ضربه روی عکس هر کودک، ورودش را ثبت کنید." />
             ) : null}
+
             <ChildGrid items={items} onSelect={openChild} onHold={openArrivalSheet} />
 
             {/*

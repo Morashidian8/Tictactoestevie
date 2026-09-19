@@ -10,10 +10,12 @@
  * وصل شدن یک نمونه واقعی، «کامپایل می‌شود» تنها چیزی است که ثابت شده.
  */
 import { quotaReport, type QuotaLine, type SmsBucket } from '../../notify/index.ts'
+import { upcomingBirthdays } from '../birthdays.ts'
 import type {
   ThreadSummary,
   AccessScope,
   Attendance,
+  Birthday,
   BulkValues,
   Child,
 
@@ -1671,6 +1673,33 @@ export function createSupabaseDataAccess(scope: AccessScope): AuditedDataAccess 
         note: (r.note as string | null) ?? null,
         visibleToFamily: Boolean(r.visible_to_family),
       }))
+    },
+
+    /*
+     * تولدهای پیشِ رو.
+     *
+     * سطرها از `child` می‌آیند و سیاست سطر-محور خودش کلاس‌های حسابِ
+     * فعال را می‌بندد — همان قیدی که آداپتور محلی با visibleClassIds
+     * تقلیدش می‌کند. حساب سرپرست اینجا خالی برمی‌گرداند، چون فهرست
+     * تولد یعنی فهرست نام و تاریخ تولدِ کودکانِ خانواده‌های دیگر.
+     *
+     * حسابِ «چه روزی و چند سالش می‌شود» در `birthdays.ts` است، مشترک
+     * با آداپتور محلی: دو حساب جدا یعنی روزی یکی «فردا» می‌گوید و
+     * دیگری «امروز».
+     */
+    async listBirthdays(withinDays: number): Promise<Birthday[]> {
+      if (scope.role === 'guardian') return []
+      const rows = orThrow(
+        await db
+          .from('child')
+          .select('*')
+          .eq('center_id', scope.centerId)
+          .is('left_at', null)
+          .not('birth_date', 'is', null),
+      ) as Row[]
+      const classes = await this.listClasses()
+      const nameOf = (id: string) => classes.find((c) => c.id === id)?.name ?? null
+      return upcomingBirthdays((rows ?? []).map(asChild), withinDays, nameOf)
     },
 
     async addCalendarEvent(input) {

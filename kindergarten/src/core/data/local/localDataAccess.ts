@@ -79,6 +79,7 @@ import type {
   ReportPatch,
 } from '../types.ts'
 import { isInCurrentWeek } from '../../../i18n/week.ts'
+import { upcomingBirthdays } from '../birthdays.ts'
 import {
   AUTHORIZED,
   CENTER_ID,
@@ -3545,6 +3546,23 @@ export function createLocalDataAccess(scope: AccessScope): DataAccess {
          */
         .filter((e) => e.visibleToFamily || scope.role !== 'guardian')
         .sort((a, b) => a.date.localeCompare(b.date))
+    },
+
+    /*
+     * تولدهای پیشِ رو — مشتق از تاریخ تولد، نه رویداد ذخیره‌شده.
+     *
+     * دامنه همان دامنهٔ حساب است: مربی کلاس‌های خودش، مدیر کل مرکز.
+     * سرپرست اینجا کاری ندارد — تولدِ کودکان دیگر به خانواده مربوط
+     * نیست و فهرست تولد یعنی فهرست نام و تاریخ تولدِ بیست خانواده.
+     */
+    async listBirthdays(withinDays) {
+      if (scope.role === 'guardian') return []
+      const allowed = new Set(visibleClassIds())
+      return upcomingBirthdays(
+        CHILDREN.filter((c) => c.classId !== null && allowed.has(c.classId)),
+        withinDays,
+        (classId) => CLASSES.find((c) => c.id === classId)?.name ?? null,
+      )
     },
 
     async addCalendarEvent(input) {

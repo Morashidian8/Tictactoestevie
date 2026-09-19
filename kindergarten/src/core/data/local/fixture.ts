@@ -103,13 +103,40 @@ const faceOf = (id: string): string | null => {
  * سه تا شش پخش باشد تا هم متن «۳ سال و ۱۱ ماه» و هم «۶ سال» دیده شوند.
  * پخش‌کردن از روی شاخص است، نه تصادفی، تا نسخه نمایشی هر بار یکی باشد.
  */
+/*
+ * تاریخ تولد هر کودک.
+ *
+ * سن بین سه تا شش سال پخش می‌شود، و روزِ تولد عمداً روی تمام سال
+ * پخش **نمی‌شود**: چهار کودک اول تولدشان در همین هفته پیشِ رو می‌افتد
+ * (یکی فردا، یکی امروز) وگرنه در نسخهٔ نمایشی «تولدهای پیش رو» همیشه
+ * خالی دیده می‌شود و کسی نمی‌فهمد این قابلیت هست.
+ *
+ * ماه و روز از امروز حساب می‌شود، نه ثابت: داده‌ای که به تاریخِ نوشته
+ * شدنش گره بخورد، شش ماه بعد دوباره خالی است.
+ */
+const SOON = [1, 0, 3, 6] as const
+
 const birthOf = (index: number): string => {
   const months = 36 + ((index * 7) % 36)
   const born = new Date()
   born.setMonth(born.getMonth() - months)
-  born.setDate(1 + ((index * 3) % 27))
-  return born.toISOString().slice(0, 10)
+  const soon = SOON[index]
+  if (soon !== undefined) {
+    // همان سال تولد، ولی ماه و روزش را به روزهای پیشِ رو می‌بریم.
+    const target = new Date()
+    target.setDate(target.getDate() + soon)
+    born.setMonth(target.getMonth(), target.getDate())
+  } else {
+    born.setDate(1 + ((index * 3) % 27))
+  }
+  return toIsoDay(born)
 }
+
+/** روزِ محلی. `toISOString` شب‌ها یک روز عقب می‌افتد. */
+const toIsoDay = (date: Date): string =>
+  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(
+    date.getDate(),
+  ).padStart(2, '0')}`
 
 export const CHILDREN: Child[] = names.map(([first, last], index) => ({
   id: `child-${index + 1}`,

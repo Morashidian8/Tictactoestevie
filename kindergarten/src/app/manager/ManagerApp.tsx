@@ -75,11 +75,12 @@ export function ManagerApp() {
       .catch(() => setUnread(0))
   }, [data])
 
+  /* «منو» وسط، مثل دو پنل دیگر. ترتیب از راست: خانه، مالی، منو، پیام‌ها، کودکان. */
   const NAV: TabItem[] = [
     { id: 'dashboard', label: 'خانه', shape: 'home', tone: 'mint' },
     { id: 'finance', label: 'مالی', shape: 'wallet', tone: 'mango', badge: counts.claims },
+    { id: 'messages', label: 'پیام‌ها', shape: 'bubble', tone: 'bubble', badge: unread },
     { id: 'children', label: 'کودکان', shape: 'people', tone: 'grape' },
-    { id: 'more', label: 'منو', shape: 'grid', tone: 'neutral', badge: counts.gaps },
   ]
   /*
    * پیام‌ها کنش مرکزی هر سه پنل است.
@@ -88,11 +89,11 @@ export function ManagerApp() {
    * گفتگو کاری که هر روز. جای کنش مرکزی، مالِ کارِ روزانه است.
    */
   const CENTER: TabItem = {
-    id: 'messages',
-    label: 'پیام‌ها',
-    shape: 'bubble',
+    id: 'more',
+    label: 'منو',
+    shape: 'grid',
     tone: 'mango',
-    badge: unread,
+    badge: counts.gaps,
   }
 
   /*

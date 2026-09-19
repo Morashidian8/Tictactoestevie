@@ -10,6 +10,7 @@ import {
   toPersianDigits,
 } from '../../i18n/index.ts'
 import { useData } from '../../core/auth/index.ts'
+import { BirthdayCard } from '../shared/BirthdayCard.tsx'
 import type {
   AuditReadiness,
   Child,
@@ -416,6 +417,14 @@ export function DashboardPage({ onGo, onCounts, onOpenStaff }: {
                 <span className={`${styles.complianceGo} t-caption`}>بررسی</span>
               </button>
             ) : null}
+
+            {/*
+              تولدهای پیشِ رو، بالای پراکندگی سنی.
+
+              هر دو دربارهٔ سن‌اند، ولی این یکی کاری است که همین هفته
+              باید انجام شود و آن یکی یک آمار. کارِ نزدیک‌تر، بالاتر.
+            */}
+            <BirthdayCard />
 
             {ageBands.length > 0 ? (
               <section className={styles.card} aria-label="پراکندگی سنی">

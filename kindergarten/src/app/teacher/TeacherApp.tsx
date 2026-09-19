@@ -93,13 +93,23 @@ export function TeacherApp() {
    * تا اینجا همان آیکونِ خانه را داشت، یعنی همان چیزی که در دو پنل دیگر
    * مقصدِ دیگری است. کارِ این صفحه ثبت ورود و خروج است.
    */
+  /*
+   * «منو» وسط نشست.
+   *
+   * خواسته مالک محصول. معامله‌اش صریح است: جای وسط تا اینجا کنشِ اصلی
+   * بود («ثبت گروهی») و حالا یک مقصد است. در عوض فهرستِ کاملِ کارها —
+   * که همه‌چیز از آن باز می‌شود — با شست راست در دسترس است، و «ثبت
+   * گروهی» هنوز در نوار هست، فقط یک خانه آن‌طرف‌تر.
+   *
+   * ترتیب از راست: ورود خروج، ثبت گروهی، منو، پیام‌ها، بستن روز.
+   */
   const NAV: TabItem[] = [
     { id: 'today', label: 'ورود خروج', shape: 'door', tone: 'mint' },
-    { id: 'close', label: 'بستن روز', shape: 'clipboard', tone: 'sky' },
+    { id: 'bulk', label: 'ثبت گروهی', shape: 'pen', tone: 'mango' },
     { id: 'inbox', label: 'پیام‌ها', shape: 'bubble', tone: 'bubble', badge: waiting },
-    { id: 'more', label: 'منو', shape: 'grid', tone: 'neutral' },
+    { id: 'close', label: 'بستن روز', shape: 'clipboard', tone: 'sky' },
   ]
-  const CENTER: TabItem = { id: 'bulk', label: 'ثبت گروهی امروز', shape: 'pen', tone: 'mango' }
+  const CENTER: TabItem = { id: 'more', label: 'منو', shape: 'grid', tone: 'mango' }
 
   /*
    * ثبت گروهی تمام‌صفحه است: کار متمرکز، بی نوار ناوبری.

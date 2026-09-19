@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { BackIcon, ChatIcon, EmptyState } from '../../design-system/index.ts'
+import { BackIcon, ChatIcon, EmojiField, EmptyState } from '../../design-system/index.ts'
 import { formatJalali, formatTime, toPersianDigits } from '../../i18n/index.ts'
 import { ROLE_LABEL, useData } from '../../core/auth/index.ts'
 import type {
@@ -335,13 +335,12 @@ function ChatView({ conversationId, onBack }: {
       {error ? <p className={`${styles.error} t-body`}>{error}</p> : null}
 
       <div className={styles.composer}>
-        <textarea
-          className={styles.input}
+        <EmojiField
           value={draft}
-          rows={2}
-          aria-label="متن پیام"
+          onChange={setDraft}
+          label="متن پیام"
           placeholder="پیامتان را بنویسید…"
-          onChange={(event) => setDraft(event.target.value)}
+          disabled={busy}
         />
         <button
           type="button"

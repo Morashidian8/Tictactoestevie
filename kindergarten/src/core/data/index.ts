@@ -74,3 +74,9 @@ export {
   periodsFor,
   weekdayOf,
 } from './periods.ts'
+
+/*
+ * حسابِ تولد. رابط هم لازمش دارد: کارتِ تولد باید بداند کدام ردیف
+ * «فردا» است، و آن قاعده باید یک‌جا باشد نه در هر صفحه‌ای دوباره.
+ */
+export { birthdaysTomorrow, upcomingBirthdays } from './birthdays.ts'
