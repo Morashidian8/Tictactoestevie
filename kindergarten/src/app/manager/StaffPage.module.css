@@ -383,3 +383,44 @@
   background: var(--surface);
   padding-block-start: var(--space-2);
 }
+
+/* نشانِ سمت کنار نام، در فهرست کارکنان. */
+.badge {
+  margin-inline-start: var(--space-2);
+  padding: 2px var(--space-2);
+  border-radius: var(--r-chip);
+  background: var(--grape-tint);
+  color: var(--ink-muted-on-tint);
+}
+
+/* ── سمت، در کارت مشخصات ────────────────────────────────────── */
+
+.titleCell {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.titleEdit {
+  min-block-size: var(--touch-manager);
+  padding-inline: var(--space-3);
+  border: 1px solid var(--border-input);
+  border-radius: var(--r-chip);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+}
+
+/*
+ * کنشِ بازگشت‌ناپذیر.
+ *
+ * زمینه تینتِ آجری است و متن --ink، نه سفید روی آجری: آجریِ پر در
+ * صفحه‌ای که «رنگ رویداد است» جیغ می‌زند، و متن سفید رویش هم کف
+ * کنتراست را رد نمی‌کند. مرز، رنگِ اصلی را حمل می‌کند.
+ */
+.danger {
+  background: var(--brick-tint);
+  border: 1px solid var(--brick);
+  color: var(--ink);
+}

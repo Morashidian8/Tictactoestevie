@@ -118,11 +118,29 @@
  * که روی محتوای صفحه بیفتد — همان قاعده‌ای که دکمه شناور «ثبت رویداد»
  * در پنل مربی از آن پیروی می‌کند.
  */
+/*
+ * قابِ خانهٔ مرکزی: دکمهٔ برجسته، و برچسبش هم‌تراز برچسبِ بقیه.
+ */
+.centerWrap {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding-block: var(--space-1) 2px;
+}
+
+.centerLabel {
+  color: var(--nav-fg);
+  font-weight: var(--weight-bold);
+  white-space: nowrap;
+}
+
 .center {
   flex: none;
   inline-size: 56px;
   block-size: 56px;
-  margin-block-start: -22px;
+  margin-block-start: -26px;
   position: relative;
   display: grid;
   place-items: center;

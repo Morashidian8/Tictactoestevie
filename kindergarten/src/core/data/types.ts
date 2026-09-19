@@ -699,6 +699,8 @@ export type StaffCartableRow = {
   staffId: string
   fullName: string
   role: string
+  /** سمت در مهد — همان که روی چارت نوشته می‌شود. */
+  title: StaffTitle
   photoUrl: string | null
   /** روزی که دست‌کم یک ثبت کرده. جایگزین حضور و غیاب پرسنل نیست. */
   daysActive: number
@@ -726,10 +728,39 @@ export type StaffField = {
   value: string
 }
 
+/**
+ * سمتِ کارمند — آنچه روی چارت مهد نوشته می‌شود.
+ *
+ * **جدا از دسترسی.** `role` تعیین می‌کند چه می‌بیند و چه می‌تواند؛
+ * `title` می‌گوید در مهد چه‌کاره است. سرمربی و کمک‌مربی هر دو دسترسیِ
+ * `teacher` دارند و همین درست است — اگر سمت وارد enum دسترسی می‌شد،
+ * باید برای هر سیاست سطر-محور تصمیم می‌گرفتیم سوپروایزر چه می‌بیند، و
+ * آن تصمیمی است که کسی نگرفته. مهاجرت ۰۰۳۸ همین را می‌گوید.
+ */
+export type StaffTitle =
+  | 'head'
+  | 'supervisor'
+  | 'lead_teacher'
+  | 'teacher'
+  | 'assistant'
+  | 'other'
+
+export const STAFF_TITLE_LABEL: Record<StaffTitle, string> = {
+  head: 'سرپرست',
+  supervisor: 'سوپروایزر',
+  lead_teacher: 'سرمربی',
+  teacher: 'مربی',
+  assistant: 'کمک‌مربی',
+  other: 'سایر',
+}
+
 export type NewStaff = {
   firstName: string
   lastName: string
+  /** دسترسی. تعیین می‌کند چه می‌بیند. */
   role: 'teacher' | 'assistant' | 'manager'
+  /** سمت. تعیین می‌کند چه‌کاره است. */
+  title: StaffTitle
   phone?: string | null
 }
 
@@ -741,6 +772,8 @@ export type StaffProfile = {
   firstName: string
   lastName: string
   role: string
+  /** سمت در مهد. جدا از دسترسی — مهاجرت ۰۰۳۸. */
+  title: StaffTitle
   phone: string | null
   /** تاریخ تولد میلادیِ ISO. سن از آن حساب می‌شود، ذخیره نمی‌شود. */
   birthDate: string | null
@@ -2274,6 +2307,18 @@ export interface DataAccess {
 
   /** افزودن مربی تازه. شناسه‌اش برمی‌گردد تا پرونده‌اش باز شود. */
   addStaff(input: NewStaff): Promise<string>
+
+  /** تغییر سمت. دسترسی از این راه عوض نمی‌شود. */
+  setStaffTitle(staffId: string, title: StaffTitle): Promise<void>
+
+  /**
+   * ثبت خروج کارمند از مهد.
+   *
+   * حذف نیست و نباید باشد: ردیفِ کارمند به ثبت ورودِ کودکان و گزارش
+   * روز گره خورده و حذفش یعنی گزارشِ پارسال می‌گوید «ثبت‌کننده: —».
+   * دسترسی‌اش همان لحظه قطع می‌شود — بخش ۷.۴.
+   */
+  removeStaff(staffId: string): Promise<void>
 
   /* ── مرخصی مربی ───────────────────────────────────────────── */
 

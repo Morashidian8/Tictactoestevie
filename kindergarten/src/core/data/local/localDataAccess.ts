@@ -56,6 +56,7 @@ import type {
   MealPlate,
   PendingMealPayment,
   StaffField,
+  StaffTitle,
   StaffNote,
   StaffRatio,
   StaffProfile,
@@ -702,6 +703,14 @@ type DirectoryEntry = {
   firstName: string
   lastName: string
   role: 'manager' | 'teacher' | 'guardian'
+  /**
+   * سمت در مهد — جدا از دسترسی.
+   *
+   * سرمربی و کمک‌مربی هر دو `role: 'teacher'` دارند. مهاجرت ۰۰۳۸.
+   */
+  title?: StaffTitle
+  /** روزی که از مهد رفته. پر که باشد، دیگر در فهرست کارکنان نیست. */
+  leftAt?: string | null
   classIds: string[]
   /** برای سرپرست: کودکانش. برای کارکنان خالی. */
   childIds: string[]
@@ -985,6 +994,7 @@ function staffFileOf(accountId: string): StaffProfile {
     firstName: entry?.firstName ?? '',
     lastName: entry?.lastName ?? '',
     role: entry?.role === 'manager' ? 'مدیر' : 'مربی',
+    title: entry?.title ?? (entry?.role === 'manager' ? 'head' : 'teacher'),
     /*
      * شماره تماس اینجا **هست**.
      *
@@ -4228,13 +4238,15 @@ export function createLocalDataAccess(scope: AccessScope): DataAccess {
     async getStaffCartable(from, to) {
       assertManager()
       const now = new Date()
-      return DIRECTORY.filter((d) => d.role === 'teacher').map((d) => {
+      /* کارمندی که رفته، در کارتابل نمی‌ماند — ولی پرونده‌اش پاک نمی‌شود. */
+      return DIRECTORY.filter((d) => d.role === 'teacher' && !d.leftAt).map((d) => {
         const gaps = documentGaps(d.id, now)
         const notes = STAFF_NOTES.filter((n) => n.staffId === d.id)
         return {
           staffId: d.id,
           fullName: fullNameOf(d) ?? '—',
           role: 'مربی',
+          title: d.title ?? 'teacher',
           photoUrl: null,
           // «روز فعال» یعنی روزی که این مربی دست‌کم یک ثبت کرده.
           daysActive: countActiveDays(d.id, from, to),
@@ -4784,12 +4796,42 @@ export function createLocalDataAccess(scope: AccessScope): DataAccess {
         firstName,
         lastName: input.lastName.trim(),
         role: input.role === 'manager' ? 'manager' : 'teacher',
+        title: input.title,
+        leftAt: null,
         classIds: [],
         childIds: [],
         phone: input.phone?.trim() || null,
       })
       save()
       return id
+    },
+
+    async setStaffTitle(staffId, title) {
+      assertManager()
+      const entry = entryOf(staffId)
+      if (!entry || entry.role === 'guardian') throw new Error('این کارمند پیدا نشد.')
+      entry.title = title
+      save()
+    },
+
+    /*
+     * خروج، نه حذف.
+     *
+     * ردیفِ کارمند به ثبت ورودِ کودکان و گزارش روز گره خورده؛ حذف
+     * واقعی یعنی گزارشِ پارسال می‌گوید «ثبت‌کننده: —». پس روز خروج ثبت
+     * می‌شود، کلاس‌هایش برداشته می‌شود و دسترسی‌اش همان لحظه می‌رود —
+     * بخش ۷.۴، «قطع فوری با یک اقدام». آینه app.remove_staff.
+     */
+    async removeStaff(staffId) {
+      assertManager()
+      const entry = entryOf(staffId)
+      if (!entry || entry.role === 'guardian') throw new Error('این کارمند پیدا نشد.')
+      if (staffId === scope.accountId) {
+        throw new Error('نمی‌توانید خروج خودتان را ثبت کنید.')
+      }
+      entry.leftAt = toIsoDate(new Date())
+      entry.classIds = []
+      save()
     },
 
     async decideProfileChange(requestId, approve, reason) {

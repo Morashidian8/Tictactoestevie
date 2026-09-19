@@ -3117,3 +3117,85 @@ begin
 end $$;
 
 select login_as('aa000000-0000-0000-0000-0000000000f2', '09120000077');
+
+\echo ''
+\echo '── سمت کارکنان و خروج از مهد — مهاجرت ۰۰۳۸ ──'
+do $$
+declare
+  centre  uuid := '11111111-1111-1111-1111-111111111111';
+  golha   uuid := 'c1111111-1111-1111-1111-111111111111';
+  made    uuid;
+  acc     uuid;
+begin
+  perform login_as('aa000000-0000-0000-0000-0000000000f2', '09120000077');
+
+  -- ۱. افزودن با سمت.
+  made := app.add_staff('نگار', 'احمدی', 'teacher', null, 'supervisor');
+  perform assert(
+    (select title from staff where id = made) = 'supervisor',
+    'مربی تازه با سمتِ خواسته‌شده ثبت می‌شود'
+  );
+
+  -- ۲. سمت بی آنکه گفته شود، از دسترسی حدس زده می‌شود — فقط همان یک بار.
+  perform assert(
+    (select title from staff where id = app.add_staff('سمانه', 'رادی', 'assistant'))
+      = 'assistant',
+    'سمتِ نگفته، از دسترسی حدس زده می‌شود'
+  );
+
+  -- ۳. تغییر سمت، بی دست زدن به دسترسی.
+  perform app.set_staff_title(made, 'lead_teacher');
+  perform assert(
+    (select title from staff where id = made) = 'lead_teacher'
+      and (select role from staff where id = made) = 'teacher',
+    'تغییر سمت، دسترسی را دست نمی‌زند'
+  );
+
+  -- ۴. خروج: روز خروج، غیرفعال شدن، و برداشته شدن کلاس‌ها.
+  insert into staff_class (staff_id, class_id) values (made, golha)
+  on conflict do nothing;
+  perform app.remove_staff(made);
+  perform assert(
+    (select left_at is not null and active = false from staff where id = made),
+    'خروج ثبت می‌شود و کارمند غیرفعال'
+  );
+  perform assert(
+    not exists (select 1 from staff_class where staff_id = made),
+    'و از فهرست کلاس‌ها بیرون می‌رود'
+  );
+
+  -- ۵. ردیف پاک نمی‌شود: گزارش پارسال باید ثبت‌کننده‌اش را بشناسد.
+  perform assert(
+    exists (select 1 from staff where id = made),
+    'ولی پرونده‌اش پاک نمی‌شود'
+  );
+
+  -- ۶. حساب کاربری‌اش همان لحظه غیرفعال می‌شود — بخش ۷.۴.
+  insert into staff (id, center_id, first_name, last_name, role)
+  values ('5a999999-9999-9999-9999-999999999999', centre, 'پویا', 'ن.', 'teacher')
+  on conflict (id) do nothing;
+  insert into user_account (id, center_id, phone, role, staff_id)
+  values ('9a999999-9999-9999-9999-999999999999', centre, '09120000111', 'teacher',
+          '5a999999-9999-9999-9999-999999999999')
+  on conflict (id) do nothing;
+  acc := '9a999999-9999-9999-9999-999999999999';
+  perform app.remove_staff('5a999999-9999-9999-9999-999999999999');
+  perform assert(
+    (select not active from user_account where id = acc),
+    'دسترسی همان لحظه قطع می‌شود، نه وقتی کسی یادش بیفتد'
+  );
+end $$;
+
+do $$
+declare
+  ok boolean := false;
+begin
+  -- مدیر نمی‌تواند خودش را بیرون بگذارد: مرکزی بی مدیر می‌ماند.
+  perform login_as('aa000000-0000-0000-0000-0000000000f2', '09120000077');
+  begin
+    perform app.remove_staff((select staff_id from user_account
+                              where id = '66666666-6666-6666-6666-666666666666'));
+  exception when others then ok := true;
+  end;
+  perform assert(ok, 'مدیر خروج خودش را ثبت نمی‌کند');
+end $$;

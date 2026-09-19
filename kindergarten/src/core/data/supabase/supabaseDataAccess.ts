@@ -16,6 +16,7 @@ import type {
   AccessScope,
   Attendance,
   Birthday,
+  StaffTitle,
   BulkValues,
   Child,
 
@@ -468,6 +469,7 @@ export function createSupabaseDataAccess(scope: AccessScope): AuditedDataAccess 
       firstName: row.first_name as string,
       lastName: row.last_name as string,
       role: row.role as string,
+      title: ((row.title as StaffTitle | null) ?? 'teacher'),
       /*
        * شماره تماس اینجا **هست**.
        *
@@ -3357,6 +3359,7 @@ export function createSupabaseDataAccess(scope: AccessScope): AuditedDataAccess 
         staffId: r.staff_id as string,
         fullName: r.full_name as string,
         role: r.role as string,
+        title: ((r.title as StaffTitle | null) ?? 'teacher'),
         photoUrl: (r.photo_url as string | null) ?? null,
         daysActive: (r.days_active as number) ?? 0,
         checkIns: (r.check_ins as number) ?? 0,
@@ -3933,9 +3936,23 @@ export function createSupabaseDataAccess(scope: AccessScope): AuditedDataAccess 
           last_name: input.lastName.trim(),
           staff_role: input.role,
           phone: input.phone?.trim() || null,
+          staff_title: input.title,
         }),
       )
       return made as unknown as string
+    },
+
+    async setStaffTitle(staffId: string, title: StaffTitle) {
+      orThrow(await db.rpc('set_staff_title', { target: staffId, staff_title: title }))
+    },
+
+    /*
+     * خروج، نه حذف. قاعده‌اش در app.remove_staff است: روز خروج ثبت
+     * می‌شود، کلاس‌ها برداشته می‌شوند و حساب کاربری همان لحظه غیرفعال —
+     * بخش ۷.۴، «قطع فوری با یک اقدام».
+     */
+    async removeStaff(staffId: string) {
+      orThrow(await db.rpc('remove_staff', { target: staffId }))
     },
 
     async decideProfileChange(requestId: string, approve: boolean, reason?: string) {

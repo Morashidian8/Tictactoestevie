@@ -4,8 +4,8 @@ import styles from './TabBar.module.css'
 /**
  * نوار ناوبری پایین با کنش مرکزی.
  *
- * دکمه وسط، کنش اصلی است و از بقیه بزرگ‌تر و رنگی‌تر: در پنل والد و
- * مدیر «پیام‌ها»، و در پنل مربی «ثبت گروهی».
+ * خانهٔ وسط از بقیه بزرگ‌تر و رنگی‌تر است. در هر سه پنل «منو» است —
+ * فهرستِ کامل کارها، جایی که با شست راست در دسترس باشد.
  *
  * چرا پنج‌تا و نه بیشتر: در عرض ۳۲۰ پیکسل، شش خانه یعنی هدف لمسی زیر
  * ۴۸ پیکسل — کف پنل والد در بخش ۱۲.۷.
@@ -18,8 +18,8 @@ import styles from './TabBar.module.css'
  * فقط با رنگ گفته نمی‌شود (بخش ۱۲.۲).
  *
  * **خانه فعال هم‌تراز بقیه.** نسخه‌ای که خانه فعال را بالا می‌برد، دو
- * چیز را از خطِ نوار بیرون می‌زد — کنشِ مرکزی و خانه فعال — و نوار کج
- * دیده می‌شد. حالا فقط کنشِ مرکزی بالا می‌آید، چون کنش است نه مقصد.
+ * چیز را از خطِ نوار بیرون می‌زد — خانهٔ مرکزی و خانه فعال — و نوار کج
+ * دیده می‌شد. حالا فقط خانهٔ مرکزی بالا می‌آید.
  */
 
 /** رنگِ خانه. فهرست بسته است و از توکن‌های `--nav-*` می‌آید. */
@@ -36,14 +36,14 @@ export type TabItem = {
 
 type Props = {
   items: TabItem[]
-  /** خانه‌ای که وسط می‌نشیند و کنش اصلی است. */
+  /** خانه‌ای که وسط می‌نشیند، برجسته و با برچسب. */
   center: TabItem
   active: string
   onSelect: (id: string) => void
 }
 
 export function TabBar({ items, center, active, onSelect }: Props) {
-  // نیمه اول راست، نیمه دوم چپ. کنش مرکزی بینشان.
+  // نیمه اول راست، نیمه دوم چپ. خانهٔ مرکزی بینشان.
   const half = Math.ceil(items.length / 2)
 
   return (
@@ -52,20 +52,32 @@ export function TabBar({ items, center, active, onSelect }: Props) {
         <Tab key={item.id} item={item} active={active === item.id} onSelect={onSelect} />
       ))}
 
-      <button
-        type="button"
-        className={styles.center}
-        onClick={() => onSelect(center.id)}
-        aria-label={center.label}
-        aria-current={active === center.id ? 'page' : undefined}
-      >
-        {/*
-          گلیفِ کنشِ مرکزی روی گرادیانِ انبه‌ای --ink است، نه سفید:
-          سفید روی #F5B733 نسبت ۲٫۱ می‌دهد و در هیچ اندازه‌ای مجاز نیست.
-        */}
-        <NavIcon shape={center.shape} size={26} fill="var(--ink)" cut="var(--nav-mango)" />
-        {center.badge ? <span className={styles.centerDot} aria-hidden /> : null}
-      </button>
+      {/*
+        خانهٔ مرکزی برچسبِ دیده‌شدنی دارد، مثل بقیه.
+
+        تا وقتی وسط یک **کنش** بود (قلمِ ثبت گروهی)، آیکونِ تنها کافی
+        بود: کنشِ اصلیِ صفحه را آدم از شکل و رنگش می‌شناسد. حالا که
+        مقصد است، بی‌برچسب یعنی تنها خانه‌ای که باید حدسش زد.
+      */}
+      <span className={styles.centerWrap}>
+        <button
+          type="button"
+          className={styles.center}
+          onClick={() => onSelect(center.id)}
+          aria-label={center.label}
+          aria-current={active === center.id ? 'page' : undefined}
+        >
+          {/*
+            گلیفِ خانهٔ مرکزی روی گرادیانِ انبه‌ای --ink است، نه سفید:
+            سفید روی #F5B733 نسبت ۲٫۱ می‌دهد و در هیچ اندازه‌ای مجاز نیست.
+          */}
+          <NavIcon shape={center.shape} size={26} fill="var(--ink)" cut="var(--nav-mango)" />
+          {center.badge ? <span className={styles.centerDot} aria-hidden /> : null}
+        </button>
+        <span className={`${styles.centerLabel} t-caption`} aria-hidden>
+          {center.label}
+        </span>
+      </span>
 
       {items.slice(half).map((item) => (
         <Tab key={item.id} item={item} active={active === item.id} onSelect={onSelect} />

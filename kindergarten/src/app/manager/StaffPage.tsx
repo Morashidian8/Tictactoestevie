@@ -8,8 +8,10 @@ import {
 } from '../../design-system/index.ts'
 import { formatAge, formatCount, formatJalali, toIsoDate, toPersianDigits } from '../../i18n/index.ts'
 import { useData } from '../../core/auth/index.ts'
+import { STAFF_TITLE_LABEL } from '../../core/data/index.ts'
 import type {
   NewStaff,
+  StaffTitle,
   StaffCartableRow,
   StaffDocumentKind,
   StaffField,
@@ -132,9 +134,19 @@ export function StaffPage({ openStaffId, onBack }: {
               <li key={row.staffId}>
                 <button type="button" className={styles.item} onClick={() => setOpenId(row.staffId)}>
                   <span className={styles.main}>
-                    <span className={`${styles.name} t-body`}>{row.fullName}</span>
+                    <span className={`${styles.name} t-body`}>
+                      {row.fullName}
+                      {/* سمت کنار نام: مدیری که چارت می‌چیند، همین را می‌خواند. */}
+                      <span className={`${styles.badge} t-caption`}>
+                        {STAFF_TITLE_LABEL[row.title]}
+                      </span>
+                    </span>
                     <span className={`${styles.stats} t-caption`}>
-                      {formatCount(row.daysActive)} روز فعال ·{' '}
+                      {/*
+                        ویرگول فارسی، نه «·»: نقطه‌چین میان دو رقم فارسی
+                        «۰» خوانده می‌شود.
+                      */}
+                      {formatCount(row.daysActive)} روز فعال،{' '}
                       {formatCount(row.checkIns)} ورود ثبت‌شده
                     </span>
                     {row.lastReview ? (
@@ -213,11 +225,23 @@ export function StaffPage({ openStaffId, onBack }: {
 
 /* ── شیت افزودن مربی ────────────────────────────────────────── */
 
+/*
+ * دو فهرست، چون دو چیز متفاوت‌اند.
+ *
+ * **دسترسی** تعیین می‌کند چه می‌بیند و چه می‌تواند؛ سه مقدار دارد و
+ * تمام سیاست‌های سطر-محور روی همان بنا شده. **سمت** آنچه روی چارت مهد
+ * نوشته می‌شود و بازرس می‌پرسد. سرمربی و کمک‌مربی هر دو دسترسیِ «مربی»
+ * دارند — مهاجرت ۰۰۳۸.
+ */
 const STAFF_ROLES: { value: NewStaff['role']; label: string }[] = [
   { value: 'teacher', label: 'مربی' },
   { value: 'assistant', label: 'کمک‌مربی' },
   { value: 'manager', label: 'مدیر' },
 ]
+
+const STAFF_TITLES: { value: StaffTitle; label: string }[] = (
+  Object.keys(STAFF_TITLE_LABEL) as StaffTitle[]
+).map((value) => ({ value, label: STAFF_TITLE_LABEL[value] }))
 
 function NewStaffSheet({ onClose, onDone }: {
   onClose: () => void
@@ -227,6 +251,7 @@ function NewStaffSheet({ onClose, onDone }: {
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
   const [role, setRole] = useState<NewStaff['role']>('teacher')
+  const [title, setTitle] = useState<StaffTitle>('teacher')
   const [phone, setPhone] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -235,7 +260,7 @@ function NewStaffSheet({ onClose, onDone }: {
     setBusy(true)
     setError(null)
     try {
-      await onDone(await data.addStaff({ firstName, lastName, role, phone }))
+      await onDone(await data.addStaff({ firstName, lastName, role, title, phone }))
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'ثبت نشد.')
       setBusy(false)
@@ -268,7 +293,8 @@ function NewStaffSheet({ onClose, onDone }: {
           />
         </label>
 
-        <ChoiceGroup label="نقش" options={STAFF_ROLES} value={role} onChange={setRole} />
+        <ChoiceGroup label="دسترسی" options={STAFF_ROLES} value={role} onChange={setRole} />
+        <ChoiceGroup label="سمت" options={STAFF_TITLES} value={title} onChange={setTitle} />
 
         <label className={`${styles.field} t-caption`}>
           شماره تماس
@@ -326,6 +352,9 @@ function StaffFile({ staffId, onBack }: { staffId: string; onBack: () => void })
     }
   }, [data, staffId])
 
+  const [titleOpen, setTitleOpen] = useState(false)
+  const [exitOpen, setExitOpen] = useState(false)
+
   useEffect(() => {
     void load()
   }, [load])
@@ -375,7 +404,27 @@ function StaffFile({ staffId, onBack }: { staffId: string; onBack: () => void })
         <section className={styles.card}>
           <span className={`${styles.cardLabel} t-caption`}>مشخصات</span>
           <Fact label="نام و نام خانوادگی" value={file.fullName} />
-          <Fact label="نقش" value={file.role} />
+          <Fact label="دسترسی" value={file.role} />
+          {/*
+            سمت جدا از دسترسی است و از همین‌جا عوض می‌شود.
+
+            دسترسی از این فرم عوض **نمی‌شود**: نقشِ حساب کاربری باید با
+            نقشِ پرسنل یکی بماند (تریگر ۰۰۰۲) و تغییرش یعنی تصمیم درباره
+            دسترسی — همان چیزی که بخش ۷.۴ جدا نگهش می‌دارد.
+          */}
+          <p className={`${styles.row} t-body`}>
+            <span>سمت</span>
+            <span className={styles.titleCell}>
+              <b>{STAFF_TITLE_LABEL[file.title]}</b>
+              <button
+                type="button"
+                className={`${styles.titleEdit} t-caption`}
+                onClick={() => setTitleOpen(true)}
+              >
+                تغییر
+              </button>
+            </span>
+          </p>
           <Fact label="کلاس‌ها" value={file.classNames.join('، ')} />
           {/*
             سن از تاریخ تولد حساب می‌شود، ذخیره نمی‌شود: سنِ ذخیره‌شده
@@ -487,7 +536,51 @@ function StaffFile({ staffId, onBack }: { staffId: string; onBack: () => void })
             پرسنل نیست: مربی‌ای که تمام روز بوده و چیزی ثبت نکرده، اینجا صفر می‌خورد.
           </p>
         </section>
+
+        {/*
+          خروج از مهد — آخرین کارت، و عمداً آخر.
+
+          کنشی است که بازگشت ندارد و نباید کنار «بارگذاری مدرک» بنشیند.
+          متنش هم می‌گوید چه اتفاقی می‌افتد و چه اتفاقی **نمی‌افتد**:
+          پرونده می‌ماند، دسترسی می‌رود.
+        */}
+        <section className={styles.card}>
+          <span className={`${styles.cardLabel} t-caption`}>خروج از مهد</span>
+          <p className={`${styles.muted} t-caption`}>
+            پرونده و گزارش‌های گذشته‌اش سر جایشان می‌مانند — بازرس همان‌ها را می‌خواهد.
+            آنچه می‌رود، دسترسی به اپ و جای او در فهرست کلاس‌هاست.
+          </p>
+          <button
+            type="button"
+            className={`${styles.action} ${styles.danger}`}
+            onClick={() => setExitOpen(true)}
+          >
+            ثبت خروج از مهد
+          </button>
+        </section>
       </div>
+
+      {titleOpen ? (
+        <TitleSheet
+          staffId={staffId}
+          current={file.title}
+          onClose={() => setTitleOpen(false)}
+          onDone={async (label) => {
+            setTitleOpen(false)
+            setNote(`سمت به «${label}» تغییر کرد.`)
+            await load()
+          }}
+        />
+      ) : null}
+
+      {exitOpen ? (
+        <ExitSheet
+          staffId={staffId}
+          fullName={file.fullName}
+          onClose={() => setExitOpen(false)}
+          onDone={onBack}
+        />
+      ) : null}
 
       {adding === 'doc' ? (
         <DocumentSheet
@@ -532,6 +625,115 @@ function StaffFile({ staffId, onBack }: { staffId: string; onBack: () => void })
           }}
         />
       ) : null}
+    </div>
+  )
+}
+
+/* ── شیت تغییر سمت ──────────────────────────────────────────── */
+
+function TitleSheet({ staffId, current, onClose, onDone }: {
+  staffId: string
+  current: StaffTitle
+  onClose: () => void
+  onDone: (label: string) => Promise<void>
+}) {
+  const data = useData()
+  const [title, setTitle] = useState<StaffTitle>(current)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const submit = async () => {
+    setBusy(true)
+    setError(null)
+    try {
+      await data.setStaffTitle(staffId, title)
+      await onDone(STAFF_TITLE_LABEL[title])
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'ثبت نشد.')
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className={styles.sheetBackdrop} role="dialog" aria-label="تغییر سمت">
+      <div className={styles.sheet}>
+        <p className={`${styles.sheetTitle} t-h2`}>سمت در مهد</p>
+        <ChoiceGroup label="سمت" options={STAFF_TITLES} value={title} onChange={setTitle} />
+        <p className={`${styles.muted} t-caption`}>
+          سمت، دسترسی را عوض نمی‌کند. دسترسی تصمیم جداگانه‌ای است.
+        </p>
+        {error ? <p className={`${styles.error} t-body`}>{error}</p> : null}
+        <div className={styles.sheetActions}>
+          <button type="button" className={styles.secondary} onClick={onClose}>
+            انصراف
+          </button>
+          <button
+            type="button"
+            className={`${styles.action} ${styles.primary}`}
+            disabled={busy}
+            onClick={() => void submit()}
+          >
+            ثبت سمت
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/* ── شیت ثبت خروج ───────────────────────────────────────────── */
+
+/**
+ * خروج کارمند از مهد.
+ *
+ * نام را تأیید می‌گیرد، نه یک «مطمئنید؟» خالی: در فهرستی که چند مریمِ
+ * هم‌نام دارد، «بله» زدن روی پرونده اشتباه یک ضربه فاصله است.
+ */
+function ExitSheet({ staffId, fullName, onClose, onDone }: {
+  staffId: string
+  fullName: string
+  onClose: () => void
+  onDone: () => void
+}) {
+  const data = useData()
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const submit = async () => {
+    setBusy(true)
+    setError(null)
+    try {
+      await data.removeStaff(staffId)
+      onDone()
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'ثبت نشد.')
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className={styles.sheetBackdrop} role="dialog" aria-label="ثبت خروج از مهد">
+      <div className={styles.sheet}>
+        <p className={`${styles.sheetTitle} t-h2`}>خروج {fullName} از مهد</p>
+        <p className={`${styles.muted} t-body`}>
+          از امروز دسترسی‌اش به اپ قطع می‌شود و از فهرست کلاس‌ها بیرون می‌رود.
+          پرونده، مدارک و گزارش‌های گذشته‌اش پاک نمی‌شوند.
+        </p>
+        {error ? <p className={`${styles.error} t-body`}>{error}</p> : null}
+        <div className={styles.sheetActions}>
+          <button type="button" className={styles.secondary} onClick={onClose}>
+            انصراف
+          </button>
+          <button
+            type="button"
+            className={`${styles.action} ${styles.danger}`}
+            disabled={busy}
+            onClick={() => void submit()}
+          >
+            ثبت خروج
+          </button>
+        </div>
+      </div>
     </div>
   )
 }
