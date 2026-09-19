@@ -2,17 +2,12 @@ import type { ReactNode } from 'react'
 import { useState } from 'react'
 import { AccountIcon } from './icons.tsx'
 import { Mascot, type MascotKind } from './Mascot.tsx'
-import { SkyScene, SkyWave } from './SkyScene.tsx'
+import type { ShellTone } from './tone.ts'
+import { Meadow, PaperMarks, SkyScene, SkyWave } from './SkyScene.tsx'
 import { TabBar, type TabItem } from './TabBar.tsx'
 import styles from './AppShell.module.css'
 
-/**
- * لحن هر نقش — رنگِ آسمان و شکلِ شخصیت.
- *
- * تنها چیزی که بین سه پنل عوض می‌شود. ساختار یکی می‌ماند، چون مربی و
- * مدیر گاهی یک نفرند و نباید دوبار یاد بگیرند کجا را بزنند.
- */
-export type ShellTone = 'teacher' | 'parent' | 'manager'
+export type { ShellTone } from './tone.ts'
 
 const MASCOT: Record<ShellTone, MascotKind> = {
   teacher: 'sun',
@@ -80,7 +75,17 @@ export function AppShell({
   const [menuOpen, setMenuOpen] = useState(false)
 
   return (
-    <div className={styles.shell}>
+    <div className={`${styles.shell} ${styles[`wash${cap(tone)}`]}`}>
+      {/*
+        بوم، پیش از محتوا.
+
+        هر دو `z-index: -1` دارند و `.shell` با `isolation: isolate` آن را
+        به همین لایه محدود می‌کند — پس شیت پایین‌رونده با z-index ۴۰ و
+        نوار با ۱۰ همچنان بالای این‌ها و نسبت به هم درست می‌مانند.
+      */}
+      <PaperMarks />
+      <Meadow />
+
       <div className={styles.body}>
         {/*
           آسمانِ سرصفحه.
@@ -91,7 +96,7 @@ export function AppShell({
         */}
         {greeting ? (
           <div className={`${styles.sky} ${styles[tone]}`}>
-            <SkyScene />
+            <SkyScene tone={tone} />
 
             <header className={styles.header}>
               <span className={styles.brand} aria-hidden>
@@ -142,4 +147,9 @@ export function AppShell({
       <TabBar items={nav} center={center} active={active} onSelect={onSelect} />
     </div>
   )
+}
+
+/** `teacher` → `Teacher`، برای ساختن نام کلاسِ ماژول CSS. */
+function cap(tone: ShellTone): 'Teacher' | 'Parent' | 'Manager' {
+  return (tone[0]!.toUpperCase() + tone.slice(1)) as 'Teacher' | 'Parent' | 'Manager'
 }

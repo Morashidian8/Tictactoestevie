@@ -146,7 +146,7 @@ export function MealsPage({ childId }: { childId: string }) {
                     <p className={`${styles.price} t-caption tabular`}>
                       {formatRial(meal.price ?? 0)}
                       {meal.capacity !== null
-                        ? ` · ${formatCount(Math.max(meal.capacity - meal.taken, 0))} جا مانده`
+                        ? `، ${formatCount(Math.max(meal.capacity - meal.taken, 0))} جا مانده`
                         : ''}
                     </p>
 

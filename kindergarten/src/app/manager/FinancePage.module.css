@@ -1,5 +1,5 @@
 /* لحن دفتر کل — بخش ۱۲.۱: متراکم، جدولی، رنگ فقط برای وضعیت. */
-.page { min-block-size: 100dvh; display: flex; flex-direction: column; background: var(--paper); }
+.page { min-block-size: 100dvh; display: flex; flex-direction: column; }
 
 .header {
   position: sticky; inset-block-start: 0; z-index: 2;

@@ -290,7 +290,7 @@ export function FinancePage({ onBack }: { onBack: () => void }) {
                     <p className={`${styles.muted} t-caption`}>
                       {item.published
                         ? item.optional
-                          ? `${formatCount(item.childCount)} خانواده · ${formatCount(item.acceptedCount)} پذیرفته · ${formatCount(item.declinedCount)} نپذیرفته`
+                          ? `${formatCount(item.childCount)} خانواده، ${formatCount(item.acceptedCount)} پذیرفته، ${formatCount(item.declinedCount)} نپذیرفته`
                           : `روی ${formatCount(item.issuedCount)} صورتحساب از ${formatCount(item.childCount)}`
                         : `${formatCount(item.childCount)} خانواده — هنوز فرستاده نشده`}
                     </p>

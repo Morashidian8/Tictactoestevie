@@ -3,7 +3,6 @@
   min-block-size: 0;
   display: flex;
   flex-direction: column;
-  background: var(--paper);
 }
 
 .header {

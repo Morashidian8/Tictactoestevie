@@ -5,12 +5,9 @@ import {
   CheckIcon,
   ChevronIcon,
   ChildFace,
-  CalendarIcon,
-  ChatIcon,
-  HomeIcon,
   ImageIcon,
-  WalletIcon,
-  MoreIcon,
+  Meadow,
+  PaperMarks,
   ShieldCheckIcon,
   TabBar,
   type TabItem,
@@ -26,6 +23,7 @@ import type {
 } from '../../core/data/index.ts'
 import { DayTimeline, type DayStep } from './DayTimeline.tsx'
 import { MessagesPage } from '../shared/MessagesPage.tsx'
+import { DemoRoleSwitch } from '../shared/DemoRoleSwitch.tsx'
 import { MorePage } from './MorePage.tsx'
 import { TomorrowCard } from './TomorrowCard.tsx'
 import styles from './TodayPage.module.css'
@@ -192,18 +190,18 @@ export function ParentTodayPage() {
   }
 
   const NAV: TabItem[] = [
-    { id: 'home', label: 'خانه', icon: <HomeIcon size={22} /> },
-    { id: 'tomorrow', label: 'فردا', icon: <CalendarIcon size={22} /> },
+    { id: 'home', label: 'خانه', shape: 'home', tone: 'mint' },
+    { id: 'tomorrow', label: 'فردا', shape: 'calendar', tone: 'sky' },
     /*
       مالی در نوار پایین است، نه پشت «بیشتر».
       خانواده شهریه را ماهی یک‌بار می‌بیند ولی وقتی سررسید نزدیک است
       هر روز؛ اطلاعیه برعکس، خوانده می‌شود و تمام. پس مالی مقصد شد و
       اطلاعیه به فهرست «بیشتر» برگشت.
     */
-    { id: 'finance', label: 'مالی', icon: <WalletIcon size={22} /> },
-    { id: 'more', label: 'منو', icon: <MoreIcon size={22} /> },
+    { id: 'finance', label: 'مالی', shape: 'wallet', tone: 'mango' },
+    { id: 'more', label: 'منو', shape: 'grid', tone: 'neutral' },
   ]
-  const CENTER: TabItem = { id: 'messages', label: 'پیام‌ها', icon: <ChatIcon size={24} /> }
+  const CENTER: TabItem = { id: 'messages', label: 'پیام‌ها', shape: 'bubble', tone: 'mango' }
 
   /*
    * هر مقصدی جز خانه، همان صفحه «بیشتر» است با تب از پیش انتخاب‌شده.
@@ -226,6 +224,8 @@ export function ParentTodayPage() {
   if (nav === 'messages') {
     return (
       <div className={styles.shell}>
+        <PaperMarks />
+        <Meadow />
         <div className={styles.shellBody}>
           <MessagesPage />
         </div>
@@ -239,6 +239,8 @@ export function ParentTodayPage() {
     const name = children.find((c) => c.id === childId)?.firstName ?? ''
     return (
       <div className={styles.shell}>
+        <PaperMarks />
+        <Meadow />
         <div className={styles.shellBody}>
           {/*
             key: بی این، رفتن از یک مقصد نوار به مقصد دیگر هیچ کاری
@@ -269,6 +271,7 @@ export function ParentTodayPage() {
       subtitle="امروز هم روز خوبی برایش آرزو می‌کنیم."
       roleLabel={session?.active ? ROLE_LABEL[session.active.role] : '—'}
       onSignOut={() => void signOut()}
+      menuExtra={<DemoRoleSwitch />}
       nav={NAV}
       center={CENTER}
       active={nav}

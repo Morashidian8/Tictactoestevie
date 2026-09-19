@@ -1,5 +1,5 @@
 /* لحن دفترچه، مثل بقیه پنل خانواده — بخش ۱۲.۱. هدف لمسی ۴۸. */
-.page { min-block-size: 100dvh; display: flex; flex-direction: column; background: var(--paper); }
+.page { min-block-size: 100dvh; display: flex; flex-direction: column; }
 
 .header {
   position: sticky; inset-block-start: 0; z-index: 2;

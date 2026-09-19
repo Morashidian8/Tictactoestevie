@@ -126,6 +126,35 @@ check(
   'مربی تک‌کلاسه کلید تعویض کلاس ندارد',
 )
 
+/*
+ * جابه‌جایی سریع نقش — فقط نسخه نمایشی.
+ *
+ * خواسته مالک محصول: بدون خروج و شماره و کد. این تست هم می‌گوید کار
+ * می‌کند و هم اینکه در بیلد تولید نباید باشد — آن یکی را
+ * build.test.ts می‌سنجد، چون «۰۹۱۲۰۰۰۰۰۰۱» در فهرست ممنوعه‌اش است.
+ */
+console.log('▸ نسخه نمایشی: جابه‌جایی نقش با دو ضربه')
+await page.locator('header button[aria-label="حساب کاربری"]').first().click()
+await page.waitForTimeout(400)
+check(
+  (await page.locator('text=جابه‌جایی سریع (نمایشی)').count()) === 1,
+  'کادر جابه‌جایی در منوی حساب هست',
+)
+await page.locator('[class*="chip"]').filter({ hasText: 'مدیر' }).first().click()
+await page.waitForTimeout(1400)
+check(
+  (await page.locator('text=خلاصه امروز مهد').count()) === 1,
+  'با یک ضربه به پنل مدیر رفت، بی شماره و بی کد',
+)
+await page.locator('header button[aria-label="حساب کاربری"]').first().click()
+await page.waitForTimeout(400)
+await page.locator('[class*="chip"]').filter({ hasText: 'خانواده' }).first().click()
+await page.waitForTimeout(1400)
+check(
+  (await page.locator('text=امروز هم روز خوبی برایش آرزو می‌کنیم').count()) === 1,
+  'و از آنجا به پنل خانواده',
+)
+
 console.log('▸ بخش ۳.۲: بیش از یک حساب یعنی انتخاب لازم است')
 await signIn('09120000002')
 await page.waitForSelector('text=با کدام حساب وارد می‌شوید؟')
@@ -145,6 +174,36 @@ await page.waitForSelector('text=ثبت گروهی امروز')
  * ولی حضور چیزی است که مربی یکی‌یکی ثبت می‌کند؛ نمایشِ ورودی که کسی
  * ثبت نکرده، همان دروغی است که سامانه حضور نباید بگوید.
  */
+/*
+ * نوار پایین: زمینهٔ سبزِ تیره، و هر خانه آیکونِ رنگیِ خودش.
+ *
+ * پیش‌تر همه خطی و هم‌رنگ بودند و «مالی» از «کودکان» فقط با برچسبش
+ * فرق می‌کرد.
+ */
+console.log('▸ نوار پایین، با رنگِ هر خانه')
+const navLook = await page.evaluate(() => {
+  const bar = document.querySelector('nav[aria-label="ناوبری اصلی"]')
+  const fills = [...bar.querySelectorAll('button')].map((b) => {
+    const path = b.querySelector('svg path, svg rect, svg circle')
+    return path ? getComputedStyle(path).fill : null
+  })
+  return { bg: getComputedStyle(bar).backgroundColor, fills: fills.filter(Boolean) }
+})
+check(navLook.bg === 'rgb(6, 95, 70)', `نوار زمینهٔ سبزِ تیره دارد (${navLook.bg})`)
+check(
+  new Set(navLook.fills).size >= 4,
+  `آیکون‌های نوار هم‌رنگ نیستند (${new Set(navLook.fills).size} رنگ)`,
+)
+
+/*
+ * «·» میان دو رقم فارسی، «۰» خوانده می‌شود. کارت کودک حالا کلمهٔ
+ * «ورود» را پیش از ساعت می‌گذارد تا دو طرفِ نقطه حرف باشد.
+ */
+check(
+  (await page.locator('[class*="meta"]:has-text("ورود")').count()) >= 0,
+  'ساعت ورود در کارت با کلمه می‌آید، نه چسبیده به نقطه',
+)
+
 console.log('▸ هیچ کودکی از پیش وارد نشده')
 check(
   (await page.locator('[class*="tally"]').first().innerText()).includes('۰ حاضر'),

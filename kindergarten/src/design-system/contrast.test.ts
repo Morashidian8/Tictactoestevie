@@ -228,3 +228,71 @@ describe('پالت با سند یکی است — بخش ۱۲.۲', () => {
     })
   }
 })
+
+/**
+ * نوار پایین — هر خانه رنگِ خودش، و هر دو حالت سنجیده.
+ *
+ * آیکون‌ها گرافیکِ معنادارند نه متن، پس کفشان ۳:۱ است (معیار ۱.۴.۱۱).
+ * برچسبِ متنیِ زیرشان ولی متن است و کف ۴٫۵ را می‌خواهد.
+ *
+ * این تست همان چیزی را نگه می‌دارد که «هر آیکون رنگ خودش» را ممکن
+ * کرد: رنگی که کف را رد نکند، وارد پالت نوار نمی‌شود.
+ */
+describe('نوار پایین — رنگِ هر خانه', () => {
+  const TONES = ['mint', 'sky', 'bubble', 'mango', 'grape', 'neutral'] as const
+
+  it('برچسبِ نوار روی زمینهٔ نوار، کف متن را رد می‌کند', () => {
+    expect(contrast(token('nav-fg'), token('nav-bg'))).toBeGreaterThanOrEqual(TEXT_MIN)
+  })
+
+  for (const tone of TONES) {
+    it(`آیکونِ ${tone} در حالت غیرفعال، روی زمینهٔ نوار`, () => {
+      expect(contrast(token(`nav-${tone}`), token('nav-bg'))).toBeGreaterThanOrEqual(UI_MIN)
+    })
+
+    it(`آیکونِ ${tone} در حالت فعال، روی قرصِ کرم`, () => {
+      expect(contrast(token(`nav-${tone}-deep`), token('paper'))).toBeGreaterThanOrEqual(UI_MIN)
+    })
+  }
+
+  /*
+   * کنشِ مرکزی از نعنایی به انبه‌ای رفت — روی نوارِ سبزِ تیره، سبز روی
+   * سبز گم می‌شد. گلیفش --ink است و این تست می‌گوید چرا سفید نشد.
+   */
+  describe('کنشِ مرکزی', () => {
+    const ENDS = ['#FFD66B', '#F5B733'] as const
+
+    it('گلیفِ --ink روی هر دو سرِ گرادیان قبول است', () => {
+      for (const end of ENDS) {
+        expect(contrast(token('ink'), end)).toBeGreaterThanOrEqual(TEXT_MIN)
+      }
+    })
+
+    it('و سفید روی هیچ‌کدام قبول نیست', () => {
+      for (const end of ENDS) {
+        expect(contrast('#FFFFFF', end)).toBeLessThan(TEXT_MIN)
+      }
+    })
+  })
+})
+
+/**
+ * متنِ ثانویه روی تینت‌ها.
+ *
+ * از وقتی کارت‌ها تینت می‌گیرند، --ink-muted کافی نیست: روی --grape-tint
+ * نسبت ۴٫۰۹ می‌دهد. --ink-muted-on-tint یک پله تیره‌تر است و این تست
+ * می‌گوید چرا لازم شد.
+ */
+describe('متن ثانویه روی تینت', () => {
+  const TINTED = ['mint-tint', 'sky-tint', 'grape-tint', 'mango-tint', 'bubble-tint'] as const
+
+  for (const tint of TINTED) {
+    it(`--ink-muted-on-tint روی --${tint}`, () => {
+      expect(contrast(token('ink-muted-on-tint'), token(tint))).toBeGreaterThanOrEqual(TEXT_MIN)
+    })
+  }
+
+  it('و --ink-muted روی --grape-tint کف را رد نمی‌کند — چرا توکن تازه لازم شد', () => {
+    expect(contrast(token('ink-muted'), token('grape-tint'))).toBeLessThan(TEXT_MIN)
+  })
+})

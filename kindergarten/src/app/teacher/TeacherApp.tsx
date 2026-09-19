@@ -1,10 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import {
   AppShell,
-  ChatIcon,
-  CheckIcon,
-  HomeIcon,
-  MoreIcon,
   type TabItem,
 } from '../../design-system/index.ts'
 import { ROLE_LABEL, useAuth, useData } from '../../core/auth/index.ts'
@@ -15,6 +11,7 @@ import { BulkEntryPage } from './BulkEntryPage.tsx'
 import { CloseDayPage } from './CloseDayPage.tsx'
 import { MessagesPage } from '../shared/MessagesPage.tsx'
 import { LoansPage } from '../shared/LoansPage.tsx'
+import { DemoRoleSwitch } from '../shared/DemoRoleSwitch.tsx'
 import { FreePlayPage } from './FreePlayPage.tsx'
 import { ObservationsPage } from './ObservationsPage.tsx'
 import { TeacherMorePage } from './TeacherMorePage.tsx'
@@ -90,13 +87,19 @@ export function TeacherApp() {
     refresh()
   }, [screen, refresh])
 
+  /*
+   * «ورود خروج» دَر می‌گیرد، نه خانه.
+   *
+   * تا اینجا همان آیکونِ خانه را داشت، یعنی همان چیزی که در دو پنل دیگر
+   * مقصدِ دیگری است. کارِ این صفحه ثبت ورود و خروج است.
+   */
   const NAV: TabItem[] = [
-    { id: 'today', label: 'ورود خروج', icon: <HomeIcon size={22} /> },
-    { id: 'close', label: 'بستن روز', icon: <CheckIcon size={22} /> },
-    { id: 'inbox', label: 'پیام‌ها', icon: <ChatIcon size={22} />, badge: waiting },
-    { id: 'more', label: 'منو', icon: <MoreIcon size={22} /> },
+    { id: 'today', label: 'ورود خروج', shape: 'door', tone: 'mint' },
+    { id: 'close', label: 'بستن روز', shape: 'clipboard', tone: 'sky' },
+    { id: 'inbox', label: 'پیام‌ها', shape: 'bubble', tone: 'bubble', badge: waiting },
+    { id: 'more', label: 'منو', shape: 'grid', tone: 'neutral' },
   ]
-  const CENTER: TabItem = { id: 'bulk', label: 'ثبت گروهی امروز', icon: <PenIcon /> }
+  const CENTER: TabItem = { id: 'bulk', label: 'ثبت گروهی امروز', shape: 'pen', tone: 'mango' }
 
   /*
    * ثبت گروهی تمام‌صفحه است: کار متمرکز، بی نوار ناوبری.
@@ -133,8 +136,10 @@ export function TeacherApp() {
       onSignOut={() => void signOut()}
       hasAlert={waiting > 0}
       menuExtra={
-        /* بخش ۳.۲: جابه‌جایی بین حساب‌ها از منو، بدون خروج و ورود مجدد. */
-        session?.accounts
+        <>
+          <DemoRoleSwitch />
+          {/* بخش ۳.۲: جابه‌جایی بین حساب‌ها از منو، بدون خروج و ورود مجدد. */}
+          {session?.accounts
           .filter((account) => account.id !== session.active?.id)
           .map((account) => (
             <button
@@ -145,7 +150,8 @@ export function TeacherApp() {
             >
               رفتن به حساب {ROLE_LABEL[account.role]}
             </button>
-          ))
+          ))}
+        </>
       }
       toolbar={
         screen !== 'today' ? null : classes.length > 1 ? (
@@ -231,12 +237,3 @@ export function TeacherApp() {
   )
 }
 
-/* قلم — کنش مرکزی نوار مربی. */
-function PenIcon() {
-  return (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-      strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      <path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
-    </svg>
-  )
-}

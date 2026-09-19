@@ -3,7 +3,6 @@
   min-block-size: 100dvh;
   display: flex;
   flex-direction: column;
-  background: var(--paper);
   padding-block-end: var(--sticky-bar-height);
 }
 

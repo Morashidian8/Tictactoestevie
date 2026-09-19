@@ -1,11 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import {
   AppShell,
-  ChatIcon,
-  HomeIcon,
-  MoreIcon,
-  PeopleIcon,
-  WalletIcon,
   type TabItem,
 } from '../../design-system/index.ts'
 import { ROLE_LABEL, useAuth, useData } from '../../core/auth/index.ts'
@@ -21,6 +16,7 @@ import { ManagerMorePage } from './ManagerMorePage.tsx'
 import { NoticePage } from './NoticePage.tsx'
 import { StaffPage } from './StaffPage.tsx'
 import { MessagesPage } from '../shared/MessagesPage.tsx'
+import { DemoRoleSwitch } from '../shared/DemoRoleSwitch.tsx'
 
 /**
  * پنل مدیر — بخش ۱۳.۳.
@@ -80,10 +76,10 @@ export function ManagerApp() {
   }, [data])
 
   const NAV: TabItem[] = [
-    { id: 'dashboard', label: 'خانه', icon: <HomeIcon size={22} /> },
-    { id: 'finance', label: 'مالی', icon: <WalletIcon size={22} />, badge: counts.claims },
-    { id: 'children', label: 'کودکان', icon: <PeopleIcon size={22} /> },
-    { id: 'more', label: 'منو', icon: <MoreIcon size={22} />, badge: counts.gaps },
+    { id: 'dashboard', label: 'خانه', shape: 'home', tone: 'mint' },
+    { id: 'finance', label: 'مالی', shape: 'wallet', tone: 'mango', badge: counts.claims },
+    { id: 'children', label: 'کودکان', shape: 'people', tone: 'grape' },
+    { id: 'more', label: 'منو', shape: 'grid', tone: 'neutral', badge: counts.gaps },
   ]
   /*
    * پیام‌ها کنش مرکزی هر سه پنل است.
@@ -94,7 +90,8 @@ export function ManagerApp() {
   const CENTER: TabItem = {
     id: 'messages',
     label: 'پیام‌ها',
-    icon: <ChatIcon size={24} />,
+    shape: 'bubble',
+    tone: 'mango',
     badge: unread,
   }
 
@@ -130,6 +127,7 @@ export function ManagerApp() {
       roleLabel={session?.active ? ROLE_LABEL[session.active.role] : '—'}
       onSignOut={() => void signOut()}
       hasAlert={counts.claims > 0 || counts.gaps > 0 || unread > 0}
+      menuExtra={<DemoRoleSwitch />}
       nav={NAV}
       center={CENTER}
       active={page}

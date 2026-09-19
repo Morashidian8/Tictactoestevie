@@ -16,7 +16,6 @@
 
 .page {
   min-block-size: 100dvh;
-  background: var(--paper);
   display: flex;
   flex-direction: column;
 }
@@ -595,11 +594,49 @@
  * نوار بیرون از ناحیه اسکرول است، نه داخلش: نواری که با صفحه بالا و
  * پایین برود، در صفحه‌ای که هفت کارت دارد عملاً ناپدید می‌شود.
  */
+/*
+ * بومِ لحن‌دار، مثل خودِ پوسته مشترک.
+ *
+ * مقصدهای نوارِ پنل خانواده از AppShell رد نمی‌شوند، ولی خانواده نباید
+ * با زدن «مالی» ناگهان از چمنزار به یک بومِ کرمِ تخت بیفتد.
+ */
 .shell {
+  position: relative;
+  isolation: isolate;
+  overflow-x: clip;
   min-block-size: 100dvh;
   display: flex;
   flex-direction: column;
-  background: var(--paper);
+  --wave-fill: var(--wash-parent);
+  background:
+    linear-gradient(180deg, var(--wash-parent) 0%, var(--paper) 30%, var(--paper) 66%, var(--wash-foot) 100%);
+}
+
+.shell :global(.meadow) {
+  position: fixed;
+  inset-inline: 0;
+  inset-block-end: 0;
+  block-size: 330px;
+  z-index: -1;
+  pointer-events: none;
+}
+
+.shell :global(.meadow-hills),
+.shell :global(.meadow-life) {
+  position: absolute;
+  inset: 0;
+  inline-size: 100%;
+  block-size: 100%;
+  display: block;
+}
+
+.shell :global(.paper-marks) {
+  position: fixed;
+  inset-inline: 0;
+  inset-block-start: 0;
+  block-size: 100dvh;
+  z-index: -1;
+  pointer-events: none;
 }
 
 .shellBody {

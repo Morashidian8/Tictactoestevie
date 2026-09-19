@@ -402,9 +402,14 @@ export function DashboardPage({ onGo, onCounts, onOpenStaff }: {
                   <span className={`${styles.complianceTitle} t-body-lg`}>
                     پرونده بازرسی: {formatCount(gaps)} مورد ناقص
                   </span>
+                  {/*
+                    ویرگول فارسی، نه «·».
+                    نقطه‌چین میان دو رقم، «۰» خوانده می‌شود: «۶ واکسن ·
+                    ۳ کد ملی» روی گوشی «۶ واکسن ۳۰ کد ملی» دیده می‌شد.
+                  */}
                   <span className={`${styles.complianceText} t-caption`}>
-                    {formatCount(ready.incompleteVaccination)} واکسن ·{' '}
-                    {formatCount(ready.missingNationalId)} کد ملی ·{' '}
+                    {formatCount(ready.incompleteVaccination)} واکسن،{' '}
+                    {formatCount(ready.missingNationalId)} کد ملی،{' '}
                     {formatCount(ready.expiringHealthCards)} کارت بهداشت
                   </span>
                 </span>

@@ -18,9 +18,16 @@
   gap: var(--space-1);
   margin: 0 var(--space-3) calc(var(--space-3) + env(safe-area-inset-bottom));
   padding: var(--space-2);
-  background: var(--surface);
+  /*
+   * نوار، «زمین» است و در هر سه نقش یکی می‌ماند — روی چمنزار می‌نشیند.
+   *
+   * سفیدِ پیشین روی بومِ تقریباً سفید، لنگری برای پایین صفحه نمی‌ساخت.
+   * رنگِ آسمان همان چیزی است که می‌گوید در کدام حساب هستی؛ اگر نوار هم
+   * رنگِ نقش بگیرد، همان حرف دو بار زده می‌شود.
+   */
+  background: var(--nav-bg);
   border-radius: 26px;
-  box-shadow: var(--shadow-lg);
+  box-shadow: 0 16px 34px -10px rgb(6 95 70 / .45);
 }
 
 .tab {
@@ -43,24 +50,23 @@
   border-radius: var(--r-input);
   background: none;
   border: none;
-  color: var(--ink-muted);
+  /* برچسبِ کرم روی --nav-bg نسبت ۷٫۴۲ می‌دهد. */
+  color: var(--nav-fg);
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
 }
 
 /*
- * خانه فعال: رنگ متن پررنگ‌تر، و یک قرصِ تینت زیر گلیف.
+ * خانه فعال: قرصِ کرمِ گرد زیر گلیف، و گلیفِ سیر رویش.
  *
- * پیش‌تر پرکننده امتحان شده بود و رد شد چون کنار دکمه گرد وسط، دو چیزِ
- * رنگی در یک نوار می‌شد. حالا تینت است نه رنگِ پر، و دکمه وسط گرادیانِ
- * سیر دارد — دو وزنِ متفاوت، پس چشم همچنان می‌فهمد کدام کنش است.
+ * ارتفاع نمی‌گیرد. نسخه‌ای که خانه فعال را بیست پیکسل بالا می‌برد، دو
+ * چیز را از خطِ نوار بیرون می‌زد — کنشِ مرکزی و خانه فعال — و مالک
+ * محصول درست پرسید چرا نوار کج است. حالا فقط کنشِ مرکزی بالا می‌آید.
  */
-.tabActive {
-  color: var(--ink);
-}
-
 .tabActive .icon {
-  background: var(--surface-warm);
+  background: var(--paper);
+  border-radius: var(--r-chip);
+  box-shadow: 0 2px 6px rgb(6 95 70 / .35);
 }
 
 .tabActive .label {
@@ -80,10 +86,10 @@
    * گرفت. سرریزِ بی‌ضرر، آن محافظ را کور می‌کند.
    */
   padding: 3px;
-  /* قرصِ تینت زیر گلیفِ خانه فعال. */
-  inline-size: 42px;
-  block-size: 30px;
-  border-radius: 13px;
+  /* قرصِ گردِ خانه فعال. مربع است تا دایره بشود، نه بیضی. */
+  inline-size: 38px;
+  block-size: 38px;
+  border-radius: var(--r-chip);
 }
 
 .label {
@@ -102,7 +108,7 @@
   block-size: 7px;
   border-radius: var(--r-chip);
   background: var(--coral);
-  box-shadow: 0 0 0 2px var(--surface);
+  box-shadow: 0 0 0 2px var(--nav-bg);
 }
 
 /*
@@ -116,22 +122,19 @@
   flex: none;
   inline-size: 56px;
   block-size: 56px;
-  margin-block-start: -18px;
+  margin-block-start: -22px;
   position: relative;
   display: grid;
   place-items: center;
-  border: 3px solid var(--surface);
-  /*
-   * مربعِ گرد، نه دایره — بازطراحی «آسمان».
-   *
-   * رنگ عمداً نعنایی ماند و با نقش عوض نمی‌شود: گلیف روی این گرادیان
-   * ۷٫۰۴ می‌دهد و سنجیده شده. مرجانی و سرمه‌ایِ نقش‌های دیگر هر کدام
-   * سنجش خودشان را لازم دارند، و دکمه‌ای که خوانده نشود دکمه نیست.
-   */
+  border: 4px solid var(--paper);
+  /* مربعِ گرد، نه دایره — بازطراحی «آسمان». */
   border-radius: 21px;
-  background: var(--grad-primary);
-  box-shadow: var(--glow-primary);
-  /* گلیف --ink روی نعنایی نسبت ۷٫۰۴ می‌دهد؛ سفید ۲٫۵۴ و مجاز نیست. */
+  /*
+   * انبه‌ای، نه نعنایی — روی نوارِ سبزِ تیره، سبز روی سبز گم می‌شود.
+   * گلیف --ink روی این گرادیان نسبت ۹٫۹ می‌دهد؛ سفید ۲٫۱ و مجاز نیست.
+   */
+  background: linear-gradient(135deg, #FFD66B 0%, #F5B733 100%);
+  box-shadow: 0 10px 18px -4px rgb(245 183 51 / .55);
   color: var(--ink);
   transition:
     transform var(--motion-feedback) var(--easing),
@@ -145,10 +148,6 @@
   box-shadow: none;
 }
 
-.centerIcon {
-  display: inline-grid;
-  place-items: center;
-}
 
 .centerDot {
   position: absolute;
@@ -158,5 +157,5 @@
   block-size: 10px;
   border-radius: var(--r-chip);
   background: var(--coral);
-  box-shadow: 0 0 0 2px var(--surface);
+  box-shadow: 0 0 0 2px var(--paper);
 }

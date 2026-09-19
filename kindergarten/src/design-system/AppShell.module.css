@@ -15,10 +15,90 @@
  */
 
 .shell {
+  position: relative;
+  /*
+   * بوم و چمنزار با `z-index: -1` پشت محتوا می‌نشینند. `isolation` آن
+   * منفی را به همین لایه محدود می‌کند، وگرنه از پوسته بیرون می‌زد و
+   * پشتِ زمینهٔ خودِ صفحه گم می‌شد.
+   *
+   * شیت پایین‌رونده (۴۰) و نوار (۱۰) هر دو داخل همین بافت‌اند، پس
+   * ترتیبشان نسبت به هم دست‌نخورده می‌ماند — همان چیزی که یک‌بار با
+   * بافتِ چینشِ اشتباه شکست و دکمه «ثبت ورود» را غیرقابل‌زدن کرد.
+   */
+  isolation: isolate;
+  overflow-x: clip;
   min-block-size: 100dvh;
   display: flex;
   flex-direction: column;
   background: var(--paper);
+}
+
+/*
+ * بومِ لحن‌دار.
+ *
+ * از رنگِ آسمانِ نقش شروع می‌شود، به کرم می‌رسد و پایین به سبزِ چمنزار.
+ * حتی وقتی شبکه کارت‌ها تمام صفحه را پر کرده، همان نوارهای ۱۶ پیکسلیِ
+ * کنارِ کارت‌ها رنگ دارند — و همین بود که مالک محصول نداشتنش را
+ * «بی‌روح» خواند.
+ *
+ * `--wave-fill` را هم همین‌جا می‌گذاریم تا موجِ زیر سرصفحه دقیقاً سرِ
+ * همین بوم را بردارد.
+ */
+.washTeacher {
+  --wave-fill: var(--wash-teacher);
+  background:
+    linear-gradient(180deg, var(--wash-teacher) 0%, var(--paper) 30%, var(--paper) 66%, var(--wash-foot) 100%);
+}
+.washParent {
+  --wave-fill: var(--wash-parent);
+  background:
+    linear-gradient(180deg, var(--wash-parent) 0%, var(--paper) 30%, var(--paper) 66%, var(--wash-foot) 100%);
+}
+.washManager {
+  --wave-fill: var(--wash-manager);
+  background:
+    linear-gradient(180deg, var(--wash-manager) 0%, var(--paper) 30%, var(--paper) 66%, var(--wash-foot) 100%);
+}
+
+/* ── چمنزار و نقش‌های بوم ───────────────────────────────────── */
+
+/*
+ * `fixed` است، نه `absolute`.
+ *
+ * با `absolute` چمنزار به انتهای **سند** می‌چسبید، یعنی در فهرستی که
+ * بیست کارت دارد فقط بعد از اسکرول تا ته دیده می‌شد. زمین باید همیشه
+ * زیر پای صفحه باشد؛ کارت‌ها رویش می‌لغزند.
+ */
+.shell :global(.meadow) {
+  position: fixed;
+  inset-inline: 0;
+  inset-block-end: 0;
+  block-size: 330px;
+  z-index: -1;
+  pointer-events: none;
+}
+
+.shell :global(.meadow-hills),
+.shell :global(.meadow-life) {
+  position: absolute;
+  inset: 0;
+  inline-size: 100%;
+  block-size: 100%;
+  display: block;
+}
+
+/*
+ * نقش‌های مدادرنگی فقط تا جایی می‌آیند که چمنزار شروع نشده. بالای صفحه
+ * را کارت‌ها پر می‌کنند، پس بیش از این دیده نمی‌شود و بیش از این هم
+ * لازم نیست.
+ */
+.shell :global(.paper-marks) {
+  position: fixed;
+  inset-inline: 0;
+  inset-block-start: 0;
+  block-size: 100dvh;
+  z-index: -1;
+  pointer-events: none;
 }
 
 /*
@@ -80,6 +160,12 @@
   z-index: -1;
   pointer-events: none;
 }
+
+/*
+ * سرصفحه‌ای که شخصیت و چیپ دارد، بلندتر از قبل است و صحنه باید همان‌قدر
+ * جا بگیرد. `preserveAspectRatio="none"` در خودِ SVG این را می‌سپارد به
+ * همین دو خط.
+ */
 
 .sky :global(.sky-wave) {
   position: absolute;

@@ -254,7 +254,15 @@ export function TodayPage({
           // شیت بفهمد این کودک وضعیت متفاوتی دارد.
           flagged: child.addedException,
           flagLabel: 'استثنا',
-          caption: checkIn ? formatTime(checkIn) : undefined,
+          /*
+           * «ورود» پیش از ساعت، عمدی است.
+           *
+           * جداکنندهٔ «·» میان دو رقم فارسی در اندازهٔ ۱۱ پیکسل عملاً
+           * «۰» خوانده می‌شود: «۵ سال و ۴ ماه · ۹:۲۰» روی گوشی
+           * «... ماه ۰ ۹:۲۰» دیده می‌شد. یک کلمه دو طرفِ نقطه را حرف
+           * می‌کند، و هم‌زمان می‌گوید این ساعت، ساعتِ چیست.
+           */
+          caption: checkIn ? `ورود ${formatTime(checkIn)}` : undefined,
           age: formatAge(child.birthDate, now),
           // بخش ۷.۱: آلرژی در دید مربی، نه در پرونده کودک.
           /*

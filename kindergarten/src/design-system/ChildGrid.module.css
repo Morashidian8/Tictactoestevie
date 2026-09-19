@@ -40,15 +40,25 @@
   padding: var(--space-2) var(--space-3) var(--space-3);
   text-align: center;
 
+  position: relative;
+  /*
+   * لبهٔ استیکری: سه پیکسل سفید، و یک خط مویی بیرونش.
+   *
+   * روی بومِ رنگی، کارتِ سفید با یک خط مویی از بوم جدا نمی‌شد. حاشیه
+   * سفید کارت را «بریده و چسبانده» نشان می‌دهد — همان چیزی که شبکه را
+   * از یک جدول به یک دفتر چسب‌کاری تبدیل می‌کند.
+   */
   background: var(--surface);
-  border: 1px solid var(--card-border);
+  border: 3px solid var(--surface);
+  outline: 1px solid var(--card-border);
   border-radius: var(--r-card);
+  overflow: hidden;
   /*
    * استثنای قاعده «کارت داخل فهرست سایه نمی‌گیرد»: اینجا هر کارت یک
    * هدف لمسی مستقل است، نه یک ردیف فهرست. سایه همان چیزی است که
    * می‌گوید «این را می‌شود زد».
    */
-  box-shadow: var(--shadow-sm);
+  box-shadow: 0 16px 28px -14px rgb(15 23 42 / .28);
 
   /* تنها انیمیشن مجاز: بازخورد لمس — بخش ۱۲.۸ */
   transition:
@@ -75,9 +85,12 @@
 /*
  * بی‌خبر: تنها حالتی که کارت خودش مرز رنگی می‌گیرد. بخش ۵.۳ این را
  * فوریت می‌داند، نه وضعیت.
+ *
+ * `outline` است نه `border`، چون حالا حاشیهٔ سفیدِ استیکری روی border
+ * نشسته و مرزِ معنادار باید بیرونِ آن دیده شود.
  */
 .unaccounted {
-  border-color: var(--brick);
+  outline: 2px solid var(--brick);
 }
 
 /*
@@ -86,7 +99,7 @@
  */
 .alert {
   background: var(--mango-tint);
-  border-color: var(--mango);
+  outline-color: var(--mango);
 }
 
 /* قاب عکس، به‌علاوه نماد کمد که گوشه‌اش می‌نشیند. */
@@ -221,3 +234,34 @@
   white-space: nowrap;
   text-align: center;
 }
+
+/* ── چسبِ رنگیِ بالای کارت ──────────────────────────────────── */
+
+/*
+ * تزئین، و فقط تزئین. نه حالتی را می‌گوید و نه با هیچ حالتی عوض
+ * می‌شود — پس هیچ‌وقت با تینتِ آلرژی یا مرزِ بی‌خبر اشتباه گرفته
+ * نمی‌شود. متنی رویش نمی‌نشیند، پس از قاعدهٔ کنتراست معاف است.
+ */
+.tape {
+  position: absolute;
+  inset-block-start: 0;
+  /*
+   * `inset-inline-start` یعنی لبهٔ راست در چیدمان راست‌به‌چپ. با
+   * `end` چسب سمت چپ کارت می‌نشست — همان دامی که منطق‌های جهت‌دار
+   * این اپ یک‌بار دیگر هم در آن افتادند.
+   */
+  inset-inline-start: 22px;
+  inline-size: 46px;
+  block-size: 11px;
+  border-end-start-radius: 8px;
+  border-end-end-radius: 8px;
+}
+
+.tapeA { background: var(--mint-edge); }
+.tapeB { background: var(--bubble-edge); }
+.tapeC { background: var(--sky-edge); }
+.tapeD { background: var(--mango-edge); }
+.tapeE { background: var(--grape-edge); }
+
+/* کودکی که رفته، چسبش هم عقب می‌نشیند. */
+.left .tape { opacity: .45; }

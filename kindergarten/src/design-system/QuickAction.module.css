@@ -8,9 +8,16 @@
   z-index: 10;
   padding: var(--space-3) var(--space-4);
   padding-block-end: calc(var(--space-3) + env(safe-area-inset-bottom));
-  background: var(--surface);
-  border-block-start: 1px solid var(--border);
-  box-shadow: var(--shadow-lg);
+  /*
+   * شیشه‌ای، نه سفیدِ توپر.
+   *
+   * از وقتی بوم چمنزار دارد، یک سطحِ سفیدِ ۱۹۰ پیکسلی روی آن می‌نشست و
+   * پایین صفحه دوباره همان تخته سفید می‌شد. متن روی این هم خوانا است:
+   * تراشه‌ها و دکمه‌ها زمینهٔ خودشان را دارند.
+   */
+  background: rgb(252 249 244 / .82);
+  backdrop-filter: blur(12px);
+  border-block-start: 1px solid rgb(255 255 255 / .6);
 }
 
 /* ردیف کنش ثانویه، یک فاصله ۱۶ بالای کنش اصلی */
