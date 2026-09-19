@@ -4,11 +4,18 @@ import {
   BottomSheet,
   ChoiceGroup,
   EmptyState,
+  FileField,
   JalaliDateField,
 } from '../../design-system/index.ts'
 import { formatCount, formatJalali, toIsoDate } from '../../i18n/index.ts'
 import { ROLE_LABEL, useAuth, useData } from '../../core/auth/index.ts'
-import type { LeaveKind, LeaveRequest, StaffProfile } from '../../core/data/index.ts'
+import type {
+  LeaveKind,
+  LeaveRequest,
+  SlotState,
+  StaffDocumentSlot,
+  StaffProfile,
+} from '../../core/data/index.ts'
 import styles from './TeacherProfilePage.module.css'
 
 /**
@@ -46,16 +53,58 @@ const LEAVE_STATE_TEXT: Record<LeaveRequest['state'], string> = {
   rejected: 'رد شد',
 }
 
+/*
+ * حالت هر قلم از چک‌لیست، با **کلمه**.
+ *
+ * رنگ اینجا فقط همین کلمه را تکرار می‌کند و هیچ خبری تنها با رنگ
+ * گفته نمی‌شود — بخش ۱۲.۲.
+ */
+const SLOT_TEXT: Record<SlotState, string> = {
+  missing: 'نفرستاده‌اید',
+  pending: 'در انتظار تأیید مدیر',
+  rejected: 'رد شد',
+  expired: 'منقضی شده',
+  expiring: 'رو به انقضا',
+  valid: 'تأیید شده',
+  none: 'تأیید شده',
+}
+
+/** کدام حالت‌ها کاری از مربی می‌خواهند. */
+const SLOT_TODO: Record<SlotState, boolean> = {
+  missing: true,
+  pending: false,
+  rejected: true,
+  expired: true,
+  expiring: true,
+  valid: false,
+  none: false,
+}
+
+/**
+ * نوعِ مدرکِ «سایر» عنوان دلخواه می‌خواهد، بقیه عنوانِ خودِ قلم را
+ * برمی‌دارند — مربی وسط شیفت نباید عنوان تایپ کند.
+ */
+
 export function TeacherProfilePage() {
   const data = useData()
   const { session } = useAuth()
   const [file, setFile] = useState<StaffProfile | null>(null)
   const [leave, setLeave] = useState<LeaveRequest[] | null>(null)
   const [asking, setAsking] = useState(false)
+  const [slots, setSlots] = useState<StaffDocumentSlot[] | null>(null)
+  const [sending, setSending] = useState<StaffDocumentSlot | null>(null)
 
   useEffect(() => {
     data.getMyStaffFile().then(setFile).catch(() => setFile(null))
   }, [data])
+
+  const loadSlots = useCallback(() => {
+    data.getMyDocumentChecklist().then(setSlots).catch(() => setSlots([]))
+  }, [data])
+
+  useEffect(() => {
+    loadSlots()
+  }, [loadSlots])
 
   const loadLeave = useCallback(() => {
     data.listMyLeave().then(setLeave).catch(() => setLeave([]))
@@ -68,10 +117,7 @@ export function TeacherProfilePage() {
   const me = session?.active
   if (!me) return <EmptyState text="در حال خواندن…" />
 
-  const today = toIsoDate(new Date())
-  const expiring = (file?.documents ?? []).filter(
-    (d) => d.expiresAt !== null && d.expiresAt < today,
-  )
+  const toFix = (slots ?? []).filter((slot) => SLOT_TODO[slot.state])
 
   return (
     <div className={styles.page}>
@@ -146,40 +192,76 @@ export function TeacherProfilePage() {
       </section>
 
       {/*
-        مدارک، از دید خودِ مربی.
+        مدارک، از دید خودِ مربی — و اینجا **کارِ** خودِ مربی هم هست.
 
-        چرا اینجا هست و فقط در پنل مدیر نیست: مدرکی که منقضی شده، اول
-        از همه مشکل خودِ مربی است. دیدنش در پنل مدیر یعنی مربی روز
-        بازرسی خبردار شود.
+        تا ۰۰۳۹ این بخش فقط فهرستِ خواندنی بود و زیرش نوشته بود
+        «بارگذاری مدارک کار مدیر است». یعنی مدیر باید ده نفر را دنبال
+        می‌کرد، کاغذها را می‌گرفت، عکس می‌گرفت و خودش بارگذاری می‌کرد.
+        حالا مربی خودش می‌فرستد و مدیر فقط تأیید می‌کند.
+
+        یک ردیف برای هر **خواسته**، نه برای هر مدرک: فهرستی که فقط
+        داشته‌ها را نشان بدهد، کسی از رویش نمی‌فهمد چه کم دارد.
       */}
       <section className={styles.card}>
         <span className={`${styles.label} t-caption`}>مدارک من</span>
-        {expiring.length > 0 ? (
+
+        {toFix.length > 0 ? (
           <p className={`${styles.warn} t-body`}>
             <AlertIcon size={18} />
-            {formatCount(expiring.length)} مدرک شما منقضی شده. به مدیر خبر بدهید.
+            {formatCount(toFix.length)} مدرک مانده که باید بفرستید یا تازه‌اش کنید.
           </p>
         ) : null}
-        {file === null ? (
+
+        {slots === null ? (
           <p className={`${styles.muted} t-body`}>در حال خواندن…</p>
-        ) : file.documents.length === 0 ? (
-          <p className={`${styles.muted} t-body`}>
-            هنوز مدرکی برای شما ثبت نشده. بارگذاری مدارک کار مدیر است.
-          </p>
+        ) : slots.length === 0 ? (
+          <p className={`${styles.muted} t-body`}>مدیر هنوز فهرست مدارک را نچیده.</p>
         ) : (
-          file.documents.map((doc) => {
-            const expired = doc.expiresAt !== null && doc.expiresAt < today
-            return (
-              <p key={doc.id} className={`${styles.docRow} t-body`}>
-                <span>{doc.title}</span>
-                <b className={expired ? styles.expired : styles.muted}>
-                  {doc.expiresAt
-                    ? `${expired ? 'منقضی ' : 'تا '}${formatJalali(new Date(doc.expiresAt), 'short')}`
-                    : 'بدون انقضا'}
+          slots.map((slot) => (
+            <div key={slot.requirementId} className={styles.slot}>
+              <p className={`${styles.docRow} t-body`}>
+                <span>{slot.title}</span>
+                {/*
+                  حالت با **کلمه** گفته می‌شود، نه با رنگ — بخش ۱۲.۲.
+                  رنگ فقط تکرارش می‌کند.
+                */}
+                <b className={SLOT_TODO[slot.state] ? styles.expired : styles.muted}>
+                  {SLOT_TEXT[slot.state]}
                 </b>
               </p>
-            )
-          })
+
+              {slot.state === 'valid' || slot.state === 'expiring' ? (
+                <p className={`${styles.muted} t-caption`}>
+                  {slot.expiresAt
+                    ? `اعتبار تا ${formatJalali(new Date(slot.expiresAt), 'short')}`
+                    : 'بدون تاریخ انقضا'}
+                </p>
+              ) : null}
+
+              {/*
+                دلیلِ رد، همین‌جا و کنار خودِ مدرک.
+                مربی‌ای که فقط «رد شد» می‌بیند، همان عکس را دوباره
+                می‌فرستد و مدیر دوباره ردش می‌کند.
+              */}
+              {slot.state === 'rejected' && slot.reviewNote ? (
+                <p className={`${styles.warn} t-caption`}>{slot.reviewNote}</p>
+              ) : null}
+
+              {slot.note && slot.state === 'missing' ? (
+                <p className={`${styles.muted} t-caption`}>{slot.note}</p>
+              ) : null}
+
+              {slot.state === 'pending' ? null : (
+                <button
+                  type="button"
+                  className={`${styles.actionRow} t-body`}
+                  onClick={() => setSending(slot)}
+                >
+                  {slot.state === 'missing' ? 'بارگذاری' : 'فرستادن نسخه تازه'}
+                </button>
+              )}
+            </div>
+          ))
         )}
       </section>
 
@@ -226,6 +308,17 @@ export function TeacherProfilePage() {
           onDone={() => {
             setAsking(false)
             loadLeave()
+          }}
+        />
+      ) : null}
+
+      {sending ? (
+        <DocumentSheet
+          slot={sending}
+          onClose={() => setSending(null)}
+          onDone={() => {
+            setSending(null)
+            loadSlots()
           }}
         />
       ) : null}
@@ -302,6 +395,95 @@ function LeaveSheet({ onClose, onDone }: { onClose: () => void; onDone: () => vo
 
       <p className={`${styles.muted} t-caption`}>
         تا تأیید مدیر، این مرخصی نیست. جوابش را همین‌جا می‌بینید.
+      </p>
+
+      {error ? <p className={`${styles.warn} t-caption`}>{error}</p> : null}
+    </BottomSheet>
+  )
+}
+
+
+/* ── شیت فرستادن مدرک ───────────────────────────────────────── */
+
+/**
+ * بارگذاری یک قلم از چک‌لیست، از پنل خودِ مربی.
+ *
+ * نوع و عنوان از خودِ قلم می‌آید و دستِ مربی نیست: قلم «کارت بهداشت»
+ * است و اگر مربی بتواند عنوانش را عوض کند، ردیفِ چک‌لیست پر نمی‌شود و
+ * هر دو طرف فکر می‌کنند کار تمام است.
+ */
+function DocumentSheet({ slot, onClose, onDone }: {
+  slot: StaffDocumentSlot
+  onClose: () => void
+  onDone: () => void
+}) {
+  const data = useData()
+  const [image, setImage] = useState<string | null>(null)
+  const [expires, setExpires] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const submit = async () => {
+    if (!image) {
+      setError('تصویر مدرک را انتخاب کنید.')
+      return
+    }
+    /*
+     * تاریخ انقضا فقط جایی که قلم می‌خواهد.
+     *
+     * اجبارِ تاریخ روی مدرکی که تاریخ ندارد، مربی را وادار می‌کند
+     * تاریخِ الکی بزند — و آن تاریخ بعداً «مدرک معتبر» نشان می‌دهد.
+     */
+    if (slot.needsExpiry && !expires) {
+      setError('تاریخ اعتبار این مدرک لازم است.')
+      return
+    }
+    setBusy(true)
+    setError(null)
+    try {
+      await data.submitMyDocument({
+        kind: slot.kind,
+        title: slot.title,
+        fileUrl: image,
+        expiresAt: expires,
+      })
+      onDone()
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'فرستاده نشد.')
+      setBusy(false)
+    }
+  }
+
+  return (
+    <BottomSheet
+      title={slot.title}
+      onClose={onClose}
+      footer={
+        <button
+          type="button"
+          className={`${styles.actionRow} t-body-lg`}
+          onClick={() => void submit()}
+          disabled={busy}
+        >
+          فرستادن برای مدیر
+        </button>
+      }
+    >
+      {slot.note ? <p className={`${styles.muted} t-body`}>{slot.note}</p> : null}
+
+      <FileField
+        label="تصویر مدرک"
+        value={image}
+        onChange={setImage}
+        hint="تا وصل شدن فضای ذخیره‌سازی، تصویر فقط در همین مرورگر می‌ماند."
+      />
+
+      {slot.needsExpiry ? (
+        <JalaliDateField label="اعتبار تا" value={expires} onChange={setExpires} />
+      ) : null}
+
+      <p className={`${styles.muted} t-caption`}>
+        تا تأیید مدیر، این مدرک ثبت‌شده حساب نمی‌شود. جوابش را همین‌جا می‌بینید.
       </p>
 
       {error ? <p className={`${styles.warn} t-caption`}>{error}</p> : null}

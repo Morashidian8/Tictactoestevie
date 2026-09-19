@@ -12,6 +12,9 @@
 import { quotaReport, type QuotaLine, type SmsBucket } from '../../notify/index.ts'
 import { upcomingBirthdays } from '../birthdays.ts'
 import type {
+  DocumentReview,
+  StaffDocumentKind,
+  StaffDocumentSlot,
   ThreadSummary,
   AccessScope,
   Attendance,
@@ -440,6 +443,40 @@ function periodRange(period: string): { from: string; to: string } {
 
 export function createSupabaseDataAccess(scope: AccessScope): AuditedDataAccess {
   /**
+   * شناسه مربیِ حسابِ فعال.
+   *
+   * `scope.accountId` شناسه **حساب** است نه مربی — یک نفر می‌تواند هم
+   * حساب مربی داشته باشد هم سرپرست، و آن دو یک شناسه ندارند.
+   */
+  const myStaffId = async (): Promise<string> => {
+    const me = orThrow(
+      await db.from('user_account').select('staff_id').eq('id', scope.accountId).single(),
+    ) as Row
+    const id = me.staff_id as string | null
+    if (!id) throw new Error('این حساب مربی نیست')
+    return id
+  }
+
+  /** چک‌لیست مدارک یک مربی. یک ردیف برای هر خواسته، نه هر مدرک. */
+  const readChecklist = async (staffId: string): Promise<StaffDocumentSlot[]> => {
+    const rows = (orThrow(
+      await db.rpc('staff_document_checklist', { centre: scope.centerId, target: staffId }),
+    ) ?? []) as Row[]
+    return rows.map((r) => ({
+      requirementId: r.requirement_id as string,
+      kind: r.kind as StaffDocumentKind,
+      title: r.title as string,
+      note: (r.note as string | null) ?? null,
+      needsExpiry: Boolean(r.needs_expiry),
+      documentId: (r.document_id as string | null) ?? null,
+      review: (r.review as DocumentReview | null) ?? null,
+      reviewNote: (r.review_note as string | null) ?? null,
+      expiresAt: (r.expires_at as string | null) ?? null,
+      state: r.state as StaffDocumentSlot['state'],
+    }))
+  }
+
+  /**
    * پرونده یک مربی.
    *
    * `sharedOnly` برای وقتی است که خودِ مربی می‌خواند: یادداشتی که با او
@@ -493,6 +530,8 @@ export function createSupabaseDataAccess(scope: AccessScope): AuditedDataAccess 
         kind: d.kind as StaffProfile['documents'][number]['kind'],
         title: d.title as string,
         fileUrl: d.file_url as string,
+        review: d.review as DocumentReview,
+        reviewNote: (d.review_note as string | null) ?? null,
         issuedAt: (d.issued_at as string | null) ?? null,
         expiresAt: (d.expires_at as string | null) ?? null,
         uploadedAt: d.uploaded_at as string,
@@ -3375,14 +3414,98 @@ export function createSupabaseDataAccess(scope: AccessScope): AuditedDataAccess 
     },
 
     async uploadStaffDocument(input) {
+      /*
+       * از تابع، نه درج مستقیم.
+       *
+       * `submit_staff_document` است که تصمیم می‌گیرد مدرک «تأییدشده»
+       * ثبت شود یا «در انتظار» — و همان‌جاست که جلوی مربی گرفته می‌شود
+       * که مدرک دیگری را به نام خودش بفرستد.
+       */
       orThrow(
-        await db.from('staff_document').insert({
-          center_id: scope.centerId,
-          staff_id: input.staffId,
-          kind: input.kind,
-          title: input.title.trim(),
+        await db.rpc('submit_staff_document', {
+          target: input.staffId,
+          doc_kind: input.kind,
+          doc_title: input.title.trim(),
           file_url: input.fileUrl,
           issued_at: input.issuedAt ?? null,
+          expires_at: input.expiresAt ?? null,
+        }),
+      )
+    },
+
+    /* ── مدارک: مربی می‌فرستد، مدیر تأیید می‌کند ─────────────── */
+
+    async listDocumentRequirements() {
+      const rows = (orThrow(
+        await db.rpc('staff_document_requirements', { centre: scope.centerId }),
+      ) ?? []) as Row[]
+      return rows.map((r) => ({
+        id: r.id as string,
+        kind: r.kind as StaffDocumentKind,
+        title: r.title as string,
+        note: (r.note as string | null) ?? null,
+        needsExpiry: Boolean(r.needs_expiry),
+      }))
+    },
+
+    async setDocumentRequirement(input) {
+      orThrow(
+        await db.rpc('set_staff_document_requirement', {
+          doc_kind: input.kind,
+          req_title: input.title.trim(),
+          req_note: input.note?.trim() || null,
+          expiry_needed: input.needsExpiry ?? false,
+        }),
+      )
+    },
+
+    async dropDocumentRequirement(requirementId) {
+      orThrow(await db.rpc('drop_staff_document_requirement', { requirement: requirementId }))
+    },
+
+    async listPendingDocuments() {
+      const rows = (orThrow(
+        await db.rpc('staff_document_queue', { centre: scope.centerId }),
+      ) ?? []) as Row[]
+      return rows.map((r) => ({
+        id: r.id as string,
+        staffId: r.staff_id as string,
+        fullName: r.full_name as string,
+        kind: r.kind as StaffDocumentKind,
+        title: r.title as string,
+        fileUrl: r.file_url as string,
+        issuedAt: (r.issued_at as string | null) ?? null,
+        expiresAt: (r.expires_at as string | null) ?? null,
+        uploadedAt: r.uploaded_at as string,
+      }))
+    },
+
+    async reviewStaffDocument(documentId, approve, note) {
+      orThrow(
+        await db.rpc('review_staff_document', {
+          document: documentId,
+          approve,
+          note: note?.trim() || null,
+        }),
+      )
+    },
+
+    async getStaffDocumentChecklist(staffId) {
+      return readChecklist(staffId)
+    },
+
+    async getMyDocumentChecklist() {
+      return readChecklist(await myStaffId())
+    },
+
+    async submitMyDocument(input) {
+      orThrow(
+        await db.rpc('submit_staff_document', {
+          target: await myStaffId(),
+          doc_kind: input.kind,
+          doc_title: input.title.trim(),
+          file_url: input.fileUrl,
+          issued_at: null,
           expires_at: input.expiresAt ?? null,
         }),
       )

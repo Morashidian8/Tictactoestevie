@@ -975,11 +975,16 @@ begin
   perform assert(total.total_minutes = 300, 'و مجموع دقیقه فقط از روزهای کامل');
 
   -- ۵. مدارک مربی: وضعیت از تاریخ انقضا می‌آید.
-  insert into staff_document (center_id, staff_id, kind, title, file_url, issued_at, expires_at)
+  /*
+   * `review` صریح است، چون از ۰۰۳۹ به بعد پیش‌فرضِ ستون «در انتظار
+   * تأیید» است و نماهای کاستی و بازرسی فقط تأییدشده‌ها را می‌شمارند.
+   * این سه، مدرکِ تأییدشده‌اند.
+   */
+  insert into staff_document (center_id, staff_id, kind, title, file_url, issued_at, expires_at, review)
   values
-    (centre, zahra, 'health_card', 'کارت بهداشت', 'x1', current_date - 300, current_date - 1),
-    (centre, zahra, 'training', 'دوره کمک‌های اولیه', 'x2', current_date - 100, current_date + 10),
-    (centre, zahra, 'degree', 'کارشناسی روان‌شناسی', 'x3', current_date - 3000, null);
+    (centre, zahra, 'health_card', 'کارت بهداشت', 'x1', current_date - 300, current_date - 1, 'approved'),
+    (centre, zahra, 'training', 'دوره کمک‌های اولیه', 'x2', current_date - 100, current_date + 10, 'approved'),
+    (centre, zahra, 'degree', 'کارشناسی روان‌شناسی', 'x3', current_date - 3000, null, 'approved');
 
   perform assert(
     (select state from app.staff_documents(centre, zahra) where title = 'کارت بهداشت') = 'expired',
@@ -1084,12 +1089,12 @@ begin
     'یک مربی بی‌کارت بهداشت، کل قلم را ناقص می‌کند'
   );
 
-  insert into staff_document (center_id, staff_id, kind, title, file_url, expires_at)
+  insert into staff_document (center_id, staff_id, kind, title, file_url, expires_at, review)
   values (centre, '52222222-2222-2222-2222-222222222222',
-          'health_card', 'کارت بهداشت', 'y1', current_date + 100);
+          'health_card', 'کارت بهداشت', 'y1', current_date + 100, 'approved');
   -- زهرا کارت منقضی داشت؛ تازه‌اش را می‌گیرد تا قلم کامل شود.
-  insert into staff_document (center_id, staff_id, kind, title, file_url, expires_at)
-  values (centre, zahra, 'health_card', 'کارت بهداشت تمدیدشده', 'y2', current_date + 100);
+  insert into staff_document (center_id, staff_id, kind, title, file_url, expires_at, review)
+  values (centre, zahra, 'health_card', 'کارت بهداشت تمدیدشده', 'y2', current_date + 100, 'approved');
 
   select * into line from app.inspection_readiness(centre)
    where title = 'کارت بهداشت همه مربیان';
@@ -3198,4 +3203,120 @@ begin
   exception when others then ok := true;
   end;
   perform assert(ok, 'مدیر خروج خودش را ثبت نمی‌کند');
+end $$;
+
+
+\echo ''
+\echo '── مدارک مربی: مربی می‌فرستد، مدیر تأیید می‌کند ──'
+do $$
+declare
+  centre uuid := '11111111-1111-1111-1111-111111111111';
+  zahra  uuid := '51111111-1111-1111-1111-111111111111';
+  doc    uuid;
+  line   record;
+  ok     boolean := false;
+begin
+  -- ۱. مربی، مدرک خودش را می‌فرستد.
+  perform login_as('aa000000-0000-0000-0000-0000000000f3', '09120000001');
+  doc := app.submit_staff_document(zahra, 'health_card', 'کارت بهداشت',
+                                   'blob:1', current_date - 10, current_date + 200);
+  perform assert(
+    (select review from staff_document where id = doc) = 'pending',
+    'مدرکی که مربی می‌فرستد، در انتظار تأیید می‌ماند'
+  );
+
+  /*
+   * و تا تأیید نشود، هیچ‌جا شمرده نمی‌شود. بدون این، جریان تأیید
+   * تزئینی است: عکسی می‌رسد و پرونده بازرسی همان لحظه سبز می‌شود.
+   */
+  select * into line from app.staff_document_gaps(centre) where staff_id = zahra;
+  perform assert(line.waiting = 1, 'صف انتظار جدا شمرده می‌شود');
+
+  -- ۲. مربی نمی‌تواند خودش را تأیید کند.
+  begin
+    perform app.review_staff_document(doc, true);
+  exception when others then ok := true;
+  end;
+  perform assert(ok, 'مربی مدرک خودش را تأیید نمی‌کند');
+
+  -- ۳. و اگر مستقیم بنویسد هم، تریگر حالت را برمی‌گرداند.
+  insert into staff_document (center_id, staff_id, kind, title, file_url, review)
+  values (centre, zahra, 'training', 'دوره‌ای که خودم تأیید کردم', 'blob:2', 'approved')
+  returning id into doc;
+  perform assert(
+    (select review from staff_document where id = doc) = 'pending',
+    'حالتِ تأییدِ دست‌نویس مربی نادیده گرفته می‌شود'
+  );
+
+  -- ۴. چک‌لیست: مربی می‌بیند چه کم دارد.
+  perform assert(
+    (select count(*) from app.staff_document_checklist(centre, zahra)) = 4,
+    'چک‌لیست یک ردیف برای هر خواسته دارد، نه برای هر مدرک'
+  );
+  perform assert(
+    (select state from app.staff_document_checklist(centre, zahra)
+      where kind = 'criminal_record') = 'missing',
+    'آنچه هنوز نیامده، «نیامده» علامت می‌خورد'
+  );
+
+  -- ۵. مدیر تأیید می‌کند.
+  perform login_as('aa000000-0000-0000-0000-0000000000f2', '09120000077');
+  perform assert(
+    (select count(*) from app.staff_document_queue(centre)) = 2,
+    'صف تأیید مدیر، فرستاده‌های بی‌جواب را می‌آورد'
+  );
+
+  select id into doc from app.staff_document_queue(centre) where kind = 'health_card';
+  perform app.review_staff_document(doc, true);
+  perform assert(
+    (select state from app.staff_document_checklist(centre, zahra)
+      where kind = 'health_card') = 'valid',
+    'مدرکِ تأییدشده، معتبر می‌شود'
+  );
+
+  -- ۶. رد بدون دلیل نمی‌شود.
+  ok := false;
+  select id into doc from app.staff_document_queue(centre) where kind = 'training';
+  begin
+    perform app.review_staff_document(doc, false);
+  exception when others then ok := true;
+  end;
+  perform assert(ok, 'رد بدون دلیل ثبت نمی‌شود');
+
+  perform app.review_staff_document(doc, false, 'تصویر خوانا نیست، دوباره بفرستید.');
+  select * into line from app.staff_document_checklist(centre, zahra) where kind = 'training';
+  perform assert(line.state = 'rejected', 'ردشده در چک‌لیست ردشده می‌ماند');
+  perform assert(
+    line.review_note = 'تصویر خوانا نیست، دوباره بفرستید.',
+    'و دلیلش را مربی همان‌جا می‌بیند'
+  );
+
+  -- ۷. مدیر که بارگذاری می‌کند، همان لحظه تأیید است.
+  doc := app.submit_staff_document(zahra, 'national_id', 'کارت ملی', 'blob:3');
+  perform assert(
+    (select review from staff_document where id = doc) = 'approved',
+    'مدرکی که خودِ مدیر می‌گذارد، صف انتظار ندارد'
+  );
+
+  -- ۸. فهرست خواسته‌ها را فقط مدیر می‌چیند.
+  perform app.set_staff_document_requirement('contract', 'قرارداد امضاشده', null, false);
+  perform assert(
+    (select count(*) from app.staff_document_requirements(centre)) = 5,
+    'مدیر می‌تواند قلم تازه به فهرست اضافه کند'
+  );
+  perform app.drop_staff_document_requirement(
+    (select id from app.staff_document_requirements(centre) where kind = 'contract')
+  );
+  perform assert(
+    (select count(*) from app.staff_document_requirements(centre)) = 4,
+    'و برداشتنش نرم است — مدارکِ بارگذاری‌شده بی‌پدر نمی‌شوند'
+  );
+
+  ok := false;
+  perform login_as('aa000000-0000-0000-0000-0000000000f3', '09120000001');
+  begin
+    perform app.set_staff_document_requirement('other', 'هرچه دلم خواست');
+  exception when others then ok := true;
+  end;
+  perform assert(ok, 'مربی فهرست خواسته‌ها را عوض نمی‌کند');
 end $$;

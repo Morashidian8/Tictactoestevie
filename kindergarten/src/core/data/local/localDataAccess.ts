@@ -47,6 +47,9 @@ import type {
   ConversationSummary,
   MessageCandidate,
   StaffDocument,
+  StaffDocumentRequirement,
+  StaffDocumentSlot,
+  SlotState,
   LeaveRequest,
   Loan,
   MealBasketLine,
@@ -166,7 +169,7 @@ const STORE_KEY = 'kg.dev.days'
  * عدد یک واحد بالا می‌رود و حافظه قدیمی دور انداخته می‌شود. از دست
  * رفتن داده نمایشی هزینه‌ای ندارد؛ عدد غلط جلوی چشم خانواده دارد.
  */
-const STORE_VERSION = 2
+const STORE_VERSION = 3
 let hydrated = false
 
 type StoredDay = {
@@ -258,6 +261,7 @@ function save(): void {
       surveys: SURVEYS,
       expenses: EXPENSES,
       staffDocs: STAFF_DOCS,
+      docRequirements: DOC_REQUIREMENTS,
       staffNotes: STAFF_NOTES,
       leaves: LEAVES,
       loans: LOANS,
@@ -312,6 +316,7 @@ function hydrate(): void {
       surveys?: SurveyRow[]
       expenses?: Expense[]
       staffDocs?: (StaffDocument & { staffId: string })[]
+      docRequirements?: StaffDocumentRequirement[]
       staffNotes?: (StaffNote & { staffId: string })[]
       leaves?: LeaveRow[]
       loans?: LoanRow[]
@@ -388,6 +393,7 @@ function hydrate(): void {
     restore(SURVEYS, payload.surveys)
     restore(EXPENSES, payload.expenses)
     restore(STAFF_DOCS, payload.staffDocs)
+    if (payload.docRequirements) restore(DOC_REQUIREMENTS, payload.docRequirements)
     restore(STAFF_NOTES, payload.staffNotes)
     restore(LEAVES, payload.leaves)
     restore(LOANS, payload.loans)
@@ -917,9 +923,138 @@ const LOANS: LoanRow[] = []
 type LeaveRow = LeaveRequest & { staffId: string }
 const LEAVES: LeaveRow[] = []
 
-const STAFF_DOCS: (StaffDocument & { staffId: string })[] = []
+/*
+ * تصویرِ جای‌گیرِ مدرک در نسخه نمایشی.
+ *
+ * SVG درون‌خطی و نه عکس: چیزی که شبیه کاغذِ اسکن‌شده باشد ولی هیچ
+ * داده‌ای از کسی نداشته باشد، و بدون شبکه هم بیاید.
+ *
+ * رنگ‌ها با `#` نوشته می‌شوند و `encodeURIComponent` خودش درشان
+ * می‌آورد. نوشتنِ `%23` دستی یعنی دو بار کدگذاری، و مرورگر رنگ را
+ * نامعتبر می‌بیند و مستطیل سیاه می‌کشد.
+ */
+const DEMO_SCAN =
+  'data:image/svg+xml;utf8,' +
+  encodeURIComponent(
+    '<svg xmlns="http://www.w3.org/2000/svg" width="240" height="160">' +
+      '<rect width="240" height="160" fill="#F4EFE6"/>' +
+      '<rect x="18" y="18" width="204" height="124" fill="#FCF9F4" stroke="#D6CDBE"/>' +
+      '<rect x="34" y="38" width="120" height="8" fill="#D6CDBE"/>' +
+      '<rect x="34" y="58" width="172" height="6" fill="#E4DCCE"/>' +
+      '<rect x="34" y="74" width="172" height="6" fill="#E4DCCE"/>' +
+      '<rect x="34" y="90" width="96" height="6" fill="#E4DCCE"/>' +
+      '<rect x="152" y="98" width="54" height="30" fill="#EDE6D8"/>' +
+      '</svg>',
+  )
+
+const STAFF_DOCS: (StaffDocument & { staffId: string })[] = [
+  /*
+   * سه حالت، تا هر سه سرِ جریان در نسخه نمایشی دیده شود: یکی
+   * تأییدشده، یکی در صف مدیر، یکی ردشده با دلیل. صفِ خالی یعنی مدیری
+   * که اپ را باز می‌کند، اصلاً نمی‌فهمد این صف وجود دارد.
+   */
+  {
+    id: 'doc-demo-1',
+    staffId: 'acc-teacher-golha',
+    kind: 'health_card',
+    title: 'کارت بهداشت',
+    fileUrl: DEMO_SCAN,
+    review: 'approved',
+    reviewNote: null,
+    issuedAt: null,
+    expiresAt: null,
+    uploadedAt: '2026-01-12T09:00:00.000Z',
+  },
+  {
+    id: 'doc-demo-2',
+    staffId: 'staff-maryam',
+    kind: 'criminal_record',
+    title: 'گواهی عدم سوءپیشینه',
+    fileUrl: DEMO_SCAN,
+    review: 'pending',
+    reviewNote: null,
+    issuedAt: null,
+    expiresAt: null,
+    uploadedAt: '2026-03-09T07:30:00.000Z',
+  },
+  {
+    id: 'doc-demo-3',
+    staffId: 'acc-teacher-golha',
+    kind: 'national_id',
+    title: 'کارت ملی',
+    fileUrl: DEMO_SCAN,
+    review: 'rejected',
+    reviewNote: 'فقط یک رو فرستاده شده. هر دو رو لازم است.',
+    issuedAt: null,
+    expiresAt: null,
+    uploadedAt: '2026-03-08T11:15:00.000Z',
+  },
+]
 const STAFF_NOTES: (StaffNote & { staffId: string })[] = []
 let staffSeq = 0
+
+/*
+ * فهرست مدارکی که مدیر از هر مربی می‌خواهد.
+ *
+ * مثل چک‌لیست بازرسی، **داده است نه کد**: مهد کم و زیادش می‌کند. این
+ * مقدار آغازین همان چیزی است که مهاجرت ۰۰۳۹ برای هر مرکز تازه می‌کارد.
+ */
+const DOC_REQUIREMENTS: StaffDocumentRequirement[] = [
+  {
+    id: 'req-health',
+    kind: 'health_card',
+    title: 'کارت بهداشت',
+    note: 'کارت بهداشتِ معتبر، با تاریخ اعتبار خوانا.',
+    needsExpiry: true,
+  },
+  {
+    id: 'req-criminal',
+    kind: 'criminal_record',
+    title: 'گواهی عدم سوءپیشینه',
+    note: 'برای پرونده بازرسی لازم است.',
+    needsExpiry: true,
+  },
+  { id: 'req-nid', kind: 'national_id', title: 'کارت ملی', note: 'هر دو رو.', needsExpiry: false },
+  { id: 'req-degree', kind: 'degree', title: 'مدرک تحصیلی', note: 'آخرین مدرک.', needsExpiry: false },
+]
+
+/**
+ * چک‌لیست مدارک یک مربی — یک ردیف برای هر **خواسته**، نه هر مدرک.
+ *
+ * ترتیبِ انتخابِ مدرک عمدی است: تأییدشده مقدم است، بعد تازه‌ترین.
+ * مربی‌ای که کارت معتبر دارد و تازه یکی دیگر فرستاده، نباید ردیفش
+ * «در انتظار» شود — مدرکش همین حالا معتبر است.
+ */
+function checklistOf(staffId: string, now: Date): StaffDocumentSlot[] {
+  const today = toIsoDate(now)
+  return DOC_REQUIREMENTS.map((req) => {
+    const doc = STAFF_DOCS.filter((d) => d.staffId === staffId && d.kind === req.kind).sort(
+      (a, b) =>
+        Number(b.review === 'approved') - Number(a.review === 'approved') ||
+        b.uploadedAt.localeCompare(a.uploadedAt),
+    )[0]
+    const state: SlotState =
+      doc === undefined
+        ? 'missing'
+        : doc.review === 'pending'
+          ? 'pending'
+          : doc.review === 'rejected'
+            ? 'rejected'
+            : documentState(doc.expiresAt, today)
+    return {
+      requirementId: req.id,
+      kind: req.kind,
+      title: req.title,
+      note: req.note,
+      needsExpiry: req.needsExpiry,
+      documentId: doc?.id ?? null,
+      review: doc?.review ?? null,
+      reviewNote: doc?.reviewNote ?? null,
+      expiresAt: doc?.expiresAt ?? null,
+      state,
+    }
+  })
+}
 
 /** مدرکی که گذشته یا کمتر از شصت روز تا انقضایش مانده. */
 function documentGaps(staffId: string, now: Date): { expired: number; expiring: number } {
@@ -927,7 +1062,10 @@ function documentGaps(staffId: string, now: Date): { expired: number; expiring: 
   const soon = new Date(now)
   soon.setDate(soon.getDate() + 60)
   const soonIso = toIsoDate(soon)
-  const mine = STAFF_DOCS.filter((d) => d.staffId === staffId && d.expiresAt)
+  /* مدرکِ تأییدنشده، مدرک نیست — نه اینجا شمرده می‌شود نه در بازرسی. */
+  const mine = STAFF_DOCS.filter(
+    (d) => d.staffId === staffId && d.review === 'approved' && d.expiresAt,
+  )
   return {
     expired: mine.filter((d) => (d.expiresAt ?? '') < today).length,
     expiring: mine.filter((d) => (d.expiresAt ?? '') >= today && (d.expiresAt ?? '') <= soonIso)
@@ -3868,10 +4006,15 @@ export function createLocalDataAccess(scope: AccessScope): DataAccess {
               (doc) =>
                 doc.staffId === t.id &&
                 doc.kind === r.sourceKey &&
+                // «داشتن» یعنی مدرکِ تأییدشده؛ چیزی که هنوز در صف مدیر
+                // است، روز بازرسی به کار نمی‌آید.
+                doc.review === 'approved' &&
                 (!doc.expiresAt || doc.expiresAt >= today),
             ),
         )
-        const soonest = STAFF_DOCS.filter((d) => d.kind === r.sourceKey && d.expiresAt)
+        const soonest = STAFF_DOCS.filter(
+          (d) => d.kind === r.sourceKey && d.review === 'approved' && d.expiresAt,
+        )
           .map((d) => d.expiresAt as string)
           .sort()[0] ?? null
         return {
@@ -4277,8 +4420,107 @@ export function createLocalDataAccess(scope: AccessScope): DataAccess {
         staffId: input.staffId,
         kind: input.kind,
         title: input.title.trim(),
-        fileUrl: input.fileUrl,
+        fileUrl: await durableUrl(input.fileUrl),
+        /*
+         * مدرکی که خودِ مدیر می‌گذارد، صف انتظار ندارد: کسی نمانده که
+         * تأییدش کند و یک صفِ تک‌نفره فقط کار را کند می‌کند.
+         */
+        review: 'approved',
+        reviewNote: null,
         issuedAt: input.issuedAt ?? null,
+        expiresAt: input.expiresAt ?? null,
+        uploadedAt: new Date().toISOString(),
+      })
+      save()
+    },
+
+    /* ── مدارک: مربی می‌فرستد، مدیر تأیید می‌کند ─────────────── */
+
+    async listDocumentRequirements() {
+      return [...DOC_REQUIREMENTS]
+    },
+
+    async setDocumentRequirement(input) {
+      assertManager()
+      const title = input.title.trim()
+      if (!title) throw new Error('عنوان مدرک لازم است.')
+      /* از هر نوع، یکی: دو «کارت بهداشت» یعنی مربی دو بار بفرستد. */
+      const at = DOC_REQUIREMENTS.findIndex((r) => r.kind === input.kind)
+      const row: StaffDocumentRequirement = {
+        id: at >= 0 ? (DOC_REQUIREMENTS[at]?.id ?? `req-${(staffSeq += 1)}`) : `req-${(staffSeq += 1)}`,
+        kind: input.kind,
+        title,
+        note: input.note?.trim() || null,
+        needsExpiry: input.needsExpiry ?? false,
+      }
+      if (at >= 0) DOC_REQUIREMENTS[at] = row
+      else DOC_REQUIREMENTS.push(row)
+      save()
+    },
+
+    async dropDocumentRequirement(requirementId) {
+      assertManager()
+      const at = DOC_REQUIREMENTS.findIndex((r) => r.id === requirementId)
+      if (at < 0) throw new Error('این قلم پیدا نشد.')
+      DOC_REQUIREMENTS.splice(at, 1)
+      save()
+    },
+
+    async listPendingDocuments() {
+      assertManager()
+      return STAFF_DOCS.filter((d) => d.review === 'pending')
+        .map((d) => ({
+          id: d.id,
+          staffId: d.staffId,
+          fullName: fullNameOf(DIRECTORY.find((x) => x.id === d.staffId)) ?? '—',
+          kind: d.kind,
+          title: d.title,
+          fileUrl: d.fileUrl,
+          issuedAt: d.issuedAt,
+          expiresAt: d.expiresAt,
+          uploadedAt: d.uploadedAt,
+        }))
+        .sort((a, b) => a.uploadedAt.localeCompare(b.uploadedAt))
+    },
+
+    async reviewStaffDocument(documentId, approve, note) {
+      assertManager()
+      const doc = STAFF_DOCS.find((d) => d.id === documentId)
+      if (!doc) throw new Error('مدرک پیدا نشد.')
+      /*
+       * رد بدون دلیل نمی‌شود.
+       *
+       * مربی‌ای که فقط «رد شد» می‌بیند، همان عکس را دوباره می‌فرستد —
+       * و مدیر دوباره ردش می‌کند. یک جمله این حلقه را می‌بندد.
+       */
+      if (!approve && !note?.trim()) throw new Error('دلیل رد را بنویسید.')
+      doc.review = approve ? 'approved' : 'rejected'
+      doc.reviewNote = note?.trim() || null
+      save()
+    },
+
+    async getStaffDocumentChecklist(staffId) {
+      assertManager()
+      return checklistOf(staffId, new Date())
+    },
+
+    async getMyDocumentChecklist() {
+      return checklistOf(scope.accountId, new Date())
+    },
+
+    async submitMyDocument(input) {
+      const title = input.title.trim()
+      if (!title) throw new Error('عنوان مدرک لازم است.')
+      STAFF_DOCS.push({
+        id: `doc-${(staffSeq += 1)}`,
+        staffId: scope.accountId,
+        kind: input.kind,
+        title,
+        fileUrl: await durableUrl(input.fileUrl),
+        /* از پنل مربی، همیشه «در انتظار». کل نکته همین است. */
+        review: 'pending',
+        reviewNote: null,
+        issuedAt: null,
         expiresAt: input.expiresAt ?? null,
         uploadedAt: new Date().toISOString(),
       })

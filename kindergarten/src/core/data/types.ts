@@ -655,11 +655,28 @@ export type StaffDocumentKind =
   | 'contract'
   | 'other'
 
+/**
+ * حالت تأیید مدرک — ماژول ۰۰۳۹.
+ *
+ * قاعده‌ای که همه‌جا برقرار است: **مدرکِ تأییدنشده، مدرک نیست.** هیچ
+ * شمارشی — کاستی مربی، آمادگی بازرسی — آن را نمی‌بیند.
+ */
+export type DocumentReview = 'pending' | 'approved' | 'rejected'
+
+export const DOCUMENT_REVIEW_LABEL: Record<DocumentReview, string> = {
+  pending: 'در انتظار تأیید مدیر',
+  approved: 'تأیید شد',
+  rejected: 'رد شد',
+}
+
 export type StaffDocument = {
   id: string
   kind: StaffDocumentKind
   title: string
   fileUrl: string
+  review: DocumentReview
+  /** دلیل رد، همان‌جا کنار مدرک. رد بی‌دلیل ثبت نمی‌شود. */
+  reviewNote: string | null
   issuedAt: string | null
   /**
    * تاریخ انقضا.
@@ -976,6 +993,65 @@ export type StaffDocumentInput = {
   title: string
   fileUrl: string
   issuedAt?: string | null
+  expiresAt?: string | null
+}
+
+/** یک قلم از فهرستی که مدیر از هر مربی می‌خواهد. */
+export type StaffDocumentRequirement = {
+  id: string
+  kind: StaffDocumentKind
+  title: string
+  note: string | null
+  /** کارت بهداشت بله، مدرک تحصیلی نه. */
+  needsExpiry: boolean
+}
+
+/**
+ * وضعیت یک قلمِ خواسته‌شده برای یک مربی.
+ *
+ * `missing` یعنی هنوز نیامده. بقیه حالت‌ها یا جوابِ مدیرند
+ * (`pending`/`rejected`) یا وضعیت انقضای مدرکِ تأییدشده.
+ */
+export type SlotState = 'missing' | 'pending' | 'rejected' | DocumentState
+
+/**
+ * یک ردیف از چک‌لیست مدارک مربی.
+ *
+ * یک ردیف برای هر **خواسته**، نه برای هر مدرک: فهرستی که فقط داشته‌ها
+ * را نشان بدهد، همان کشوی کاغذِ قدیم است و کسی از رویش نمی‌فهمد چه کم
+ * دارد.
+ */
+export type StaffDocumentSlot = {
+  requirementId: string
+  kind: StaffDocumentKind
+  title: string
+  note: string | null
+  needsExpiry: boolean
+  documentId: string | null
+  review: DocumentReview | null
+  reviewNote: string | null
+  expiresAt: string | null
+  state: SlotState
+}
+
+/** یک فرستادهٔ بی‌جواب در صف تأیید مدیر. */
+export type PendingStaffDocument = {
+  id: string
+  staffId: string
+  fullName: string
+  kind: StaffDocumentKind
+  title: string
+  fileUrl: string
+  issuedAt: string | null
+  expiresAt: string | null
+  uploadedAt: string
+}
+
+/** آنچه مربی از پنل خودش می‌فرستد. همیشه «در انتظار» ثبت می‌شود. */
+export type MyDocumentInput = {
+  kind: StaffDocumentKind
+  title: string
+  fileUrl: string
   expiresAt?: string | null
 }
 
@@ -2098,6 +2174,37 @@ export interface DataAccess {
   getStaffProfile(staffId: string): Promise<StaffProfile>
 
   uploadStaffDocument(input: StaffDocumentInput): Promise<void>
+
+  /* ── مدارک: مربی می‌فرستد، مدیر تأیید می‌کند — ماژول ۰۰۳۹ ── */
+
+  /** فهرست مدارکی که مدیر از هر مربی می‌خواهد. */
+  listDocumentRequirements(): Promise<StaffDocumentRequirement[]>
+
+  /** افزودن یا بازنویسی یک قلم. از هر نوع، یکی. */
+  setDocumentRequirement(input: {
+    kind: StaffDocumentKind
+    title: string
+    note?: string | null
+    needsExpiry?: boolean
+  }): Promise<void>
+
+  /** برداشتن یک قلم. نرم است — مدارکِ بارگذاری‌شده بی‌پدر نمی‌شوند. */
+  dropDocumentRequirement(requirementId: string): Promise<void>
+
+  /** صف تأیید مدیر: هرچه مربیان فرستاده‌اند و هنوز جواب نگرفته. */
+  listPendingDocuments(): Promise<PendingStaffDocument[]>
+
+  /** تأیید یا رد. رد بدون دلیل ثبت نمی‌شود. */
+  reviewStaffDocument(documentId: string, approve: boolean, note?: string): Promise<void>
+
+  /** چک‌لیست مدارک یک مربی، از دید مدیر. */
+  getStaffDocumentChecklist(staffId: string): Promise<StaffDocumentSlot[]>
+
+  /** چک‌لیست خودِ مربی — چه خواسته‌اند و چه کم دارد. */
+  getMyDocumentChecklist(): Promise<StaffDocumentSlot[]>
+
+  /** بارگذاری مدرک از پنل خودِ مربی. */
+  submitMyDocument(input: MyDocumentInput): Promise<void>
 
   addStaffNote(input: StaffNoteInput): Promise<void>
 

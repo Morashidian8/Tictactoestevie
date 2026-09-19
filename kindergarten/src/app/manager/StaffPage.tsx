@@ -11,6 +11,10 @@ import { useData } from '../../core/auth/index.ts'
 import { STAFF_TITLE_LABEL } from '../../core/data/index.ts'
 import type {
   NewStaff,
+  PendingStaffDocument,
+  SlotState,
+  StaffDocumentRequirement,
+  StaffDocumentSlot,
   StaffTitle,
   StaffCartableRow,
   StaffDocumentKind,
@@ -50,6 +54,33 @@ const DOC_KINDS: { value: StaffDocumentKind; label: string; needsExpiry: boolean
   { value: 'other', label: 'سایر', needsExpiry: false },
 ]
 
+/*
+ * حالت هر قلم از چک‌لیست، با **کلمه**.
+ *
+ * همان فهرستی که پنل مربی نشان می‌دهد — دو طرف باید یک چیز بخوانند،
+ * وگرنه مربی می‌گوید «فرستادم» و مدیر می‌گوید «نیامده».
+ */
+const SLOT_TEXT: Record<SlotState, string> = {
+  missing: 'نیامده',
+  pending: 'در انتظار تأیید',
+  rejected: 'رد شد',
+  expired: 'منقضی شده',
+  expiring: 'رو به انقضا',
+  valid: 'تأیید شده',
+  none: 'تأیید شده',
+}
+
+/** کدام حالت‌ها کاری می‌خواهند. */
+const SLOT_TODO: Record<SlotState, boolean> = {
+  missing: true,
+  pending: true,
+  rejected: true,
+  expired: true,
+  expiring: true,
+  valid: false,
+  none: false,
+}
+
 const NOTE_KINDS: { value: StaffNoteKind; label: string }[] = [
   { value: 'commendation', label: 'تقدیر' },
   { value: 'review', label: 'ارزیابی دوره‌ای' },
@@ -75,6 +106,10 @@ export function StaffPage({ openStaffId, onBack }: {
   const [addingStaff, setAddingStaff] = useState(false)
   const [exported, setExported] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [queue, setQueue] = useState<PendingStaffDocument[] | null>(null)
+  const [rejecting, setRejecting] = useState<PendingStaffDocument | null>(null)
+  const [needs, setNeeds] = useState<StaffDocumentRequirement[] | null>(null)
+  const [askingNeed, setAskingNeed] = useState(false)
 
   const load = useCallback(async () => {
     const to = toIsoDate(new Date())
@@ -88,9 +123,15 @@ export function StaffPage({ openStaffId, onBack }: {
     }
   }, [data])
 
+  const loadQueue = useCallback(() => {
+    data.listPendingDocuments().then(setQueue).catch(() => setQueue([]))
+    data.listDocumentRequirements().then(setNeeds).catch(() => setNeeds([]))
+  }, [data])
+
   useEffect(() => {
     void load()
-  }, [load])
+    loadQueue()
+  }, [load, loadQueue])
 
   if (openId) {
     return (
@@ -123,6 +164,66 @@ export function StaffPage({ openStaffId, onBack }: {
           فعالیت سی روز گذشته. این ارقام کارِ ثبت‌شده را می‌شمارند، نه کیفیت کار را —
           و بین مربیان مقایسه نمی‌شوند.
         </p>
+
+        {/*
+          صف تأیید مدارک، **بالای** فهرست.
+
+          این تنها چیز این صفحه است که کسِ دیگری منتظرش است: مربی مدرکش
+          را فرستاده و تا مدیر جواب ندهد، برایش ثبت نشده. کاری که کسی
+          منتظرش است، پایین صفحه نمی‌رود.
+        */}
+        {queue && queue.length > 0 ? (
+          <section className={styles.queue} aria-label="مدارک در انتظار تأیید">
+            <p className={`${styles.queueTitle} t-body-lg`}>
+              <AlertIcon size={18} />
+              {formatCount(queue.length)} مدرک در انتظار تأیید شما
+            </p>
+            {queue.map((doc) => (
+              <article key={doc.id} className={styles.queueRow}>
+                <p className={`${styles.queueWho} t-body`}>
+                  <b>{doc.fullName}</b>
+                  <span className={styles.muted}>{doc.title}</span>
+                </p>
+                {/*
+                  خودِ تصویر، نه فقط عنوانش.
+                  مدیری که مدرک را ندیده، تأییدش هم بی‌معنا است.
+                */}
+                <img className={styles.queueShot} src={doc.fileUrl} alt="" />
+                {doc.expiresAt ? (
+                  <p className={`${styles.muted} t-caption`}>
+                    اعتبار تا {formatJalali(new Date(doc.expiresAt), 'short')}
+                  </p>
+                ) : null}
+                <div className={styles.queueActions}>
+                  <button
+                    type="button"
+                    className={`${styles.primary} t-body`}
+                    onClick={() =>
+                      void data
+                        .reviewStaffDocument(doc.id, true)
+                        .then(() => {
+                          loadQueue()
+                          void load()
+                        })
+                        .catch((cause: unknown) =>
+                          setError(cause instanceof Error ? cause.message : 'ثبت نشد.'),
+                        )
+                    }
+                  >
+                    تأیید
+                  </button>
+                  <button
+                    type="button"
+                    className={`${styles.secondary} t-body`}
+                    onClick={() => setRejecting(doc)}
+                  >
+                    رد با توضیح
+                  </button>
+                </div>
+              </article>
+            ))}
+          </section>
+        ) : null}
 
         {rows === null ? (
           <EmptyState text="در حال خواندن…" />
@@ -190,6 +291,51 @@ export function StaffPage({ openStaffId, onBack }: {
           افزودن مربی
         </button>
 
+        {/*
+          فهرست مدارکی که از هر مربی خواسته می‌شود.
+
+          فهرست **داده است، نه کد** — همان استدلال چک‌لیست بازرسی:
+          مقررات از استانی به استان دیگر فرق دارد و مهدِ خصوصی چیزی
+          می‌خواهد که مهدِ دولتی نمی‌خواهد. مربی همین فهرست را در پنل
+          خودش می‌بیند.
+        */}
+        <section className={styles.card} aria-label="مدارک لازم از مربیان">
+          <span className={`${styles.cardLabel} t-caption`}>مدارک لازم از هر مربی</span>
+          {needs === null ? (
+            <p className={`${styles.muted} t-body`}>در حال خواندن…</p>
+          ) : needs.length === 0 ? (
+            <p className={`${styles.muted} t-body`}>
+              هنوز چیزی خواسته نشده. تا این فهرست خالی باشد، پنل مربی چیزی برای بارگذاری ندارد.
+            </p>
+          ) : (
+            needs.map((need) => (
+              <p key={need.id} className={`${styles.row} t-body`}>
+                <span>{need.title}</span>
+                <span className={styles.muted}>
+                  {need.needsExpiry ? 'با تاریخ اعتبار' : 'بدون تاریخ'}
+                </span>
+                <button
+                  type="button"
+                  className={styles.linkAction}
+                  onClick={() =>
+                    void data
+                      .dropDocumentRequirement(need.id)
+                      .then(loadQueue)
+                      .catch((cause: unknown) =>
+                        setError(cause instanceof Error ? cause.message : 'برداشته نشد.'),
+                      )
+                  }
+                >
+                  برداشتن
+                </button>
+              </p>
+            ))
+          )}
+          <button type="button" className={styles.action} onClick={() => setAskingNeed(true)}>
+            افزودن به فهرست
+          </button>
+        </section>
+
         <button
           type="button"
           className={styles.action}
@@ -206,6 +352,28 @@ export function StaffPage({ openStaffId, onBack }: {
 
         {error ? <p className={`${styles.error} t-body`}>{error}</p> : null}
       </div>
+
+      {rejecting ? (
+        <RejectSheet
+          doc={rejecting}
+          onClose={() => setRejecting(null)}
+          onDone={() => {
+            setRejecting(null)
+            loadQueue()
+            void load()
+          }}
+        />
+      ) : null}
+
+      {askingNeed ? (
+        <RequirementSheet
+          onClose={() => setAskingNeed(false)}
+          onDone={() => {
+            setAskingNeed(false)
+            loadQueue()
+          }}
+        />
+      ) : null}
 
       {addingStaff ? (
         <NewStaffSheet
@@ -343,6 +511,7 @@ function StaffFile({ staffId, onBack }: { staffId: string; onBack: () => void })
   const [file, setFile] = useState<StaffProfile | null>(null)
   const [adding, setAdding] = useState<'doc' | 'note' | 'profile' | null>(null)
   const [note, setNote] = useState<string | null>(null)
+  const [slots, setSlots] = useState<StaffDocumentSlot[] | null>(null)
 
   const load = useCallback(async () => {
     try {
@@ -350,6 +519,7 @@ function StaffFile({ staffId, onBack }: { staffId: string; onBack: () => void })
     } catch {
       setFile(null)
     }
+    data.getStaffDocumentChecklist(staffId).then(setSlots).catch(() => setSlots([]))
   }, [data, staffId])
 
   const [titleOpen, setTitleOpen] = useState(false)
@@ -374,6 +544,9 @@ function StaffFile({ staffId, onBack }: { staffId: string; onBack: () => void })
   }
 
   const today = toIsoDate(new Date())
+  /* مدارکی که هیچ قلمِ چک‌لیست ادعایشان را نمی‌کند. */
+  const onList = new Set((slots ?? []).map((slot) => slot.kind))
+  const extras = file.documents.filter((doc) => !onList.has(doc.kind))
 
   return (
     <div className={styles.page}>
@@ -460,29 +633,66 @@ function StaffFile({ staffId, onBack }: { staffId: string; onBack: () => void })
           </button>
         </section>
 
+        {/*
+          مدارک، به‌ترتیبِ چک‌لیست.
+
+          پیش‌تر اینجا فقط داشته‌ها فهرست می‌شد و مدیر باید خودش
+          می‌فهمید چه کم است. حالا یک ردیف برای هر **خواسته** می‌آید،
+          و آنچه نیامده هم ردیف خودش را دارد.
+        */}
         <section className={styles.card}>
           <span className={`${styles.cardLabel} t-caption`}>مدارک</span>
-          {file.documents.length === 0 ? (
-            <p className={`${styles.muted} t-body`}>هنوز مدرکی بارگذاری نشده.</p>
+          {slots === null ? (
+            <p className={`${styles.muted} t-body`}>در حال خواندن…</p>
+          ) : slots.length === 0 ? (
+            <p className={`${styles.muted} t-body`}>
+              فهرست مدارک لازم خالی است. آن را در صفحه کارکنان بچینید.
+            </p>
           ) : (
-            file.documents.map((doc) => {
-              const expired = doc.expiresAt !== null && doc.expiresAt < today
-              return (
-                <p key={doc.id} className={`${styles.row} t-body`}>
-                  <span>{doc.title}</span>
-                  <span className={styles.muted}>{DOC_LABEL[doc.kind] ?? doc.kind}</span>
-                  {doc.expiresAt ? (
-                    <b className={expired ? styles.expired : undefined}>
-                      {expired ? 'منقضی ' : 'تا '}
-                      {formatJalali(new Date(doc.expiresAt), 'short')}
-                    </b>
-                  ) : (
-                    <b className={styles.muted}>بدون انقضا</b>
-                  )}
-                </p>
-              )
-            })
+            slots.map((slot) => (
+              <p key={slot.requirementId} className={`${styles.row} t-body`}>
+                <span>{slot.title}</span>
+                {/* حالت با کلمه، نه با رنگ — بخش ۱۲.۲. */}
+                <b className={SLOT_TODO[slot.state] ? styles.expired : styles.muted}>
+                  {SLOT_TEXT[slot.state]}
+                </b>
+                {slot.expiresAt && (slot.state === 'valid' || slot.state === 'expiring') ? (
+                  <span className={styles.muted}>
+                    تا {formatJalali(new Date(slot.expiresAt), 'short')}
+                  </span>
+                ) : null}
+              </p>
+            ))
           )}
+
+          {/*
+            مدارکی که بیرون از چک‌لیست بارگذاری شده‌اند — قرارداد، گواهی
+            دوره‌ای که مهد لازمش ندارد ولی دارد. حذفشان از صفحه یعنی
+            مدرکی که هست، دیده نشود.
+          */}
+          {extras.length > 0 ? (
+            <>
+              <span className={`${styles.cardLabel} t-caption`}>بیرون از فهرست</span>
+              {extras.map((doc) => {
+                const expired = doc.expiresAt !== null && doc.expiresAt < today
+                return (
+                  <p key={doc.id} className={`${styles.row} t-body`}>
+                    <span>{doc.title}</span>
+                    <span className={styles.muted}>{DOC_LABEL[doc.kind] ?? doc.kind}</span>
+                    {doc.expiresAt ? (
+                      <b className={expired ? styles.expired : undefined}>
+                        {expired ? 'منقضی ' : 'تا '}
+                        {formatJalali(new Date(doc.expiresAt), 'short')}
+                      </b>
+                    ) : (
+                      <b className={styles.muted}>بدون انقضا</b>
+                    )}
+                  </p>
+                )
+              })}
+            </>
+          ) : null}
+
           <button type="button" className={styles.action} onClick={() => setAdding('doc')}>
             بارگذاری مدرک
           </button>
@@ -1056,5 +1266,180 @@ function Chevron({ flip }: { flip?: boolean }) {
       stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
       <path d={flip ? 'm9 18 6-6-6-6' : 'm15 18-6-6 6-6'} />
     </svg>
+  )
+}
+
+
+/* ── شیت رد مدرک ────────────────────────────────────────────── */
+
+/**
+ * رد یک مدرک، با دلیل.
+ *
+ * دلیل اجباری است و پایگاه داده هم همین را می‌گوید. مربی‌ای که فقط
+ * «رد شد» می‌بیند، همان عکس را دوباره می‌فرستد و مدیر دوباره ردش
+ * می‌کند — یک جمله این حلقه را می‌بندد.
+ */
+function RejectSheet({ doc, onClose, onDone }: {
+  doc: PendingStaffDocument
+  onClose: () => void
+  onDone: () => void
+}) {
+  const data = useData()
+  const [why, setWhy] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const submit = async () => {
+    if (!why.trim()) {
+      setError('بنویسید چرا، تا مربی بداند چه باید بفرستد.')
+      return
+    }
+    setBusy(true)
+    setError(null)
+    try {
+      await data.reviewStaffDocument(doc.id, false, why)
+      onDone()
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'ثبت نشد.')
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className={styles.sheetBackdrop} role="dialog" aria-label="رد مدرک">
+      <div className={styles.sheet}>
+        <p className={`${styles.sheetTitle} t-h2`}>رد «{doc.title}»</p>
+        <p className={`${styles.muted} t-body`}>{doc.fullName}</p>
+
+        <label className={`${styles.field} t-caption`}>
+          چرا رد می‌شود
+          <textarea
+            className={styles.textarea}
+            rows={3}
+            value={why}
+            aria-label="دلیل رد مدرک"
+            placeholder="مثلاً: تصویر خوانا نیست، دوباره بفرستید."
+            onChange={(event) => setWhy(event.target.value)}
+          />
+        </label>
+
+        {error ? <p className={`${styles.error} t-caption`}>{error}</p> : null}
+
+        <div className={styles.sheetActions}>
+          <button type="button" className={styles.secondary} onClick={onClose}>
+            انصراف
+          </button>
+          <button
+            type="button"
+            className={`${styles.primary} t-body`}
+            disabled={busy}
+            onClick={() => void submit()}
+          >
+            ثبت رد
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/* ── شیت افزودن قلم به فهرست مدارک لازم ─────────────────────── */
+
+function RequirementSheet({ onClose, onDone }: {
+  onClose: () => void
+  onDone: () => void
+}) {
+  const data = useData()
+  const [kind, setKind] = useState<StaffDocumentKind>('health_card')
+  const [title, setTitle] = useState('')
+  const [note, setNote] = useState('')
+  const [needsExpiry, setNeedsExpiry] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const submit = async () => {
+    setBusy(true)
+    setError(null)
+    try {
+      await data.setDocumentRequirement({
+        kind,
+        title: title.trim() || (DOC_LABEL[kind] ?? 'مدرک'),
+        note,
+        needsExpiry,
+      })
+      onDone()
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'ثبت نشد.')
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className={styles.sheetBackdrop} role="dialog" aria-label="افزودن مدرک لازم">
+      <div className={styles.sheet}>
+        <p className={`${styles.sheetTitle} t-h2`}>مدرک لازم</p>
+
+        <ChoiceGroup
+          label="نوع مدرک"
+          options={DOC_KINDS.map((k) => ({ value: k.value, label: k.label }))}
+          value={kind}
+          onChange={setKind}
+        />
+
+        <label className={`${styles.field} t-caption`}>
+          عنوان، همان‌طور که مربی می‌بیند
+          <input
+            className={styles.input}
+            value={title}
+            aria-label="عنوان مدرک لازم"
+            placeholder={DOC_LABEL[kind]}
+            onChange={(event) => setTitle(event.target.value)}
+          />
+        </label>
+
+        <label className={`${styles.field} t-caption`}>
+          توضیح برای مربی — اختیاری
+          <input
+            className={styles.input}
+            value={note}
+            aria-label="توضیح مدرک لازم"
+            placeholder="مثلاً: کارت بهداشتِ امسال، نه پارسال."
+            onChange={(event) => setNote(event.target.value)}
+          />
+        </label>
+
+        {/*
+          تاریخ اعتبار، فقط جایی که واقعاً هست.
+
+          اجبارِ تاریخ روی مدرکی که تاریخ ندارد، مربی را وادار می‌کند
+          تاریخِ الکی بزند — و آن تاریخ بعداً «مدرک معتبر» نشان می‌دهد.
+        */}
+        <ChoiceGroup
+          label="تاریخ اعتبار"
+          options={[
+            { value: 'no', label: 'لازم نیست' },
+            { value: 'yes', label: 'لازم است' },
+          ]}
+          value={needsExpiry ? 'yes' : 'no'}
+          onChange={(next) => setNeedsExpiry(next === 'yes')}
+        />
+
+        {error ? <p className={`${styles.error} t-caption`}>{error}</p> : null}
+
+        <div className={styles.sheetActions}>
+          <button type="button" className={styles.secondary} onClick={onClose}>
+            انصراف
+          </button>
+          <button
+            type="button"
+            className={`${styles.primary} t-body`}
+            disabled={busy}
+            onClick={() => void submit()}
+          >
+            افزودن
+          </button>
+        </div>
+      </div>
+    </div>
   )
 }

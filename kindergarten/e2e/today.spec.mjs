@@ -1129,7 +1129,7 @@ check(
 
 console.log('▸ بخش ۱۵.۳: اطلاع‌رسانی با تأیید دو مرحله‌ای')
 // اطلاع‌رسانی به «بیشتر» رفت؛ جای کنش مرکزی مالِ کارِ روزانه است.
-await page.locator('nav button:has-text("منو")').click()
+await page.locator('nav button[aria-label="منو"]').click()
 await page.waitForSelector('button:has-text("اطلاع‌رسانی")')
 await page.click('button:has-text("اطلاع‌رسانی")')
 await page.waitForSelector('text=چه چیزی')
@@ -1288,8 +1288,8 @@ await signIn('09120000003', { fresh: false })
  *
  * پس اینجا عمداً منتظر گزارش روز نمی‌مانیم؛ به محض آمدن نوار، می‌زنیم.
  */
-await page.waitForSelector('nav button:has-text("منو")', { timeout: 8000 })
-await page.locator('nav button:has-text("منو")').click()
+await page.waitForSelector('nav button[aria-label="منو"]', { timeout: 8000 })
+await page.locator('nav button[aria-label="منو"]').click()
 await page.waitForSelector('text=اعلام غیبت', { timeout: 8000 })
 check(true, 'نوار پیش از آمدن گزارش روز هم کار می‌کند')
 
@@ -1299,11 +1299,11 @@ check(true, 'نوار پیش از آمدن گزارش روز هم کار می‌
  * چون متن دیده‌شدنی ندارد، با برچسب دسترس‌پذیری‌اش زده می‌شود — و اگر
  * روزی آن برچسب برود، همین‌جا می‌افتد.
  */
-await page.locator('nav button[aria-label="پیام‌ها"]').click()
+await page.locator('nav button:has-text("پیام‌ها")').click()
 await page.waitForSelector('text=گفتگوی تازه', { timeout: 8000 })
 check(true, 'دکمه گرد وسط، صندوق پیام را باز می‌کند')
 
-await page.locator('nav button:has-text("منو")').click()
+await page.locator('nav button[aria-label="منو"]').click()
 await page.waitForSelector('text=اعلام غیبت')
 check(true, 'فهرست «بیشتر» باز شد')
 
@@ -1333,7 +1333,7 @@ await page.waitForTimeout(400)
  * تا اینجا یک اتاق برای هر کودک بود و همه مربیانِ کلاس در آن — نمی‌شد
  * گفت این پیام برای کدام مربی است.
  */
-await page.locator('nav button[aria-label="پیام‌ها"]').click()
+await page.locator('nav button:has-text("پیام‌ها")').click()
 await page.waitForSelector('text=گفتگوی تازه')
 await page.click('button:has-text("گفتگوی تازه")')
 await page.waitForSelector('text=مربیان')
@@ -1361,7 +1361,7 @@ check(
   'و متنش همان است که نوشته شد',
 )
 
-await page.locator('nav button:has-text("منو")').click()
+await page.locator('nav button[aria-label="منو"]').click()
 await page.waitForSelector('text=اعلام غیبت')
 await page.click('button:has-text("اعلام غیبت")')
 await page.waitForSelector('text=/علت، اگر/')
@@ -1730,8 +1730,8 @@ await page.waitForTimeout(400)
 
 console.log('▸ ویرایش پرونده کودک: از خانواده تا تأیید مدیر')
 await signIn('09120000003')
-await page.waitForSelector('nav button:has-text("منو")', { timeout: 8000 })
-await page.locator('nav button:has-text("منو")').click()
+await page.waitForSelector('nav button[aria-label="منو"]', { timeout: 8000 })
+await page.locator('nav button[aria-label="منو"]').click()
 await page.waitForSelector('text=پرونده کودک')
 await page.click('button:has-text("پرونده کودک")')
 await page.waitForSelector('text=اطلاعات کودک')
@@ -1817,12 +1817,16 @@ await page.waitForTimeout(800)
  * نوار مشترک نقطه می‌گذارد نه رقم: عدد روی یک نشان ۹ پیکسلی خوانده
  * نمی‌شود و مدیر برای دیدن شمار، خودش وارد صفحه می‌شود.
  */
+/*
+ * نشانِ خانهٔ مرکزی کلاسِ خودش را دارد (`centerDot`)، نه `dot` خانه‌های
+ * عادی — انتخابگرِ حروف‌کوچک هیچ‌وقت پیدایش نمی‌کند.
+ */
 const auditBadge = await page
-  .locator('nav button:has-text("منو") [class*="dot"]')
+  .locator('nav button[aria-label="منو"] [class*="Dot"]')
   .count()
 check(auditBadge === 1, 'نشان آمادگی روی خانه «بیشتر» می‌آید')
 
-await page.locator('nav button:has-text("منو")').click()
+await page.locator('nav button[aria-label="منو"]').click()
 await page.waitForSelector('button:has-text("پرونده بازرسی")')
 await page.click('button:has-text("پرونده بازرسی")')
 await page.waitForSelector('text=آمادگی بازرسی')
@@ -1959,7 +1963,7 @@ console.log('▸ ارتقای ۳: درخواست دارو از خانه، تا �
 await setClock(9)
 await signIn('09120000003')
 await page.waitForSelector('[class*="cardDate"]', { timeout: 8000 })
-await page.locator('nav button:has-text("منو")').click()
+await page.locator('nav button[aria-label="منو"]').click()
 await page.click('button:has-text("درخواست دارو")')
 await page.waitForSelector('input[aria-label="نام دارو"]')
 await page.fill('input[aria-label="نام دارو"]', 'شربت سرماخوردگی')
@@ -2008,7 +2012,7 @@ check(
 await signOutAny()
 await signIn('09120000003', { fresh: false })
 await page.waitForSelector('[class*="cardDate"]', { timeout: 8000 })
-await page.locator('nav button:has-text("منو")').click()
+await page.locator('nav button[aria-label="منو"]').click()
 await page.click('button:has-text("درخواست دارو")')
 await page.waitForTimeout(600)
 const afterReceive = await page.evaluate(() => document.body.innerText)
@@ -2039,7 +2043,7 @@ await page.waitForSelector('[class*="cardDate"]', { timeout: 8000 })
  * رشته، بی هیچ انتخاب گیرنده‌ای. خانواده می‌نوشت و نمی‌دانست به کدام
  * مربی می‌رسد. حالا هر دو یک جا می‌روند.
  */
-await page.locator('nav button:has-text("منو")').click()
+await page.locator('nav button[aria-label="منو"]').click()
 await page.waitForTimeout(500)
 await page.locator('[class*="tile"]:has-text("پیام‌ها")').first().click()
 await page.waitForTimeout(700)
@@ -2059,7 +2063,7 @@ check(
 await page.locator('[aria-label="بازگشت"]').first().click()
 await page.waitForTimeout(400)
 
-await page.locator('nav button[aria-label="پیام‌ها"]').click()
+await page.locator('nav button:has-text("پیام‌ها")').click()
 await page.waitForSelector('text=گفتگوی تازه')
 /*
  * از راه انتخاب، نه از فهرست.
@@ -2155,7 +2159,7 @@ await signIn('09120000002')
 await page.waitForSelector('text=با کدام حساب وارد می‌شوید؟')
 await page.locator('button:has-text("مریم رضایی")').nth(1).click()
 await page.waitForSelector('text=وضعیت ثبت', { timeout: 10000 })
-await page.locator('nav button[aria-label="پیام‌ها"]').click()
+await page.locator('nav button:has-text("پیام‌ها")').click()
 await page.waitForSelector('text=گفتگوی تازه')
 await page.click('button:has-text("گفتگوی تازه")')
 await page.waitForSelector('text=مربیان')
@@ -2198,7 +2202,7 @@ await page.click('nav button:has-text("خانه")')
 await page.waitForTimeout(500)
 
 console.log('▸ کارتابل کارکنان: مدرک، ارزیابی، و خروجی بازرس')
-await page.locator('nav button:has-text("منو")').click()
+await page.locator('nav button[aria-label="منو"]').click()
 await page.waitForSelector('button:has-text("کارکنان")')
 await page.click('button:has-text("کارکنان")')
 await page.waitForSelector('text=/فعالیت سی روز گذشته|روز فعال/')
@@ -2299,7 +2303,7 @@ await page.waitForTimeout(500)
 console.log('▸ بازی آزاد و نقشه علایق')
 await signIn('09120000001')
 await page.waitForSelector('text=ثبت گروهی امروز', { timeout: 8000 })
-await page.locator('nav button:has-text("منو")').click()
+await page.locator('nav button[aria-label="منو"]').click()
 await page.waitForSelector('text=بازی آزاد')
 await page.click('button:has-text("بازی آزاد")')
 await page.waitForSelector('text=/روی کودک بزنید/')
@@ -2382,7 +2386,7 @@ await page.waitForTimeout(400)
 console.log('▸ مشاهده مربی تا گزارش ماهانه خانواده')
 await signIn('09120000001')
 await page.waitForSelector('text=ثبت گروهی امروز', { timeout: 8000 })
-await page.locator('nav button:has-text("منو")').click()
+await page.locator('nav button[aria-label="منو"]').click()
 await page.waitForSelector('button:has-text("مشاهده‌ها")')
 
 /*
@@ -2406,7 +2410,7 @@ check(
   'و هیچ نمره‌ای برای خودش نمی‌بیند',
 )
 
-await page.locator('nav button:has-text("منو")').click()
+await page.locator('nav button[aria-label="منو"]').click()
 await page.waitForSelector('button:has-text("مشاهده‌ها")')
 await page.click('button:has-text("مشاهده‌ها")')
 await page.waitForSelector('text=مشاهده و گزارش ماهانه')
@@ -2506,8 +2510,8 @@ await page.waitForTimeout(400)
 
 await signOutAny()
 await signIn('09120000003', { fresh: false })
-await page.waitForSelector('nav button:has-text("منو")', { timeout: 8000 })
-await page.locator('nav button:has-text("منو")').click()
+await page.waitForSelector('nav button[aria-label="منو"]', { timeout: 8000 })
+await page.locator('nav button[aria-label="منو"]').click()
 await page.waitForSelector('text=گزارش ماهانه')
 await page.click('button:has-text("گزارش ماهانه")')
 await page.waitForSelector('text=جمع‌بندی مربی')
@@ -2533,7 +2537,7 @@ await page.waitForTimeout(400)
 console.log('▸ رزرو غذا: منوی ماه، انتخاب خانواده، پرداخت، نهایی‌شدن')
 await signIn('09120000003')
 await page.waitForSelector('[class*="cardDate"]', { timeout: 8000 })
-await page.locator('nav button:has-text("منو")').click()
+await page.locator('nav button[aria-label="منو"]').click()
 await page.waitForSelector('button:has-text("رزرو غذا")')
 await page.click('button:has-text("رزرو غذا")')
 await page.waitForTimeout(1200)
@@ -2594,7 +2598,7 @@ await page.waitForSelector('#code')
 await page.fill('#code', '11111')
 await page.click('button:has-text("ورود")')
 await page.waitForSelector('text=ثبت گروهی امروز')
-await page.locator('nav button:has-text("منو")').click()
+await page.locator('nav button[aria-label="منو"]').click()
 await page.waitForSelector('button:has-text("غذای امروز")')
 await page.clock.setFixedTime(new Date('2026-03-13T09:00:00'))
 await page.click('button:has-text("غذای امروز")')
@@ -2609,7 +2613,7 @@ await setClock(9)
 console.log('▸ دفتر امانت: مربی ثبت می‌کند، خانواده می‌بیند، مهد تحویل می‌گیرد')
 await signIn('09120000001')
 await page.waitForSelector('text=ثبت گروهی امروز')
-await page.locator('nav button:has-text("منو")').click()
+await page.locator('nav button[aria-label="منو"]').click()
 await page.waitForSelector('button:has-text("دفتر امانت")')
 await page.click('button:has-text("دفتر امانت")')
 await page.waitForSelector('[aria-label="امانت‌های بیرون"]')
@@ -2654,7 +2658,7 @@ await page.waitForSelector('#code')
 await page.fill('#code', '11111')
 await page.click('button:has-text("ورود")')
 await page.waitForTimeout(1500)
-await page.locator('nav button:has-text("منو")').click()
+await page.locator('nav button[aria-label="منو"]').click()
 await page.waitForSelector('button:has-text("پرونده کودک")')
 await page.click('button:has-text("پرونده کودک")')
 await page.waitForSelector('[aria-label="امانت‌های مهد"]')
@@ -2685,7 +2689,7 @@ await page.waitForSelector('#code')
 await page.fill('#code', '11111')
 await page.click('button:has-text("ورود")')
 await page.waitForSelector('text=ثبت گروهی امروز')
-await page.locator('nav button:has-text("منو")').click()
+await page.locator('nav button[aria-label="منو"]').click()
 await page.waitForSelector('button:has-text("دفتر امانت")')
 await page.click('button:has-text("دفتر امانت")')
 await page.waitForSelector('[aria-label="امانت‌های بیرون"]')
@@ -2702,7 +2706,7 @@ await page.waitForTimeout(600)
 const asManagerForProgram = page.locator('button:has-text("مدیر")')
 if (await asManagerForProgram.count()) await asManagerForProgram.first().click()
 await page.waitForSelector('text=وضعیت ثبت', { timeout: 10000 })
-await page.locator('nav button:has-text("منو")').click()
+await page.locator('nav button[aria-label="منو"]').click()
 await page.waitForSelector('button:has-text("برنامه مهد")')
 await page.click('button:has-text("برنامه مهد")')
 await page.waitForSelector('[aria-label="منوی غذایی"]')
@@ -2773,7 +2777,7 @@ await page.waitForSelector('#code')
 await page.fill('#code', '11111')
 await page.click('button:has-text("ورود")')
 await page.waitForTimeout(1500)
-await page.locator('nav button:has-text("منو")').click()
+await page.locator('nav button[aria-label="منو"]').click()
 await page.waitForSelector('button:has-text("برنامه مهد")')
 await page.click('button:has-text("برنامه مهد")')
 await page.waitForSelector('[aria-label="منوی غذایی"]')
@@ -2802,7 +2806,7 @@ check(/نتیجه هنوز منتشر نشده/.test(voted), 'و نتیجه تا
 console.log('▸ مرخصی مربی: درخواست، تصمیم مدیر، جوابی که مربی می‌بیند')
 await signIn('09120000001')
 await page.waitForSelector('text=ثبت گروهی امروز')
-await page.locator('nav button:has-text("منو")').click()
+await page.locator('nav button[aria-label="منو"]').click()
 // مرخصی به «حساب من» رفت: منو فهرستِ کارهاست، پرونده شخصی مقصد خودش.
 await page.waitForSelector('button:has-text("حساب من")')
 await page.click('button:has-text("حساب من")')
@@ -2822,10 +2826,17 @@ await page.click('button:has-text("فرستادن برای مدیر")')
 await page.waitForTimeout(900)
 const askedLeave = await page.evaluate(() => document.body.innerText)
 check(/در انتظار تأیید مدیر/.test(askedLeave), 'درخواست ثبت شد و در انتظار ماند')
-check(
-  !/تأیید شد/.test(askedLeave.slice(askedLeave.indexOf('مرخصی'))),
-  'و تا تصمیم مدیر، مرخصی حساب نمی‌شود',
+/*
+ * فقط کارتِ مرخصی، نه هرچه بعدش روی صفحه است.
+ *
+ * پایین‌تر «مدارک من» است و آنجا «تأیید شده» درباره مدرک گفته می‌شود،
+ * نه مرخصی. برشِ باز، آن را به حساب مرخصی می‌گذاشت.
+ */
+const leaveCard = askedLeave.slice(
+  askedLeave.indexOf('مرخصی'),
+  askedLeave.indexOf('کلاس‌های من'),
 )
+check(!/تأیید شد/.test(leaveCard), 'و تا تصمیم مدیر، مرخصی حساب نمی‌شود')
 
 /*
  * خروج، نه ورودِ تازه: `signIn` حافظه مرورگر را پاک می‌کند و با آن،
@@ -2902,7 +2913,7 @@ await page.waitForSelector('#code')
 await page.fill('#code', '11111')
 await page.click('button:has-text("ورود")')
 await page.waitForSelector('text=ثبت گروهی امروز')
-await page.locator('nav button:has-text("منو")').click()
+await page.locator('nav button[aria-label="منو"]').click()
 // تاریخچه مرخصی در «حساب من» است، نه در فهرست کارها.
 await page.waitForSelector('button:has-text("حساب من")')
 await page.click('button:has-text("حساب من")')
@@ -2910,6 +2921,119 @@ await page.waitForTimeout(900)
 const answered = await page.evaluate(() => document.body.innerText)
 check(/رد شد/.test(answered), 'مربی جواب مدیر را می‌بیند')
 check(/آن روز فقط دو مربی داریم/.test(answered), 'و دلیلش را، نه فقط یک «نه»')
+
+console.log('▸ ماژول ۰۰۳۹: مدارک — مربی می‌فرستد، مدیر تأیید می‌کند')
+await signIn('09120000001')
+await page.waitForSelector('text=ثبت گروهی امروز')
+await page.click('nav button[aria-label="منو"]')
+await page.waitForTimeout(400)
+await page.click('button:has-text("حساب من")')
+await page.waitForTimeout(700)
+
+{
+  const mine = await page.evaluate(() => document.body.innerText)
+  /*
+   * چک‌لیست، نه فهرستِ داشته‌ها.
+   *
+   * تا پیش از ۰۰۳۹ اینجا فقط مدارکِ بارگذاری‌شده می‌آمد و زیرش نوشته
+   * بود «بارگذاری مدارک کار مدیر است» — یعنی مربی نه می‌دانست چه از او
+   * خواسته‌اند، نه راهی داشت که بفرستد.
+   */
+  check(/نفرستاده‌اید/.test(mine), 'مربی می‌بیند چه مدرکی هنوز نفرستاده')
+  check(/رد شد/.test(mine), 'و مدرکِ ردشده را')
+  check(
+    /فقط یک رو فرستاده شده/.test(mine),
+    'با دلیلِ رد، نه فقط یک «نه» — وگرنه همان عکس دوباره می‌آید',
+  )
+
+  // فرستادن یک مدرکِ نیامده، از پنل خودِ مربی.
+  await page.locator('button:has-text("بارگذاری")').first().click()
+  await page.waitForSelector('text=تصویر مدرک')
+  await page.click('button:has-text("فرستادن برای مدیر")')
+  await page.waitForTimeout(400)
+  check(
+    /تصویر مدرک را انتخاب کنید/.test(await page.evaluate(() => document.body.innerText)),
+    'بی‌تصویر فرستاده نمی‌شود — ردیفی که فقط عنوان دارد، مدرک نیست',
+  )
+
+  const png = Buffer.from(
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+    'base64',
+  )
+  await page.setInputFiles('input[type=file]', {
+    name: 'doc.png',
+    mimeType: 'image/png',
+    buffer: png,
+  })
+  await page.waitForTimeout(800)
+  await page.click('button:has-text("فرستادن برای مدیر")')
+  await page.waitForTimeout(400)
+  check(
+    /تاریخ اعتبار این مدرک لازم است/.test(await page.evaluate(() => document.body.innerText)),
+    'مدرکی که تاریخ اعتبار می‌خواهد، بی‌تاریخ نمی‌رود',
+  )
+
+  await page.click('text=انتخاب نشده')
+  await page.waitForTimeout(500)
+  await page.locator('button').filter({ hasText: /^۲۵$/ }).first().click()
+  await page.waitForTimeout(300)
+  await page.click('button:has-text("فرستادن برای مدیر")')
+  await page.waitForTimeout(900)
+  check(
+    /در انتظار تأیید مدیر/.test(await page.evaluate(() => document.body.innerText)),
+    'فرستاده‌ی مربی «در انتظار» می‌ماند، نه «ثبت‌شده»',
+  )
+}
+
+/*
+ * ── همان مدرک، از این سرِ ماجرا: کارتابل مدیر.
+ *
+ * `fresh: false` عمدی است: ورودِ تازه حافظه مرورگر را پاک می‌کند و
+ * همان چیزی را که مربی همین الان فرستاد می‌شوید. این تست دقیقاً درباره
+ * عبورِ یک مدرک از یک پنل به پنل دیگر است.
+ */
+await signOutAny()
+await signIn('09120000002', { fresh: false })
+await page.waitForSelector('text=با کدام حساب وارد می‌شوید؟')
+await page.locator('button:has-text("مریم رضایی")').nth(1).click()
+await page.waitForTimeout(1200)
+for (let i = 0; i < 6; i += 1) {
+  if (await page.getByRole('button', { name: /کارکنان/ }).count()) break
+  await page.click('nav button[aria-label="منو"]').catch(() => {})
+  await page.waitForTimeout(600)
+}
+await page.getByRole('button', { name: /کارکنان/ }).first().click()
+await page.waitForTimeout(900)
+
+{
+  const desk = await page.evaluate(() => document.body.innerText)
+  check(/در انتظار تأیید شما/.test(desk), 'صف تأیید در کارتابل مدیر دیده می‌شود')
+  check(
+    (await page.locator('[class*="queueShot"]').count()) > 0,
+    'و خودِ تصویر مدرک، نه فقط عنوانش — تأییدِ ندیده بی‌معنا است',
+  )
+  check(/مدارک لازم از هر مربی/.test(desk), 'فهرست خواسته‌ها را مدیر می‌چیند، نه کد')
+
+  // رد بدون دلیل نمی‌شود.
+  await page.locator('button:has-text("رد با توضیح")').first().click()
+  await page.waitForSelector('text=چرا رد می‌شود')
+  await page.click('button:has-text("ثبت رد")')
+  await page.waitForTimeout(300)
+  check(
+    /بنویسید چرا/.test(await page.evaluate(() => document.body.innerText)),
+    'رد بدون دلیل ثبت نمی‌شود',
+  )
+  await page.fill('textarea', 'تصویر خوانا نیست، دوباره بفرستید.')
+  await page.click('button:has-text("ثبت رد")')
+  await page.waitForTimeout(900)
+
+  await page.locator('button:has-text("تأیید")').first().click()
+  await page.waitForTimeout(900)
+  check(
+    !/در انتظار تأیید شما/.test(await page.evaluate(() => document.body.innerText)),
+    'صف بعد از جوابِ مدیر خالی می‌شود',
+  )
+}
 
 console.log('▸ بخش ۱۲.۷: کف کیفیت')
 await signIn('09120000001')

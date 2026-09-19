@@ -99,3 +99,19 @@
 }
 
 .leaveText:focus { border-color: var(--mint); outline: none; }
+
+/*
+ * یک قلم از چک‌لیست مدارک.
+ *
+ * هر قلم خودش یک بلوک است نه یک سطر: زیرِ عنوان ممکن است دلیلِ رد،
+ * تاریخ اعتبار و یک کلید بارگذاری بیاید، و سطرِ تک‌خطی همه را به هم
+ * می‌چسباند.
+ */
+.slot {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding-block: var(--space-2);
+}
+
+.slot + .slot { border-block-start: 1px solid var(--border); }

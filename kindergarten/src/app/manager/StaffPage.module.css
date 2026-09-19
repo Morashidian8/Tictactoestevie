@@ -424,3 +424,91 @@
   border: 1px solid var(--brick);
   color: var(--ink);
 }
+
+
+/* ── صف تأیید مدارک — ماژول ۰۰۳۹ ────────────────────────────── */
+
+/*
+ * کارتِ صف، تینت‌دار و بالای فهرست.
+ *
+ * این تنها بخش این صفحه است که کسِ دیگری منتظرش است — مربی مدرکش را
+ * فرستاده و تا مدیر جواب ندهد، برایش ثبت نشده. تینتِ گرم آن را از
+ * کارت‌های خواندنیِ بقیه صفحه جدا می‌کند، و متنِ «در انتظار تأیید شما»
+ * همان خبر را بی‌اتکا به رنگ هم می‌دهد — بخش ۱۲.۲.
+ */
+.queue {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background: var(--mango-tint);
+  border: 1px solid var(--mango);
+  border-radius: var(--r-card);
+}
+
+.queueTitle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  color: var(--ink);
+  font-weight: var(--weight-bold);
+}
+.queueTitle svg { flex: none; }
+
+.queueRow {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  background: var(--surface);
+  border-radius: var(--r-input);
+}
+
+.queueWho {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  margin: 0;
+  color: var(--ink);
+}
+
+/*
+ * خودِ تصویر مدرک، نه فقط عنوانش.
+ *
+ * ارتفاعِ سقف‌دار چون عکسِ کاغذِ A4 با گوشی، بلند است و بدون سقف کل
+ * صفحه را می‌گیرد و کلیدهای «تأیید»/«رد» زیر خط افق می‌روند.
+ */
+.queueShot {
+  inline-size: 100%;
+  max-block-size: 220px;
+  object-fit: cover;
+  border-radius: var(--r-input);
+  background: var(--surface-warm);
+}
+
+.queueActions {
+  display: flex;
+  gap: var(--space-2);
+}
+
+/*
+ * کنشِ درون‌سطری «برداشتن».
+ *
+ * کلیدِ کامل اینجا نمی‌نشیند — هر قلمِ فهرست یک سطر است و سه کلیدِ
+ * تمام‌عرض یعنی فهرستی که باید اسکرولش کرد. هدف لمسی از خودِ سطر
+ * می‌آید که min-block-size دارد.
+ */
+.linkAction {
+  margin-inline-start: auto;
+  min-block-size: var(--touch-manager);
+  padding-inline: var(--space-2);
+  border: none;
+  background: none;
+  color: var(--ink);
+  font-family: inherit;
+  font-weight: var(--weight-bold);
+  text-decoration: underline;
+  cursor: pointer;
+}
