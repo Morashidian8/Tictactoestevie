@@ -294,6 +294,226 @@ begin
     'و وقتِ تحویل که گذشت، می‌بیندش — بی آنکه کسی ستونی را عوض کند');
 end $$;
 
+\echo ''
+\echo '── جداسازی دو مهد: هیچ سطری از مرز مرکز رد نمی‌شود ──'
+reset role;
+
+/*
+ * بزرگ‌ترین وعدهٔ یک محصول چندمستأجری، و تا امروز آزموده‌نشده.
+ *
+ * این فایل تا اینجا فقط **یک** مرکز داشت. یعنی همهٔ گزاره‌های بالا
+ * ثابت می‌کردند که مربی دادهٔ کلاس دیگر را نمی‌بیند و خانواده دادهٔ
+ * کودک دیگر را — ولی هیچ‌کدام ثابت نمی‌کرد که مهد الف دادهٔ مهد ب را
+ * نمی‌بیند. سیاست‌ها درست نوشته شده بودند؛ «درست نوشته شده» با «ثابت
+ * شده» یکی نیست.
+ *
+ * نشت داده بین دو مهدکودک چیزی نیست که با عذرخواهی جمع شود.
+ *
+ * ── چرا جاروی خودکار، نه فهرست دستی ────────────────────────────
+ *
+ * شصت‌وشش جدول به `center_id` بسته‌اند و فردا شصت‌وهفتمی اضافه می‌شود.
+ * فهرستِ دستی همان روز کهنه می‌شود و کسی خبردار نمی‌شود. این تست به‌جای
+ * فهرست، `information_schema` را می‌خواند: هر جدولی که ستون `center_id`
+ * داشته باشد خودبه‌خود آزموده می‌شود، حتی اگر فردا ساخته شود و کسی
+ * یادش برود برایش سیاست بنویسد.
+ */
+
+-- ── مهد دوم، با پرونده‌های واقعی ──────────────────────────────
+insert into center (id, name) values ('b0000000-0000-0000-0000-000000000001', 'مهد ستاره');
+
+insert into class (id, center_id, name) values
+  ('b0000000-0000-0000-0000-0000000000c1', 'b0000000-0000-0000-0000-000000000001', 'شکوفه‌ها');
+
+insert into staff (id, center_id, first_name, last_name, role) values
+  ('b0000000-0000-0000-0000-0000000000f1', 'b0000000-0000-0000-0000-000000000001', 'مربیِ', 'ستاره', 'teacher'),
+  ('b0000000-0000-0000-0000-0000000000f2', 'b0000000-0000-0000-0000-000000000001', 'مدیرِ', 'ستاره', 'manager');
+
+insert into staff_class (staff_id, class_id) values
+  ('b0000000-0000-0000-0000-0000000000f1', 'b0000000-0000-0000-0000-0000000000c1');
+
+insert into child (id, center_id, class_id, first_name, last_name) values
+  ('b0000000-0000-0000-0000-0000000000d1', 'b0000000-0000-0000-0000-000000000001',
+   'b0000000-0000-0000-0000-0000000000c1', 'کودکِ', 'ستاره');
+
+insert into guardian (id, center_id, full_name) values
+  ('b0000000-0000-0000-0000-0000000000b1', 'b0000000-0000-0000-0000-000000000001', 'مادرِ ستاره');
+
+insert into child_guardian (child_id, guardian_id, center_id, is_payer) values
+  ('b0000000-0000-0000-0000-0000000000d1', 'b0000000-0000-0000-0000-0000000000b1',
+   'b0000000-0000-0000-0000-000000000001', true);
+
+insert into auth.users (id, phone) values
+  ('b0000000-0000-0000-0000-00000000ee01', '09990000001'),
+  ('b0000000-0000-0000-0000-00000000ee02', '09990000002');
+
+insert into user_account (id, center_id, phone, role, staff_id) values
+  ('b0000000-0000-0000-0000-0000000000a1', 'b0000000-0000-0000-0000-000000000001',
+   '09990000001', 'teacher', 'b0000000-0000-0000-0000-0000000000f1'),
+  ('b0000000-0000-0000-0000-0000000000a2', 'b0000000-0000-0000-0000-000000000001',
+   '09990000002', 'manager', 'b0000000-0000-0000-0000-0000000000f2');
+
+insert into active_account (auth_user_id, user_account_id) values
+  ('b0000000-0000-0000-0000-00000000ee01', 'b0000000-0000-0000-0000-0000000000a1'),
+  ('b0000000-0000-0000-0000-00000000ee02', 'b0000000-0000-0000-0000-0000000000a2');
+
+-- جواهرات تاج: حضور، سلامت، پول، رخداد، گزارش، مدرک.
+insert into attendance (center_id, child_id, date, check_in_at)
+values ('b0000000-0000-0000-0000-000000000001', 'b0000000-0000-0000-0000-0000000000d1',
+        current_date, now());
+
+insert into medical_profile (center_id, child_id, blood_type)
+values ('b0000000-0000-0000-0000-000000000001', 'b0000000-0000-0000-0000-0000000000d1', 'A+');
+
+insert into invoice (center_id, child_id, period, amount, due_date)
+values ('b0000000-0000-0000-0000-000000000001', 'b0000000-0000-0000-0000-0000000000d1',
+        '1404-10', 9999999, current_date + 10);
+
+insert into incident (center_id, child_id, occurred_at, type, severity, location,
+                      minor_category, description)
+values ('b0000000-0000-0000-0000-000000000001', 'b0000000-0000-0000-0000-0000000000d1',
+        now(), 'fall', 'minor', 'yard', 'fall_no_injury', 'رازِ مهد ستاره');
+
+insert into daily_report (center_id, child_id, date, teacher_note)
+values ('b0000000-0000-0000-0000-000000000001', 'b0000000-0000-0000-0000-0000000000d1',
+        current_date, 'یادداشتِ مهد ستاره');
+
+insert into staff_document (center_id, staff_id, kind, title, file_url, review)
+values ('b0000000-0000-0000-0000-000000000001', 'b0000000-0000-0000-0000-0000000000f1',
+        'health_card', 'کارت بهداشتِ ستاره', 'x', 'approved');
+
+/*
+ * ۱. اول ثابت کنیم داده واقعاً هست.
+ *
+ * بی این، جاروی بعدی می‌تواند به دلیل غلط سبز شود: جدولی که اصلاً
+ * سطری ندارد، «نشت نمی‌کند» چون چیزی برای نشت ندارد.
+ */
+set role authenticated;
+select login_as('b0000000-0000-0000-0000-00000000ee02', '09990000002');
+do $$
+begin
+  perform assert((select count(*) from child) = 1, 'مدیر مهد دوم، کودک خودش را می‌بیند');
+  perform assert((select count(*) from invoice) = 1, 'و صورتحساب خودش را');
+  perform assert((select count(*) from incident) = 1, 'و رخداد خودش را');
+  perform assert((select count(*) from daily_report) = 1, 'و گزارش خودش را');
+  perform assert((select count(*) from staff_document) = 1, 'و مدرک مربی خودش را');
+  perform assert(
+    app.current_center_id() = 'b0000000-0000-0000-0000-000000000001',
+    'و مرکز فعالش، مهد خودش است');
+end $$;
+
+/*
+ * ۲. جاروی خودکار: مدیرِ مهد اول، هیچ سطری از مهد دوم نمی‌بیند.
+ *
+ * مدیر پردسترس‌ترین نقش است؛ اگر او نبیند، هیچ‌کس نمی‌بیند.
+ */
+reset role;
+update active_account set user_account_id = 'a0000000-0000-0000-0000-0000000000a2'
+where auth_user_id = 'a0000000-0000-0000-0000-00000000ee02';
+
+set role authenticated;
+select login_as('a0000000-0000-0000-0000-00000000ee02', '09120000002');
+do $$
+declare
+  t record;
+  leaked integer;
+  seen  integer := 0;
+  bad   text := '';
+begin
+  for t in
+    select c.table_name
+      from information_schema.columns c
+      join information_schema.tables x
+        on x.table_schema = c.table_schema and x.table_name = c.table_name
+     where c.table_schema = 'public'
+       and c.column_name = 'center_id'
+       and x.table_type = 'BASE TABLE'
+     order by c.table_name
+  loop
+    execute format(
+      'select count(*) from public.%I where center_id = %L',
+      t.table_name, 'b0000000-0000-0000-0000-000000000001'
+    ) into leaked;
+    seen := seen + 1;
+    if leaked > 0 then
+      bad := bad || t.table_name || '(' || leaked || ') ';
+    end if;
+  end loop;
+
+  perform assert(seen >= 60, format('جارو روی %s جدولِ مرکزدار اجرا شد', seen));
+  perform assert(bad = '', format('هیچ سطری از مهد دوم دیده نمی‌شود — نشتی: %s', bad));
+end $$;
+
+/*
+ * ۳. و برعکس: مدیر مهد دوم هم چیزی از مهد اول نمی‌بیند.
+ *
+ * یک‌طرفه آزمودن یعنی نصف مرز آزموده نشده.
+ */
+reset role;
+set role authenticated;
+select login_as('b0000000-0000-0000-0000-00000000ee02', '09990000002');
+do $$
+declare
+  t record;
+  leaked integer;
+  bad text := '';
+begin
+  for t in
+    select c.table_name
+      from information_schema.columns c
+      join information_schema.tables x
+        on x.table_schema = c.table_schema and x.table_name = c.table_name
+     where c.table_schema = 'public'
+       and c.column_name = 'center_id'
+       and x.table_type = 'BASE TABLE'
+     order by c.table_name
+  loop
+    execute format(
+      'select count(*) from public.%I where center_id = %L',
+      t.table_name, 'a0000000-0000-0000-0000-000000000001'
+    ) into leaked;
+    if leaked > 0 then bad := bad || t.table_name || '(' || leaked || ') '; end if;
+  end loop;
+
+  perform assert(bad = '', format('و مهد دوم هم چیزی از مهد اول نمی‌بیند — نشتی: %s', bad));
+end $$;
+
+/*
+ * ۴. نوشتن هم از مرز رد نمی‌شود.
+ *
+ * ندیدن کافی نیست: مدیری که بتواند کودکی در مهد دیگری بنویسد، همان‌قدر
+ * خطرناک است — حتی اگر بعدش نتواند بخواندش.
+ */
+reset role;
+set role authenticated;
+select login_as('a0000000-0000-0000-0000-00000000ee02', '09120000002');
+do $$
+declare ok boolean := false;
+begin
+  begin
+    insert into child (center_id, class_id, first_name, last_name)
+    values ('b0000000-0000-0000-0000-000000000001',
+            'b0000000-0000-0000-0000-0000000000c1', 'کودکِ', 'قاچاقی');
+    -- اگر درج رد نشد، شاید سیاست نوشتن ندارد. خودِ نبودِ سطر هم جواب است.
+    ok := not exists (
+      select 1 from child
+       where center_id = 'b0000000-0000-0000-0000-000000000001'
+         and last_name = 'قاچاقی');
+  exception when others then
+    ok := true;
+  end;
+  perform assert(ok, 'مدیر مهد اول نمی‌تواند در مهد دوم کودک ثبت کند');
+end $$;
+
+reset role;
+do $$
+begin
+  -- و اگر از راهِ ابرکاربر نگاه کنیم، واقعاً چیزی ننشسته.
+  perform assert(
+    (select count(*) from child
+      where center_id = 'b0000000-0000-0000-0000-000000000001') = 1,
+    'و مهد دوم همان یک کودک خودش را دارد، نه بیشتر');
+end $$;
+
 reset role;
 \echo ''
 \echo 'ماتریس دسترسی پاس شد.'
