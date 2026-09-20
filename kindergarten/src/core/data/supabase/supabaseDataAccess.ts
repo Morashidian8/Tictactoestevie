@@ -3624,10 +3624,23 @@ export function createSupabaseDataAccess(scope: AccessScope): AuditedDataAccess 
       )
       if (!line) throw new Error('گفتگو پیدا نشد.')
 
+      /*
+       * «رسیده» از زمان می‌آید، نه از یک ستونِ حالت — ارتقای ۰۰۴۰.
+       *
+       * صفِ ساعت کاری یک زمانِ تحویل است و هیچ کارِ زمان‌بندی‌شده‌ای
+       * `sent_at` را پر نمی‌کند. بدون این حساب، پیامی که ساعتش رسیده
+       * تا ابد «در صف تا ۸:۰۰» می‌ماند.
+       *
+       * سیاست سطر-محور همین قاعده را دارد، پس پیامِ نرسیدهٔ دیگران
+       * اصلاً به اینجا نمی‌رسد؛ این فقط برچسبِ درست را می‌گذارد.
+       */
+      const now = new Date().toISOString()
       const messages = ((orThrow(msgRows) as Row[]) ?? []).map((m) => {
         const sender = m.sender as Row | null
         const staff = sender?.staff as Row | null
         const guardian = sender?.guardian as Row | null
+        const queuedUntil = (m.queued_until as string | null) ?? null
+        const delivered = ((m.sent_at as string | null) ?? null) ?? queuedUntil
         return {
           id: m.id as string,
           body: m.body as string,
@@ -3636,8 +3649,8 @@ export function createSupabaseDataAccess(scope: AccessScope): AuditedDataAccess 
             (staff?.full_name as string | undefined) ??
             (guardian?.full_name as string | undefined) ??
             '—',
-          sentAt: (m.sent_at as string | null) ?? null,
-          queuedUntil: (m.queued_until as string | null) ?? null,
+          sentAt: delivered !== null && delivered <= now ? delivered : null,
+          queuedUntil,
         }
       })
 

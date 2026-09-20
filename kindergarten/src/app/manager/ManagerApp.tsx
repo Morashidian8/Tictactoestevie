@@ -160,6 +160,7 @@ export function ManagerApp() {
         <DashboardPage
           onGo={setPage}
           onCounts={setCounts}
+          unread={unread}
           onOpenStaff={(id) => {
             setOpenStaff(id)
             setPage('staff')

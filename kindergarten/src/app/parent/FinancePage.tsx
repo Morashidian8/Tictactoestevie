@@ -97,13 +97,29 @@ export function FinancePage({ childId, onBack }: { childId: string; onBack: () =
     )
   }
 
-  const open = finance.invoices.filter(
-    (i) => i.status !== 'paid' && i.status !== 'cancelled',
-  )
+  /*
+   * صورتحساب‌های باز، به ترتیبِ فوریت.
+   *
+   * سررسیدگذشته اول، بعد نزدیک‌ترین سررسید. خانواده‌ای که دو صورتحساب
+   * باز دارد باید اول آنی را ببیند که دیرکرد می‌خورد، نه آنی را که
+   * زودتر صادر شده.
+   */
+  const open = finance.invoices
+    .filter((i) => i.status !== 'paid' && i.status !== 'cancelled')
+    .sort(
+      (a, b) =>
+        Number(b.status === 'overdue') - Number(a.status === 'overdue') ||
+        a.dueDate.localeCompare(b.dueDate),
+    )
   const nextDue = open
     .map((i) => i.dueDate)
     .sort()
     .at(0)
+  /* نزدیک‌ترین صورتحسابِ باز که هنوز اعلام پرداختی برایش ثبت نشده. */
+  const payNext = open.find(
+    (invoice) =>
+      !finance.claims.some((c) => c.invoiceId === invoice.id && c.status !== 'rejected'),
+  )
   const waiting = finance.offers.filter((o) => o.optional && o.answer === null)
 
   /*
@@ -123,7 +139,20 @@ export function FinancePage({ childId, onBack }: { childId: string; onBack: () =
 
   return (
     <Shell title="مالی" onBack={onBack}>
-      {/* ── مانده ─────────────────────────────────────────── */}
+      {/*
+        ── مانده، و راهِ پرداختش ───────────────────────────────
+
+        خواسته مالک محصول: «یه جور درستش کن که اولویت دیدن وضعیت مالی و
+        پرداخت بدهی باشه … نه اینکه بخواد دنبال این باشه حالا چجوری و
+        از کجا باید بدهی پرداخت کنه.»
+
+        پیش از این کلیدهای پرداخت سه کارت پایین‌تر بودند، پشتِ جدولِ
+        دوازده‌ماههٔ شهریه. خانواده‌ای که آمده قسطش را بدهد، باید از
+        برنامهٔ سال رد می‌شد تا به دکمه برسد.
+
+        حالا مبلغ، سررسید و خودِ کلیدِ پرداخت در یک کارت‌اند. بقیهٔ
+        صورتحساب‌ها بلافاصله زیرش می‌آیند.
+      */}
       <section className={shared.card}>
         <span className={`${shared.cardLabel} t-caption`}>مانده</span>
         <p className={`${shared.big} ${finance.outstanding > 0 ? shared.owed : shared.clear}`}>
@@ -138,7 +167,113 @@ export function FinancePage({ childId, onBack }: { childId: string; onBack: () =
             نزدیک‌ترین سررسید: {formatJalali(new Date(nextDue), 'full')}
           </p>
         ) : null}
+
+        {payNext ? (
+          <>
+            <button
+              type="button"
+              className={`${shared.payOnline} t-body`}
+              onClick={() => setPaying(payNext)}
+            >
+              {/*
+                وقتی بیش از یکی باز است، کلیدِ بالا صریح می‌گوید کدام را
+                می‌بندد. «پرداخت بدهی» روی دو صورتحساب، وعده‌ای است که
+                این کلید نگه نمی‌دارد.
+              */}
+              {open.length > 1
+                ? `پرداخت ${formatPeriod(payNext.period, false)} — ${formatRial(invoiceDue(payNext))}`
+                : `پرداخت ${formatRial(invoiceDue(payNext))} با شاپرک`}
+            </button>
+            <button
+              type="button"
+              className={`${shared.declare} t-caption`}
+              onClick={() => setDeclaring(payNext)}
+            >
+              کارت به کارت — با ثبت رسید
+            </button>
+          </>
+        ) : null}
       </section>
+
+      {/*
+        ── صورتحساب‌های باز، بلافاصله زیر مانده ────────────────
+
+        جایش عمدی است: این بخش است که «چقدر و برای کدام ماه» را می‌گوید
+        و کلید پرداختِ هر کدام را دارد. برنامهٔ دوازده‌ماههٔ سال
+        پایین‌تر رفت — آن، تصویرِ سال است نه کارِ امروز.
+      */}
+      <section className={shared.card} aria-label="صورتحساب‌های باز">
+        <span className={`${shared.cardLabel} t-caption`}>صورتحساب‌های باز</span>
+        {open.length === 0 ? (
+          <p className={`${shared.hint} t-body`}>صورتحساب پرداخت‌نشده‌ای ندارید.</p>
+        ) : (
+          open.map((invoice) => {
+            const claim = finance.claims.find(
+              (c) => c.invoiceId === invoice.id && c.status !== 'rejected',
+            )
+            return (
+              <div key={invoice.id} className={shared.invoice}>
+                <p className={`${shared.row} t-body`}>
+                  <span>{formatPeriod(invoice.period)}</span>
+                  <span className={`${shared.hint} t-caption`}>{STATUS_TEXT[invoice.status]}</span>
+                  <b className={shared.amount}>{formatRial(invoiceDue(invoice))}</b>
+                </p>
+
+                <Breakdown invoice={invoice} />
+
+                {claim ? (
+                  <p className={`${shared.claimState} t-caption`}>
+                    {claim.status === 'pending'
+                      ? 'اعلام پرداخت شما ثبت شد و منتظر تأیید مهد است.'
+                      : 'مهد پرداخت شما را تأیید کرد.'}
+                  </p>
+                ) : invoice.id === payNext?.id ? (
+                  /*
+                   * کلیدِ این یکی بالاست، در کارتِ مانده.
+                   *
+                   * دو کلیدِ یکسان برای یک کار، آن هم چند سانت زیر هم،
+                   * انتخاب نیست — تردید است.
+                   */
+                  <p className={`${shared.hint} t-caption`}>
+                    کلید پرداخت این صورتحساب، بالای همین صفحه است.
+                  </p>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      className={`${shared.payOnline} t-body`}
+                      onClick={() => setPaying(invoice)}
+                    >
+                      پرداخت با شاپرک
+                    </button>
+                    <button
+                      type="button"
+                      className={`${shared.declare} t-caption`}
+                      onClick={() => setDeclaring(invoice)}
+                    >
+                      کارت به کارت — با ثبت رسید
+                    </button>
+                  </>
+                )}
+              </div>
+            )
+          })
+        )}
+      </section>
+
+      {/* ── اعلام‌های رد شده ───────────────────────────────── */}
+      {finance.claims.some((c) => c.status === 'rejected') ? (
+        <section className={`${shared.card} ${shared.rejected}`} aria-label="اعلام رد شده">
+          <span className={`${shared.cardLabel} t-caption`}>اعلام رد شده</span>
+          {finance.claims
+            .filter((c) => c.status === 'rejected')
+            .map((claim) => (
+              <p key={claim.id} className={`${shared.hint} t-body`}>
+                {formatPeriod(claim.period)} · {formatRial(claim.amount)} — {claim.rejectReason}
+              </p>
+            ))}
+        </section>
+      ) : null}
 
       {/* ── قلم‌های اختیاریِ بی‌جواب ────────────────────────── */}
       {waiting.length > 0 ? (
@@ -157,7 +292,13 @@ export function FinancePage({ childId, onBack }: { childId: string; onBack: () =
         </section>
       ) : null}
 
-      {/* ── برنامه شهریه سال، در سه دسته ───────────────────── */}
+      {/*
+        ── برنامه شهریه سال، در سه دسته ────────────────────────
+
+        پایین‌تر از پرداخت. خانواده‌ای که آمده قسطش را بدهد، اول کارش
+        را می‌کند؛ تصویرِ سال وقتی لازم است که کسی بخواهد برنامه‌ریزی
+        کند، و آن کار هر روز نیست.
+      */}
       {/*
         گذشته، الان، پیش رو.
 
@@ -204,70 +345,6 @@ export function FinancePage({ childId, onBack }: { childId: string; onBack: () =
           ماه‌های «پیش رو» که هنوز صورتحساب ندارند، برآوردند و بدهی به حساب نمی‌آیند.
         </p>
       </section>
-
-      {/* ── صورتحساب‌های باز ───────────────────────────────── */}
-      <section className={shared.card} aria-label="صورتحساب‌های باز">
-        <span className={`${shared.cardLabel} t-caption`}>صورتحساب‌های باز</span>
-        {open.length === 0 ? (
-          <p className={`${shared.hint} t-body`}>صورتحساب پرداخت‌نشده‌ای ندارید.</p>
-        ) : (
-          open.map((invoice) => {
-            const claim = finance.claims.find(
-              (c) => c.invoiceId === invoice.id && c.status !== 'rejected',
-            )
-            return (
-              <div key={invoice.id} className={shared.invoice}>
-                <p className={`${shared.row} t-body`}>
-                  <span>{formatPeriod(invoice.period)}</span>
-                  <span className={`${shared.hint} t-caption`}>{STATUS_TEXT[invoice.status]}</span>
-                  <b className={shared.amount}>{formatRial(invoiceDue(invoice))}</b>
-                </p>
-
-                <Breakdown invoice={invoice} />
-
-                {claim ? (
-                  <p className={`${shared.claimState} t-caption`}>
-                    {claim.status === 'pending'
-                      ? 'اعلام پرداخت شما ثبت شد و منتظر تأیید مهد است.'
-                      : 'مهد پرداخت شما را تأیید کرد.'}
-                  </p>
-                ) : (
-                  <>
-                    <button
-                      type="button"
-                      className={`${shared.payOnline} t-body`}
-                      onClick={() => setPaying(invoice)}
-                    >
-                      پرداخت با شاپرک
-                    </button>
-                    <button
-                      type="button"
-                      className={`${shared.declare} t-caption`}
-                      onClick={() => setDeclaring(invoice)}
-                    >
-                      کارت به کارت — با ثبت رسید
-                    </button>
-                  </>
-                )}
-              </div>
-            )
-          })
-        )}
-      </section>
-
-      {/* ── اعلام‌های رد شده ───────────────────────────────── */}
-      {finance.claims.some((c) => c.status === 'rejected') ? (
-        <section className={`${shared.card} ${shared.rejected}`} aria-label="اعلام رد شده">
-          <span className={`${shared.cardLabel} t-caption`}>اعلام رد شده</span>
-          {finance.claims
-            .filter((c) => c.status === 'rejected')
-            .map((claim) => (
-              <p key={claim.id} className={`${shared.hint} t-body`}>
-                {formatPeriod(claim.period)} · {formatRial(claim.amount)} — {claim.rejectReason}
-              </p>
-            ))}
-        </section>
-      ) : null}
 
       {/* ── پرداخت‌های ثبت‌شده، با سند ─────────────────────── */}
       {finance.payments.length > 0 ? (

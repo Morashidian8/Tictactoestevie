@@ -462,7 +462,7 @@ const SHIFT_PLAN: [string, string, string, string][] = [
 
 export const STAFF_NAMES: Record<string, string> = {
   'staff-zahra': 'زهرا محمدی',
-  'staff-maryam': 'مریم رضایی',
+  'staff-maryam': 'سمیه رحیمی',
   'staff-nasrin': 'نسرین کاظمی',
   'staff-elham': 'الهام نوری',
 }

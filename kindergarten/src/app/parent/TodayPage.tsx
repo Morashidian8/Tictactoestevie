@@ -2,6 +2,9 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   AlertIcon,
   AppShell,
+  BellIcon,
+  CalendarIcon,
+  ChatIcon,
   CheckIcon,
   ChevronIcon,
   ChildFace,
@@ -9,10 +12,19 @@ import {
   Meadow,
   PaperMarks,
   ShieldCheckIcon,
+  SpoonIcon,
   TabBar,
+  WalletIcon,
   type TabItem,
 } from '../../design-system/index.ts'
-import { formatClock, formatCount, formatJalali, formatTime, toIsoDate } from '../../i18n/index.ts'
+import {
+  formatClock,
+  formatCount,
+  formatJalali,
+  formatRial,
+  formatTime,
+  toIsoDate,
+} from '../../i18n/index.ts'
 import { ROLE_LABEL, useAuth, useData } from '../../core/auth/index.ts'
 import type {
   Child,
@@ -22,6 +34,7 @@ import type {
   ParentDay,
 } from '../../core/data/index.ts'
 import { DayTimeline, type DayStep } from './DayTimeline.tsx'
+import { Cartable } from '../shared/Cartable.tsx'
 import { MessagesPage } from '../shared/MessagesPage.tsx'
 import { DemoRoleSwitch } from '../shared/DemoRoleSwitch.tsx'
 import { MorePage } from './MorePage.tsx'
@@ -93,7 +106,78 @@ export function ParentTodayPage() {
   /** گزارش کامل روز، پشت کارت خلاصه. بسته می‌ماند تا والد بخواهد. */
   const [detailOpen, setDetailOpen] = useState(false)
 
+  /**
+   * شمار پیام‌های نخوانده، روی نوار پایین.
+   *
+   * دو پنل دیگر این نشان را داشتند و پنل خانواده نه — یعنی تنها کسی که
+   * جواب مربی را منتظر است، تنها کسی بود که خبردار نمی‌شد و باید
+   * خودش تب را باز می‌کرد تا بفهمد چیزی آمده یا نه.
+   *
+   * با هر جابه‌جایی مقصد دوباره خوانده می‌شود، نه با تایمر: عددی که
+   * عوض نشده، درخواست شبکه نمی‌خواهد.
+   */
+  const [unread, setUnread] = useState(0)
+
+  const refreshUnread = useCallback(() => {
+    data
+      .listConversations()
+      .then((list) => setUnread(list.reduce((sum, row) => sum + row.unread, 0)))
+      .catch(() => setUnread(0))
+  }, [data])
+
+  /**
+   * کارتابل «جا نماند» — همان چیزی که پنل مدیر دارد، برای خانواده.
+   *
+   * صفحه اول خانواده خلوت بود: گزارش امروز و برنامه فردا، و تمام. هر
+   * چیز دیگری که منتظر خانواده بود — بدهی، جوابِ اردو، نظرسنجی، سبد
+   * غذای پرداخت‌نشده — پشت دو سه ضربه بود و کسی سراغش نمی‌رفت.
+   *
+   * هر سه عدد جدا خوانده می‌شوند و خطای هیچ‌کدام بقیه را نمی‌کشد:
+   * کارتابلِ ناقص از کارتابلِ نیامده بهتر است.
+   */
+  const [owed, setOwed] = useState(0)
+  const [offers, setOffers] = useState(0)
+  const [polls, setPolls] = useState(0)
+  const [basket, setBasket] = useState(0)
+
+  const refreshCartable = useCallback(
+    (child: string | null) => {
+      if (!child) return
+      data
+        .getParentFinance(child)
+        .then((finance) => {
+          setOwed(finance.isPayer ? finance.outstanding : 0)
+          setOffers(
+            finance.isPayer
+              ? finance.offers.filter((o) => o.optional && o.answer === null).length
+              : 0,
+          )
+        })
+        .catch(() => {
+          setOwed(0)
+          setOffers(0)
+        })
+      data
+        .listSurveys()
+        .then((rows) => setPolls(rows.filter((row) => row.myChoice === null).length))
+        .catch(() => setPolls(0))
+      data
+        .listMealBasket(child)
+        .then((rows) => setBasket(rows.length))
+        .catch(() => setBasket(0))
+    },
+    [data],
+  )
+
   const date = useMemo(() => toIsoDate(new Date()), [])
+
+  useEffect(() => {
+    refreshUnread()
+  }, [nav, refreshUnread])
+
+  useEffect(() => {
+    refreshCartable(childId)
+  }, [childId, nav, refreshCartable])
 
   useEffect(() => {
     data
@@ -198,7 +282,7 @@ export function ParentTodayPage() {
       هر روز؛ اطلاعیه برعکس، خوانده می‌شود و تمام. پس مالی مقصد شد و
       اطلاعیه به فهرست «بیشتر» برگشت.
     */
-    { id: 'messages', label: 'پیام‌ها', shape: 'bubble', tone: 'bubble' },
+    { id: 'messages', label: 'پیام‌ها', shape: 'bubble', tone: 'bubble', badge: unread },
     { id: 'finance', label: 'مالی', shape: 'wallet', tone: 'mango' },
   ]
   /* «منو» وسط. ترتیب از راست: خانه، فردا، منو، پیام‌ها، مالی. */
@@ -223,15 +307,30 @@ export function ParentTodayPage() {
    * برای هر کودک بود و همه مربیان در آن.
    */
   if (nav === 'messages') {
+    /*
+     * صندوق هم داخل همان پوسته، مثل دو پنل دیگر.
+     *
+     * پیش‌تر این شاخه پوسته را دور می‌زد و مستقیم نوار پایین را
+     * می‌ساخت: یعنی در تب پیام‌ها نه سرصفحه بود، نه کلید حساب کاربری —
+     * خانواده‌ای که در این تب بود هیچ راهی برای خروج از حساب نداشت جز
+     * برگشتن به خانه.
+     */
     return (
-      <div className={styles.shell}>
-        <PaperMarks />
-        <Meadow />
-        <div className={styles.shellBody}>
-          <MessagesPage />
-        </div>
-        <TabBar items={NAV} center={CENTER} active={nav} onSelect={(id: string) => setNav(id as typeof nav)} />
-      </div>
+      <AppShell
+        tone="parent"
+        greeting={`سلام ${session?.active?.displayName ?? 'خوش آمدید'}!`}
+        subtitle="گفتگو با مربی و مدیر"
+        roleLabel={session?.active ? ROLE_LABEL[session.active.role] : '—'}
+        onSignOut={() => void signOut()}
+        menuExtra={<DemoRoleSwitch />}
+        hasAlert={unread > 0}
+        nav={NAV}
+        center={CENTER}
+        active={nav}
+        onSelect={(id: string) => setNav(id as typeof nav)}
+      >
+        <MessagesPage onCountChanged={setUnread} />
+      </AppShell>
     )
   }
 
@@ -304,6 +403,68 @@ export function ParentTodayPage() {
           ))}
         </div>
       ) : null}
+
+      {/*
+        ── جا نماند ────────────────────────────────────────
+
+        بعد از گزارشِ امروز نه، قبلش: خانواده صفحه را برای دیدن روزِ
+        کودک باز می‌کند، ولی چیزی که **کاری از او می‌خواهد** نباید
+        پشتِ آن بماند. بدهی و جوابِ اردو و نظرسنجی، هرکدام تا امروز پشت
+        دو سه ضربه بودند.
+
+        سطرِ صفر نوشته نمی‌شود، پس روزی که چیزی نمانده این کارت یک خط
+        آرام است و بس.
+      */}
+      <Cartable
+        items={[
+          {
+            id: 'owed',
+            text: `بدهی پرداخت‌نشده: ${formatRial(owed)}`,
+            count: owed > 0 ? 1 : 0,
+            quiet: true,
+            tone: 'mango',
+            icon: <WalletIcon size={16} />,
+            goLabel: 'مالی',
+            onGo: () => setNav('finance'),
+          },
+          {
+            id: 'messages',
+            text: 'پیام خوانده‌نشده',
+            count: unread,
+            tone: 'bubble',
+            icon: <ChatIcon size={16} />,
+            goLabel: 'پیام‌ها',
+            onGo: () => setNav('messages'),
+          },
+          {
+            id: 'offers',
+            text: 'قلم اختیاری که منتظر جواب شماست',
+            count: offers,
+            tone: 'coral',
+            icon: <BellIcon size={16} />,
+            goLabel: 'مالی',
+            onGo: () => setNav('finance'),
+          },
+          {
+            id: 'basket',
+            text: 'وعده رزروشده که هنوز پرداخت نشده',
+            count: basket,
+            tone: 'mint',
+            icon: <SpoonIcon size={16} />,
+            goLabel: 'غذا',
+            onGo: () => setNav('more'),
+          },
+          {
+            id: 'polls',
+            text: 'نظرسنجی بی‌پاسخ',
+            count: polls,
+            tone: 'grape',
+            icon: <CalendarIcon size={16} />,
+            goLabel: 'برنامه مهد',
+            onGo: () => setNav('more'),
+          },
+        ]}
+      />
 
       {/* ── برنامه روزانه ─────────────────────────────────── */}
       <section className={styles.card}>

@@ -8,6 +8,7 @@ import {
   toLatinDigits,
 } from '../../i18n/index.ts'
 import { useData } from '../../core/auth/index.ts'
+import { BirthdayCard } from '../shared/BirthdayCard.tsx'
 import type {
   CalendarEvent,
   CalendarKind,
@@ -208,7 +209,17 @@ export function ProgramPage({ onBack }: { onBack: () => void }) {
           </p>
         </section>
 
-        {/* ── تقویم ──────────────────────────────────────── */}
+        {/*
+          ── تقویم ──────────────────────────────────────────
+
+          تولدها اینجا، بالای رویدادهای دست‌نویس.
+
+          پیش‌تر کارت کاملشان در صفحه اول مدیر بود و آنجا را شلوغ
+          می‌کرد. تولد یک رویداد تقویمی است — جایش همین‌جاست، و صفحه
+          اول فقط یک سطر می‌گوید که چیزی هست.
+        */}
+        <BirthdayCard />
+
         <section className={styles.card} aria-label="تقویم مهد">
           <span className={`${styles.cardLabel} t-caption`}>تقویم</span>
           {events === null ? (

@@ -3035,6 +3035,86 @@ await page.waitForTimeout(900)
   )
 }
 
+console.log('▸ کارتابل «جا نماند» و مالیِ خانواده')
+await signIn('09120000003')
+await page.waitForTimeout(1400)
+
+{
+  const home = await page.evaluate(() => document.body.innerText)
+  /*
+   * صفحه اول خانواده پیش از این فقط گزارش امروز و برنامه فردا بود.
+   * هرچه کاری از خانواده می‌خواست — بدهی، جوابِ اردو، نظرسنجی — پشت
+   * دو سه ضربه بود و کسی سراغش نمی‌رفت.
+   */
+  check(/جا نماند/.test(home), 'کارتابل در صفحه اول خانواده می‌آید')
+  check(/بدهی پرداخت‌نشده/.test(home), 'و بدهی را همان‌جا می‌گوید')
+
+  await page.locator('button:has-text("بدهی پرداخت‌نشده")').first().click()
+  await page.waitForTimeout(1200)
+  const money = await page.evaluate(() => document.body.innerText)
+  check(/مانده/.test(money), 'لمسِ سطر، خانواده را به صفحه مالی می‌برد')
+
+  /*
+   * کلید پرداخت، بالای صفحه.
+   *
+   * خواسته مالک محصول: «نه اینکه بخواد دنبال این باشه حالا چجوری و از
+   * کجا باید بدهی پرداخت کنه». پیش از این کلیدها سه کارت پایین‌تر
+   * بودند، پشتِ جدول دوازده‌ماهه شهریه.
+   */
+  const payAt = money.indexOf('پرداخت')
+  const yearAt = money.indexOf('شهریه سال')
+  check(payAt > -1 && payAt < yearAt, 'کلید پرداخت پیش از برنامه شهریه سال می‌آید')
+}
+
+console.log('▸ صندوق خانواده هم پوسته دارد')
+await page.locator('nav button:has-text("پیام‌ها")').click()
+await page.waitForTimeout(900)
+check(
+  (await page.locator('header button[aria-label="حساب کاربری"]').count()) === 1,
+  'تب پیام‌های خانواده سرصفحه و کلید حساب دارد — پیش از این هیچ راه خروجی نداشت',
+)
+
+await page.click('button:has-text("گفتگوی تازه")')
+await page.waitForTimeout(800)
+{
+  const people = await page.evaluate(() => document.body.innerText)
+  /*
+   * سه «مریم رضایی» در یک فهرست، یعنی خانواده نمی‌داند به کدام
+   * می‌نویسد. دو تایشان یک آدم‌اند (یک شماره، دو حساب — بخش ۳.۲)؛
+   * سومی آدم دیگری بود و نامش عوض شد.
+   */
+  const many = (people.match(/مریم رضایی/g) ?? []).length
+  check(many <= 2, `فهرست گیرنده نام تکراری ندارد (${many} بار «مریم رضایی»)`)
+  check(/سمیه رحیمی/.test(people), 'و مربیِ هم‌نام، نام خودش را دارد')
+}
+
+console.log('▸ کارتابل مدیر، و تولدها در تقویم')
+await signOutAny()
+await signIn('09120000002', { fresh: false })
+await page.waitForSelector('text=با کدام حساب وارد می‌شوید؟')
+await page.locator('button:has-text("مریم رضایی")').nth(1).click()
+await page.waitForTimeout(1400)
+
+{
+  const board = await page.evaluate(() => document.body.innerText)
+  check(/جا نماند/.test(board), 'کارتابل در صفحه اول مدیر می‌آید')
+  /*
+   * کارتِ کاملِ تولدها از صفحه اول رفت: یک کارت تمام‌عرض برای خبری که
+   * اغلب روزها خالی است، و هیچ‌چیز برای پنج خبرِ دیگری که منتظر بودند.
+   */
+  check(
+    !/تولدهای پیش رو/.test(board),
+    'و کارت کامل تولدها دیگر صفحه اول را شلوغ نمی‌کند',
+  )
+
+  await page.locator('nav button[aria-label="منو"]').click()
+  await page.waitForSelector('button:has-text("برنامه مهد")')
+  await page.click('button:has-text("برنامه مهد")')
+  await page.waitForTimeout(1200)
+  const program = await page.evaluate(() => document.body.innerText)
+  check(/تولدهای پیش رو/.test(program), 'تولدها به تقویم برنامه مهد رفتند')
+}
+
 console.log('▸ بخش ۱۲.۷: کف کیفیت')
 await signIn('09120000001')
 await page.waitForSelector('text=ثبت گروهی امروز')

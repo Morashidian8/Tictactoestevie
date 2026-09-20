@@ -53,7 +53,7 @@ const ACCOUNTS: Record<string, AccountOption[]> = {
       centerId: CENTER_ID,
       centerName: CENTER_NAME,
       role: 'teacher',
-      displayName: 'مریم رضایی',
+      displayName: 'سمیه رحیمی',
       classIds: ['class-golha'],
     },
   ],

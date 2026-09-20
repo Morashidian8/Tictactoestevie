@@ -751,8 +751,16 @@ const DIRECTORY: DirectoryEntry[] = [
   },
   {
     id: 'staff-maryam',
-    firstName: 'مریم',
-    lastName: 'رضایی',
+    /*
+     * نامِ یکتا، عمدی.
+     *
+     * پیش‌تر این مربی هم «مریم رضایی» بود، مثل حسابِ مربی و مدیرِ شماره
+     * دوم — سه ردیف هم‌نام در فهرست «گفتگوی تازه». خانواده نمی‌توانست
+     * بگوید به کدامشان می‌نویسد. آن دو تای دیگر یک آدم‌اند (یک شماره،
+     * دو حساب — بخش ۳.۲) و هم‌نامی‌شان درست است؛ این یکی آدم دیگری بود.
+     */
+    firstName: 'سمیه',
+    lastName: 'رحیمی',
     role: 'teacher',
     classIds: ['class-golha'],
     childIds: [],
@@ -786,7 +794,14 @@ const DIRECTORY: DirectoryEntry[] = [
   {
     id: 'acc-manager',
     firstName: 'مریم',
-    lastName: 'رضایی (مدیر)',
+    /*
+     * بدون «(مدیر)» در نام خانوادگی.
+     *
+     * نقش، ستونِ خودش را دارد و همه‌جا — صفحه انتخاب حساب، فهرست
+     * گیرنده، سرصفحه گفتگو — کنار نام نوشته می‌شود. چسباندنش به نام،
+     * همان نقش را دو بار می‌گفت و در گزارش‌ها هم می‌نشست.
+     */
+    lastName: 'رضایی',
     role: 'manager',
     classIds: [],
     childIds: [],
@@ -1410,6 +1425,42 @@ function allergyMatches(ingredient: string, allergy: string): boolean {
 const CONVERSATIONS: ConversationRow[] = []
 const CHATS: ChatRow[] = []
 let chatSeq = 0
+
+/**
+ * لحظه‌ای که پیام **رسیده** حساب می‌شود.
+ *
+ * بیرون از ساعت کاری، نوشتن آزاد است و رسیدن صبر می‌کند (بخش ۶.۶). تا
+ * اینجا این صف فقط یک برچسب روی صفحه بود: پیامِ در صف هیچ‌وقت «رسیده»
+ * نمی‌شد و در عوض همان لحظه در گفتگوی طرف مقابل دیده می‌شد.
+ *
+ * دو دروغ در یک ستون. این تابع هر دو را می‌بندد: صف یک **زمانِ
+ * تحویل** است، نه یک حالت که کسی باید بعداً عوضش کند. پس هیچ کار
+ * زمان‌بندی‌شده‌ای لازم نیست؛ گذشتنِ ساعت خودش تحویل است.
+ */
+function deliveredAt(message: ChatRow): string | null {
+  return message.sentAt ?? message.queuedUntil
+}
+
+/** آیا این پیام تا این لحظه رسیده است. */
+function isDelivered(message: ChatRow, nowIso: string): boolean {
+  const at = deliveredAt(message)
+  return at !== null && at <= nowIso
+}
+
+/**
+ * پیام‌هایی که این حساب حق دیدنشان را دارد.
+ *
+ * فرستنده پیام خودش را همیشه می‌بیند — با برچسب «در صف تا …» — ولی
+ * گیرنده تا وقت تحویل نه. نمایشِ زودهنگام یعنی همان وعده‌ای که زیر
+ * کادر نوشته شده، جلوی چشم خودِ کاربر نقض شود.
+ */
+function visibleChats(conversationId: string, me: string, nowIso: string): ChatRow[] {
+  return CHATS.filter(
+    (m) =>
+      m.conversationId === conversationId &&
+      (m.senderId === me || isDelivered(m, nowIso)),
+  )
+}
 
 
 /* ── حالت‌های تازه برای برنامه فردا و اطلاع‌رسانی ─────────────── */
@@ -4576,13 +4627,20 @@ export function createLocalDataAccess(scope: AccessScope): DataAccess {
 
     async listConversations() {
       const me = scope.accountId
+      const nowIso = new Date().toISOString()
       return CONVERSATIONS.filter((c) => c.members.includes(me))
         .map((c) => {
           const otherId = c.members.find((m) => m !== me) ?? ''
           const other = entryOf(otherId)
           const seen = c.readAt[me]
-          const mine = CHATS.filter((m) => m.conversationId === c.id && m.sentAt)
-          const last = mine.at(-1)
+          /*
+           * پیش‌نمایش و شمارش، هر دو از «رسیده‌ها».
+           *
+           * پیش‌تر شرط `m.sentAt` بود، یعنی پیامِ در صف هرگز — حتی بعد
+           * از رسیدن وقتش — نه در پیش‌نمایش می‌آمد نه شمرده می‌شد.
+           */
+          const shown = visibleChats(c.id, me, nowIso).filter((m) => isDelivered(m, nowIso))
+          const last = shown.at(-1)
           return {
             id: c.id,
             otherAccountId: otherId,
@@ -4591,10 +4649,14 @@ export function createLocalDataAccess(scope: AccessScope): DataAccess {
             childId: c.childId,
             childName: c.childId ? childName(c.childId) : null,
             lastBody: last?.body ?? null,
-            lastAt: c.lastAt,
-            // نخوانده یعنی «از طرف مقابل، پس از آخرین بازدید من».
-            unread: mine.filter(
-              (m) => m.senderId !== me && (!seen || (m.sentAt ?? '') > seen),
+            /*
+             * ترتیب فهرست از وقتِ **تحویل** است، نه وقتِ نوشتن. پیامی
+             * که ساعت یازده شب نوشته شده و صبح می‌رسد، صبح بالا می‌آید.
+             */
+            lastAt: last ? deliveredAt(last) : null,
+            // نخوانده یعنی «از طرف مقابل، رسیده، و پس از آخرین بازدید من».
+            unread: shown.filter(
+              (m) => m.senderId !== me && (!seen || (deliveredAt(m) ?? '') > seen),
             ).length,
           }
         })
@@ -4673,12 +4735,22 @@ export function createLocalDataAccess(scope: AccessScope): DataAccess {
         otherRole: (other?.role ?? 'guardian') as Conversation['otherRole'],
         childName: row.childId ? childName(row.childId) : null,
         hours: withFamily ? { ...MESSAGE_HOURS } : null,
-        messages: CHATS.filter((m) => m.conversationId === conversationId).map((m) => ({
+        /*
+         * پیامِ در صف را فقط فرستنده‌اش می‌بیند.
+         *
+         * پیش از این هر دو طرف همه را می‌دیدند — یعنی گیرنده پیامی را
+         * می‌خواند که درست بالایش نوشته بود «صبح تحویل می‌شود».
+         */
+        messages: visibleChats(conversationId, me, new Date().toISOString()).map((m) => ({
           id: m.id,
           body: m.body,
           mine: m.senderId === me,
           senderName: fullNameOf(entryOf(m.senderId)) ?? '—',
-          sentAt: m.sentAt,
+          /*
+           * وقتِ تحویل که گذشت، پیام «رسیده» است — بی آنکه کسی ستونی
+           * را عوض کرده باشد.
+           */
+          sentAt: isDelivered(m, new Date().toISOString()) ? deliveredAt(m) : null,
           queuedUntil: m.queuedUntil,
         })),
       }

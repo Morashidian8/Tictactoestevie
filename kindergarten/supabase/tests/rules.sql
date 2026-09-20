@@ -2088,6 +2088,7 @@ declare
   acc_manager uuid := '66666666-6666-6666-6666-666666666666';
   chat   uuid;
   queued timestamptz;
+  line   record;
 begin
   select id into acc_parent from user_account
    where center_id = centre and role = 'guardian' and phone = '09120000001';
@@ -2121,6 +2122,62 @@ begin
       where table_name = 'message' and column_name = 'queued_until') = 1,
     'پیامِ بیرون از ساعت، نوشته می‌شود و رسیدنش صبر می‌کند'
   );
+
+  /*
+   * ۱۲. و صف، واقعاً صف است — ارتقای ۰۰۴۰.
+   *
+   * تا پیش از این `queued_until` فقط یک برچسب روی صفحه بود: پیام همان
+   * لحظه در گفتگوی طرف مقابل دیده می‌شد و هیچ‌وقت هم «رسیده» نمی‌شد.
+   *
+   * پنجره را می‌بندیم تا پیام حتماً در صف بنشیند، بی آنکه تست به ساعتِ
+   * اجرا وابسته شود.
+   */
+  update center set parent_message_start = '08:00', parent_message_end = '08:01'
+   where id = centre;
+
+  perform login_as('aa000000-0000-0000-0000-0000000000f1', '09120000001');
+  chat := app.open_conversation(acc_teacher);
+  perform app.send_message(chat, 'سارا امشب تب داشت.');
+
+  select queued_until into queued from message
+   where conversation_id = chat order by created_at desc limit 1;
+  perform assert(queued is not null, 'پیام خانواده بیرون از ساعت، در صف می‌نشیند');
+  perform assert(queued > now(), 'و وقتِ تحویلش هنوز نرسیده');
+
+  /*
+   * و در صندوقِ گیرنده هیچ اثری ندارد.
+   *
+   * خودِ نامرئی بودنِ سطر کارِ سیاست سطر-محور است و اینجا سنجیده
+   * نمی‌شود: این فایل با کاربر ابرکاربر اجرا می‌شود و ابرکاربر از هر
+   * سیاستی رد می‌شود. آن گزاره در `rls.sql` است، با نقش authenticated.
+   */
+  perform login_as('aa000000-0000-0000-0000-0000000000f3', '09120000001');
+  select * into line from app.my_conversations() where conversation_id = chat;
+  perform assert(coalesce(line.unread, 0) = 0, 'و در شمار نخوانده‌هایش هم نمی‌آید');
+  perform assert(line.last_body is distinct from 'سارا امشب تب داشت.',
+    'و در پیش‌نمایش صندوقش هم نمی‌نشیند');
+
+  /*
+   * حالا وقتِ تحویل را به گذشته می‌بریم — همان کاری که گذشتِ زمان
+   * می‌کند. هیچ کار زمان‌بندی‌شده‌ای لازم نیست؛ صف یک زمان است.
+   */
+  /*
+   * `now()` و نه «یک دقیقه پیش».
+   *
+   * `now()` زمانِ شروعِ تراکنش است؛ عقب بردنش آن را پیش از لحظه‌ای
+   * می‌برد که مربی گفتگو را خوانده بود، و آن وقت پیام «نخوانده» حساب
+   * نمی‌شد. زمانِ همین تراکنش، از آخرین بازدیدِ مربی تازه‌تر است.
+   */
+  update message set queued_until = now()
+   where conversation_id = chat and queued_until is not null;
+
+  select * into line from app.my_conversations() where conversation_id = chat;
+  perform assert(line.unread = 1,
+    'وقتِ تحویل که گذشت، یک نخوانده می‌شود — بی آنکه کسی ستونی را عوض کند');
+  perform assert(line.last_body = 'سارا امشب تب داشت.', 'و در پیش‌نمایش می‌آید');
+
+  update center set parent_message_start = '08:00', parent_message_end = '16:30'
+   where id = centre;
 end $$;
 
 \echo ''

@@ -1,5 +1,16 @@
 import { useCallback, useEffect, useState } from 'react'
-import { AlertIcon, BottomSheet, EmptyState } from '../../design-system/index.ts'
+import {
+  AlertIcon,
+  BellIcon,
+  BottomSheet,
+  CalendarIcon,
+  ChatIcon,
+  EmptyState,
+  FolderIcon,
+  PersonIcon,
+  ShieldCheckIcon,
+  WalletIcon,
+} from '../../design-system/index.ts'
 import {
   formatCount,
   formatJalali,
@@ -10,9 +21,11 @@ import {
   toPersianDigits,
 } from '../../i18n/index.ts'
 import { useData } from '../../core/auth/index.ts'
-import { BirthdayCard } from '../shared/BirthdayCard.tsx'
+import { Cartable, type CartableItem } from '../shared/Cartable.tsx'
+import { birthdaysTomorrow } from '../../core/data/index.ts'
 import type {
   AuditReadiness,
+  Birthday,
   Child,
   FinanceOverview,
   PendingLeave,
@@ -64,8 +77,10 @@ const LOCATION_TEXT: Record<string, string> = {
   other: 'جای دیگر',
 }
 
-export function DashboardPage({ onGo, onCounts, onOpenStaff }: {
+export function DashboardPage({ onGo, onCounts, onOpenStaff, unread = 0 }: {
   onGo: (page: ManagerPage) => void
+  /** شمار پیام‌های نخوانده، از پوسته. داشبورد دوباره نمی‌خواندش. */
+  unread?: number
   /** رفتن مستقیم به پرونده یک مربی، بی گذر از فهرست کارکنان. */
   onOpenStaff?: (staffId: string) => void
   /**
@@ -84,8 +99,22 @@ export function DashboardPage({ onGo, onCounts, onOpenStaff }: {
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState<string | null>(null)
   const [showAll, setShowAll] = useState(false)
+  /* دو سطر کارتابل که جای دیگری از این صفحه خوانده نمی‌شوند. */
+  const [docQueue, setDocQueue] = useState(0)
+  const [birthdays, setBirthdays] = useState<Birthday[]>([])
 
   const date = toIsoDate(new Date())
+
+  /**
+   * رفتن به بخشی از همین صفحه.
+   *
+   * رویداد و مرخصی و بی‌خبرها کلیدهای تصمیمشان را همین‌جا دارند و
+   * بردنشان به صفحه دیگر یعنی یک ضربه اضافه برای کاری که سر جایش
+   * بود. سطر کارتابل فقط تا آن‌ها می‌لغزد.
+   */
+  const scrollTo = (id: string) => {
+    document.getElementById(`board-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
 
   const load = useCallback(async () => {
     try {
@@ -112,6 +141,23 @@ export function DashboardPage({ onGo, onCounts, onOpenStaff }: {
   useEffect(() => {
     void load()
   }, [load])
+
+  useEffect(() => {
+    data
+      .listPendingDocuments()
+      .then((rows) => setDocQueue(rows.length))
+      .catch(() => setDocQueue(0))
+    /*
+     * تولدهای دو هفته پیش رو، ولی کارتابل فقط «فردا» را می‌گوید.
+     *
+     * کارتِ کاملِ تولدها به تقویمِ «برنامه مهد» رفت. صفحه اول فقط خبر
+     * می‌دهد که چیزی هست و کجا دیده می‌شود.
+     */
+    data
+      .listBirthdays(14)
+      .then(setBirthdays)
+      .catch(() => setBirthdays([]))
+  }, [data])
 
   /*
    * آمادگی بازرسی — ارتقای ۲.
@@ -187,6 +233,102 @@ export function DashboardPage({ onGo, onCounts, onOpenStaff }: {
     return bands.filter((band) => band.count > 0)
   })()
 
+  /*
+   * کارتابل صفحه اول — «جا نماند».
+   *
+   * ترتیب از فوریت می‌آید، نه از دسته‌بندی: ایمنی کودک اول، بعد آنچه
+   * کسِ دیگری منتظرش است (مربی و خانواده)، بعد آنچه فقط تاریخ دارد.
+   *
+   * رویداد و مرخصی همین پایین باز هستند، با کلیدهای تصمیم؛ سطرشان
+   * اینجا هست چون خواسته این بود که مدیر **همه‌ی** جامانده‌ها را در
+   * یک نگاه ببیند، و لمسش همان‌جا پایین می‌بَردش.
+   */
+  const tomorrow = birthdaysTomorrow(birthdays)
+  const items: CartableItem[] = [
+    {
+      id: 'incidents',
+      text: 'رویداد در انتظار تأیید شما',
+      count: board?.pendingIncidents.length ?? 0,
+      tone: 'coral',
+      urgent: true,
+      goLabel: 'همین صفحه، بالا',
+      onGo: () => scrollTo('incidents'),
+    },
+    {
+      id: 'leave',
+      text: 'درخواست مرخصی مربیان',
+      count: leave.length,
+      tone: 'sky',
+      icon: <CalendarIcon size={16} />,
+      goLabel: 'همین صفحه',
+      onGo: () => scrollTo('leave'),
+    },
+    {
+      id: 'docs',
+      text: 'مدرک مربی در انتظار تأیید',
+      count: docQueue,
+      tone: 'mint',
+      icon: <PersonIcon size={16} />,
+      goLabel: 'کارکنان',
+      onGo: () => onGo('staff'),
+    },
+    {
+      id: 'messages',
+      text: 'پیام خوانده‌نشده',
+      count: unread,
+      tone: 'bubble',
+      icon: <ChatIcon size={16} />,
+      goLabel: 'پیام‌ها',
+      onGo: () => onGo('messages'),
+    },
+    {
+      id: 'claims',
+      text: 'اعلام پرداخت در انتظار بررسی',
+      count: claims,
+      tone: 'mango',
+      icon: <WalletIcon size={16} />,
+      goLabel: 'مالی',
+      onGo: () => onGo('finance'),
+    },
+    {
+      id: 'birthdays',
+      /*
+       * جمله کامل، نه فقط عدد.
+       *
+       * «۲» کنار «تولد» به مدیر نمی‌گوید امروز است یا هفته بعد؛ و
+       * کاری که فردا باید بکند با کاری که هفته بعد، یکی نیست.
+       */
+      text:
+        tomorrow.length > 0
+          ? `تولد ${formatCount(tomorrow.length)} کودک فرداست`
+          : 'تولد در دو هفته پیش رو',
+      count: tomorrow.length > 0 ? tomorrow.length : birthdays.length,
+      quiet: tomorrow.length > 0,
+      tone: 'grape',
+      icon: <BellIcon size={16} />,
+      goLabel: 'برنامه مهد',
+      onGo: () => onGo('program'),
+    },
+    {
+      id: 'gaps',
+      text: 'قلم ناقص در پرونده بازرسی',
+      count: gaps,
+      tone: 'coral',
+      icon: <ShieldCheckIcon size={16} />,
+      goLabel: 'پرونده بازرسی',
+      onGo: () => onGo('audit'),
+    },
+    {
+      id: 'unaccounted',
+      text: 'کودک بدون اطلاع نیامده',
+      count: board?.unaccounted.length ?? 0,
+      tone: 'mango',
+      icon: <FolderIcon size={16} />,
+      goLabel: 'همین صفحه',
+      onGo: () => scrollTo('unaccounted'),
+    },
+  ]
+
   const decide = async (incidentId: string, decision: IncidentDecision) => {
     setBusy(incidentId)
     try {
@@ -215,9 +357,22 @@ export function DashboardPage({ onGo, onCounts, onOpenStaff }: {
   return (
     <div className={styles.page}>
       <div className={styles.body}>
+        {/*
+          کارتابل، اولِ صفحه.
+
+          پیش از این صفحه اول با کارتِ کاملِ تولدها شلوغ بود و بقیهٔ
+          جامانده‌ها هرکدام جای خودشان — یعنی مدیر باید می‌گشت تا بفهمد
+          چه چیزی منتظرش است.
+
+          بالای بنر رویداد هم نمی‌نشیند: خودِ بنر تصمیم می‌خواهد و
+          بخش ۱۳.۳ می‌گوید ایمنی کودک اولِ همه‌چیز است. کارتابل فهرستِ
+          اشاره است، نه جای تصمیم.
+        */}
+        <Cartable items={items} />
+
         {/* بنر رویداد همیشه بالاتر از همه‌چیز — بخش ۱۳.۳ */}
         {board && board.pendingIncidents.length > 0 ? (
-          <section className={styles.queue} aria-label="رویدادهای در انتظار تأیید">
+          <section id="board-incidents" className={styles.queue} aria-label="رویدادهای در انتظار تأیید">
             <p className={`${styles.queueHead} t-body-lg`}>
               <AlertIcon size={20} />
               {formatCount(board.pendingIncidents.length)} رویداد در انتظار تأیید
@@ -275,7 +430,7 @@ export function DashboardPage({ onGo, onCounts, onOpenStaff }: {
           فردا از مرخصیِ ماه بعد فوری‌تر است، هرچند دیرتر ثبت شده باشد.
         */}
         {leave.length > 0 ? (
-          <section className={styles.queue} aria-label="درخواست‌های مرخصی">
+          <section id="board-leave" className={styles.queue} aria-label="درخواست‌های مرخصی">
             <p className={`${styles.queueHead} t-body-lg`}>
               {formatCount(leave.length)} درخواست مرخصی
             </p>
@@ -424,7 +579,6 @@ export function DashboardPage({ onGo, onCounts, onOpenStaff }: {
               هر دو دربارهٔ سن‌اند، ولی این یکی کاری است که همین هفته
               باید انجام شود و آن یکی یک آمار. کارِ نزدیک‌تر، بالاتر.
             */}
-            <BirthdayCard />
 
             {ageBands.length > 0 ? (
               <section className={styles.card} aria-label="پراکندگی سنی">
@@ -434,7 +588,7 @@ export function DashboardPage({ onGo, onCounts, onOpenStaff }: {
             ) : null}
 
             {board.unaccounted.length > 0 ? (
-              <section className={styles.card} aria-label="کودکان بی‌خبر">
+              <section id="board-unaccounted" className={styles.card} aria-label="کودکان بی‌خبر">
                 <span className={`${styles.cardLabel} t-caption`}>بدون اطلاع نیامده‌اند</span>
                 {/*
                   فهرست کوتاه می‌ماند. مدیر این کارت را برای زنگ زدن باز
