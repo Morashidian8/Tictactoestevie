@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- همان توکن‌های اپ: --paper و --wash-foot و --nav-bg. -->
+    <color name="paper">#FCF9F4</color>
+    <color name="wash_foot">#F5FAEE</color>
+    <color name="nav_bg">#065F46</color>
+    <color name="ink">#0F172A</color>
+</resources>

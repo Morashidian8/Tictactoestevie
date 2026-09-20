@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">مهد</string>
+    <string name="offline_title">به اینترنت وصل نیستید</string>
+    <string name="offline_body">برای اولین اجرا، اپ باید یک بار برنامه را بگیرد. بعد از آن آفلاین هم بالا می‌آید.</string>
+    <string name="retry">تلاش دوباره</string>
+    <string name="pick_image">انتخاب تصویر</string>
+</resources>
