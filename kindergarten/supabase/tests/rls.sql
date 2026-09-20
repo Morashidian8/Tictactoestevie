@@ -656,7 +656,7 @@ begin
    * بی این، اپ صفحهٔ خالیِ بی‌توضیح نشان می‌داد و مدیر فکر می‌کرد
    * داده‌هایش پاک شده.
    */
-  select * into line from app.my_centre_licence();
+  select * into line from app.my_centre();
   perform assert(line.licence_active = false, 'ولی می‌داند اشتراکش تمام شده');
   perform assert(line.name = 'مهد آفتاب', 'و نام مهد خودش را می‌خواند');
 end $$;
@@ -696,6 +696,114 @@ begin
     'و آخرین روزِ اشتراک، روزِ کاملی است');
   update center set active_until = null
    where id = 'a0000000-0000-0000-0000-000000000001';
+end $$;
+
+-- ────────────────────────────────────────────────────────────
+-- هویت مهد: نام و نشان، و مرزهایش
+-- ────────────────────────────────────────────────────────────
+/*
+ * دو ستونی که ده مهاجرت وجود داشتند و هیچ‌کس نمی‌خواندشان، حالا در
+ * سرصفحهٔ هر سه پنل می‌نشینند. این بخش سه چیز را می‌بندد:
+ *
+ *   ۱. مدیر عوضشان می‌کند، و فقط مالِ مهدِ خودش.
+ *   ۲. مربی و خانواده می‌خوانندشان، ولی عوض نمی‌کنند.
+ *   ۳. هیچ‌کدام از راه این تابع به `active_until` نمی‌رسند — قفلِ
+ *      اشتراک چیزی نیست که مستأجر خودش بازش کند.
+ */
+reset role;
+set role authenticated;
+select login_as('a0000000-0000-0000-0000-00000000ee02', '09120000002');
+do $$
+declare line record;
+begin
+  perform app.set_center_brand('مهد آفتاب نو', 'https://cdn.example/aftab.png');
+  select * into line from app.my_centre();
+  perform assert(line.name = 'مهد آفتاب نو', 'مدیر نام مهد را عوض می‌کند');
+  perform assert(line.logo_url = 'https://cdn.example/aftab.png', 'و نشانش را');
+
+  -- تهی یعنی «دست نزن»: اصلاح نام، لوگو را از بین نمی‌برد.
+  perform app.set_center_brand('مهد آفتاب', null);
+  select * into line from app.my_centre();
+  perform assert(line.logo_url = 'https://cdn.example/aftab.png',
+                 'اصلاح نام، نشان را پاک نمی‌کند');
+
+  perform app.clear_center_logo();
+  select * into line from app.my_centre();
+  perform assert(line.logo_url is null, 'برداشتن نشان، خواستنِ صریح خودش را دارد');
+end $$;
+
+do $$
+declare ok boolean := false;
+begin
+  begin
+    perform app.set_center_brand('ی', null);
+  exception when others then ok := true;
+  end;
+  perform assert(ok, 'نام یک‌نویسه‌ای نمی‌نشیند');
+end $$;
+
+-- مربی می‌خواند، ولی عوض نمی‌کند.
+reset role;
+set role authenticated;
+select login_as('a0000000-0000-0000-0000-00000000ee01', '09120000001');
+do $$
+declare line record; ok boolean := false;
+begin
+  select * into line from app.my_centre();
+  perform assert(line.name = 'مهد آفتاب', 'مربی نام مهدش را می‌خواند');
+
+  begin
+    perform app.set_center_brand('مهد مربی', null);
+  exception when others then ok := true;
+  end;
+  perform assert(ok, 'ولی نمی‌تواند عوضش کند');
+end $$;
+
+-- و مدیرِ مهد دیگر، از این راه به مهد ما نمی‌رسد.
+reset role;
+set role authenticated;
+select login_as('b0000000-0000-0000-0000-00000000ee02', '09990000002');
+do $$
+declare line record;
+begin
+  perform app.set_center_brand('مهد ستاره نو', null);
+  select * into line from app.my_centre();
+  perform assert(line.center_id = 'b0000000-0000-0000-0000-000000000001',
+                 'مدیر مهد ب، مهد خودش را می‌گیرد');
+  perform assert(line.name = 'مهد ستاره نو', 'و همان را عوض کرده');
+end $$;
+
+/*
+ * و مهد الف دست‌نخورده مانده.
+ *
+ * این را از بیرونِ هر دو جلسه می‌سنجیم: مدیر مهد ب سیاستِ `center`
+ * را دارد و ردیفِ مهد الف اصلاً برایش وجود ندارد، پس سنجشِ آن از
+ * جلسهٔ خودش «تهی» می‌داد، نه «درست».
+ */
+reset role;
+do $$
+begin
+  perform assert(
+    (select name from center where id = 'a0000000-0000-0000-0000-000000000001') = 'مهد آفتاب',
+    'و نام مهد الف دست‌نخورده مانده');
+
+  /*
+   * و هر تغییر رد گذاشته.
+   *
+   * از بیرونِ جلسه سنجیده می‌شود چون `audit_log` برای هیچ نقشی
+   * خواندنی نیست — رد پا چیزی است که نوشته می‌شود و با دسترسی به
+   * خودِ پایگاه داده خوانده می‌شود، نه از اپ.
+   */
+  perform assert(
+    (select count(*) from audit_log
+      where entity = 'center_brand'
+        and center_id = 'a0000000-0000-0000-0000-000000000001') = 3,
+    'و هر سه تغییرِ مهد الف رد گذاشته‌اند');
+  perform assert(
+    (select count(*) from audit_log
+      where entity = 'center_brand'
+        and center_id = 'b0000000-0000-0000-0000-000000000001') = 1,
+    'و تغییرِ مهد ب، در ردِ پای مهد ب');
 end $$;
 
 reset role;

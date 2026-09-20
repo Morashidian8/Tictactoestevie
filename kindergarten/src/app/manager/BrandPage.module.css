@@ -1,0 +1,107 @@
+/*
+ * پیش‌نمایشِ سرصفحه، با همان گرادیانِ پنل خانواده.
+ *
+ * چرا پیش‌نمایش لازم است: مدیر نشان را از گالری انتخاب می‌کند و تا
+ * ذخیره نکند نمی‌داند در سرصفحه چه شکلی می‌شود. اینجا پیش از ذخیره
+ * می‌بیندش.
+ */
+.preview {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border-radius: var(--r-card);
+  background: var(--sky-parent);
+}
+
+.brand {
+  flex: none;
+  inline-size: 44px;
+  block-size: 44px;
+  display: grid;
+  place-items: center;
+}
+
+.logo {
+  inline-size: 44px;
+  block-size: 44px;
+  border-radius: var(--r-chip);
+  background: #fff;
+  object-fit: contain;
+  padding: 3px;
+}
+
+.stack { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; min-inline-size: 0; }
+
+/* همان برچسبِ سفید با جوهرِ تیره که در پوسته می‌نشیند. */
+.centre {
+  max-inline-size: 100%;
+  padding: 1px var(--space-2);
+  border-radius: var(--r-chip);
+  background: #fff;
+  color: var(--ink);
+  font-weight: var(--weight-bold);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hello { color: #fff; font-weight: var(--weight-black); }
+
+.input {
+  min-block-size: var(--touch-manager);
+  padding-inline: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--r-input);
+  background: var(--surface);
+  color: var(--ink);
+  font-family: inherit;
+}
+
+.actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+
+.pick,
+.drop {
+  min-block-size: var(--touch-manager);
+  padding-inline: var(--space-3);
+  border-radius: var(--r-input);
+  font-family: inherit;
+  font-weight: var(--weight-bold);
+  cursor: pointer;
+}
+
+.pick { border: 1px solid var(--border); background: var(--surface); color: var(--ink); }
+
+/*
+ * برداشتن، با متنِ خودش و نه فقط رنگِ قرمز — بخش ۱۲.۲.
+ */
+.drop { border: 1px solid var(--brick); background: var(--surface); color: var(--brick); }
+
+/* ورودی پرونده پنهان است؛ دکمهٔ بالا صدایش می‌زند. */
+.hiddenInput {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.ok { margin: 0; color: var(--mint-deep); font-weight: var(--weight-bold); }
+
+.save {
+  margin-block-start: var(--space-2);
+  min-block-size: var(--touch-manager);
+  border: none;
+  border-radius: var(--r-input);
+  background: var(--coral);
+  /* بخش ۱۲.۲: متنِ کنشِ اصلی جوهرِ تیره است، نه سفید — سفید روی مرجانی ۲٫۸ می‌دهد. */
+  color: var(--ink);
+  font-family: inherit;
+  font-weight: var(--weight-bold);
+  cursor: pointer;
+}
+
+.save:disabled { background: var(--border); color: var(--ink-muted); cursor: default; }

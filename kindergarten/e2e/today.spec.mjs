@@ -3115,6 +3115,62 @@ await page.waitForTimeout(1400)
   check(/تولدهای پیش رو/.test(program), 'تولدها به تقویم برنامه مهد رفتند')
 }
 
+console.log('▸ هویت مهد: نام و نشانی که خانواده می‌بیند')
+/*
+ * یک نصب، چهل مهد. `center.name` و `center.logo_url` از مهاجرت ۰۰۰۲
+ * وجود داشتند و ده مهاجرت هیچ‌جای رابط خوانده نمی‌شدند.
+ *
+ * اینجا از جلسهٔ مدیرِ همین بالا ادامه می‌دهیم: نام را عوض می‌کنیم و
+ * می‌سنجیم که در سرصفحهٔ خودش و در پنل خانواده هم عوض شده باشد.
+ */
+{
+  await page.locator('nav button[aria-label="منو"]').click()
+  await page.waitForSelector('button:has-text("هویت مهد")')
+  await page.click('button:has-text("هویت مهد")')
+  await page.waitForSelector('#centre-name')
+
+  const before = await page.evaluate(() => document.body.innerText)
+  check(/این‌طور دیده می‌شود/.test(before), 'پیش‌نمایش سرصفحه بالای صفحه است')
+  check(
+    (await page.locator('[class*="preview"] img').count()) === 1,
+    'و نشانِ مهد را در همان پیش‌نمایش نشان می‌دهد',
+  )
+
+  await page.fill('#centre-name', 'مهد گل‌های بهشت')
+  await page.click('button:has-text("ذخیره")')
+  await page.waitForTimeout(900)
+  check(
+    /ذخیره شد/.test(await page.evaluate(() => document.body.innerText)),
+    'نام تازه ذخیره می‌شود',
+  )
+
+  await page.locator('button[aria-label="بازگشت به منو"]').click()
+  await page.waitForTimeout(800)
+  check(
+    /مهد گل‌های بهشت/.test(await page.evaluate(() => document.body.innerText)),
+    'و همان لحظه در سرصفحهٔ مدیر می‌نشیند',
+  )
+}
+
+{
+  /* و خانواده هم همان نام را می‌بیند — یک مهد است، نه دو تا. */
+  await signOutAny()
+  await signIn('09120000003', { fresh: false })
+  await page.waitForTimeout(1400)
+  check(
+    /مهد گل‌های بهشت/.test(await page.evaluate(() => document.body.innerText)),
+    'خانواده هم نام تازهٔ مهد را در سرصفحه می‌بیند',
+  )
+
+  /* و صفحهٔ ورود، دفعهٔ بعد مهدِ همین دستگاه را نشان می‌دهد. */
+  await signOutAny()
+  await page.waitForTimeout(800)
+  check(
+    /مهد گل‌های بهشت/.test(await page.evaluate(() => document.body.innerText)),
+    'و صفحهٔ ورود، مهدِ بارِ پیشِ همین دستگاه را می‌آورد',
+  )
+}
+
 console.log('▸ بخش ۱۲.۷: کف کیفیت')
 await signIn('09120000001')
 await page.waitForSelector('text=ثبت گروهی امروز')

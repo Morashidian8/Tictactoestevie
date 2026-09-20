@@ -4,11 +4,13 @@ import {
   type TabItem,
 } from '../../design-system/index.ts'
 import { ROLE_LABEL, useAuth, useData } from '../../core/auth/index.ts'
+import { useCentre } from '../../core/centre/index.ts'
 import { formatJalali } from '../../i18n/index.ts'
 import { ProgramPage } from './ProgramPage.tsx'
 import { LoansPage } from '../shared/LoansPage.tsx'
 import shell from './ProgramPage.module.css'
 import { AuditPage } from './AuditPage.tsx'
+import { BrandPage } from './BrandPage.tsx'
 import { ChildrenPage } from './ChildrenPage.tsx'
 import { DashboardPage } from './DashboardPage.tsx'
 import { FinancePage } from './FinancePage.tsx'
@@ -36,6 +38,8 @@ export type ManagerPage =
   | 'audit'
   | 'staff'
   | 'program'
+  /* هویت مهد — نام و نشانی که خانواده می‌بیند. */
+  | 'brand'
   | 'loans'
   /* نامِ دومِ همان صفحه برنامه — کاشیِ «منوی غذایی» در منو. */
   | 'meals'
@@ -45,6 +49,7 @@ export type ManagerPage =
 export function ManagerApp() {
   const data = useData()
   const { session, signOut } = useAuth()
+  const { centre } = useCentre()
   const [page, setPage] = useState<ManagerPage>('dashboard')
   /*
    * پرونده‌ای که باید مستقیم باز شود.
@@ -122,6 +127,8 @@ export function ManagerApp() {
 
   return (
     <AppShell
+      centreName={centre?.name}
+      brandLogoUrl={centre?.logoUrl}
       tone="manager"
       greeting={onHome ? 'صبح بخیر' : undefined}
       subtitle={`${formatJalali(new Date(), 'weekday')} · اینجا خلاصه امروز مهد است`}
@@ -156,6 +163,8 @@ export function ManagerApp() {
         <ProgramPage onBack={() => setPage('more')} />
       ) : page === 'audit' ? (
         <AuditPage onBack={() => setPage('more')} />
+      ) : page === 'brand' ? (
+        <BrandPage onBack={() => setPage('more')} />
       ) : (
         <DashboardPage
           onGo={setPage}

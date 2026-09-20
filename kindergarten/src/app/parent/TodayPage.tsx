@@ -26,6 +26,7 @@ import {
   toIsoDate,
 } from '../../i18n/index.ts'
 import { ROLE_LABEL, useAuth, useData } from '../../core/auth/index.ts'
+import { useCentre } from '../../core/centre/index.ts'
 import type {
   Child,
   MealAmount,
@@ -88,6 +89,7 @@ const INCIDENT_TEXT: Record<string, string> = {
 export function ParentTodayPage() {
   const data = useData()
   const { session, signOut } = useAuth()
+  const { centre } = useCentre()
 
   const [children, setChildren] = useState<Child[]>([])
   const [childId, setChildId] = useState<string | null>(null)
@@ -317,6 +319,8 @@ export function ParentTodayPage() {
      */
     return (
       <AppShell
+        centreName={centre?.name}
+        brandLogoUrl={centre?.logoUrl}
         tone="parent"
         greeting={`سلام ${session?.active?.displayName ?? 'خوش آمدید'}!`}
         subtitle="گفتگو با مربی و مدیر"
@@ -366,6 +370,8 @@ export function ParentTodayPage() {
 
   return (
     <AppShell
+      centreName={centre?.name}
+      brandLogoUrl={centre?.logoUrl}
       tone="parent"
       greeting={`سلام ${greeting}!`}
       subtitle="امروز هم روز خوبی برایش آرزو می‌کنیم."

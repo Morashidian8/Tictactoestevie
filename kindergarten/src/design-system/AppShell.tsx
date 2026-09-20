@@ -28,6 +28,8 @@ const MASCOT: Record<ShellTone, MascotKind> = {
  */
 export function AppShell({
   tone = 'teacher',
+  centreName,
+  brandLogoUrl,
   greeting,
   subtitle,
   roleLabel,
@@ -43,6 +45,22 @@ export function AppShell({
 }: {
   /** لحن نقش: رنگ آسمان و شکل شخصیت. */
   tone?: ShellTone
+  /**
+   * نام مهد — بالای سلام، در همهٔ صفحه‌های خانه.
+   *
+   * وقتی یک نصب چهل مهد را می‌گرداند، خانواده‌ای که اپ را باز می‌کند
+   * باید مهدِ **خودش** را ببیند. کوچک نوشته می‌شود چون کارِ امروز
+   * مهم‌تر از نامِ مهد است؛ ولی هست.
+   */
+  centreName?: string
+  /**
+   * نشان مهد، جای شخصیتِ پوسته.
+   *
+   * تهی یعنی این مهد هنوز نشانی نگذاشته و خورشید/قلب/ستاره سر جایش
+   * می‌ماند. رنگِ آسمان از این راه عوض نمی‌شود — آن رنگ می‌گوید در
+   * کدام حساب هستی، نه در کدام مهد.
+   */
+  brandLogoUrl?: string | null
   /**
    * سرصفحه سلام. نبودنش یعنی مقصد، سرصفحه خودش را دارد.
    *
@@ -100,10 +118,24 @@ export function AppShell({
 
             <header className={styles.header}>
               <span className={styles.brand} aria-hidden>
-                <Mascot kind={MASCOT[tone]} size={44} />
+                {brandLogoUrl ? (
+                  /*
+                   * نشان روی زمینهٔ سفید می‌نشیند، نه مستقیم روی آسمان.
+                   *
+                   * لوگوی مهدها هر رنگی دارند و بعضی‌شان روی سبز یا
+                   * بنفشِ سرصفحه گم می‌شوند. قابِ سفید کاری می‌کند هر
+                   * نشانی، در هر سه پنل، دیده شود — بخش ۱۲.۲.
+                   */
+                  <img className={styles.logo} src={brandLogoUrl} alt="" />
+                ) : (
+                  <Mascot kind={MASCOT[tone]} size={44} />
+                )}
               </span>
 
               <div className={styles.greet}>
+                {centreName ? (
+                  <p className={`${styles.centre} t-caption`}>{centreName}</p>
+                ) : null}
                 <p className={`${styles.hello} t-h2`}>{greeting}</p>
                 <p className={`${styles.helloSub} t-body`}>{subtitle}</p>
               </div>

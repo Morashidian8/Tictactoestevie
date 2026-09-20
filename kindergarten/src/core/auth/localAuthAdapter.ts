@@ -137,6 +137,27 @@ export const DEV_PHONES = {
   platform: '09120000009',
 } as const
 
+/**
+ * نامِ مهد، از همان جایی که پوسته می‌خواندش.
+ *
+ * در نسخه واقعی `supabaseAuthAdapter` نام را زنده از جدول `center`
+ * می‌گیرد، پس تغییرِ مدیر همان لحظه در صفحه انتخاب حساب هم دیده
+ * می‌شود. اینجا دو ماژول جدا هستند و بی این، مدیر نام مهد را عوض
+ * می‌کرد و صفحه انتخاب حساب هنوز نامِ قدیمی را نشان می‌داد.
+ */
+function centreName(): string {
+  try {
+    const raw = localStorage.getItem('kg.centre')
+    const parsed = raw ? (JSON.parse(raw) as { name?: unknown }) : null
+    return typeof parsed?.name === 'string' && parsed.name ? parsed.name : CENTER_NAME
+  } catch {
+    return CENTER_NAME
+  }
+}
+
+const named = (list: AccountOption[]): AccountOption[] =>
+  list.map((account) => ({ ...account, centerName: centreName() }))
+
 export function createLocalAuthAdapter(): AuthAdapter {
   let pendingPhone: string | null = null
 
@@ -173,7 +194,7 @@ export function createLocalAuthAdapter(): AuthAdapter {
       if (code !== DEV_CODE) {
         throw new Error('کد درست نیست. دوباره وارد کنید.')
       }
-      const accounts = ACCOUNTS[phone] ?? []
+      const accounts = named(ACCOUNTS[phone] ?? [])
       // بخش ۳.۲: صفحه انتخاب حساب فقط وقتی می‌آید که بیش از یک حساب باشد.
       // با یک حساب، مستقیم وارد می‌شود.
       persist({ phone, accounts, active: accounts.length === 1 ? accounts[0]! : null })

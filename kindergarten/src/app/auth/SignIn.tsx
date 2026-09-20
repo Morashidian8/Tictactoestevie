@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { toLatinDigits, toPersianDigits } from '../../i18n/index.ts'
 import { useAuth } from '../../core/auth/index.ts'
+import { readLastCentre, type LastCentre } from '../../core/centre/index.ts'
 import styles from './SignIn.module.css'
 
 /**
@@ -15,6 +16,17 @@ type Step = 'phone' | 'code'
 
 export function SignIn() {
   const { requestCode, verifyCode } = useAuth()
+  /*
+   * مهدِ بارِ پیش.
+   *
+   * صفحهٔ ورود حسابی ندارد، پس نمی‌تواند بپرسد «کدام مهد». ولی
+   * خانواده‌ای که هر روز همین یک اپ را باز می‌کند، باید از همان
+   * صفحهٔ اول مهدِ خودش را ببیند — نه نامِ عمومیِ یک نرم‌افزار.
+   *
+   * `useState` با مقدار آغازین و نه `useEffect`: تا اولین رنگ‌آمیزی
+   * خوانده می‌شود و عنوان یک‌بار عوض نمی‌شود.
+   */
+  const [lastCentre] = useState(readLastCentre)
   const [step, setStep] = useState<Step>('phone')
   const [phone, setPhone] = useState('')
   const [code, setCode] = useState('')
@@ -36,6 +48,7 @@ export function SignIn() {
   if (step === 'code') {
     return (
       <main className={styles.screen}>
+        <CentreMark centre={lastCentre} />
         <h1 className={`${styles.title} t-h1`}>کد را وارد کنید</h1>
         <p className={`${styles.hint} t-body`}>
           کد پنج‌رقمی به شماره {toPersianDigits(phone)} فرستاده شد.
@@ -85,7 +98,11 @@ export function SignIn() {
 
   return (
     <main className={styles.screen}>
-      <h1 className={`${styles.title} t-h1`}>ورود به سامانه مهد</h1>
+      <CentreMark centre={lastCentre} />
+      {/* نامِ مهد بالای صفحه آمده؛ دوباره نوشتنش در عنوان، یک خط تکراری است. */}
+      <h1 className={`${styles.title} t-h1`}>
+        {lastCentre ? 'ورود به حساب' : 'ورود به سامانه مهد'}
+      </h1>
       <p className={`${styles.hint} t-body`}>شماره تلفنتان را وارد کنید تا کد بفرستیم.</p>
 
       <form
@@ -123,6 +140,23 @@ export function SignIn() {
 
       <DevNote />
     </main>
+  )
+}
+
+/**
+ * نشانِ مهد در صفحهٔ ورود.
+ *
+ * فقط وقتی می‌آید که این دستگاه پیش‌تر واردِ مهدی شده باشد. اولین بار
+ * — و روی دستگاهی که حافظه‌اش پاک شده — صفحه همان صفحهٔ عمومی است، و
+ * این درست است: نشانِ حدسی بدتر از بی‌نشانی است.
+ */
+function CentreMark({ centre }: { centre: LastCentre | null }) {
+  if (!centre) return null
+  return (
+    <div className={styles.mark}>
+      {centre.logoUrl ? <img className={styles.markLogo} src={centre.logoUrl} alt="" /> : null}
+      <span className={`${styles.markName} t-body-lg`}>{centre.name}</span>
+    </div>
   )
 }
 

@@ -8,6 +8,7 @@ import { quotaReport, type QuotaLine, type SmsBucket } from '../../notify/index.
 import type {
   AbsenceNotice,
   AccessScope,
+  Centre,
   ReadAuditSink,
   ChildInSession,
   Enrollment,
@@ -169,7 +170,7 @@ const STORE_KEY = 'kg.dev.days'
  * عدد یک واحد بالا می‌رود و حافظه قدیمی دور انداخته می‌شود. از دست
  * رفتن داده نمایشی هزینه‌ای ندارد؛ عدد غلط جلوی چشم خانواده دارد.
  */
-const STORE_VERSION = 3
+const STORE_VERSION = 4
 let hydrated = false
 
 type StoredDay = {
@@ -215,6 +216,38 @@ type PendingPayment = {
 }
 
 const GATEWAY: PendingPayment[] = []
+
+/*
+ * نشانِ نمایشیِ «مهد آفتاب».
+ *
+ * SVG درون‌خطی، به همان دلیلِ `DEMO_SCAN`: چیزی که بدون شبکه بیاید و
+ * دادهٔ هیچ مهدِ واقعی در آن نباشد. نکتهٔ اصلی این است که نسخهٔ
+ * نمایشی از همان اولین ثانیه، مهد را با نشانِ خودش نشان بدهد — وگرنه
+ * کسی که اپ را می‌بیند اصلاً نمی‌فهمد چنین چیزی هست.
+ */
+const DEMO_LOGO =
+  'data:image/svg+xml;utf8,' +
+  encodeURIComponent(
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">' +
+      '<circle cx="32" cy="32" r="30" fill="#FFF3D6"/>' +
+      '<circle cx="32" cy="32" r="14" fill="#F6A623"/>' +
+      '<g stroke="#F6A623" stroke-width="4" stroke-linecap="round">' +
+      '<path d="M32 6v6"/><path d="M32 52v6"/><path d="M6 32h6"/><path d="M52 32h6"/>' +
+      '<path d="M13 13l4 4"/><path d="M47 47l4 4"/><path d="M51 13l-4 4"/><path d="M17 47l-4 4"/>' +
+      '</g></svg>',
+  )
+
+/**
+ * هویت مهد در نسخه نمایشی — مهاجرت ۰۰۴۲.
+ *
+ * در نسخه واقعی این یک سطر از جدول `center` است و مدیر با
+ * `app.set_center_brand` عوضش می‌کند. اینجا یک شیء ماژولی است که در
+ * حافظه ذخیره می‌شود، تا تغییرِ مدیر با نوسازی صفحه از بین نرود.
+ */
+const CENTRE = {
+  name: 'مهد آفتاب',
+  logoUrl: DEMO_LOGO as string | null,
+}
 
 function save(): void {
   try {
@@ -272,6 +305,7 @@ function save(): void {
       medRequests: MED_REQUESTS,
       gateway: GATEWAY,
       extras: [...EXTRA_TODAY.entries()].map(([k, v]) => [k, [...v]] as [string, string[]]),
+      centre: { ...CENTRE },
       smsUsed: { ...smsUsedBy },
     }
     localStorage.setItem(STORE_KEY, JSON.stringify(payload))
@@ -327,6 +361,7 @@ function hydrate(): void {
       medRequests?: MedicationRequest[]
       gateway?: PendingPayment[]
       extras?: [string, string[]][]
+      centre?: { name: string; logoUrl: string | null }
       smsUsed?: number
     }
     /*
@@ -416,6 +451,10 @@ function hydrate(): void {
     restore(MED_REQUESTS, payload.medRequests)
     restore(GATEWAY, payload.gateway)
     for (const [k, v] of payload.extras ?? []) EXTRA_TODAY.set(k, new Set(v))
+    if (payload.centre) {
+      CENTRE.name = payload.centre.name
+      CENTRE.logoUrl = payload.centre.logoUrl
+    }
     // نسخه پیشین یک عدد ذخیره می‌کرد. همان را روی سطل اطلاع‌رسانی
     // می‌نشانیم تا داده ذخیره‌شده کاربر با ارتقا از بین نرود.
     if (typeof payload.smsUsed === 'number') smsUsedBy.notice = payload.smsUsed
@@ -2101,8 +2140,51 @@ export function createLocalDataAccess(scope: AccessScope): DataAccess {
     }
   }
 
+  const centreRow = (): Centre => ({
+    centerId: scope.centerId,
+    name: CENTRE.name,
+    logoUrl: CENTRE.logoUrl,
+    phone: '۰۲۱-۵۵۵۵۵۵۵۵',
+    address: 'تهران، خیابان نمونه، پلاک ۱۲',
+    plan: 'ماهانه',
+    activeUntil: null,
+    licenceActive: true,
+  })
+
   return {
     scope,
+
+    async getMyCentre() {
+      return centreRow()
+    },
+
+    async setCentreBrand(input) {
+      assertManager()
+      const clean = input.name.trim()
+      if (clean.length < 2 || clean.length > 80) {
+        throw new Error('نام مهد بین ۲ تا ۸۰ نویسه باشد.')
+      }
+      CENTRE.name = clean
+      /*
+       * تهی یعنی «دست نزن» — همان قاعدهٔ `app.set_center_brand`.
+       *
+       * و نشانی `blob:` با نوسازی صفحه می‌میرد، پس مثل عکسِ روز به
+       * داده‌نشانی تبدیل می‌شود؛ وگرنه مدیر لوگو را می‌گذارد و با
+       * اولین نوسازی، تصویرِ شکسته می‌بیند.
+       */
+      if (input.logoUrl !== undefined && input.logoUrl !== null) {
+        CENTRE.logoUrl = await durableUrl(input.logoUrl)
+      }
+      save()
+      return centreRow()
+    },
+
+    async clearCentreLogo() {
+      assertManager()
+      CENTRE.logoUrl = null
+      save()
+      return centreRow()
+    },
 
     async listClasses() {
       const allowed = visibleClassIds()
@@ -2880,7 +2962,7 @@ export function createLocalDataAccess(scope: AccessScope): DataAccess {
       const limit = toIsoDate(soon)
 
       return {
-        centerName: 'مهد آفتاب',
+        centerName: CENTRE.name,
         builtAt: new Date().toISOString(),
         builtBy: staffNameOf(scope.accountId),
         children: CHILDREN.map((child) => {

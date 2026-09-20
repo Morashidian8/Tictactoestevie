@@ -121,3 +121,32 @@
   align-self: flex-start;
   min-block-size: var(--touch-teacher);
 }
+
+/*
+ * نشانِ مهد، بالای صفحهٔ ورود.
+ *
+ * روی کاغذِ روشنِ این صفحه می‌نشیند، نه روی آسمانِ رنگی، پس جوهرِ
+ * تیره می‌گیرد و قابِ سفید لازم ندارد — ولی `contain` همان‌جاست: لوگوی
+ * مهدها اغلب مربع نیستند.
+ */
+.mark {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.markLogo {
+  flex: none;
+  inline-size: 56px;
+  block-size: 56px;
+  border-radius: var(--r-chip);
+  background: var(--surface);
+  border: 1px solid var(--card-border);
+  object-fit: contain;
+  padding: 4px;
+}
+
+.markName {
+  color: var(--ink);
+  font-weight: var(--weight-black);
+}

@@ -196,7 +196,49 @@
   block-size: 44px;
 }
 
+/*
+ * نشان مهد، در همان ۴۴ پیکسلِ شخصیت.
+ *
+ * `contain` و نه `cover`: لوگوی مهدها اغلب مربع نیستند و بریدنشان
+ * یعنی نصفِ نام یا نصفِ نشان. قابِ سفید همیشه هست، حتی وقتی خودِ
+ * تصویر زمینهٔ شفاف دارد.
+ */
+.logo {
+  inline-size: 44px;
+  block-size: 44px;
+  border-radius: var(--r-chip);
+  background: #fff;
+  object-fit: contain;
+  padding: 3px;
+}
+
 .greet { flex: 1; min-inline-size: 0; }
+
+/*
+ * نام مهد، بالای سلام — و چرا برچسبِ سفید است نه متنِ سفید.
+ *
+ * متنِ سفید روی آسمان، در اندازهٔ ریز، از ۴٫۵ رد نمی‌شود: تیره‌ترین
+ * پلهٔ سبزِ مربی (#0E9B72) با سفیدِ کامل ۳٫۵ می‌دهد. برای «سلام» که
+ * درشت و سیاه‌قلم است ۳ کافی است (بخش ۱۲.۲)، برای یک خط ۱۱ پیکسلی نه.
+ *
+ * پس رنگ‌ها جا عوض می‌کنند: زمینه سفید، متن جوهرِ تیره. همان قابِ
+ * سفیدی که نشان را نگه می‌دارد، اینجا نام را هم نگه می‌دارد — و
+ * کنارِ هم، نشانهٔ مهد را می‌سازند.
+ */
+.centre {
+  margin: 0 0 4px;
+  max-inline-size: 100%;
+  display: inline-block;
+  padding: 1px var(--space-2);
+  border-radius: var(--r-chip);
+  background: #fff;
+  color: var(--ink);
+  font-weight: var(--weight-bold);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: bottom;
+}
 
 /*
  * متن سفید روی آسمان.

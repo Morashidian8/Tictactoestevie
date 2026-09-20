@@ -4,6 +4,7 @@ import {
   CalendarIcon,
   ChatIcon,
   HomeIcon,
+  ImageIcon,
   LayersIcon,
   MegaphoneIcon,
   PeopleIcon,
@@ -64,6 +65,7 @@ export function ManagerMorePage({ onGo, gaps, claims }: {
       title: 'مهد و کارکنان',
       items: [
         { id: 'staff', label: 'کارکنان', hint: 'پرونده، مدارک، مرخصی', icon: <PersonIcon size={20} />, tone: 'mint' },
+        { id: 'brand', label: 'هویت مهد', hint: 'نام و نشان مهد در اپ', icon: <ImageIcon size={20} />, tone: 'grape' },
         {
           id: 'audit',
           label: 'پرونده بازرسی',

@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import './design-system/index.ts'
 import { AuthProvider, createAuthAdapter, useAuth } from './core/auth/index.ts'
 import type { AuthAdapter } from './core/auth/index.ts'
+import { CentreProvider, useCentre } from './core/centre/index.ts'
+import { LicenceEnded } from './app/shared/LicenceEnded.tsx'
 import { AccountPicker } from './app/auth/AccountPicker.tsx'
 import { SignIn } from './app/auth/SignIn.tsx'
 import { ManagerApp } from './app/manager/ManagerApp.tsx'
@@ -53,7 +55,41 @@ function Routes() {
   // مخزن ناهمگام ساخته می‌شود؛ تا آماده نشده هیچ پنلی داده نمی‌خواند.
   if (!data) return <main />
 
-  switch (session.active.role) {
+  /*
+   * پشتیبانی محصول، کنسول خودش را دارد — و بیرون از `CentreProvider`.
+   *
+   * اپراتور مالکِ سکوست، نه مالکِ پرونده‌ها؛ مهدی ندارد که نامش را در
+   * سرصفحه بنشاند. گذاشتنش زیر آن زمینه یعنی خواندنی که هیچ‌وقت جواب
+   * نمی‌دهد.
+   */
+  if (session.active.role === 'platform_admin') return <PlatformApp />
+
+  return (
+    <CentreProvider>
+      <CentrePanels role={session.active.role} />
+    </CentreProvider>
+  )
+}
+
+/**
+ * پنل‌های مهد، زیر هویت و اشتراکِ همان مهد.
+ *
+ * چرا اینجا و نه در هر پنل: قفلِ اشتراک برای هر سه نقش یکی است. اگر
+ * هر پنل خودش می‌سنجیدش، اضافه شدن پنل بعدی یعنی یک جای دیگر که
+ * یادشان می‌رود بسنجند.
+ */
+function CentrePanels({ role }: { role: string }) {
+  const { centre } = useCentre()
+
+  /*
+   * اشتراکِ تمام‌شده، پیش از هر پنلی.
+   *
+   * تا `centre` نیامده چیزی را نمی‌بندیم: قفل کردنِ اپ بر اساس
+   * «هنوز نمی‌دانم»، هر بار باز کردن اپ را یک لحظه قرمز می‌کرد.
+   */
+  if (centre && !centre.licenceActive) return <LicenceEnded centre={centre} />
+
+  switch (role) {
     case 'teacher':
     case 'assistant':
       return <TeacherApp />
@@ -61,16 +97,8 @@ function Routes() {
       return <ManagerApp />
     case 'guardian':
       return <ParentTodayPage />
-    /*
-     * پشتیبانی محصول، کنسول خودش را دارد.
-     *
-     * پنلِ مهد نیست و نباید باشد: اپراتور مالکِ سکوست، نه مالکِ
-     * پرونده‌ها. آنچه می‌بیند شمار مهدهاست و وضعیت اشتراکشان.
-     */
-    case 'platform_admin':
-      return <PlatformApp />
     default:
-      return <NotBuiltYet role={session.active.role} />
+      return <NotBuiltYet role={role} />
   }
 }
 

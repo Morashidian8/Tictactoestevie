@@ -4,6 +4,7 @@ import {
   type TabItem,
 } from '../../design-system/index.ts'
 import { ROLE_LABEL, useAuth, useData } from '../../core/auth/index.ts'
+import { useCentre } from '../../core/centre/index.ts'
 import { formatJalali } from '../../i18n/index.ts'
 import type { ClassRoom } from '../../core/data/index.ts'
 import { TodayPage } from './TodayPage.tsx'
@@ -37,6 +38,7 @@ type Screen =
 export function TeacherApp() {
   const data = useData()
   const { session, signOut, selectAccount } = useAuth()
+  const { centre } = useCentre()
   const [screen, setScreen] = useState<Screen>('today')
   const [waiting, setWaiting] = useState(0)
 
@@ -139,6 +141,8 @@ export function TeacherApp() {
 
   return (
     <AppShell
+      centreName={centre?.name}
+      brandLogoUrl={centre?.logoUrl}
       tone="teacher"
       greeting={ownHeader ? undefined : `سلام ${greeting}!`}
       subtitle={formatJalali(new Date(), 'full')}

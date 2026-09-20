@@ -1934,8 +1934,56 @@ export interface ReadAuditSink {
   readOccurred(entity: ReadAuditEntity, ids: string[]): Promise<void>
 }
 
+/**
+ * هویت مهد و وضعیت اشتراکش — مهاجرت ۰۰۴۲.
+ *
+ * ستون‌های `name` و `logo_url` از مهاجرت ۰۰۰۲ بودند و ده مهاجرت هیچ‌کس
+ * نمی‌خواندشان. وقتی یک نصب، چهل مهد را می‌گرداند، خانواده‌ای که اپ را
+ * باز می‌کند باید نشانِ مهدِ خودش را ببیند نه نشانِ سازندهٔ نرم‌افزار.
+ *
+ * `licenceActive` هم همین‌جاست چون همان یک سطر است: مهدِ منقضی نامش را
+ * می‌خواند ولی هیچ کودکی نمی‌بیند، و اپ باید بتواند به‌جای صفحهٔ خالی
+ * بگوید چرا.
+ */
+export type Centre = {
+  centerId: string
+  name: string
+  /** نشان مهد. تهی یعنی هنوز نگذاشته‌اند و شخصیتِ پوسته سر جایش می‌ماند. */
+  logoUrl: string | null
+  phone: string | null
+  address: string | null
+  plan: string | null
+  /** آخرین روزِ اشتراک، به شمسی. تهی یعنی بی‌مهلت. */
+  activeUntil: string | null
+  licenceActive: boolean
+}
+
 export interface DataAccess {
   readonly scope: AccessScope
+
+  /* ── هویت مهد — مهاجرت ۰۰۴۲ ───────────────────────────────── */
+
+  /**
+   * مهدِ این حساب: نام، نشان، و وضعیت اشتراک.
+   *
+   * هر سه نقش می‌خوانندش — پوستهٔ مشترک نشان و نام را از همین می‌گیرد.
+   * مهدِ منقضی هم جواب می‌گیرد، با `licenceActive` نادرست؛ بی این، اپ
+   * به‌جای «اشتراک تمام شده» یک صفحهٔ خالیِ بی‌توضیح می‌شد.
+   */
+  getMyCentre(): Promise<Centre>
+
+  /**
+   * تغییر نام و نشان مهد — فقط مدیر.
+   *
+   * `logoUrl` تهی یعنی «دست نزن»، نه «پاک کن»: مدیری که غلط املایی نام
+   * را درست می‌کند نباید نشانش را از دست بدهد. برداشتنِ نشان دکمهٔ
+   * خودش را دارد.
+   */
+  setCentreBrand(input: { name: string; logoUrl?: string | null }): Promise<Centre>
+
+  /** برداشتن نشان مهد — خواستنِ صریح، نه اثرِ جانبیِ یک ویرایش دیگر. */
+  clearCentreLogo(): Promise<Centre>
+
   /** کلاس‌هایی که این حساب می‌بیند. */
   listClasses(): Promise<ClassRoom[]>
   getClassDay(classId: string, date: string): Promise<ClassDay>

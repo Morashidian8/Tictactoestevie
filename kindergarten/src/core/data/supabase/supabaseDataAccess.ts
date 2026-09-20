@@ -12,6 +12,7 @@
 import { quotaReport, type QuotaLine, type SmsBucket } from '../../notify/index.ts'
 import { upcomingBirthdays } from '../birthdays.ts'
 import type {
+  Centre,
   DocumentReview,
   StaffDocumentKind,
   StaffDocumentSlot,
@@ -648,9 +649,50 @@ export function createSupabaseDataAccess(scope: AccessScope): AuditedDataAccess 
     })
   }
 
+  /**
+   * مهدِ این حساب — مهاجرت ۰۰۴۲.
+   *
+   * از تابع خوانده می‌شود، نه از جدول: مهدِ منقضی زیر سیاستِ `center`
+   * ردیف خودش را می‌بیند ولی `security definer` همان یک خواندن را
+   * برای هر سه نقش یکسان می‌کند، و `licence_active` همان‌جا حساب
+   * می‌شود.
+   */
+  const readCentre = async (): Promise<Centre> => {
+    const rows = (orThrow(await db.rpc('my_centre')) ?? []) as Row[]
+    const r = rows[0]
+    if (!r) throw new Error('مهد این حساب پیدا نشد.')
+    return {
+      centerId: r.center_id as string,
+      name: r.name as string,
+      logoUrl: (r.logo_url as string | null) ?? null,
+      phone: (r.phone as string | null) ?? null,
+      address: (r.address as string | null) ?? null,
+      plan: (r.plan as string | null) ?? null,
+      activeUntil: (r.active_until as string | null) ?? null,
+      licenceActive: Boolean(r.licence_active),
+    }
+  }
+
   return {
     scope,
     listClasses,
+
+    getMyCentre: readCentre,
+
+    async setCentreBrand(input) {
+      orThrow(
+        await db.rpc('set_center_brand', {
+          new_name: input.name,
+          new_logo_url: input.logoUrl ?? null,
+        }),
+      )
+      return readCentre()
+    },
+
+    async clearCentreLogo() {
+      orThrow(await db.rpc('clear_center_logo'))
+      return readCentre()
+    },
 
     async getClassDay(classId, date) {
       await assertVisible(classId)
