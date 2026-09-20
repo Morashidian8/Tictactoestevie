@@ -546,7 +546,10 @@ begin
    * سوپرادمین مالکِ سکوست، نه مالکِ پرونده‌ها. همان جاروی تست جداسازی،
    * این بار از سمت اپراتور: هیچ جدولِ مرکزداری نباید حتی یک سطر بدهد.
    *
-   * جدول `center` خودش کنار گذاشته می‌شود — دیدنش دقیقاً کارِ اوست.
+   * دو جدول کنار گذاشته می‌شوند، چون خودشان کارِ اویند: `center`
+   * (که `center_id` ندارد و اصلاً در جارو نمی‌افتد) و
+   * `center_feature` — یعنی «این مهد چه خریده». هیچ‌کدام دادهٔ کودک
+   * نیستند؛ قرارداد فروش‌اند.
    */
   for t in
     select c.table_name
@@ -556,6 +559,7 @@ begin
      where c.table_schema = 'public'
        and c.column_name = 'center_id'
        and x.table_type = 'BASE TABLE'
+       and c.table_name <> 'center_feature'
      order by c.table_name
   loop
     execute format('select count(*) from public.%I', t.table_name) into leaked;
@@ -804,6 +808,152 @@ begin
       where entity = 'center_brand'
         and center_id = 'b0000000-0000-0000-0000-000000000001') = 1,
     'و تغییرِ مهد ب، در ردِ پای مهد ب');
+end $$;
+
+-- ────────────────────────────────────────────────────────────
+-- قابلیت‌های هر مهد: پرچمی که مقصد را می‌بندد، نه گذشته را
+-- ────────────────────────────────────────────────────────────
+/*
+ * چهار چیز که این بخش می‌بندد:
+ *
+ *   ۱. پیش‌فرض روشن است، و هر مهد پرچم‌های خودش را می‌خواند.
+ *   ۲. خاموش کردن کارِ اپراتور است؛ مدیر و مربی نمی‌توانند.
+ *   ۳. خاموشی، **ساختنِ تازه** را می‌بندد.
+ *   ۴. ولی سطرهای موجود سرِ جایشان می‌مانند — قاعدهٔ اولِ مهاجرت ۰۰۴۳.
+ */
+reset role;
+set role authenticated;
+select login_as('a0000000-0000-0000-0000-00000000ee02', '09120000002');
+do $$
+declare on_count integer;
+begin
+  select count(*) into on_count from app.my_features() where enabled;
+  perform assert(on_count = 8, 'مهد تازه همهٔ قابلیت‌ها را روشن دارد');
+end $$;
+
+/* یک امانت، پیش از خاموش شدنِ دفتر امانت. */
+reset role;
+do $$
+begin
+  insert into loan (id, center_id, child_id, title, lent_on)
+  values ('a0000000-0000-0000-0000-0000000000e1',
+          'a0000000-0000-0000-0000-000000000001',
+          'a0000000-0000-0000-0000-0000000000d1', 'کتابِ فیل', current_date);
+end $$;
+
+/* مدیر خودش نمی‌تواند چیزی را خاموش کند. */
+set role authenticated;
+select login_as('a0000000-0000-0000-0000-00000000ee02', '09120000002');
+do $$
+declare ok boolean := false;
+begin
+  begin
+    perform app.set_center_feature(
+      'a0000000-0000-0000-0000-000000000001', 'loans', false);
+  exception when others then ok := true;
+  end;
+  perform assert(ok, 'مدیر مهد نمی‌تواند قابلیتی را خاموش کند');
+
+  ok := false;
+  begin
+    update center_feature set enabled = false
+     where center_id = 'a0000000-0000-0000-0000-000000000001';
+    ok := (select enabled from center_feature
+            where center_id = 'a0000000-0000-0000-0000-000000000001'
+              and feature = 'loans');
+  exception when others then ok := true;
+  end;
+  perform assert(ok, 'و از راه خودِ جدول هم نمی‌تواند');
+end $$;
+
+/* اپراتور می‌تواند. */
+reset role;
+set role authenticated;
+select login_as('c0000000-0000-0000-0000-00000000ee01', '09350000001');
+do $$
+declare line record;
+begin
+  perform app.set_center_feature('a0000000-0000-0000-0000-000000000001', 'loans', false);
+  select * into line from app.center_features('a0000000-0000-0000-0000-000000000001')
+   where feature = 'loans';
+  perform assert(line.enabled = false, 'اپراتور دفتر امانت این مهد را می‌بندد');
+
+  /* و مهد دیگر دست‌نخورده می‌ماند — پرچم مالِ یک مهد است. */
+  select * into line from app.center_features('b0000000-0000-0000-0000-000000000001')
+   where feature = 'loans';
+  perform assert(line.enabled, 'و مهد ب همچنان دفتر امانت دارد');
+end $$;
+
+reset role;
+set role authenticated;
+select login_as('a0000000-0000-0000-0000-00000000ee02', '09120000002');
+do $$
+declare ok boolean := false;
+begin
+  perform assert(
+    (select enabled from app.my_features() where feature = 'loans') = false,
+    'مهد، خاموشی را می‌خواند');
+
+  /* ۳. ساختنِ تازه بسته است. */
+  begin
+    insert into loan (center_id, child_id, title, lent_on)
+    values ('a0000000-0000-0000-0000-000000000001',
+            'a0000000-0000-0000-0000-0000000000d1', 'کتابِ تازه', current_date);
+  exception when others then ok := true;
+  end;
+  perform assert(ok, 'و امانتِ تازه ثبت نمی‌شود');
+
+  /* ۴. ولی امانتِ دیروز سرِ جایش است. */
+  perform assert(
+    (select count(*) from loan
+      where id = 'a0000000-0000-0000-0000-0000000000e1') = 1,
+    'ولی امانتِ پیش از خاموشی پاک نشده — پرچم مقصد را می‌بندد، نه گذشته را');
+end $$;
+
+/* و رد پا در دفترِ خودِ مهد نشسته. */
+reset role;
+do $$
+begin
+  perform assert(
+    (select count(*) from audit_log
+      where entity = 'center_feature:loans'
+        and action = 'disable'
+        and center_id = 'a0000000-0000-0000-0000-000000000001') = 1,
+    'خاموش کردن، در ردِ پای همان مهد می‌نشیند');
+end $$;
+
+/* روشن کردن، همه‌چیز را برمی‌گرداند. */
+reset role;
+set role authenticated;
+select login_as('c0000000-0000-0000-0000-00000000ee01', '09350000001');
+do $$
+begin
+  perform app.set_center_feature('a0000000-0000-0000-0000-000000000001', 'loans', true);
+end $$;
+
+reset role;
+set role authenticated;
+select login_as('a0000000-0000-0000-0000-00000000ee02', '09120000002');
+do $$
+begin
+  insert into loan (center_id, child_id, title, lent_on)
+  values ('a0000000-0000-0000-0000-000000000001',
+          'a0000000-0000-0000-0000-0000000000d1', 'کتابِ برگشته', current_date);
+  perform assert(
+    (select count(*) from loan
+      where center_id = 'a0000000-0000-0000-0000-000000000001') = 2,
+    'با روشن شدن دوباره، ثبت باز می‌شود');
+end $$;
+
+/* و ایمنی کودک اصلاً پرچم ندارد. */
+reset role;
+do $$
+begin
+  perform assert(
+    not exists (
+      select 1 from unnest(enum_range(null::app.center_feature)) as f
+       where f::text in ('attendance', 'incident', 'medication', 'notice', 'medical')),
+    'هیچ‌کدام از ستون‌های ایمنی کودک پرچم ندارند — بخش ۱۳.۳');
 end $$;
 
 reset role;

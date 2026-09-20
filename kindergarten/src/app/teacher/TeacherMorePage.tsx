@@ -10,6 +10,15 @@ import {
   PersonIcon,
   SpoonIcon,
 } from '../../design-system/icons.tsx'
+import { useCentre } from '../../core/centre/index.ts'
+import type { CentreFeature } from '../../core/data/index.ts'
+
+/** کدام کاشی به کدام قابلیت بسته است — مهاجرت ۰۰۴۳. */
+const TILE_FEATURE: Partial<Record<string, CentreFeature>> = {
+  play: 'free_play',
+  meals: 'meals',
+  loans: 'loans',
+}
 
 /**
  * «منو» پنل مربی — فهرست کامل کارها.
@@ -23,6 +32,7 @@ import {
  * چه می‌گردد، جایی لازم دارد که همه‌چیز را یک‌جا ببیند.
  */
 export function TeacherMorePage({ onGo }: { onGo: (id: string) => void }) {
+  const { has } = useCentre()
   const sections: MenuSection[] = [
     {
       title: 'کارِ امروز',
@@ -50,9 +60,20 @@ export function TeacherMorePage({ onGo }: { onGo: (id: string) => void }) {
     },
   ]
 
+  /* کاشیِ قابلیتِ خاموش کشیده نمی‌شود، و دستهٔ خالی هم می‌رود. */
+  const shown = sections
+    .map((section) => ({
+      ...section,
+      items: section.items.filter((item) => {
+        const feature = TILE_FEATURE[item.id]
+        return !feature || has(feature)
+      }),
+    }))
+    .filter((section) => section.items.length > 0)
+
   return (
     <>
-      <MenuGrid sections={sections} onSelect={onGo} />
+      <MenuGrid sections={shown} onSelect={onGo} />
       <p className="menu-foot t-caption">
         <span aria-hidden><AlertIcon size={14} /></span>{' '}
         برای خروج از حساب، کلید حساب کاربری در بالای صفحه.

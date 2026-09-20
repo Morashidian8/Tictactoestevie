@@ -105,3 +105,39 @@
 }
 
 .save:disabled { background: var(--border); color: var(--ink-muted); cursor: default; }
+
+/*
+ * قابلیت‌های مهد — فهرست خواندنی.
+ *
+ * نه دکمه: اینجا خبر است، نه کنترل. حالت با کلمه گفته می‌شود و رنگ
+ * فقط سطرها را از هم جدا می‌کند (بخش ۱۲.۲).
+ */
+.featureList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+}
+
+.featureRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding-block: var(--space-2);
+  color: var(--ink);
+}
+
+.featureRow + .featureRow { border-block-start: 1px solid var(--border); }
+
+.featureName { flex: 1; min-inline-size: 0; }
+
+.featureState {
+  flex: none;
+  padding: 2px var(--space-2);
+  border-radius: var(--r-chip);
+  font-weight: var(--weight-bold);
+}
+
+.on { background: var(--mint-tint); color: var(--mint-deep); }
+.off { background: var(--surface-warm); color: var(--ink-muted); }

@@ -8,6 +8,7 @@ import {
   toPersianDigits,
 } from '../../i18n/index.ts'
 import { useData } from '../../core/auth/index.ts'
+import { useCentre } from '../../core/centre/index.ts'
 import { invoiceDue } from '../../core/data/index.ts'
 import type {
   FeeItemOffer,
@@ -64,6 +65,7 @@ const monthTotal = (m: FeeYearMonth): number =>
 
 export function FinancePage({ childId, onBack }: { childId: string; onBack: () => void }) {
   const data = useData()
+  const { has } = useCentre()
   const [finance, setFinance] = useState<ParentFinance | null>(null)
   const [declaring, setDeclaring] = useState<Invoice | null>(null)
   const [paying, setPaying] = useState<Invoice | null>(null)
@@ -170,6 +172,11 @@ export function FinancePage({ childId, onBack }: { childId: string; onBack: () =
 
         {payNext ? (
           <>
+            {/*
+              مهدی که درگاه ندارد، دکمهٔ درگاه هم ندارد — مهاجرت ۰۰۴۳.
+              کارت‌به‌کارت می‌ماند، که راهِ همیشگی است.
+            */}
+            {has('online_payment') ? (
             <button
               type="button"
               className={`${shared.payOnline} t-body`}
@@ -184,6 +191,7 @@ export function FinancePage({ childId, onBack }: { childId: string; onBack: () =
                 ? `پرداخت ${formatPeriod(payNext.period, false)} — ${formatRial(invoiceDue(payNext))}`
                 : `پرداخت ${formatRial(invoiceDue(payNext))} با شاپرک`}
             </button>
+            ) : null}
             <button
               type="button"
               className={`${shared.declare} t-caption`}
@@ -239,13 +247,15 @@ export function FinancePage({ childId, onBack }: { childId: string; onBack: () =
                   </p>
                 ) : (
                   <>
-                    <button
-                      type="button"
-                      className={`${shared.payOnline} t-body`}
-                      onClick={() => setPaying(invoice)}
-                    >
-                      پرداخت با شاپرک
-                    </button>
+                    {has('online_payment') ? (
+                      <button
+                        type="button"
+                        className={`${shared.payOnline} t-body`}
+                        onClick={() => setPaying(invoice)}
+                      >
+                        پرداخت با شاپرک
+                      </button>
+                    ) : null}
                     <button
                       type="button"
                       className={`${shared.declare} t-caption`}

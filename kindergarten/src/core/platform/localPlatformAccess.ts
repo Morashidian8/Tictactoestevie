@@ -1,3 +1,5 @@
+import { ALL_FEATURES } from '../data/index.ts'
+import type { CentreFeature, FeatureFlags } from '../data/index.ts'
 import type { CenterSummary, NewCenter, PlatformAccess } from './types.ts'
 
 /**
@@ -65,12 +67,41 @@ const CENTERS: CenterSummary[] = [
   },
 ]
 
+/*
+ * پرچم‌های هر مهد در نسخهٔ نمایشی.
+ *
+ * برای مهدِ نمایشی — «مهد آفتاب» — همین پرچم‌ها باید واقعاً پنل‌ها را
+ * عوض کنند، وگرنه کنسول اپراتور یک دکمهٔ تزئینی است. پس تغییر، با
+ * `import` پویا به همان انبارِ داده نمونه می‌رود که پنل‌ها از آن
+ * می‌خوانند.
+ *
+ * بقیهٔ مهدها فقط در همین حافظه‌اند: داده‌ای ندارند که عوض شود.
+ */
+const DEMO_CENTRE = 'centre-aftab'
+
+const allOn = (): FeatureFlags =>
+  Object.fromEntries(ALL_FEATURES.map((f) => [f, true])) as FeatureFlags
+
+const FEATURES: Record<string, FeatureFlags> = {}
+
 let seq = 0
 
 export function createLocalPlatformAccess(): PlatformAccess {
   return {
     async listCenters() {
-      return CENTERS.map((row) => ({ ...row }))
+      /*
+       * نامِ مهدِ نمایشی از همان انباری می‌آید که پنل‌ها می‌خوانند.
+       *
+       * بی این، مدیر نام مهدش را عوض می‌کرد و کنسول اپراتور هنوز نامِ
+       * قدیمی را نشان می‌داد — در نسخهٔ واقعی هر دو یک سطر از جدول
+       * `center` را می‌خوانند و چنین چیزی ممکن نیست.
+       */
+      const mod = await import('../data/local/localDataAccess.ts')
+      const demoName = mod.readDemoCentreName()
+      return CENTERS.map((row) => ({
+        ...row,
+        name: row.centerId === DEMO_CENTRE ? demoName : row.name,
+      }))
     },
 
     async createCenter(input: NewCenter) {
@@ -101,6 +132,26 @@ export function createLocalPlatformAccess(): PlatformAccess {
       row.plan = plan?.trim() || null
       row.activeUntil = activeUntil
       row.licenceActive = activeUntil === null || activeUntil >= day(0)
+    },
+
+    async listCenterFeatures(centerId) {
+      if (centerId === DEMO_CENTRE) {
+        const mod = await import('../data/local/localDataAccess.ts')
+        return mod.readDemoFeatures()
+      }
+      return { ...(FEATURES[centerId] ?? allOn()) }
+    },
+
+    async setCenterFeature(centerId, feature: CentreFeature, on) {
+      if (!CENTERS.some((c) => c.centerId === centerId)) {
+        throw new Error('مهد پیدا نشد.')
+      }
+      if (centerId === DEMO_CENTRE) {
+        const mod = await import('../data/local/localDataAccess.ts')
+        mod.setDemoFeature(feature, on)
+        return
+      }
+      FEATURES[centerId] = { ...(FEATURES[centerId] ?? allOn()), [feature]: on }
     },
   }
 }

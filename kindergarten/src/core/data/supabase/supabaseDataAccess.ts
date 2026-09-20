@@ -11,8 +11,11 @@
  */
 import { quotaReport, type QuotaLine, type SmsBucket } from '../../notify/index.ts'
 import { upcomingBirthdays } from '../birthdays.ts'
+import { ALL_FEATURES } from '../types.ts'
 import type {
   Centre,
+  CentreFeature,
+  FeatureFlags,
   DocumentReview,
   StaffDocumentKind,
   StaffDocumentSlot,
@@ -692,6 +695,25 @@ export function createSupabaseDataAccess(scope: AccessScope): AuditedDataAccess 
     async clearCentreLogo() {
       orThrow(await db.rpc('clear_center_logo'))
       return readCentre()
+    },
+
+    async getMyFeatures() {
+      const rows = (orThrow(await db.rpc('my_features')) ?? []) as Row[]
+      /*
+       * از «همه روشن» شروع می‌شود و سطرها رویش می‌نشینند.
+       *
+       * همان قاعدهٔ `center_feature_on`: نبودِ سطر یعنی روشن. اگر
+       * مهاجرتِ بعدی قابلیتی اضافه کند و مهدی هنوز سطرش را نداشته
+       * باشد، اینجا هم از دست نمی‌رود.
+       */
+      const flags = Object.fromEntries(
+        ALL_FEATURES.map((f) => [f, true]),
+      ) as FeatureFlags
+      for (const r of rows) {
+        const key = r.feature as CentreFeature
+        if (key in flags) flags[key] = Boolean(r.enabled)
+      }
+      return flags
     },
 
     async getClassDay(classId, date) {

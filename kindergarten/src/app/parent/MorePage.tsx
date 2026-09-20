@@ -14,6 +14,8 @@ import {
   WalletIcon,
   type MenuSection,
 } from '../../design-system/index.ts'
+import { useCentre } from '../../core/centre/index.ts'
+import type { CentreFeature } from '../../core/data/index.ts'
 import {
   formatClock,
   formatJalali,
@@ -118,6 +120,7 @@ export function MorePage({ childId, childName, onBack, initialTab = 'menu' }: {
     حالا همه‌چیز اینجاست، حتی مقصدهای نوار. کسی که نمی‌داند دنبال چه
     می‌گردد، جایی لازم دارد که همه‌چیز را یک‌جا ببیند.
   */
+  const { has } = useCentre()
   const sections: MenuSection[] = [
     {
       title: `کودک من — ${childName}`,
@@ -199,13 +202,41 @@ export function MorePage({ childId, childName, onBack, initialTab = 'menu' }: {
     },
   ]
 
+  /*
+   * کاشیِ قابلیتی که این مهد ندارد، کشیده نمی‌شود — مهاجرت ۰۰۴۳.
+   *
+   * برای خانواده مهم‌تر از دو پنل دیگر است: خانواده‌ای که «رزرو غذا»
+   * را می‌بیند و بعد صفحهٔ خالی می‌گیرد، فکر می‌کند مهد کاری را نکرده
+   * که اصلاً قرار نبوده بکند.
+   */
+  const shown = sections
+    .map((section) => ({
+      ...section,
+      items: section.items.filter((item) => {
+        const feature = PARENT_TILE_FEATURE[item.id]
+        return !feature || has(feature)
+      }),
+    }))
+    .filter((section) => section.items.length > 0)
+
   return (
     <Shell title="منو" onBack={onBack}>
-      <MenuGrid sections={sections} onSelect={(id) => setTab(id as Tab)} />
+      <MenuGrid sections={shown} onSelect={(id) => setTab(id as Tab)} />
     </Shell>
   )
 }
 
+
+/**
+ * کدام کاشی به کدام قابلیت بسته است — مهاجرت ۰۰۴۳.
+ *
+ * «برنامه مهد» در این فهرست نیست: تقویم و منوی غذا همیشه هستند و
+ * فقط بخشِ نظرسنجیِ درونش پرچم دارد.
+ */
+const PARENT_TILE_FEATURE: Partial<Record<string, CentreFeature>> = {
+  report: 'monthly_report',
+  meals: 'meals',
+}
 
 /* ── درخواست مصرف دارو — ارتقای ۳ سند بررسی طراحی ────────────── */
 

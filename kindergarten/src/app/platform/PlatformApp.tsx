@@ -8,6 +8,8 @@ import {
 } from '../../design-system/index.ts'
 import { formatCount, formatJalali, toPersianDigits } from '../../i18n/index.ts'
 import { useAuth } from '../../core/auth/index.ts'
+import { ALL_FEATURES, FEATURE_LABEL } from '../../core/data/index.ts'
+import type { CentreFeature, FeatureFlags } from '../../core/data/index.ts'
 import { createPlatformAccess } from '../../core/platform/index.ts'
 import type { CenterSummary, PlatformAccess } from '../../core/platform/index.ts'
 import styles from './PlatformApp.module.css'
@@ -217,6 +219,94 @@ export function PlatformApp() {
   )
 }
 
+/**
+ * قابلیت‌های یک مهد — مهاجرت ۰۰۴۳.
+ *
+ * این همان چیزی است که جای چهل شاخهٔ کد را می‌گیرد. مهدی که آشپزخانه
+ * ندارد، «رزرو غذا»یش خاموش می‌شود و کاشی‌اش در هر سه پنل کشیده
+ * نمی‌شود — بی آنکه یک خط کد برای آن مهد عوض شود.
+ *
+ * ── دو چیزی که این فهرست عمداً می‌کند ───────────────────────────
+ *
+ * ۱. **همان لحظه ثبت می‌شود، بی دکمهٔ «ذخیره».** یک کلید دوحالته که
+ *    منتظر ذخیره بماند، یعنی اپراتور نمی‌داند الان روشن است یا نه.
+ *
+ * ۲. **حالت را با کلمه می‌گوید، نه فقط با رنگ** — بخش ۱۲.۲.
+ *
+ * و آنچه اینجا **نیست**: حضور، آلرژی، دارو، رخداد. آن‌ها اصلاً پرچم
+ * ندارند و `app.center_feature` نمی‌شناسدشان.
+ */
+function FeatureRows({ platform, centerId }: {
+  platform: PlatformAccess
+  centerId: string
+}) {
+  const [flags, setFlags] = useState<FeatureFlags | null>(null)
+  const [busy, setBusy] = useState<CentreFeature | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    platform
+      .listCenterFeatures(centerId)
+      .then((rows) => {
+        if (!cancelled) setFlags(rows)
+      })
+      .catch(() => {
+        if (!cancelled) setFlags(null)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [platform, centerId])
+
+  const toggle = async (feature: CentreFeature, next: boolean) => {
+    setBusy(feature)
+    setError(null)
+    try {
+      await platform.setCenterFeature(centerId, feature, next)
+      setFlags((old) => (old ? { ...old, [feature]: next } : old))
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'ثبت نشد.')
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  if (!flags) return null
+
+  return (
+    <section className={styles.features} aria-label="قابلیت‌های این مهد">
+      <span className={`${styles.field} t-caption`}>قابلیت‌ها</span>
+      <ul className={styles.featureList}>
+        {ALL_FEATURES.map((feature) => {
+          const on = flags[feature] !== false
+          return (
+            <li key={feature}>
+              <button
+                type="button"
+                className={`${styles.featureRow} t-body`}
+                disabled={busy !== null}
+                aria-pressed={on}
+                onClick={() => void toggle(feature, !on)}
+              >
+                <span className={styles.featureName}>{FEATURE_LABEL[feature]}</span>
+                <span className={`${styles.featureState} ${on ? styles.on : styles.off} t-caption`}>
+                  {on ? 'روشن' : 'خاموش'}
+                </span>
+              </button>
+            </li>
+          )
+        })}
+      </ul>
+      <p className={`${styles.note} t-caption`}>
+        خاموش کردن، داده را پاک نمی‌کند: مقصدش از پنل‌های آن مهد برداشته می‌شود و
+        ثبت تازه بسته می‌شود. با روشن کردن دوباره، همه‌چیز برمی‌گردد.
+      </p>
+      {error ? <p className={`${styles.error} t-caption`}>{error}</p> : null}
+    </section>
+  )
+}
+
 /* ── شیت مهد تازه ───────────────────────────────────────────── */
 
 function NewCenterSheet({ platform, onClose, onDone }: {
@@ -384,6 +474,8 @@ function LicenceSheet({ platform, centre, onClose, onDone }: {
       </label>
 
       <JalaliDateField label="اشتراک تا — خالی یعنی بی‌پایان" value={until} onChange={setUntil} />
+
+      <FeatureRows platform={platform} centerId={centre.centerId} />
 
       {/*
         تمدید یک‌ماهه، با یک ضربه.

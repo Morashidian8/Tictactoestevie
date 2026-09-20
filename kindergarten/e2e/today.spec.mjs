@@ -74,9 +74,22 @@ const signIn = async (phone, { fresh = true } = {}) => {
  * می‌افتد.
  */
 const signOutAny = async () => {
-  await page.locator('header button[aria-label="حساب کاربری"]').first().click()
-  await page.waitForTimeout(350)
-  await page.click('button:has-text("خروج")')
+  /*
+   * کنسول اپراتور منوی حساب ندارد.
+   *
+   * سه پنلِ مهد کلید «حساب کاربری» مشترک دارند؛ کنسول سکو پوستهٔ
+   * آن‌ها را اصلاً ندارد و کلید خروجش مستقیم در سرصفحه است. پس اول
+   * منو را باز می‌کنیم اگر بود، و بعد خروج را می‌زنیم.
+   */
+  /* اگر از قبل بیرون است، کاری نمانده. */
+  if ((await page.locator('#phone').count()) > 0) return
+
+  const account = page.locator('header button[aria-label="حساب کاربری"]')
+  if ((await account.count()) > 0) {
+    await account.first().click()
+    await page.waitForTimeout(350)
+  }
+  await page.locator('button', { hasText: /^خروج/ }).first().click()
   await page.waitForSelector('#phone')
 }
 
@@ -3168,6 +3181,82 @@ console.log('▸ هویت مهد: نام و نشانی که خانواده می�
   check(
     /مهد گل‌های بهشت/.test(await page.evaluate(() => document.body.innerText)),
     'و صفحهٔ ورود، مهدِ بارِ پیشِ همین دستگاه را می‌آورد',
+  )
+}
+
+console.log('▸ قابلیت‌های هر مهد: پرچمی که مقصد را برمی‌دارد')
+/*
+ * جایگزینِ چهل شاخهٔ کد — مهاجرت ۰۰۴۳.
+ *
+ * اپراتور «دفتر امانت» را برای این مهد خاموش می‌کند و همان لحظه کاشی‌اش
+ * از منوی مدیر و منوی مربی می‌رود. هیچ خطی از کد برای این مهد عوض نشده.
+ */
+{
+  await signOutAny()
+  await signIn('09120000009', { fresh: false })
+  await page.waitForTimeout(1200)
+
+  /*
+   * همان مهدی که بخشِ بالا نامش را عوض کرد.
+   *
+   * کنسول اپراتور نامِ تازه را نشان می‌دهد، نه نامِ قدیمی — در نسخهٔ
+   * واقعی هر دو یک سطر از `center` را می‌خوانند.
+   */
+  await page.locator('button', { hasText: 'مهد گل‌های بهشت' }).first().click()
+  await page.waitForSelector('text=قابلیت‌ها')
+
+  const row = page.locator('button', { hasText: 'دفتر امانت' }).filter({ hasText: /روشن|خاموش/ })
+  check((await row.count()) > 0, 'کنسول اپراتور، قابلیت‌های این مهد را نشان می‌دهد')
+  await row.first().click()
+  await page.waitForTimeout(700)
+  check(
+    (await row.first().innerText()).includes('خاموش'),
+    'و خاموش کردن، همان لحظه ثبت می‌شود — بی دکمهٔ ذخیره',
+  )
+
+  /* شیت را می‌بندیم؛ وگرنه پردهٔ پشتش کلیدِ خروج را می‌گیرد. */
+  await page.locator('button[aria-label="بستن"]').first().click()
+  await page.waitForTimeout(500)
+}
+
+{
+  await signOutAny()
+  await signIn('09120000002', { fresh: false })
+  await page.waitForSelector('text=با کدام حساب وارد می‌شوید؟')
+  await page.locator('button:has-text("مریم رضایی")').nth(1).click()
+  await page.waitForTimeout(1400)
+
+  await page.locator('nav button[aria-label="منو"]').click()
+  await page.waitForTimeout(900)
+  const menu = await page.evaluate(() => document.body.innerText)
+  check(!/دفتر امانت/.test(menu), 'کاشیِ قابلیتِ خاموش، در منوی مدیر کشیده نمی‌شود')
+  check(/کارکنان/.test(menu), 'ولی بقیهٔ منو سر جایش است')
+
+  /* و مدیر می‌بیند چه خاموش است، بی آنکه بتواند روشنش کند. */
+  await page.click('button:has-text("هویت مهد")')
+  await page.waitForSelector('#centre-name')
+  const brand = await page.evaluate(() => document.body.innerText)
+  check(/غیرفعال/.test(brand), 'مدیر در «هویت مهد» می‌بیند چه چیزی غیرفعال است')
+  check(
+    /با پشتیبانی تماس/.test(brand),
+    'و به‌جای دکمهٔ مُرده، می‌گوید برای فعال کردن چه کند',
+  )
+
+  /* برمی‌گردیم به منو؛ «هویت مهد» سرصفحهٔ خودش را دارد و کلید حساب ندارد. */
+  await page.locator('button[aria-label="بازگشت به منو"]').click()
+  await page.waitForTimeout(700)
+}
+
+{
+  /* و مربی هم همان را نمی‌بیند — پرچم مالِ مهد است، نه مالِ یک پنل. */
+  await signOutAny()
+  await signIn('09120000001', { fresh: false })
+  await page.waitForTimeout(1400)
+  await page.locator('nav button[aria-label="منو"]').click()
+  await page.waitForTimeout(900)
+  check(
+    !/دفتر امانت/.test(await page.evaluate(() => document.body.innerText)),
+    'و در منوی مربی هم نیست',
   )
 }
 

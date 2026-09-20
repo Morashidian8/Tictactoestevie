@@ -89,7 +89,7 @@ const INCIDENT_TEXT: Record<string, string> = {
 export function ParentTodayPage() {
   const data = useData()
   const { session, signOut } = useAuth()
-  const { centre } = useCentre()
+  const { centre, has } = useCentre()
 
   const [children, setChildren] = useState<Child[]>([])
   const [childId, setChildId] = useState<string | null>(null)
@@ -159,16 +159,29 @@ export function ParentTodayPage() {
           setOwed(0)
           setOffers(0)
         })
-      data
-        .listSurveys()
-        .then((rows) => setPolls(rows.filter((row) => row.myChoice === null).length))
-        .catch(() => setPolls(0))
-      data
-        .listMealBasket(child)
-        .then((rows) => setBasket(rows.length))
-        .catch(() => setBasket(0))
+      /*
+       * سطرِ قابلیتی که این مهد ندارد، اصلاً خوانده نمی‌شود — مهاجرت
+       * ۰۰۴۳. شمارِ صفر خودش سطر را پنهان می‌کند، پس یک شرط اینجا هم
+       * درخواست را کم می‌کند هم سطرِ مُرده را.
+       */
+      if (has('survey')) {
+        data
+          .listSurveys()
+          .then((rows) => setPolls(rows.filter((row) => row.myChoice === null).length))
+          .catch(() => setPolls(0))
+      } else {
+        setPolls(0)
+      }
+      if (has('meals')) {
+        data
+          .listMealBasket(child)
+          .then((rows) => setBasket(rows.length))
+          .catch(() => setBasket(0))
+      } else {
+        setBasket(0)
+      }
     },
-    [data],
+    [data, has],
   )
 
   const date = useMemo(() => toIsoDate(new Date()), [])

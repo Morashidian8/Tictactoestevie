@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Mascot } from '../../design-system/index.ts'
 import { useData } from '../../core/auth/index.ts'
 import { useCentre } from '../../core/centre/index.ts'
+import { ALL_FEATURES, FEATURE_LABEL } from '../../core/data/index.ts'
 import { compressImage } from '../../core/media/compress.ts'
 import shell from './ProgramPage.module.css'
 import styles from './BrandPage.module.css'
@@ -26,7 +27,7 @@ import styles from './BrandPage.module.css'
  */
 export function BrandPage({ onBack }: { onBack: () => void }) {
   const data = useData()
-  const { centre, setCentre } = useCentre()
+  const { centre, setCentre, features } = useCentre()
   const fileInput = useRef<HTMLInputElement>(null)
 
   const [name, setName] = useState(centre?.name ?? '')
@@ -187,6 +188,32 @@ export function BrandPage({ onBack }: { onBack: () => void }) {
           <p className={`${shell.muted} t-caption`}>
             تصویر مربع بهتر می‌نشیند. نشان روی قاب سفید می‌آید تا در هر سه پنل
             دیده شود.
+          </p>
+        </section>
+
+        {/*
+          قابلیت‌های این مهد — خواندنی، نه دوحالته.
+          مدیر می‌بیند چه خریده؛ روشن کردنِ چیزی که نخریده کارِ او
+          نیست. دکمه‌ای که «نمی‌شود» بگوید بدتر از نبودنش است.
+        */}
+        <section className={shell.card} aria-label="قابلیت‌های این مهد">
+          <span className={`${shell.cardLabel} t-caption`}>قابلیت‌های این مهد</span>
+          <ul className={styles.featureList}>
+            {ALL_FEATURES.map((feature) => (
+              <li key={feature} className={`${styles.featureRow} t-body`}>
+                <span className={styles.featureName}>{FEATURE_LABEL[feature]}</span>
+                <span
+                  className={`${styles.featureState} ${
+                    features[feature] !== false ? styles.on : styles.off
+                  } t-caption`}
+                >
+                  {features[feature] !== false ? 'فعال' : 'غیرفعال'}
+                </span>
+              </li>
+            ))}
+          </ul>
+          <p className={`${shell.muted} t-caption`}>
+            برای فعال کردن قابلیتی که غیرفعال است، با پشتیبانی تماس بگیرید.
           </p>
         </section>
 

@@ -8,6 +8,7 @@ import {
   toLatinDigits,
 } from '../../i18n/index.ts'
 import { useData } from '../../core/auth/index.ts'
+import { useCentre } from '../../core/centre/index.ts'
 import { BirthdayCard } from '../shared/BirthdayCard.tsx'
 import type {
   CalendarEvent,
@@ -60,6 +61,7 @@ type Sheet = 'menu' | 'event' | 'survey' | null
 
 export function ProgramPage({ onBack }: { onBack: () => void }) {
   const data = useData()
+  const { has } = useCentre()
   const [menu, setMenu] = useState<MenuEntry[] | null>(null)
   const [events, setEvents] = useState<CalendarEvent[] | null>(null)
   const [surveys, setSurveys] = useState<Survey[] | null>(null)
@@ -248,6 +250,11 @@ export function ProgramPage({ onBack }: { onBack: () => void }) {
         </section>
 
         {/* ── نظرسنجی ────────────────────────────────────── */}
+        {/*
+          مهدی که نظرسنجی را نخریده، کارتش را هم نمی‌بیند — مهاجرت
+          ۰۰۴۳. بقیهٔ این صفحه (منوی غذا، تقویم) پرچم ندارد.
+        */}
+        {has('survey') ? (
         <section className={styles.card} aria-label="نظرسنجی‌ها">
           <span className={`${styles.cardLabel} t-caption`}>نظرسنجی</span>
           {surveys === null ? (
@@ -300,6 +307,7 @@ export function ProgramPage({ onBack }: { onBack: () => void }) {
             نظرسنجی تازه
           </button>
         </section>
+        ) : null}
 
         {error ? <p className={`${styles.error} t-body`}>{error}</p> : null}
       </div>

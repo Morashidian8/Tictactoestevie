@@ -13,7 +13,22 @@ import {
   SpoonIcon,
   WalletIcon,
 } from '../../design-system/icons.tsx'
+import { useCentre } from '../../core/centre/index.ts'
+import type { CentreFeature } from '../../core/data/index.ts'
 import type { ManagerPage } from './ManagerApp.tsx'
+
+/**
+ * کدام کاشی به کدام قابلیت بسته است — مهاجرت ۰۰۴۳.
+ *
+ * کاشی‌هایی که اینجا نیستند، همیشه هستند: خانه، کودکان، پیام‌ها،
+ * مالی، کارکنان، اطلاع‌رسانی، هویت مهد. هیچ‌کدام پرچم ندارند و
+ * نباید داشته باشند.
+ */
+const TILE_FEATURE: Partial<Record<string, CentreFeature>> = {
+  meals: 'meals',
+  loans: 'loans',
+  audit: 'inspection',
+}
 
 /**
  * «منو» پنل مدیر — فهرست کامل کارها.
@@ -37,6 +52,7 @@ export function ManagerMorePage({ onGo, gaps, claims }: {
   /** اعلام‌های پرداخت در انتظار تصمیم. */
   claims: number
 }) {
+  const { has } = useCentre()
   const sections: MenuSection[] = [
     {
       title: 'هر روز',
@@ -78,9 +94,26 @@ export function ManagerMorePage({ onGo, gaps, claims }: {
     },
   ]
 
+  /*
+   * کاشیِ قابلیتِ خاموش اصلاً کشیده نمی‌شود.
+   *
+   * نه خاکستری، نه با قفل: مدیری که کاشیِ قفل‌شده می‌بیند، هر هفته
+   * یک بار رویش می‌زند. دکمه‌ای که کار نکند بدتر از نبودنش است — و
+   * دسته‌ای که خالی شود، خودش هم می‌رود.
+   */
+  const shown = sections
+    .map((section) => ({
+      ...section,
+      items: section.items.filter((item) => {
+        const feature = TILE_FEATURE[item.id]
+        return !feature || has(feature)
+      }),
+    }))
+    .filter((section) => section.items.length > 0)
+
   return (
     <>
-      <MenuGrid sections={sections} onSelect={(id) => onGo(id as ManagerPage)} />
+      <MenuGrid sections={shown} onSelect={(id) => onGo(id as ManagerPage)} />
 
       {/*
         آنچه اینجا نیست و عمدی است: هیچ گزینه‌ای برای حذف داده کودک.

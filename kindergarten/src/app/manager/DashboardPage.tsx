@@ -21,6 +21,7 @@ import {
   toPersianDigits,
 } from '../../i18n/index.ts'
 import { useData } from '../../core/auth/index.ts'
+import { useCentre } from '../../core/centre/index.ts'
 import { Cartable, type CartableItem } from '../shared/Cartable.tsx'
 import { birthdaysTomorrow } from '../../core/data/index.ts'
 import type {
@@ -92,6 +93,7 @@ export function DashboardPage({ onGo, onCounts, onOpenStaff, unread = 0 }: {
   onCounts?: (counts: { claims: number; gaps: number }) => void
 }) {
   const data = useData()
+  const { has } = useCentre()
   const [board, setBoard] = useState<ManagerDashboard | null>(null)
   const [leave, setLeave] = useState<PendingLeave[]>([])
   const [onLeave, setOnLeave] = useState<{ staffId: string; fullName: string }[]>([])
@@ -168,11 +170,20 @@ export function DashboardPage({ onGo, onCounts, onOpenStaff, unread = 0 }: {
    */
   const [ready, setReady] = useState<AuditReadiness | null>(null)
   useEffect(() => {
+    /*
+     * مهدی که پروندهٔ بازرسی را نخریده، نه کارتش را می‌بیند نه سطرِ
+     * کارتابلش را — و نه عددِ روی «منو» را. یک شرط، چون هر سه از
+     * همین `gaps` می‌آیند.
+     */
+    if (!has('inspection')) {
+      setReady(null)
+      return
+    }
     data
       .getAuditReadiness()
       .then(setReady)
       .catch(() => setReady(null))
-  }, [data])
+  }, [data, has])
   const gaps = ready
     ? ready.incompleteVaccination + ready.missingNationalId + ready.expiringHealthCards
     : 0

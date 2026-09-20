@@ -1,7 +1,8 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 import { useData } from '../auth/index.ts'
-import type { Centre } from '../data/index.ts'
+import { ALL_FEATURES } from '../data/index.ts'
+import type { Centre, CentreFeature, FeatureFlags } from '../data/index.ts'
 
 /**
  * هویت مهدِ حسابِ باز — نام و نشانی که در سرصفحهٔ هر سه پنل می‌نشیند.
@@ -48,11 +49,24 @@ function rememberCentre(centre: Centre): void {
   }
 }
 
+/**
+ * تا پرچم‌ها نیامده‌اند، همه روشن‌اند.
+ *
+ * برعکسش یعنی هر بار باز کردن اپ، نوار پایین یک لحظه نصفه است و بعد
+ * کامل می‌شود — که از هر تأخیری بدتر دیده می‌شود. و قاعدهٔ پایگاه
+ * داده هم همین است: نبودِ سطر یعنی روشن.
+ */
+const ALL_ON = Object.fromEntries(ALL_FEATURES.map((f) => [f, true])) as FeatureFlags
+
 type CentreState = {
   /** تا نیامده null است — سرصفحه همان لحظه شخصیتِ نقش را نشان می‌دهد. */
   centre: Centre | null
   /** پس از تغییرِ مدیر. سرصفحه بی نوسازی صفحه به‌روز می‌شود. */
   setCentre: (next: Centre) => void
+  /** پرچم‌های قابلیت. تا نیامده، همه روشن. */
+  features: FeatureFlags
+  /** آیا این مهد این قابلیت را دارد. */
+  has: (feature: CentreFeature) => boolean
 }
 
 const CentreContext = createContext<CentreState | null>(null)
@@ -60,6 +74,7 @@ const CentreContext = createContext<CentreState | null>(null)
 export function CentreProvider({ children }: { children: ReactNode }) {
   const data = useData()
   const [centre, setStored] = useState<Centre | null>(null)
+  const [features, setFeatures] = useState<FeatureFlags>(ALL_ON)
 
   const setCentre = useCallback((next: Centre) => {
     setStored(next)
@@ -68,6 +83,13 @@ export function CentreProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let cancelled = false
+    data
+      .getMyFeatures()
+      .then((flags) => {
+        if (!cancelled) setFeatures(flags)
+      })
+      /* نیامدنِ پرچم‌ها، اپ را نصفه نمی‌کند. همه روشن می‌ماند. */
+      .catch(() => {})
     data
       .getMyCentre()
       .then((row) => {
@@ -89,7 +111,15 @@ export function CentreProvider({ children }: { children: ReactNode }) {
     }
   }, [data])
 
-  const value = useMemo(() => ({ centre, setCentre }), [centre, setCentre])
+  const value = useMemo(
+    () => ({
+      centre,
+      setCentre,
+      features,
+      has: (feature: CentreFeature) => features[feature] !== false,
+    }),
+    [centre, setCentre, features],
+  )
   return <CentreContext.Provider value={value}>{children}</CentreContext.Provider>
 }
 

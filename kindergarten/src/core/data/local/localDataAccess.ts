@@ -9,6 +9,8 @@ import type {
   AbsenceNotice,
   AccessScope,
   Centre,
+  CentreFeature,
+  FeatureFlags,
   ReadAuditSink,
   ChildInSession,
   Enrollment,
@@ -170,7 +172,7 @@ const STORE_KEY = 'kg.dev.days'
  * عدد یک واحد بالا می‌رود و حافظه قدیمی دور انداخته می‌شود. از دست
  * رفتن داده نمایشی هزینه‌ای ندارد؛ عدد غلط جلوی چشم خانواده دارد.
  */
-const STORE_VERSION = 4
+const STORE_VERSION = 5
 let hydrated = false
 
 type StoredDay = {
@@ -249,6 +251,47 @@ const CENTRE = {
   logoUrl: DEMO_LOGO as string | null,
 }
 
+/**
+ * پرچم‌های قابلیت در نسخه نمایشی — مهاجرت ۰۰۴۳.
+ *
+ * همه روشن، مثل مهدِ تازه در پایگاه داده. کنسول اپراتور خاموششان
+ * می‌کند و پنل‌ها همان لحظه مقصدهایشان را کم می‌کنند — همان چیزی که
+ * در فروش باید نشان داده شود.
+ */
+const FEATURES: FeatureFlags = {
+  meals: true,
+  loans: true,
+  free_play: true,
+  monthly_report: true,
+  inspection: true,
+  survey: true,
+  expenses: true,
+  online_payment: true,
+}
+
+/**
+ * خاموش/روشن کردن یک قابلیت — از کنسول اپراتور، نه از پنل مهد.
+ *
+ * `localPlatformAccess` صدایش می‌زند. در نسخه واقعی این کار
+ * `app.set_center_feature` است و از سمتِ سکو انجام می‌شود.
+ */
+export function setDemoFeature(feature: CentreFeature, on: boolean): void {
+  hydrate()
+  FEATURES[feature] = on
+  save()
+}
+
+export function readDemoFeatures(): FeatureFlags {
+  hydrate()
+  return { ...FEATURES }
+}
+
+/** نامِ مهدِ نمایشی — کنسول اپراتور هم همین را نشان می‌دهد. */
+export function readDemoCentreName(): string {
+  hydrate()
+  return CENTRE.name
+}
+
 function save(): void {
   try {
     const payload = {
@@ -306,6 +349,7 @@ function save(): void {
       gateway: GATEWAY,
       extras: [...EXTRA_TODAY.entries()].map(([k, v]) => [k, [...v]] as [string, string[]]),
       centre: { ...CENTRE },
+      features: { ...FEATURES },
       smsUsed: { ...smsUsedBy },
     }
     localStorage.setItem(STORE_KEY, JSON.stringify(payload))
@@ -362,6 +406,7 @@ function hydrate(): void {
       gateway?: PendingPayment[]
       extras?: [string, string[]][]
       centre?: { name: string; logoUrl: string | null }
+      features?: Partial<FeatureFlags>
       smsUsed?: number
     }
     /*
@@ -454,6 +499,15 @@ function hydrate(): void {
     if (payload.centre) {
       CENTRE.name = payload.centre.name
       CENTRE.logoUrl = payload.centre.logoUrl
+    }
+    /*
+     * نبودِ کلید یعنی روشن — همان قاعدهٔ `center_feature_on`.
+     *
+     * پس قابلیتی که فردا اضافه شود، برای حافظهٔ دیروز خاموش
+     * نمی‌افتد.
+     */
+    for (const [key, value] of Object.entries(payload.features ?? {})) {
+      if (key in FEATURES) FEATURES[key as CentreFeature] = value !== false
     }
     // نسخه پیشین یک عدد ذخیره می‌کرد. همان را روی سطل اطلاع‌رسانی
     // می‌نشانیم تا داده ذخیره‌شده کاربر با ارتقا از بین نرود.
@@ -2184,6 +2238,10 @@ export function createLocalDataAccess(scope: AccessScope): DataAccess {
       CENTRE.logoUrl = null
       save()
       return centreRow()
+    },
+
+    async getMyFeatures() {
+      return { ...FEATURES }
     },
 
     async listClasses() {

@@ -1,4 +1,6 @@
 import { supabase } from '../data/supabase/client.ts'
+import { ALL_FEATURES } from '../data/index.ts'
+import type { CentreFeature, FeatureFlags } from '../data/index.ts'
 import type { CenterSummary, NewCenter, PlatformAccess } from './types.ts'
 
 type Row = Record<string, unknown>
@@ -57,6 +59,31 @@ export function createSupabasePlatformAccess(): PlatformAccess {
           centre: centerId,
           centre_plan: plan?.trim() || null,
           until: activeUntil,
+        }),
+      )
+    },
+
+    async listCenterFeatures(centerId) {
+      const rows = ((orThrow(
+        await db.rpc('center_features', { centre: centerId }),
+      ) ?? []) as Row[])
+      /* از «همه روشن» شروع می‌شود — همان قاعدهٔ `center_feature_on`. */
+      const flags = Object.fromEntries(
+        ALL_FEATURES.map((f) => [f, true]),
+      ) as FeatureFlags
+      for (const r of rows) {
+        const key = r.feature as CentreFeature
+        if (key in flags) flags[key] = Boolean(r.enabled)
+      }
+      return flags
+    },
+
+    async setCenterFeature(centerId, feature, on) {
+      orThrow(
+        await db.rpc('set_center_feature', {
+          centre: centerId,
+          which: feature,
+          turn_on: on,
         }),
       )
     },

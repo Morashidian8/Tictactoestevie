@@ -1,3 +1,5 @@
+import type { CentreFeature, FeatureFlags } from '../data/index.ts'
+
 /**
  * لایهٔ سکو — کارِ اپراتور، جدا از کارِ مهد.
  *
@@ -55,5 +57,25 @@ export type PlatformAccess = {
     centerId: string,
     plan: string | null,
     activeUntil: string | null,
+  ): Promise<void>
+
+  /**
+   * قابلیت‌های یک مهد — مهاجرت ۰۰۴۳.
+   *
+   * همان خط قرمز سرِ جایش است: این نام پرچم و روشن/خاموش است، نه
+   * دادهٔ کودک. «این مهد چه خریده» قرارداد فروش است، نه پرونده.
+   */
+  listCenterFeatures(centerId: string): Promise<FeatureFlags>
+
+  /**
+   * روشن یا خاموش کردنِ یک قابلیت برای یک مهد.
+   *
+   * چرا کارِ اپراتور است و نه مدیرِ مهد: مدیر نمی‌تواند چیزی را که
+   * نخریده روشن کند. همان مرزی که برای `active_until` کشیده شد.
+   */
+  setCenterFeature(
+    centerId: string,
+    feature: CentreFeature,
+    on: boolean,
   ): Promise<void>
 }

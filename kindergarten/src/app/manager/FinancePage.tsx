@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { AlertIcon, CheckIcon, EmptyState } from '../../design-system/index.ts'
 import { formatCount, formatRial, jalaliYearMonth, toIsoDate, toLatinDigits, toPersianDigits } from '../../i18n/index.ts'
 import { useData } from '../../core/auth/index.ts'
+import { useCentre } from '../../core/centre/index.ts'
 import { invoiceDue } from '../../core/data/index.ts'
 import { ChoiceGroup, JalaliDateField } from '../../design-system/index.ts'
 import type {
@@ -35,6 +36,7 @@ const STATUS_TEXT: Record<Invoice['status'], string> = {
 
 export function FinancePage({ onBack }: { onBack: () => void }) {
   const data = useData()
+  const { has } = useCentre()
   const [period] = useState(() => jalaliYearMonth(new Date()))
   const [view, setView] = useState<FinanceOverview | null>(null)
   /** اعلام‌های پرداخت خانواده‌ها، در انتظار تصمیم — بخش ۸. */
@@ -68,12 +70,16 @@ export function FinancePage({ onBack }: { onBack: () => void }) {
       setError(cause instanceof Error ? cause.message : 'خوانده نشد.')
     }
     // دفتر هزینه جدا خوانده می‌شود: نبودش نباید کل صفحه مالی را خالی کند.
+    if (!has('expenses')) {
+      setBooks(null)
+      return
+    }
     try {
       setBooks(await data.getIncomeVsExpense(period))
     } catch {
       setBooks(null)
     }
-  }, [data, period])
+  }, [data, period, has])
 
   useEffect(() => {
     void load()
@@ -344,6 +350,8 @@ export function FinancePage({ onBack }: { onBack: () => void }) {
               خرید، تأمین‌کننده، حسابداری. این یک دفترِ ساده است تا
               مدیر ته ماه بداند چه ماند، نه یک سامانه مالی.
             */}
+            {/* مهدی که دفترِ هزینه را نخریده، این کارت را نمی‌بیند — مهاجرت ۰۰۴۳. */}
+            {has('expenses') ? (
             <section className={styles.card} aria-label="وصولی و هزینه">
               <span className={`${styles.cardLabel} t-caption`}>وصولی و هزینه این ماه</span>
               {books === null ? (
@@ -393,6 +401,7 @@ export function FinancePage({ onBack }: { onBack: () => void }) {
                 ثبت هزینه
               </button>
             </section>
+            ) : null}
 
             <section className={styles.card} aria-label="صورتحساب‌های تسویه‌نشده">
               <span className={`${styles.cardLabel} t-caption`}>تسویه‌نشده</span>

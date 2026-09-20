@@ -1958,6 +1958,45 @@ export type Centre = {
   licenceActive: boolean
 }
 
+/**
+ * قابلیت‌هایی که هر مهد می‌تواند نداشته باشد — مهاجرت ۰۰۴۳.
+ *
+ * «این مهد آشپزخانه ندارد» نباید یک شاخهٔ جدا از کد بسازد. با چهل
+ * مهد یعنی چهل شاخه که باید جداگانه وصله شوند، و اولین رخنهٔ امنیتی
+ * باید چهل بار بسته شود.
+ *
+ * ── چه چیزی در این فهرست **نیست** ───────────────────────────────
+ *
+ * حضور، آلرژی، دارو، رخداد و اطلاع‌رسانی فوری. قابلیتی که بشود
+ * خاموشش کرد، روزی خاموش می‌شود؛ و بخش ۱۳.۳ سرِ قیمت چانه نمی‌خورد.
+ */
+export type CentreFeature =
+  | 'meals'
+  | 'loans'
+  | 'free_play'
+  | 'monthly_report'
+  | 'inspection'
+  | 'survey'
+  | 'expenses'
+  | 'online_payment'
+
+/** همهٔ پرچم‌ها با هم. نبودِ کلید یعنی روشن — همان قاعدهٔ پایگاه داده. */
+export type FeatureFlags = Record<CentreFeature, boolean>
+
+/** برچسب فارسیِ هر قابلیت — یک‌جا، تا کنسول و پنل یک اسم بگویند. */
+export const FEATURE_LABEL: Record<CentreFeature, string> = {
+  meals: 'رزرو غذا',
+  loans: 'دفتر امانت',
+  free_play: 'بازی آزاد',
+  monthly_report: 'گزارش ماهانه',
+  inspection: 'پرونده بازرسی',
+  survey: 'نظرسنجی',
+  expenses: 'هزینه و درآمد',
+  online_payment: 'پرداخت آنلاین',
+}
+
+export const ALL_FEATURES = Object.keys(FEATURE_LABEL) as CentreFeature[]
+
 export interface DataAccess {
   readonly scope: AccessScope
 
@@ -1983,6 +2022,18 @@ export interface DataAccess {
 
   /** برداشتن نشان مهد — خواستنِ صریح، نه اثرِ جانبیِ یک ویرایش دیگر. */
   clearCentreLogo(): Promise<Centre>
+
+  /**
+   * قابلیت‌های روشنِ این مهد — مهاجرت ۰۰۴۳.
+   *
+   * رابط مقصدهایش را از همین می‌چیند: کاشیِ قابلیتی که خاموش است
+   * اصلاً کشیده نمی‌شود. **دکمه‌ای که بعداً «نمی‌شود» بگوید بدتر از
+   * نبودنش است** — و این همان قاعده است، نه یک مورد تازه.
+   *
+   * تغییرش کارِ مدیرِ مهد نیست و متدِ نوشتن ندارد: مدیر می‌بیند چه
+   * خریده، ولی چیزی را که نخریده روشن نمی‌کند.
+   */
+  getMyFeatures(): Promise<FeatureFlags>
 
   /** کلاس‌هایی که این حساب می‌بیند. */
   listClasses(): Promise<ClassRoom[]>
