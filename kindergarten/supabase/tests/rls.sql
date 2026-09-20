@@ -514,6 +514,190 @@ begin
     'و مهد دوم همان یک کودک خودش را دارد، نه بیشتر');
 end $$;
 
+\echo ''
+\echo '── سکوی چندمهدی: سوپرادمین و قفل اشتراک ──'
+reset role;
+
+/*
+ * اپراتور سکو. بیرون از مدل مستأجر — نه `user_account` دارد نه
+ * `active_account`.
+ */
+insert into auth.users (id, phone) values
+  ('c0000000-0000-0000-0000-00000000ee01', '09350000001');
+insert into platform_admin (auth_user_id, full_name, phone) values
+  ('c0000000-0000-0000-0000-00000000ee01', 'پشتیبانی محصول', '09350000001');
+
+set role authenticated;
+select login_as('c0000000-0000-0000-0000-00000000ee01', '09350000001');
+do $$
+declare
+  t record;
+  leaked integer;
+  bad text := '';
+begin
+  perform assert(app.is_platform_admin(), 'اپراتور شناخته می‌شود');
+
+  -- هر دو مرکز را می‌بیند. این کارِ اوست.
+  perform assert((select count(*) from center) = 2, 'و هر دو مهد را در فهرستش دارد');
+
+  /*
+   * و اینجا خط قرمز.
+   *
+   * سوپرادمین مالکِ سکوست، نه مالکِ پرونده‌ها. همان جاروی تست جداسازی،
+   * این بار از سمت اپراتور: هیچ جدولِ مرکزداری نباید حتی یک سطر بدهد.
+   *
+   * جدول `center` خودش کنار گذاشته می‌شود — دیدنش دقیقاً کارِ اوست.
+   */
+  for t in
+    select c.table_name
+      from information_schema.columns c
+      join information_schema.tables x
+        on x.table_schema = c.table_schema and x.table_name = c.table_name
+     where c.table_schema = 'public'
+       and c.column_name = 'center_id'
+       and x.table_type = 'BASE TABLE'
+     order by c.table_name
+  loop
+    execute format('select count(*) from public.%I', t.table_name) into leaked;
+    if leaked > 0 then bad := bad || t.table_name || '(' || leaked || ') '; end if;
+  end loop;
+
+  perform assert(bad = '', format('سوپرادمین هیچ سطری از دادهٔ مهدها نمی‌بیند — نشتی: %s', bad));
+
+  -- ولی شمارها را می‌بیند، که برای گرداندن سکو لازم است.
+  perform assert(
+    (select children from app.platform_overview()
+      where center_id = 'b0000000-0000-0000-0000-000000000001') = 1,
+    'شمارِ کودکانِ هر مهد را می‌بیند، نه خودِ کودکان را');
+end $$;
+
+/*
+ * ساختن مهد تازه — کاری که تا امروز هیچ راهی نداشت.
+ */
+do $$
+declare made record;
+begin
+  select * into made from app.create_center('مهد بهار', 'نگار احمدی', '09360000001', 'ماهانه', null);
+  perform assert(made.center_id is not null, 'اپراتور مهد تازه می‌سازد');
+  perform assert(made.manager_account_id is not null, 'و مدیر اولش با همان تراکنش ساخته می‌شود');
+  perform assert(
+    (select count(*) from center) = 3, 'و مهد تازه در فهرست می‌نشیند');
+end $$;
+
+reset role;
+do $$
+declare centre uuid;
+begin
+  select id into centre from center where name = 'مهد بهار';
+  /*
+   * مهدِ تازه از همان لحظه پیش‌فرض‌هایش را دارد: تریگرهای موجود روی
+   * `insert into center` می‌نشینند.
+   */
+  perform assert(
+    (select count(*) from activity_corner where center_id = centre) = 8,
+    'مهد تازه هشت گوشهٔ فعالیت پیش‌فرض دارد');
+  perform assert(
+    (select count(*) from staff_document_requirement where center_id = centre) = 4,
+    'و فهرست مدارک لازمش را');
+  perform assert(
+    (select count(*) from staff where center_id = centre and role = 'manager') = 1,
+    'و یک مدیر');
+end $$;
+
+/*
+ * کسی جز اپراتور نمی‌تواند مهد بسازد یا اشتراک را دست بزند.
+ */
+set role authenticated;
+select login_as('a0000000-0000-0000-0000-00000000ee02', '09120000002');
+do $$
+declare ok boolean := false;
+begin
+  begin
+    perform app.create_center('مهد قاچاقی', 'کسی', '09370000001', null, null);
+  exception when others then ok := true;
+  end;
+  perform assert(ok, 'مدیر مهد نمی‌تواند مهد تازه بسازد');
+
+  ok := false;
+  begin
+    perform app.set_center_licence('a0000000-0000-0000-0000-000000000001', 'رایگان', null);
+  exception when others then ok := true;
+  end;
+  perform assert(ok, 'و اشتراک خودش را هم تمدید نمی‌کند');
+end $$;
+
+/*
+ * ── قفل اشتراک ────────────────────────────────────────────────
+ *
+ * مهدی که تسویه نکرده، هیچ سطری نمی‌بیند — ولی باید بتواند بفهمد چرا.
+ */
+reset role;
+set role authenticated;
+select login_as('c0000000-0000-0000-0000-00000000ee01', '09350000001');
+do $$
+begin
+  perform app.set_center_licence(
+    'a0000000-0000-0000-0000-000000000001', 'ماهانه', current_date - 1);
+end $$;
+
+reset role;
+set role authenticated;
+select login_as('a0000000-0000-0000-0000-00000000ee02', '09120000002');
+do $$
+declare line record;
+begin
+  perform assert((select count(*) from child) = 0, 'مهدِ منقضی هیچ کودکی نمی‌بیند');
+  perform assert((select count(*) from invoice) = 0, 'و هیچ صورتحسابی');
+  perform assert(app.current_center_id() is null, 'و مرکز جاری‌اش تهی می‌شود');
+
+  /*
+   * ولی ردیف خودش را می‌بیند و می‌داند چرا.
+   *
+   * بی این، اپ صفحهٔ خالیِ بی‌توضیح نشان می‌داد و مدیر فکر می‌کرد
+   * داده‌هایش پاک شده.
+   */
+  select * into line from app.my_centre_licence();
+  perform assert(line.licence_active = false, 'ولی می‌داند اشتراکش تمام شده');
+  perform assert(line.name = 'مهد آفتاب', 'و نام مهد خودش را می‌خواند');
+end $$;
+
+-- و با تمدید، همه‌چیز برمی‌گردد.
+reset role;
+set role authenticated;
+select login_as('c0000000-0000-0000-0000-00000000ee01', '09350000001');
+do $$
+begin
+  perform app.set_center_licence('a0000000-0000-0000-0000-000000000001', 'ماهانه', null);
+end $$;
+
+reset role;
+set role authenticated;
+select login_as('a0000000-0000-0000-0000-00000000ee02', '09120000002');
+do $$
+begin
+  perform assert((select count(*) from child) = 3, 'با تمدید، داده برمی‌گردد — پاک نشده بود');
+end $$;
+
+/*
+ * آخرین روزِ اشتراک، روزِ کاملی است.
+ *
+ * قطع کردن وسط روز با ما کاری نمی‌کند و با آن مهد همه‌کار.
+ */
+reset role;
+do $$
+begin
+  perform assert(
+    app.center_licence_active('a0000000-0000-0000-0000-000000000001', current_date),
+    'اشتراک بی‌تاریخ، همیشه برقرار است');
+  update center set active_until = current_date
+   where id = 'a0000000-0000-0000-0000-000000000001';
+  perform assert(
+    app.center_licence_active('a0000000-0000-0000-0000-000000000001', current_date),
+    'و آخرین روزِ اشتراک، روزِ کاملی است');
+  update center set active_until = null
+   where id = 'a0000000-0000-0000-0000-000000000001';
+end $$;
+
 reset role;
 \echo ''
 \echo 'ماتریس دسترسی پاس شد.'
