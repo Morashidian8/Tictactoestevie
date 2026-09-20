@@ -1,6 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- همان توکن‌های اپ: --paper و --wash-foot و --nav-bg. -->
+    <!--
+      همان توکن‌های برنامه: paper و wash-foot و nav-bg.
+
+      نام توکن‌ها بی خط تیره‌ی دوتایی نوشته شده‌اند: XML رشته‌ی «دو خط
+      تیره» را داخل توضیح نمی‌پذیرد و aapt بیلد را همان‌جا می‌شکند.
+    -->
     <color name="paper">#FCF9F4</color>
     <color name="wash_foot">#F5FAEE</color>
     <color name="nav_bg">#065F46</color>
