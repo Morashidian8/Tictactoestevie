@@ -80,6 +80,24 @@ const ACCOUNTS: Record<string, AccountOption[]> = {
       classIds: ['class-setareha'],
     },
   ],
+  /*
+   * پشتیبانی محصول — کنسول اپراتور.
+   *
+   * در نسخهٔ واقعی این حساب اصلاً `user_account` ندارد و از جدول
+   * `platform_admin` شناخته می‌شود (مهاجرت ۰۰۴۱). اینجا چون آداپتور
+   * نمایشی همه‌چیز را از یک شکل می‌خواند، همان شکل را می‌گیرد؛ مرکزش
+   * هم تزئینی است و هیچ‌جا خوانده نمی‌شود.
+   */
+  '09120000009': [
+    {
+      id: 'acc-platform',
+      centerId: CENTER_ID,
+      centerName: CENTER_NAME,
+      role: 'platform_admin',
+      displayName: 'پشتیبانی محصول',
+      classIds: [],
+    },
+  ],
   '09120000002': [
     {
       id: 'acc-teacher-both',
@@ -116,6 +134,7 @@ export const DEV_PHONES = {
   teacherMorning: '09120000004',
   teacherAfternoon: '09120000005',
   teacherOtherClass: '09120000006',
+  platform: '09120000009',
 } as const
 
 export function createLocalAuthAdapter(): AuthAdapter {

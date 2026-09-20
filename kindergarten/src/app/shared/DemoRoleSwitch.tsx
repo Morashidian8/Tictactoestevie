@@ -24,12 +24,17 @@ import styles from './DemoRoleSwitch.module.css'
  */
 const IS_DEMO = import.meta.env.DEV || import.meta.env.VITE_DEMO === '1'
 
-type Role = { role: AccountRole; label: string; phoneKey: 'teacher' | 'teacherAndManager' | 'guardian' }
+type Role = {
+  role: AccountRole
+  label: string
+  phoneKey: 'teacher' | 'teacherAndManager' | 'guardian' | 'platform'
+}
 
 const ROLES: Role[] = [
   { role: 'teacher', label: 'مربی', phoneKey: 'teacher' },
   { role: 'manager', label: 'مدیر', phoneKey: 'teacherAndManager' },
   { role: 'guardian', label: 'خانواده', phoneKey: 'guardian' },
+  { role: 'platform_admin', label: 'پشتیبانی', phoneKey: 'platform' },
 ]
 
 export function DemoRoleSwitch() {

@@ -6,6 +6,7 @@ import { AccountPicker } from './app/auth/AccountPicker.tsx'
 import { SignIn } from './app/auth/SignIn.tsx'
 import { ManagerApp } from './app/manager/ManagerApp.tsx'
 import { ParentTodayPage } from './app/parent/TodayPage.tsx'
+import { PlatformApp } from './app/platform/PlatformApp.tsx'
 import { TeacherApp } from './app/teacher/TeacherApp.tsx'
 
 /**
@@ -15,8 +16,8 @@ import { TeacherApp } from './app/teacher/TeacherApp.tsx'
  * می‌گوید دسترسی‌ها هرگز ترکیب نمی‌شوند، پس مسیر نباید بتواند کاربر را
  * به پنلی ببرد که نقشش اجازه‌اش را ندارد.
  *
- * پنل مربی، خانواده و مدیر ساخته شده. کمک‌مربی همان پنل مربی را
- * می‌بیند؛ پشتیبانی محصول صفحه‌ای ندارد.
+ * پنل مربی، خانواده، مدیر و پشتیبانی محصول ساخته شده. کمک‌مربی همان
+ * پنل مربی را می‌بیند.
  */
 export function App() {
   /*
@@ -60,6 +61,14 @@ function Routes() {
       return <ManagerApp />
     case 'guardian':
       return <ParentTodayPage />
+    /*
+     * پشتیبانی محصول، کنسول خودش را دارد.
+     *
+     * پنلِ مهد نیست و نباید باشد: اپراتور مالکِ سکوست، نه مالکِ
+     * پرونده‌ها. آنچه می‌بیند شمار مهدهاست و وضعیت اشتراکشان.
+     */
+    case 'platform_admin':
+      return <PlatformApp />
     default:
       return <NotBuiltYet role={session.active.role} />
   }
