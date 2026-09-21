@@ -8,8 +8,8 @@
     <meta name="theme-color" content="#FFFFFF" />
     <link rel="icon" type="image/svg+xml" href="/Tictactoestevie/kindergarten1/icon.svg" />
     <title>مهد آفتاب — نسخه نمایشی</title>
-    <script type="module" crossorigin src="/Tictactoestevie/kindergarten1/assets/index-BZTMdbqS.js"></script>
-    <link rel="stylesheet" crossorigin href="/Tictactoestevie/kindergarten1/assets/index-BuKyWuwr.css">
+    <script type="module" crossorigin src="/Tictactoestevie/kindergarten1/assets/index-mQIZCXTX.js"></script>
+    <link rel="stylesheet" crossorigin href="/Tictactoestevie/kindergarten1/assets/index-mqHWCdCb.css">
     <script>
 /*
  * ساعت نمایشی — داربستِ نسخهٔ نمایشی است، نه کد اپ.
@@ -40,6 +40,25 @@
   var day = target.getDay()
   if (day === 5) target.setDate(target.getDate() - 2)
   else if (day === 4) target.setDate(target.getDate() - 1)
+
+  /*
+   * روزشمارِ دستی — «امروزِ» نسخهٔ نمایشی.
+   *
+   * چیزی که بدون آن آزمودنی نیست: گزارش ماهانه. برای دیدنِ جمع‌بندیِ
+   * یک ماه باید یک ماه صبر کرد، و کسی که دارد محصول را می‌سنجد این
+   * وقت را ندارد. با این شمارنده، هر بار یک روز جلو می‌رود و سی روز
+   * در یک نشست طی می‌شود.
+   *
+   * جابه‌جاییِ تعطیلیِ بالا پیش از این اعمال می‌شود، نه بعدش: لنگرِ
+   * شمارش باید ثابت بماند، وگرنه قدم‌زدن از روزِ پنجشنبه دو بار به
+   * یک چهارشنبه می‌رسد.
+   */
+  try {
+    var offset = Number(localStorage.getItem('kg.dev.dayShift') || 0)
+    if (isFinite(offset) && offset !== 0) target.setDate(target.getDate() + offset)
+  } catch (e) {
+    /* حالت ناشناس یا دادهٔ سایت بسته — بی روزشمار ادامه بده. */
+  }
 
   var shift = target.getTime() - real.getTime()
   if (shift === 0) return
