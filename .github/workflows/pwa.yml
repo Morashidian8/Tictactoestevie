@@ -123,6 +123,15 @@ jobs:
             mkdir -p "site/$centre"
             cp -r "kindergarten_site/$centre/." "site/$centre/"
           done
+          # وقتی نشانی روی گوشی ۴۰۴ می‌دهد، اولین سؤال این است که اصلاً
+          # چه چیزی منتشر شده. بی این سطر، لاگ جوابی ندارد و تنها راه،
+          # باز کردن خودِ سایت است — همان چیزی که کار نمی‌کند.
+          echo "منتشر شد:"
+          for centre in kindergarten kindergarten1 kindergarten2; do
+            printf '  %s → %s فایل، عنوان: ' \
+              "$centre" "$(find "site/$centre" -type f | wc -l)"
+            sed -n 's/.*<title>\(.*\)<\/title>.*/\1/p' "site/$centre/index.html"
+          done
 
       - uses: actions/configure-pages@v5
         with:
