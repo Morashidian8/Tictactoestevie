@@ -13,24 +13,37 @@ GitHub Pages روی مخزن خصوصی فقط با اشتراک پولی کار
 نسخهٔ نمایشی را باز کند. این آگاهانه است: اینجا فقط دادهٔ نمونه هست و
 هیچ سروری پشتش نیست.
 
-## دو مهد، دو نشانی
+## سه پوشه، دو مهد
 
 | پوشه | نشانی | مهد |
 | --- | --- | --- |
-| `kindergarten/` | `/Tictactoestevie/kindergarten/` | مهد آفتاب |
+| `kindergarten1/` | `/Tictactoestevie/kindergarten1/` | مهد آفتاب |
 | `kindergarten2/` | `/Tictactoestevie/kindergarten2/` | مهد ستاره |
+| `kindergarten/` | `/Tictactoestevie/kindergarten/` | مهد آفتاب — نشانیِ قدیمی |
 
-هر کدام `manifest` و سرویس‌ورکرِ خودش را دارد، پس دو میان‌بر جدا با دو
-نام و دو نشان روی صفحهٔ اصلی می‌نشینند. کلیدهای `localStorage` هم
+هر کدام `manifest` و سرویس‌ورکرِ خودش را دارد، پس میان‌برهای جدا با
+نام و نشانِ جدا روی صفحهٔ اصلی می‌نشینند. کلیدهای `localStorage` هم
 پسونددار است، چون حافظهٔ مرورگر به دامنه بسته است نه به مسیر.
+
+### چرا مهد آفتاب دو نشانی دارد
+
+`/kindergarten/` از قبل سرویس‌ورکر داشت و روی گوشی‌هایی که یک بار
+بازش کرده‌اند، بیلدِ کهنه را آفلاین سِرو می‌کند — گوشی نسخهٔ ماه‌ها
+پیش را نشان می‌دهد و تا پاک‌کردنِ دادهٔ سایت هم همان می‌ماند.
+`/kindergarten1/` نشانی‌ای است که هرگز سرویس‌ورکری نداشته، پس هیچ
+کشی نمی‌تواند جلویش را بگیرد. نشانی قدیمی هم به‌روز می‌ماند، چون اپ
+اندروید همان را باز می‌کند.
 
 ## ساختنِ دوباره
 
-از ریشهٔ مخزن خصوصی:
+از ریشهٔ مخزن خصوصی، برای هر پوشه یک بار:
 
 ```sh
-BASE_PATH=/Tictactoestevie/kindergarten/  VITE_DEMO=1 npm run build
+BASE_PATH=/Tictactoestevie/kindergarten1/ VITE_DEMO=1 npm run build
 BASE_PATH=/Tictactoestevie/kindergarten2/ VITE_DEMO=1 VITE_DEMO_CENTRE=2 npm run build
+BASE_PATH=/Tictactoestevie/kindergarten/  VITE_DEMO=1 npm run build
 ```
 
-و محتوای `dist/` هر بار در پوشهٔ متناظرِ بالا کپی می‌شود.
+و محتوای `dist/` هر بار در پوشهٔ متناظرِ بالا کپی می‌شود. مسیر در
+`BASE_PATH` باید با نام پوشه یکی باشد، وگرنه دامنهٔ سرویس‌ورکر غلط
+می‌شود و صفحه سفید بالا می‌آید.

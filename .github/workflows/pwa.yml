@@ -117,7 +117,7 @@ jobs:
       # حافظهٔ جدا — تا جداسازیِ چندمهدی روی گوشیِ واقعی آزموده شود.
       - name: Publish kindergarten demo apps
         run: |
-          for centre in kindergarten kindergarten2; do
+          for centre in kindergarten kindergarten1 kindergarten2; do
             test -f "kindergarten_site/$centre/index.html" \
               || { echo "خروجی $centre نیست"; exit 1; }
             mkdir -p "site/$centre"
