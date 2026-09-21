@@ -1,0 +1,8 @@
+/* قاب را پر می‌کند و شعاع را از والد می‌گیرد، مثل عکس در ChildAvatar. */
+.photo {
+  inline-size: 100%;
+  block-size: 100%;
+  border-radius: inherit;
+  object-fit: cover;
+  display: block;
+}

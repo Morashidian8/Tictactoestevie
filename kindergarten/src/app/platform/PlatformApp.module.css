@@ -1,0 +1,241 @@
+/*
+ * کنسول اپراتور.
+ *
+ * عمداً ساده‌تر از سه پنل دیگر: نه آسمان، نه چمنزار، نه شخصیت. آن‌ها
+ * برای مهدند و روزی ده بار باز می‌شوند؛ این یکی ابزارِ کار است و هفته‌ای
+ * چند بار. بوم آرام، فهرست خوانا.
+ */
+.page {
+  min-block-size: 100dvh;
+  padding: var(--space-4);
+  padding-block-end: calc(var(--space-6) + env(safe-area-inset-bottom));
+  background: var(--paper);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding-block-end: var(--space-2);
+}
+
+.badge {
+  flex: none;
+  inline-size: 40px;
+  block-size: 40px;
+  border-radius: var(--r-chip);
+  display: grid;
+  place-items: center;
+  background: var(--mint-tint);
+  color: var(--ink);
+}
+
+.headText { flex: 1; min-inline-size: 0; display: flex; flex-direction: column; }
+.title { margin: 0; color: var(--ink); }
+.who { color: var(--ink-muted); }
+
+.signOut {
+  flex: none;
+  min-block-size: var(--touch-manager);
+  padding-inline: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--r-input);
+  background: var(--surface);
+  color: var(--ink);
+  font-family: inherit;
+  cursor: pointer;
+}
+
+/* ── کاری که مانده ─────────────────────────────────────────── */
+
+.alerts {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  background: var(--mango-tint);
+  border: 1px solid var(--mango);
+  border-radius: var(--r-card);
+}
+
+.alertRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  color: var(--ink);
+}
+.alertRow svg { flex: none; }
+
+/* بسته بودن با کلمه گفته می‌شود؛ خط کناری فقط پیدایش می‌کند. */
+.alertBad {
+  padding-inline-start: var(--space-2);
+  border-inline-start: 3px solid var(--brick);
+  font-weight: var(--weight-bold);
+}
+
+.add {
+  min-block-size: var(--touch-manager);
+  border: none;
+  border-radius: var(--r-input);
+  background: var(--coral);
+  color: var(--ink);
+  font-family: inherit;
+  font-weight: var(--weight-bold);
+  cursor: pointer;
+}
+
+/* ── فهرست مهدها ───────────────────────────────────────────── */
+
+.list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.card {
+  inline-size: 100%;
+  padding: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  background: var(--surface);
+  border: 1px solid var(--card-border);
+  border-radius: var(--r-card);
+  box-shadow: var(--shadow-sm);
+  text-align: start;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+/*
+ * مهدِ بسته، با خط کناری — نه فقط رنگِ کم‌رنگ‌تر.
+ * کم‌رنگ کردن، روی گوشی زیر آفتاب دیده نمی‌شود.
+ */
+.cardOff {
+  border-inline-start: 4px solid var(--brick);
+  background: var(--surface-warm);
+}
+
+.cardTop {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+}
+
+.name { flex: 1; min-inline-size: 0; margin: 0; color: var(--ink); }
+.state { flex: none; color: var(--ink-muted); font-weight: var(--weight-bold); }
+.counts { margin: 0; color: var(--ink); }
+.meta { color: var(--ink-muted); }
+
+.note { margin: 0; color: var(--ink-muted); }
+.error { margin: 0; color: var(--ink); background: var(--brick-tint); padding: var(--space-2); border-radius: var(--r-input); }
+
+/* ── شیت‌ها ────────────────────────────────────────────────── */
+
+.field { display: flex; flex-direction: column; gap: var(--space-1); color: var(--ink-muted); }
+
+.input {
+  min-block-size: var(--touch-manager);
+  padding-inline: var(--space-3);
+  border: 1px solid var(--border-input);
+  border-radius: var(--r-input);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+}
+
+.primary {
+  inline-size: 100%;
+  min-block-size: var(--touch-manager);
+  border: none;
+  border-radius: var(--r-input);
+  background: var(--coral);
+  color: var(--ink);
+  font-family: inherit;
+  font-weight: var(--weight-bold);
+  cursor: pointer;
+}
+.primary:disabled { background: var(--disabled-bg); color: var(--disabled-fg); }
+
+.secondary {
+  inline-size: 100%;
+  min-block-size: var(--touch-manager);
+  border: 1px solid var(--border);
+  border-radius: var(--r-input);
+  background: var(--surface);
+  color: var(--ink);
+  font-family: inherit;
+  cursor: pointer;
+}
+
+/* متنِ تیره روی تینت، نه سفید روی قرمز — کف کنتراست بخش ۱۲.۲. */
+.danger {
+  inline-size: 100%;
+  min-block-size: var(--touch-manager);
+  border: 1px solid var(--brick);
+  border-radius: var(--r-input);
+  background: var(--brick-tint);
+  color: var(--ink);
+  font-family: inherit;
+  cursor: pointer;
+}
+
+/*
+ * قابلیت‌های یک مهد، در شیت همان مهد.
+ *
+ * فهرستِ دوحالته‌ای که همان لحظه ثبت می‌شود. حالت با کلمه گفته
+ * می‌شود — «روشن»/«خاموش» — و رنگ فقط کمک می‌کند سطر خوانده‌شده از
+ * سطر بعدی جدا دیده شود (بخش ۱۲.۲).
+ */
+.features {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.featureList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+}
+
+.featureRow {
+  inline-size: 100%;
+  min-block-size: var(--touch-manager);
+  padding: var(--space-2) var(--space-1);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  background: none;
+  border: none;
+  color: var(--ink);
+  font-family: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+li + li .featureRow { border-block-start: 1px solid var(--border); }
+
+.featureRow:active { background: var(--surface-warm); }
+
+.featureName { flex: 1; min-inline-size: 0; }
+
+/* برچسب حالت، با زمینهٔ خودش تا لبه‌اش دیده شود. */
+.featureState {
+  flex: none;
+  padding: 2px var(--space-2);
+  border-radius: var(--r-chip);
+  font-weight: var(--weight-bold);
+}
+
+.on { background: var(--mint-tint); color: var(--mint-deep); }
+.off { background: var(--surface-warm); color: var(--ink-muted); }

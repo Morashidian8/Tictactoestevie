@@ -1,0 +1,106 @@
+/*
+ * کادر نوشتن با انتخابگر اموجی.
+ *
+ * کلید اموجی **کنار** کادر است، نه داخلش: داخلِ کادر روی متن می‌افتد و
+ * در عرض ۳۲۰ پیکسل دو حرف آخر هر سطر را می‌خورد.
+ */
+.field {
+  inline-size: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.row {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-2);
+}
+
+.input {
+  flex: 1;
+  min-inline-size: 0;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border-input);
+  border-radius: var(--r-input);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  resize: none;
+}
+
+.toggle {
+  flex: none;
+  inline-size: var(--touch-parent);
+  block-size: var(--touch-parent);
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--border-input);
+  border-radius: var(--r-input);
+  background: var(--surface);
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.toggle[aria-expanded='true'] {
+  background: var(--mint-tint);
+  border-color: var(--mint);
+}
+
+.toggle:disabled {
+  color: var(--disabled-fg);
+  background: var(--disabled-bg);
+  cursor: default;
+}
+
+/*
+ * تخته اموجی، در جریان صفحه می‌نشیند نه شناور.
+ *
+ * شناور روی گوشی یا زیر صفحه‌کلید می‌رفت یا روی آخرین پیام‌ها. اینجا
+ * کادر را هل می‌دهد بالا و هر دو دیده می‌شوند.
+ */
+.panel {
+  padding: var(--space-3);
+  background: var(--surface-warm);
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.groupTitle { color: var(--ink-muted); }
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: var(--space-1);
+}
+
+/*
+ * هدف لمسی کامل.
+ *
+ * شش ستون در عرض ۳۲۰ پیکسل یعنی هر خانه حدود ۴۴ پیکسل — کفِ مدیر. در
+ * تخته‌ای که فقط اموجی درج می‌کند و خطایش با یک بک‌اسپیس جبران می‌شود،
+ * همین کف کافی است.
+ */
+.emoji {
+  min-block-size: var(--touch-manager);
+  display: grid;
+  place-items: center;
+  border: none;
+  border-radius: var(--r-input);
+  background: var(--surface);
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.emoji:active { background: var(--mint-tint); }

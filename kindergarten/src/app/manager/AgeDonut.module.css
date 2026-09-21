@@ -1,0 +1,98 @@
+/*
+ * پراکندگی سنی — داشبورد مدیر.
+ *
+ * حلقه و برچسب‌ها کنار هم. زیر ۳۶۰ پیکسل زیر هم می‌روند، چون حلقه‌ای
+ * که به ۶۰ پیکسل برسد دیگر چیزی نمی‌گوید.
+ */
+.wrap {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.chart {
+  position: relative;
+  flex: none;
+  inline-size: 108px;
+  block-size: 108px;
+}
+
+.svg {
+  inline-size: 100%;
+  block-size: 100%;
+  /* سر گرد قطعه‌ها فاصله دو پیکسلی را می‌خورد، پس سر صاف می‌ماند. */
+  stroke-linecap: butt;
+}
+
+.center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  pointer-events: none;
+}
+
+.centerNum {
+  color: var(--ink);
+  font-weight: var(--weight-black);
+  line-height: 1.1;
+}
+
+.centerLabel {
+  color: var(--ink-muted);
+}
+
+.legend {
+  flex: 1;
+  min-inline-size: 120px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--ink);
+}
+
+.swatch {
+  flex: none;
+  inline-size: 10px;
+  block-size: 10px;
+  border-radius: 3px;
+}
+
+.rowLabel {
+  flex: 1;
+  min-inline-size: 0;
+  color: var(--ink-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rowValue {
+  flex: none;
+  color: var(--ink);
+  font-weight: var(--weight-bold);
+}
+
+/* درصد کنار عدد، یک پله کم‌رنگ‌تر: عدد اصلی شمار است، نه سهم. */
+.rowShare {
+  color: var(--ink-muted);
+  font-weight: var(--weight-regular);
+}
+
+.empty {
+  color: var(--ink-muted);
+  margin: 0;
+}

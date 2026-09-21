@@ -1,0 +1,267 @@
+/*
+ * شبکه کودکان — دو ستون، کارت عمودی.
+ *
+ * چیدمان ماکت: عکس دایره‌ای بالا و وسط، نام زیرش، سن، و دو کپسول
+ * وضعیت روز در پایین کارت.
+ *
+ * چیدمان پیشین افقی بود (عکس کنار متن) تا کودک بیشتری در یک پرده جا
+ * شود. هزینه عمودی صریح است و اندازه گرفته شده — عددش در بخش ۱۳.۱
+ * سند و در تست مرورگری ثبت است.
+ */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-4);
+  align-items: stretch;
+}
+
+/*
+ * زیر ۳۳۶ پیکسل، دو ستون یعنی کارت ۱۵۰ پیکسلی و نام بریده.
+ * یک ستون زشت‌تر است ولی خوانا می‌ماند — بخش ۱۲.۷ تا ۳۲۰ پیکسل.
+ */
+@media (max-width: 335px) {
+  .grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.cell {
+  inline-size: 100%;
+  block-size: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  /*
+   * بدون gap. هر سطر فاصله خودش را می‌گیرد، چون gap یکنواخت روی پنج
+   * سطر، ۱۶ پیکسل به ارتفاع کارت اضافه می‌کرد — یعنی یک ردیف کمتر در
+   * هر پرده، برای فاصله‌ای که هیچ‌جا لازم نبود.
+   */
+  padding: var(--space-2) var(--space-3) var(--space-3);
+  text-align: center;
+
+  position: relative;
+  /*
+   * لبهٔ استیکری: سه پیکسل سفید، و یک خط مویی بیرونش.
+   *
+   * روی بومِ رنگی، کارتِ سفید با یک خط مویی از بوم جدا نمی‌شد. حاشیه
+   * سفید کارت را «بریده و چسبانده» نشان می‌دهد — همان چیزی که شبکه را
+   * از یک جدول به یک دفتر چسب‌کاری تبدیل می‌کند.
+   */
+  background: var(--surface);
+  border: 3px solid var(--surface);
+  outline: 1px solid var(--card-border);
+  border-radius: var(--r-card);
+  overflow: hidden;
+  /*
+   * استثنای قاعده «کارت داخل فهرست سایه نمی‌گیرد»: اینجا هر کارت یک
+   * هدف لمسی مستقل است، نه یک ردیف فهرست. سایه همان چیزی است که
+   * می‌گوید «این را می‌شود زد».
+   */
+  box-shadow: 0 16px 28px -14px rgb(15 23 42 / .28);
+
+  /* تنها انیمیشن مجاز: بازخورد لمس — بخش ۱۲.۸ */
+  transition:
+    transform var(--motion-feedback) var(--easing),
+    box-shadow var(--motion-feedback) var(--easing);
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+.cell:active {
+  transform: scale(0.98);
+  box-shadow: var(--shadow-xs);
+}
+
+/*
+ * کودکی که رفته، کارتش عقب می‌نشیند ولی پاک نمی‌شود: مربی باید بتواند
+ * ببیند چه کسی امروز بود و رفت.
+ */
+.left {
+  background: var(--paper);
+  box-shadow: none;
+}
+
+/*
+ * بی‌خبر: تنها حالتی که کارت خودش مرز رنگی می‌گیرد. بخش ۵.۳ این را
+ * فوریت می‌داند، نه وضعیت.
+ *
+ * `outline` است نه `border`، چون حالا حاشیهٔ سفیدِ استیکری روی border
+ * نشسته و مرزِ معنادار باید بیرونِ آن دیده شود.
+ */
+.unaccounted {
+  outline: 2px solid var(--brick);
+}
+
+/*
+ * آلرژی — بخش ۷.۱. کارت کرم می‌شود، مثل ماکت: در فهرست سفید کارت‌ها،
+ * همین یک تفاوت زمینه از دو متری دیده می‌شود.
+ */
+.alert {
+  background: var(--mango-tint);
+  outline-color: var(--mango);
+}
+
+/* قاب عکس، به‌علاوه نماد کمد که گوشه‌اش می‌نشیند. */
+.photo {
+  position: relative;
+  display: grid;
+  place-items: center;
+  margin-block-end: var(--space-2);
+}
+
+.name {
+  inline-size: 100%;
+  color: var(--ink);
+  font-weight: var(--weight-bold);
+  font-size: 14px;
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.meta {
+  inline-size: 100%;
+  color: var(--ink-muted);
+  font-size: 11px;
+  line-height: 1.4;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/*
+ * نوار آلرژی، تمام‌عرض کارت.
+ *
+ * بجِ کوچک کنار نام امتحان شد و در کارت ۱۷۳ پیکسلی، نام را به دو حرف
+ * می‌رساند. تمام‌عرض، هم نام سالم می‌ماند و هم خودِ آلرژی خوانده
+ * می‌شود — که تمام نکته بخش ۷.۱ است.
+ */
+.allergy {
+  inline-size: 100%;
+  margin-block-start: var(--space-1);
+  padding: 0 var(--space-2);
+  border-radius: var(--r-chip);
+  background: var(--brick-tint);
+  border: 1px solid var(--brick);
+  color: var(--ink);
+  font-weight: var(--weight-bold);
+  font-size: 10px;
+  line-height: 1.9;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── دو کپسول وضعیت روز ───────────────────────────────────── */
+/*
+ * پایین کارت، هرکدام نصف عرض. مثل ماکت.
+ *
+ * `margin-block-start: auto` کپسول‌ها را به کف کارت می‌چسباند، پس در
+ * یک ردیف که یکی آلرژی دارد و دیگری نه، هر دو هم‌تراز می‌مانند.
+ */
+.activity {
+  inline-size: 100%;
+  margin-block-start: auto;
+  padding-block-start: var(--space-2);
+  /* کپسول‌ها کوتاه‌تر از هدف لمسی‌اند چون خودشان کنش نیستند: کل کارت
+     هدف لمسی است و این‌ها فقط وضعیت را می‌گویند. */
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+/*
+ * خاموش: پرکننده خنثی و گلیف کم‌رنگ. «ثبت نشده» خبر بدی نیست و نباید
+ * جلب توجه کند.
+ */
+.act {
+  flex: 1;
+  min-inline-size: 0;
+  display: grid;
+  place-items: center;
+  block-size: 24px;
+  border-radius: var(--r-chip);
+  background: var(--neutral-fill);
+  color: var(--ink-muted);
+}
+
+/*
+ * روشن: پرکننده تینت لحن، گلیف --ink.
+ * گلیف رنگی نمی‌شود — نعنایی روی تینتش ۳٫۵۸ و انبه‌ای ۳٫۰۷ می‌دهد و
+ * این گلیف ۱۳ پیکسل است، یعنی بدترین حالت ممکن.
+ */
+.actLunch {
+  background: var(--mint-tint);
+  color: var(--ink);
+}
+
+.actNap {
+  background: var(--mango-tint);
+  color: var(--ink);
+}
+
+/* روی کارت کرمِ آلرژی، تینت انبه‌ای دیده نمی‌شود؛ سطح جایش را می‌گیرد. */
+.alert .act {
+  background: var(--surface);
+}
+
+.alert .actLunch {
+  background: var(--mint-tint);
+}
+
+/*
+ * تحویل امروز فرق دارد — بخش ۵.۸.
+ *
+ * زرد، نه قرمز: این یک خطر نیست، یک تفاوت است. قرمز را برای آلرژی
+ * نگه می‌داریم، وگرنه هر دو به یک اندازه دیده می‌شوند و آن یکی که
+ * واقعاً خطر دارد، گم می‌شود.
+ */
+.pickup {
+  inline-size: 100%;
+  margin-block-start: var(--space-1);
+  padding: 0 var(--space-2);
+  border-radius: var(--r-chip);
+  background: var(--mango-tint);
+  border: 1px solid var(--mango);
+  color: var(--ink);
+  font-weight: var(--weight-bold);
+  font-size: 10px;
+  line-height: 1.9;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: center;
+}
+
+/* ── چسبِ رنگیِ بالای کارت ──────────────────────────────────── */
+
+/*
+ * تزئین، و فقط تزئین. نه حالتی را می‌گوید و نه با هیچ حالتی عوض
+ * می‌شود — پس هیچ‌وقت با تینتِ آلرژی یا مرزِ بی‌خبر اشتباه گرفته
+ * نمی‌شود. متنی رویش نمی‌نشیند، پس از قاعدهٔ کنتراست معاف است.
+ */
+.tape {
+  position: absolute;
+  inset-block-start: 0;
+  /*
+   * `inset-inline-start` یعنی لبهٔ راست در چیدمان راست‌به‌چپ. با
+   * `end` چسب سمت چپ کارت می‌نشست — همان دامی که منطق‌های جهت‌دار
+   * این اپ یک‌بار دیگر هم در آن افتادند.
+   */
+  inset-inline-start: 22px;
+  inline-size: 46px;
+  block-size: 11px;
+  border-end-start-radius: 8px;
+  border-end-end-radius: 8px;
+}
+
+.tapeA { background: var(--mint-edge); }
+.tapeB { background: var(--bubble-edge); }
+.tapeC { background: var(--sky-edge); }
+.tapeD { background: var(--mango-edge); }
+.tapeE { background: var(--grape-edge); }
+
+/* کودکی که رفته، چسبش هم عقب می‌نشیند. */
+.left .tape { opacity: .45; }

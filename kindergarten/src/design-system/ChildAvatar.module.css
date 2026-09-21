@@ -1,0 +1,181 @@
+.root {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  inline-size: 100%;
+}
+
+.frame {
+  position: relative;
+  border-radius: var(--r-chip); /* آواتار گرد است، بخش ۱۲.۵ */
+  background: var(--neutral-fill);
+  display: grid;
+  place-items: center;
+  flex: none;
+  color: var(--ink);
+}
+
+.sm {
+  inline-size: var(--avatar-sm);
+  block-size: var(--avatar-sm);
+}
+.md {
+  inline-size: var(--avatar-md);
+  block-size: var(--avatar-md);
+}
+.lg {
+  inline-size: var(--avatar-lg);
+  block-size: var(--avatar-lg);
+}
+
+.photo {
+  inline-size: 100%;
+  block-size: 100%;
+  border-radius: inherit;
+  object-fit: cover;
+}
+
+/* چهره جایگزین عکس، هم‌اندازه قاب */
+.frame > svg {
+  inline-size: 100%;
+  block-size: 100%;
+}
+
+/*
+ * پنج حالت، بخش ۱۳.۱ سند به‌علاوه تصمیم مالک محصول.
+ * فقط یک رنگ فعال در کل شبکه به کار می‌رود (فیروزه‌ای برای حاضر)، پس
+ * قاعده «حداکثر دو رنگ فعال در هر صفحه» نمی‌شکند.
+ */
+
+/*
+ * چهار حالت باید از فاصله یک متری تفکیک شوند. حلقه تنها نشانه نیست:
+ * هر حالت نشان و متن خودش را هم دارد (بخش ۱۲.۲).
+ *
+ * حلقه فقط برای دو حالتی است که کودک در مهد بوده. نیامده و غایب حلقه
+ * ندارند، پس چشم مربی از دور فقط دنبال حلقه فیروزه‌ای می‌گردد.
+ */
+
+/* نیامده: بدون حلقه، بدون نشان */
+.notArrived {
+  box-shadow: none;
+}
+
+/* غیبت اعلام‌شده: بدون حلقه، نشان ✗ خاکستری */
+.absenceDeclared {
+  box-shadow: none;
+}
+
+/* بی‌خبر پس از ۹: بدون حلقه، نقطه آجری */
+.unaccounted {
+  box-shadow: none;
+}
+
+/* حاضر: حلقه فیروزه‌ای */
+/*
+ * حضور نعنایی است، نه مرجانی — بخش ۱۲.۲ نسخه ۲.۰.
+ *
+ * مرجانی رنگ کنش است و حلقه مرجانی دور آواتار یعنی «اینجا را بزن».
+ * نعنایی در پالت تازه معنای موفقیت و حضور را دارد.
+ */
+.present {
+  box-shadow: 0 0 0 2px var(--mint);
+}
+
+/* رفته: همان حلقه، کم‌رنگ، به‌علاوه نشان ✓ */
+.left {
+  box-shadow: 0 0 0 2px var(--mint);
+  opacity: 0.6;
+}
+
+/*
+ * قاب مربعِ گوشه‌نرم — بازطراحی کارت‌محور.
+ *
+ * در یک کارت افقی، لبه صافِ عکس با لبه کارت هم‌راستا می‌شود؛ دایره
+ * فضای گوشه را هدر می‌دهد و کارت را شلخته می‌کند.
+ */
+.rounded {
+  border-radius: var(--r-photo);
+  inline-size: var(--card-photo);
+  block-size: var(--card-photo);
+}
+
+/*
+ * نشان وضعیت روی گوشه آواتار.
+ *
+ * گوشه بیرونی می‌نشیند، نه گوشه‌ای که به متن نزدیک است: روی کارت، نام
+ * کودک کنار عکس است و نشان نباید رویش بیفتد.
+ */
+.badge {
+  position: absolute;
+  inset-block-end: -2px;
+  inset-inline-start: -2px;
+  inline-size: 20px;
+  block-size: 20px;
+  border-radius: var(--r-chip);
+  display: grid;
+  place-items: center;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  color: var(--ink-muted);
+}
+
+/* حاضر: بلندترین نشانه شبکه. گلیف --ink روی نعنایی، نسبت ۷٫۰۴ */
+.badgePresent {
+  background: var(--mint);
+  border-color: var(--surface);
+  color: var(--ink);
+}
+
+/* نیامده: دایره توخالی. چیزی نیفتاده، پس چیزی هم نباید جیغ بزند */
+.badgeHollow {
+  inline-size: 14px;
+  block-size: 14px;
+  background: var(--surface);
+  border: 2px solid var(--border);
+}
+
+.badgeDot {
+  inline-size: 12px;
+  block-size: 12px;
+  background: var(--brick);
+  border-color: var(--surface);
+}
+
+.name {
+  color: var(--ink);
+  font-weight: var(--weight-medium);
+  text-align: center;
+  max-inline-size: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.caption {
+  color: var(--ink-muted);
+  text-align: center;
+}
+
+/*
+ * نشان کودک استثنا — تصمیم ۰۴ سند بررسی طراحی.
+ *
+ * انبه‌ای، نه مرجانی: مرجانی رنگ کنش است و حلقه مرجانی روی آواتار معنای
+ * «اینجا را بزن» می‌دهد. انبه‌ای یعنی «توجه، چیزی متفاوت است».
+ *
+ * گوشه دور از شروع می‌نشیند تا با نشان حالت حضور که گوشه مقابل است
+ * تداخل نکند. حلقه دو پیکسلی سطح، تا روی هر عکسی دیده شود.
+ *
+ * رنگ تنها حامل معنا نیست: برچسب صفحه‌خوان هم «، استثنا» می‌گیرد.
+ */
+.flag {
+  position: absolute;
+  inset-block-start: -2px;
+  inset-inline-end: -2px;
+  /* قطر بیرونی همان است؛ گوشه قطری نسبت به نشان حالت، تا تداخل نکنند */
+  inline-size: 10px;
+  block-size: 10px;
+  border-radius: var(--r-chip);
+  background: var(--mango);
+  box-shadow: 0 0 0 2px var(--surface);
+}

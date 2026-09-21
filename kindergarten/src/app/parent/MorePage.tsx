@@ -1,0 +1,617 @@
+import { useCallback, useEffect, useState } from 'react'
+import {
+  CalendarIcon,
+  ChatIcon,
+  CheckIcon,
+  EmptyState,
+  FolderIcon,
+  LeafIcon,
+  MegaphoneIcon,
+  MenuGrid,
+  PersonIcon,
+  SpoonIcon,
+  PillIcon,
+  WalletIcon,
+  type MenuSection,
+} from '../../design-system/index.ts'
+import { useCentre } from '../../core/centre/index.ts'
+import type { CentreFeature } from '../../core/data/index.ts'
+import {
+  formatClock,
+  formatJalali,
+  toIsoDate,
+  toLatinDigits,
+  toPersianDigits,
+} from '../../i18n/index.ts'
+import { useData } from '../../core/auth/index.ts'
+import type {
+  MedicationRequest,
+  Notice,
+} from '../../core/data/index.ts'
+import { ChildProfilePage } from './ChildProfilePage.tsx'
+import { FinancePage } from './FinancePage.tsx'
+import { MonthlyReportPage } from './MonthlyReportPage.tsx'
+import { ProgramPage } from './ProgramPage.tsx'
+import { MealsPage } from './MealsPage.tsx'
+import { MessagesPage } from '../shared/MessagesPage.tsx'
+import styles from './MorePage.module.css'
+
+/**
+ * «بیشتر» در پنل خانواده — بخش ۶.۴.
+ *
+ * سند این‌ها را در یک فهرست ساده گذاشته و گفته «اعلام غیبت» بالای فهرست
+ * باشد چون پرکاربردترین است. همان ترتیب رعایت شده.
+ *
+ * مالی فقط برای سرپرست پرداخت‌کننده دیده می‌شود — بخش ۶.۵. سایر
+ * سرپرستان این بخش را اصلاً نمی‌بینند، نه اینکه خالی ببینند.
+ */
+type Tab =
+  | 'menu'
+  | 'absence'
+  | 'medication'
+  | 'finance'
+  | 'notices'
+  | 'messages'
+  | 'profile'
+  | 'report'
+  | 'program'
+  | 'meals'
+
+export function MorePage({ childId, childName, onBack, initialTab = 'menu' }: {
+  childId: string
+  childName: string
+  onBack: () => void
+  /**
+   * تبی که مستقیم باز می‌شود.
+   *
+   * نوار پایین، «پیام» و «اطلاعیه» را مقصد مستقل کرده. بی این، هر دو
+   * پشت فهرست «بیشتر» می‌ماندند و یک ضربه دورتر — که کل دلیل وجود
+   * نوار پایین را از بین می‌برد.
+   */
+  initialTab?: Tab
+}) {
+  const [tab, setTab] = useState<Tab>(initialTab)
+
+  if (tab !== 'menu') {
+    // اگر این تب مقصدِ نوار پایین بوده، «بازگشت» یعنی خانه، نه فهرست بیشتر.
+    const back = initialTab === 'menu' ? () => setTab('menu') : onBack
+    if (tab === 'absence') return <AbsenceTab childId={childId} childName={childName} onBack={back} />
+    if (tab === 'medication') return <MedicationTab childId={childId} onBack={back} />
+    if (tab === 'finance') return <FinancePage childId={childId} onBack={back} />
+    if (tab === 'profile') {
+      return <ChildProfilePage childId={childId} childName={childName} onBack={back} />
+    }
+    if (tab === 'report') {
+      return <MonthlyReportPage childId={childId} childName={childName} onBack={back} />
+    }
+    if (tab === 'meals') {
+      return (
+        <Shell title="رزرو غذا" onBack={back}>
+          <MealsPage childId={childId} />
+        </Shell>
+      )
+    }
+    if (tab === 'program') {
+      return (
+        <Shell title="برنامه مهد" onBack={back}>
+          <ProgramPage childId={childId} />
+        </Shell>
+      )
+    }
+    if (tab === 'notices') return <NoticesTab onBack={back} />
+    /*
+      صندوق مشترکِ هر سه نقش، نه رشته کودک‌محورِ نسل پیشین.
+
+      تا اینجا این کاشی به صفحه‌ای می‌رفت که فقط یک رشته داشت و هیچ
+      انتخاب گیرنده‌ای: خانواده می‌نوشت و نمی‌دانست به کدام مربی
+      می‌رسد. حالا همان صندوقی باز می‌شود که نوار پایین هم باز می‌کند،
+      با «گفتگوی تازه» و فهرست مدیر و مربیانِ کلاسِ کودک.
+    */
+    return <MessagesPage onBack={back} />
+  }
+
+  /*
+    «منو» — فهرست کامل کارهای خانواده.
+
+    تا اینجا نامش «بیشتر» بود و فقط چیزهایی در آن می‌نشست که جایی در
+    نوار پایین نداشتند. یعنی خانواده باید می‌دانست «مالی» در نوار است و
+    «پرونده کودک» در فهرست.
+
+    حالا همه‌چیز اینجاست، حتی مقصدهای نوار. کسی که نمی‌داند دنبال چه
+    می‌گردد، جایی لازم دارد که همه‌چیز را یک‌جا ببیند.
+  */
+  const { has } = useCentre()
+  const sections: MenuSection[] = [
+    {
+      title: `کودک من — ${childName}`,
+      items: [
+        {
+          id: 'profile',
+          label: 'پرونده کودک',
+          hint: 'اطلاعات و آلرژی‌ها',
+          icon: <PersonIcon size={20} />,
+          tone: 'bubble',
+        },
+        {
+          id: 'report',
+          label: 'گزارش ماهانه',
+          hint: 'آنچه مربی این ماه دیده',
+          icon: <FolderIcon size={20} />,
+          tone: 'grape',
+        },
+      ],
+    },
+    {
+      title: 'کارهای روزمره',
+      items: [
+        {
+          id: 'absence',
+          label: 'اعلام غیبت',
+          hint: 'وقتی فردا نمی‌آید',
+          icon: <CalendarIcon size={20} />,
+          tone: 'mango',
+        },
+        {
+          id: 'medication',
+          label: 'درخواست دارو',
+          hint: 'از شب قبل بنویسید',
+          icon: <PillIcon size={20} />,
+          tone: 'coral',
+        },
+        {
+          id: 'messages',
+          label: 'پیام‌ها',
+          hint: 'گفتگو با مدیر و مربیان',
+          icon: <ChatIcon size={20} />,
+          tone: 'bubble',
+        },
+        {
+          id: 'finance',
+          label: 'مالی',
+          hint: 'شهریه و پرداخت‌ها',
+          icon: <WalletIcon size={20} />,
+          tone: 'mint',
+        },
+      ],
+    },
+    {
+      title: 'از مهد',
+      items: [
+        {
+          id: 'meals',
+          label: 'رزرو غذا',
+          hint: 'منوی ماه، رزرو و پرداخت',
+          icon: <SpoonIcon size={20} />,
+          tone: 'mint',
+        },
+        {
+          id: 'program',
+          label: 'برنامه مهد',
+          hint: 'منوی غذا، تقویم، نظرسنجی',
+          icon: <LeafIcon size={20} />,
+          tone: 'sky',
+        },
+        {
+          id: 'notices',
+          label: 'اطلاعیه‌ها',
+          hint: 'خبرهای مهد',
+          icon: <MegaphoneIcon size={20} />,
+          tone: 'mango',
+        },
+      ],
+    },
+  ]
+
+  /*
+   * کاشیِ قابلیتی که این مهد ندارد، کشیده نمی‌شود — مهاجرت ۰۰۴۳.
+   *
+   * برای خانواده مهم‌تر از دو پنل دیگر است: خانواده‌ای که «رزرو غذا»
+   * را می‌بیند و بعد صفحهٔ خالی می‌گیرد، فکر می‌کند مهد کاری را نکرده
+   * که اصلاً قرار نبوده بکند.
+   */
+  const shown = sections
+    .map((section) => ({
+      ...section,
+      items: section.items.filter((item) => {
+        const feature = PARENT_TILE_FEATURE[item.id]
+        return !feature || has(feature)
+      }),
+    }))
+    .filter((section) => section.items.length > 0)
+
+  return (
+    <Shell title="منو" onBack={onBack}>
+      <MenuGrid sections={shown} onSelect={(id) => setTab(id as Tab)} />
+    </Shell>
+  )
+}
+
+
+/**
+ * کدام کاشی به کدام قابلیت بسته است — مهاجرت ۰۰۴۳.
+ *
+ * «برنامه مهد» در این فهرست نیست: تقویم و منوی غذا همیشه هستند و
+ * فقط بخشِ نظرسنجیِ درونش پرچم دارد.
+ */
+const PARENT_TILE_FEATURE: Partial<Record<string, CentreFeature>> = {
+  report: 'monthly_report',
+  meals: 'meals',
+}
+
+/* ── درخواست مصرف دارو — ارتقای ۳ سند بررسی طراحی ────────────── */
+
+/**
+ * خانواده از شب قبل دارو را اعلام می‌کند.
+ *
+ * قاعده‌ای که این صفحه باید صادقانه بگوید و می‌گوید:
+ * **اعلام کردن، تحویل دادن نیست.** والد می‌تواند فرم را پر کند و شیشه
+ * دارو را در خانه جا بگذارد. پس صفحه وعده نمی‌دهد که دارو داده می‌شود؛
+ * می‌گوید مربی باید تحویلش بگیرد، و وضعیت زنده را نشان می‌دهد.
+ */
+function MedicationTab({ childId, onBack }: { childId: string; onBack: () => void }) {
+  const data = useData()
+  const [list, setList] = useState<MedicationRequest[]>([])
+  const [name, setName] = useState('')
+  const [dose, setDose] = useState('')
+  const [times, setTimes] = useState<string[]>([''])
+  const [days, setDays] = useState<'today' | 'tomorrow' | 'week'>('tomorrow')
+  const [note, setNote] = useState('')
+  const [error, setError] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
+
+  const from = (() => {
+    const day = new Date()
+    if (days !== 'today') day.setDate(day.getDate() + 1)
+    return toIsoDate(day)
+  })()
+  const to = (() => {
+    const day = new Date(`${from}T09:00:00`)
+    if (days === 'week') day.setDate(day.getDate() + 6)
+    return toIsoDate(day)
+  })()
+
+  const load = useCallback(async () => {
+    try {
+      // امروز و فردا هر دو مهم‌اند: چیزی که دیشب نوشته شده امروز جاری است.
+      const today = toIsoDate(new Date())
+      const tomorrow = new Date()
+      tomorrow.setDate(tomorrow.getDate() + 1)
+      const [now, next] = await Promise.all([
+        data.listMedicationRequests(childId, today),
+        data.listMedicationRequests(childId, toIsoDate(tomorrow)),
+      ])
+      const seen = new Set<string>()
+      setList([...now, ...next].filter((r) => !seen.has(r.id) && seen.add(r.id)))
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'خوانده نشد.')
+    }
+  }, [data, childId])
+
+  useEffect(() => {
+    void load()
+  }, [load])
+
+  const submit = async () => {
+    setBusy(true)
+    setError(null)
+    try {
+      await data.requestMedication({
+        childId,
+        name,
+        dose,
+        times: times.map((t) => toLatinDigits(t.trim())).filter(Boolean),
+        fromDate: from,
+        toDate: to,
+        note: note.trim() || null,
+      })
+      setName(''); setDose(''); setTimes(['']); setNote('')
+      await load()
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'ثبت نشد.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const ready = name.trim() && dose.trim() && times.some((t) => t.trim())
+
+  return (
+    <Shell title="درخواست مصرف دارو" onBack={onBack}>
+      {list.length > 0 ? (
+        <section className={styles.medList} aria-label="درخواست‌های ثبت‌شده">
+          {list.map((row) => (
+            <article key={row.id} className={styles.medCard}>
+              <p className={`${styles.medName} t-body`}>
+                {row.name} · {row.dose}
+              </p>
+              <p className={`${styles.medTimes} t-caption`}>
+                ساعت {row.times.map((t) => formatClock(t)).join(' و ')}
+              </p>
+              {/*
+                نوار سه‌مرحله‌ای: اعلام شد ← مهد تحویل گرفت ← داده شد.
+                مرحله سوم در گزارش شب دیده می‌شود، اینجا دو مرحله اول.
+              */}
+              <ol className={styles.medSteps}>
+                <li className={styles.medStepDone}>اعلام شد</li>
+                <li className={row.receivedAt ? styles.medStepDone : styles.medStepWait}>
+                  {row.receivedAt
+                    ? `مهد تحویل گرفت${row.receivedByName ? ` — ${row.receivedByName}` : ''}`
+                    : 'هنوز تحویل مهد نشده'}
+                </li>
+              </ol>
+              {!row.receivedAt ? (
+                <button
+                  type="button"
+                  className={`${styles.medCancel} t-caption`}
+                  onClick={() => {
+                    void data
+                      .cancelMedicationRequest(row.id)
+                      .then(load)
+                      .catch((cause: unknown) =>
+                        setError(cause instanceof Error ? cause.message : 'لغو نشد.'),
+                      )
+                  }}
+                >
+                  لغو درخواست
+                </button>
+              ) : null}
+            </article>
+          ))}
+        </section>
+      ) : null}
+
+      <p className={`${styles.hint} t-caption`}>
+        دارو را صبح به مربی بدهید. تا وقتی مربی تحویل نگرفته باشد، سامانه
+        اجازه ثبت مصرف نمی‌دهد.
+      </p>
+
+      <label className={`${styles.field} t-caption`}>
+        نام دارو
+        <input
+          className={styles.input}
+          value={name}
+          aria-label="نام دارو"
+          placeholder="مثلاً: شربت سرماخوردگی"
+          onChange={(event) => setName(event.target.value)}
+        />
+      </label>
+
+      <label className={`${styles.field} t-caption`}>
+        مقدار مصرف
+        <input
+          className={styles.input}
+          value={dose}
+          aria-label="مقدار مصرف"
+          placeholder="مثلاً: ۵ سی‌سی، یا یک قاشق مرباخوری"
+          onChange={(event) => setDose(event.target.value)}
+        />
+      </label>
+
+      <span className={`${styles.field} t-caption`}>ساعت مصرف</span>
+      {times.map((time, index) => (
+        <div key={index} className={styles.medTimeRow}>
+          <input
+            className={styles.input}
+            inputMode="numeric"
+            value={time}
+            aria-label={`ساعت مصرف ${toPersianDigits(index + 1)}`}
+            placeholder="۱۱:۳۰"
+            onChange={(event) => {
+              const next = [...times]
+              next[index] = event.target.value
+              setTimes(next)
+            }}
+          />
+          {times.length > 1 ? (
+            <button
+              type="button"
+              className={styles.medTimeRemove}
+              aria-label="حذف این ساعت"
+              onClick={() => setTimes(times.filter((_, at) => at !== index))}
+            >
+              ×
+            </button>
+          ) : null}
+        </div>
+      ))}
+      {times.length < 6 ? (
+        <button
+          type="button"
+          className={`${styles.medAddTime} t-caption`}
+          onClick={() => setTimes([...times, ''])}
+        >
+          ساعت دیگر
+        </button>
+      ) : null}
+
+      <span className={`${styles.field} t-caption`}>برای چه روزهایی</span>
+      <div className={styles.choices}>
+        {([
+          ['today', 'امروز'],
+          ['tomorrow', 'فردا'],
+          ['week', 'یک هفته'],
+        ] as const).map(([value, label]) => (
+          <button
+            key={value}
+            type="button"
+            className={`${styles.choice} t-body`}
+            aria-pressed={days === value}
+            onClick={() => setDays(value)}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      <label className={`${styles.field} t-caption`}>
+        توضیح، اگر لازم است
+        <textarea
+          className={styles.text}
+          rows={2}
+          value={note}
+          aria-label="توضیح دارو"
+          placeholder="مثلاً: بعد از ناهار"
+          onChange={(event) => setNote(event.target.value)}
+        />
+      </label>
+
+      {error ? <p className={`${styles.error} t-body`}>{error}</p> : null}
+
+      <button
+        type="button"
+        className={`${styles.primary} t-body`}
+        disabled={!ready || busy}
+        onClick={() => void submit()}
+      >
+        اعلام به مهد
+      </button>
+    </Shell>
+  )
+}
+
+/* ── اعلام غیبت — بخش ۶.۴ ───────────────────────────────────── */
+
+function AbsenceTab({ childId, childName, onBack }: {
+  childId: string
+  childName: string
+  onBack: () => void
+}) {
+  const data = useData()
+  const [reason, setReason] = useState('')
+  const [when, setWhen] = useState<'today' | 'tomorrow'>('tomorrow')
+  const [done, setDone] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const date = (() => {
+    const day = new Date()
+    if (when === 'tomorrow') day.setDate(day.getDate() + 1)
+    return toIsoDate(day)
+  })()
+
+  const submit = async () => {
+    try {
+      await data.declareAbsence({ childId, date, reason: reason.trim() || null })
+      setDone(true)
+      setError(null)
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'ثبت نشد.')
+    }
+  }
+
+  if (done) {
+    return (
+      <Shell title="اعلام غیبت" onBack={onBack}>
+        <p className={`${styles.done} t-body`}>
+          <CheckIcon size={20} />
+          غیبت {childName} برای {formatJalali(new Date(`${date}T09:00:00`), 'weekday')} اعلام شد.
+        </p>
+        <p className={`${styles.hint} t-caption`}>
+          مربی همان روز روی صفحه «امروز» می‌بیند و دیگر دنبالتان نمی‌گردد.
+        </p>
+      </Shell>
+    )
+  }
+
+  return (
+    <Shell title="اعلام غیبت" onBack={onBack}>
+      <div className={styles.choices}>
+        {(['today', 'tomorrow'] as const).map((choice) => (
+          <button
+            key={choice}
+            type="button"
+            className={`${styles.choice} t-body`}
+            aria-pressed={when === choice}
+            onClick={() => setWhen(choice)}
+          >
+            {choice === 'today' ? 'امروز' : 'فردا'}
+          </button>
+        ))}
+      </div>
+
+      <label className={`${styles.field} t-caption`}>
+        علت، اگر می‌خواهید بنویسید
+        <textarea
+          className={styles.text}
+          rows={3}
+          value={reason}
+          aria-label="علت غیبت"
+          placeholder="مثلاً: سرماخوردگی"
+          onChange={(event) => setReason(event.target.value)}
+        />
+      </label>
+      <p className={`${styles.hint} t-caption`}>
+        نوشتن علت اختیاری است. مهد برای غیبت اعلام‌شده دنبالتان نمی‌گردد.
+      </p>
+
+      {error ? <p className={`${styles.error} t-body`}>{error}</p> : null}
+
+      <button type="button" className={`${styles.primary} t-body`} onClick={() => void submit()}>
+        اعلام غیبت
+      </button>
+    </Shell>
+  )
+}
+
+
+/* ── اطلاعیه‌ها ──────────────────────────────────────────────── */
+
+function NoticesTab({ onBack }: { onBack: () => void }) {
+  const data = useData()
+  const [notices, setNotices] = useState<Notice[] | null>(null)
+
+  useEffect(() => {
+    data.listMyNotices().then(setNotices).catch(() => setNotices([]))
+  }, [data])
+
+  return (
+    <Shell title="اطلاعیه‌ها" onBack={onBack}>
+      {notices === null ? (
+        <EmptyState text="در حال خواندن…" />
+      ) : notices.length === 0 ? (
+        <EmptyState text="اطلاعیه‌ای نیست." />
+      ) : (
+        notices.map((notice) => (
+          <article key={notice.id} className={styles.card}>
+            <p className={`${styles.noticeTitle} t-body`}>{notice.title}</p>
+            <p className={`${styles.noticeBody} t-body`}>{notice.body}</p>
+            {notice.publishedAt ? (
+              <span className={`${styles.hint} t-caption`}>
+                {formatJalali(new Date(notice.publishedAt), 'short')}
+                {notice.smsSentCount > 0 ? ' · با پیامک هم فرستاده شد' : ''}
+              </span>
+            ) : null}
+          </article>
+        ))
+      )}
+    </Shell>
+  )
+}
+
+/* ── پوسته مشترک ────────────────────────────────────────────── */
+
+export function Shell({ title, onBack, children }: {
+  title: string
+  onBack: () => void
+  children: React.ReactNode
+}) {
+  return (
+    <div className={styles.page}>
+      <header className={styles.header}>
+        <button type="button" className={styles.back} onClick={onBack} aria-label="بازگشت">
+          <Chevron />
+        </button>
+        <span className={`${styles.title} t-h2`}>{title}</span>
+      </header>
+      <div className={styles.body}>{children}</div>
+    </div>
+  )
+}
+
+function Chevron({ flip }: { flip?: boolean }) {
+  return (
+    <svg className="mirror" width="20" height="20" viewBox="0 0 24 24" fill="none"
+      stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d={flip ? 'm9 18 6-6-6-6' : 'm15 18-6-6 6-6'} />
+    </svg>
+  )
+}

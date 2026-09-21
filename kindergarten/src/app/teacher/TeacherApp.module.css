@@ -1,0 +1,41 @@
+/*
+ * پوسته پنل مربی.
+ *
+ * چیدمان از AppShell می‌آید؛ اینجا فقط کنترل‌های ویژه مربی می‌مانند.
+ */
+
+/* تعویض کلاس — هدف لمسی پنل مربی، بخش ۱۲.۷. */
+/*
+ * تعویض کلاس — حالا روی آسمانِ سرصفحه می‌نشیند، نه روی بوم.
+ *
+ * پس شیشه‌ای است: پرکننده سفیدِ کم‌شفاف با مرزِ سفیدتر، و متن سفید.
+ * نسخهٔ پیشین سطح سفید و متن --ink بود و روی گرادیان مثل یک وصله
+ * دیده می‌شد.
+ */
+.classSwitch {
+  min-block-size: var(--touch-teacher);
+  padding-inline: var(--space-4);
+  border: 1px solid rgb(255 255 255 / .3);
+  border-radius: var(--r-input);
+  background: rgb(255 255 255 / .18);
+  color: #fff;
+  font: inherit;
+  cursor: pointer;
+}
+.classSwitch:active { background: rgb(255 255 255 / .3); }
+
+.classQuiet { color: #fff; font-weight: var(--weight-bold); }
+
+.switchAccount {
+  inline-size: 100%;
+  min-block-size: var(--touch-parent);
+  padding-inline: var(--space-2);
+  text-align: start;
+  background: none;
+  border: none;
+  border-radius: var(--r-input);
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+}
+.switchAccount:active { background: var(--coral-tint); }

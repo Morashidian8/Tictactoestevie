@@ -1,0 +1,21 @@
+/*
+ * نماد کمد، گوشه بالای عکس.
+ *
+ * دایره سفید پشتش لازم است تا روی هر عکسی دیده شود — همان قاعده‌ای که
+ * نقطه استثنا از آن پیروی می‌کند.
+ */
+.mark {
+  position: absolute;
+  inset-block-start: -4px;
+  inset-inline-end: -4px;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  inline-size: 22px;
+  block-size: 22px;
+  border-radius: var(--r-chip);
+  background: var(--surface);
+  box-shadow: var(--shadow-xs);
+  font-size: 12px;
+  line-height: 1;
+}

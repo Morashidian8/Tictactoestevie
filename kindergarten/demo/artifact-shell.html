@@ -1,0 +1,89 @@
+<!doctype html>
+<title>مهد آفتاب — نسخه نمایشی</title>
+<link rel="icon" type="image/svg+xml" href="icon.svg">
+<link rel="stylesheet" href="assets/__CSS__">
+<style>
+  /*
+   * اپ واقعی است — همان بیلدی که از مخزن درمی‌آید. فقط داده‌اش نمونه
+   * است و در حافظه همین مرورگر می‌ماند.
+   *
+   * صفحه اصلی اپ روی <html dir="rtl"> سوار است. اینجا صفحه داخل قاب
+   * منتشر می‌شود، پس جهت را خودمان می‌گذاریم — و پیش از اجرای اسکریپت،
+   * وگرنه اولین رنگ‌آمیزی چپ‌به‌راست دیده می‌شود.
+   */
+  html { direction: rtl; }
+  body { margin: 0; min-height: 100dvh; background: #FCF9F4; }
+  #root { min-height: 100dvh; }
+</style>
+
+<script>
+  /*
+   * ساعت نمایشی — داربست این صفحه است، نه کد اپ.
+   *
+   * مسئله: اپ بازه‌آگاه است و شبکه کودکان فقط کودکانِ بازه جاری را
+   * نشان می‌دهد. هر کس این لینک را ساعت یازده شب یا روز جمعه باز کند،
+   * «بیرون از ساعت کار» و یک شبکه خالی می‌بیند — یعنی دقیقاً چیزی که
+   * آمده ببیند را نمی‌بیند.
+   *
+   * پس ساعت مرورگر به یک صبحِ روز کاری جابه‌جا می‌شود. زمان همچنان
+   * جلو می‌رود (جابه‌جایی است، نه انجماد)، فقط مبدأ عوض شده.
+   *
+   *   ?live  → بی هیچ جابه‌جایی، با ساعت واقعی خودتان
+   *   ?t=۱۳:۴۵ → هر ساعتی که بخواهید، مثلاً برای دیدن پنجره انتقال
+   *
+   * هفته ایرانی شنبه شروع می‌شود و پنجشنبه و جمعه تعطیل است، پس اگر
+   * امروز آن دو روز باشد، به چهارشنبه عقب کشیده می‌شود.
+   */
+  ;(function () {
+    var q = new URLSearchParams(location.search)
+    if (q.has('live')) return
+
+    var asked = (q.get('t') || '09:15').replace(/[۰-۹]/g, function (d) {
+      return String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d))
+    })
+    var parts = asked.split(':')
+    var hour = Number(parts[0])
+    var minute = Number(parts[1] || 0)
+    if (!isFinite(hour) || hour < 0 || hour > 23) { hour = 9; minute = 15 }
+    if (!isFinite(minute) || minute < 0 || minute > 59) minute = 0
+
+    var real = new Date()
+    var target = new Date(real)
+    target.setHours(hour, minute, 0, 0)
+    // getDay: ۰ یکشنبه … ۴ پنجشنبه، ۵ جمعه، ۶ شنبه
+    var day = target.getDay()
+    if (day === 5) target.setDate(target.getDate() - 2)
+    else if (day === 4) target.setDate(target.getDate() - 1)
+
+    var shift = target.getTime() - real.getTime()
+    if (shift === 0) return
+
+    var Base = Date
+    function Shifted(a, b, c, d, e, f, g) {
+      if (!(this instanceof Shifted)) return new Base(Base.now() + shift).toString()
+      switch (arguments.length) {
+        case 0: return new Base(Base.now() + shift)
+        case 1: return new Base(a)
+        case 2: return new Base(a, b)
+        case 3: return new Base(a, b, c)
+        case 4: return new Base(a, b, c, d)
+        case 5: return new Base(a, b, c, d, e)
+        case 6: return new Base(a, b, c, d, e, f)
+        default: return new Base(a, b, c, d, e, f, g)
+      }
+    }
+    Shifted.prototype = Base.prototype
+    Shifted.now = function () { return Base.now() + shift }
+    Shifted.parse = Base.parse
+    Shifted.UTC = Base.UTC
+    window.Date = Shifted
+  })()
+
+  document.documentElement.setAttribute('dir', 'rtl')
+  document.documentElement.setAttribute('lang', 'fa')
+</script>
+
+<div id="root"></div>
+
+<script type="module" src="assets/__JS__"></script>
+

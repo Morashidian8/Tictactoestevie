@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <!-- سفیدِ سرصفحه اپ. رنگ پیشین #0F8C86 از پالت فیروزه‌ای بود
+         که در نسخه ۲.۰ حذف شد و فقط همین‌جا جا مانده بود. -->
+    <meta name="theme-color" content="#FFFFFF" />
+    <link rel="icon" type="image/svg+xml" href="/Tictactoestevie/kindergarten1/icon.svg" />
+    <title>مهد آفتاب — نسخه نمایشی</title>
+    <script type="module" crossorigin src="/Tictactoestevie/kindergarten1/assets/index-BZTMdbqS.js"></script>
+    <link rel="stylesheet" crossorigin href="/Tictactoestevie/kindergarten1/assets/index-BuKyWuwr.css">
+    <script>
+/*
+ * ساعت نمایشی — داربستِ نسخهٔ نمایشی است، نه کد اپ.
+ *
+ * یک نسخه، دو مصرف: هم صفحهٔ منتشرشده در قاب (`artifact-shell.html`)
+ * و هم اپِ نصب‌شدنی روی گوشی. هر دو یک چیز لازم دارند، پس یک‌جا
+ * نوشته می‌شود؛ پیش از این فقط قاب داشتش و اپِ روی گوشی نداشت — و
+ * هر کس صبحِ زود بازش می‌کرد «بیرون از ساعت کار» و شبکه‌ای خالی
+ * می‌دید، یعنی دقیقاً چیزی که آمده بود ببیند را نمی‌دید.
+ */
+;(function () {
+  var q = new URLSearchParams(location.search)
+  if (q.has('live')) return
+
+  var asked = (q.get('t') || '09:15').replace(/[۰-۹]/g, function (d) {
+    return String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d))
+  })
+  var parts = asked.split(':')
+  var hour = Number(parts[0])
+  var minute = Number(parts[1] || 0)
+  if (!isFinite(hour) || hour < 0 || hour > 23) { hour = 9; minute = 15 }
+  if (!isFinite(minute) || minute < 0 || minute > 59) minute = 0
+
+  var real = new Date()
+  var target = new Date(real)
+  target.setHours(hour, minute, 0, 0)
+  // getDay: ۰ یکشنبه … ۴ پنجشنبه، ۵ جمعه، ۶ شنبه
+  var day = target.getDay()
+  if (day === 5) target.setDate(target.getDate() - 2)
+  else if (day === 4) target.setDate(target.getDate() - 1)
+
+  var shift = target.getTime() - real.getTime()
+  if (shift === 0) return
+
+  var Base = Date
+  function Shifted(a, b, c, d, e, f, g) {
+    if (!(this instanceof Shifted)) return new Base(Base.now() + shift).toString()
+    switch (arguments.length) {
+      case 0: return new Base(Base.now() + shift)
+      case 1: return new Base(a)
+      case 2: return new Base(a, b)
+      case 3: return new Base(a, b, c)
+      case 4: return new Base(a, b, c, d)
+      case 5: return new Base(a, b, c, d, e)
+      case 6: return new Base(a, b, c, d, e, f)
+      default: return new Base(a, b, c, d, e, f, g)
+    }
+  }
+  Shifted.prototype = Base.prototype
+  Shifted.now = function () { return Base.now() + shift }
+  Shifted.parse = Base.parse
+  Shifted.UTC = Base.UTC
+  window.Date = Shifted
+})()
+
+    </script>
+  <link rel="manifest" href="/Tictactoestevie/kindergarten1/manifest.webmanifest"><script id="vite-plugin-pwa:register-sw" src="/Tictactoestevie/kindergarten1/registerSW.js"></script></head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>

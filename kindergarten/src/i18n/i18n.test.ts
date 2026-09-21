@@ -1,0 +1,145 @@
+import { describe, expect, it } from 'vitest'
+import {
+  formatAge,
+  formatCount,
+  formatJalali,
+  formatTime,
+  formatRial,
+  formatToman,
+  jalaliParts,
+  jalaliYearMonth,
+  toIsoDate,
+  toLatinDigits,
+  toPersianDigits,
+} from './index.ts'
+
+// ۴ ژانویه ۲۰۲۶ برابر یکشنبه ۱۴ دی ۱۴۰۴ است.
+const day = new Date(2026, 0, 4, 8, 12)
+
+describe('ارقام', () => {
+  it('ارقام لاتین را فارسی می‌کند', () => {
+    expect(toPersianDigits('8:12')).toBe('۸:۱۲')
+  })
+
+  it('ارقام فارسی و عربی را لاتین می‌کند', () => {
+    expect(toLatinDigits('۰۹۱۲۳۴۵۶۷۸۹')).toBe('09123456789')
+    expect(toLatinDigits('٠٩١٢')).toBe('0912')
+  })
+
+  it('شمارش را بدون جداکننده می‌دهد', () => {
+    expect(formatCount(18)).toBe('۱۸')
+  })
+
+  it('مبلغ را با جداکننده و واحد می‌دهد', () => {
+    expect(formatToman(1234567)).toBe('۱٬۲۳۴٬۵۶۷ تومان')
+  })
+
+  /*
+   * یک خانواده در مرورگرش «ناعدد تومان» دید — چیزی که Intl برای NaN
+   * می‌سازد. ریشه‌اش حافظه ذخیره‌شده با شکل قدیمی بود و آنجا بسته شد،
+   * ولی نگهبانش اینجا می‌ماند: مبلغی که عدد نیست، مبلغ نشان داده
+   * نمی‌شود.
+   */
+  it('مبلغی که عدد نیست را «ناعدد» نمی‌نویسد', () => {
+    expect(formatToman(Number.NaN)).toBe('—')
+    expect(formatToman(Number.POSITIVE_INFINITY)).toBe('—')
+    expect(formatRial(Number.NaN)).toBe('—')
+  })
+})
+
+describe('تاریخ جلالی', () => {
+  it('قالب کوتاه، کامل و تقویمی', () => {
+    expect(formatJalali(day, 'short')).toBe('۱۴ دی')
+    expect(formatJalali(day, 'full')).toBe('۱۴ دی ۱۴۰۴')
+    expect(formatJalali(day, 'weekday')).toBe('یکشنبه ۱۴ دی')
+  })
+
+  it('پیش‌فرض قالب کوتاه است', () => {
+    expect(formatJalali(day)).toBe(formatJalali(day, 'short'))
+  })
+
+  it('هیچ قالبی رقم لاتین بیرون نمی‌دهد', () => {
+    for (const format of ['short', 'full', 'weekday'] as const) {
+      expect(formatJalali(day, format)).not.toMatch(/[0-9]/)
+    }
+    expect(formatTime(day)).not.toMatch(/[0-9]/)
+  })
+
+  it('ساعت بدون ثانیه و با ارقام فارسی', () => {
+    expect(formatTime(day)).toBe('۸:۱۲')
+    expect(formatTime(new Date(2026, 0, 4, 16, 5))).toBe('۱۶:۰۵')
+  })
+
+  it('اجزای جلالی را عددی می‌دهد', () => {
+    expect(jalaliParts(day)).toEqual({ year: 1404, month: 10, day: 14 })
+  })
+
+  it('کلید دوره ماهانه', () => {
+    expect(jalaliYearMonth(day)).toBe('1404-10')
+  })
+})
+
+describe('لایه داده', () => {
+  it('تاریخ میلادی محلی می‌دهد، نه UTC', () => {
+    expect(toIsoDate(day)).toBe('2026-01-04')
+  })
+})
+
+describe('ساعت ذخیره‌شده برای نمایش', () => {
+  it('رشته لاتین لایه داده را فارسی می‌کند', async () => {
+    const { formatClock } = await import('./index.ts')
+    expect(formatClock('13:00')).toBe('۱۳:۰۰')
+    expect(formatClock('08:05')).toBe('۸:۰۵')
+    expect(formatClock('17:30')).toBe('۱۷:۳۰')
+  })
+
+  it('صفر ابتدای ساعت را می‌اندازد، مثل قالب بخش ۱۲.۴', async () => {
+    const { formatClock } = await import('./index.ts')
+    expect(formatClock('09:07')).toBe('۹:۰۷')
+  })
+
+  it('ورودی نامنتظر را هم بدون رقم لاتین برمی‌گرداند', async () => {
+    const { formatClock } = await import('./index.ts')
+    expect(formatClock('13')).not.toMatch(/[0-9]/)
+    expect(formatClock('')).toBe('')
+  })
+})
+
+describe('سن کودک — بخش ۱۳.۱', () => {
+  const at = (iso: string) => new Date(iso)
+
+  it('سال و ماه را با هم می‌گوید', () => {
+    expect(formatAge('2022-02-10', at('2026-03-11T09:00:00'))).toBe('۴ سال و ۱ ماه')
+  })
+
+  /*
+   * ماه صفر حذف می‌شود، نه اینکه «۴ سال و ۰ ماه» بنویسد.
+   */
+  it('در سالگرد، فقط سال می‌گوید', () => {
+    expect(formatAge('2022-03-11', at('2026-03-11T09:00:00'))).toBe('۴ سال')
+  })
+
+  it('زیر یک سال، فقط ماه می‌گوید', () => {
+    expect(formatAge('2025-09-11', at('2026-03-11T09:00:00'))).toBe('۶ ماه')
+  })
+
+  /*
+   * روزِ ماه هم حساب می‌شود: کودکی که فردا چهارساله می‌شود، امروز
+   * هنوز سه سال و یازده ماه است.
+   */
+  it('یک روز مانده به سالگرد، هنوز سال قبلی است', () => {
+    expect(formatAge('2022-03-12', at('2026-03-11T09:00:00'))).toBe('۳ سال و ۱۱ ماه')
+  })
+
+  it('بدون تاریخ تولد، چیزی نمی‌گوید — نه «۰ سال»', () => {
+    expect(formatAge(null)).toBeNull()
+    expect(formatAge('چیز نامعتبر')).toBeNull()
+  })
+
+  /*
+   * تاریخ تولد آینده یعنی داده اشتباه. عدد منفی ساخته نمی‌شود.
+   */
+  it('تاریخ تولد در آینده، عدد منفی نمی‌سازد', () => {
+    expect(formatAge('2027-01-01', at('2026-03-11T09:00:00'))).toBeNull()
+  })
+})

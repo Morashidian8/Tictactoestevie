@@ -1,0 +1,176 @@
+/*
+ * مالی خانواده.
+ *
+ * فهرست است نه شبکه کارت: پول با تراز خوانده می‌شود. دوازده کارت ماه
+ * کنار هم، مقایسه مبلغ‌ها را سخت می‌کند و همان کاری است که خانواده
+ * اینجا می‌خواهد بکند.
+ */
+
+/* ── برنامه سال ─────────────────────────────────────────────── */
+
+.year {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.month { display: flex; flex-direction: column; }
+.month + .month { border-block-start: 1px solid var(--border); }
+
+.monthButton {
+  inline-size: 100%;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) 0;
+  background: none;
+  border: none;
+  font: inherit;
+  color: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+.monthButton:active { background: var(--coral-tint); }
+
+/* ماه صادرنشده دکمه نیست، پس نه فشرده می‌شود و نه اشاره‌گر عوض می‌کند. */
+.monthQuiet {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) 0;
+  color: var(--ink-muted);
+}
+
+.monthName { flex: none; min-inline-size: 5.5ch; }
+
+.monthAmount {
+  margin-inline-start: auto;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/*
+ * برآورد با وزن سبک‌تر نوشته می‌شود، نه با رنگ کم‌کنتراست.
+ * رنگ محوتر یعنی خواندنش سخت‌تر؛ وزن سبک‌تر یعنی «این عدد قطعی نیست».
+ */
+.estimate { font-weight: var(--weight-regular); color: var(--ink-muted); }
+
+/* ── نشان وضعیت ─────────────────────────────────────────────── */
+
+.pill {
+  flex: none;
+  padding: 2px var(--space-2);
+  border-radius: var(--r-chip);
+  font-size: var(--text-caption);
+  line-height: var(--text-caption-line);
+  white-space: nowrap;
+}
+
+.paid { background: var(--mint-tint); color: var(--mint-deep); }
+.issued { background: var(--surface-warm); color: var(--ink); }
+.partially_paid { background: var(--mango-tint); color: var(--ink); }
+.overdue { background: var(--brick-tint); color: var(--ink); }
+.cancelled { background: var(--surface-warm); color: var(--ink-muted); }
+.not_issued { background: transparent; color: var(--ink-muted); }
+
+/* ── ریز مبلغ ───────────────────────────────────────────────── */
+
+.monthDetail,
+.breakdown {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-3);
+  margin-block-end: var(--space-3);
+  background: var(--paper);
+  border-radius: var(--r-input);
+}
+
+.line { display: flex; justify-content: space-between; gap: var(--space-3); margin: 0; }
+.line span:first-child { color: var(--ink-muted); }
+.lineStrong { font-weight: var(--weight-bold); }
+.lineStrong span:first-child { color: var(--ink); }
+
+.detailHint { margin: var(--space-1) 0 0; color: var(--ink-muted); }
+
+/* ── قلم اختیاری ────────────────────────────────────────────── */
+
+/*
+ * زمینه زرد، نه مرجانی: این یک هشدار نیست، یک سؤال است.
+ * مرجانی در این اپ رنگ کنش اصلی است و اینجا دو کنش هم‌وزن داریم.
+ */
+.asking { background: var(--mango-tint); border-color: transparent; }
+
+.offer { display: flex; flex-direction: column; gap: var(--space-1); }
+.offer + .offer {
+  border-block-start: 1px solid var(--border);
+  padding-block-start: var(--space-3);
+  margin-block-start: var(--space-1);
+}
+
+.offerTitle {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin: 0;
+  font-weight: var(--weight-bold);
+  color: var(--ink);
+}
+
+/* دو کنش هم‌وزن: «می‌پذیرم» پیش‌فرض نیست و نباید شبیه پیش‌فرض باشد. */
+.offerActions {
+  display: flex;
+  gap: var(--space-2);
+  margin-block-start: var(--space-2);
+}
+.offerActions > * { flex: 1; }
+
+/* ── پرداخت‌های گذشته ───────────────────────────────────────── */
+
+.payRow { display: flex; flex-direction: column; gap: var(--space-1); }
+.payRow + .payRow {
+  border-block-start: 1px solid var(--border);
+  padding-block-start: var(--space-2);
+}
+
+.doc {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin: 0;
+  color: var(--ink-muted);
+}
+.doc svg { color: var(--mint-deep); flex: none; }
+
+/*
+ * «سندی ثبت نشده» پنهان نمی‌شود.
+ * اگر روزی اختلافی پیش بیاید، خانواده باید همان‌موقع دیده باشد که این
+ * ردیف پشتوانه‌ای ندارد — نه یک سال بعد.
+ */
+.docMissing { margin: 0; color: var(--ink); font-weight: var(--weight-medium); }
+
+/* ── یادآوری‌ها ─────────────────────────────────────────────── */
+
+.disclose {
+  align-self: flex-start;
+  padding: 0;
+  background: none;
+  border: none;
+  font: inherit;
+  color: var(--ink);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* ── دسته‌های سال ───────────────────────────────────────────── */
+
+.group { display: flex; flex-direction: column; gap: var(--space-1); }
+.group + .group { margin-block-start: var(--space-3); }
+
+.groupTitle {
+  margin: 0;
+  color: var(--ink);
+  font-weight: var(--weight-bold);
+}

@@ -1,0 +1,75 @@
+/*
+ * تراشه وضعیت — بخش ۱۲.۹، نسخه ۲.۰.
+ *
+ * قاعده بخش ۱۲.۲: رنگ هرگز تنها حامل معنا نیست. پس آیکون و متن همیشه
+ * همراهند و لحن را پس‌زمینه تینت‌دار و مرز حمل می‌کنند.
+ *
+ * متن و آیکون هر لحن --ink است، نه رنگ لحن. در پالت مرجانی هیچ رنگی
+ * روی تینت خودش به کف ۳:۱ نمی‌رسد: نعنایی ۲٫۲۹، انبه‌ای ۱٫۹۳، مرجانی
+ * ۲٫۵۱، و آجری ۳٫۰۸ که فقط به‌زحمت رد می‌شود. --ink روی هر چهار تینت
+ * بالای ۱۱٫۹ می‌دهد.
+ *
+ * پس لحن را مرز یک‌پیکسلی می‌گوید، که عنصر غیرمتنی است و کف ۳:۱ دارد —
+ * و همان مرز است که تراشه را از زمینه جدا می‌کند.
+ */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding-block: var(--space-1);
+  padding-inline: var(--space-3);
+  border-radius: var(--r-chip);
+  border: 1px solid transparent;
+  font-weight: var(--weight-medium);
+  white-space: nowrap;
+  color: var(--ink);
+}
+
+.neutral {
+  background: var(--neutral-fill);
+  border-color: var(--border);
+  --chip-icon: var(--ink);
+  color: var(--ink);
+}
+.coral {
+  background: var(--coral-tint);
+  border-color: var(--coral);
+  --chip-icon: var(--ink);
+  color: var(--ink);
+}
+.mango {
+  background: var(--mango-tint);
+  border-color: var(--mango);
+  --chip-icon: var(--ink);
+  color: var(--ink);
+}
+.brick {
+  background: var(--brick-tint);
+  border-color: var(--brick);
+  --chip-icon: var(--ink);
+  color: var(--ink);
+}
+/*
+ * نعنایی تنها لحنی است که متنش رنگی می‌شود — بازطراحی کارت‌محور.
+ *
+ * قاعده «گلیف همیشه --ink است» از یک عدد آمده بود: هیچ رنگی روی تینت
+ * خودش به کف نمی‌رسید. --mint-deep روی --mint-tint نسبت ۷٫۲۹ می‌دهد،
+ * پس مقدمه آن قاعده درباره‌اش صادق نیست.
+ *
+ * چرا فقط همین یکی: تراشه «حاضر» پرتکرارترین حالت خوب روز است و باید
+ * از فیلترهای خنثی کنارش جدا دیده شود. سه لحن دیگر معادلی ندارند و
+ * --ink می‌مانند.
+ */
+.mint {
+  background: var(--mint-tint);
+  border-color: var(--mint);
+  --chip-icon: var(--mint-deep);
+  color: var(--mint-deep);
+}
+
+.icon {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  color: var(--chip-icon);
+}

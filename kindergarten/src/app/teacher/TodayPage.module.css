@@ -1,0 +1,699 @@
+.page {
+  min-block-size: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* سرصفحه: نام کلاس، تاریخ جلالی، نشانگر همگام‌سازی */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background: var(--surface);
+  border-block-end: 1px solid var(--border);
+  position: sticky;
+  inset-block-start: 0;
+  z-index: 5;
+}
+
+.headerStart {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-inline-size: 0;
+}
+
+.className {
+  color: var(--ink);
+  font-weight: var(--weight-bold);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* کلید تعویض کلاس. اگر مربی یک کلاس داشته باشد نمایش داده نمی‌شود. */
+.classSwitch {
+  min-block-size: var(--touch-teacher);
+  padding-inline: var(--space-3);
+  border: 1px solid var(--border-input);
+  border-radius: var(--r-input);
+  background: var(--surface);
+  color: var(--ink);
+  font-weight: var(--weight-medium);
+}
+
+.date {
+  color: var(--ink-muted);
+  white-space: nowrap;
+}
+
+/* نوار خلاصه، همیشه دیده می‌شود */
+/*
+ * فیلترهای حضور و غیاب. روی بوم می‌نشینند، نه روی یک نوار سفید:
+ * نوار سفید زیر سرصفحه سفید، یک مرز اضافی می‌سازد که چیزی را جدا
+ * نمی‌کند.
+ */
+.tally {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  padding: var(--space-1) var(--space-4) var(--space-2);
+}
+
+/* تراشه‌ای که فهرست را باز می‌کند. هدف لمسی کامل می‌گیرد. */
+.tallyAction {
+  min-block-size: var(--touch-teacher);
+  display: inline-flex;
+  align-items: center;
+  border-radius: var(--r-chip);
+}
+
+.tallyAction:disabled {
+  background: none;
+  cursor: default;
+}
+
+.outstanding {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: var(--space-4) var(--space-4) 0;
+  padding: var(--space-4);
+  border-radius: var(--r-card);
+  background: var(--surface);
+  border: 1px solid var(--card-border);
+  box-shadow: var(--shadow-md);
+}
+
+.outstandingLabel { color: var(--ink-muted); }
+.outstandingNames { color: var(--ink); font-weight: var(--weight-medium); }
+
+.banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin: var(--space-4);
+  padding: var(--space-4);
+  border-radius: var(--r-card);
+  background: var(--brick-tint);
+  color: var(--ink);
+}
+
+.bannerIcon {
+  color: var(--ink);
+  flex: none;
+}
+
+.bannerText {
+  flex: 1;
+}
+
+/*
+ * یادآور دارو — بخش ۵.۳. زعفرانی است چون «در انتظار» است، نه خطر.
+ * خودِ نوار دکمه است تا جزئیات با یک ضربه باز شود.
+ */
+/*
+ * یادآور دارو — بازطراحی کارت‌محور.
+ *
+ * پیش‌تر یک بلوک تمام‌تینت انبه‌ای بود. مشکلش این نبود که دیده نمی‌شد؛
+ * این بود که همیشه دیده می‌شد و چشم مربی به آن عادت می‌کرد. حالا کارت
+ * سفید است با یک لبه زعفرانی چهارپیکسلی: در فهرست سفید کارت‌ها، همان
+ * یک خط رنگی کافی است.
+ */
+.medication {
+  margin: 0 var(--space-4) var(--space-4);
+  border-radius: var(--r-card);
+  background: var(--surface);
+  border: 1px solid var(--card-border);
+  border-inline-start: 4px solid var(--mango);
+  box-shadow: var(--shadow-sm);
+  color: var(--ink);
+  overflow: hidden;
+}
+
+.medicationBar {
+  inline-size: 100%;
+  min-block-size: var(--touch-teacher);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border: none;
+  background: none;
+  color: var(--ink);
+  font-family: inherit;
+  text-align: start;
+}
+
+
+
+.medicationList {
+  list-style: none;
+  margin: 0;
+  padding: 0 var(--space-4) var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.medicationItem {
+  min-block-size: var(--touch-teacher);
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding-block-start: var(--space-2);
+  border-block-start: 1px solid rgba(19, 39, 47, .1);
+}
+
+.medicationChild { font-weight: var(--weight-bold); flex: none; }
+.medicationName { flex: 1; min-inline-size: 0; color: var(--ink-muted); }
+
+.medicationTime {
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--weight-medium);
+  flex: none;
+}
+
+.medicationDone {
+  flex: none;
+  min-block-size: var(--touch-teacher);
+  padding-inline: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--r-chip);
+  background: var(--surface);
+  color: var(--ink);
+  font-family: inherit;
+  font-weight: var(--weight-bold);
+}
+
+/* آیکون کپسول داخل یک دایره انبه‌ای ملایم. گلیف --ink می‌ماند. */
+.medicationIcon {
+  display: grid;
+  place-items: center;
+  inline-size: 36px;
+  block-size: 36px;
+  border-radius: var(--r-chip);
+  background: var(--mango-tint);
+  color: var(--ink);
+  flex: none;
+}
+
+/* «جزئیات» یک لینک متنی است، نه دکمه‌ای که با کارت رقابت کند. */
+.medicationMore {
+  margin-inline-start: auto;
+  color: var(--ink);
+  font-weight: var(--weight-bold);
+  flex: none;
+  text-decoration: underline;
+  text-decoration-color: var(--mango);
+  text-underline-offset: 3px;
+}
+
+.grid {
+  flex: 1;
+}
+
+.footerNote {
+  padding: 0 var(--space-4) var(--space-4);
+  color: var(--ink-muted);
+  text-align: center;
+}
+
+/* کنترل حساب فعال و جابه‌جایی — بخش ۳.۲ */
+.account {
+  position: relative;
+  flex: none;
+}
+
+.accountButton {
+  min-block-size: var(--touch-teacher);
+  min-inline-size: var(--touch-teacher);
+  padding-inline: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--r-chip);
+  background: var(--surface);
+  color: var(--ink-muted);
+  font-weight: var(--weight-medium);
+}
+
+.menu {
+  position: absolute;
+  inset-block-start: calc(100% + var(--space-2));
+  inset-inline-end: 0;
+  min-inline-size: 14rem;
+  padding: var(--space-2);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  box-shadow: var(--shadow-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  z-index: 20;
+}
+
+.menuName {
+  color: var(--ink-muted);
+  padding: var(--space-2) var(--space-3);
+}
+
+.menuItem {
+  min-block-size: var(--touch-teacher);
+  padding-inline: var(--space-3);
+  border-radius: var(--r-input);
+  text-align: start;
+  color: var(--ink);
+}
+
+.menuItem:active {
+  background: var(--coral-tint);
+  color: var(--ink);
+}
+
+/* راه رفتن به صفحه پایان روز. کنش ثانویه است، پس فیروزه‌ای نمی‌گیرد. */
+.closeDay {
+  align-self: center;
+  min-block-size: var(--touch-teacher);
+  margin-block-end: var(--space-3);
+  padding-inline: var(--space-5);
+  border: 1px solid var(--border-input);
+  border-radius: var(--r-input);
+  background: var(--surface);
+  color: var(--ink);
+  font-weight: var(--weight-medium);
+  font-size: var(--text-body-lg);
+}
+
+/*
+ * تراشه «ورود ثبت شد · تغییر» — بخش ۵.۳.
+ *
+ * لحن تأیید دارد نه هشدار، پس --mint-tint می‌گیرد و نه زعفرانی. بالای
+ * شبکه می‌نشیند و جای خودش را در جریان می‌گیرد، تا مثل دکمه شناور روی
+ * هیچ کودکی نیفتد.
+ */
+.justIn {
+  margin: 0 var(--space-4) var(--space-3);
+  min-block-size: var(--touch-teacher);
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding-inline: var(--space-4);
+  border-radius: var(--r-chip);
+  background: var(--mint-tint);
+  color: var(--ink);
+  border: 1px solid transparent;
+  text-align: start;
+}
+
+.justIn svg { inline-size: 20px; block-size: 20px; color: var(--ink); flex: none; }
+
+.justInChange {
+  margin-inline-start: auto;
+  color: var(--ink);
+  font-weight: var(--weight-bold);
+}
+
+/*
+ * اعلام خانواده برای امروز — بخش ۵.۸.
+ *
+ * لحن اطلاع است نه هشدار، پس --coral-tint می‌گیرد و نه زعفرانی:
+ * چیزی خراب نشده، فقط امروز فرق دارد.
+ */
+.plans {
+  margin: 0 var(--space-4) var(--space-3);
+  padding: var(--space-4);
+  border-radius: var(--r-card);
+  background: var(--coral-tint);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  color: var(--ink);
+}
+
+.plansLabel { color: var(--ink-muted); }
+
+.plan {
+  margin: 0;
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  color: var(--ink);
+}
+
+.planChild { font-weight: var(--weight-bold); }
+.planHow { color: var(--ink-muted); margin-inline-start: auto; }
+
+/* ------------------------------------------------------------
+   بازه جاری — بخش ۴ و ۷ سند دوره حضور
+
+   یک نوار باریک زیر سرصفحه: نام بازه، تعداد کودکان همین بازه، و تعداد
+   مربی سر کار. سه عدد کوچک که با هم می‌گویند «الان چه خبر است»، و
+   ساعت ۱۳ وقتی شبکه عوض می‌شود همین نوار توضیحش را داده است.
+   ------------------------------------------------------------ */
+/*
+ * نوار بازه، به شکل تراشه شناور — بازطراحی کارت‌محور.
+ *
+ * پیش‌تر یک نوار پهن تمام‌عرض بود که مثل سرصفحه دوم به نظر می‌رسید و
+ * وزن بصری‌اش از خودِ شبکه بیشتر بود. حالا یک کپسول است که روی بوم
+ * می‌نشیند: همان اطلاعات، یک پله پایین‌تر در سلسله‌مراتب.
+ */
+.periodBar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  align-self: flex-start;
+  margin: var(--space-3) var(--space-4) var(--space-1);
+  min-block-size: 32px;
+  padding: 0 var(--space-3);
+  /*
+   * خاکستری سرد، نه کرم و نه مرجانی. مرجانی رنگ کنش است و تراشه خبر
+   * می‌دهد؛ کرم روی بوم تازه گِل‌آلود می‌نشیند.
+   */
+  background: var(--card-border);
+  border-radius: var(--r-chip);
+  color: var(--ink);
+}
+
+.periodName {
+  color: var(--ink);
+  font-weight: var(--weight-bold);
+  font-size: 14px;
+}
+
+.periodCount,
+.periodStaff {
+  color: var(--ink-muted);
+}
+
+/*
+ * جداکننده نقطه‌ای به‌جای فاصله: در یک کپسول، سه تکه متن بدون جداکننده
+ * یک جمله بریده به نظر می‌رسند.
+ */
+.periodCount::before,
+.periodStaff::before {
+  content: '·';
+  margin-inline-end: var(--space-2);
+  color: var(--ink-muted);
+}
+
+/* نسبت مربی به کودک از حد گذشته — بخش ۷.۲. آجر، چون ایمنی است. */
+.ratioWarning {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: var(--space-3) var(--space-4) 0;
+  padding: var(--space-3);
+  border-radius: var(--r-card);
+  background: var(--brick-tint);
+  color: var(--ink);
+}
+
+/* ------------------------------------------------------------
+   کودکان خارج از روزشان — بخش ۲ و ۴
+
+   بسته می‌ماند. روز عادی هیچ‌کس بازش نمی‌کند؛ فقط وقتی کودک سه‌روزه
+   روز چهارم دم در است، مربی یک ضربه تا افزودنش فاصله دارد.
+   ------------------------------------------------------------ */
+.offDay {
+  margin: 0 var(--space-4) var(--space-4);
+  border: 1px solid var(--card-border);
+  box-shadow: var(--shadow-md);
+  border-radius: var(--r-card);
+  background: var(--surface);
+  overflow: hidden;
+}
+
+.offDayBar {
+  inline-size: 100%;
+  min-block-size: var(--touch-teacher);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border: none;
+  background: none;
+  color: var(--ink-muted);
+  font-family: inherit;
+  text-align: start;
+}
+
+.offDayMore {
+  margin-inline-start: auto;
+  color: var(--ink);
+  font-weight: var(--weight-bold);
+  flex: none;
+}
+
+.offDayList {
+  list-style: none;
+  margin: 0;
+  padding: 0 var(--space-4) var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.offDayItem {
+  min-block-size: var(--touch-teacher);
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding-block-start: var(--space-2);
+  border-block-start: 1px solid var(--border);
+}
+
+.offDayAdd {
+  flex: none;
+  margin-inline-start: auto;
+  min-block-size: var(--touch-teacher);
+  padding-inline: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--r-chip);
+  background: var(--surface);
+  color: var(--ink);
+  font-family: inherit;
+  font-weight: var(--weight-bold);
+}
+
+/* ------------------------------------------------------------
+   نشانگر بازه‌های هم‌پوشان — تصمیم ۰۲ سند بررسی طراحی
+
+   به‌جای چیدن اسامی با «و»، بازه جاری پررنگ می‌آید و بقیه در یک عدد
+   فشرده می‌شوند. در عرض ۳۲۰ پیکسل، سه نام کنار هم بریده می‌شد.
+   ------------------------------------------------------------ */
+.periodName {
+  max-inline-size: 14ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.periodMore {
+  flex: none;
+  min-block-size: var(--touch-manager);
+  padding-inline: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--r-chip);
+  background: var(--surface);
+  color: var(--ink);
+  font-family: inherit;
+  font-weight: var(--weight-bold);
+}
+
+.periodList {
+  list-style: none;
+  margin: 0;
+  padding: var(--space-2) var(--space-4) var(--space-3);
+  background: var(--surface-warm);
+  border-block-end: 1px solid var(--border);
+  display: grid;
+  gap: var(--space-1);
+}
+
+.periodItem {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ------------------------------------------------------------
+   بنر پنجره انتقال — تصمیم ۰۳
+
+   پنج ثانیه می‌ماند. تقویت است، نه منبع حقیقت: عنوان بخش پایین شبکه
+   همان خبر را می‌دهد و نمی‌رود.
+   ------------------------------------------------------------ */
+.transitionBanner {
+  margin: var(--space-3) var(--space-4) 0;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--r-card);
+  border: 1px solid var(--mango);
+  background: var(--mango-tint);
+  color: var(--ink);
+  box-shadow: var(--shadow-md);
+}
+
+/* ------------------------------------------------------------
+   بخش‌های تفکیک‌شده پنجره انتقال
+
+   عنوان ملایم و شبکه کم‌رنگ‌تر: هست، ولی هنوز بازه‌اش نیست.
+   ------------------------------------------------------------ */
+.phaseGroup {
+  margin-block-start: var(--space-5);
+  padding-block-start: var(--space-3);
+  border-block-start: 1px solid var(--border);
+}
+
+.phaseTitle {
+  margin: 0 var(--space-4) var(--space-2);
+  color: var(--ink-muted);
+  font-weight: var(--weight-bold);
+}
+
+/*
+ * شفافیت ۰٫۶۵ فقط روی آواتار می‌نشیند، نه روی متن: نام و ساعت باید
+ * خوانا بمانند وگرنه کف کنتراست می‌شکند.
+ */
+.phaseDim img,
+.phaseDim svg {
+  opacity: 0.65;
+}
+
+/* ------------------------------------------------------------
+   داروی اعلام‌شده از خانه، پیش از تحویل — ارتقای ۳
+
+   عمداً از یادآور دارو جداست و بالاترش می‌نشیند: یادآور یعنی «وقتش
+   رسیده، بده»، این یعنی «از خانواده بگیر». قاطی شدنشان همان اشتباهی
+   است که کل این ماژول برای جلوگیری از آن ساخته شده.
+   ------------------------------------------------------------ */
+.handover {
+  margin: 0 var(--space-4) var(--space-3);
+  border: 1px solid var(--mango);
+  border-radius: var(--r-card);
+  background: var(--mango-tint);
+  color: var(--ink);
+  overflow: hidden;
+}
+
+.handoverHead {
+  margin: 0;
+  padding: var(--space-3) var(--space-4) var(--space-2);
+  font-weight: var(--weight-bold);
+}
+
+.handoverList {
+  list-style: none;
+  margin: 0;
+  padding: 0 var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/*
+ * دو سطر، نه یک ردیف.
+ *
+ * در عرض ۳۹۰ پیکسل، نام دارو کنار دکمه فشرده می‌شد و «شربت سرماخوردگی»
+ * سه تکه می‌شکست. حالا مشخصات بالا و دکمه پایین.
+ */
+.handoverItem {
+  display: grid;
+  gap: var(--space-2);
+  padding-block-start: var(--space-3);
+  border-block-start: 1px solid var(--mango);
+}
+
+.handoverItem .medicationName {
+  flex: initial;
+  color: var(--ink);
+}
+
+.handoverWho {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-1) var(--space-2);
+}
+
+/*
+ * دکمه ثانویه، نه مرجانی.
+ *
+ * کنش اصلی این صفحه «ثبت گروهی امروز» است و بخش ۱۲.۲ می‌گوید در هر
+ * صفحه فقط یک مرجانی. این دکمه مهم است ولی کنش اصلی روز نیست.
+ */
+.handoverTake {
+  /* تمام‌عرض کارت: کنش اصلیِ همین کارت است و هدف لمسی بزرگ می‌خواهد. */
+  inline-size: 100%;
+  min-block-size: var(--touch-teacher);
+  padding-inline: var(--space-5);
+  border: 1px solid var(--ink);
+  border-radius: var(--r-input);
+  background: var(--surface);
+  color: var(--ink);
+  font-family: inherit;
+  font-weight: var(--weight-bold);
+}
+
+.handoverWhy {
+  margin: 0;
+  padding: var(--space-2) var(--space-4) var(--space-3);
+  color: var(--ink);
+}
+
+/*
+ * خلاصه ثبت روز، بالای دکمه ثبت گروهی — بازطراحی.
+ *
+ * می‌گوید چقدر از گزارش امروز مانده. جایش عمدی است: تنها عددی که مربی
+ * پیش از زدن «ثبت گروهی» لازم دارد، همین است.
+ */
+.daySummary {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  margin-inline-end: auto;
+}
+
+.sumItem {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 3px var(--space-2);
+  border-radius: var(--r-chip);
+  background: var(--card-border);
+  color: var(--ink);
+  white-space: nowrap;
+}
+
+/* گلیف --ink می‌ماند؛ پرکننده خنثی است و لحنی ندارد. */
+.sumIcon {
+  display: inline-grid;
+  place-items: center;
+  color: var(--ink-muted);
+}
+
+/*
+ * نشان همگام‌سازی، بالای شبکه کودکان.
+ *
+ * به نوار مشترک نرفت: چیزی که می‌گوید «همین شبکه زنده است یا نه» باید
+ * کنار همان شبکه باشد، نه کنار نام مربی.
+ */
+/*
+ * فاصله از بالا، چون بدنه ۱۶ پیکسل روی آسمان سوار می‌شود.
+ *
+ * بی این، نشانِ «آفلاین» — اولین چیز صفحه — زیر موجِ سرصفحه می‌رفت و
+ * نصفش بریده دیده می‌شد. کارت‌ها این همپوشانی را تحمل می‌کنند چون
+ * گوشه گردشان زیر موج قشنگ است؛ یک تراشه تنها، نه.
+ */
+.syncRow {
+  display: flex;
+  justify-content: flex-end;
+  padding: var(--space-4) var(--space-4) var(--space-2);
+}

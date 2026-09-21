@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+      بدون نوار عنوان: خودِ برنامه سرصفحهٔ خودش را دارد و نوار دومِ
+      سیستمی فقط ارتفاع مفید را می‌خورد.
+
+      نوار وضعیت رنگِ کاغذِ اپ است و نوار ناوبری رنگِ چمنزارِ پایین صفحه،
+      تا دو نوار سیستمی ادامهٔ همان بوم دیده شوند نه دو خط سیاه.
+
+      لبه‌به‌لبه عمداً نیست: برنامه فقط `safe-area-inset-bottom` را
+      می‌شناسد و بالایش حسابِ نوار وضعیت را نکرده. پنجرهٔ معمولی یعنی
+      WebView از زیر نوار وضعیت شروع می‌شود و سرصفحه زیر ساعت نمی‌رود.
+    -->
+    <style name="Theme.Mahd" parent="@android:style/Theme.Material.Light.NoActionBar">
+        <item name="android:statusBarColor">@color/paper</item>
+        <item name="android:navigationBarColor">@color/wash_foot</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowBackground">@color/paper</item>
+    </style>
+</resources>

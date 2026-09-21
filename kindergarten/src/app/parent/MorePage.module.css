@@ -1,0 +1,416 @@
+/* لحن دفترچه، مثل بقیه پنل خانواده — بخش ۱۲.۱. هدف لمسی ۴۸. */
+.page { min-block-size: 100dvh; display: flex; flex-direction: column; }
+
+.header {
+  position: sticky; inset-block-start: 0; z-index: 2;
+  display: flex; align-items: center; gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: var(--surface); border-block-end: 1px solid var(--border);
+}
+
+.back {
+  min-inline-size: var(--touch-parent); min-block-size: var(--touch-parent);
+  display: grid; place-items: center; border: none; background: none; color: var(--ink);
+}
+
+.title { font-family: var(--font); font-weight: var(--weight-black); }
+
+.body {
+  flex: 1; display: flex; flex-direction: column; gap: var(--space-3);
+  padding: var(--space-4) var(--space-4) var(--space-7);
+}
+
+.menu {
+  list-style: none; margin: 0; padding: 0;
+  background: var(--surface); border: 1px solid var(--card-border);
+  box-shadow: var(--shadow-md);
+  border-radius: var(--r-card); overflow: hidden;
+}
+
+.menuItem {
+  inline-size: 100%; min-block-size: calc(var(--touch-parent) + var(--space-3));
+  display: flex; align-items: center; gap: var(--space-3);
+  padding-inline: var(--space-4);
+  border: none; background: var(--surface); color: var(--ink);
+  font-family: inherit; text-align: start;
+}
+
+.menu li + li .menuItem { border-block-start: 1px solid var(--border); }
+.menuItem:active { background: var(--coral-tint);
+  color: var(--ink);
+}
+.menuItem svg { color: var(--ink-muted); flex: none; }
+
+.menuMain { flex: 1; min-inline-size: 0; display: flex; flex-direction: column; gap: 2px; }
+.menuLabel { font-weight: var(--weight-medium); }
+.menuHint { color: var(--ink-muted); }
+
+.card {
+  background: var(--surface); border: 1px solid var(--card-border);
+  box-shadow: var(--shadow-md);
+  border-radius: var(--r-card); padding: var(--space-4);
+  display: flex; flex-direction: column; gap: var(--space-2);
+}
+
+.cardLabel { color: var(--ink-muted); }
+.hint { color: var(--ink-muted); margin: 0; }
+
+.big {
+  margin: 0;
+  font-family: var(--font);
+  font-weight: var(--weight-black);
+  font-size: var(--text-display);
+  line-height: var(--text-display-line);
+  font-variant-numeric: tabular-nums;
+}
+
+.owed { color: var(--ink); }
+.clear {
+  padding-block: 1px;
+  padding-inline: var(--space-2);
+  border-radius: var(--r-chip);
+  border: 1px solid var(--mint);
+  background: var(--mint-tint);
+  color: var(--ink);
+  font-weight: var(--weight-bold);
+  white-space: nowrap;
+}
+
+.row {
+  margin: 0; min-block-size: var(--touch-parent);
+  display: flex; align-items: center; gap: var(--space-3); color: var(--ink);
+}
+.row + .row { border-block-start: 1px solid var(--border); }
+.row .hint { margin-inline-start: auto; }
+.amount { font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+.noticeTitle { margin: 0; font-weight: var(--weight-bold); color: var(--ink); }
+.noticeBody { margin: 0; color: var(--ink); }
+
+.choices { display: flex; gap: var(--space-2); }
+
+.choice {
+  flex: 1; min-block-size: var(--touch-parent);
+  border: 1px solid var(--border-input); border-radius: var(--r-input);
+  background: var(--surface); color: var(--ink); font-family: inherit;
+}
+.choice[aria-pressed='true'] {
+  background: var(--coral-tint); border-color: var(--coral);
+  font-weight: var(--weight-medium);
+}
+
+.field { display: flex; flex-direction: column; gap: var(--space-1); color: var(--ink-muted); }
+
+.text {
+  padding: var(--space-3);
+  border: 1px solid var(--border-input); border-radius: var(--r-input);
+  background: var(--surface); color: var(--ink);
+  font-family: inherit; font-size: var(--text-body); line-height: var(--text-body-line);
+  resize: vertical;
+}
+.text:focus { border-color: var(--coral); outline: none; }
+
+.primary {
+  min-block-size: var(--touch-parent);
+  border: none; border-radius: var(--r-input);
+  background: var(--coral); color: var(--ink);
+  font-family: inherit; font-weight: var(--weight-bold);
+}
+.primary:disabled { background: var(--disabled-bg); color: var(--disabled-fg); }
+
+.done {
+  margin: 0; display: flex; align-items: center; gap: var(--space-2);
+  padding: var(--space-4); border-radius: var(--r-card);
+  background: var(--mint-tint); color: var(--ink);
+}
+.done svg { color: var(--ink); flex: none; }
+
+/* ── گفت‌وگو ─────────────────────────────────────────────────── */
+.thread { display: flex; flex-direction: column; gap: var(--space-2); }
+
+.bubble {
+  max-inline-size: 85%;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--r-card);
+  background: var(--surface);
+  border: 1px solid var(--card-border);
+  box-shadow: var(--shadow-md);
+  display: flex; flex-direction: column; gap: var(--space-1);
+}
+
+.bubbleMine {
+  align-self: flex-start;
+  background: var(--coral-tint);
+  border-color: transparent;
+}
+
+.bubbleBody { margin: 0; color: var(--ink); }
+
+.bubbleMeta {
+  color: var(--ink-muted);
+  display: flex; align-items: center; gap: var(--space-1);
+  font-variant-numeric: tabular-nums;
+}
+.bubbleMeta svg { color: var(--ink); flex: none; }
+
+.composer { display: flex; flex-direction: column; gap: var(--space-2); }
+.error { margin: 0; color: var(--ink); }
+
+/* ── اعلام پرداخت — بخش ۸ ───────────────────────────────────── */
+
+.invoice { display: flex; flex-direction: column; gap: var(--space-2); }
+.invoice + .invoice { border-block-start: 1px solid var(--border); padding-block-start: var(--space-2); }
+
+/*
+ * مسیر فرعی — ارتقای ۱.
+ *
+ * تا پیش از درگاه، این کنش اصلی کارت بود. حالا زیر «پرداخت آنلاین»
+ * می‌نشیند و مرزش خنثی است، نه مرجانی: هم‌وزن نیست و نباید به نظر
+ * برسد.
+ */
+.declare {
+  min-block-size: var(--touch-parent);
+  border: 1px solid var(--border-input);
+  border-radius: var(--r-input);
+  background: var(--surface);
+  color: var(--ink);
+  font-family: inherit;
+  font-weight: var(--weight-bold);
+}
+
+/*
+ * لحن انتظار، نه موفقیت: تا مدیر تأیید نکرده، پرداخت ثبت نشده. سبز
+ * گفتن «تمام شد» در حالی که هنوز تمام نشده، بدترین کاری است که این
+ * صفحه می‌تواند بکند.
+ */
+.claimState {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--r-input);
+  background: var(--mango-tint);
+  color: var(--ink);
+}
+
+.rejected { background: var(--brick-tint); border-color: transparent; }
+
+.sheetBackdrop {
+  position: fixed; inset: 0; z-index: 30;
+  background: rgba(19, 39, 47, .45);
+  display: flex; align-items: flex-end;
+}
+
+.sheet {
+  inline-size: 100%;
+  background: var(--surface);
+  border-start-start-radius: var(--r-card);
+  border-start-end-radius: var(--r-card);
+  box-shadow: var(--shadow-lg);
+  padding: var(--space-5) var(--space-4) var(--space-6);
+  display: flex; flex-direction: column; gap: var(--space-3);
+  max-block-size: 90dvh; overflow-y: auto;
+}
+
+.sheetTitle { margin: 0; font-family: var(--font); font-weight: var(--weight-black); }
+
+.input {
+  min-block-size: var(--touch-parent);
+  padding-inline: var(--space-3);
+  border: 1px solid var(--border-input);
+  border-radius: var(--r-input);
+  background: var(--surface);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: var(--text-body);
+  font-variant-numeric: tabular-nums;
+}
+.input:focus { border-color: var(--coral); outline: none; }
+
+.receipt {
+  inline-size: 100%;
+  max-block-size: 240px;
+  object-fit: contain;
+  border-radius: var(--r-avatar);
+  background: var(--neutral-fill);
+  color: var(--ink);
+}
+
+.pickReceipt {
+  min-block-size: var(--touch-parent);
+  border: 1px dashed var(--border);
+  border-radius: var(--r-input);
+  background: var(--surface);
+  color: var(--ink);
+  font-family: inherit;
+}
+
+/* با انتخاب عکس، خط‌چین به خط پیوسته تبدیل می‌شود. */
+.pickReceiptDone { border-style: solid; border-color: var(--coral); }
+
+.hiddenInput {
+  position: absolute; inline-size: 1px; block-size: 1px;
+  padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%);
+}
+
+.sheetActions { display: flex; gap: var(--space-2); margin-block-start: var(--space-2); }
+
+.secondary {
+  flex: 1; min-block-size: var(--touch-parent);
+  border: 1px solid var(--border-input); border-radius: var(--r-input);
+  background: var(--surface); color: var(--ink); font-family: inherit;
+}
+
+.sheetActions .primary { flex: 2; }
+
+/* ------------------------------------------------------------
+   درخواست مصرف دارو — ارتقای ۳ سند بررسی طراحی
+   ------------------------------------------------------------ */
+.medList {
+  display: grid;
+  gap: var(--space-3);
+  margin-block-end: var(--space-4);
+}
+
+.medCard {
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+  padding: var(--space-3) var(--space-4);
+  display: grid;
+  gap: var(--space-1);
+}
+
+.medName { margin: 0; font-weight: var(--weight-bold); color: var(--ink); }
+.medTimes { margin: 0; color: var(--ink-muted); font-variant-numeric: tabular-nums; }
+
+/*
+ * نوار سه‌مرحله‌ای. مرحله انجام‌نشده تینت انبه‌ای می‌گیرد، نه متن رنگی:
+ * قاعده بخش ۱۲.۲ می‌گوید گلیف همیشه --ink است.
+ */
+.medSteps {
+  list-style: none;
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.medSteps li {
+  font-size: var(--text-caption);
+  font-weight: var(--weight-bold);
+  padding: 2px var(--space-3);
+  border-radius: var(--r-chip);
+  border: 1px solid transparent;
+  color: var(--ink);
+}
+
+.medStepDone { background: var(--mint-tint); border-color: var(--mint); }
+.medStepWait { background: var(--mango-tint); border-color: var(--mango); }
+
+.medCancel {
+  justify-self: start;
+  margin-block-start: var(--space-2);
+  min-block-size: var(--touch-parent);
+  padding-inline: var(--space-3);
+  border: 1px solid var(--border-input);
+  border-radius: var(--r-input);
+  background: var(--surface);
+  color: var(--ink);
+  font-family: inherit;
+  font-weight: var(--weight-bold);
+}
+
+.medTimeRow {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  margin-block-end: var(--space-2);
+}
+
+.medTimeRow .input { flex: 1; }
+
+.medTimeRemove {
+  flex: none;
+  inline-size: var(--touch-parent);
+  block-size: var(--touch-parent);
+  border: 1px solid var(--border-input);
+  border-radius: var(--r-input);
+  background: var(--surface);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: var(--text-body-lg);
+}
+
+.medAddTime {
+  justify-self: start;
+  min-block-size: var(--touch-parent);
+  padding-inline: var(--space-3);
+  border: 1px dashed var(--border-input);
+  border-radius: var(--r-input);
+  background: none;
+  color: var(--ink);
+  font-family: inherit;
+  font-weight: var(--weight-bold);
+  margin-block-end: var(--space-4);
+}
+
+/* ------------------------------------------------------------
+   پرداخت آنلاین — ارتقای ۱ سند بررسی طراحی
+
+   کنش اصلی کارت صورتحساب. «پرداخت کردم، ولی نه از اینجا» زیرش و
+   کوچک‌تر می‌نشیند: مسیر فرعی است، نه هم‌وزن.
+   ------------------------------------------------------------ */
+.payOnline {
+  inline-size: 100%;
+  min-block-size: var(--touch-parent);
+  margin-block-start: var(--space-3);
+  border: none;
+  border-radius: var(--r-input);
+  background: var(--coral);
+  color: var(--ink);
+  font-family: inherit;
+  font-weight: var(--weight-bold);
+}
+
+.payAmount {
+  margin: var(--space-2) 0 0;
+  color: var(--ink);
+  font-weight: var(--weight-black);
+  font-variant-numeric: tabular-nums;
+}
+
+.payDone {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: var(--space-2) 0 0;
+  color: var(--ink);
+  font-weight: var(--weight-bold);
+}
+
+/*
+ * کد رهگیری. تنها چیزی که والد ممکن است بخواهد یادداشت کند یا بخواند،
+ * پس درشت‌تر و با ارقام هم‌عرض.
+ */
+.trackingCode {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--mint);
+  border-radius: var(--r-input);
+  background: var(--mint-tint);
+  color: var(--ink);
+  font-weight: var(--weight-bold);
+  font-variant-numeric: tabular-nums;
+}
+
+.ghost {
+  inline-size: 100%;
+  min-block-size: var(--touch-parent);
+  border: 1px solid var(--border-input);
+  border-radius: var(--r-input);
+  background: var(--surface);
+  color: var(--ink);
+  font-family: inherit;
+  font-weight: var(--weight-bold);
+}
