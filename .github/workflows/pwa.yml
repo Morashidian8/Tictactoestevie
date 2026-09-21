@@ -14,7 +14,7 @@ on:
       - "pwa/**"
       - "polybot_web/**"
       - "wallet_tracker/webui/**"
-      - "kindergarten/**"
+      - "kindergarten_site/**"
       - "build_pwa.py"
       - ".github/workflows/pwa.yml"
   schedule:
@@ -103,25 +103,26 @@ jobs:
             echo '<meta http-equiv="refresh" content="0; url=./hse/"></head>' >> site/index.html
             echo '<body>در حال انتقال به اپ بازدید ایمنی... <a href="./hse/">ورود</a></body></html>' >> site/index.html
           fi
-      # ── سامانه مدیریت مهدکودک، زیر /kindergarten/ ──────────────────
+      # ── سامانه مدیریت مهدکودک: دو مهدِ نمایشی ──────────────────────
       # نسخه نمایشی است: لایه داده محلی با یک کلاس نمونه، بدون سرور.
       # میزبانی واقعی محصول طبق بند ۱۰.۲ سند باید داخل کشور باشد؛ این
       # نشانی فقط برای بازبینی است.
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-          cache: npm
-          cache-dependency-path: kindergarten/package-lock.json
-      - name: Build kindergarten PWA
-        env:
-          BASE_PATH: /Tictactoestevie/kindergarten/
-          VITE_DEMO: "1"
+      #
+      # اینجا دیگر بیلد نمی‌شود. سورس به مخزن خصوصی Mahd_app- رفته و
+      # Pages روی مخزن خصوصی اشتراک پولی می‌خواهد، پس بیلد روی دستگاه
+      # گرفته می‌شود و خروجیِ آماده در kindergarten_site/ می‌آید. شرح
+      # کامل و فرمانِ ساختِ دوباره در kindergarten_site/README.md است.
+      #
+      # دو پوشه یعنی دو اپِ نصب‌شدنیِ جدا — دو مهد، با نام و نشان و
+      # حافظهٔ جدا — تا جداسازیِ چندمهدی روی گوشیِ واقعی آزموده شود.
+      - name: Publish kindergarten demo apps
         run: |
-          cd kindergarten
-          npm ci
-          npm run build
-          mkdir -p ../site/kindergarten
-          cp -r dist/* ../site/kindergarten/
+          for centre in kindergarten kindergarten2; do
+            test -f "kindergarten_site/$centre/index.html" \
+              || { echo "خروجی $centre نیست"; exit 1; }
+            mkdir -p "site/$centre"
+            cp -r "kindergarten_site/$centre/." "site/$centre/"
+          done
 
       - uses: actions/configure-pages@v5
         with:
