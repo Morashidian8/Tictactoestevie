@@ -1,0 +1,1 @@
+const e="kg.dev.liap";function a(){try{const t=localStorage.getItem(e);return t?JSON.parse(t):[]}catch{return[]}}function n(t){try{localStorage.setItem(e,JSON.stringify(t))}catch{}}let r=0;const o=t=>`${t}-${Date.now().toString(36)}-${r+=1}`;export{o as n,a as r,n as w};
