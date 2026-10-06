@@ -1215,7 +1215,26 @@
   .hero-pipe .hp-wheel{ transform-origin:170px 6px; transform-box:view-box; animation:spin 6s linear infinite; }
   .hero-pipe .hp-dot{ fill:#22FF88; animation:blink 1.6s ease-in-out infinite; }
   @keyframes blink{ 50%{ opacity:.2; } }
-  .hero-stats{ position:relative; display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-top:8px; }
+  .hero-stats{ position:relative; display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:8px; }
+  .kpi-main{ position:relative; display:flex; align-items:center; gap:14px; margin-top:8px; padding:12px 14px; border-radius:18px;
+    background:linear-gradient(135deg, rgba(34,255,136,.16), rgba(34,255,136,.04)); border:1px solid rgba(34,255,136,.35);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.06), 0 10px 30px -14px rgba(34,255,136,.45); }
+  .km-num{ display:flex; align-items:baseline; gap:5px; flex-shrink:0; }
+  .km-num b{ font-size:40px; font-weight:800; line-height:1;
+    background:linear-gradient(180deg,#ffffff,#22FF88); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;
+    filter:drop-shadow(0 0 14px rgba(34,255,136,.35)); }
+  .km-num span{ font-size:14px; font-weight:800; color:var(--neon); }
+  .km-txt{ flex:1; min-width:0; }
+  .km-t{ font-size:13.5px; font-weight:800; color:#fff; line-height:1.6; }
+  .km-s{ font-size:11px; color:var(--txt2); margin-top:2px; }
+  .kpi-sample{ position:absolute; top:-9px; left:12px; font-size:10px; font-weight:800; color:#1b1200; background:#FFC94D;
+    border-radius:20px; padding:2px 9px; box-shadow:0 4px 12px -4px rgba(255,201,77,.6); }
+  .kpi-sample[hidden]{ display:none; }
+  .rep-sample{ font-size:10px; font-weight:800; color:#1b1200; background:#FFC94D; border-radius:20px; padding:3px 9px; margin-left:6px; }
+  html[data-theme="light"] .kpi-main{ background:linear-gradient(135deg,#DDF8EA,#F3FDF8); border-color:rgba(15,174,102,.35); box-shadow:0 8px 22px -14px rgba(15,174,102,.6); }
+  html[data-theme="light"] .km-num b{ background:linear-gradient(180deg,#0E1B2E,#0FAE66); -webkit-background-clip:text; background-clip:text; filter:none; }
+  html[data-theme="light"] .km-num span{ color:#0a8f52; }
+  html[data-theme="light"] .km-t{ color:#0E1B2E; }
   .hs{ text-align:center; background:rgba(255,255,255,.035); border:1px solid var(--line); border-radius:14px; padding:9px 2px 8px; }
   .hs b{ display:block; font-size:19px; font-weight:800; line-height:1.2;
     background:linear-gradient(180deg,#ffffff,#8affc4); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; }
@@ -1235,13 +1254,14 @@
   /* ---------- سیستم حرکت: ورود صفحات و کارت‌ها ---------- */
   @keyframes riseIn{ from{ opacity:0; transform:translateY(16px); } to{ opacity:1; transform:none; } }
   @keyframes popIn{ from{ opacity:0; transform:translateY(14px) scale(.96); } to{ opacity:1; transform:none; } }
-  .page.active > .container > *{ animation:riseIn .55s var(--ease-out) both; }
+  /* fill-mode: backwards (نه both) — پس از پایان انیمیشن، کارت لایهٔ مستقل (stacking context) نمی‌ماند تا منوهای کشویی زیر کارت بعدی نروند */
+  .page.active > .container > *{ animation:riseIn .55s var(--ease-out) backwards; }
   .page.active > .container > *:nth-child(2){ animation-delay:.06s; }
   .page.active > .container > *:nth-child(3){ animation-delay:.12s; }
   .page.active > .container > *:nth-child(4){ animation-delay:.18s; }
   .page.active > .container > *:nth-child(5){ animation-delay:.24s; }
   .page.active > .container > *:nth-child(n+6){ animation-delay:.3s; }
-  .page.active .axes > .axis, .page.active .quick > .q-tile, .page.active .toolrows > .toolrow, .page.active .hero-stats > .hs{ animation:popIn .5s var(--ease-out) both; }
+  .page.active .axes > .axis, .page.active .quick > .q-tile, .page.active .toolrows > .toolrow, .page.active .hero-stats > .hs, .page.active .kpi-main{ animation:popIn .5s var(--ease-out) backwards; }
   .page.active .axes > .axis:nth-child(1), .page.active .quick > .q-tile:nth-child(1), .page.active .toolrows > .toolrow:nth-child(1), .page.active .hero-stats > .hs:nth-child(1){ animation-delay:.10s; }
   .page.active .axes > .axis:nth-child(2), .page.active .quick > .q-tile:nth-child(2), .page.active .toolrows > .toolrow:nth-child(2), .page.active .hero-stats > .hs:nth-child(2){ animation-delay:.16s; }
   .page.active .axes > .axis:nth-child(3), .page.active .quick > .q-tile:nth-child(3), .page.active .toolrows > .toolrow:nth-child(3), .page.active .hero-stats > .hs:nth-child(3){ animation-delay:.22s; }
@@ -1261,10 +1281,10 @@
     .axis:hover, .toolrow:hover, .q-tile:hover{ transform:translateY(-3px); border-color:color-mix(in srgb, var(--c, var(--neon)) 45%, var(--line)); }
   }
   /* نمودارها */
-  .page.active .bar-fill{ transform-origin:bottom; animation:growUp .9s var(--ease-out) both; }
+  .page.active .bar-fill{ transform-origin:bottom; animation:growUp .9s var(--ease-out) backwards; }
   .page.active .bar:nth-child(2) .bar-fill{ animation-delay:.1s; } .page.active .bar:nth-child(3) .bar-fill{ animation-delay:.2s; } .page.active .bar:nth-child(4) .bar-fill{ animation-delay:.3s; }
   @keyframes growUp{ from{ transform:scaleY(0); } to{ transform:scaleY(1); } }
-  .page.active .donut{ animation:donutIn 1s var(--ease-out) .2s both; }
+  .page.active .donut{ animation:donutIn 1s var(--ease-out) .2s backwards; }
   @keyframes donutIn{ from{ opacity:0; transform:rotate(-120deg) scale(.7); } to{ opacity:1; transform:none; } }
   /* نوار پایین: نشانگر فعال */
   .bn-item{ position:relative; }
@@ -1435,11 +1455,15 @@
       <circle class="hp-dot" cx="318" cy="7" r="2.4"/>
       <circle class="hp-dot" cx="22" cy="7" r="2.4" style="animation-delay:.8s"/>
     </svg>
+    <div class="kpi-main">
+      <div class="km-num"><b id="kpiDays">۰</b><span>روز</span></div>
+      <div class="km-txt"><div class="km-t">بدون حادثهٔ منجر به ازکارافتادگی</div><div class="km-s" id="kpiSince"></div></div>
+      <span class="kpi-sample" id="kpiSample">داده نمونه</span>
+    </div>
     <div class="hero-stats">
-      <div class="hs"><b data-count="22">۲۲</b><span>ابزار تخصصی</span></div>
-      <div class="hs"><b data-count="200">۲۰۰</b><span>سؤال آزمون</span></div>
-      <div class="hs"><b data-count="220">۲۲۰</b><span>سمت سازمانی</span></div>
-      <div class="hs"><b data-count="28">۲۸</b><span>قلم PPE</span></div>
+      <div class="hs"><b id="kpiHours">۰</b><span>میلیون نفر-ساعت ایمن</span></div>
+      <div class="hs"><b id="kpiPermits">۰</b><span>پرمیت این ماه</span></div>
+      <div class="hs"><b id="kpiGas">۰</b><span>گازسنجی این ماه</span></div>
     </div>
   </div>
 
@@ -1523,7 +1547,7 @@
   <!-- ۶) گزارش ماهانه HSE -->
   <div class="sec-head"><span class="sh-bar" style="background:var(--blue)"></span>
     <div class="sh-txt"><div class="sh-t">گزارش ماهانه HSE</div><div class="sh-s">عملکرد واحد عملیات</div></div>
-    <span class="sh-badge">خرداد ۱۴۰۵</span></div>
+    <span class="rep-sample" data-sample-badge>داده نمونه</span><span class="sh-badge">خرداد ۱۴۰۵</span></div>
   <div class="report-card">
     <div class="rep-stats">
       <div class="rstat"><span class="rs-ico" style="--c:#3FD0FF">📋</span><span class="rs-lbl">پرمیت صادرشده</span><span class="rs-num">۸۴</span><span class="rs-trend up">▲ ۱۲٪</span></div>
@@ -5304,16 +5328,49 @@ function bindSplash(sp){
   sp.addEventListener('animationend', function(e){ if(e.target===sp && e.animationName==='spOut') splashDone(); });
   setTimeout(function(){ if(document.getElementById('splash')===sp) splashDone(); }, 3300);
 }
-// شمارنده‌ی اعداد هیرو
+/* ===== شاخص‌های HSE صفحهٔ خانه — تنها جای ویرایش اعداد =====
+   lastIncident: تاریخ شمسی آخرین حادثهٔ منجر به ازکارافتادگی (LTI)؛ «روز بدون حادثه» هر روز خودکار محاسبه می‌شود.
+   sample: تا وقتی اعداد واقعی نیامده true بماند (برچسب «داده نمونه» نمایش داده می‌شود). */
+var HSE_KPI = {
+  sample: true,
+  lastIncident: '1405/01/01',
+  manHoursMillion: 1.2,
+  permitsThisMonth: 84,
+  gasTestsThisMonth: 210
+};
+function jalaliToGregorian(jy,jm,jd){
+  var gy=(jy<=979)?621:1600; jy-=(jy<=979)?0:979;
+  var days=(365*jy)+(Math.floor(jy/33)*8)+Math.floor(((jy%33)+3)/4)+78+jd+((jm<7)?(jm-1)*31:((jm-7)*30)+186);
+  gy+=400*Math.floor(days/146097); days%=146097;
+  if(days>36524){ days--; gy+=100*Math.floor(days/36524); days%=36524; if(days>=365) days++; }
+  gy+=4*Math.floor(days/1461); days%=1461;
+  if(days>365){ gy+=Math.floor((days-1)/365); days=(days-1)%365; }
+  var gd=days+1, ml=[0,31,((gy%4===0&&gy%100!==0)||(gy%400===0))?29:28,31,30,31,30,31,31,30,31,30,31], gm;
+  for(gm=0;gm<13&&gd>ml[gm];gm++) gd-=ml[gm];
+  return [gy,gm,gd];
+}
+function kpiDaysSince(jdate){
+  var p=String(jdate).replace(/[۰-۹]/g,function(d){return '۰۱۲۳۴۵۶۷۸۹'.indexOf(d);}).split('/').map(Number);
+  var g=jalaliToGregorian(p[0],p[1],p[2]);
+  var then=new Date(g[0],g[1]-1,g[2]), now=new Date(); now=new Date(now.getFullYear(),now.getMonth(),now.getDate());
+  return Math.max(0, Math.round((now-then)/86400000));
+}
+function kpiFmt(v,dec){ return faDigits(dec? v.toFixed(dec).replace('.','٫') : Math.round(v)); }
+// شمارنده‌ی اعداد هیرو (از صفر تا مقدار)
 function heroCount(){
-  var els=document.querySelectorAll('.hero-stats b[data-count]');
+  var K=HSE_KPI, items=[
+    ['kpiDays', kpiDaysSince(K.lastIncident), 0], ['kpiHours', K.manHoursMillion, 1],
+    ['kpiPermits', K.permitsThisMonth, 0], ['kpiGas', K.gasTestsThisMonth, 0]];
+  var s=document.getElementById('kpiSince'); if(s) s.textContent='از '+faDigits(K.lastIncident)+' تا امروز';
+  var sb=document.getElementById('kpiSample'); if(sb) sb.hidden=!K.sample;
+  document.querySelectorAll('[data-sample-badge]').forEach(function(e){ e.style.display=K.sample?'':'none'; });
   var reduce=false; try{ reduce=window.matchMedia('(prefers-reduced-motion: reduce)').matches; }catch(e){}
-  els.forEach(function(el){
-    var to=+el.getAttribute('data-count');
-    if(reduce || !window.requestAnimationFrame){ el.textContent=faDigits(to); return; }
-    var t0=null, dur=1200;
-    function step(t){ if(!t0) t0=t; var p=Math.min(1,(t-t0)/dur); var e=1-Math.pow(1-p,3);
-      el.textContent=faDigits(Math.round(to*e)); if(p<1) requestAnimationFrame(step); }
+  items.forEach(function(it){
+    var el=document.getElementById(it[0]); if(!el) return; var to=it[1], dec=it[2];
+    if(reduce || !window.requestAnimationFrame){ el.textContent=kpiFmt(to,dec); return; }
+    var t0=null, dur=1300;
+    function step(t){ if(!t0) t0=t; var p=Math.min(1,(t-t0)/dur), e=1-Math.pow(1-p,3);
+      el.textContent=kpiFmt(to*e,dec); if(p<1) requestAnimationFrame(step); }
     requestAnimationFrame(step);
   });
 }
