@@ -1300,6 +1300,161 @@
     .splash{ display:none !important; }
     body::after{ animation:none; }
   }
+
+  /* ============================================================
+     ================  آتش‌نشانی: سه ابزار جدید  ================
+     ============================================================ */
+  .seg button small{ display:block; font-size:10.5px; font-weight:600; opacity:.7; margin-top:2px; }
+  .seg.seg-sm{ margin-top:8px; }
+  .seg.seg-sm button{ min-width:0; padding:7px 6px; font-size:13px; }
+  .gf-seg button{ min-width:120px; }
+  .gf-rule{ display:flex; gap:12px; align-items:flex-start; padding:14px; border-radius:18px; margin-bottom:14px;
+    background:linear-gradient(135deg, rgba(255,90,90,.18), rgba(255,90,90,.05)); border:1px solid rgba(255,90,90,.45);
+    font-size:13px; line-height:2; color:var(--txt); box-shadow:0 12px 30px -16px rgba(255,90,90,.5); }
+  .gf-rule-ico{ flex-shrink:0; width:34px; height:34px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+    background:#FF5A5A; color:#fff; font-weight:900; font-size:20px; animation:gfPulse 1.8s ease-in-out infinite; }
+  @keyframes gfPulse{ 0%,100%{ box-shadow:0 0 0 0 rgba(255,90,90,.6); } 60%{ box-shadow:0 0 0 9px rgba(255,90,90,0); } }
+  .gf-q + .gf-q{ margin-top:16px; padding-top:14px; border-top:1px solid var(--line); }
+  .gf-qt{ display:flex; align-items:center; gap:9px; font-size:14px; font-weight:800; color:var(--txt); margin-bottom:10px; line-height:1.7; }
+  .gf-n{ flex-shrink:0; width:24px; height:24px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:12px;
+    background:rgba(255,90,90,.18); color:#FF8a8a; border:1px solid rgba(255,90,90,.4); }
+  .gf-wait{ text-align:center; font-size:13px; color:var(--txt2); padding:14px; border:1px dashed var(--line2); border-radius:14px; margin-top:12px; }
+  .gf-sec h3{ display:flex; align-items:center; gap:8px; }
+  .gf-s1 h3{ color:#FF9500 !important; } .gf-s2 h3{ color:#FF5A5A !important; } .gf-s3 h3{ color:#FFC94D !important; }
+  .gf-s4 h3{ color:#3FD0FF !important; } .gf-s5 h3{ color:var(--neon2) !important; }
+  .gf-links{ display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
+  .gf-links button, .gf-inl{ font-family:inherit; font-size:12.5px; font-weight:700; cursor:pointer; border-radius:20px; padding:7px 13px;
+    background:var(--glass2); border:1px solid var(--line2); color:var(--neon); }
+  .gf-inl{ padding:3px 10px; font-size:11.5px; }
+  .gf-ct{ font-size:16px; font-weight:800; color:#fff; }
+  .gf-cs{ font-size:12px; color:var(--txt2); margin:4px 0 12px; line-height:1.8; }
+  .gf-row2{ display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:14px; }
+  .gf-out{ display:flex; align-items:center; gap:12px; margin-top:14px; }
+  .gf-rings{ width:44%; max-width:190px; flex-shrink:0; }
+  .gf-ring-fl{ fill:#ffb020; filter:drop-shadow(0 0 6px #ff7a00); }
+  .gf-legend{ flex:1; display:flex; flex-direction:column; gap:8px; min-width:0; }
+  .gf-zone{ display:grid; grid-template-columns:12px auto 1fr; grid-template-areas:"c q r" ". t t"; column-gap:7px; row-gap:1px; align-items:center; font-size:12px; }
+  .gz-c{ grid-area:c; width:12px; height:12px; border-radius:4px; }
+  .gz-q{ grid-area:q; font-weight:800; color:var(--txt); direction:ltr; }
+  .gz-r{ grid-area:r; justify-self:end; font-weight:800; font-size:14px; color:#fff; direction:ltr; }
+  .gz-t{ grid-area:t; font-size:10.5px; color:var(--txt2); line-height:1.6; }
+  .gf-note{ font-size:11.5px; color:var(--txt2); line-height:1.9; margin-top:10px; padding:10px 12px; border-radius:12px; background:rgba(255,201,77,.08); border:1px solid rgba(255,201,77,.22); }
+  html[data-theme="light"] .gf-ct, html[data-theme="light"] .gz-r{ color:#0E1B2E; }
+  html[data-theme="light"] .gf-rule{ background:linear-gradient(135deg,#FFE9E9,#FFF6F6); }
+  html[data-theme="light"] .gf-n{ color:#c5221f; }
+  html[data-theme="light"] .gf-s1 h3{ color:#b96b00 !important; } html[data-theme="light"] .gf-s3 h3{ color:#9a7400 !important; }
+  html[data-theme="light"] .gf-s4 h3{ color:#1481a8 !important; } html[data-theme="light"] .gf-s2 h3{ color:#c5221f !important; }
+
+  /* --- محاسبه کپسول --- */
+  .ec-dims{ display:grid; grid-template-columns:1fr 1fr .7fr; gap:10px; }
+  .ec-cls button{ min-width:86px; }
+  .ec-warn{ margin-top:12px; padding:12px 14px; border-radius:14px; font-size:12.5px; line-height:1.9; color:var(--txt);
+    background:rgba(255,149,0,.10); border:1px solid rgba(255,149,0,.35); }
+  .ec-hero{ display:flex; align-items:center; gap:16px; margin-top:12px; padding:16px; border-radius:20px;
+    background:linear-gradient(135deg, rgba(255,90,90,.16), rgba(255,149,0,.06)); border:1px solid rgba(255,90,90,.35); }
+  .ec-big{ display:flex; align-items:baseline; gap:6px; }
+  .ec-big b{ font-size:46px; font-weight:800; line-height:1; color:#fff; }
+  .ec-big span{ font-size:14px; font-weight:800; color:#FF8a8a; }
+  .ec-sub{ font-size:13px; color:var(--txt); line-height:1.8; } .ec-sub small{ color:var(--txt2); }
+  .ec-plan{ display:block; width:100%; height:auto; margin:6px 0 4px; }
+  .ec-room{ fill:rgba(63,208,255,.05); stroke:var(--txt2); stroke-width:1.4; }
+  .ec-cov{ fill:rgba(255,90,90,.07); stroke:rgba(255,90,90,.45); stroke-width:1; stroke-dasharray:3 3; }
+  .ec-pt circle{ fill:#FF3B3B; stroke:#fff; stroke-width:1.5; } .ec-pt .ec-pt-in{ fill:#fff; stroke:none; }
+  .page.active .ec-pt{ animation:popIn .45s var(--ease-out) backwards; }
+  .ec-dim{ font-size:11px; fill:var(--txt); text-anchor:middle; font-weight:700; }
+  .ec-dim2{ font-size:10px; fill:var(--txt2); text-anchor:middle; }
+  html[data-theme="light"] .ec-big b{ color:#0E1B2E; }
+  html[data-theme="light"] .ec-hero{ background:linear-gradient(135deg,#FFE9E9,#FFF5EC); }
+  html[data-theme="light"] .ec-big span{ color:#c5221f; }
+
+  /* --- آموزش PASS --- */
+  .pass-card{ padding:12px; }
+  .pass-stage{ position:relative; border-radius:16px; overflow:hidden;
+    background:radial-gradient(120% 90% at 75% 100%, rgba(255,120,40,.18), transparent 60%), linear-gradient(180deg,#0b1a30,#0a1426); }
+  .pass-svg{ display:block; width:100%; height:auto; }
+  .ps-ground{ stroke:rgba(255,255,255,.18); stroke-width:2; }
+  .ps-big{ font-size:15px; font-weight:900; fill:rgba(255,255,255,.14); text-anchor:middle; letter-spacing:6px; }
+  .ps-wind path{ fill:none; stroke:#3FD0FF; stroke-width:2.2; stroke-linecap:round; stroke-linejoin:round; animation:psWind 1.6s ease-in-out infinite; }
+  .ps-wind text{ font-size:10px; fill:#3FD0FF; text-anchor:middle; font-weight:700; }
+  @keyframes psWind{ 0%,100%{ transform:translateX(0); opacity:.6; } 50%{ transform:translateX(5px); opacity:1; } }
+  .ps-dist path{ fill:none; stroke:rgba(255,255,255,.35); stroke-width:1.2; }
+  .ps-dist text{ font-size:10px; fill:#cfe0f5; text-anchor:middle; paint-order:stroke; stroke:#0a1426; stroke-width:4px; }
+  .ps-dist, .ps-wind{ transition:opacity .4s; }
+  .pass-stage:not([data-step="0"]):not([data-step="2"]) .ps-dist{ opacity:0; }
+  .pass-stage:not([data-step="0"]) .ps-wind{ opacity:.35; }
+  /* آتش */
+  .ps-fire{ transform-box:view-box; transform-origin:250px 204px; transition:transform 2.4s cubic-bezier(.5,0,.3,1), opacity 2.4s; }
+  .ps-fl{ fill:url(#psFlame); transform-box:view-box; transform-origin:250px 204px; animation:psFlick .5s ease-in-out infinite alternate; }
+  .ps-fl.f1{ animation-duration:.42s; } .ps-fl.f3{ animation-duration:.37s; animation-delay:.1s; }
+  .ps-core{ fill:#fff3b0; opacity:.85; transform-box:view-box; transform-origin:250px 204px; animation:psFlick .3s ease-in-out infinite alternate; }
+  .ps-ember{ fill:rgba(255,120,30,.45); }
+  @keyframes psFlick{ from{ transform:scale(1,1) skewX(0deg); } to{ transform:scale(.94,1.08) skewX(-3deg); } }
+  .pass-stage[data-step="4"] .ps-fire{ transform:scale(.05); opacity:0; transition-delay:.6s; }
+  .ps-smoke circle{ fill:rgba(190,200,215,.35); }
+  .ps-smoke{ opacity:0; transition:opacity 1s 1.8s; }
+  .pass-stage[data-step="4"] .ps-smoke{ opacity:1; animation:psSmoke 3s ease-out 1.8s infinite; }
+  @keyframes psSmoke{ from{ transform:translateY(0); opacity:.9; } to{ transform:translateY(-30px); opacity:0; } }
+  /* هدف */
+  .ps-target{ opacity:0; transition:opacity .3s; }
+  .ps-target circle{ fill:none; stroke:#22FF88; stroke-width:2; }
+  .ps-target circle:first-child{ animation:psTarget 1.2s ease-out infinite; transform-box:fill-box; transform-origin:center; }
+  .ps-target text{ font-size:10px; fill:#22FF88; text-anchor:middle; font-weight:800; paint-order:stroke; stroke:#0a1426; stroke-width:4px; }
+  @keyframes psTarget{ from{ transform:scale(.6); opacity:1; } to{ transform:scale(1.8); opacity:0; } }
+  .ps-aimline{ stroke:#22FF88; stroke-width:1.6; stroke-dasharray:5 5; opacity:0; animation:flow .8s linear infinite; }
+  .pass-stage[data-step="2"] .ps-target, .pass-stage[data-step="2"] .ps-aimline{ opacity:1; }
+  /* کپسول */
+  .ps-label{ fill:#f4f1e8; } .ps-ltxt{ font-size:11px; font-weight:900; fill:#1F4E79; text-anchor:middle; } .ps-ltxt2{ font-size:9px; font-weight:700; fill:#333; text-anchor:middle; direction:ltr; unicode-bidi:bidi-override; }
+  .ps-metal{ fill:#9aa6b4; } .ps-gauge{ fill:#f4f1e8; stroke:#556; stroke-width:1.5; } .ps-needle{ stroke:#1d9b52; stroke-width:1.6; stroke-linecap:round; }
+  .ps-handle{ fill:none; stroke:#2b2f36; stroke-width:5; stroke-linecap:round; }
+  .ps-lever{ transform-box:view-box; transform-origin:52px 60px; transition:transform .35s var(--ease-out); }
+  .pass-stage[data-step="3"] .ps-lever, .pass-stage[data-step="4"] .ps-lever{ transform:rotate(9deg); }
+  .ps-ring{ fill:none; stroke:#e9c43c; stroke-width:2.6; } .ps-rod{ stroke:#e9c43c; stroke-width:2.2; } .ps-seal{ fill:#22c55e; }
+  .ps-pin{ transform-box:view-box; transform-origin:96px 64px; transition:transform .7s var(--ease-out), opacity .7s .2s; }
+  .pass-stage:not([data-step="0"]) .ps-pin{ transform:translate(46px,-30px) rotate(40deg); opacity:0; }
+  .pass-stage[data-step="1"] .ps-pin{ opacity:1; transition:transform .9s var(--ease-out); }
+  .ps-hose{ fill:none; stroke:#22262c; stroke-width:5; stroke-linecap:round; }
+  .ps-tip{ fill:#2b2f36; }
+  .ps-cone{ fill:url(#psCone); animation:psCone .25s ease-in-out infinite alternate; transform-box:view-box; transform-origin:138px 74px; }
+  @keyframes psCone{ from{ opacity:.75; transform:scaleY(.9); } to{ opacity:1; transform:scaleY(1.08); } }
+  .ps-noz{ transform-box:view-box; transform-origin:70px 74px; transform:rotate(80deg); transition:transform .9s var(--ease-out); }
+  .pass-stage[data-step="2"] .ps-noz, .pass-stage[data-step="3"] .ps-noz{ transform:rotate(35deg); }
+  .pass-stage[data-step="4"] .ps-noz{ animation:psSweep 1.1s ease-in-out infinite; }
+  @keyframes psSweep{ 0%,100%{ transform:rotate(29deg); } 50%{ transform:rotate(41deg); } }
+  /* پاشش */
+  .ps-spray{ opacity:0; transition:opacity .2s; }
+  .pass-stage[data-step="3"] .ps-spray, .pass-stage[data-step="4"] .ps-spray{ opacity:1; }
+  .ps-pt{ fill:url(#psCloud); transform-box:view-box; transform-origin:138px 74px; animation:psSpray 1s linear infinite; }
+  .ps-pt:nth-child(2){ animation-delay:-.17s; } .ps-pt:nth-child(3){ animation-delay:-.34s; } .ps-pt:nth-child(4){ animation-delay:-.5s; }
+  .ps-pt:nth-child(5){ animation-delay:-.67s; } .ps-pt:nth-child(6){ animation-delay:-.84s; }
+  @keyframes psSpray{ 0%{ transform:translate(0,0) scale(.4); opacity:.95; } 100%{ transform:translate(150px,0) scale(4.2); opacity:0; } }
+  /* کنترل‌ها */
+  .pass-steps{ display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-top:12px; }
+  .pass-steps button{ font-family:inherit; cursor:pointer; border-radius:14px; padding:9px 4px; display:flex; flex-direction:column; align-items:center; gap:2px;
+    background:rgba(255,255,255,.04); border:1.5px solid var(--line2); color:var(--txt2); transition:.2s; }
+  .pass-steps b{ font-size:20px; font-weight:900; line-height:1.1; color:var(--txt); }
+  .pass-steps span{ font-size:11.5px; font-weight:700; }
+  .pass-steps button.on{ border-color:#FF9500; background:rgba(255,149,0,.14); color:#FF9500; box-shadow:0 0 18px -6px #FF9500; }
+  .pass-steps button.on b{ color:#FF9500; }
+  .pass-steps button.done{ border-color:rgba(34,255,136,.4); }
+  .pass-steps button.done b{ color:var(--neon); }
+  .pass-cap{ margin-top:12px; padding:12px 14px; border-radius:14px; background:rgba(255,255,255,.035); border:1px solid var(--line); min-height:92px; }
+  .pc-t{ font-size:15px; font-weight:800; color:#FF9500; margin-bottom:4px; }
+  .pc-d{ font-size:13px; line-height:2; color:var(--txt); }
+  .pass-ctrl{ display:flex; gap:10px; margin-top:12px; }
+  .pass-btn{ flex:1; font-family:inherit; font-size:14px; font-weight:800; cursor:pointer; border-radius:14px; padding:12px; border:none;
+    background:linear-gradient(135deg,#FF9500,#FF5A5A); color:#fff; box-shadow:0 8px 22px -8px rgba(255,120,40,.6); }
+  .pass-btn.ghost{ flex:.6; background:var(--glass2); color:var(--txt2); border:1px solid var(--line2); box-shadow:none; }
+  .pass-chk{ display:flex; gap:10px; padding:9px 0; font-size:13px; line-height:1.9; color:var(--txt); border-bottom:1px solid var(--line); }
+  .pass-chk:last-child{ border-bottom:none; }
+  .pass-chk .ok, .pass-chk .no{ flex-shrink:0; width:22px; height:22px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:900; margin-top:3px; }
+  .pass-chk .ok{ background:rgba(34,255,136,.16); color:var(--neon); } .pass-chk .no{ background:rgba(255,90,90,.16); color:#FF5A5A; }
+  .tetra{ display:grid; grid-template-columns:1fr 1fr; gap:10px; padding:6px 0 12px; }
+  .tt{ border-radius:14px; padding:11px 12px; background:color-mix(in srgb, var(--c) 12%, transparent); border:1px solid color-mix(in srgb, var(--c) 40%, transparent); }
+  .tt b{ display:block; font-size:14px; color:var(--c); } .tt span{ font-size:11.5px; color:var(--txt2); line-height:1.7; }
+  html[data-theme="light"] .pass-steps b{ color:#0E1B2E; }
+  html[data-theme="light"] .pass-steps button{ background:#F4F7FB; }
+  html[data-theme="light"] .pass-cap{ background:#F4F7FB; }
+  html[data-theme="light"] .tt b{ color:color-mix(in srgb, var(--c) 70%, #0E1B2E); }
 </style>
 </head>
 <body>
@@ -1340,6 +1495,9 @@
     <symbol id="i-heart" viewBox="0 0 24 24"><path class="d" d="M19 14c1.5-1.5 3-3.2 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.8 0-3 .5-4.5 2-1.5-1.5-2.7-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4 3 5.5l7 7z"/><path d="M19 14c1.5-1.5 3-3.2 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.8 0-3 .5-4.5 2-1.5-1.5-2.7-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4 3 5.5l7 7z"/><path d="M3.5 11.5h4.2l1.6-3 2.4 6 1.6-3h7.2"/></symbol>
     <symbol id="i-grad" viewBox="0 0 24 24"><path class="d" d="M22 9.5L12 4.5 2 9.5l10 5z"/><path d="M22 9.5L12 4.5 2 9.5l10 5zM6 11.5v5c0 1.5 2.7 3 6 3s6-1.5 6-3v-5M22 9.5v6"/></symbol>
     <symbol id="i-leaf" viewBox="0 0 24 24"><path class="d" d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.5 19 2c1 2 2 4.2 2 8 0 5.5-4.8 10-10 10z"/><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.5 19 2c1 2 2 4.2 2 8 0 5.5-4.8 10-10 10zM2 21c0-3 1.9-5.4 5.1-6 2.4-.5 4.9-2 5.9-3"/></symbol>
+    <symbol id="i-gasfire" viewBox="0 0 24 24"><path class="d" d="M2 16.5h20v4H2z"/><path d="M2 16.5h20M2 20.5h20M6.5 15v7M17.5 15v7"/><path d="M12 13.5c-2 0-3.2-1.3-3.2-3 0-1.9 1.5-2.7 2-4.9.7 1.4 1.6 1.8 1.9 2.9.4-.6.5-1.4.3-2.3 1.4 1 2.2 2.5 2.2 4.1 0 1.8-1.2 3.2-3.2 3.2z"/></symbol>
+    <symbol id="i-plan" viewBox="0 0 24 24"><rect class="d" x="3" y="3" width="18" height="18" rx="2"/><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 12h7M14 12h7M12 3v6M12 15v6"/><circle cx="7.5" cy="7.5" r="1.7" fill="currentColor"/><circle cx="16.5" cy="16.5" r="1.7" fill="currentColor"/></symbol>
+    <symbol id="i-play" viewBox="0 0 24 24"><circle class="d" cx="12" cy="12" r="9.5"/><circle cx="12" cy="12" r="9.5"/><path d="M10 8.3v7.4l6-3.7z" fill="currentColor"/></symbol>
     <symbol id="i-home" viewBox="0 0 24 24"><path d="M3 11l9-8 9 8M5 10v10h14V10M10 20v-5h4v5"/></symbol>
     <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.2"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></symbol>
     <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20.5 14.5A8.5 8.5 0 1 1 9.5 3.5a6.8 6.8 0 0 0 11 11z"/></symbol>
@@ -1417,6 +1575,9 @@
     <button data-page="evac">شعاع تخلیه نشت گاز</button>
     <button data-page="gastable">خواص گازها</button>
     <div class="menu-sec"><span class="ms-dot" style="background:#FF5A5A"></span> آتش‌نشانی</div>
+    <button data-page="gasfire">واکنش به حریق گاز</button>
+    <button data-page="extcalc">تعداد و جانمایی کپسول</button>
+    <button data-page="passtrain">آموزش کار با کپسول (PASS)</button>
     <button data-page="extinguisher">انتخاب کپسول آتش‌نشانی مناسب</button>
     <button data-page="building">تحلیل اطفا و اعلام ساختمان</button>
     <div class="menu-sec"><span class="ms-dot" style="background:#b6a4ff"></span> آزمون و آموزش</div>
@@ -1476,7 +1637,7 @@
       <span class="ax-ico">🛡️</span>
       <span class="ax-name">ایمنی</span>
       <span class="ax-desc">عملیات، فضای محصور، آتش‌نشانی و ریسک</span>
-      <span class="ax-foot"><span class="ax-badge">۲۲ ابزار</span><span class="ax-arrow">←</span></span>
+      <span class="ax-foot"><span class="ax-badge">۲۵ ابزار</span><span class="ax-arrow">←</span></span>
     </button>
     <button class="axis" style="--c:#3FD0FF" onclick="axisSoon('بهداشت حرفه‌ای و طب کار')">
       <span class="ax-ghost">💓</span>
@@ -1666,8 +1827,11 @@
     <button class="toolrow" onclick="goPage('gastable')"><span class="tr-ico" style="--c:#b6a4ff">🧪</span><span class="tr-txt"><span class="tr-name">خواص گازها</span><span class="tr-desc">جدول مرجع گازهای صنعتی</span></span><span class="tr-arrow">‹</span></button>
   </div>
 
-  <div class="sec-head"><span class="sh-bar" style="background:#FF5A5A"></span><div class="sh-txt"><div class="sh-t">آتش‌نشانی</div><div class="sh-s">۲ ابزار</div></div></div>
+  <div class="sec-head"><span class="sh-bar" style="background:#FF5A5A"></span><div class="sh-txt"><div class="sh-t">آتش‌نشانی</div><div class="sh-s">۵ ابزار</div></div></div>
   <div class="toolrows">
+    <button class="toolrow" onclick="goPage('gasfire')"><span class="tr-ico" style="--c:#FF5A5A">🛑</span><span class="tr-txt"><span class="tr-name">واکنش به حریق گاز</span><span class="tr-desc">سناریوی گام‌به‌گام + شعاع تشعشع حرارتی</span></span><span class="tr-arrow">‹</span></button>
+    <button class="toolrow" onclick="goPage('extcalc')"><span class="tr-ico" style="--c:#FF9500">📐</span><span class="tr-txt"><span class="tr-name">تعداد و جانمایی کپسول</span><span class="tr-desc">محاسبه طبق NFPA 10 + نقشهٔ جانمایی</span></span><span class="tr-arrow">‹</span></button>
+    <button class="toolrow" onclick="goPage('passtrain')"><span class="tr-ico" style="--c:#FF9500">🎬</span><span class="tr-txt"><span class="tr-name">آموزش کار با کپسول</span><span class="tr-desc">انیمیشن روش PASS گام‌به‌گام</span></span><span class="tr-arrow">‹</span></button>
     <button class="toolrow" onclick="goPage('extinguisher')"><span class="tr-ico" style="--c:#FF5A5A">🧯</span><span class="tr-txt"><span class="tr-name">انتخاب کپسول آتش‌نشانی</span><span class="tr-desc">خاموش‌کننده مناسب هر کلاس حریق</span></span><span class="tr-arrow">‹</span></button>
     <button class="toolrow" onclick="goPage('building')"><span class="tr-ico" style="--c:#3a8ee0">🏢</span><span class="tr-txt"><span class="tr-name">تحلیل اطفا و اعلام ساختمان</span><span class="tr-desc">الزامات اطفا و اعلام حریق</span></span><span class="tr-arrow">‹</span></button>
   </div>
@@ -1706,8 +1870,11 @@
     <button class="toolrow" onclick="goPage('gastable')"><span class="tr-ico" style="--c:#b6a4ff">🧪</span><span class="tr-txt"><span class="tr-name">خواص گازها</span><span class="tr-desc">جدول مرجع گازهای صنعتی</span></span><span class="tr-arrow">‹</span></button>
   </div>
 
-  <div class="sec-head"><span class="sh-bar" style="background:#FF5A5A"></span><div class="sh-txt"><div class="sh-t">آتش‌نشانی</div><div class="sh-s">۲ ابزار</div></div></div>
+  <div class="sec-head"><span class="sh-bar" style="background:#FF5A5A"></span><div class="sh-txt"><div class="sh-t">آتش‌نشانی</div><div class="sh-s">۵ ابزار</div></div></div>
   <div class="toolrows">
+    <button class="toolrow" onclick="goPage('gasfire')"><span class="tr-ico" style="--c:#FF5A5A">🛑</span><span class="tr-txt"><span class="tr-name">واکنش به حریق گاز</span><span class="tr-desc">سناریوی گام‌به‌گام + شعاع تشعشع حرارتی</span></span><span class="tr-arrow">‹</span></button>
+    <button class="toolrow" onclick="goPage('extcalc')"><span class="tr-ico" style="--c:#FF9500">📐</span><span class="tr-txt"><span class="tr-name">تعداد و جانمایی کپسول</span><span class="tr-desc">محاسبه طبق NFPA 10 + نقشهٔ جانمایی</span></span><span class="tr-arrow">‹</span></button>
+    <button class="toolrow" onclick="goPage('passtrain')"><span class="tr-ico" style="--c:#FF9500">🎬</span><span class="tr-txt"><span class="tr-name">آموزش کار با کپسول</span><span class="tr-desc">انیمیشن روش PASS گام‌به‌گام</span></span><span class="tr-arrow">‹</span></button>
     <button class="toolrow" onclick="goPage('extinguisher')"><span class="tr-ico" style="--c:#FF5A5A">🧯</span><span class="tr-txt"><span class="tr-name">انتخاب کپسول آتش‌نشانی</span><span class="tr-desc">خاموش‌کننده مناسب هر کلاس حریق</span></span><span class="tr-arrow">‹</span></button>
     <button class="toolrow" onclick="goPage('building')"><span class="tr-ico" style="--c:#3a8ee0">🏢</span><span class="tr-txt"><span class="tr-name">تحلیل اطفا و اعلام ساختمان</span><span class="tr-desc">الزامات اطفا و اعلام حریق</span></span><span class="tr-arrow">‹</span></button>
   </div>
@@ -2346,6 +2513,213 @@
 <div class="note">پیش از اطفا، در صورت امکان منبع انرژی/برق قطع شود. این راهنما جایگزین آموزش اطفای حریق و دستورالعمل HSE نیست.</div>
 </div><!-- /page extinguisher -->
 
+<!-- ===== سناریوی واکنش به حریق گاز ===== -->
+<div class="page" id="gasfire">
+<div class="container">
+  <div class="cat-banner" style="--c:#FF5A5A"><div class="cb-txt"><div class="cb-title">واکنش به حریق گاز</div><div class="cb-desc">سناریوی گام‌به‌گام واکنش اضطراری + برآورد شعاع تشعشع حرارتی شعله</div></div><div class="cb-ico">🛑</div></div>
+
+  <div class="gf-rule">
+    <span class="gf-rule-ico">!</span>
+    <div><b>قانون طلایی حریق گاز:</b> شعلهٔ گاز را تا <b>قطع منبع گاز</b> خاموش نکنید. اگر شعله خاموش شود ولی گاز همچنان خارج شود، ابر گاز تجمع می‌کند و با اولین جرقه <b>انفجار</b> رخ می‌دهد. شعلهٔ پایدار تا لحظهٔ قطع جریان، کنترل‌شده‌ترین حالت است.</div>
+  </div>
+
+  <div class="card">
+    <div class="gf-q"><div class="gf-qt"><span class="gf-n">۱</span>حریق کجاست؟</div>
+      <div class="seg gf-seg" id="gfLoc">
+        <button data-v="bldg">داخل ساختمان<small>¼ psi</small></button>
+        <button data-v="riser">علمک / رگولاتور مشترک<small>۶۰ psi</small></button>
+        <button data-v="net">شبکه توزیع (معبر)<small>۶۰ psi</small></button>
+        <button data-v="tbs">ایستگاه TBS / خط تغذیه<small>۲۵۰ psi</small></button>
+        <button data-v="cgs">ایستگاه CGS<small>تا ۱۰۰۰ psi</small></button>
+        <button data-v="trans">خط انتقال فشار قوی<small>تا ۱۰۵۰ psi</small></button>
+      </div>
+    </div>
+    <div class="gf-q"><div class="gf-qt"><span class="gf-n">۲</span>شیر قطع جریان گاز (بالادست) بدون ورود به محدودهٔ شعله در دسترس است؟</div>
+      <div class="seg gf-seg" id="gfValve"><button data-v="yes">بله</button><button data-v="no">خیر</button><button data-v="unk">نامشخص</button></div>
+    </div>
+    <div class="gf-q"><div class="gf-qt"><span class="gf-n">۳</span>شعله ساختمان، خودرو یا تجهیزات مجاور را تهدید می‌کند؟</div>
+      <div class="seg gf-seg" id="gfExpo"><button data-v="yes">بله</button><button data-v="no">خیر</button></div>
+    </div>
+    <div class="gf-q"><div class="gf-qt"><span class="gf-n">۴</span>مصدوم وجود دارد؟</div>
+      <div class="seg gf-seg" id="gfInj"><button data-v="yes">بله</button><button data-v="no">خیر</button></div>
+    </div>
+  </div>
+
+  <div id="gfResult"></div>
+
+  <div class="card gf-calc" id="gfCalc">
+    <div class="gf-ct">برآورد شعاع تشعشع حرارتی شعله</div>
+    <div class="gf-cs">فاصله از شعله برای هر سطح شدت حرارت؛ با انتخاب محل حریق، مقادیر نمونه پر می‌شود و قابل ویرایش است.</div>
+    <div class="seg" id="gfMode"><button data-v="hole" class="on">نشتی از سوراخ / شکاف</button><button data-v="rupt">پارگی کامل خط فولادی</button></div>
+    <div class="gf-row2">
+      <div class="field"><label>فشار گاز (نسبی)</label><input type="number" id="gfP" inputmode="decimal" min="0" step="any" placeholder="مثلاً ۶۰">
+        <div class="seg seg-sm" id="gfPU"><button data-v="psi" class="on">psi</button><button data-v="bar">bar</button></div></div>
+      <div class="field"><label id="gfDLbl">قطر سوراخ</label><input type="number" id="gfD" inputmode="decimal" min="0" step="any" placeholder="مثلاً ۵۰">
+        <div class="seg seg-sm" id="gfDU"><button data-v="mm" class="on">mm</button><button data-v="in">اینچ</button></div></div>
+    </div>
+    <div id="gfCalcOut"></div>
+  </div>
+
+  <div class="conv-note">
+    <b>مبانی محاسبه:</b> حالت «نشتی»: دبی جرمی متان از روزنه (جریان خفه/زیرصوت، Cd=۰٫۸۵، دمای ۱۵°C)، حرارت آزادشده با ارزش حرارتی ۵۰ MJ/kg، کسر تشعشعی ۰٫۲ و مدل منبع نقطه‌ای <bdi>API 521</bdi> (شفافیت جو = ۱، محافظه‌کارانه)؛ طول شعله از رابطهٔ تجربی <bdi>L = 0.00326·Q<sup>0.478</sup></bdi>.
+    حالت «پارگی کامل»: شعاع اثر بالقوه <bdi>PIR = 0.69·d·√p</bdi> طبق <bdi>ASME B31.8S</bdi> (فوت، اینچ، psi) برای شدت ۱۵٫۸ kW/m² و تعمیم به سایر شدت‌ها با قانون عکس مجذور فاصله.
+    <br>آستانه‌ها: ۱٫۶ kW/m² حضور طولانی بدون آسیب؛ ۴٫۷ kW/m² حداکثر برای اقدام اضطراری چنددقیقه‌ای با لباس مناسب؛ ۱۲٫۵ kW/m² اشتعال چوب و احتمال مرگ؛ ۳۷٫۵ kW/m² آسیب تجهیزات فولادی.
+  </div>
+</div>
+<div class="note">این ابزار برای آموزش و تصمیم‌گیری اولیه است و جایگزین دستورالعمل واکنش در شرایط اضطراری شرکت، فرماندهی آتش‌نشانی و مطالعهٔ پیامد (Consequence Modeling) نیست.</div>
+</div><!-- /page gasfire -->
+
+<!-- ===== محاسبه تعداد و جانمایی کپسول ===== -->
+<div class="page" id="extcalc">
+<div class="container">
+  <div class="cat-banner" style="--c:#FF5A5A"><div class="cb-txt"><div class="cb-title">تعداد و جانمایی کپسول</div><div class="cb-desc">تعداد، نوع، حداکثر فاصلهٔ پیمایش و ارتفاع نصب — طبق NFPA 10</div></div><div class="cb-ico">📐</div></div>
+
+  <div class="card">
+    <div class="field"><label>نوع فضا</label>
+      <select class="inp" id="ecSpace">
+        <option value="">— انتخاب نوع فضا —</option>
+        <option value="office">اداری / آموزشی / اتاق کنترل</option>
+        <option value="store">انبار عمومی / کارگاه / پارکینگ</option>
+        <option value="station">ایستگاه تقلیل فشار گاز (TBS / CGS)</option>
+        <option value="xhaz">تعمیرگاه خودرو / انبار رنگ و حلال</option>
+        <option value="kitchen">آشپزخانه / رستوران</option>
+        <option value="elec">اتاق برق / سرور / تابلو</option>
+        <option value="custom">سایر (تنظیم دستی)</option>
+      </select></div>
+    <div class="field"><label>سطح خطر</label>
+      <div class="seg" id="ecHaz"><button data-v="L">کم<small>سبک</small></button><button data-v="O">متوسط<small>معمولی</small></button><button data-v="X">زیاد<small>شدید</small></button></div></div>
+    <div class="field"><label>کلاس‌های حریق محتمل <span class="unit">(چند انتخابی)</span></label>
+      <div class="seg ec-cls" id="ecCls"><button data-v="A">جامدات<small>A</small></button><button data-v="B">مایعات<small>B</small></button><button data-v="G">گاز<small>C اروپایی</small></button><button data-v="E">برق<small>⚡</small></button><button data-v="F">روغن آشپزی<small>F / K</small></button></div></div>
+    <div class="ec-dims">
+      <div class="field"><label>طول <span class="unit">(متر)</span></label><input type="number" id="ecL" inputmode="decimal" min="0" step="any" placeholder="۴۰"></div>
+      <div class="field"><label>عرض <span class="unit">(متر)</span></label><input type="number" id="ecW" inputmode="decimal" min="0" step="any" placeholder="۲۵"></div>
+      <div class="field"><label>طبقات</label><input type="number" id="ecF" inputmode="numeric" min="1" step="1" value="1"></div>
+    </div>
+    <div class="field"><label>کپسول مورد نظر</label>
+      <select class="inp" id="ecType">
+        <option value="p12">پودر ABC ۱۲ کیلوگرمی (8A · 160B)</option>
+        <option value="p6">پودر ABC ۶ کیلوگرمی (4A · 80B)</option>
+        <option value="bc12">پودر BC ۱۲ کیلوگرمی (120B)</option>
+        <option value="foam">فوم AFFF ۱۰ لیتری (3A · 144B)</option>
+        <option value="water">آب و گاز ۱۰ لیتری (2A)</option>
+        <option value="co2">CO₂ (20B)</option>
+      </select></div>
+  </div>
+
+  <div id="ecResult"></div>
+
+  <div class="conv-note">
+    مبنا: <bdi>NFPA 10</bdi> — جدول ۶-۲-۱-۱ (کلاس A: حداقل رتبه، مساحت تحت پوشش هر واحد A، حداکثر ۱۰۴۵ m² برای هر کپسول و فاصلهٔ پیمایش ۲۲٫۹ متر) و جدول ۶-۳-۱-۱ (کلاس B: فاصلهٔ پیمایش ۹٫۱۵ یا ۱۵٫۲۵ متر بر اساس رتبهٔ B).
+    رتبه‌های کپسول‌ها همان مقادیر ابزار «انتخاب کپسول آتش‌نشانی» است (ضوابط ملاک عمل سازمان آتش‌نشانی تهران)؛ رتبهٔ ۶ کیلوگرمی تقریبی است و عدد روی پلاک هر کپسول ملاک نهایی است.
+    جانمایی نقشه، آرایش ایده‌آل در فضای باز است؛ دیوارها و موانع، مسیر واقعی پیمایش را طولانی‌تر می‌کنند.
+  </div>
+</div>
+<div class="note">این محاسبه برآورد اولیه است و جایگزین طراحی سامانهٔ اطفا توسط مهندس ذی‌صلاح و تأیید سازمان آتش‌نشانی نیست.</div>
+</div><!-- /page extcalc -->
+
+<!-- ===== آموزش متحرک کار با کپسول (PASS) ===== -->
+<div class="page" id="passtrain">
+<div class="container">
+  <div class="cat-banner" style="--c:#FF9500"><div class="cb-txt"><div class="cb-title">آموزش کار با کپسول</div><div class="cb-desc">روش چهارمرحله‌ای PASS — انیمیشن گام‌به‌گام</div></div><div class="cb-ico">🎬</div></div>
+
+  <div class="card pass-card">
+    <div class="pass-stage" id="passStage" data-step="0">
+      <svg class="pass-svg" viewBox="0 0 340 230" aria-label="انیمیشن کار با کپسول آتش‌نشانی">
+        <defs>
+          <linearGradient id="psBody" x1="0" x2="1"><stop offset="0" stop-color="#b3121f"/><stop offset=".45" stop-color="#ff4b4b"/><stop offset="1" stop-color="#9c0f1a"/></linearGradient>
+          <radialGradient id="psFlame" cx=".5" cy=".85" r=".8"><stop offset="0" stop-color="#fff3b0"/><stop offset=".35" stop-color="#ffb020"/><stop offset=".75" stop-color="#ff5a1f"/><stop offset="1" stop-color="#d81e1e" stop-opacity=".9"/></radialGradient>
+          <linearGradient id="psCone" x1="0" x2="1"><stop offset="0" stop-color="#ffffff" stop-opacity=".85"/><stop offset=".6" stop-color="#e6eef8" stop-opacity=".35"/><stop offset="1" stop-color="#e6eef8" stop-opacity="0"/></linearGradient>
+          <radialGradient id="psCloud"><stop offset="0" stop-color="#ffffff" stop-opacity=".95"/><stop offset="1" stop-color="#dfe8f5" stop-opacity="0"/></radialGradient>
+        </defs>
+        <!-- زمین -->
+        <line x1="8" y1="205" x2="332" y2="205" class="ps-ground"/>
+        <!-- باد -->
+        <g class="ps-wind"><path d="M14 36h34m-6-5 6 5-6 5M20 50h22m-5-4 5 4-5 4"/><text x="31" y="66">باد</text></g>
+        <!-- فاصله -->
+        <g class="ps-dist"><path d="M70 220H250"/><path d="M70 215v10M250 215v10"/><text x="160" y="217">۲ تا ۳ متر</text></g>
+        <!-- آتش -->
+        <g class="ps-fire">
+          <ellipse cx="250" cy="204" rx="38" ry="5" class="ps-ember"/>
+          <path class="ps-fl f1" d="M226 204c-6-22 6-30 10-46 6 14 16 20 12 46z"/>
+          <path class="ps-fl f2" d="M238 204c-8-30 8-44 14-66 8 20 22 32 16 66z"/>
+          <path class="ps-fl f3" d="M256 204c-4-18 6-26 9-38 5 12 13 17 10 38z"/>
+          <path class="ps-core" d="M244 204c-3-14 4-20 7-30 4 10 10 14 8 30z"/>
+        </g>
+        <g class="ps-smoke"><circle cx="246" cy="170" r="12"/><circle cx="258" cy="150" r="16"/><circle cx="240" cy="128" r="20"/></g>
+        <!-- هدف: پایهٔ آتش -->
+        <g class="ps-target"><circle cx="250" cy="200" r="9"/><circle cx="250" cy="200" r="3"/><text x="306" y="203">پایهٔ آتش</text></g>
+        <line class="ps-aimline" x1="128" y1="113" x2="244" y2="196"/>
+        <!-- کپسول -->
+        <g class="ps-ext">
+          <rect x="40" y="86" width="46" height="116" rx="17" fill="url(#psBody)"/>
+          <rect x="44" y="120" width="38" height="40" rx="4" class="ps-label"/>
+          <text x="63" y="136" class="ps-ltxt">ABC</text><text x="63" y="150" class="ps-ltxt2">6 kg</text>
+          <rect x="54" y="72" width="18" height="16" rx="3" class="ps-metal"/>
+          <circle cx="76" cy="66" r="7" class="ps-gauge"/><path d="M76 66l3-4" class="ps-needle"/>
+          <!-- دستهٔ ثابت -->
+          <path d="M50 70h38" class="ps-handle"/>
+          <!-- اهرم -->
+          <g class="ps-lever"><path d="M52 60 L92 54" class="ps-handle"/></g>
+          <!-- ضامن -->
+          <g class="ps-pin"><circle cx="96" cy="64" r="6" class="ps-ring"/><path d="M60 64h31" class="ps-rod"/><rect x="58" y="61" width="5" height="6" rx="1" class="ps-seal"/></g>
+          <!-- شیلنگ و نازل (دوران حول محل اتصال) -->
+          <g class="ps-noz">
+            <path d="M70 74 C 88 76, 104 74, 122 74" class="ps-hose"/>
+            <rect x="120" y="70" width="18" height="8" rx="3" class="ps-tip"/>
+            <g class="ps-spray">
+              <path class="ps-cone" d="M138 72 L292 50 Q300 74 292 98 L138 76 Z"/>
+              <circle class="ps-pt" cx="138" cy="74" r="8"/><circle class="ps-pt" cx="138" cy="74" r="6"/><circle class="ps-pt" cx="138" cy="74" r="7"/>
+              <circle class="ps-pt" cx="138" cy="74" r="7"/><circle class="ps-pt" cx="138" cy="74" r="8"/><circle class="ps-pt" cx="138" cy="74" r="6"/>
+            </g>
+          </g>
+        </g>
+        <text x="170" y="22" class="ps-big" id="passBig">PASS</text>
+      </svg>
+    </div>
+    <div class="pass-steps" id="passSteps">
+      <button data-s="1"><b>P</b><span>بکش</span></button>
+      <button data-s="2"><b>A</b><span>نشانه بگیر</span></button>
+      <button data-s="3"><b>S</b><span>فشار بده</span></button>
+      <button data-s="4"><b>S</b><span>جارو کن</span></button>
+    </div>
+    <div class="pass-cap" id="passCap"></div>
+    <div class="pass-ctrl">
+      <button class="pass-btn" id="passPlay">▶ پخش خودکار</button>
+      <button class="pass-btn ghost" id="passReset">↺ از اول</button>
+    </div>
+  </div>
+
+  <div class="sec-block"><h3>پیش از استفاده — آیا باید اطفا کنم؟</h3>
+    <div class="pass-chk"><span class="ok">✓</span>اعلام حریق انجام شده و با آتش‌نشانی <b>۱۲۵</b> تماس گرفته شده است.</div>
+    <div class="pass-chk"><span class="ok">✓</span>آتش <b>کوچک و محدود</b> است (حداکثر در اندازهٔ یک سطل زباله) و فضا پر از دود نیست.</div>
+    <div class="pass-chk"><span class="ok">✓</span>کپسول با <b>کلاس حریق</b> سازگار است و عقربهٔ فشارسنج در <b>ناحیهٔ سبز</b> است.</div>
+    <div class="pass-chk"><span class="ok">✓</span><b>راه فرار پشت سر شماست</b> و پشت به باد ایستاده‌اید.</div>
+    <div class="pass-chk"><span class="no">✕</span>اگر هر یک از موارد بالا برقرار نیست: <b>اطفا نکنید</b>؛ محل را تخلیه کنید و درها را پشت سر ببندید.</div>
+    <div class="pass-chk"><span class="no">✕</span>حریق گاز: تا <b>قطع جریان گاز</b> شعله را خاموش نکنید (ابزار «واکنش به حریق گاز»).</div>
+  </div>
+
+  <div class="sec-block"><h3>پس از اطفا</h3>
+    <div class="pass-chk"><span class="ok">✓</span>رو به آتش عقب بروید (پشت به آتش نکنید) و محل را برای <b>شعله‌ور شدن مجدد</b> زیر نظر بگیرید.</div>
+    <div class="pass-chk"><span class="ok">✓</span>فضا را پس از تخلیهٔ CO₂ یا پودر <b>تهویه</b> کنید؛ پودر در فضای بسته دید و تنفس را مختل می‌کند.</div>
+    <div class="pass-chk"><span class="ok">✓</span>کپسول استفاده‌شده — حتی نیمه‌خالی — باید <b>شارژ مجدد</b> شود؛ آن را در جای خود برنگردانید.</div>
+    <div class="pass-chk"><span class="ok">✓</span>حادثه را به واحد HSE <b>گزارش</b> دهید.</div>
+  </div>
+
+  <div class="sec-block"><h3>چهاروجهی آتش — هر کپسول کدام ضلع را حذف می‌کند؟</h3>
+    <div class="tetra">
+      <div class="tt" style="--c:#FF9500"><b>سوخت</b><span>قطع منبع گاز / دور کردن مواد</span></div>
+      <div class="tt" style="--c:#FF5A5A"><b>حرارت</b><span>آب: خنک‌کردن</span></div>
+      <div class="tt" style="--c:#3FD0FF"><b>اکسیژن</b><span>CO₂ و فوم: خفه‌کردن</span></div>
+      <div class="tt" style="--c:#b6a4ff"><b>واکنش زنجیره‌ای</b><span>پودر: قطع واکنش شیمیایی</span></div>
+    </div>
+  </div>
+
+  <div class="conv-note">زمان تخلیهٔ کامل کپسول‌های دستی فقط چند ثانیه است (کپسول پودری ۶ کیلوگرمی حدود ۱۰ تا ۱۵ ثانیه)؛ پیش از فشار دادن اهرم، در فاصلهٔ مناسب و رو به پایهٔ آتش قرار بگیرید. مبنا: آموزش عمومی اطفای حریق (PASS) و <bdi>NFPA 10</bdi>.</div>
+</div>
+<div class="note">این آموزش جایگزین تمرین عملی اطفا زیر نظر مربی آتش‌نشانی نیست.</div>
+</div><!-- /page passtrain -->
+
+
 <!-- ===== صفحه تبدیل مقادیر ===== -->
 <div class="page" id="convert">
 <div class="container">
@@ -2823,7 +3197,8 @@
 // جابجایی بین صفحه‌ها (منو + کارت‌های داشبورد)
 var PAGE_TITLES = { 'cat-safety':'ایمنی', 'tools':'ابزارها', 'alerts':'اطلاعیه‌ها', 'quiz':'آزمون و خودآزمایی',
   'competency':'لیست صلاحیت افراد', 'area-type':'محوطه مشمول/مشروط',
-  'clothing':'ماتریس البسه و PPE', 'hcdet':'تشخیص کار گرم و سرد', 'gasinject':'تزریق گاز', 'hazzone':'زون‌بندی مناطق خطر', 'gasdet':'انواع دستگاه گازسنج', 'calib':'کالیبراسیون گازسنج‌ها', 'guidelines':'دستورالعمل‌ها' };
+  'clothing':'ماتریس البسه و PPE', 'hcdet':'تشخیص کار گرم و سرد', 'gasinject':'تزریق گاز', 'hazzone':'زون‌بندی مناطق خطر', 'gasdet':'انواع دستگاه گازسنج', 'calib':'کالیبراسیون گازسنج‌ها', 'guidelines':'دستورالعمل‌ها',
+  'gasfire':'واکنش به حریق گاز', 'extcalc':'تعداد و جانمایی کپسول', 'passtrain':'آموزش کار با کپسول' };
 var navStack = [];
 var currentPage = 'home';
 function goPage(id, isBack){
@@ -2848,6 +3223,7 @@ function goPage(id, isBack){
   document.querySelectorAll('.bn-item').forEach(function(b){ b.classList.toggle('active', b.dataset.nav===nav); });
   if (id==='clothing' && typeof clMode==='function') clMode('home');
   if (id==='home' && typeof heroCount==='function') heroCount();
+  if (id!=='passtrain' && typeof passStop==='function') passStop();
   window.scrollTo({top:0});
   toggleMenu(false);
 }
@@ -5290,6 +5666,319 @@ enhanceSelects();
 applyTheme(document.documentElement.getAttribute('data-theme')==='light' ? 'light' : 'dark');
 
 
+
+/* ================= آتش‌نشانی: واکنش به حریق گاز ================= */
+// هر محل: نام، مقادیر نمونهٔ محاسبه‌گر، متن قطع جریان (شیر در دسترس / نه) و اقدامات خاص
+var GF_LOC = {
+  bldg:{n:'داخل ساختمان', p:0.25, pu:'psi', d:15, du:'mm', mode:'hole',
+    yes:'شیر اصلی گاز ساختمان (شیر قبل از کنتور یا شیر علمک بیرون ساختمان) را ببندید.',
+    no:'امداد گاز (۱۹۴) گاز را از شیر علمک یا شبکه قطع می‌کند؛ تا آن زمان ساختمان را تخلیه کنید.',
+    imm:['ساکنان را از راه‌پله تخلیه کنید (استفاده از آسانسور ممنوع) و درها را پشت سر ببندید تا حریق محدود بماند.',
+         'برق ساختمان را فقط از کنتور یا تابلوی اصلیِ <b>بیرون</b> ساختمان قطع کنید.']},
+  riser:{n:'علمک / رگولاتور مشترک', p:60, pu:'psi', d:25, du:'mm', mode:'hole',
+    yes:'شیر علمک (قبل از رگولاتور) را از کنار و بدون قرار گرفتن در مسیر شعله ببندید.',
+    no:'امداد گاز، گاز را از شبکه قطع می‌کند: بستن شیر انشعاب یا شیرهای شبکه؛ در لولهٔ پلی‌اتیلن با ابزار خفه‌کن (Squeeze-off).',
+    imm:['ساختمان پشت علمک و ساختمان‌های مجاور را تخلیه کنید و پنجره‌های مشرف به شعله را ببندید.']},
+  net:{n:'شبکه توزیع (معبر)', p:60, pu:'psi', d:50, du:'mm', mode:'hole',
+    yes:'شیرهای شبکه در بالادست و پایین‌دست محل را طبق نقشهٔ شبکه ببندید. در لولهٔ پلی‌اتیلن از ابزار خفه‌کن (Squeeze-off) در فاصلهٔ ایمن از محل نشت استفاده شود؛ لوله را برای تخلیهٔ الکتریسیتهٔ ساکن مرطوب و ابزار را اتصال زمین کنید.',
+    no:'تیم امداد با نقشهٔ شبکه، نزدیک‌ترین شیرهای قابل‌دسترس دورتر را شناسایی و می‌بندد؛ اثر قطع بر مشترکین بررسی و اطلاع‌رسانی شود.',
+    imm:['ترافیک معبر را با همکاری پلیس (۱۱۰) قطع یا منحرف کنید.']},
+  tbs:{n:'ایستگاه TBS / خط تغذیه', p:250, pu:'psi', d:50, du:'mm', mode:'hole',
+    yes:'شیر ورودی ایستگاه را از محل ایمن ببندید و در صورت امکان شیر خروجی را نیز ببندید؛ مرکز دیسپچینگ را فوراً مطلع کنید.',
+    no:'از طریق دیسپچینگ، بستن شیرهای بالادستِ خط تغذیه درخواست شود.',
+    imm:['اثر قطع ایستگاه بر شبکهٔ پایین‌دست و تعداد مشترکین بی‌گاز را به دیسپچینگ اعلام کنید.']},
+  cgs:{n:'ایستگاه CGS', p:1000, pu:'psi', d:50, du:'mm', mode:'hole',
+    yes:'شیرهای ورودی ایستگاه را از اتاق کنترل یا محل ایمن ببندید (در صورت وجود، سامانهٔ توقف اضطراری ESD را فعال کنید) و با دیسپچینگ هماهنگ شوید.',
+    no:'هماهنگی فوری با دیسپچینگ و شرکت انتقال گاز برای بستن شیرهای بالادست خط.',
+    imm:['فقط افراد آموزش‌دیدهٔ ایستگاه با لباس ضدحریق به محدودهٔ ایستگاه نزدیک شوند.']},
+  trans:{n:'خط انتقال فشار قوی', p:1050, pu:'psi', d:20, du:'in', mode:'rupt',
+    yes:'خطوط انتقال توسط شرکت انتقال گاز بهره‌برداری می‌شوند: از طریق دیسپچینگ، بستن شیرهای بین‌راهی (Block Valve) دو طرف محل حادثه را درخواست کنید.',
+    no:'خطوط انتقال توسط شرکت انتقال گاز بهره‌برداری می‌شوند: از طریق دیسپچینگ، بستن شیرهای بین‌راهی (Block Valve) دو طرف محل حادثه را درخواست کنید.',
+    imm:['در پارگی خط انتقال، شعاع خطر ده‌ها تا صدها متر است؛ با محاسبه‌گر پایین (حالت «پارگی کامل») محدوده را تعیین و جاده‌ها و آبادی‌های مجاور را تخلیه کنید.']}
+};
+var gfState = {loc:'', valve:'', expo:'', inj:''};
+
+function gfSegBind(id, key){
+  var box=document.getElementById(id); if(!box) return;
+  box.addEventListener('click', function(e){
+    var b=e.target.closest('button'); if(!b) return;
+    box.querySelectorAll('button').forEach(function(x){ x.classList.toggle('on', x===b); });
+    gfState[key]=b.getAttribute('data-v');
+    if(key==='loc') gfPrefill(gfState.loc);
+    gfRender();
+  });
+}
+function gfList(title, cls, items){
+  return '<div class="sec-block gf-sec '+(cls||'')+'"><h3>'+title+'</h3>'+items.map(function(t,i){
+    return '<div class="step-item"><span class="step-num">'+faDigits(i+1)+'</span><span>'+t+'</span></div>'; }).join('')+'</div>';
+}
+function gfRender(){
+  var box=document.getElementById('gfResult'), s=gfState; if(!box) return;
+  if(!s.loc || !s.valve || !s.expo || !s.inj){
+    var left=[!s.loc&&'۱',!s.valve&&'۲',!s.expo&&'۳',!s.inj&&'۴'].filter(Boolean);
+    box.innerHTML='<div class="gf-wait">برای دیدن سناریو به پرسش '+left.join('، ')+' پاسخ دهید.</div>'; return;
+  }
+  var L=GF_LOC[s.loc], html='';
+  var imm=['تماس فوری با امداد گاز <b>۱۹۴</b> و آتش‌نشانی <b>۱۲۵</b>'+(s.inj==='yes'?' و اورژانس <b>۱۱۵</b>':'')+'؛ نشانی دقیق، «حریق گاز در '+L.n+'» و وضعیت مصدومان را اعلام کنید.',
+    'از سمت <b>بالادست باد</b> (پشت به باد) به محل نزدیک شوید؛ لباس ضدحریق، کلاه و دستکش الزامی است.',
+    'محدودهٔ ایمن را با نوار یا مانع ببندید و افراد متفرقه، رهگذران و خودروها را دور کنید.',
+    'در فضاهای مجاور که ممکن است گاز در آن‌ها جمع شده باشد، هیچ کلید برقی را قطع یا وصل نکنید و از تلفن همراه فقط بیرون محدوده استفاده کنید.'].concat(L.imm);
+  html+=gfList('۱) اقدامات فوری','gf-s1',imm);
+
+  var iso = (s.valve==='yes')
+    ? [L.yes, 'پس از بستن شیر، شعله به‌تدریج کوچک و خاموش می‌شود؛ مدت آن به حجم گاز محبوس در خط بستگی دارد. تا خاموشی کامل صبر کنید.']
+    : ['<b>به شیرِ داخل محدودهٔ شعله نزدیک نشوید.</b> '+L.no,
+       (s.valve==='unk'?'تا مشخص شدن محل و دسترسی شیر، فرض کنید شیر در دسترس نیست. ':'')+'تا قطع جریان، شعله را کنترل‌شده نگه دارید و فقط محیط اطراف را محافظت کنید.'];
+  html+=gfList('۲) قطع جریان گاز — اولویت اصلی','gf-s2',iso);
+
+  var burn=['<b>شعلهٔ گاز را خاموش نکنید</b> تا جریان گاز قطع شود.'];
+  if(s.expo==='yes'){
+    burn.push('سطوح و سازه‌های در معرض (دیوار، کنتور، خودرو، لوله‌ها و تجهیزات مجاور) را با آب به‌صورت <b>مه‌پاش (Fog)</b> خنک کنید؛ این کار را آتش‌نشانی انجام می‌دهد.');
+    burn.push('آتش‌های ثانویهٔ مواد اطراف (چوب، زباله، پوشش گیاهی) را می‌توان با کپسول مناسب خاموش کرد، به شرطی که شعلهٔ اصلی گاز خاموش نشود.');
+  } else {
+    burn.push('محیط اطراف را برای سرایت آتش زیر نظر داشته باشید؛ مواد قابل اشتعال قابل‌جابه‌جایی را از نزدیکی شعله دور کنید.');
+  }
+  burn.push('منهول‌ها، کانال‌ها، زیرزمین‌ها و ساختمان‌های مجاور را با <b>گازسنج</b> کنترل کنید؛ گاز می‌تواند از مسیر خاک به این فضاها نفوذ کند و انفجار ثانویه ایجاد کند.');
+  burn.push('<b>استثنا:</b> خاموش‌کردن شعلهٔ کوچک فقط برای نجات جان یک فرد مجاز است، آن هم به شرط بستن فوری شیر — با کپسول پودری ABC یا BC.');
+  html+=gfList('۳) تا قطع جریان، هنگام سوختن شعله','gf-s3',burn);
+
+  if(s.inj==='yes'){
+    html+=gfList('مصدوم','gf-s4',[
+      'نجات مصدوم فقط بدون به خطر انداختن نجات‌دهنده؛ او را به خارج از محدودهٔ حرارت و دود منتقل کنید.',
+      'اگر لباس فرد آتش گرفته: «بایست، بخواب، غلت بزن» یا با پتو شعله را خفه کنید.',
+      'سوختگی را <b>۲۰ دقیقه</b> زیر آب خنک (نه یخ) نگه دارید؛ لباس چسبیده به پوست را جدا نکنید و با پوشش تمیز و غیرچسبنده بپوشانید.',
+      'مصدوم را از نظر استنشاق دود و گاز داغ (سرفه، خشونت صدا، تنگی نفس) تحت نظر بگیرید و به اورژانس <b>۱۱۵</b> تحویل دهید.']);
+  }
+
+  var after=['محدودهٔ ایمن را تا تأیید گازسنجی حفظ کنید؛ ورود فقط وقتی مجاز است که ٪LEL محیط <b>صفر</b> باشد.',
+    'فضاهای بسته را تهویه کنید و دوباره با گازسنج بسنجید.',
+    'تعمیر فقط با <b>پرمیت کار</b> (گرم یا سرد، متناسب با روش تعمیر) و با حضور ناظر HSE انجام شود.',
+    'پس از تعمیر: تست نشتی، پرج و گازدار کردن مجدد طبق دستورالعمل'+((s.loc==='bldg'||s.loc==='riser'||s.loc==='net'||s.loc==='tbs')?'؛ وصل گاز مشترکین و روشن کردن دوبارهٔ وسایل گازسوز فقط توسط امداد گاز.':'.'),
+    'گزارش حادثه و بررسی علل ریشه‌ای (RCA) طبق روال HSE.'];
+  html+=gfList('۴) پس از خاموش شدن شعله','gf-s5',after);
+
+  html+='<div class="gf-links"><button onclick="goPage(\'evac\')">شعاع تخلیهٔ نشت گاز</button>'+
+    (s.inj==='yes'?'<button onclick="goPage(\'firstaid\')">اقدامات اولیهٔ حوادث</button>':'')+
+    '<button onclick="document.getElementById(\'gfCalc\').scrollIntoView({behavior:\'smooth\'})">شعاع تشعشع حرارتی ↓</button></div>';
+  box.innerHTML=html;
+}
+
+/* ---------- محاسبه‌گر تشعشع حرارتی ---------- */
+var GF_TH = [
+  {q:37.5, c:'#b3122a', t:'آسیب به تجهیزات و سازه‌های فولادی'},
+  {q:12.5, c:'#FF5A5A', t:'اشتعال چوب؛ احتمال مرگ در تماس کوتاه'},
+  {q:4.7,  c:'#FF9500', t:'حداکثر برای اقدام اضطراری کوتاه با لباس ضدحریق'},
+  {q:1.6,  c:'#FFC94D', t:'حد ایمن برای حضور طولانی افراد و عموم'}
+];
+function gfSegVal(id){ var b=document.querySelector('#'+id+' button.on'); return b?b.getAttribute('data-v'):''; }
+function gfSetSeg(id,v){ document.querySelectorAll('#'+id+' button').forEach(function(b){ b.classList.toggle('on', b.getAttribute('data-v')===v); }); }
+function gfPrefill(loc){
+  var L=GF_LOC[loc]; if(!L) return;
+  gfSetSeg('gfMode',L.mode); gfSetSeg('gfPU',L.pu); gfSetSeg('gfDU',L.du);
+  document.getElementById('gfP').value=L.p; document.getElementById('gfD').value=L.d;
+  gfCalc();
+}
+function ltr(s){ return '<bdi dir="ltr">'+s+'</bdi>'; }
+function gfNum(x){
+  var a=Math.abs(x), s = a>=100 ? Math.round(x).toString() : a>=10 ? x.toFixed(1) : x.toFixed(2);
+  if(s.indexOf('.')>=0) s=s.replace(/0+$/,'').replace(/\.$/,'');
+  return faDigits(s).replace('.','٫');
+}
+function gfCalc(){
+  var out=document.getElementById('gfCalcOut'); if(!out) return;
+  var mode=gfSegVal('gfMode')||'hole';
+  document.getElementById('gfDLbl').textContent = mode==='rupt' ? 'قطر خارجی لوله' : 'قطر سوراخ';
+  var P=parseFloat(document.getElementById('gfP').value), D=parseFloat(document.getElementById('gfD').value);
+  if(!(P>0) || !(D>0)){ out.innerHTML='<div class="gf-wait">فشار و قطر را وارد کنید.</div>'; return; }
+  var Pg = P*(gfSegVal('gfPU')==='bar'?1e5:6894.757), Pa=101325, P0=Pg+Pa;
+  var dm = D*(gfSegVal('gfDU')==='in'?0.0254:0.001);
+  var rows=[], radii=[], note='';
+  if(mode==='hole'){
+    var g=1.31, M=0.01604, R=8.314, T=288.15, Cd=0.85, A=Math.PI*dm*dm/4, pr=Pa/P0;
+    var crit=Math.pow(2/(g+1), g/(g-1)), m;
+    if(pr<=crit) m=Cd*A*P0*Math.sqrt(g*M/(R*T)*Math.pow(2/(g+1),(g+1)/(g-1)));
+    else m=Cd*A*P0*Math.sqrt((2*g/(g-1))*(M/(R*T))*(Math.pow(pr,2/g)-Math.pow(pr,(g+1)/g)));
+    var Q=m*50e6, Qr=0.2*Q, Lf=0.00326*Math.pow(Q,0.478);
+    GF_TH.forEach(function(t){ radii.push(Math.sqrt(Qr/(4*Math.PI*t.q*1000))); });
+    rows=[['دبی گاز خروجی', ltr(gfNum(m)+' kg/s')+' · '+ltr(gfNum(m/0.68*3600)+' m³/h')],
+          ['حرارت آزادشده', ltr(Q>=1e6? gfNum(Q/1e6)+' MW' : gfNum(Q/1e3)+' kW')],
+          ['طول تقریبی شعله', gfNum(Lf)+' متر'],
+          ['نوع جریان', pr<=crit?'خفه (صوتی)':'زیرصوت']];
+    note='فاصله‌ها از مرکز شعله است؛ در فاصلهٔ کمتر از طول شعله، مدل منبع نقطه‌ای دقت ندارد و آن ناحیه را داخل شعله در نظر بگیرید.';
+  } else {
+    var din=dm/0.0254, ppsi=Pg/6894.757, pir=0.69*din*Math.sqrt(ppsi)*0.3048;
+    GF_TH.forEach(function(t){ radii.push(pir*Math.sqrt(15.8/t.q)); });
+    rows=[['شعاع اثر بالقوه (PIR)', gfNum(pir)+' متر'],['مبنای PIR', ltr('15.8 kW/m²')+' — '+ltr('ASME B31.8S')]];
+    if(ppsi<100) note='مدل PIR برای خطوط فولادی فشار قوی تدوین شده و در فشارهای پایین‌تر از ۱۰۰ psi تقریبی است.';
+    else note='PIR برای پارگی کامل خط با فرض اشتعال است و برای تعیین محدودهٔ تخلیه و منطقهٔ پرخطر کاربرد دارد.';
+  }
+  var maxR=radii[radii.length-1]||1, S=128;
+  var svg='<svg class="gf-rings" viewBox="0 0 300 300" aria-hidden="true">';
+  for(var i=GF_TH.length-1;i>=0;i--){
+    var r=Math.max(6, radii[i]/maxR*S);
+    svg+='<circle cx="150" cy="150" r="'+r.toFixed(1)+'" fill="'+GF_TH[i].c+'" fill-opacity="'+(0.18+0.12*(3-i))+'" stroke="'+GF_TH[i].c+'" stroke-width="1.5"/>';
+  }
+  svg+='<path class="gf-ring-fl" d="M150 162c-9 0-14-6-14-13 0-8 7-11 9-20 3 6 7 7 8 12 2-3 2-6 1-10 6 4 10 11 10 18 0 7-5 13-14 13z"/></svg>';
+  var legend=GF_TH.map(function(t,i){ return '<div class="gf-zone"><span class="gz-c" style="background:'+t.c+'"></span><span class="gz-q">'+gfNum(t.q)+' kW/m²</span><span class="gz-t">'+t.t+'</span><span class="gz-r">'+gfNum(radii[i])+' m</span></div>'; }).join('');
+  out.innerHTML='<div class="gf-out">'+svg+'<div class="gf-legend">'+legend+'</div></div>'+
+    '<div class="sec-block">'+rows.map(function(r){return '<div class="sec-row"><span class="sk">'+r[0]+'</span><span class="sv">'+r[1]+'</span></div>';}).join('')+'</div>'+
+    (note?'<div class="gf-note">'+note+'</div>':'');
+}
+function initGasFire(){
+  gfSegBind('gfLoc','loc'); gfSegBind('gfValve','valve'); gfSegBind('gfExpo','expo'); gfSegBind('gfInj','inj');
+  ['gfMode','gfPU','gfDU'].forEach(function(id){
+    var box=document.getElementById(id); if(!box) return;
+    box.addEventListener('click', function(e){ var b=e.target.closest('button'); if(!b) return; gfSetSeg(id,b.getAttribute('data-v')); gfCalc(); });
+  });
+  ['gfP','gfD'].forEach(function(id){ var el=document.getElementById(id); if(el) el.addEventListener('input', gfCalc); });
+  gfRender(); gfCalc();
+}
+
+/* ================= آتش‌نشانی: تعداد و جانمایی کپسول (NFPA 10) ================= */
+var EC_TYPES = {
+  p12:{n:'پودر ABC ۱۲ کیلوگرمی', A:8, B:160, cls:'ABGE', w:17},
+  p6:{n:'پودر ABC ۶ کیلوگرمی', A:4, B:80, cls:'ABGE', w:9},
+  bc12:{n:'پودر BC ۱۲ کیلوگرمی', A:0, B:120, cls:'BGE', w:17},
+  foam:{n:'فوم AFFF ۱۰ لیتری', A:3, B:144, cls:'AB', w:15},
+  water:{n:'آب و گاز ۱۰ لیتری', A:2, B:0, cls:'A', w:14},
+  co2:{n:'CO₂', A:0, B:20, cls:'BE', w:16}
+};
+// NFPA 10 جدول ۶-۲-۱-۱ (کلاس A) و ۶-۳-۱-۱ (کلاس B)
+var EC_HAZ = {
+  L:{n:'کم (سبک)', minA:2, perA:278.7, B:[[5,9.15],[10,15.25]]},
+  O:{n:'متوسط (معمولی)', minA:2, perA:139.4, B:[[10,9.15],[20,15.25]]},
+  X:{n:'زیاد (شدید)', minA:4, perA:92.9, B:[[40,9.15],[80,15.25]]}
+};
+var EC_PRESET = {
+  office:{h:'L', c:'AE', t:'p6'}, store:{h:'O', c:'AB', t:'p12'}, station:{h:'O', c:'ABGE', t:'p12'},
+  xhaz:{h:'X', c:'AB', t:'p12'}, kitchen:{h:'O', c:'AF', t:'p6'}, elec:{h:'L', c:'AE', t:'co2'}
+};
+function ecSel(id){ return Array.prototype.map.call(document.querySelectorAll('#'+id+' button.on'), function(b){ return b.getAttribute('data-v'); }); }
+function ecPreset(){
+  var p=EC_PRESET[document.getElementById('ecSpace').value]; if(!p) { ecCalc(); return; }
+  gfSetSeg('ecHaz',p.h);
+  document.querySelectorAll('#ecCls button').forEach(function(b){ b.classList.toggle('on', p.c.indexOf(b.getAttribute('data-v'))>=0); });
+  var t=document.getElementById('ecType'); t.value=p.t; if(typeof refreshCSelect==='function') refreshCSelect('ecType');
+  ecCalc();
+}
+function ecCalc(){
+  var out=document.getElementById('ecResult'); if(!out) return;
+  var haz=ecSel('ecHaz')[0], cls=ecSel('ecCls'), tk=document.getElementById('ecType').value, T=EC_TYPES[tk];
+  var Lm=parseFloat(document.getElementById('ecL').value), Wm=parseFloat(document.getElementById('ecW').value);
+  var fl=Math.max(1, parseInt(document.getElementById('ecF').value,10)||1);
+  if(!haz || !cls.length || !(Lm>0) || !(Wm>0)){
+    out.innerHTML='<div class="gf-wait">سطح خطر، دست‌کم یک کلاس حریق، طول و عرض فضا را وارد کنید.</div>'; return;
+  }
+  var H=EC_HAZ[haz], area=Lm*Wm, warn=[], extra=[], travel=[], nA=0, nB=0;
+  var hasA=cls.indexOf('A')>=0, hasB=cls.indexOf('B')>=0;
+  if(hasA){
+    if(T.A<H.minA){ warn.push('این کپسول برای جامدات (A) در سطح خطر «'+H.n+'» کافی نیست؛ حداقل رتبهٔ لازم '+faDigits(H.minA)+'A است.'); }
+    else { var cov=Math.min(T.A*H.perA, 1045); nA=Math.ceil(area/cov); travel.push(22.9);
+      extra.push(['پوشش هر کپسول (کلاس A)', ltr(gfNum(cov)+' m²')]); }
+  }
+  if(hasB){
+    var tB=0; if(T.B>=H.B[1][0]) tB=H.B[1][1]; else if(T.B>=H.B[0][0]) tB=H.B[0][1];
+    if(!tB) warn.push('رتبهٔ B این کپسول برای مایعات قابل اشتعال در سطح خطر «'+H.n+'» کافی نیست؛ حداقل '+faDigits(H.B[0][0])+'B لازم است.');
+    else { nB=Math.ceil(area/(2*tB*tB)); travel.push(tB); }
+  }
+  var cleanCls=cls.filter(function(c){ return c!=='F'; });
+  cleanCls.forEach(function(c){ if(T.cls.indexOf(c)<0){
+    var nm={A:'جامدات',B:'مایعات',G:'گاز',E:'تجهیزات برق‌دار'}[c];
+    warn.push('«'+T.n+'» برای حریق '+nm+' مناسب نیست'+(c==='E'?' (خطر برق‌گرفتگی)':'')+'.'); } });
+  var d = travel.length ? Math.min.apply(null,travel) : 22.9;
+  var s = d*Math.SQRT2, cols=Math.max(1,Math.ceil(Lm/s)), rows=Math.max(1,Math.ceil(Wm/s));
+  var need=Math.max(nA, nB, cols*rows, 1);
+  while(cols*rows<need){ if(Lm/cols>=Wm/rows) cols++; else rows++; }
+  need=Math.max(need, cols*rows);
+  var total=need*fl;
+
+  // نقشهٔ جانمایی یک طبقه
+  var sc=Math.min(280/Lm, 180/Wm), w=Lm*sc, h=Wm*sc, ox=(300-w)/2, oy=10;
+  var plan='<svg class="ec-plan" viewBox="0 0 300 '+(h+52).toFixed(0)+'" aria-hidden="true"><defs><clipPath id="ecClip"><rect x="'+ox+'" y="'+oy+'" width="'+w+'" height="'+h+'"/></clipPath></defs>'+
+    '<rect class="ec-room" x="'+ox+'" y="'+oy+'" width="'+w+'" height="'+h+'" rx="3"/><g clip-path="url(#ecClip)">';
+  var pts=''; for(var i=0;i<cols;i++) for(var j=0;j<rows;j++){
+    var cx=ox+(i+0.5)*w/cols, cy=oy+(j+0.5)*h/rows;
+    plan+='<circle class="ec-cov" cx="'+cx.toFixed(1)+'" cy="'+cy.toFixed(1)+'" r="'+(d*sc).toFixed(1)+'"/>';
+    pts+='<g class="ec-pt"><circle cx="'+cx.toFixed(1)+'" cy="'+cy.toFixed(1)+'" r="6"/><circle cx="'+cx.toFixed(1)+'" cy="'+cy.toFixed(1)+'" r="2.2" class="ec-pt-in"/></g>';
+  }
+  plan+='</g>'+pts+'<text class="ec-dim" x="150" y="'+(oy+h+18).toFixed(0)+'">ابعاد '+gfNum(Lm)+' در '+gfNum(Wm)+' متر</text>'+
+    '<text class="ec-dim2" x="150" y="'+(oy+h+34).toFixed(0)+'">دایره = حداکثر فاصلهٔ پیمایش '+gfNum(d)+' متر</text></svg>';
+
+  var info=[['کپسول', T.n],['سطح خطر', H.n],['مساحت هر طبقه', ltr(gfNum(area)+' m²')],
+    ['حداکثر فاصلهٔ پیمایش تا کپسول', gfNum(d)+' متر'],['فاصلهٔ تقریبی بین کپسول‌ها', gfNum(s)+' متر']].concat(extra);
+  var adds=[];
+  if(cls.indexOf('E')>=0) adds.push('کنار ورودی هر اتاق برق، تابلو یا رک سرور یک کپسول <b>CO₂</b> نصب شود (نارسانا و بدون آسیب به تجهیزات).');
+  if(cls.indexOf('F')>=0) adds.push('برای وسایل پخت با روغن: کپسول <b>کلاس F (K)</b> با حداکثر <b>۹ متر</b> فاصلهٔ پیمایش از هر سرخ‌کن یا اجاق.');
+  if(cls.indexOf('G')>=0) adds.push('در حریق گاز، اولویت <b>قطع جریان گاز</b> است؛ کپسول پودری فقط پس از بستن شیر یا برای نجات جان. <button class="gf-inl" onclick="goPage(\'gasfire\')">سناریوی واکنش ›</button>');
+  if(tk==='co2' && hasA) adds.push('CO₂ رتبهٔ A ندارد؛ برای جامدات، کپسول پودری یا آب و گاز کنار آن لازم است.');
+
+  var mount = T.w<=18 ? 'بالای کپسول حداکثر <b>۱٫۵ متر</b> از کف (کپسول تا ۱۸ کیلوگرم وزن کل)' : 'بالای کپسول حداکثر <b>۱٫۰۷ متر</b> از کف (کپسول سنگین‌تر از ۱۸ کیلوگرم)';
+  var place=[mount+'؛ فاصلهٔ کف تا پایین کپسول حداقل <b>۱۰ سانتی‌متر</b>.',
+    'در مسیرهای عادی تردد، نزدیک درهای خروج و ورودی هر فضا؛ همیشه قابل دیدن و بدون مانع.',
+    'در هر طبقه جداگانه؛ اگر کپسول دیده نمی‌شود، تابلوی راهنمای آن نصب شود.',
+    'دور از منابع حرارت و آسیب فیزیکی؛ کپسول‌های بیرونی در کاور یا جعبهٔ محافظ.'];
+  var maint=[['بازرسی چشمی','ماهانه (۳۰ روز)'],['سرویس و نگهداری','سالانه'],['بازرسی داخلی پودری تحت فشار','هر ۶ سال'],
+    ['تست هیدرواستاتیک CO₂، آب و فوم','هر ۵ سال'],['تست هیدرواستاتیک پودری','هر ۱۲ سال']];
+
+  out.innerHTML=
+    (warn.length?'<div class="ec-warn">'+warn.map(function(w){return '<div>⚠ '+w+'</div>';}).join('')+'</div>':'')+
+    '<div class="ec-hero"><div class="ec-big"><b>'+faDigits(total)+'</b><span>کپسول</span></div><div class="ec-sub">'+
+      (fl>1? faDigits(need)+' کپسول در هر طبقه × '+faDigits(fl)+' طبقه' : 'برای این فضا')+'<br><small>'+T.n+'</small></div></div>'+
+    '<div class="sec-block"><h3>نقشهٔ جانمایی پیشنهادی (یک طبقه)</h3>'+plan+'</div>'+
+    '<div class="sec-block"><h3>جزئیات محاسبه</h3>'+info.map(function(r){return '<div class="sec-row"><span class="sk">'+r[0]+'</span><span class="sv">'+r[1]+'</span></div>';}).join('')+'</div>'+
+    (adds.length?gfList('کپسول‌های تکمیلی','',adds):'')+
+    gfList('ضوابط نصب','',place)+
+    '<div class="sec-block"><h3>برنامهٔ بازرسی و آزمون (NFPA 10)</h3>'+maint.map(function(r){return '<div class="sec-row"><span class="sk">'+r[0]+'</span><span class="sv">'+r[1]+'</span></div>';}).join('')+'</div>';
+}
+function initExtCalc(){
+  var sp=document.getElementById('ecSpace'); if(!sp) return;
+  sp.addEventListener('change', ecPreset);
+  document.getElementById('ecType').addEventListener('change', ecCalc);
+  document.getElementById('ecHaz').addEventListener('click', function(e){ var b=e.target.closest('button'); if(!b) return; gfSetSeg('ecHaz',b.getAttribute('data-v')); ecCalc(); });
+  document.getElementById('ecCls').addEventListener('click', function(e){ var b=e.target.closest('button'); if(!b) return; b.classList.toggle('on'); ecCalc(); });
+  ['ecL','ecW','ecF'].forEach(function(id){ document.getElementById(id).addEventListener('input', ecCalc); });
+  ecCalc();
+}
+
+/* ================= آتش‌نشانی: آموزش متحرک PASS ================= */
+var PASS_STEPS = [
+  {t:'آماده‌سازی', d:'کپسول را از جای خود بردارید، عقربهٔ فشارسنج را در ناحیهٔ سبز ببینید و <b>پشت به باد</b> در فاصلهٔ ۲ تا ۳ متری آتش بایستید؛ راه فرار پشت سرتان باشد.'},
+  {t:'P — بکش (Pull)', d:'پلمب را بشکنید و <b>ضامن (پین)</b> را با حرکت چرخشی بیرون بکشید. هنگام کشیدن ضامن، اهرم را فشار ندهید و نازل را رو به خود نگیرید.'},
+  {t:'A — نشانه بگیر (Aim)', d:'نازل را به سمت <b>پایهٔ آتش</b> بگیرید، نه به شعله‌ها. خاموش‌کننده باید به منبع سوخت برسد؛ پاشیدن به شعله‌ها بی‌اثر است.'},
+  {t:'S — فشار بده (Squeeze)', d:'اهرم را <b>آرام و یکنواخت</b> فشار دهید تا ماده خاموش‌کننده خارج شود. با رها کردن اهرم، تخلیه متوقف می‌شود.'},
+  {t:'S — جارو کن (Sweep)', d:'نازل را روی پایهٔ آتش <b>به چپ و راست</b> حرکت دهید و کم‌کم جلو بروید تا شعله کاملاً خاموش شود. سپس رو به آتش عقب بروید و مراقب شعله‌ور شدن مجدد باشید.'}
+];
+var passTimer=null;
+function passGo(n){
+  var st=document.getElementById('passStage'); if(!st) return;
+  n=Math.max(0,Math.min(4,(+n)||0)); st.setAttribute('data-step', n);
+  document.querySelectorAll('#passSteps button').forEach(function(b){
+    var k=+b.getAttribute('data-s'); b.classList.toggle('on', k===n); b.classList.toggle('done', k<n); });
+  var S=PASS_STEPS[n];
+  document.getElementById('passCap').innerHTML='<div class="pc-t">'+S.t+'</div><div class="pc-d">'+S.d+'</div>';
+}
+function passStop(){ if(passTimer){ clearInterval(passTimer); passTimer=null; } var b=document.getElementById('passPlay'); if(b) b.textContent='▶ پخش خودکار'; }
+function passPlay(){
+  if(passTimer){ passStop(); return; }
+  var st=document.getElementById('passStage'), n=+st.getAttribute('data-step');
+  if(n>=4) n=-1;
+  passGo(n+1);
+  document.getElementById('passPlay').textContent='❚❚ توقف';
+  passTimer=setInterval(function(){
+    var k=+document.getElementById('passStage').getAttribute('data-step');
+    if(k>=4){ passStop(); return; }
+    passGo(k+1);
+  }, 3600);
+}
+function initPass(){
+  var steps=document.getElementById('passSteps'); if(!steps) return;
+  steps.addEventListener('click', function(e){ var b=e.target.closest('button'); if(!b) return; passStop(); passGo(+b.getAttribute('data-s')); });
+  document.getElementById('passPlay').addEventListener('click', passPlay);
+  document.getElementById('passReset').addEventListener('click', function(){ passStop(); passGo(0); });
+  passGo(0);
+}
+initGasFire(); initExtCalc(); initPass();
+
 /* ================= لایه طراحی ارائه: آیکون‌ها، اینترو، شمارنده ================= */
 // نگاشت ایموجی → آیکون SVG اختصاصی (ایموجی‌های بدون نگاشت دست‌نخورده می‌مانند)
 var ICON_MAP = {
@@ -5297,7 +5986,7 @@ var ICON_MAP = {
   '🏭':'factory','⛔':'hazard','🎯':'target','🏢':'building','🛢':'valve','🔄':'convert','📟':'detector',
   '📋':'permit','🕳':'manhole','📏':'ruler','💨':'wind','📍':'pin','👕':'shirt','🎖':'award','ℹ':'info',
   '🧠':'bulb','🧑‍💼':'user','🧰':'toolbox','🛡':'shield','🔔':'bell','📚':'book','🚨':'siren','💓':'heart',
-  '🎓':'grad','🌿':'leaf'
+  '🎓':'grad','🌿':'leaf','🛑':'gasfire','📐':'plan','🎬':'play'
 };
 var ICON_SEL = '.tr-ico,.cb-ico,.ax-ico,.ax-ghost,.q-ico,.rs-ico,.hb-ico,.edu-ico,.qh-ico,.mc-ico';
 function svgIcon(id, cls){ return '<svg class="'+(cls||'ic')+'" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-'+id+'"/></svg>'; }
