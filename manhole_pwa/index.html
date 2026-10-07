@@ -1455,6 +1455,105 @@
   html[data-theme="light"] .pass-steps button{ background:#F4F7FB; }
   html[data-theme="light"] .pass-cap{ background:#F4F7FB; }
   html[data-theme="light"] .tt b{ color:color-mix(in srgb, var(--c) 70%, #0E1B2E); }
+
+  /* ============ آموزش سیستم‌های اعلام و اطفای حریق ============ */
+  .fs-tabs{ display:flex; gap:8px; overflow-x:auto; padding:2px 2px 10px; margin-bottom:4px; scrollbar-width:none; }
+  .fs-tabs::-webkit-scrollbar{ display:none; }
+  .fs-tabs button{ flex-shrink:0; font-family:inherit; font-size:13px; font-weight:700; cursor:pointer; border-radius:20px; padding:8px 14px;
+    background:var(--glass2); border:1px solid var(--line2); color:var(--txt2); transition:.2s; }
+  .fs-tabs button.on{ background:linear-gradient(135deg,#FF5A5A,#FF9500); border-color:transparent; color:#fff; box-shadow:0 6px 16px -6px rgba(255,90,90,.6); }
+  .fs-panel{ display:none; } .fs-panel.on{ display:block; animation:riseIn .4s var(--ease-out) backwards; }
+  .fs-p{ font-size:13px; line-height:2; color:var(--txt); padding:4px 0 10px; }
+  .fs-warn{ margin:8px 0 12px; padding:10px 12px; border-radius:12px; font-size:12.5px; line-height:1.9; color:var(--txt);
+    background:rgba(255,149,0,.10); border:1px solid rgba(255,149,0,.35); }
+  .fs-dcard{ padding:12px; }
+  .fs-stage{ border-radius:16px; overflow:hidden; background:linear-gradient(180deg,#0b1a30,#0a1426); }
+  .fs-svg{ display:block; width:100%; height:auto; }
+  .fs-bld{ fill:rgba(255,255,255,.035); stroke:rgba(255,255,255,.35); stroke-width:1.6; }
+  .fs-slab{ stroke:rgba(255,255,255,.35); stroke-width:3; } .fs-ground{ stroke:#5b6b84; stroke-width:2; }
+  .fs-fl{ font-size:9px; fill:#7f93b3; text-anchor:middle; }
+  .fs-lbl{ font-size:9.5px; font-weight:700; fill:#cfe0f5; text-anchor:middle; paint-order:stroke; stroke:#0a1426; stroke-width:3px; }
+  .fs-shaft{ fill:rgba(255,255,255,.03); stroke:rgba(255,255,255,.18); stroke-dasharray:3 3; }
+  .fs-car rect{ fill:#3a4d6b; stroke:#8fb6dc; stroke-width:1; } .fs-car path{ stroke:#8fb6dc; stroke-width:1; }
+  .fs-car{ transition:transform 2.2s cubic-bezier(.5,0,.3,1); }
+  .fs-spipe{ fill:none; stroke:#c0392b; stroke-width:2.4; } .fs-head path, .fs-headx{ fill:none; stroke:#e5e7eb; stroke-width:1.6; stroke-linecap:round; }
+  .fs-spray{ opacity:0; transition:opacity .3s; }
+  .fs-spray path{ stroke:#6ec6ff; stroke-width:1.6; stroke-linecap:round; stroke-dasharray:4 5; fill:none; animation:fsDrip .5s linear infinite; }
+  @keyframes fsDrip{ to{ stroke-dashoffset:-9; } }
+  .fs-wire{ fill:none; stroke:#FFC94D; stroke-width:1.1; stroke-dasharray:2 2; opacity:.55; }
+  .fs-det ellipse{ fill:#e8edf5; stroke:#8fa3bf; stroke-width:1; } .fs-detled{ fill:#5b6b84; }
+  .fs-snd rect{ fill:#d63031; stroke:#ff7675; stroke-width:1; } .fs-wave{ fill:none; stroke:#ff7675; stroke-width:1.4; stroke-linecap:round; opacity:0; }
+  .fs-mcp{ fill:#d63031; stroke:#fff; stroke-width:1; }
+  .fs-pbox{ fill:#c0392b; stroke:#ff9b9b; stroke-width:1; } .fs-pscr{ fill:#0f2a1c; } .fs-ptxt{ font-size:6.5px; fill:#ff6b6b; text-anchor:middle; font-weight:800; opacity:0; }
+  .fs-led-g{ fill:#22c55e; } .fs-led-r{ fill:#5a1f1f; } .fs-led-y{ fill:#5a4a1f; } .fs-pkeys{ stroke:#f5d0d0; stroke-width:2; stroke-linecap:round; }
+  .fs-pulse{ fill:#FFC94D; opacity:0; filter:drop-shadow(0 0 4px #FFC94D); }
+  .fs-gpipe{ fill:none; stroke:#FFD60A; stroke-width:3; } .fs-meter{ fill:#9aa6b4; stroke:#dfe6ee; stroke-width:1; }
+  .fs-solb{ fill:#FFD60A; stroke:#7a6400; stroke-width:1; } .fs-solh{ fill:#8fa3bf; } .fs-solx{ stroke:#FF3B3B; stroke-width:2.4; stroke-linecap:round; opacity:0; }
+  .fs-gwire{ fill:none; stroke:#FFC94D; stroke-width:1; stroke-dasharray:2 2; opacity:.35; }
+  .fs-smoke circle{ fill:rgba(170,180,195,.45); } .fs-smoke{ opacity:0; transition:opacity 1s; }
+  .fs-fire{ opacity:0; transform-box:view-box; transform-origin:140px 190px; transition:opacity .6s, transform 2s; }
+  .fs-fl1{ fill:#ff7a1a; animation:psFlick .45s ease-in-out infinite alternate; transform-box:view-box; transform-origin:140px 190px; }
+  .fs-fl2{ fill:#ffd166; animation:psFlick .3s ease-in-out infinite alternate; transform-box:view-box; transform-origin:140px 190px; }
+  /* ترتیب رویدادها */
+  .fs-stage:not([data-step="0"]) .fs-fire{ opacity:1; }
+  .fs-stage:not([data-step="0"]) .fs-smoke{ opacity:1; }
+  .fs-stage[data-step="2"] .fs-detled, .fs-stage[data-step="3"] .fs-detled, .fs-stage[data-step="4"] .fs-detled, .fs-stage[data-step="5"] .fs-detled, .fs-stage[data-step="6"] .fs-detled{ fill:#FF3B3B; animation:blink .6s steps(2) infinite; }
+  .fs-stage[data-step="3"] .fs-pulse, .fs-stage[data-step="4"] .fs-pulse, .fs-stage[data-step="5"] .fs-pulse{ opacity:1; }
+  .fs-stage[data-step="4"] .fs-led-r, .fs-stage[data-step="5"] .fs-led-r, .fs-stage[data-step="6"] .fs-led-r{ fill:#FF3B3B; animation:blink .7s steps(2) infinite; }
+  .fs-stage[data-step="4"] .fs-ptxt, .fs-stage[data-step="5"] .fs-ptxt, .fs-stage[data-step="6"] .fs-ptxt{ opacity:1; }
+  .fs-stage[data-step="4"] .fs-wave, .fs-stage[data-step="5"] .fs-wave, .fs-stage[data-step="6"] .fs-wave{ animation:fsWave .8s ease-out infinite; }
+  .fs-stage[data-step="4"] .fs-snd rect, .fs-stage[data-step="5"] .fs-snd rect, .fs-stage[data-step="6"] .fs-snd rect{ animation:fsStrobe .9s steps(2) infinite; }
+  @keyframes fsWave{ 0%{ opacity:0; } 30%{ opacity:1; } 100%{ opacity:0; } }
+  @keyframes fsStrobe{ 0%{ fill:#d63031; } 50%{ fill:#ffffff; } }
+  .fs-stage[data-step="5"] .fs-solx, .fs-stage[data-step="6"] .fs-solx{ opacity:1; }
+  .fs-stage[data-step="5"] .fs-solb, .fs-stage[data-step="6"] .fs-solb{ fill:#FF3B3B; }
+  .fs-stage[data-step="5"] .fs-gwire, .fs-stage[data-step="6"] .fs-gwire{ opacity:1; stroke:#FF5A5A; }
+  .fs-stage[data-step="5"] .fs-car, .fs-stage[data-step="6"] .fs-car{ transform:translateY(180px); }
+  .fs-stage[data-step="6"] .fs-spray{ opacity:1; }
+  .fs-stage[data-step="6"] .fs-fire{ transform:scale(.3); opacity:.5; transition-delay:.8s; }
+  .fs-stage[data-step="6"] .fs-smoke{ opacity:.45; }
+  .fs-steps{ display:grid; grid-template-columns:repeat(6,1fr); gap:6px; margin-top:12px; }
+  .fs-steps button{ font-family:inherit; cursor:pointer; border-radius:12px; padding:7px 2px; font-size:16px; font-weight:900; color:var(--txt);
+    display:flex; flex-direction:column; align-items:center; background:rgba(255,255,255,.04); border:1.5px solid var(--line2); transition:.2s; }
+  .fs-steps button span{ font-size:10.5px; font-weight:700; color:var(--txt2); }
+  .fs-steps button.on{ border-color:#FF5A5A; background:rgba(255,90,90,.14); color:#FF5A5A; box-shadow:0 0 16px -6px #FF5A5A; }
+  .fs-steps button.done{ border-color:rgba(34,255,136,.4); color:var(--neon); }
+  .fs-duo{ display:grid; grid-template-columns:1fr 1fr; gap:10px; padding:4px 0 12px; }
+  .fs-duo-i{ border-radius:14px; padding:12px; background:color-mix(in srgb, var(--c) 10%, transparent); border:1px solid color-mix(in srgb, var(--c) 38%, transparent); }
+  .fs-duo-i b{ display:block; color:var(--c); font-size:14px; margin-bottom:4px; } .fs-duo-i span{ font-size:12px; line-height:1.9; color:var(--txt); }
+  .fs-det-grid{ display:grid; grid-template-columns:1fr; gap:10px; padding:4px 0 12px; }
+  .fs-dt{ border-radius:14px; padding:12px; border:1px solid color-mix(in srgb, var(--c) 35%, transparent); background:color-mix(in srgb, var(--c) 8%, transparent); }
+  .fs-dt b{ display:block; color:var(--c); font-size:14.5px; } .fs-dt span{ display:block; font-size:12.5px; line-height:1.9; color:var(--txt); margin:3px 0 6px; }
+  .fs-dt em{ display:block; font-style:normal; font-size:12px; line-height:1.8; padding:2px 0; }
+  .fs-dt em.ok::before{ content:'✓ مناسب: '; color:var(--neon); font-weight:800; } .fs-dt em.no::before{ content:'✕ نامناسب: '; color:#FF5A5A; font-weight:800; }
+  .fs-dt em{ color:var(--txt2); }
+  .fs-led-row{ display:grid; grid-template-columns:16px 92px 1fr; gap:10px; align-items:center; padding:9px 0; border-bottom:1px solid var(--line); font-size:12.5px; }
+  .fs-led-row:last-child{ border-bottom:none; } .fs-led-row b{ color:var(--txt); } .fs-led-row span:last-child{ color:var(--txt2); line-height:1.8; }
+  .fs-ld{ width:14px; height:14px; border-radius:50%; background:var(--c); box-shadow:0 0 10px var(--c); } .fs-ld.blink{ animation:blink .8s steps(2) infinite; }
+  .fs-bulbs{ display:flex; flex-wrap:wrap; gap:8px; padding:4px 0 12px; }
+  .fs-bulbs span{ display:flex; align-items:center; gap:6px; font-size:12px; font-weight:700; color:var(--txt); background:rgba(255,255,255,.04); border:1px solid var(--line2); border-radius:20px; padding:5px 10px; }
+  .fs-bulbs i{ width:8px; height:16px; border-radius:5px; background:var(--c); box-shadow:0 0 8px var(--c); }
+  #fsPlace{ margin-bottom:4px; }
+  .fs-sc{ border-radius:14px; padding:11px 12px; margin:8px 0; border-right:4px solid var(--c); background:color-mix(in srgb, var(--c) 9%, transparent); }
+  .fs-sc b{ display:block; color:var(--c); font-size:13.5px; margin-bottom:3px; } .fs-sc span{ font-size:12.5px; line-height:1.9; color:var(--txt); }
+  .fs-tl{ position:relative; padding:6px 18px 10px 0; }
+  .fs-tl::before{ content:''; position:absolute; right:5px; top:12px; bottom:18px; width:2px; background:linear-gradient(#22FF88,#3FD0FF,#b6a4ff); border-radius:2px; }
+  .tl-i{ position:relative; padding:6px 0 10px; } .tl-i::before{ content:''; position:absolute; right:-17px; top:12px; width:10px; height:10px; border-radius:50%; background:var(--neon); box-shadow:0 0 8px var(--neon); }
+  .tl-i b{ display:block; font-size:13.5px; color:var(--txt); } .tl-i span{ font-size:12.5px; color:var(--txt2); line-height:1.9; }
+  .fs-qhead{ display:flex; justify-content:space-between; align-items:center; margin:2px 2px 10px; } .fs-qhead b{ font-size:16px; color:var(--txt); } .fs-qhead span{ font-size:12px; color:var(--txt2); }
+  .fs-qc{ margin-bottom:12px; } .fs-qc .q-text{ font-size:14.5px; line-height:1.9; margin-bottom:12px; }
+  .q-opt.fs-right{ border-color:var(--neon); background:rgba(34,255,136,.12); } .q-opt.fs-wrong{ border-color:#FF5A5A; background:rgba(255,90,90,.12); }
+  .q-opt:disabled{ cursor:default; opacity:1; color:var(--txt); }
+  .fs-exp{ margin-top:10px; font-size:12.5px; line-height:1.9; padding:9px 11px; border-radius:11px; } .fs-exp.ok{ background:rgba(34,255,136,.10); color:var(--txt); } .fs-exp.bad{ background:rgba(255,90,90,.10); color:var(--txt); }
+  .fs-score{ text-align:center; padding:18px; border-radius:20px; margin-top:6px; background:linear-gradient(135deg, rgba(34,255,136,.14), rgba(63,208,255,.06)); border:1px solid rgba(34,255,136,.35); }
+  .fs-score b{ display:block; font-size:44px; font-weight:900; color:var(--neon); line-height:1.1; } .fs-score span{ font-size:13px; color:var(--txt2); }
+  .fs-score div{ font-size:13.5px; color:var(--txt); margin:8px 0 12px; } .fs-score .pass-btn{ width:100%; }
+  html[data-theme="light"] .fs-tabs button:not(.on){ background:#fff; }
+  #firesys .sec-row .sk{ flex:0 0 34%; font-weight:700; color:var(--txt); }
+  #firesys .sec-row .sv{ flex:1; text-align:right; font-weight:400; color:var(--txt2); font-size:13px; }
+  html[data-theme="light"] .fs-steps button{ background:#F4F7FB; }
+  html[data-theme="light"] .fs-qhead b{ color:#0E1B2E; }
+  html[data-theme="light"] .fs-duo-i b, html[data-theme="light"] .fs-dt b, html[data-theme="light"] .fs-sc b{ color:color-mix(in srgb, var(--c) 68%, #0E1B2E); }
 </style>
 </head>
 <body>
@@ -1581,6 +1680,8 @@
     <button data-page="extinguisher">انتخاب کپسول آتش‌نشانی مناسب</button>
     <button data-page="building">تحلیل اطفا و اعلام ساختمان</button>
     <div class="menu-sec"><span class="ms-dot" style="background:#b6a4ff"></span> آزمون و آموزش</div>
+    <button data-page="firesys">سیستم‌های اعلام و اطفای حریق</button>
+    <button data-page="passtrain">آموزش کار با کپسول (PASS)</button>
     <button data-page="quiz">آزمون و خودآزمایی HSE</button>
     <div class="menu-sec"><span class="ms-dot" style="background:#8A9BB8"></span> مستندات</div>
     <button data-page="guidelines">دستورالعمل‌ها</button>
@@ -1660,12 +1761,12 @@
       <span class="ax-desc">حفاظت و مدیریت بحران</span>
       <span class="ax-foot"><span class="ax-badge">به‌زودی</span><span class="ax-arrow">←</span></span>
     </button>
-    <button class="axis" style="--c:#b6a4ff" onclick="goPage('quiz')">
+    <button class="axis" style="--c:#b6a4ff" onclick="goPage('cat-edu')">
       <span class="ax-ghost">🎓</span>
       <span class="ax-ico">🎓</span>
       <span class="ax-name">آموزش</span>
-      <span class="ax-desc">آزمون و خودآزمایی HSE</span>
-      <span class="ax-foot"><span class="ax-badge">آزمون</span><span class="ax-arrow">←</span></span>
+      <span class="ax-desc">آموزش‌های تعاملی و آزمون HSE</span>
+      <span class="ax-foot"><span class="ax-badge">۳ ماژول</span><span class="ax-arrow">←</span></span>
     </button>
     <button class="axis" style="--c:#3a8ee0" onclick="goPage('guidelines')">
       <span class="ax-ghost">📚</span>
@@ -2719,6 +2820,270 @@
 <div class="note">این آموزش جایگزین تمرین عملی اطفا زیر نظر مربی آتش‌نشانی نیست.</div>
 </div><!-- /page passtrain -->
 
+<!-- ===== هاب آموزش ===== -->
+<div class="page" id="cat-edu">
+<div class="container">
+  <div class="cat-banner" style="--c:#b6a4ff"><div class="cb-txt"><div class="cb-title">آموزش</div><div class="cb-desc">آموزش‌های تعاملی و آزمون خودآزمایی HSE</div></div><div class="cb-ico">🎓</div></div>
+  <div class="sec-head"><span class="sh-bar" style="background:#FF5A5A"></span><div class="sh-txt"><div class="sh-t">آموزش‌های تعاملی</div><div class="sh-s">۲ ماژول</div></div></div>
+  <div class="toolrows">
+    <button class="toolrow" onclick="goPage('firesys')"><span class="tr-ico" style="--c:#FF5A5A">🚨</span><span class="tr-txt"><span class="tr-name">سیستم‌های اعلام و اطفای حریق</span><span class="tr-desc">معرفی و کار با سیستم‌ها — اداری و مسکونی</span></span><span class="tr-arrow">‹</span></button>
+    <button class="toolrow" onclick="goPage('passtrain')"><span class="tr-ico" style="--c:#FF9500">🎬</span><span class="tr-txt"><span class="tr-name">آموزش کار با کپسول</span><span class="tr-desc">انیمیشن روش PASS گام‌به‌گام</span></span><span class="tr-arrow">‹</span></button>
+  </div>
+  <div class="sec-head"><span class="sh-bar" style="background:#b6a4ff"></span><div class="sh-txt"><div class="sh-t">آزمون</div><div class="sh-s">۲۰۰ سؤال در ۴ حوزه</div></div></div>
+  <div class="toolrows">
+    <button class="toolrow" onclick="goPage('quiz')"><span class="tr-ico" style="--c:#b6a4ff">🧠</span><span class="tr-txt"><span class="tr-name">آزمون خودآزمایی HSE</span><span class="tr-desc">۲۰ سؤال تصادفی · نمره از ۱۰۰</span></span><span class="tr-arrow">‹</span></button>
+  </div>
+</div>
+</div><!-- /page cat-edu -->
+
+<!-- ===== آموزش سیستم‌های اعلام و اطفای حریق ===== -->
+<div class="page" id="firesys">
+<div class="container">
+  <div class="cat-banner" style="--c:#FF5A5A"><div class="cb-txt"><div class="cb-title">سیستم‌های اعلام و اطفای حریق</div><div class="cb-desc">معرفی، نحوهٔ کار و وظایف شما — ساختمان‌های اداری و مسکونی</div></div><div class="cb-ico">🚨</div></div>
+
+  <div class="fs-tabs" id="fsTabs">
+    <button data-t="flow" class="on">نمای کلی</button>
+    <button data-t="alarm">اعلام حریق</button>
+    <button data-t="ext">اطفای حریق</button>
+    <button data-t="place">اداری و مسکونی</button>
+    <button data-t="act">هنگام حریق</button>
+    <button data-t="maint">بازرسی و نگهداری</button>
+    <button data-t="quiz">خودآزمایی</button>
+  </div>
+
+  <!-- ۱) نمای کلی -->
+  <div class="fs-panel on" data-p="flow">
+    <div class="card fs-dcard">
+      <div class="fs-stage" id="fsStage" data-step="0">
+        <svg class="fs-svg" viewBox="0 0 320 292" aria-label="نمودار عملکرد سیستم اعلام و اطفای حریق در ساختمان">
+          <!-- ساختمان -->
+          <rect class="fs-bld" x="20" y="28" width="250" height="242" rx="4"/>
+          <line class="fs-slab" x1="20" y1="110" x2="270" y2="110"/><line class="fs-slab" x1="20" y1="190" x2="270" y2="190"/>
+          <line class="fs-ground" x1="4" y1="270" x2="316" y2="270"/>
+          <text class="fs-fl" x="205" y="103">طبقهٔ دوم</text><text class="fs-fl" x="205" y="183">طبقهٔ اول</text><text class="fs-fl" x="160" y="236">همکف</text>
+          <!-- آسانسور -->
+          <rect class="fs-shaft" x="238" y="50" width="26" height="218"/>
+          <g class="fs-car"><rect x="241" y="56" width="20" height="26" rx="2"/><path d="M251 60v18"/></g>
+          <!-- لوله اسپرینکلر -->
+          <path class="fs-spipe" d="M96 34H224M96 114H224M96 194H224"/>
+          <g class="fs-head"><path d="M125 114v5M121 120h8"/></g><path class="fs-headx" d="M125 34v5M121 40h8M205 34v5M201 40h8M125 194v5M121 200h8M205 194v5M201 200h8M205 114v5M201 120h8"/>
+          <g class="fs-spray"><path d="M125 122l-14 50M125 122l-6 52M125 122l2 52M125 122l10 50M125 122l18 46"/></g>
+          <!-- سیم‌کشی اعلام -->
+          <path class="fs-wire" d="M30 40V245H36M30 117H170M30 37H170M30 197H170M30 52H44M30 132H44M30 212H44"/>
+          <!-- دتکتورها -->
+          <g class="fs-det"><ellipse cx="170" cy="36" rx="8" ry="3.4"/></g>
+          <g class="fs-det fs-det-on"><ellipse cx="170" cy="116" rx="8" ry="3.4"/><circle class="fs-detled" cx="170" cy="118" r="2"/></g>
+          <g class="fs-det"><ellipse cx="170" cy="196" rx="8" ry="3.4"/></g>
+          <!-- آژیر/فلاشر و شستی هر طبقه -->
+          <g class="fs-snd"><rect x="44" y="46" width="12" height="12" rx="2"/><path class="fs-wave" d="M60 47q5 5 0 10M64 44q8 8 0 16"/></g>
+          <g class="fs-snd"><rect x="44" y="126" width="12" height="12" rx="2"/><path class="fs-wave" d="M60 127q5 5 0 10M64 124q8 8 0 16"/></g>
+          <g class="fs-snd"><rect x="44" y="206" width="12" height="12" rx="2"/><path class="fs-wave" d="M60 207q5 5 0 10M64 204q8 8 0 16"/></g>
+          <rect class="fs-mcp" x="78" y="74" width="9" height="9" rx="1.5"/><rect class="fs-mcp" x="78" y="154" width="9" height="9" rx="1.5"/><rect class="fs-mcp" x="78" y="234" width="9" height="9" rx="1.5"/>
+          <!-- پنل -->
+          <g class="fs-panel-g"><rect class="fs-pbox" x="36" y="222" width="36" height="42" rx="3"/>
+            <rect class="fs-pscr" x="40" y="227" width="28" height="11" rx="1.5"/><text class="fs-ptxt" x="54" y="235.5">طبقه ۱</text>
+            <circle class="fs-led-g" cx="44" cy="246" r="2.6"/><circle class="fs-led-r" cx="52" cy="246" r="2.6"/><circle class="fs-led-y" cx="60" cy="246" r="2.6"/>
+            <path class="fs-pkeys" d="M42 255h6M50 255h6M58 255h6"/></g>
+          <!-- پالس سیگنال -->
+          <circle class="fs-pulse" r="3.4"><animateMotion id="fsMotion" dur="1.4s" begin="indefinite" repeatCount="indefinite" path="M170 117H30V245H36"/></circle>
+          <!-- گاز -->
+          <path class="fs-gpipe" d="M314 252H200V236"/>
+          <rect class="fs-meter" x="290" y="232" width="16" height="14" rx="2"/>
+          <g class="fs-sol"><path class="fs-solb" d="M274 246l10 12v-12l-10 12z"/><rect class="fs-solh" x="276" y="238" width="6" height="6" rx="1"/><path class="fs-solx" d="M270 232l18 18M288 232l-18 18"/></g>
+          <path class="fs-gwire" d="M72 258H279V244"/>
+          <!-- آتش و دود -->
+          <g class="fs-smoke"><circle cx="146" cy="160" r="10"/><circle cx="158" cy="140" r="13"/><circle cx="168" cy="124" r="11"/><circle cx="140" cy="130" r="12"/></g>
+          <g class="fs-fire"><path class="fs-fl1" d="M132 190c-4-14 4-20 7-30 4 9 11 13 8 30z"/><path class="fs-fl2" d="M140 190c-3-9 3-13 5-19 3 6 7 8 5 19z"/></g>
+          <text class="fs-lbl" x="196" y="141">دتکتور دودی</text>
+          <text class="fs-lbl" x="98" y="181">اسپرینکلر</text>
+          <text class="fs-lbl" x="54" y="284">پنل اعلام</text>
+          <text class="fs-lbl" x="287" y="226">شیر برقی گاز</text>
+        </svg>
+      </div>
+      <div class="fs-steps" id="fsSteps">
+        <button data-s="1">۱<span>شروع</span></button><button data-s="2">۲<span>تشخیص</span></button><button data-s="3">۳<span>سیگنال</span></button>
+        <button data-s="4">۴<span>اعلام</span></button><button data-s="5">۵<span>فرمان‌ها</span></button><button data-s="6">۶<span>اطفا</span></button>
+      </div>
+      <div class="pass-cap" id="fsCap"></div>
+      <div class="pass-ctrl"><button class="pass-btn" id="fsPlay">▶ پخش خودکار</button><button class="pass-btn ghost" id="fsReset">↺ از اول</button></div>
+    </div>
+    <div class="sec-block"><h3>دو سیستم، یک هدف: نجات جان</h3>
+      <div class="fs-duo">
+        <div class="fs-duo-i" style="--c:#FFC94D"><b>سیستم اعلام حریق</b><span>آتش را <b>زود</b> تشخیص می‌دهد و همه را باخبر می‌کند تا فرصت تخلیه باشد؛ آتش را خاموش نمی‌کند.</span></div>
+        <div class="fs-duo-i" style="--c:#3FD0FF"><b>سیستم اطفای حریق</b><span>آتش را <b>مهار یا خاموش</b> می‌کند: دستی (کپسول، جعبهٔ آتش‌نشانی) یا خودکار (اسپرینکلر، سیستم گازی).</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ۲) اعلام حریق -->
+  <div class="fs-panel" data-p="alarm">
+    <div class="sec-block"><h3>اجزای سیستم اعلام حریق</h3>
+      <div class="sec-row"><span class="sk">پنل کنترل اعلام حریق</span><span class="sv">مغز سیستم؛ سیگنال‌ها را دریافت، محل را نمایش و فرمان‌ها را صادر می‌کند؛ با باتری پشتیبان در قطع برق کار می‌کند</span></div>
+      <div class="sec-row"><span class="sk">دتکتورها (آشکارسازها)</span><span class="sv">دود، حرارت، شعله یا گاز را به‌طور خودکار تشخیص می‌دهند</span></div>
+      <div class="sec-row"><span class="sk">شستی اعلام دستی</span><span class="sv">جعبهٔ قرمز کنار خروجی‌ها؛ هر کس آتش را دید با فشار آن اعلام حریق می‌کند</span></div>
+      <div class="sec-row"><span class="sk">آژیر و فلاشر</span><span class="sv">هشدار صوتی و نوری به همهٔ ساکنان (فلاشر برای افراد کم‌شنوا)</span></div>
+      <div class="sec-row"><span class="sk">ماژول‌های فرمان</span><span class="sv">بستن شیر برقی گاز، فرستادن آسانسور به همکف، آزاد کردن درهای دودبند، توقف هواساز</span></div>
+    </div>
+    <div class="sec-block"><h3>متعارف یا آدرس‌پذیر؟</h3>
+      <div class="sec-row"><span class="sk">متعارف (Conventional)</span><span class="sv">دتکتورها زون‌بندی می‌شوند؛ پنل فقط «زون» را نشان می‌دهد. ارزان‌تر؛ مناسب ساختمان‌های کوچک و مسکونی</span></div>
+      <div class="sec-row"><span class="sk">آدرس‌پذیر (Addressable)</span><span class="sv">هر دتکتور شناسهٔ خود را دارد؛ پنل دقیقاً اتاق و تجهیز را نشان می‌دهد. مناسب ساختمان‌های اداری و بزرگ</span></div>
+      <div class="sec-row"><span class="sk">بی‌سیم (Wireless)</span><span class="sv">بدون سیم‌کشی؛ مناسب ساختمان‌های موجود و تاریخی</span></div>
+    </div>
+    <div class="sec-block"><h3>انواع دتکتور و محل مناسب</h3>
+      <div class="fs-det-grid">
+        <div class="fs-dt" style="--c:#8A9BB8"><b>دودی (اپتیکال)</b><span>با پراکندگی نور، دود را تشخیص می‌دهد. پرکاربردترین نوع.</span><em class="ok">اتاق‌ها، راهرو، دفتر کار، اتاق خواب</em><em class="no">آشپزخانه، حمام، پارکینگ (بخار و دود ← آلارم کاذب)</em></div>
+        <div class="fs-dt" style="--c:#FF9500"><b>حرارتی</b><span>دمای ثابت (معمولاً حدود ۵۷°C) یا افزایش سریع دما (حدود ۸ درجه در دقیقه).</span><em class="ok">آشپزخانه، آبدارخانه، پارکینگ، موتورخانه</em><em class="no">جایی که تشخیص زود دود حیاتی است (اتاق خواب)</em></div>
+        <div class="fs-dt" style="--c:#22FF88"><b>گاز شهری (متان)</b><span>نشت گاز را پیش از انفجار تشخیص می‌دهد؛ بهتر است به <b>شیر برقی قطع گاز</b> وصل شود.</span><em class="ok">نزدیک <b>سقف</b> (متان از هوا سبک‌تر است)، حدود ۱۵ تا ۳۰ سانتی‌متر زیر سقف، در فاصلهٔ افقی حدود ۴ متر از وسیلهٔ گازسوز</em><em class="no">مستقیماً بالای اجاق؛ برای گاز مایع (LPG) نزدیک کف</em></div>
+        <div class="fs-dt" style="--c:#3FD0FF"><b>مونوکسید کربن (CO)</b><span>گاز کشنده، بی‌رنگ و بی‌بوی ناشی از سوختن ناقص بخاری، آبگرمکن و شومینه.</span><em class="ok">نزدیک اتاق‌های خواب و فضای وسایل گازسوز، طبق دستور سازنده</em><em class="no">کنار پنجره یا هواکش، پشت پرده</em></div>
+        <div class="fs-dt" style="--c:#b6a4ff"><b>چندحسگره (دود + حرارت)</b><span>ترکیب دو حسگر؛ آلارم کاذب کمتر.</span><em class="ok">ساختمان‌های اداری، فضاهای با شرایط متغیر</em></div>
+        <div class="fs-dt" style="--c:#FF5A5A"><b>شعله‌ای / بیم خطی</b><span>شعله با پرتو UV/IR؛ بیم: پرتو نور در طول سالن.</span><em class="ok">سالن‌های بزرگ، آتریوم، انبار مرتفع، ایستگاه‌ها</em></div>
+      </div>
+    </div>
+    <div class="sec-block"><h3>ضوابط کلیدی نصب (NFPA 72)</h3>
+      <div class="step-item"><span class="step-num">۱</span><span>دتکتور دودی روی سقف صاف: فاصلهٔ اسمی بین دتکتورها حدود <b>۹ متر</b> و هیچ نقطه‌ای از سقف دورتر از <b>۰٫۷</b> این فاصله (حدود ۶٫۴ متر) از نزدیک‌ترین دتکتور نباشد.</span></div>
+      <div class="step-item"><span class="step-num">۲</span><span>در کنج دیوار و سقف (هوای ساکن) نصب نشود؛ روی سقف حداقل ۱۰ سانتی‌متر از دیوار، روی دیوار بین ۱۰ تا ۳۰ سانتی‌متر زیر سقف.</span></div>
+      <div class="step-item"><span class="step-num">۳</span><span>دور از دریچه‌های کولر و هواساز؛ جریان هوا دود را از دتکتور دور می‌کند.</span></div>
+      <div class="step-item"><span class="step-num">۴</span><span>شستی دستی: حداکثر حدود <b>۱٫۵ متر</b> از هر در خروج، ارتفاع دستگیره بین <b>۱٫۰۷ تا ۱٫۲۲ متر</b>، و حداکثر <b>۶۱ متر</b> فاصلهٔ پیمایش تا نزدیک‌ترین شستی.</span></div>
+      <div class="step-item"><span class="step-num">۵</span><span>آژیرها در همهٔ فضاهای قابل‌تصرف شنیده شوند؛ در محیط پرسروصدا یا برای افراد کم‌شنوا، فلاشر لازم است.</span></div>
+    </div>
+    <div class="sec-block"><h3>پنل کنترل — معنی چراغ‌ها</h3>
+      <div class="fs-led-row"><span class="fs-ld" style="--c:#22c55e"></span><b>برق (سبز)</b><span>برق شهر برقرار است — حالت عادی</span></div>
+      <div class="fs-led-row"><span class="fs-ld blink" style="--c:#FF3B3B"></span><b>حریق (قرمز)</b><span>اعلام حریق از زون یا آدرس نمایش‌داده‌شده</span></div>
+      <div class="fs-led-row"><span class="fs-ld" style="--c:#FFC94D"></span><b>خرابی (زرد)</b><span>قطعی مدار، جدا شدن دتکتور، باتری ضعیف یا اتصال زمین — باید رفع شود</span></div>
+      <div class="fs-led-row"><span class="fs-ld" style="--c:#FFC94D"></span><b>غیرفعال (زرد)</b><span>یک زون یا تجهیز از مدار خارج شده؛ آن بخش حفاظت ندارد</span></div>
+      <div class="fs-led-row"><span class="fs-ld" style="--c:#FF9500"></span><b>نظارتی</b><span>وضعیت غیرعادی در سیستم اطفا؛ مثلاً بسته شدن شیر اسپرینکلر</span></div>
+    </div>
+    <div class="sec-block"><h3>وقتی پنل اعلام حریق می‌دهد (وظیفهٔ نگهبان یا مسئول)</h3>
+      <div class="step-item"><span class="step-num">۱</span><span>صدای بازر داخلی پنل را با <b>Buzzer Silence</b> قطع کنید؛ این کار آژیرهای ساختمان را ساکت نمی‌کند.</span></div>
+      <div class="step-item"><span class="step-num">۲</span><span>زون یا آدرس فعال را از نمایشگر بخوانید و فوراً با کپسول و تلفن یا بی‌سیم به محل بروید. اگر پنل روی «توالی اعلام مثبت» تنظیم شده باشد، تأیید باید در ۱۵ ثانیه و بررسی حداکثر در ۱۸۰ ثانیه انجام شود (NFPA 72).</span></div>
+      <div class="step-item"><span class="step-num">۳</span><span>پیش از باز کردن در، دمای آن را با <b>پشت دست</b> بسنجید؛ در داغ را باز نکنید.</span></div>
+      <div class="step-item"><span class="step-num">۴</span><span><b>حریق واقعی:</b> شستی دستی یا دکمهٔ تخلیه (Evacuate) را بزنید، با آتش‌نشانی <b>۱۲۵</b> تماس بگیرید و تخلیه را هدایت کنید.</span></div>
+      <div class="step-item"><span class="step-num">۵</span><span><b>آلارم کاذب:</b> علت را پیدا و رفع کنید (دود آشپزی، گرد و غبار، بخار، تست بدون هماهنگی)، سپس <b>Reset</b> کنید. اگر دوباره فعال شد، شرکت سرویس‌دهنده را خبر کنید؛ دتکتور را جدا نکنید.</span></div>
+      <div class="step-item"><span class="step-num">۶</span><span>هر رخداد، خرابی و تست را در <b>دفتر ثبت وقایع</b> پنل بنویسید.</span></div>
+      <div class="fs-warn">کار گرم داخل ساختمان (جوشکاری، برشکاری): غیرفعال کردن موقت دتکتورِ محل فقط با <b>پرمیت کار</b> و حضور <b>نگهبان آتش</b>، و فعال کردن دوباره پس از پایان دورهٔ مراقبت. <button class="gf-inl" onclick="goPage('ptw')">پرمیت کار ›</button></div>
+    </div>
+  </div>
+
+  <!-- ۳) اطفای حریق -->
+  <div class="fs-panel" data-p="ext">
+    <div class="sec-block"><h3>کپسول آتش‌نشانی دستی</h3>
+      <div class="fs-p">اولین وسیلهٔ مقابله با آتش کوچک. نوع کپسول باید با کلاس حریق سازگار باشد.</div>
+      <div class="gf-links"><button onclick="goPage('extinguisher')">انتخاب کپسول مناسب</button><button onclick="goPage('extcalc')">تعداد و جانمایی</button><button onclick="goPage('passtrain')">آموزش PASS</button></div>
+    </div>
+    <div class="sec-block"><h3>جعبهٔ آتش‌نشانی (قرقرهٔ شیلنگ)</h3>
+      <div class="fs-p">شیلنگ متصل به لولهٔ آب آتش‌نشانی برای مهار آتش توسط ساکنان، پیش از رسیدن آتش‌نشانی.</div>
+      <div class="step-item"><span class="step-num">۱</span><span>در جعبه را باز کنید و <b>شیر اصلی</b> را باز کنید.</span></div>
+      <div class="step-item"><span class="step-num">۲</span><span>با نازل بسته، شیلنگ را به سمت آتش بکشید. شیلنگ کرباسی (تخت) را کامل باز کنید تا تا نخورد؛ شیلنگ قرقره‌ای را می‌توان به اندازهٔ نیاز کشید.</span></div>
+      <div class="step-item"><span class="step-num">۳</span><span>در فاصلهٔ مناسب نازل را باز کنید و به <b>پایهٔ آتش</b> بگیرید؛ حالت پاششی برای خنک‌سازی و محافظت، حالت جت برای پرتاب دورتر.</span></div>
+      <div class="step-item"><span class="step-num">۴</span><span>بهتر است دو نفر کار کنند: یکی نازل را هدایت کند، دیگری شیلنگ را آزاد کند و مراقب شیر باشد.</span></div>
+      <div class="fs-warn">آب ممنوع: تجهیزات برق‌دار (پیش از قطع برق)، روغن داغ آشپزی، و حریق گاز پیش از قطع جریان گاز.</div>
+    </div>
+    <div class="sec-block"><h3>اسپرینکلر خودکار</h3>
+      <div class="fs-p">سرهای اسپرینکلر روی لولهٔ پر از آب نصب‌اند. حبابِ مایع داخل هر سر با حرارت می‌شکند و <b>فقط همان سر</b> آب می‌پاشد. برخلاف فیلم‌ها، همهٔ اسپرینکلرهای ساختمان با هم باز نمی‌شوند.</div>
+      <div class="fs-bulbs">
+        <span style="--c:#FF9500"><i></i>نارنجی ۵۷°C</span><span style="--c:#FF3B3B"><i></i>قرمز ۶۸°C</span><span style="--c:#FFD60A"><i></i>زرد ۷۹°C</span>
+        <span style="--c:#22c55e"><i></i>سبز ۹۳°C</span><span style="--c:#3a8ee0"><i></i>آبی ۱۴۱°C</span>
+      </div>
+      <div class="pass-chk"><span class="no">✕</span>چیزی به سر اسپرینکلر آویزان نکنید و آن را رنگ نکنید.</div>
+      <div class="pass-chk"><span class="no">✕</span>زیر سر اسپرینکلر حداقل <b>۴۵ سانتی‌متر</b> فضای خالی بماند؛ کالا را تا سقف نچینید.</div>
+      <div class="pass-chk"><span class="ok">✓</span>شیر کنترل اسپرینکلر همیشه <b>باز و پلمب</b> باشد؛ بسته شدن آن روی پنل «نظارتی» نشان داده می‌شود.</div>
+    </div>
+    <div class="sec-block"><h3>سیستم‌های خاص</h3>
+      <div class="sec-row"><span class="sk">اطفای گازی پاک (FM-200 / Novec)</span><span class="sv">اتاق سرور و تجهیزات حساس؛ بدون آب و آسیب به تجهیزات</span></div>
+      <div class="sec-row"><span class="sk">اطفای CO₂ تمام‌فضا</span><span class="sv">اتاق برق و ژنراتور؛ <b>در غلظت اطفا کشنده است</b> — با آژیر پیش از تخلیه، فوراً اتاق را ترک کنید</span></div>
+      <div class="sec-row"><span class="sk">سیستم هود آشپزخانه</span><span class="sv">مادهٔ شیمیایی مرطوب برای حریق روغن در رستوران‌ها؛ گاز و برق اجاق را هم‌زمان قطع می‌کند</span></div>
+      <div class="sec-row"><span class="sk">شیر برقی قطع گاز</span><span class="sv">با فرمان دتکتور گاز یا پنل اعلام حریق، جریان گاز ساختمان را خودکار قطع می‌کند</span></div>
+    </div>
+  </div>
+
+  <!-- ۴) اداری و مسکونی -->
+  <div class="fs-panel" data-p="place">
+    <div class="seg" id="fsPlace"><button data-v="res" class="on">ساختمان مسکونی</button><button data-v="off">ساختمان اداری</button></div>
+    <div class="fs-pl" data-pl="res">
+      <div class="sec-block"><h3>داخل هر واحد</h3>
+        <div class="pass-chk"><span class="ok">✓</span><b>دتکتور دودی</b> در هر اتاق خواب، در راهروی منتهی به اتاق‌های خواب و در هر طبقهٔ واحد.</div>
+        <div class="pass-chk"><span class="ok">✓</span><b>دتکتور CO</b> نزدیک اتاق‌های خواب و در فضایی که بخاری، آبگرمکن یا پکیج دارد.</div>
+        <div class="pass-chk"><span class="ok">✓</span><b>دتکتور گاز شهری</b> نزدیک سقف آشپزخانه و محل آبگرمکن، ترجیحاً متصل به شیر برقی قطع گاز.</div>
+        <div class="pass-chk"><span class="ok">✓</span>آشپزخانه: <b>دتکتور حرارتی</b> (نه دودی)، <b>پتوی نسوز</b> و یک کپسول پودری ABC کوچک (حدود ۲ تا ۴ کیلوگرم).</div>
+      </div>
+      <div class="sec-block"><h3>مشاعات ساختمان</h3>
+        <div class="pass-chk"><span class="ok">✓</span>شستی دستی و آژیر در هر طبقه و پنل در لابی یا اتاق نگهبانی (اگر سیستم مرکزی الزامی است).</div>
+        <div class="pass-chk"><span class="ok">✓</span>جعبهٔ آتش‌نشانی و کپسول در راه‌پله یا راهروی هر طبقه.</div>
+        <div class="pass-chk"><span class="ok">✓</span>روشنایی اضطراری و تابلوی خروج در راه‌پله و راهروها.</div>
+        <div class="pass-chk"><span class="no">✕</span>درِ دودبند راه‌پله را باز نگه ندارید (گُوِه، سنگ، بند) و در راه‌پله و پیلوت وسیله انبار نکنید.</div>
+        <div class="pass-chk"><span class="no">✕</span>مسیر دسترسی خودروی آتش‌نشانی و شیرهای آتش‌نشانی (هیدرانت) را مسدود نکنید.</div>
+      </div>
+    </div>
+    <div class="fs-pl" data-pl="off" hidden>
+      <div class="sec-block"><h3>تجهیزات</h3>
+        <div class="pass-chk"><span class="ok">✓</span>سیستم اعلام <b>آدرس‌پذیر</b> با پنل در لابی یا نگهبانی و نمایش دقیق محل.</div>
+        <div class="pass-chk"><span class="ok">✓</span>دتکتور دودی در اتاق‌ها، راهروها، اتاق جلسات و بایگانی؛ حرارتی در آبدارخانه و پارکینگ.</div>
+        <div class="pass-chk"><span class="ok">✓</span>اتاق سرور و برق: دتکتور دودی (یا نمونه‌برداری هوا) به‌همراه سیستم اطفای گازی پاک یا کپسول CO₂.</div>
+        <div class="pass-chk"><span class="ok">✓</span>آبدارخانه و موتورخانه: دتکتور گاز شهری متصل به شیر برقی قطع گاز.</div>
+        <div class="pass-chk"><span class="ok">✓</span>شستی دستی کنار خروجی‌ها و پاگردها، آژیر و فلاشر در همهٔ طبقات، و جعبهٔ آتش‌نشانی در هر طبقه.</div>
+        <div class="pass-chk"><span class="ok">✓</span>کپسول‌ها طبق ابزار «تعداد و جانمایی کپسول»؛ اسپرینکلر در ساختمان‌های بلند یا بزرگ طبق مبحث ۳.</div>
+      </div>
+      <div class="sec-block"><h3>سازمان و آمادگی</h3>
+        <div class="pass-chk"><span class="ok">✓</span><b>مسئول طبقه</b> (Fire Warden) و جانشین برای هر طبقه تعیین و آموزش داده شود.</div>
+        <div class="pass-chk"><span class="ok">✓</span>نقشهٔ تخلیه در هر طبقه نصب و <b>محل تجمع</b> مشخص باشد.</div>
+        <div class="pass-chk"><span class="ok">✓</span>مانور تخلیه دست‌کم سالی یک بار برگزار و زمان تخلیه ثبت شود.</div>
+        <div class="pass-chk"><span class="ok">✓</span>فهرست کارکنان و مراجعان برای سرشماری در محل تجمع در دسترس باشد.</div>
+      </div>
+    </div>
+    <div class="gf-links"><button onclick="goPage('building')">الزامات اطفا و اعلام بر اساس کاربری و ارتفاع ساختمان (مبحث ۳) ›</button></div>
+  </div>
+
+  <!-- ۵) هنگام حریق -->
+  <div class="fs-panel" data-p="act">
+    <div class="sec-block"><h3>با شنیدن آژیر — ساختمان اداری</h3>
+      <div class="step-item"><span class="step-num">۱</span><span>آرام بمانید، کار را رها کنید و وسایل شخصی را برندارید.</span></div>
+      <div class="step-item"><span class="step-num">۲</span><span>اگر آتش را دیدید، نزدیک‌ترین <b>شستی دستی</b> را بزنید و با <b>۱۲۵</b> تماس بگیرید.</span></div>
+      <div class="step-item"><span class="step-num">۳</span><span>از <b>پله</b> استفاده کنید، هرگز از آسانسور.</span></div>
+      <div class="step-item"><span class="step-num">۴</span><span>درها را پشت سر ببندید (قفل نکنید) تا دود و آتش گسترش نیابد.</span></div>
+      <div class="step-item"><span class="step-num">۵</span><span>در دود، خمیده و نزدیک کف حرکت کنید؛ هوای تمیزتر پایین است.</span></div>
+      <div class="step-item"><span class="step-num">۶</span><span>به <b>محل تجمع</b> بروید، حضور خود را به مسئول طبقه اعلام کنید و تا اعلام آتش‌نشانی برنگردید.</span></div>
+      <div class="step-item"><span class="step-num">۷</span><span>به مراجعان، افراد کم‌توان و تازه‌واردها کمک کنید یا محلشان را به آتش‌نشانی اعلام کنید.</span></div>
+    </div>
+    <div class="sec-block"><h3>ساختمان مسکونی</h3>
+      <div class="fs-sc" style="--c:#FF5A5A"><b>آتش در واحد شما است</b><span>همه را بیرون ببرید، در واحد را پشت سر <b>ببندید</b>، شستی یا آژیر را فعال کنید و با ۱۲۵ تماس بگیرید. هنگام خروج در همسایه‌ها را بزنید.</span></div>
+      <div class="fs-sc" style="--c:#FF9500"><b>آتش در واحد دیگر است و راه‌پله پر از دود</b><span><b>در واحد بمانید</b>، درز در را با حولهٔ خیس ببندید، با ۱۲۵ تماس بگیرید و محلتان را اعلام کنید، و از پنجره علامت بدهید. ورود به راه‌پلهٔ پر از دود کشنده است.</span></div>
+      <div class="fs-sc" style="--c:#22c55e"><b>آتش در واحد دیگر است و راه‌پله امن است</b><span>با بستن در واحد از پله خارج شوید و در محل امن بیرون از ساختمان منتظر بمانید.</span></div>
+      <div class="pass-chk"><span class="no">✕</span>به داخل ساختمان در حال سوختن برنگردید و از آسانسور استفاده نکنید.</div>
+      <div class="pass-chk"><span class="ok">✓</span>اگر لباستان آتش گرفت: <b>بایست، بخواب، غلت بزن</b>.</div>
+      <div class="pass-chk"><span class="ok">✓</span>بوی گاز داشتید: کلید برق را نزنید، پنجره‌ها را باز کنید، شیر گاز را ببندید، خارج شوید و از بیرون با <b>۱۹۴</b> تماس بگیرید.</div>
+    </div>
+  </div>
+
+  <!-- ۶) بازرسی و نگهداری -->
+  <div class="fs-panel" data-p="maint">
+    <div class="sec-block"><h3>برنامهٔ بازرسی و آزمون</h3>
+      <div class="fs-tl">
+        <div class="tl-i"><b>روزانه</b><span>پنل: چراغ سبز برق روشن، بدون خرابی و غیرفعالی (نگهبان یا مسئول ساختمان)</span></div>
+        <div class="tl-i"><b>هفتگی</b><span>تست یک شستی دستی (هر هفته یکی دیگر) و اطمینان از شنیده شدن آژیر</span></div>
+        <div class="tl-i"><b>ماهانه</b><span>تست دکمهٔ دتکتورهای خانگی؛ بازدید چشمی کپسول‌ها؛ تست ۳۰ ثانیه‌ای روشنایی اضطراری</span></div>
+        <div class="tl-i"><b>شش‌ماهه</b><span>سرویس سیستم اعلام توسط شرکت ذی‌صلاح، شامل باتری‌های پشتیبان</span></div>
+        <div class="tl-i"><b>سالانه</b><span>تست عملکرد همهٔ دتکتورها و شستی‌ها؛ سرویس کپسول‌ها؛ تست ۹۰ دقیقه‌ای روشنایی اضطراری؛ تست جعبه‌های آتش‌نشانی و شیرهای اسپرینکلر</span></div>
+        <div class="tl-i"><b>۱۰ ساله</b><span>تعویض دتکتورهای دودی خانگی (حتی اگر کار می‌کنند)</span></div>
+      </div>
+    </div>
+    <div class="sec-block"><h3>کاهش آلارم کاذب</h3>
+      <div class="pass-chk"><span class="ok">✓</span>پیش از تست یا تعمیر، به نگهبان و ساکنان اطلاع دهید.</div>
+      <div class="pass-chk"><span class="ok">✓</span>هنگام رنگ‌کاری یا کارهای پرگرد و غبار، دتکتورها را با درپوش مخصوص بپوشانید و پس از کار برداریدشان.</div>
+      <div class="pass-chk"><span class="ok">✓</span>دتکتور دودی را از آشپزخانه و حمام دور نگه دارید و در صورت نیاز از نوع حرارتی استفاده کنید.</div>
+      <div class="pass-chk"><span class="no">✕</span>به‌جای رفع علت آلارم‌های مکرر، دتکتور یا زون را دائماً غیرفعال نکنید.</div>
+    </div>
+    <div class="conv-note">مبنا: NFPA 72 (اعلام حریق)، NFPA 13 (اسپرینکلر)، NFPA 10 (کپسول)، NFPA 101 (روشنایی اضطراری و تخلیه) و مبحث سوم مقررات ملی ساختمان. دوره‌های دقیق را دستورالعمل سازندهٔ تجهیزات و ضوابط سازمان آتش‌نشانی محل تعیین می‌کند.</div>
+  </div>
+
+  <!-- ۷) خودآزمایی -->
+  <div class="fs-panel" data-p="quiz">
+    <div id="fsQuiz"></div>
+  </div>
+</div>
+<div class="note">این آموزش برای آگاهی عمومی است و جایگزین طراحی سیستم توسط مهندس ذی‌صلاح، دستورالعمل سازنده و آموزش عملی آتش‌نشانی نیست.</div>
+</div><!-- /page firesys -->
+
+
 
 <!-- ===== صفحه تبدیل مقادیر ===== -->
 <div class="page" id="convert">
@@ -3198,7 +3563,7 @@
 var PAGE_TITLES = { 'cat-safety':'ایمنی', 'tools':'ابزارها', 'alerts':'اطلاعیه‌ها', 'quiz':'آزمون و خودآزمایی',
   'competency':'لیست صلاحیت افراد', 'area-type':'محوطه مشمول/مشروط',
   'clothing':'ماتریس البسه و PPE', 'hcdet':'تشخیص کار گرم و سرد', 'gasinject':'تزریق گاز', 'hazzone':'زون‌بندی مناطق خطر', 'gasdet':'انواع دستگاه گازسنج', 'calib':'کالیبراسیون گازسنج‌ها', 'guidelines':'دستورالعمل‌ها',
-  'gasfire':'واکنش به حریق گاز', 'extcalc':'تعداد و جانمایی کپسول', 'passtrain':'آموزش کار با کپسول' };
+  'gasfire':'واکنش به حریق گاز', 'extcalc':'تعداد و جانمایی کپسول', 'passtrain':'آموزش کار با کپسول', 'cat-edu':'آموزش', 'firesys':'سیستم‌های اعلام و اطفای حریق' };
 var navStack = [];
 var currentPage = 'home';
 function goPage(id, isBack){
@@ -3219,11 +3584,12 @@ function goPage(id, isBack){
     document.getElementById('pageTitle').textContent = title;
   }
   // حالت فعال نوار پایین
-  var nav = (id==='home')?'home':(id==='quiz')?'quiz':(id==='alerts')?'alerts':'tools';
+  var nav = (id==='home')?'home':(id==='quiz'||id==='cat-edu'||id==='firesys')?'quiz':(id==='alerts')?'alerts':'tools';
   document.querySelectorAll('.bn-item').forEach(function(b){ b.classList.toggle('active', b.dataset.nav===nav); });
   if (id==='clothing' && typeof clMode==='function') clMode('home');
   if (id==='home' && typeof heroCount==='function') heroCount();
   if (id!=='passtrain' && typeof passStop==='function') passStop();
+  if (id!=='firesys' && typeof fsStop==='function') fsStop();
   window.scrollTo({top:0});
   toggleMenu(false);
 }
@@ -5979,6 +6345,89 @@ function initPass(){
 }
 initGasFire(); initExtCalc(); initPass();
 
+
+/* ================= آموزش سیستم‌های اعلام و اطفای حریق ================= */
+var FS_CAP = [
+  ['حالت عادی','پنل در حال نظارت است: چراغ سبز برق روشن است و همهٔ دتکتورها، شستی‌ها و آژیرها به پنل متصل‌اند.'],
+  ['۱. شروع حریق','در اتاقی در طبقهٔ اول آتش کوچکی شروع می‌شود و دود به سمت سقف بالا می‌رود.'],
+  ['۲. تشخیص','دود به <b>دتکتور دودی</b> سقف می‌رسد و چراغ قرمز آن روشن می‌شود. اگر کسی آتش را زودتر ببیند، با فشار <b>شستی دستی</b> همین کار را انجام می‌دهد.'],
+  ['۳. ارسال سیگنال','دتکتور از طریق مدار اعلام، سیگنال حریق را به <b>پنل کنترل</b> می‌فرستد.'],
+  ['۴. اعلام','پنل وارد وضعیت «حریق» می‌شود، محل (طبقهٔ اول) را نمایش می‌دهد و <b>آژیر و فلاشر همهٔ طبقات</b> را فعال می‌کند؛ زمان تخلیه است.'],
+  ['۵. فرمان‌های خودکار','<b>شیر برقی گاز بسته می‌شود</b>، آسانسور به همکف فرستاده و از دسترس خارج می‌شود و درهای دودبند بسته می‌شوند.'],
+  ['۶. اطفا','حرارت به <b>اسپرینکلر</b> بالای آتش می‌رسد، حباب آن می‌شکند و <b>فقط همان سر</b> آب می‌پاشد تا آتش مهار شود. فلوسوئیچ، جریان آب را هم به پنل اعلام می‌کند.']
+];
+var fsTimer=null;
+function fsGo(n){
+  var st=document.getElementById('fsStage'); if(!st) return;
+  n=Math.max(0,Math.min(6,(+n)||0)); st.setAttribute('data-step', n);
+  document.querySelectorAll('#fsSteps button').forEach(function(b){ var k=+b.getAttribute('data-s'); b.classList.toggle('on',k===n); b.classList.toggle('done',k<n); });
+  document.getElementById('fsCap').innerHTML='<div class="pc-t">'+FS_CAP[n][0]+'</div><div class="pc-d">'+FS_CAP[n][1]+'</div>';
+  var m=document.getElementById('fsMotion');
+  try{ if(m){ if(n>=3 && n<6) m.beginElement(); else m.endElement(); } }catch(e){}
+}
+function fsStop(){ if(fsTimer){ clearInterval(fsTimer); fsTimer=null; } var b=document.getElementById('fsPlay'); if(b) b.textContent='▶ پخش خودکار'; }
+function fsPlay(){
+  if(fsTimer){ fsStop(); return; }
+  var n=+document.getElementById('fsStage').getAttribute('data-step'); if(n>=6) n=-1;
+  fsGo(n+1); document.getElementById('fsPlay').textContent='❚❚ توقف';
+  fsTimer=setInterval(function(){ var k=+document.getElementById('fsStage').getAttribute('data-step'); if(k>=6){ fsStop(); return; } fsGo(k+1); }, 3400);
+}
+function fsTab(t){
+  document.querySelectorAll('#fsTabs button').forEach(function(b){ b.classList.toggle('on', b.getAttribute('data-t')===t); });
+  document.querySelectorAll('#firesys .fs-panel').forEach(function(p){ p.classList.toggle('on', p.getAttribute('data-p')===t); });
+  if(t!=='flow') fsStop();
+  var tb=document.getElementById('fsTabs'), on=tb && tb.querySelector('button.on');
+  if(on && on.scrollIntoView) on.scrollIntoView({block:'nearest', inline:'center'});
+}
+// خودآزمایی: [پرسش، گزینه‌ها، اندیس پاسخ درست، توضیح]
+var FS_Q = [
+  ['در آشپزخانه کدام دتکتور مناسب‌تر است؟',['دودی اپتیکال','حرارتی','بیم خطی','شعله‌ای'],1,'بخار و دود پخت‌وپز دتکتور دودی را به آلارم کاذب می‌اندازد؛ دتکتور حرارتی مناسب آشپزخانه است.'],
+  ['دتکتور گاز شهری (متان) کجا نصب می‌شود؟',['نزدیک کف','نزدیک سقف','وسط دیوار','داخل کابینت'],1,'متان از هوا سبک‌تر است و بالا می‌رود؛ دتکتور آن نزدیک سقف نصب می‌شود (برای گاز مایع، نزدیک کف).'],
+  ['چراغ زرد «خرابی» روی پنل یعنی:',['حریق در ساختمان','ایرادی در سیستم که باید رفع شود','حالت عادی','آژیرها ساکت شده‌اند'],1,'خرابی یعنی قطعی مدار، جدا شدن دتکتور، باتری ضعیف و…؛ آن بخش ممکن است حفاظت نداشته باشد.'],
+  ['با به صدا درآمدن بازر پنل، نگهبان ابتدا کدام دکمه را می‌زند؟',['Reset','Buzzer Silence','Disable','قطع برق پنل'],1,'ابتدا بازر داخلی را ساکت می‌کند و محل را بررسی می‌کند؛ Reset فقط پس از رفع علت.'],
+  ['وقتی یک اسپرینکلر فعال می‌شود:',['همهٔ اسپرینکلرهای ساختمان باز می‌شوند','فقط سرهایی که حرارت کافی دریافت کرده‌اند باز می‌شوند','با دود باز می‌شوند','با فرمان پنل باز می‌شوند'],1,'هر سر جداگانه با شکستن حباب در اثر حرارت باز می‌شود؛ معمولاً یک یا چند سرِ نزدیک آتش.'],
+  ['حباب قرمز اسپرینکلر در چه دمایی می‌شکند؟',['۵۷ درجه','۶۸ درجه','۹۳ درجه','۱۴۱ درجه'],1,'قرمز ۶۸°C رایج‌ترین رنگ است؛ نارنجی ۵۷، زرد ۷۹، سبز ۹۳ و آبی ۱۴۱ درجه.'],
+  ['در آپارتمان، آتش در واحد دیگری است و راه‌پله پر از دود است. چه می‌کنید؟',['از پله پایین می‌روم','در واحد می‌مانم، درزها را می‌بندم و با ۱۲۵ تماس می‌گیرم','با آسانسور پایین می‌روم','به پشت‌بام می‌روم'],1,'ورود به راه‌پلهٔ پر از دود کشنده است؛ ماندن در واحدِ درب‌بسته و اعلام محل به آتش‌نشانی امن‌تر است.'],
+  ['آژیر پیش از تخلیهٔ سیستم CO₂ اتاق برق به صدا درآمد:',['کار را تمام می‌کنم','فوراً اتاق را ترک می‌کنم','در را باز نگه می‌دارم','کپسول برمی‌دارم'],1,'CO₂ در غلظت اطفا کشنده است؛ باید پیش از تخلیه، اتاق را ترک کرد.'],
+  ['شستی اعلام دستی حداکثر چقدر از در خروج فاصله دارد؟',['حدود ۱٫۵ متر','حدود ۱۰ متر','حدود ۳۰ متر','فاصله مهم نیست'],0,'طبق NFPA 72 شستی دستی حداکثر حدود ۱٫۵ متر از هر در خروج نصب می‌شود.'],
+  ['دتکتورهای دودی خانگی هر چند سال باید تعویض شوند؟',['۲ سال','۵ سال','۱۰ سال','هرگز'],2,'حسگر با گذشت زمان حساسیتش را از دست می‌دهد؛ تعویض هر ۱۰ سال، حتی اگر کار می‌کند.']
+];
+var fsAns={};
+function fsQuizRender(){
+  var box=document.getElementById('fsQuiz'); if(!box) return;
+  var done=Object.keys(fsAns).length, ok=0;
+  Object.keys(fsAns).forEach(function(k){ if(fsAns[k]===FS_Q[k][2]) ok++; });
+  var html='<div class="fs-qhead"><b>خودآزمایی</b><span>'+faDigits(done)+' از '+faDigits(FS_Q.length)+' پاسخ داده شده</span></div>';
+  html+=FS_Q.map(function(q,i){
+    var a=fsAns[i], answered=(a!==undefined);
+    return '<div class="q-card fs-qc"><span class="q-cat">پرسش '+faDigits(i+1)+'</span><div class="q-text">'+q[0]+'</div><div class="q-opts">'+
+      q[1].map(function(o,j){
+        var cls=''; if(answered){ if(j===q[2]) cls=' fs-right'; else if(j===a) cls=' fs-wrong'; }
+        return '<button class="q-opt'+cls+'"'+(answered?' disabled':'')+' onclick="fsAnswer('+i+','+j+')"><span class="opt-k">'+'الف ب ج د'.split(' ')[j]+'</span>'+o+'</button>';
+      }).join('')+'</div>'+(answered?'<div class="fs-exp '+(a===q[2]?'ok':'bad')+'">'+(a===q[2]?'✓ درست. ':'✕ نادرست. ')+q[3]+'</div>':'')+'</div>';
+  }).join('');
+  if(done===FS_Q.length){
+    var sc=Math.round(ok/FS_Q.length*100);
+    html+='<div class="fs-score"><b>'+faDigits(sc)+'</b><span>از ۱۰۰ — '+faDigits(ok)+' پاسخ درست</span><div>'+(sc>=80?'عالی! آمادگی خوبی دارید.':sc>=50?'خوب است؛ بخش‌های نادرست را دوباره مرور کنید.':'پیشنهاد می‌شود بخش‌های آموزشی را دوباره مطالعه کنید.')+'</div><button class="pass-btn" onclick="fsAns={};fsQuizRender();document.getElementById(\'fsQuiz\').scrollIntoView({behavior:\'smooth\'})">↺ آزمون مجدد</button></div>';
+  }
+  box.innerHTML=html;
+}
+function fsAnswer(i,j){ if(fsAns[i]!==undefined) return; fsAns[i]=j; fsQuizRender(); }
+function initFireSys(){
+  var tabs=document.getElementById('fsTabs'); if(!tabs) return;
+  tabs.addEventListener('click', function(e){ var b=e.target.closest('button'); if(b) fsTab(b.getAttribute('data-t')); });
+  document.getElementById('fsSteps').addEventListener('click', function(e){ var b=e.target.closest('button'); if(!b) return; fsStop(); fsGo(b.getAttribute('data-s')); });
+  document.getElementById('fsPlay').addEventListener('click', fsPlay);
+  document.getElementById('fsReset').addEventListener('click', function(){ fsStop(); fsGo(0); });
+  document.getElementById('fsPlace').addEventListener('click', function(e){
+    var b=e.target.closest('button'); if(!b) return; var v=b.getAttribute('data-v');
+    gfSetSeg('fsPlace', v);
+    document.querySelectorAll('#firesys .fs-pl').forEach(function(p){ p.hidden = p.getAttribute('data-pl')!==v; });
+  });
+  fsGo(0); fsQuizRender();
+}
+initFireSys();
+
 /* ================= لایه طراحی ارائه: آیکون‌ها، اینترو، شمارنده ================= */
 // نگاشت ایموجی → آیکون SVG اختصاصی (ایموجی‌های بدون نگاشت دست‌نخورده می‌مانند)
 var ICON_MAP = {
@@ -6085,7 +6534,7 @@ if ('serviceWorker' in navigator) {
     <svg viewBox="0 0 24 24"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg><span>خانه</span></button>
   <button class="bn-item" data-nav="tools" onclick="goPage('tools')">
     <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg><span>ابزارها</span></button>
-  <button class="bn-item" data-nav="quiz" onclick="goPage('quiz')">
+  <button class="bn-item" data-nav="quiz" onclick="goPage('cat-edu')">
     <svg viewBox="0 0 24 24"><path d="M22 10L12 5 2 10l10 5 10-5z"/><path d="M6 12v5c0 1.5 2.7 3 6 3s6-1.5 6-3v-5"/></svg><span>آموزش</span></button>
   <button class="bn-item" data-nav="alerts" onclick="goPage('alerts')">
     <svg viewBox="0 0 24 24"><path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 01-3.4 0"/></svg><span>اطلاعیه‌ها</span></button>
