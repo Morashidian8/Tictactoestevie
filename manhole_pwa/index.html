@@ -1554,6 +1554,81 @@
   html[data-theme="light"] .fs-steps button{ background:#F4F7FB; }
   html[data-theme="light"] .fs-qhead b{ color:#0E1B2E; }
   html[data-theme="light"] .fs-duo-i b, html[data-theme="light"] .fs-dt b, html[data-theme="light"] .fs-sc b{ color:color-mix(in srgb, var(--c) 68%, #0E1B2E); }
+
+  /* ======================= پادکست‌های HSE ======================= */
+  .pc-player{ padding:16px; background:linear-gradient(160deg, rgba(182,164,255,.12), rgba(63,208,255,.04) 60%, var(--glass)); border-color:rgba(182,164,255,.3) !important; }
+  .pc-top{ display:flex; gap:14px; align-items:center; }
+  .pc-cover{ width:104px; height:104px; flex-shrink:0; border-radius:20px; overflow:hidden; box-shadow:0 14px 30px -12px rgba(120,90,255,.6); }
+  .pc-cover svg{ display:block; width:100%; height:100%; }
+  .pc-meta{ flex:1; min-width:0; }
+  .pc-ep{ font-size:11.5px; font-weight:700; color:#b6a4ff; }
+  .pc-title{ font-size:17px; font-weight:800; color:#fff; line-height:1.6; margin:2px 0 4px; }
+  .pc-sub{ font-size:12px; color:var(--txt2); line-height:1.8; }
+  .pc-wave{ direction:ltr; display:flex; align-items:center; gap:2px; height:52px; margin:16px 0 4px; cursor:pointer; }
+  .pc-wave i{ flex:1; border-radius:2px; background:rgba(255,255,255,.16); transition:background .2s; }
+  .pc-wave i.on{ background:linear-gradient(180deg,#b6a4ff,#22FF88); }
+  .pc-times{ direction:ltr; display:flex; justify-content:space-between; font-size:11.5px; color:var(--txt2); font-weight:700; }
+  .pc-ctrl{ display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:12px; direction:ltr; }
+  .pc-ctrl button{ font-family:inherit; cursor:pointer; border:none; background:none; color:var(--txt); display:flex; align-items:center; justify-content:center; }
+  .pc-ctrl svg{ fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+  .pc-sm{ width:46px; height:46px; border-radius:14px !important; background:var(--glass2) !important; border:1px solid var(--line2) !important; font-size:13px; font-weight:800; }
+  .pc-sm svg{ width:22px; height:22px; }
+  #pcDl.saved{ color:var(--neon); border-color:rgba(34,255,136,.5) !important; background:rgba(34,255,136,.12) !important; }
+  #pcDl.busy svg{ animation:blink 1s steps(2) infinite; }
+  .pc-skip{ position:relative; width:52px; height:52px; } .pc-skip svg{ width:40px; height:40px; stroke-width:1.7; }
+  .pc-skip span{ position:absolute; font-size:10.5px; font-weight:900; top:52%; left:50%; transform:translate(-50%,-50%); }
+  .pc-play{ width:72px; height:72px; border-radius:50% !important; background:linear-gradient(135deg,#b6a4ff,#22FF88) !important; color:#0b1020 !important;
+    box-shadow:0 12px 28px -8px rgba(150,120,255,.65); }
+  .pc-play svg, .pc-mini-play svg{ width:32px; height:32px; fill:currentColor !important; stroke:none !important; }
+  .pc-play .i-pause, .pc-play.playing .i-play, .pc-mini-play .i-pause, .pc-mini-play.playing .i-play{ display:none; }
+  .pc-play.playing .i-pause, .pc-mini-play.playing .i-pause{ display:block; }
+  .pc-play:active{ transform:scale(.95); }
+  .pc-status{ display:none; margin-top:12px; font-size:12.5px; line-height:1.8; color:var(--txt); text-align:center; padding:8px 10px; border-radius:12px; background:rgba(255,255,255,.04); }
+  .pc-list{ display:flex; flex-direction:column; gap:10px; }
+  .pc-item{ display:flex; align-items:center; gap:8px; background:var(--glass); border:1px solid var(--line); border-radius:18px; padding:10px; transition:border-color .2s; }
+  .pc-item.cur{ border-color:rgba(182,164,255,.5); box-shadow:0 0 22px -10px #b6a4ff; }
+  .pc-it-main{ flex:1; min-width:0; display:flex; align-items:center; gap:12px; background:none; border:none; padding:0; cursor:pointer; font-family:inherit; text-align:right; color:var(--txt); }
+  .pc-it-cov{ position:relative; width:58px; height:58px; flex-shrink:0; border-radius:14px; overflow:hidden; }
+  .pc-it-cov svg{ display:block; width:100%; height:100%; }
+  .pc-eq{ position:absolute; inset:0; display:none; align-items:flex-end; justify-content:center; gap:3px; padding-bottom:12px; background:rgba(10,16,32,.55); }
+  .pc-eq i, .pc-mini-eq i{ width:4px; border-radius:2px; background:#22FF88; animation:pcEq .9s ease-in-out infinite; }
+  .pc-eq i{ height:20px; } .pc-eq i:nth-child(2), .pc-mini-eq i:nth-child(2){ animation-delay:-.3s; } .pc-eq i:nth-child(3), .pc-mini-eq i:nth-child(3){ animation-delay:-.6s; }
+  @keyframes pcEq{ 0%,100%{ transform:scaleY(.3); } 50%{ transform:scaleY(1); } }
+  .pc-eq i, .pc-mini-eq i{ transform-origin:bottom; }
+  .pc-item.playing .pc-eq{ display:flex; }
+  .pc-it-txt{ flex:1; min-width:0; display:flex; flex-direction:column; gap:3px; }
+  .pc-it-t{ font-size:14.5px; font-weight:800; color:#fff; line-height:1.6; }
+  .pc-it-s{ font-size:11.5px; color:var(--txt2); }
+  .pc-it-bar{ display:block; height:4px; border-radius:3px; background:rgba(255,255,255,.1); overflow:hidden; margin-top:3px; }
+  .pc-it-bar i{ display:block; height:100%; background:#b6a4ff; border-radius:3px; }
+  .pc-it-p.done{ font-size:11px; font-weight:700; color:var(--neon); }
+  .pc-it-side{ display:flex; flex-direction:column; align-items:center; gap:4px; }
+  .pc-it-dl{ width:40px; height:40px; border-radius:12px; cursor:pointer; background:var(--glass2); border:1px solid var(--line2); color:var(--txt2); display:flex; align-items:center; justify-content:center; }
+  .pc-it-dl svg{ width:20px; height:20px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+  .pc-it-dl.saved{ color:var(--neon); border-color:rgba(34,255,136,.45); background:rgba(34,255,136,.1); }
+  .pc-tag{ font-size:9.5px; font-weight:800; border-radius:8px; padding:1px 6px; }
+  .pc-tag.ok{ color:var(--neon); background:rgba(34,255,136,.12); } .pc-tag.busy{ color:#FFC94D; background:rgba(255,201,77,.12); }
+  /* نوار کوچک */
+  .pc-mini{ position:fixed; left:10px; right:10px; bottom:calc(76px + env(safe-area-inset-bottom,0px)); z-index:35; max-width:540px; margin:0 auto;
+    display:flex; align-items:center; gap:6px; padding:8px 8px 8px 10px; border-radius:16px; overflow:hidden;
+    background:rgba(28,22,64,.94); -webkit-backdrop-filter:blur(16px); backdrop-filter:blur(16px); border:1px solid rgba(182,164,255,.35);
+    box-shadow:0 12px 30px -10px rgba(0,0,0,.6); transform:translateY(140%); opacity:0; pointer-events:none; transition:transform .35s var(--ease-out), opacity .35s; }
+  .pc-mini.show{ transform:none; opacity:1; pointer-events:auto; }
+  body.has-mini .page{ padding-bottom:160px; }
+  .pc-mini-prog{ position:absolute; left:0; right:0; bottom:0; height:3px; background:rgba(255,255,255,.08); direction:ltr; }
+  .pc-mini-prog i{ display:block; height:100%; width:0; background:linear-gradient(90deg,#b6a4ff,#22FF88); }
+  .pc-mini-open{ flex:1; min-width:0; display:flex; align-items:center; gap:10px; background:none; border:none; cursor:pointer; font-family:inherit; color:#fff; text-align:right; padding:0 2px; }
+  .pc-mini-eq{ display:flex; align-items:flex-end; gap:2px; height:18px; flex-shrink:0; } .pc-mini-eq i{ height:18px; }
+  .pc-mini:not(.playing-now) .pc-mini-eq i{ animation-play-state:paused; }
+  .pc-mini-t{ font-size:13px; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .pc-mini-play{ width:42px; height:42px; flex-shrink:0; border-radius:50%; border:none; cursor:pointer; background:linear-gradient(135deg,#b6a4ff,#22FF88); color:#0b1020; display:flex; align-items:center; justify-content:center; }
+  .pc-mini-play svg{ width:22px !important; height:22px !important; }
+  .pc-mini-x{ width:32px; height:32px; flex-shrink:0; border:none; background:none; color:rgba(255,255,255,.6); font-size:15px; cursor:pointer; }
+  html[data-theme="light"] .pc-title, html[data-theme="light"] .pc-it-t{ color:#0E1B2E; }
+  html[data-theme="light"] .pc-player{ background:linear-gradient(160deg,#F1EDFF,#EEF7FF 60%,#fff); }
+  html[data-theme="light"] .pc-wave i{ background:rgba(16,27,46,.12); }
+  html[data-theme="light"] .pc-ep{ color:#6a55d8; }
+  html[data-theme="light"] .pc-it-bar{ background:rgba(16,27,46,.08); }
 </style>
 </head>
 <body>
@@ -1597,6 +1672,7 @@
     <symbol id="i-gasfire" viewBox="0 0 24 24"><path class="d" d="M2 16.5h20v4H2z"/><path d="M2 16.5h20M2 20.5h20M6.5 15v7M17.5 15v7"/><path d="M12 13.5c-2 0-3.2-1.3-3.2-3 0-1.9 1.5-2.7 2-4.9.7 1.4 1.6 1.8 1.9 2.9.4-.6.5-1.4.3-2.3 1.4 1 2.2 2.5 2.2 4.1 0 1.8-1.2 3.2-3.2 3.2z"/></symbol>
     <symbol id="i-plan" viewBox="0 0 24 24"><rect class="d" x="3" y="3" width="18" height="18" rx="2"/><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 12h7M14 12h7M12 3v6M12 15v6"/><circle cx="7.5" cy="7.5" r="1.7" fill="currentColor"/><circle cx="16.5" cy="16.5" r="1.7" fill="currentColor"/></symbol>
     <symbol id="i-play" viewBox="0 0 24 24"><circle class="d" cx="12" cy="12" r="9.5"/><circle cx="12" cy="12" r="9.5"/><path d="M10 8.3v7.4l6-3.7z" fill="currentColor"/></symbol>
+    <symbol id="i-headphones" viewBox="0 0 24 24"><path class="d" d="M3 14h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zM21 14h-3a2 2 0 0 0-2 2v3a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2z"/><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M3 14h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zM21 14h-3a2 2 0 0 0-2 2v3a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2z"/></symbol>
     <symbol id="i-home" viewBox="0 0 24 24"><path d="M3 11l9-8 9 8M5 10v10h14V10M10 20v-5h4v5"/></symbol>
     <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.2"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></symbol>
     <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20.5 14.5A8.5 8.5 0 1 1 9.5 3.5a6.8 6.8 0 0 0 11 11z"/></symbol>
@@ -1682,6 +1758,7 @@
     <div class="menu-sec"><span class="ms-dot" style="background:#b6a4ff"></span> آزمون و آموزش</div>
     <button data-page="firesys">سیستم‌های اعلام و اطفای حریق</button>
     <button data-page="passtrain">آموزش کار با کپسول (PASS)</button>
+    <button data-page="podcast">پادکست‌های HSE</button>
     <button data-page="quiz">آزمون و خودآزمایی HSE</button>
     <div class="menu-sec"><span class="ms-dot" style="background:#8A9BB8"></span> مستندات</div>
     <button data-page="guidelines">دستورالعمل‌ها</button>
@@ -1766,7 +1843,7 @@
       <span class="ax-ico">🎓</span>
       <span class="ax-name">آموزش</span>
       <span class="ax-desc">آموزش‌های تعاملی و آزمون HSE</span>
-      <span class="ax-foot"><span class="ax-badge">۳ ماژول</span><span class="ax-arrow">←</span></span>
+      <span class="ax-foot"><span class="ax-badge">۴ ماژول</span><span class="ax-arrow">←</span></span>
     </button>
     <button class="axis" style="--c:#3a8ee0" onclick="goPage('guidelines')">
       <span class="ax-ghost">📚</span>
@@ -2829,6 +2906,10 @@
     <button class="toolrow" onclick="goPage('firesys')"><span class="tr-ico" style="--c:#FF5A5A">🚨</span><span class="tr-txt"><span class="tr-name">سیستم‌های اعلام و اطفای حریق</span><span class="tr-desc">معرفی و کار با سیستم‌ها — اداری و مسکونی</span></span><span class="tr-arrow">‹</span></button>
     <button class="toolrow" onclick="goPage('passtrain')"><span class="tr-ico" style="--c:#FF9500">🎬</span><span class="tr-txt"><span class="tr-name">آموزش کار با کپسول</span><span class="tr-desc">انیمیشن روش PASS گام‌به‌گام</span></span><span class="tr-arrow">‹</span></button>
   </div>
+  <div class="sec-head"><span class="sh-bar" style="background:#3FD0FF"></span><div class="sh-txt"><div class="sh-t">پادکست</div><div class="sh-s">آموزش شنیداری</div></div></div>
+  <div class="toolrows">
+    <button class="toolrow" onclick="goPage('podcast')"><span class="tr-ico" style="--c:#b6a4ff">🎧</span><span class="tr-txt"><span class="tr-name">پادکست‌های HSE</span><span class="tr-desc">پخش آنلاین و ذخیره برای شنیدن آفلاین</span></span><span class="tr-arrow">‹</span></button>
+  </div>
   <div class="sec-head"><span class="sh-bar" style="background:#b6a4ff"></span><div class="sh-txt"><div class="sh-t">آزمون</div><div class="sh-s">۲۰۰ سؤال در ۴ حوزه</div></div></div>
   <div class="toolrows">
     <button class="toolrow" onclick="goPage('quiz')"><span class="tr-ico" style="--c:#b6a4ff">🧠</span><span class="tr-txt"><span class="tr-name">آزمون خودآزمایی HSE</span><span class="tr-desc">۲۰ سؤال تصادفی · نمره از ۱۰۰</span></span><span class="tr-arrow">‹</span></button>
@@ -3082,6 +3163,48 @@
 </div>
 <div class="note">این آموزش برای آگاهی عمومی است و جایگزین طراحی سیستم توسط مهندس ذی‌صلاح، دستورالعمل سازنده و آموزش عملی آتش‌نشانی نیست.</div>
 </div><!-- /page firesys -->
+
+<!-- ===== پادکست‌های HSE ===== -->
+<div class="page" id="podcast">
+<div class="container">
+  <div class="cat-banner" style="--c:#b6a4ff"><div class="cb-txt"><div class="cb-title">پادکست‌های HSE</div><div class="cb-desc">آموزش شنیداری — در مسیر، در کارگاه، حتی آفلاین</div></div><div class="cb-ico">🎧</div></div>
+
+  <div class="card pc-player" id="pcPlayer">
+    <div class="pc-top">
+      <div class="pc-cover" id="pcCover"></div>
+      <div class="pc-meta">
+        <div class="pc-ep" id="pcEpNo"></div>
+        <div class="pc-title" id="pcTitle"></div>
+        <div class="pc-sub" id="pcSub"></div>
+      </div>
+    </div>
+    <div class="pc-wave" id="pcWave" aria-label="نوار پیشرفت پخش"></div>
+    <div class="pc-times"><span id="pcCur">۰:۰۰</span><span id="pcDur">۰:۰۰</span></div>
+    <div class="pc-ctrl">
+      <button class="pc-sm" id="pcSpeed" aria-label="سرعت پخش">۱×</button>
+      <button class="pc-skip" id="pcBack" aria-label="۱۵ ثانیه عقب"><svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg><span>۱۵</span></button>
+      <button class="pc-play" id="pcPlay" aria-label="پخش"><svg viewBox="0 0 24 24" class="i-play"><path d="M8 5.5v13l11-6.5z"/></svg><svg viewBox="0 0 24 24" class="i-pause"><path d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z"/></svg></button>
+      <button class="pc-skip" id="pcFwd" aria-label="۳۰ ثانیه جلو"><svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg><span>۳۰</span></button>
+      <button class="pc-sm" id="pcDl" aria-label="ذخیره برای آفلاین"><svg viewBox="0 0 24 24"><path d="M12 4v11m-5-5 5 5 5-5M5 20h14"/></svg></button>
+    </div>
+    <div class="pc-status" id="pcStatus"></div>
+  </div>
+
+  <div class="sec-head"><span class="sh-bar" style="background:#b6a4ff"></span><div class="sh-txt"><div class="sh-t">قسمت‌ها</div><div class="sh-s" id="pcCount"></div></div></div>
+  <div id="pcList" class="pc-list"></div>
+
+  <div class="conv-note">پادکست‌ها با اینترنت پخش می‌شوند و خودکار دانلود نمی‌شوند تا اپ سبک بماند. با دکمهٔ <b>ذخیره برای آفلاین</b> هر قسمت روی همین گوشی نگه داشته می‌شود و بدون اینترنت هم پخش می‌شود. پخش از جایی که متوقف کرده‌اید ادامه پیدا می‌کند.</div>
+</div>
+</div><!-- /page podcast -->
+<!-- پخش‌کنندهٔ سراسری پادکست + نوار کوچک پایین صفحه -->
+<audio id="pcAudio" preload="none"></audio>
+<div class="pc-mini" id="pcMini">
+  <div class="pc-mini-prog"><i id="pcMiniProg"></i></div>
+  <button class="pc-mini-open" onclick="goPage('podcast')"><span class="pc-mini-eq"><i></i><i></i><i></i></span><span class="pc-mini-t" id="pcMiniT"></span></button>
+  <button class="pc-mini-play" onclick="pcToggle()" aria-label="پخش / توقف"><svg viewBox="0 0 24 24" class="i-play"><path d="M8 5.5v13l11-6.5z"/></svg><svg viewBox="0 0 24 24" class="i-pause"><path d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z"/></svg></button>
+  <button class="pc-mini-x" onclick="pcMiniClose()" aria-label="بستن پخش‌کننده">✕</button>
+</div>
+
 
 
 
@@ -3563,7 +3686,7 @@
 var PAGE_TITLES = { 'cat-safety':'ایمنی', 'tools':'ابزارها', 'alerts':'اطلاعیه‌ها', 'quiz':'آزمون و خودآزمایی',
   'competency':'لیست صلاحیت افراد', 'area-type':'محوطه مشمول/مشروط',
   'clothing':'ماتریس البسه و PPE', 'hcdet':'تشخیص کار گرم و سرد', 'gasinject':'تزریق گاز', 'hazzone':'زون‌بندی مناطق خطر', 'gasdet':'انواع دستگاه گازسنج', 'calib':'کالیبراسیون گازسنج‌ها', 'guidelines':'دستورالعمل‌ها',
-  'gasfire':'واکنش به حریق گاز', 'extcalc':'تعداد و جانمایی کپسول', 'passtrain':'آموزش کار با کپسول', 'cat-edu':'آموزش', 'firesys':'سیستم‌های اعلام و اطفای حریق' };
+  'gasfire':'واکنش به حریق گاز', 'extcalc':'تعداد و جانمایی کپسول', 'passtrain':'آموزش کار با کپسول', 'cat-edu':'آموزش', 'firesys':'سیستم‌های اعلام و اطفای حریق', 'podcast':'پادکست‌های HSE' };
 var navStack = [];
 var currentPage = 'home';
 function goPage(id, isBack){
@@ -3584,12 +3707,13 @@ function goPage(id, isBack){
     document.getElementById('pageTitle').textContent = title;
   }
   // حالت فعال نوار پایین
-  var nav = (id==='home')?'home':(id==='quiz'||id==='cat-edu'||id==='firesys')?'quiz':(id==='alerts')?'alerts':'tools';
+  var nav = (id==='home')?'home':(id==='quiz'||id==='cat-edu'||id==='firesys'||id==='podcast')?'quiz':(id==='alerts')?'alerts':'tools';
   document.querySelectorAll('.bn-item').forEach(function(b){ b.classList.toggle('active', b.dataset.nav===nav); });
   if (id==='clothing' && typeof clMode==='function') clMode('home');
   if (id==='home' && typeof heroCount==='function') heroCount();
   if (id!=='passtrain' && typeof passStop==='function') passStop();
   if (id!=='firesys' && typeof fsStop==='function') fsStop();
+  if (typeof pcMini==='function') pcMini();
   window.scrollTo({top:0});
   toggleMenu(false);
 }
@@ -6428,6 +6552,164 @@ function initFireSys(){
 }
 initFireSys();
 
+
+/* ================= پادکست‌های HSE ================= */
+// افزودن قسمت جدید: فایل را در manhole_pwa/podcasts/ بگذارید و یک ردیف به این فهرست اضافه کنید.
+var PODCASTS = [
+  {id:'ep01', n:1, t:'پادکست HSE — قسمت ۱', d:'پادکست آموزشی امور HSE شرکت گاز استان تهران.', src:'podcasts/ep01.mp3', dur:1228, mb:9.8, date:'۱۴۰۵/۰۷/۲۳',
+   peaks:[75,70,82,78,78,79,88,85,80,62,81,80,78,81,84,83,78,78,80,78,81,69,76,78,81,87,74,87,85,84,67,67,82,87,81,70,67,71,71,61,54,58,57,82,84,81,75,87,96,83,83,79,100,83,87,83,80,73,87,92,82,78,74,86,74,84,88,82,72,82,90,79,74,75,63,64,75,82,66,58,75,63,65,76,83,76,80,73,71,71,73,72,88,92,72,78]}
+];
+var PC_CACHE='hse-podcasts-v1', PC_SPEEDS=[1,1.25,1.5,2,0.75];
+var pcCur=null, pcSaved={}, pcBusy={}, pcLastSave=0, pcStarted=false;
+function pcAudio(){ return document.getElementById('pcAudio'); }
+function pcUrl(ep){ return new URL(ep.src, location.href).href; }
+function pcTime(s){ s=Math.max(0,Math.floor(s||0)); var h=Math.floor(s/3600), m=Math.floor(s%3600/60), x=s%60;
+  return faDigits((h? h+':'+(m<10?'0':'') : '')+m+':'+(x<10?'0':'')+x); }
+function pcGet(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }
+function pcSet(k,v){ try{ localStorage.setItem(k,v); }catch(e){} }
+function pcCoverSVG(ep, big){
+  return '<svg viewBox="0 0 100 100" aria-hidden="true"><defs><linearGradient id="pcg'+ep.id+(big?'b':'')+'" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2a1f6e"/><stop offset=".55" stop-color="#1a4a86"/><stop offset="1" stop-color="#0f7a5a"/></linearGradient></defs>'+
+    '<rect width="100" height="100" rx="18" fill="url(#pcg'+ep.id+(big?'b':'')+')"/>'+
+    '<g fill="none" stroke="rgba(255,255,255,.18)" stroke-width="2"><circle cx="50" cy="46" r="30"/><circle cx="50" cy="46" r="40"/></g>'+
+    '<g fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"><path d="M28 56v-8a22 22 0 0 1 44 0v8"/></g>'+
+    '<rect x="24" y="52" width="12" height="18" rx="5" fill="#22FF88"/><rect x="64" y="52" width="12" height="18" rx="5" fill="#22FF88"/>'+
+    '<text x="50" y="90" text-anchor="middle" font-size="11" font-weight="800" fill="#fff" font-family="Vazirmatn,sans-serif">قسمت '+faDigits(ep.n)+'</text></svg>';
+}
+function pcRenderWave(ep){
+  var w=document.getElementById('pcWave'); if(!w) return;
+  w.innerHTML=ep.peaks.map(function(p){ return '<i style="height:'+Math.max(8,p)+'%"></i>'; }).join('');
+}
+function pcPaint(){
+  var a=pcAudio(), ep=pcCur; if(!ep) return;
+  var loaded=a.getAttribute('data-id')===ep.id;
+  var d=loaded&&a.duration&&isFinite(a.duration)?a.duration:ep.dur, t=loaded?(a.currentTime||0):parseFloat(pcGet('pc-pos-'+ep.id)||'0'), f=d?Math.min(1,t/d):0;
+  var bars=document.querySelectorAll('#pcWave i'), k=Math.round(f*bars.length);
+  for(var i=0;i<bars.length;i++) bars[i].classList.toggle('on', i<k);
+  var c=document.getElementById('pcCur'), du=document.getElementById('pcDur');
+  if(c) c.textContent=pcTime(t); if(du) du.textContent='-'+pcTime(d-t);
+  var playing=loaded && !a.paused;
+  document.querySelectorAll('.pc-play, .pc-mini-play').forEach(function(b){ b.classList.toggle('playing', playing); });
+  document.querySelectorAll('.pc-item').forEach(function(it){ it.classList.toggle('cur', it.getAttribute('data-id')===ep.id); it.classList.toggle('playing', playing && it.getAttribute('data-id')===ep.id); });
+  var mp=document.getElementById('pcMiniProg'); if(mp) mp.style.width=(f*100).toFixed(2)+'%';
+  var mm=document.getElementById('pcMini'); if(mm) mm.classList.toggle('playing-now', playing);
+  pcMini();
+}
+// فایل صوتی فقط هنگام پخش بارگذاری می‌شود (نه با باز شدن اپ)
+function pcEnsureSrc(ep){
+  var a=pcAudio(); if(a.getAttribute('data-id')===ep.id) return;
+  a.src=ep.src; a.setAttribute('data-id',ep.id);
+  var pos=parseFloat(pcGet('pc-pos-'+ep.id)||'0');
+  if(pos>2 && pos<ep.dur-5){ a.addEventListener('loadedmetadata', function f(){ a.removeEventListener('loadedmetadata',f); try{ a.currentTime=pos; }catch(e){} pcPaint(); }); }
+  var sp=parseFloat(pcGet('pc-speed')||'1'); a.playbackRate=sp; a.defaultPlaybackRate=sp;
+}
+function pcLoad(ep, autoplay){
+  pcCur=ep;
+  document.getElementById('pcCover').innerHTML=pcCoverSVG(ep,true);
+  document.getElementById('pcEpNo').textContent='قسمت '+faDigits(ep.n)+' · '+ep.date;
+  document.getElementById('pcTitle').textContent=ep.t;
+  document.getElementById('pcSub').textContent=ep.d;
+  document.getElementById('pcMiniT').textContent=ep.t;
+  pcRenderWave(ep); pcSpeedLbl(); pcDlBtn(); pcPaint();
+  if('mediaSession' in navigator){ try{
+    navigator.mediaSession.metadata=new MediaMetadata({title:ep.t, artist:'امور HSE — شرکت گاز استان تهران', album:'پادکست‌های HSE',
+      artwork:[{src:'icons/icon-512.png', sizes:'512x512', type:'image/png'}]});
+  }catch(e){} }
+  if(autoplay){ pcEnsureSrc(ep); var a=pcAudio(), pr=a.play(); if(pr && pr.catch) pr.catch(function(){ pcStatus('برای پخش، دکمهٔ پخش را بزنید.'); }); }
+}
+function pcToggle(){ var a=pcAudio(); if(!pcCur) pcLoad(PODCASTS[0]); pcEnsureSrc(pcCur); if(a.paused){ var pr=a.play(); if(pr&&pr.catch) pr.catch(function(){ pcStatus('پخش ممکن نشد؛ اتصال اینترنت را بررسی کنید یا قسمت را برای آفلاین ذخیره کنید.'); }); } else a.pause(); }
+function pcSeekTo(t){ var a=pcAudio(); if(!pcCur) return; t=Math.max(0,Math.min(pcCur.dur-1,t));
+  if(a.getAttribute('data-id')===pcCur.id){ a.currentTime=t; } else { pcSet('pc-pos-'+pcCur.id, t); } pcPaint(); }
+function pcSeekBy(s){ var a=pcAudio(); if(!pcCur) return; var loaded=a.getAttribute('data-id')===pcCur.id;
+  pcSeekTo((loaded?(a.currentTime||0):parseFloat(pcGet('pc-pos-'+pcCur.id)||'0'))+s); }
+function pcSpeedLbl(){ var b=document.getElementById('pcSpeed'); var r=pcAudio().getAttribute('data-id')?pcAudio().playbackRate:parseFloat(pcGet('pc-speed')||'1'); if(b) b.textContent=faDigits(String(r||1)).replace('.','٫')+'×'; }
+function pcSpeed(){ var a=pcAudio(), cur=a.getAttribute('data-id')?a.playbackRate:parseFloat(pcGet('pc-speed')||'1'), i=PC_SPEEDS.indexOf(cur); var s=PC_SPEEDS[(i+1)%PC_SPEEDS.length]; a.playbackRate=s; a.defaultPlaybackRate=s; pcSet('pc-speed',s); pcSpeedLbl(); }
+function pcStatus(t){ var s=document.getElementById('pcStatus'); if(s){ s.textContent=t||''; s.style.display=t?'block':'none'; } }
+/* ---- ذخیرهٔ آفلاین ---- */
+function pcCheckSaved(){
+  if(!('caches' in window)) return;
+  caches.open(PC_CACHE).then(function(c){ return Promise.all(PODCASTS.map(function(ep){ return c.match(pcUrl(ep)).then(function(r){ pcSaved[ep.id]=!!r; }); })); })
+    .then(function(){ pcRenderList(); pcDlBtn(); }).catch(function(){});
+}
+function pcDlBtn(){
+  var b=document.getElementById('pcDl'); if(!b||!pcCur) return;
+  var id=pcCur.id; b.classList.toggle('saved', !!pcSaved[id]); b.classList.toggle('busy', pcBusy[id]!=null);
+  b.title = pcSaved[id] ? 'ذخیره شده برای آفلاین (برای حذف بزنید)' : 'ذخیره برای آفلاین';
+}
+function pcDownload(ep){
+  if(!('caches' in window)){ pcStatus('این مرورگر از ذخیرهٔ آفلاین پشتیبانی نمی‌کند.'); return; }
+  if(pcBusy[ep.id]!=null) return;
+  if(pcSaved[ep.id]){
+    if(!confirm('نسخهٔ آفلاین «'+ep.t+'» از گوشی حذف شود؟')) return;
+    caches.open(PC_CACHE).then(function(c){ return c.delete(pcUrl(ep)); }).then(function(){ pcSaved[ep.id]=false; pcRenderList(); pcDlBtn(); pcStatus('نسخهٔ آفلاین حذف شد.'); });
+    return;
+  }
+  pcBusy[ep.id]=0; pcRenderList(); pcDlBtn(); pcStatus('در حال دانلود «'+ep.t+'»…');
+  fetch(ep.src, {cache:'no-store'}).then(function(res){
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    var total=+res.headers.get('Content-Length')||ep.mb*1048576, got=0, chunks=[];
+    if(!res.body || !res.body.getReader) return res.blob();
+    var rd=res.body.getReader();
+    return (function pump(){ return rd.read().then(function(r){
+      if(r.done) return new Blob(chunks,{type:res.headers.get('Content-Type')||'audio/mpeg'});
+      chunks.push(r.value); got+=r.value.length; pcBusy[ep.id]=Math.min(99,Math.round(got/total*100));
+      pcRenderList(); pcStatus('در حال دانلود… '+faDigits(pcBusy[ep.id])+'٪'); return pump(); }); })();
+  }).then(function(blob){
+    return caches.open(PC_CACHE).then(function(c){ return c.put(pcUrl(ep), new Response(blob,{headers:{'Content-Type':blob.type||'audio/mpeg','Content-Length':String(blob.size)}})); });
+  }).then(function(){ delete pcBusy[ep.id]; pcSaved[ep.id]=true; pcRenderList(); pcDlBtn(); pcStatus('✓ «'+ep.t+'» برای پخش آفلاین ذخیره شد.'); })
+    .catch(function(){ delete pcBusy[ep.id]; pcRenderList(); pcDlBtn(); pcStatus('دانلود ناموفق بود؛ اتصال اینترنت را بررسی و دوباره تلاش کنید.'); });
+}
+/* ---- فهرست قسمت‌ها ---- */
+function pcRenderList(){
+  var box=document.getElementById('pcList'); if(!box) return;
+  document.getElementById('pcCount').textContent=faDigits(PODCASTS.length)+' قسمت';
+  box.innerHTML=PODCASTS.map(function(ep){
+    var pos=parseFloat(pcGet('pc-pos-'+ep.id)||'0'), done=pcGet('pc-done-'+ep.id)==='1', pct=Math.min(100,pos/ep.dur*100);
+    var dl = pcBusy[ep.id]!=null ? '<span class="pc-tag busy">'+faDigits(pcBusy[ep.id])+'٪</span>' : pcSaved[ep.id] ? '<span class="pc-tag ok">آفلاین ✓</span>' : '';
+    return '<div class="pc-item" data-id="'+ep.id+'"><button class="pc-it-main" onclick="pcPick(\''+ep.id+'\')"><span class="pc-it-cov">'+pcCoverSVG(ep,false)+'<span class="pc-eq"><i></i><i></i><i></i></span></span>'+
+      '<span class="pc-it-txt"><span class="pc-it-t">'+ep.t+'</span><span class="pc-it-s">'+pcTime(ep.dur)+' · '+faDigits(ep.mb.toFixed(1)).replace('.','٫')+' مگابایت · '+ep.date+'</span>'+
+      (done?'<span class="pc-it-p done">شنیده شده ✓</span>': pct>1?'<span class="pc-it-bar"><i style="width:'+pct.toFixed(1)+'%"></i></span>':'')+'</span></button>'+
+      '<span class="pc-it-side">'+dl+'<button class="pc-it-dl'+(pcSaved[ep.id]?' saved':'')+'" onclick="pcDownload(PODCASTS.filter(function(x){return x.id===\''+ep.id+'\'})[0])" aria-label="ذخیره برای آفلاین"><svg viewBox="0 0 24 24"><path d="M12 4v11m-5-5 5 5 5-5M5 20h14"/></svg></button></span></div>';
+  }).join('');
+  pcPaint();
+}
+function pcPick(id){ var ep=PODCASTS.filter(function(x){return x.id===id;})[0]; if(!ep) return;
+  if(pcCur && pcCur.id===id){ pcToggle(); return; }
+  pcLoad(ep,true); var p=document.getElementById('pcPlayer'); if(p) p.scrollIntoView({behavior:'smooth', block:'start'}); }
+/* ---- پخش‌کنندهٔ کوچک (در صفحات دیگر) ---- */
+function pcMini(){
+  var m=document.getElementById('pcMini'), a=pcAudio(); if(!m) return;
+  var show = pcStarted && !!pcCur && !!a.getAttribute('data-id') && (typeof currentPage==='undefined' || currentPage!=='podcast');
+  m.classList.toggle('show', !!show); document.body.classList.toggle('has-mini', !!show);
+}
+function pcMiniClose(){ var a=pcAudio(); a.pause(); pcSet('pc-pos-'+(pcCur&&pcCur.id), a.currentTime||0); a.removeAttribute('src'); a.removeAttribute('data-id'); a.load(); pcStarted=false; pcPaint(); pcMini(); }
+function initPodcast(){
+  var a=pcAudio(); if(!a) return;
+  a.addEventListener('timeupdate', function(){ pcPaint(); var now=Date.now();
+    if(pcCur && now-pcLastSave>4000){ pcLastSave=now; pcSet('pc-pos-'+pcCur.id, a.currentTime);
+      if(a.currentTime > pcCur.dur*0.95) pcSet('pc-done-'+pcCur.id,'1'); } });
+  ['play','pause','ended','loadedmetadata','ratechange'].forEach(function(ev){ a.addEventListener(ev, function(){
+    if(pcCur && (ev==='pause'||ev==='ended')) pcSet('pc-pos-'+pcCur.id, ev==='ended'?0:a.currentTime);
+    if(ev==='ended' && pcCur) pcSet('pc-done-'+pcCur.id,'1');
+    if(ev==='play'){ pcStatus(''); pcStarted=true; } if(ev==='ratechange') pcSpeedLbl(); pcPaint(); if(ev==='ended'||ev==='pause') pcRenderList(); }); });
+  a.addEventListener('error', function(){ if(a.getAttribute('src')) pcStatus('پخش ممکن نشد؛ اتصال اینترنت را بررسی کنید یا قسمت را برای آفلاین ذخیره کنید.'); });
+  document.getElementById('pcPlay').addEventListener('click', pcToggle);
+  document.getElementById('pcBack').addEventListener('click', function(){ pcSeekBy(-15); });
+  document.getElementById('pcFwd').addEventListener('click', function(){ pcSeekBy(30); });
+  document.getElementById('pcSpeed').addEventListener('click', pcSpeed);
+  document.getElementById('pcDl').addEventListener('click', function(){ if(pcCur) pcDownload(pcCur); });
+  document.getElementById('pcWave').addEventListener('click', function(e){ if(!pcCur) return; var r=this.getBoundingClientRect(), f=(e.clientX-r.left)/r.width;
+    pcSeekTo(Math.max(0,Math.min(1,f))*pcCur.dur); });
+  if('mediaSession' in navigator){ try{
+    navigator.mediaSession.setActionHandler('play', function(){ a.play(); });
+    navigator.mediaSession.setActionHandler('pause', function(){ a.pause(); });
+    navigator.mediaSession.setActionHandler('seekbackward', function(){ pcSeekBy(-15); });
+    navigator.mediaSession.setActionHandler('seekforward', function(){ pcSeekBy(30); });
+    navigator.mediaSession.setActionHandler('seekto', function(d){ if(d && d.seekTime!=null) pcSeekTo(d.seekTime); });
+  }catch(e){} }
+  pcLoad(PODCASTS[0], false); pcStatus(''); pcRenderList(); pcCheckSaved();
+}
+initPodcast();
+
 /* ================= لایه طراحی ارائه: آیکون‌ها، اینترو، شمارنده ================= */
 // نگاشت ایموجی → آیکون SVG اختصاصی (ایموجی‌های بدون نگاشت دست‌نخورده می‌مانند)
 var ICON_MAP = {
@@ -6435,7 +6717,7 @@ var ICON_MAP = {
   '🏭':'factory','⛔':'hazard','🎯':'target','🏢':'building','🛢':'valve','🔄':'convert','📟':'detector',
   '📋':'permit','🕳':'manhole','📏':'ruler','💨':'wind','📍':'pin','👕':'shirt','🎖':'award','ℹ':'info',
   '🧠':'bulb','🧑‍💼':'user','🧰':'toolbox','🛡':'shield','🔔':'bell','📚':'book','🚨':'siren','💓':'heart',
-  '🎓':'grad','🌿':'leaf','🛑':'gasfire','📐':'plan','🎬':'play'
+  '🎓':'grad','🌿':'leaf','🛑':'gasfire','📐':'plan','🎬':'play','🎧':'headphones'
 };
 var ICON_SEL = '.tr-ico,.cb-ico,.ax-ico,.ax-ghost,.q-ico,.rs-ico,.hb-ico,.edu-ico,.qh-ico,.mc-ico';
 function svgIcon(id, cls){ return '<svg class="'+(cls||'ic')+'" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-'+id+'"/></svg>'; }
