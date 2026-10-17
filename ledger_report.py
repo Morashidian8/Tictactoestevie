@@ -210,6 +210,28 @@ def main():
             print(f"  {nm:<34}{tot:>7,}{won:>6,}{won / tot * 100:>8.1f}%")
 
     # ---- the workbook ------------------------------------------------------- #
+    # ---- a plain CSV, for a phone with no spreadsheet app -------------------- #
+    # An .xlsx is a ZIP archive by definition, so an Android without an Office
+    # app shows it as an archive rather than opening it. This is the same table
+    # in a form that opens anywhere, with a BOM so Excel and Android editors
+    # read the Persian correctly instead of showing mojibake.
+    csv_out = os.path.splitext(OUT)[0] + ".csv"
+    with open(csv_out, "w", newline="", encoding="utf-8-sig") as f:
+        # Not `w` — that name already holds the win count, and the summary
+        # sheet below divides by it.
+        cw = csv.writer(f)
+        cw.writerow(["ردیف", "تاریخ (تهران)", "ساعت", "روز", "پنجره (ET)",
+                     "جهت", "نتیجه", "قیمت آغاز", "قیمت پایان", "حرکت ($)",
+                     "قانون‌ها"])
+        for i, r in enumerate(rows, 1):
+            cw.writerow([i, f"{r['_d']:%Y-%m-%d}", f"{r['_d']:%H:%M}",
+                         FA_DAY[r["_d"].weekday()], r.get("et") or "",
+                         fa_bet(r.get("bet")),
+                         FA_STATUS.get(r["_status"], r["_status"]),
+                         f"{r['_ref']:.2f}", f"{r['_settle']:.2f}",
+                         f"{r['_delta']:.2f}", r.get("rules") or ""])
+    print(f"wrote {csv_out} — same table, opens without a spreadsheet app")
+
     try:
         from openpyxl import Workbook
         from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
