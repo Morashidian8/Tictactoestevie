@@ -41,8 +41,15 @@ OUT = "ledger_report.xlsx"
 TEHRAN = timezone(timedelta(hours=3, minutes=30))
 LEDGER = os.environ.get("LEDGER_FILE", "signals_ledger.csv")
 PLANB = "۸) پلن بی"
+# Rule 8 was renamed mid-record. Rows written before the rename carry the old
+# name, and a filter that knows only the new one quietly files them under
+# "rules 1-7" — in the owner's real ledger that is 3 signals landing in the
+# wrong book. Both names are rule 8.
+PLANB_NAMES = (PLANB, "۸) کشیدگی از میانگینِ ۲۰ کندلی")
 FA_DAY = ["دوشنبه", "سه‌شنبه", "چهارشنبه", "پنج‌شنبه", "جمعه", "شنبه", "یکشنبه"]
 FA_STATUS = {"win": "برد", "loss": "باخت", "void": "باطل", "issued": "در انتظار"}
+# The ledger stores the side in English; the reports everywhere else are Persian.
+FA_BET = {"up": "بالا", "down": "پایین"}
 
 
 def wilson(w, n, z=1.96):
@@ -103,7 +110,12 @@ def split_rules(s):
 
 def is_planb(row):
     """Rule 8 alone — Plan B's own book. Rule 8 never speaks alongside others."""
-    return split_rules(row.get("rules")) == [PLANB]
+    r = split_rules(row.get("rules"))
+    return len(r) == 1 and r[0] in PLANB_NAMES
+
+
+def fa_bet(v):
+    return FA_BET.get((v or "").strip(), (v or "").strip())
 
 
 def enrich(rows):
@@ -181,7 +193,7 @@ def main():
     for i, r in enumerate(rows, 1):
         print(f"  {i:>4}  {r['_d']:%Y-%m-%d} {r['_d']:%H:%M}  "
               f"{FA_DAY[r['_d'].weekday()]:<10}"
-              f"{(r.get('bet') or ''):<7}"
+              f"{fa_bet(r.get('bet')):<7}"
               f"{FA_STATUS.get(r['_status'], r['_status']):<9}"
               f"{r['_delta']:>+10.2f}  {r.get('rules') or ''}")
 
@@ -224,7 +236,7 @@ def main():
     for i, r in enumerate(rows, 1):
         ws.append([i, f"{r['_d']:%Y-%m-%d}", f"{r['_d']:%H:%M}",
                    FA_DAY[r["_d"].weekday()], r.get("et") or "",
-                   r.get("bet") or "",
+                   fa_bet(r.get("bet")),
                    FA_STATUS.get(r["_status"], r["_status"]),
                    r["_ref"], r["_settle"], r["_delta"],
                    r.get("rules") or ""])
