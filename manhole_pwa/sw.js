@@ -1,5 +1,5 @@
 // Service Worker — کش کامل برای کارکرد آفلاین اپ «ارزیابی ورود به منهول»
-const CACHE = "manhole-pwa-v42";
+const CACHE = "manhole-pwa-v43";
 // پادکست‌ها در کش جداگانه نگه داشته می‌شوند تا با آپدیت اپ پاک نشوند
 const POD_CACHE = "hse-podcasts-v1";
 const ASSETS = [
