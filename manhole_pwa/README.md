@@ -51,3 +51,22 @@ manhole_pwa/
     ├── apple-touch-icon.png
     └── favicon-32.png
 ```
+
+## 🔒 قفل و رمزنگاری (از نسخهٔ v39)
+
+اپ و پادکست‌ها **رمزنگاری‌شده** منتشر می‌شوند. `index.html` منتشرشده فقط صفحهٔ ورود و محتوای رمزشده را دارد
+(AES-256-GCM؛ کلید محتوا با PBKDF2-SHA256 و ۶۰۰٬۰۰۰ تکرار از رمز ورود یا کلید بازیابی باز می‌شود).
+ابزار در `hse_tools/hse-lock.mjs` است و `hse_tools/keystore.json` فقط کلیدِ پیچیده‌شده را دارد.
+
+**ویرایش اپ** (رمز ورود یا کلید بازیابی لازم است؛ هیچ‌کدام در مخزن ذخیره نمی‌شوند):
+
+```bash
+export HSE_PASS='…'                                   # یا HSE_RECOVERY='XXXX-XXXX-…'
+node hse_tools/hse-lock.mjs open  hse_src/app.plain.html   # باز کردن برای ویرایش
+# … ویرایش hse_src/app.plain.html …
+node hse_tools/hse-lock.mjs build hse_src/app.plain.html   # ساخت دوبارهٔ manhole_pwa/index.html
+node hse_tools/hse-lock.mjs audio in.mp3 manhole_pwa/podcasts/epNN.enc   # قسمت جدید پادکست
+```
+
+`hse_src/`، `*.plain.html` و فایل‌های mp3/m4a پوشهٔ پادکست در `.gitignore` هستند و هرگز نباید commit شوند.
+**تغییر رمز:** `HSE_NEW_PASS='…' node hse_tools/hse-lock.mjs rekey` و سپس open و build.

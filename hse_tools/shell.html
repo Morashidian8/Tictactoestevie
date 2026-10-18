@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#070D18">
+<meta name="robots" content="noindex, nofollow">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="امور HSE">
+<title>امور HSE — ورود</title>
+<style>
+  @font-face{ font-family:'Vazirmatn'; font-weight:400; font-display:swap; src:url('fonts/Vazirmatn-Regular.woff2') format('woff2'); }
+  @font-face{ font-family:'Vazirmatn'; font-weight:700 900; font-display:swap; src:url('fonts/Vazirmatn-Bold.woff2') format('woff2'); }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; min-height:100%; background:#05080F; }
+  body{ min-height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:24px 16px;
+    font-family:'Vazirmatn',Tahoma,sans-serif; color:#EAF2FF;
+    background:radial-gradient(900px 600px at 50% 30%, #0f2440 0%, #070D18 55%, #03060c 100%); }
+  .lk{ width:100%; max-width:380px; text-align:center; }
+  .lk-logo{ width:96px; height:96px; border-radius:50%; filter:drop-shadow(0 0 24px rgba(34,255,136,.35)) drop-shadow(0 6px 14px rgba(0,0,0,.6)); }
+  .lk-t{ font-size:26px; font-weight:800; margin:14px 0 2px; }
+  .lk-s{ font-size:13px; color:#8A9BB8; }
+  .lk-card{ margin-top:26px; padding:20px 18px; border-radius:22px; text-align:right;
+    background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.10); box-shadow:0 24px 50px -24px rgba(0,0,0,.8); }
+  .lk-lbl{ display:block; font-size:13.5px; font-weight:700; margin-bottom:8px; }
+  .lk-row{ position:relative; }
+  .lk-in{ width:100%; direction:ltr; text-align:left; font-size:17px; font-family:inherit; letter-spacing:.5px; color:#EAF2FF;
+    padding:14px 50px 14px 14px; border-radius:14px; border:1.5px solid rgba(255,255,255,.14); background:rgba(255,255,255,.05); outline:none; }
+  .lk-in:focus{ border-color:#22FF88; box-shadow:0 0 0 3px rgba(34,255,136,.16); }
+  .lk-eye{ position:absolute; right:6px; top:50%; transform:translateY(-50%); width:40px; height:40px; border:none; background:none; color:#8A9BB8; cursor:pointer; font-size:18px; }
+  .lk-rem{ display:flex; align-items:center; gap:9px; margin:14px 2px 4px; font-size:13px; color:#c7d3e6; cursor:pointer; user-select:none; }
+  .lk-rem input{ width:18px; height:18px; accent-color:#22FF88; }
+  .lk-btn{ width:100%; margin-top:14px; padding:14px; border:none; border-radius:14px; cursor:pointer; font-family:inherit; font-size:16px; font-weight:800;
+    color:#04160d; background:linear-gradient(135deg,#00FF9F,#22FF88); box-shadow:0 10px 24px -8px rgba(0,255,159,.45); }
+  .lk-btn:disabled{ opacity:.6; cursor:wait; }
+  .lk-err{ display:none; margin-top:12px; font-size:13px; color:#ff9b9b; text-align:center; }
+  .lk-busy{ display:none; align-items:center; justify-content:center; gap:10px; margin-top:12px; font-size:13px; color:#8A9BB8; }
+  .lk-spin{ width:18px; height:18px; border-radius:50%; border:2.5px solid rgba(34,255,136,.25); border-top-color:#22FF88; animation:sp .8s linear infinite; }
+  @keyframes sp{ to{ transform:rotate(360deg); } }
+  .lk-note{ margin-top:18px; font-size:11.5px; color:#5f7395; line-height:1.9; }
+  .lk-shake{ animation:sh .4s; } @keyframes sh{ 25%{ transform:translateX(-6px); } 75%{ transform:translateX(6px); } }
+  noscript{ display:block; margin-top:20px; color:#ff9b9b; }
+</style>
+</head>
+<body>
+<div class="lk" id="lk" style="visibility:hidden">
+  <img class="lk-logo" src="icons/logo.png" alt="">
+  <div class="lk-t">امور HSE</div>
+  <div class="lk-s">شرکت گاز استان تهران</div>
+  <form class="lk-card" id="lkForm" autocomplete="off">
+    <label class="lk-lbl" for="lkPw">رمز ورود</label>
+    <div class="lk-row">
+      <input class="lk-in" id="lkPw" type="password" autocomplete="current-password" autocapitalize="off" autocorrect="off" spellcheck="false" required>
+      <button class="lk-eye" type="button" id="lkEye" aria-label="نمایش رمز">👁</button>
+    </div>
+    <label class="lk-rem"><input type="checkbox" id="lkRem" checked> مرا روی این دستگاه به خاطر بسپار</label>
+    <button class="lk-btn" id="lkBtn" type="submit">ورود</button>
+    <div class="lk-busy" id="lkBusy"><span class="lk-spin"></span>در حال باز کردن قفل…</div>
+    <div class="lk-err" id="lkErr">رمز ورود نادرست است.</div>
+  </form>
+  <div class="lk-note">🔒 محتوای این اپ رمزنگاری شده است و فقط با رمز ورود باز می‌شود.<br>برای دریافت رمز با امور HSE شرکت گاز استان تهران تماس بگیرید.</div>
+</div>
+<noscript>برای استفاده از این اپ، جاوااسکریپت مرورگر را فعال کنید.</noscript>
+<script id="hse-payload" type="application/json">/*HSE_PAYLOAD*/</script>
+<script>
+(function(){
+  var P = JSON.parse(document.getElementById('hse-payload').textContent), S = window.crypto && crypto.subtle;
+  var $ = function(id){ return document.getElementById(id); };
+  function b(s){ var x=atob(s), u=new Uint8Array(x.length); for(var i=0;i<x.length;i++) u[i]=x.charCodeAt(i); return u; }
+  // کلید محتوا به‌صورت غیرقابل‌استخراج در IndexedDB نگه داشته می‌شود (برای «به خاطر سپردن» و رمزگشایی پادکست)
+  function idb(){ return new Promise(function(res,rej){ var r=indexedDB.open('hse-lock',1);
+    r.onupgradeneeded=function(){ r.result.createObjectStore('keys'); }; r.onsuccess=function(){ res(r.result); }; r.onerror=function(){ rej(r.error); }; }); }
+  function idbDo(mode, fn){ return idb().then(function(db){ return new Promise(function(res,rej){
+    var t=db.transaction('keys',mode), q=fn(t.objectStore('keys')); t.oncomplete=function(){ res(q&&q.result); }; t.onerror=function(){ rej(t.error); }; }); }); }
+  function flag(k){ try{ return (k==='r'?localStorage:sessionStorage).getItem(k==='r'?'hse-remember':'hse-unlocked')==='1'; }catch(e){ return false; } }
+  function show(){ $('lk').style.visibility='visible'; setTimeout(function(){ try{ $('lkPw').focus(); }catch(e){} }, 50); }
+  function openApp(ck){
+    return S.decrypt({name:'AES-GCM', iv:b(P.app.iv)}, ck, b(P.app.ct)).then(function(buf){
+      window.HSE_CK = ck;
+      var html = new TextDecoder().decode(buf);
+      document.open(); document.write(html); document.close();
+    });
+  }
+  function fail(msg){ $('lkBtn').disabled=false; $('lkBusy').style.display='none'; var e=$('lkErr'); e.textContent=msg; e.style.display='block';
+    var c=$('lkForm'); c.classList.remove('lk-shake'); void c.offsetWidth; c.classList.add('lk-shake'); $('lkPw').select(); }
+  if(!S || !window.indexedDB){ show(); fail('این مرورگر قدیمی است؛ لطفاً Chrome، Edge یا Safari به‌روز استفاده کنید.'); $('lkBtn').disabled=true; return; }
+  $('lkEye').onclick=function(){ var i=$('lkPw'); i.type = i.type==='password' ? 'text' : 'password'; };
+  $('lkForm').onsubmit=function(ev){
+    ev.preventDefault(); var pw=$('lkPw').value; if(!pw) return;
+    $('lkBtn').disabled=true; $('lkErr').style.display='none'; $('lkBusy').style.display='flex';
+    var rem=$('lkRem').checked;
+    S.importKey('raw', new TextEncoder().encode(pw), 'PBKDF2', false, ['deriveKey']).then(function(base){
+      return S.deriveKey({name:'PBKDF2', hash:'SHA-256', salt:b(P.pass.salt), iterations:P.pass.iter}, base, {name:'AES-GCM', length:256}, false, ['decrypt']);
+    }).then(function(kek){
+      return S.decrypt({name:'AES-GCM', iv:b(P.pass.iv)}, kek, b(P.pass.ct)).then(null, function(){ throw 'bad'; });
+    }).then(function(raw){
+      return S.importKey('raw', raw, 'AES-GCM', false, ['decrypt']);
+    }).then(function(ck){
+      try{ if(rem) localStorage.setItem('hse-remember','1'); else localStorage.removeItem('hse-remember'); sessionStorage.setItem('hse-unlocked','1'); }catch(e){}
+      return idbDo('readwrite', function(st){ return st.put(ck,'ck'); }).then(null, function(){}).then(function(){ return openApp(ck); });
+    }).catch(function(e){ fail(e==='bad' ? 'رمز ورود نادرست است.' : 'باز کردن قفل ممکن نشد؛ صفحه را دوباره بارگذاری کنید.'); });
+  };
+  // ورود خودکار روی دستگاهی که «به خاطر سپرده» شده یا در همین نشست باز شده است
+  if(flag('r') || flag('s')){
+    idbDo('readonly', function(st){ return st.get('ck'); }).then(function(ck){
+      if(!ck) return show();
+      return openApp(ck).catch(function(){ return idbDo('readwrite', function(st){ return st.delete('ck'); }).then(show, show); });
+    }).catch(show);
+  } else {
+    idbDo('readwrite', function(st){ return st.delete('ck'); }).then(show, show);
+  }
+})();
+</script>
+</body>
+</html>
