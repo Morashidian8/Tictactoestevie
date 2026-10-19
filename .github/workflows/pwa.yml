@@ -15,6 +15,7 @@ on:
       - "polybot_web/**"
       - "wallet_tracker/webui/**"
       - "kindergarten_site/**"
+      - "frame_risk/**"
       - "build_pwa.py"
       - ".github/workflows/pwa.yml"
   schedule:
@@ -90,6 +91,12 @@ jobs:
           # این‌جا نیست — در مخزن خصوصی Morashidian8/mabhas17 است.
           mkdir -p site/mabhas17
           cp mabhas17/privacy.html site/mabhas17/index.html
+          # ارزیاب ریسک حریق FRAME (کاملاً مرورگری) را زیر /frame/ منتشر کن.
+          # index.html همان فایل Artifact است؛ head.html پوستهٔ PWA (manifest و sw) را به آن اضافه می‌کند.
+          mkdir -p site/frame
+          cat frame_risk/pwa/head.html frame_risk/index.html > site/frame/index.html
+          cp frame_risk/pwa/manifest.json frame_risk/pwa/sw.js site/frame/
+          cp -r frame_risk/pwa/icons site/frame/icons
           # اگر داده‌ی بیت‌کوین در این اجرا ساخته نشد (مثلاً push اپ HSE)، پوسته‌ی
           # ثابت اپ بیت‌کوین را در ریشه قرار بده و آخرین data.json منتشرشده را از
           # سایت زنده بگیر تا اپ ریشه سالم بماند بدون نیاز به بیلد مجدد.
