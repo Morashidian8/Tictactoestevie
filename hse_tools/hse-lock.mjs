@@ -14,6 +14,14 @@
 //   node hse_tools/hse-lock.mjs audio  <in.mp3> <out.enc>   رمزنگاری یک قسمت پادکست
 //   node hse_tools/hse-lock.mjs rekey                   تغییر رمز ورود (HSE_PASS یا HSE_RECOVERY → HSE_NEW_PASS)
 //
+// دسترسی اختصاصی همکاران (رمز جدا + واترمارک نام، قابل قطع در هر زمان):
+//   node hse_tools/hse-lock.mjs user-add <شناسه> "<نام>"   ساخت رمز شخصی (یا HSE_USER_PASS) — بعد build
+//   node hse_tools/hse-lock.mjs user-list                  فهرست همکاران
+//   node hse_tools/hse-lock.mjs user-revoke <شناسه>        قطع دسترسی (HSE_PASS و HSE_RECOVERY لازم) — بعد build
+//   هر همکار یک جفت‌کلید RSA دارد: کلید خصوصی با رمز خود او قفل است و CK با کلید عمومی‌اش رمز
+//   می‌شود. برای قطع دسترسی، CK عوض می‌شود و فقط برای بقیه دوباره رمز می‌شود (بدون نیاز به رمز آن‌ها)؛
+//   پادکست‌ها هم با CK جدید دوباره رمز می‌شوند.
+//
 // فایل HTML سادهٔ اپ هرگز نباید commit شود؛ فقط خروجی رمزشده منتشر می‌شود.
 import { webcrypto as crypto } from 'node:crypto';
 import fs from 'node:fs';
@@ -55,6 +63,18 @@ async function contentKeyRaw() {
 const normRecovery = (s) => s.replace(/[\s-]/g, '').toUpperCase();
 const aesKey = (raw) => subtle.importKey('raw', raw, 'AES-GCM', false, ['encrypt', 'decrypt']);
 function checkPass(p) { if (!p || p.length < 12) die('رمز باید دست‌کم ۱۲ کاراکتر باشد.'); }
+const ALPHA = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
+const randCode = (n) => Array.from(rand(n), (x) => ALPHA[x % 32]).join('');
+const RSA = { name: 'RSA-OAEP', hash: 'SHA-256' };
+const enc = (s) => new TextEncoder().encode(s);
+const dec = (u8) => new TextDecoder().decode(u8);
+async function userSeal(pubB64, ck, name) {
+  const pub = await subtle.importKey('spki', unb64(pubB64), RSA, false, ['encrypt']);
+  return b64(new Uint8Array(await subtle.encrypt(RSA, pub, enc(JSON.stringify({ k: b64(ck), n: name })))));
+}
+function saveKeystore(ks) { fs.writeFileSync(KEYSTORE, JSON.stringify(ks, null, 2) + '\n'); }
+// فقط بخش‌های لازم برای ورود در index.html می‌رود (شناسه و نام همکار نه)
+const publicUsers = (u) => u && u.list.length ? { salt: u.salt, iter: u.iter, list: u.list.map((x) => ({ iv: x.iv, priv: x.priv, ck: x.ck })) } : undefined;
 
 const cmd = process.argv[2];
 if (cmd === 'init') {
@@ -73,7 +93,7 @@ if (cmd === 'init') {
   if (!process.env.HSE_PASS) die('برای build رمز ورود (HSE_PASS) لازم است تا صفحهٔ ورود ساخته شود.');
   const html = fs.readFileSync(src);
   if (!/<html/i.test(html.slice(0, 2000).toString())) die('فایل ورودی HTML اپ نیست.');
-  const payload = { v: 1, pass: ks.pass, app: await seal(await aesKey(ck), html) };
+  const payload = { v: 1, pass: ks.pass, users: publicUsers(ks.users), app: await seal(await aesKey(ck), html) };
   const shell = fs.readFileSync(SHELL, 'utf8');
   if (!shell.includes('/*HSE_PAYLOAD*/')) die('shell.html نشانگر payload ندارد.');
   fs.writeFileSync(OUT_INDEX, shell.replace('/*HSE_PAYLOAD*/', () => JSON.stringify(payload)));
@@ -97,6 +117,64 @@ if (cmd === 'init') {
   ks.pass = await wrapWith(process.env.HSE_NEW_PASS, ck);
   fs.writeFileSync(KEYSTORE, JSON.stringify(ks, null, 2) + '\n');
   console.log('رمز ورود عوض شد. حالا با HSE_PASS جدید، open و سپس build را اجرا کنید تا صفحهٔ ورود به‌روز شود.');
+} else if (cmd === 'user-add') {
+  const [, , , id, name] = process.argv;
+  if (!id || !/^[a-z0-9_-]+$/i.test(id) || !name) die('user-add <شناسهٔ لاتین> "<نام برای واترمارک>"');
+  const ks = loadKeystore(); const ck = await contentKeyRaw();
+  ks.users = ks.users || { salt: b64(rand(16)), iter: ITER, list: [] };
+  if (ks.users.list.some((u) => u.id === id)) die('این شناسه وجود دارد.');
+  const pw = process.env.HSE_USER_PASS || ('HSE-' + randCode(16).match(/.{4}/g).join('-'));
+  checkPass(pw);
+  const kp = await subtle.generateKey({ ...RSA, modulusLength: 2048, publicExponent: new Uint8Array([1, 0, 1]) }, true, ['encrypt', 'decrypt']);
+  const pub = b64(new Uint8Array(await subtle.exportKey('spki', kp.publicKey)));
+  const priv = await seal(await kek(pw, unb64(ks.users.salt), ks.users.iter), new Uint8Array(await subtle.exportKey('pkcs8', kp.privateKey)));
+  ks.users.list.push({ id, label: await seal(await aesKey(ck), enc(name)), pub, iv: priv.iv, priv: priv.ct, ck: await userSeal(pub, ck, name) });
+  saveKeystore(ks);
+  console.log('همکار «' + name + '» (' + id + ') اضافه شد. رمز شخصی او:');
+  console.log(pw);
+  console.log('حالا build را اجرا کنید تا صفحهٔ ورود این رمز را بپذیرد.');
+} else if (cmd === 'user-list') {
+  const ks = loadKeystore(); const k = await aesKey(await contentKeyRaw());
+  const list = (ks.users && ks.users.list) || [];
+  if (!list.length) console.log('همکاری ثبت نشده است.');
+  for (const u of list) console.log(u.id + '\t' + dec(await unseal(k, u.label)));
+} else if (cmd === 'user-revoke') {
+  const id = process.argv[3] || die('user-revoke <شناسه>');
+  if (!process.env.HSE_PASS) die('برای قطع دسترسی، رمز ورود (HSE_PASS) لازم است.');
+  const ks = loadKeystore(); const oldCk = await contentKeyRaw();
+  const list = (ks.users && ks.users.list) || [];
+  if (!list.some((u) => u.id === id)) die('همکاری با این شناسه نیست (user-list را ببینید).');
+  // کلید بازیابی هم باید CK جدید را باز کند: یا کلید فعلی را بدهید، یا HSE_NEW_RECOVERY=1 برای ساخت کلید تازه
+  let rec = null;
+  if (process.env.HSE_RECOVERY) {
+    rec = normRecovery(process.env.HSE_RECOVERY);
+    if (!(await unwrapWith(rec, ks.recovery))) die('کلید بازیابی نادرست است.');
+  } else if (process.env.HSE_NEW_RECOVERY) rec = randCode(32);
+  else die('HSE_RECOVERY (کلید بازیابی فعلی) را بدهید، یا HSE_NEW_RECOVERY=1 برای ساخت کلید بازیابی تازه.');
+  const newCk = rand(32), oldK = await aesKey(oldCk), newK = await aesKey(newCk);
+  // همه‌چیز اول در حافظه آماده می‌شود و بعد یک‌جا نوشته می‌شود تا نیمه‌کاره نماند
+  const podDir = path.join(ROOT, 'manhole_pwa', 'podcasts'), pods = [];
+  for (const f of fs.existsSync(podDir) ? fs.readdirSync(podDir) : []) {
+    if (!f.endsWith('.enc')) continue;
+    const buf = fs.readFileSync(path.join(podDir, f));
+    const plain = await subtle.decrypt({ name: 'AES-GCM', iv: buf.subarray(0, 12) }, oldK, buf.subarray(12));
+    const iv = rand(12), ct = new Uint8Array(await subtle.encrypt({ name: 'AES-GCM', iv }, newK, plain));
+    pods.push([path.join(podDir, f), Buffer.concat([Buffer.from(iv), Buffer.from(ct)])]);
+  }
+  const remain = [];
+  for (const u of list) {
+    if (u.id === id) continue;
+    const name = dec(await unseal(oldK, u.label));
+    remain.push({ ...u, label: await seal(newK, enc(name)), ck: await userSeal(u.pub, newCk, name) });
+  }
+  ks.users.list = remain;
+  ks.pass = await wrapWith(process.env.HSE_PASS, newCk);
+  ks.recovery = await wrapWith(rec, newCk);
+  for (const [p, data] of pods) fs.writeFileSync(p, data);
+  saveKeystore(ks);
+  console.log('دسترسی «' + id + '» قطع شد؛ کلید محتوا عوض شد و ' + pods.length + ' پادکست دوباره رمز شد.');
+  if (process.env.HSE_NEW_RECOVERY && !process.env.HSE_RECOVERY) console.log('کلید بازیابی تازه (کلید قبلی دیگر کار نمی‌کند):\n' + rec.match(/.{4}/g).join('-'));
+  console.log('⚠️ حالا حتماً build را اجرا و منتشر کنید؛ تا آن موقع پادکست‌های منتشرشده با اپ منتشرشده نمی‌خوانند.');
 } else {
-  console.log('دستورها: init | build <plain.html> | open <out.html> | audio <in> <out> | rekey');
+  console.log('دستورها: init | build <plain.html> | open <out.html> | audio <in> <out> | rekey | user-add | user-list | user-revoke');
 }

@@ -78,9 +78,31 @@
     var t=db.transaction('keys',mode), q=fn(t.objectStore('keys')); t.oncomplete=function(){ res(q&&q.result); }; t.onerror=function(){ rej(t.error); }; }); }); }
   function flag(k){ try{ return (k==='r'?localStorage:sessionStorage).getItem(k==='r'?'hse-remember':'hse-unlocked')==='1'; }catch(e){ return false; } }
   function show(){ $('lk').style.visibility='visible'; setTimeout(function(){ try{ $('lkPw').focus(); }catch(e){} }, 50); }
-  function openApp(ck){
+  function kekFor(pw, salt, iter){
+    return S.importKey('raw', new TextEncoder().encode(pw), 'PBKDF2', false, ['deriveKey']).then(function(base){
+      return S.deriveKey({name:'PBKDF2', hash:'SHA-256', salt:b(salt), iterations:iter}, base, {name:'AES-GCM', length:256}, false, ['decrypt']); });
+  }
+  // رمز اصلی (مالک اپ)
+  function tryOwner(pw){
+    return kekFor(pw, P.pass.salt, P.pass.iter).then(function(k){
+      return S.decrypt({name:'AES-GCM', iv:b(P.pass.iv)}, k, b(P.pass.ct)).then(function(raw){ return {raw:raw, user:''}; }, function(){ return null; }); });
+  }
+  // رمز شخصی همکاران: کلید خصوصی RSA او با رمزش باز می‌شود و کلید محتوا + نام (برای واترمارک) را می‌دهد
+  function tryUsers(pw){
+    var U=P.users; if(!U || !U.list || !U.list.length) return Promise.resolve(null);
+    return kekFor(pw, U.salt, U.iter).then(function(k){
+      var i=0;
+      function next(){ if(i>=U.list.length) return null; var u=U.list[i++];
+        return S.decrypt({name:'AES-GCM', iv:b(u.iv)}, k, b(u.priv)).then(function(pk){
+          return S.importKey('pkcs8', pk, {name:'RSA-OAEP', hash:'SHA-256'}, false, ['decrypt']).then(function(rk){
+            return S.decrypt({name:'RSA-OAEP'}, rk, b(u.ck)); }).then(function(j){
+            var o=JSON.parse(new TextDecoder().decode(j)); return {raw:b(o.k), user:o.n||''}; });
+        }, next); }
+      return next(); });
+  }
+  function openApp(ck, user){
     return S.decrypt({name:'AES-GCM', iv:b(P.app.iv)}, ck, b(P.app.ct)).then(function(buf){
-      window.HSE_CK = ck;
+      window.HSE_CK = ck; window.HSE_USER = user || '';
       var html = new TextDecoder().decode(buf);
       document.open(); document.write(html); document.close();
     });
@@ -92,23 +114,23 @@
   $('lkForm').onsubmit=function(ev){
     ev.preventDefault(); var pw=$('lkPw').value; if(!pw) return;
     $('lkBtn').disabled=true; $('lkErr').style.display='none'; $('lkBusy').style.display='flex';
-    var rem=$('lkRem').checked;
-    S.importKey('raw', new TextEncoder().encode(pw), 'PBKDF2', false, ['deriveKey']).then(function(base){
-      return S.deriveKey({name:'PBKDF2', hash:'SHA-256', salt:b(P.pass.salt), iterations:P.pass.iter}, base, {name:'AES-GCM', length:256}, false, ['decrypt']);
-    }).then(function(kek){
-      return S.decrypt({name:'AES-GCM', iv:b(P.pass.iv)}, kek, b(P.pass.ct)).then(null, function(){ throw 'bad'; });
-    }).then(function(raw){
-      return S.importKey('raw', raw, 'AES-GCM', false, ['decrypt']);
+    var rem=$('lkRem').checked, user='';
+    tryOwner(pw).then(function(r){ return r || tryUsers(pw); }).then(function(r){
+      if(!r) throw 'bad'; user=r.user;
+      return S.importKey('raw', r.raw, 'AES-GCM', false, ['decrypt']);
     }).then(function(ck){
       try{ if(rem) localStorage.setItem('hse-remember','1'); else localStorage.removeItem('hse-remember'); sessionStorage.setItem('hse-unlocked','1'); }catch(e){}
-      return idbDo('readwrite', function(st){ return st.put(ck,'ck'); }).then(null, function(){}).then(function(){ return openApp(ck); });
+      return idbDo('readwrite', function(st){ st.put(user,'user'); return st.put(ck,'ck'); }).then(null, function(){}).then(function(){ return openApp(ck, user); });
     }).catch(function(e){ fail(e==='bad' ? 'رمز ورود نادرست است.' : 'باز کردن قفل ممکن نشد؛ صفحه را دوباره بارگذاری کنید.'); });
   };
-  // ورود خودکار روی دستگاهی که «به خاطر سپرده» شده یا در همین نشست باز شده است
+  // ورود خودکار روی دستگاهی که «به خاطر سپرده» شده یا در همین نشست باز شده است.
+  // اگر کلید محتوا عوض شده باشد (مثلاً دسترسی یک همکار قطع شده)، کلید قدیمی دیگر باز نمی‌کند و رمز دوباره خواسته می‌شود.
   if(flag('r') || flag('s')){
-    idbDo('readonly', function(st){ return st.get('ck'); }).then(function(ck){
+    var user='';
+    idbDo('readonly', function(st){ return st.get('user'); }).then(function(u){ user=u||''; }, function(){}).then(function(){
+      return idbDo('readonly', function(st){ return st.get('ck'); }); }).then(function(ck){
       if(!ck) return show();
-      return openApp(ck).catch(function(){ return idbDo('readwrite', function(st){ return st.delete('ck'); }).then(show, show); });
+      return openApp(ck, user).catch(function(){ return idbDo('readwrite', function(st){ return st.delete('ck'); }).then(show, show); });
     }).catch(show);
   } else {
     idbDo('readwrite', function(st){ return st.delete('ck'); }).then(show, show);
