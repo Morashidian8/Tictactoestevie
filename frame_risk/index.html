@@ -1,0 +1,764 @@
+<meta charset="utf-8">
+<title>ارزیاب ریسک حریق FRAME</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;700;800&family=Lalezar&display=swap">
+<style>
+/* Layout: step list (right) · checklist form (center) · live risk panel (left); stacks to one column on phones with a sticky bottom risk bar */
+:root{
+  --bg:#eef2f3; --surface:#ffffff; --surface-2:#f6f8f9; --ink:#15222a; --muted:#56666f; --line:#d5dde1;
+  --accent:#c2410c; --accent-ink:#ffffff; --accent-soft:#fbe6da;
+  --ok:#157a3c; --ok-soft:#dcf2e4; --warn:#a85d06; --warn-soft:#fbefd6; --bad:#b42318; --bad-soft:#fbe0dd;
+  --f-display:"Lalezar","Vazirmatn",Tahoma,sans-serif;
+  --f-body:"Vazirmatn",Tahoma,"Segoe UI",sans-serif;
+  --f-mono:ui-monospace,"SFMono-Regular",Consolas,monospace;
+  --r:10px;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#0e161b; --surface:#152129; --surface-2:#1a2832; --ink:#e4ecef; --muted:#93a5ae; --line:#2a3b45;
+  --accent:#fb8a3c; --accent-ink:#1a0d04; --accent-soft:#3a2416;
+  --ok:#5fd68b; --ok-soft:#173226; --warn:#f3b54a; --warn-soft:#3a2d12; --bad:#ff8a7e; --bad-soft:#3d1d1a;
+  color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#0e161b; --surface:#152129; --surface-2:#1a2832; --ink:#e4ecef; --muted:#93a5ae; --line:#2a3b45;
+  --accent:#fb8a3c; --accent-ink:#1a0d04; --accent-soft:#3a2416;
+  --ok:#5fd68b; --ok-soft:#173226; --warn:#f3b54a; --warn-soft:#3a2d12; --bad:#ff8a7e; --bad-soft:#3d1d1a;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.75;direction:rtl;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 96px}
+button,input,select,textarea{font:inherit;color:inherit}
+h1,h2,h3{text-wrap:balance;margin:0}
+.wrap{max-width:1280px;margin:0 auto}
+header.top{display:flex;flex-wrap:wrap;gap:12px 24px;align-items:center;justify-content:space-between;padding-block:20px 16px}
+.brand{display:flex;gap:14px;align-items:center}
+.brand .mark{width:44px;height:44px;border-radius:12px;background:var(--accent);display:grid;place-items:center;flex:none}
+.brand h1{font-family:var(--f-display);font-weight:400;font-size:30px;line-height:1.1;letter-spacing:0}
+.brand p{margin:2px 0 0;color:var(--muted);font-size:13px}
+.tools{display:flex;flex-wrap:wrap;gap:8px}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:7px 14px;cursor:pointer;font-size:14px;font-weight:500}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn:focus-visible,.opt:focus-within,.step:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.notice{border:1px dashed var(--warn);background:var(--warn-soft);color:var(--ink);border-radius:var(--r);padding:10px 14px;font-size:13.5px;margin-bottom:16px}
+.notice b{color:var(--warn)}
+
+.layout{display:grid;grid-template-columns:230px minmax(0,1fr) 300px;gap:20px;align-items:start}
+nav.steps{position:sticky;top:12px;display:flex;flex-direction:column;gap:2px}
+.step{display:flex;gap:10px;align-items:center;padding:8px 10px;border-radius:8px;border:0;background:none;cursor:pointer;text-align:right;width:100%}
+.step:hover{background:var(--surface)}
+.step.on{background:var(--surface);box-shadow:inset -3px 0 0 var(--accent)}
+.step .n{width:24px;height:24px;border-radius:50%;border:1.5px solid var(--line);display:grid;place-items:center;font-size:12px;flex:none;font-variant-numeric:tabular-nums}
+.step.done .n{background:var(--ok);border-color:var(--ok);color:var(--surface)}
+.step.on .n{border-color:var(--accent);color:var(--accent)}
+.step .t{font-size:14px;line-height:1.4}
+.step .k{display:block;font-size:11.5px;color:var(--muted)}
+.nav-sep{height:1px;background:var(--line);margin:8px 10px}
+
+main.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:24px;min-width:0}
+.sec-head{display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px;align-items:baseline;margin-bottom:6px}
+.sec-head h2{font-size:22px;font-weight:800}
+.factor-tag{font-family:var(--f-mono);font-size:12.5px;background:var(--accent-soft);color:var(--accent);border-radius:6px;padding:2px 8px;direction:ltr}
+.intro{color:var(--muted);margin:0 0 18px;max-width:70ch}
+.field{padding:16px 0;border-top:1px solid var(--line);display:grid;gap:6px}
+.field:first-of-type{border-top:0}
+.field label.lb,.field .lb{font-weight:700;font-size:15px}
+.help{color:var(--muted);font-size:13.5px;max-width:70ch}
+.row2{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:0 20px}
+.inp{display:flex;align-items:center;gap:8px;max-width:320px}
+.inp input,.inp select,textarea.in{width:100%;border:1px solid var(--line);background:var(--surface-2);border-radius:8px;padding:8px 10px}
+.inp .u{color:var(--muted);font-size:13px;white-space:nowrap}
+.opts{display:grid;gap:6px}
+.opt{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--line);border-radius:8px;padding:8px 12px;cursor:pointer;background:var(--surface-2)}
+.opt:hover{border-color:var(--muted)}
+.opt input{margin-top:6px;accent-color:var(--accent)}
+.opt.sel{border-color:var(--accent);background:var(--accent-soft)}
+.opt .ol{flex:1;min-width:0}
+.opt .ov{font-family:var(--f-mono);font-size:12px;color:var(--muted);direction:ltr;white-space:nowrap;margin-top:3px}
+.pager{display:flex;justify-content:space-between;gap:8px;margin-top:20px;padding-top:16px;border-top:1px solid var(--line)}
+.calc-line{font-size:13px;color:var(--muted);background:var(--surface-2);border-radius:8px;padding:8px 12px;direction:ltr;text-align:left;font-family:var(--f-mono);overflow-x:auto}
+
+aside.res{position:sticky;top:12px;display:grid;gap:12px}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px}
+.panel h3{font-size:14px;color:var(--muted);font-weight:500;margin-bottom:10px}
+.risk{display:grid;grid-template-columns:1fr auto;gap:2px 10px;align-items:center;padding:10px 0;border-top:1px solid var(--line)}
+.risk:first-of-type{border-top:0;padding-top:0}
+.risk .nm{font-weight:700;font-size:14.5px}
+.risk .sym{font-family:var(--f-mono);font-size:12px;color:var(--muted);direction:ltr;display:inline-block}
+.risk .val{font-size:26px;font-weight:800;font-variant-numeric:tabular-nums;direction:ltr}
+.pill{font-size:12px;border-radius:999px;padding:1px 10px;font-weight:700;justify-self:start}
+.pill.ok{background:var(--ok-soft);color:var(--ok)} .pill.warn{background:var(--warn-soft);color:var(--warn)} .pill.bad{background:var(--bad-soft);color:var(--bad)}
+.val.ok{color:var(--ok)} .val.warn{color:var(--warn)} .val.bad{color:var(--bad)}
+.bar{grid-column:1/-1;height:8px;border-radius:4px;background:var(--surface-2);position:relative;overflow:hidden;direction:ltr}
+.bar i{position:absolute;inset:0 auto 0 0;border-radius:4px}
+.bar::after{content:"";position:absolute;top:0;bottom:0;left:50%;width:2px;background:var(--ink);opacity:.35}
+.bar i.ok{background:var(--ok)} .bar i.warn{background:var(--warn)} .bar i.bad{background:var(--bad)}
+.scale{grid-column:1/-1;display:flex;justify-content:space-between;font-size:11px;color:var(--muted);direction:ltr;font-variant-numeric:tabular-nums}
+.kv{display:grid;grid-template-columns:auto 1fr auto auto;gap:3px 8px;font-size:13px;direction:ltr;font-variant-numeric:tabular-nums}
+.kv span:nth-child(4n+1){font-family:var(--f-mono);color:var(--accent);font-weight:700}
+.kv span:nth-child(4n+2){color:var(--muted);direction:rtl;text-align:right}
+.kv span:nth-child(4n+3),.kv span:nth-child(4n){text-align:right}
+
+table.t{border-collapse:collapse;width:100%;font-size:13.5px}
+table.t th,table.t td{border-bottom:1px solid var(--line);padding:7px 8px;text-align:right;vertical-align:top}
+table.t th{color:var(--muted);font-weight:500;background:var(--surface-2)}
+table.t td.num{font-variant-numeric:tabular-nums;direction:ltr;text-align:left;white-space:nowrap}
+table.t td.f{font-family:var(--f-mono);direction:ltr;text-align:left;font-size:12.5px}
+.scroll{overflow-x:auto}
+.badge{font-size:11.5px;border-radius:6px;padding:1px 7px;white-space:nowrap}
+.badge.u{background:var(--warn-soft);color:var(--warn)} .badge.v{background:var(--ok-soft);color:var(--ok)}
+.sugg{display:grid;gap:8px;margin:0;padding:0;list-style:none}
+.sugg li{border:1px solid var(--line);border-radius:8px;padding:10px 12px;background:var(--surface-2)}
+.sugg .d{font-variant-numeric:tabular-nums;color:var(--ok);font-weight:700}
+.big3{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:20px}
+.big3 .panel{border-width:1px}
+.verdict{border-radius:var(--r);padding:12px 16px;margin-bottom:18px;font-weight:500}
+.verdict.ok{background:var(--ok-soft)} .verdict.bad{background:var(--bad-soft)} .verdict.warn{background:var(--warn-soft)}
+h3.sub{font-size:17px;font-weight:800;margin:22px 0 10px}
+textarea.in{min-height:140px;font-family:var(--f-mono);font-size:12px;direction:ltr;max-width:100%}
+.modal{position:fixed;inset:0;background:rgb(0 0 0 / .45);display:grid;place-items:center;z-index:50;padding:16px}
+.modal .box{background:var(--surface);border-radius:14px;padding:20px;max-width:440px;width:100%;border:1px solid var(--line)}
+.modal .box p{margin:0 0 16px}
+.toast{position:fixed;bottom:calc(84px + env(safe-area-inset-bottom,0px));left:50%;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:8px 16px;border-radius:8px;font-size:14px;z-index:60}
+.mbar{display:none}
+.sample-tag{font-size:12px;background:var(--accent-soft);color:var(--accent);border-radius:6px;padding:2px 8px}
+
+@media (max-width:1100px){
+  .layout{grid-template-columns:210px minmax(0,1fr)}
+  aside.res{grid-column:1/-1;position:static;grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
+}
+@media (max-width:760px){
+  .layout{grid-template-columns:minmax(0,1fr)}
+  nav.steps{position:static;flex-direction:row;overflow-x:auto;gap:4px;padding-bottom:4px}
+  .step{width:auto;flex:none;padding:6px 8px}
+  .step .k,.nav-sep{display:none}
+  .step .t{white-space:nowrap;font-size:13px}
+  main.card{padding:16px}
+  .brand h1{font-size:24px}
+  .mbar{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:40;background:var(--surface);border-top:1px solid var(--line);
+    padding:8px max(16px,env(safe-area-inset-right,0px)) calc(8px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));justify-content:space-around;gap:8px}
+  .mbar div{text-align:center;font-size:12px;color:var(--muted);line-height:1.3}
+  .mbar b{display:block;font-size:19px;font-variant-numeric:tabular-nums}
+}
+@media (prefers-reduced-motion:no-preference){ .opt,.step,.bar i{transition:all .15s ease} }
+@media print{
+  body{background:#fff;color:#000;padding:0}
+  header.top .tools,nav.steps,aside.res,.mbar,.pager,.notice.screen{display:none!important}
+  .layout{display:block} main.card{border:0;padding:0}
+}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <div class="mark" aria-hidden="true">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M12 2c1 3.5 5 6 5 11a5 5 0 0 1-10 0c0-2.2 1-3.6 2-4.6.2 1.6 1 2.6 2 3 0-3.4-.4-6.4 1-9.4Z" fill="var(--accent-ink)"/></svg>
+      </div>
+      <div>
+        <h1>ارزیاب ریسک حریق FRAME</h1>
+        <p>ارزیابی گام‌به‌گام ریسک حریق برای ساختمان، افراد و فعالیت، با چک‌لیست و راهنما</p>
+      </div>
+    </div>
+    <div class="tools">
+      <button class="btn" id="btnSample" type="button">بارگذاری نمونه</button>
+      <button class="btn" id="btnNew" type="button">ارزیابی جدید</button>
+      <button class="btn" id="btnData" type="button">ذخیره / بازیابی</button>
+    </div>
+  </header>
+
+  <div class="notice screen" id="calNotice"><b>نسخهٔ آزمایشی ضرایب:</b> فرمول‌ها ساختار استاندارد FRAME را دارند، ولی ضرایب و جدول امتیازها هنوز با راهنمای رسمی FRAME تطبیق داده نشده‌اند. جزئیات در بخش «فرمول‌ها و ضرایب» آمده است. تا پیش از تطبیق، نتیجه را برای تصمیم نهایی به کار نبرید.</div>
+
+  <div class="layout">
+    <nav class="steps" id="steps" aria-label="مراحل ارزیابی"></nav>
+    <main class="card" id="main"></main>
+    <aside class="res" id="res" aria-live="polite"></aside>
+  </div>
+</div>
+<div class="mbar" id="mbar"></div>
+
+<script>
+/* ============================================================
+   FRAME — Fire Risk Assessment Method for Engineering
+   R  = P  /(A  · D )   ساختمان و دارایی
+   R1 = P1 /(A1 · D1)   افراد
+   R2 = P2 /(A2 · D2)   فعالیت
+   همهٔ ضرایب قابل‌تطبیق در CAL و در گزینه‌های FIELDS هستند.
+   ============================================================ */
+const CAL = {
+  version: "پیش‌فرض ۰.۱ (تطبیق‌نشده با منبع رسمی)",
+  verified: false,
+  q:  Q => Math.log10(Math.max(Q,1))/2 - 0.55,
+  i:  (T,m,M) => 1 - T/1000 - Math.log10(m)/10 + M/10,
+  g:  (b,l) => (5*Math.cbrt(b) + Math.cbrt(l)) / 16,
+  e:  E => E >= 0 ? Math.pow((E+3)/3, 0.25) : Math.pow((Math.abs(E)+3)/3, 0.5),
+  v:  (Q,k,h) => 0.84 + 0.1*Math.log10(Math.max(Q,1)) - Math.sqrt(k/Math.max(h,1)),
+  z:  (sides,H) => 1 + 0.05*(4-sides) + 0.05*Math.floor(Math.abs(H)/10),
+  tu: (dist,K,X,W) => dist/(60*K) + X/(80*Math.max(W,0.5)*K),   // دقیقه
+  t:  tu => Math.min(0.03*tu, 0.6),
+  r:  (Qi,delta) => 0.1*Math.log10(Qi+1) + delta,
+  base: 1.6,
+  N:  s => Math.pow(0.95, s),
+  S:  s => Math.pow(1.05, s),
+  U:  s => Math.pow(1.05, s),
+  Y:  s => Math.pow(1.05, s),
+  f:  (fs,ff,fw,fd) => fs + ff/2 + fw/3 + fd/4,
+  F:  f => 1 + f/200,
+  minA: 0.1,
+};
+
+/* ---------- presets by occupancy (fire load: EN 1991-1-2 Annex E, average values) ---------- */
+const USES = [
+  {v:"office",  l:"اداری",                   Qm:420,  act:0},
+  {v:"home",    l:"مسکونی",                  Qm:780,  act:0},
+  {v:"hosp",    l:"بیمارستان / درمانی",      Qm:230,  act:0},
+  {v:"school",  l:"آموزشی (کلاس درس)",       Qm:285,  act:0},
+  {v:"hotel",   l:"هتل / خوابگاه",           Qm:310,  act:0},
+  {v:"shop",    l:"تجاری / فروشگاه",         Qm:600,  act:0.1},
+  {v:"lib",     l:"کتابخانه / بایگانی",      Qm:1500, act:0},
+  {v:"ind",     l:"صنعتی / کارگاه تولیدی",   Qm:500,  act:0.1},
+  {v:"store",   l:"انبار کالا",              Qm:2000, act:0.1},
+  {v:"park",    l:"پارکینگ / حمل‌ونقل",       Qm:100,  act:0.1},
+];
+
+/* ---------- fields ---------- */
+const SECTIONS = [
+ { id:"info", title:"مشخصات", k:"اطلاعات پروژه", tag:"",
+   intro:"اطلاعات کلی ارزیابی را وارد کنید. ارزیابی FRAME برای هر «فضای آتش» (کمپارتمان) جداگانه انجام می‌شود؛ یعنی فضایی که با دیوار و سقف مقاوم در برابر آتش از بقیه جدا شده است. اگر ساختمان چند کمپارتمان دارد، برای پرخطرترین آن‌ها ارزیابی جدا انجام دهید.",
+   fields:[
+    {id:"project", t:"text", l:"نام پروژه / ساختمان"},
+    {id:"comp", t:"text", l:"نام فضای مورد ارزیابی (کمپارتمان)", h:"مثلاً «طبقهٔ دوم – بخش بستری» یا «سالن تولید شمالی»."},
+    {id:"assessor", t:"text", l:"ارزیاب"},
+    {id:"date", t:"text", l:"تاریخ ارزیابی", h:"مثلاً ۱۴۰۵/۰۷/۲۷"},
+    {id:"use", t:"sel", l:"کاربری فضا", h:"با انتخاب کاربری، بار حریق متحرک (بخش ۳) با مقدار متوسط همان کاربری پر می‌شود. بعداً می‌توانید آن را تغییر دهید.",
+      o: USES.map(u=>({v:u.v,l:u.l})), applyPreset:true},
+   ]},
+ { id:"geo", title:"ابعاد و موقعیت", k:"g · e · v · z", tag:"g, e, v, z",
+   intro:"ابعاد فضا، طبقه، تهویه و دسترسی آتش‌نشانی را وارد کنید. هرچه فضا بزرگ‌تر، بالاتر یا عمیق‌تر (زیرزمین) و دسترسی سخت‌تر باشد، مهار آتش دشوارتر و ریسک بالقوه بیشتر است.",
+   fields:[
+    {row:[
+      {id:"L", t:"num", l:"طول فضا", u:"متر", min:1, step:0.5},
+      {id:"B", t:"num", l:"عرض فضا", u:"متر", min:1, step:0.5},
+    ]},
+    {row:[
+      {id:"h", t:"num", l:"ارتفاع داخلی فضا (کف تا سقف)", u:"متر", min:2, step:0.1},
+      {id:"E", t:"num", l:"شمارهٔ طبقه", u:"", step:1, h:"همکف = ۰ ، طبقهٔ اول = ۱ ، زیرزمین اول = ‎-1"},
+    ]},
+    {id:"H", t:"num", l:"ارتفاع کف این طبقه از سطح زمین (یا عمق آن برای زیرزمین)", u:"متر", min:0, step:0.5, h:"برای همکف صفر بگذارید. این عدد روی دسترسی نیروهای آتش‌نشانی اثر دارد."},
+    {id:"vent", t:"num", l:"مساحت مؤثر بازشوهای تخلیهٔ دود و گرما", u:"متر مربع", min:0, step:0.5, h:"دریچه‌های دود، پنجره‌های بالای دیوار که در آتش‌سوزی باز می‌شوند، یا ظرفیت معادل هواکش مکانیکی دود. اگر هیچ‌کدام نیست صفر بگذارید."},
+    {id:"sides", t:"sel", l:"ماشین آتش‌نشانی از چند طرف به ساختمان دسترسی دارد؟", o:[
+      {v:4,l:"از هر چهار طرف"},{v:3,l:"از سه طرف"},{v:2,l:"از دو طرف"},{v:1,l:"فقط از یک طرف"}]},
+   ]},
+ { id:"fuel", title:"بار حریق و مواد", k:"q · i", tag:"q, i",
+   intro:"مقدار مواد سوختنی (بار حریق) و سرعت گسترش آتش را مشخص کنید. بار حریق بر حسب مگاژول بر متر مربع است.",
+   fields:[
+    {id:"Qm", t:"num", l:"بار حریق متحرک (اثاثیه، کالا، کاغذ و ...)", u:"MJ/m²", min:0, step:10,
+      h:"با انتخاب کاربری پر می‌شود (میانگین‌های پیوست E استاندارد EN 1991-1-2). اگر انبارش متراکم دارید، مقدار واقعی را حساب کنید: جرم هر ماده × ارزش حرارتی آن ÷ مساحت کف."},
+    {id:"Qi", t:"sel", l:"بار حریق ثابت (مواد سوختنی در خود ساختمان)", h:"مواد سوختنی به‌کاررفته در سازه، کف، سقف کاذب، دیوارپوش و عایق‌ها.", o:[
+      {v:0,l:"سازه و پوشش‌ها نسوز (بتن، آجر، فولاد، گچ، پشم سنگ)"},
+      {v:100,l:"مقدار کمی مواد سوختنی (کفپوش، کمی سقف کاذب یا دیوارپوش چوبی)"},
+      {v:300,l:"مقدار قابل‌توجه (سقف کاذب سوختنی، عایق پلی‌استایرن/پلی‌یورتان، دیوارپوش چوبی)"},
+      {v:600,l:"سازهٔ چوبی یا ساندویچ‌پنل با هستهٔ سوختنی"}]},
+    {id:"M", t:"sel", l:"رفتار سطوح در برابر آتش (کلاس واکنش در برابر آتش)", h:"پوشش دیوارها و سقف چقدر شعله را روی خود پخش می‌کند؟", o:[
+      {v:0,l:"نسوز (کلاس A1 / A2)"},{v:1,l:"خیلی کم سوختنی (کلاس B)"},{v:2,l:"کم سوختنی (کلاس C)"},{v:3,l:"سوختنی معمولی (کلاس D)"},{v:4,l:"به‌سرعت شعله‌ور (کلاس E / F، فوم، پارچهٔ بدون تیمار)"}]},
+    {id:"T", t:"sel", l:"حساسیت محتویات به حرارت", h:"محتویات در چه دمایی آسیب جدی می‌بینند یا از کار می‌افتند؟ هرچه حساس‌تر، خسارت سریع‌تر گسترش می‌یابد.", o:[
+      {v:50,l:"خیلی حساس: تجهیزات الکترونیکی، دارو، مواد غذایی (~۵۰°C)"},
+      {v:100,l:"حساس: پلاستیک، لوازم اداری، اسناد (~۱۰۰°C)"},
+      {v:200,l:"متوسط: چوب، کاغذ انبوه، منسوجات (~۲۰۰°C)"},
+      {v:300,l:"کم: ماشین‌آلات و قطعات فلزی (~۳۰۰°C)"},
+      {v:500,l:"خیلی کم: مصالح معدنی، فلز خام (~۵۰۰°C)"}]},
+    {id:"m", t:"sel", l:"اندازهٔ متوسط اقلام سوختنی", h:"اقلام ریز و پراکنده سریع‌تر می‌سوزند تا قطعات حجیم.", o:[
+      {v:0.005,l:"پودر، الیاف، براده (کمتر از ۱ سانتی‌متر)"},
+      {v:0.05,l:"کاغذ، پارچه، بسته‌های کوچک (چند سانتی‌متر)"},
+      {v:0.2,l:"کارتن، صندلی، اقلام متوسط (حدود ۲۰ سانتی‌متر)"},
+      {v:0.5,l:"مبلمان، قفسه، پالت (حدود نیم متر)"},
+      {v:2,l:"قطعات حجیم: ماشین‌آلات، رول‌های بزرگ (۲ متر و بیشتر)"}]},
+   ]},
+ { id:"ign", title:"منابع اشتعال", k:"a", tag:"a",
+   intro:"این چک‌لیست احتمال شروع آتش را می‌سنجد (فاکتور فعال‌سازی a). برای هر سؤال وضعیت فعلی را انتخاب کنید. هر امتیاز از سطح ریسک قابل‌قبول کم می‌کند.",
+   fields:[
+    {id:"a1", t:"sel", l:"ماهیت فعالیت اصلی", h:"با انتخاب کاربری به‌طور خودکار پیشنهاد می‌شود.", o:[
+      {v:0,l:"کم‌خطر: اداری، مسکونی، آموزشی، درمانی"},{v:0.1,l:"متوسط: تجاری، انبار، کارگاه معمولی"},{v:0.2,l:"پرخطر: فرآیند حرارتی، رنگ‌کاری، چوب‌بری، مواد شیمیایی"}]},
+    {id:"a2", t:"sel", l:"سیستم گرمایش", o:[
+      {v:0,l:"گرمایش مرکزی با موتورخانهٔ جداشده از فضا"},{v:0.05,l:"وسایل گرمایشی برقی یا گازی مجاز داخل فضا"},{v:0.1,l:"بخاری با شعلهٔ باز، کوره یا وسیلهٔ گرمایشی موقت"}]},
+    {id:"a3", t:"sel", l:"تأسیسات برقی", o:[
+      {v:0,l:"مطابق مقررات، با بازرسی دوره‌ای"},{v:0.05,l:"قدیمی ولی سالم؛ بدون بازرسی منظم"},{v:0.1,l:"سیم‌کشی فرسوده، اتصالات موقت، سه‌راهی‌های زنجیره‌ای"}]},
+    {id:"a4", t:"sel", l:"مایعات و گازهای قابل اشتعال", o:[
+      {v:0,l:"وجود ندارد یا فقط مقادیر مصرف روزانه در کابینت ایمن"},{v:0.1,l:"مقادیر متوسط در فضا"},{v:0.2,l:"مقادیر زیاد یا فرآیند با مایع/گاز قابل اشتعال"}]},
+    {id:"a5", t:"sel", l:"گرد و غبار یا بخارات قابل انفجار", o:[
+      {v:0,l:"ندارد"},{v:0.2,l:"دارد (آرد، چوب، پودر رنگ، حلال‌ها)"}]},
+    {id:"a6", t:"sel", l:"کارهای گرم (جوشکاری، برشکاری، سنگ‌زنی)", o:[
+      {v:0,l:"انجام نمی‌شود یا فقط با مجوز کار گرم"},{v:0.05,l:"گاه‌به‌گاه بدون مجوز رسمی"},{v:0.1,l:"به‌طور معمول و بدون کنترل"}]},
+    {id:"a7", t:"sel", l:"استعمال دخانیات و نظم و نظافت", o:[
+      {v:0,l:"ممنوعیت رعایت می‌شود؛ ضایعات سوختنی مرتب جمع می‌شوند"},{v:0.05,l:"کنترل ضعیف یا تجمع ضایعات"}]},
+   ]},
+ { id:"ppl", title:"افراد و تخلیه", k:"t · r", tag:"t, r",
+   intro:"زمان لازم برای تخلیهٔ افراد و خطر دود برای آن‌ها را تعیین کنید. زمان تخلیه از فاصله تا خروجی، تعداد افراد، عرض خروجی‌ها و توان حرکتی افراد محاسبه می‌شود.",
+   fields:[
+    {row:[
+      {id:"X", t:"num", l:"حداکثر تعداد افراد حاضر", u:"نفر", min:0, step:1},
+      {id:"dist", t:"num", l:"طولانی‌ترین مسیر تا خروجی امن", u:"متر", min:0, step:1, h:"از دورترین نقطه تا پلکان محافظت‌شده یا بیرون ساختمان."},
+    ]},
+    {id:"W", t:"num", l:"مجموع عرض خالص خروجی‌ها", u:"متر", min:0.5, step:0.1, h:"عرض همهٔ درها یا پلکان‌هایی که افراد این فضا می‌توانند استفاده کنند."},
+    {id:"K", t:"sel", l:"توان حرکتی افراد", o:[
+      {v:1,l:"بزرگسالان سالم و آشنا با ساختمان (کارکنان)"},
+      {v:0.8,l:"عموم مردم، ناآشنا با ساختمان (مشتری، مراجعه‌کننده)"},
+      {v:0.6,l:"کودکان یا سالمندان"},
+      {v:0.5,l:"افراد در حال خواب (هتل، خوابگاه، مسکونی)"},
+      {v:0.3,l:"بیماران بستری یا افراد کم‌تحرک که به کمک نیاز دارند"}]},
+    {id:"delta", t:"sel", l:"خطر دود و گازهای سمی", h:"مواد موجود هنگام سوختن چه نوع دودی تولید می‌کنند؟", o:[
+      {v:0,l:"معمولی: چوب، کاغذ، پارچهٔ طبیعی"},{v:0.1,l:"زیاد: پلاستیک، فوم، لاستیک"},{v:0.2,l:"سمی یا خورنده: مواد شیمیایی، PVC انبوه، باتری"}]},
+   ]},
+ { id:"val", title:"ارزش و فعالیت", k:"c · d", tag:"c, d",
+   intro:"ارزش آنچه در خطر است و اهمیت فعالیت این فضا را مشخص کنید. هرچه ارزش و وابستگی بیشتر باشد، ریسک کمتری قابل پذیرش است.",
+   fields:[
+    {id:"c1", t:"sel", l:"ارزش ریالی ساختمان و محتویات این فضا", o:[
+      {v:0,l:"کم (تجهیزات معمولی، ارزش پایین)"},{v:0.05,l:"متوسط"},{v:0.1,l:"زیاد (تجهیزات گران، موجودی بالای کالا)"},{v:0.2,l:"خیلی زیاد (تجهیزات تخصصی پزشکی/صنعتی، مرکز داده)"}]},
+    {id:"c2", t:"sel", l:"اقلام غیرقابل‌جایگزینی", o:[
+      {v:0,l:"ندارد"},{v:0.05,l:"اسناد یا سوابق مهم بدون نسخهٔ پشتیبان"},{v:0.1,l:"آثار تاریخی، فرهنگی یا هنری"}]},
+    {id:"d1", t:"sel", l:"اهمیت این فضا برای کل فعالیت سازمان", o:[
+      {v:0,l:"کم: توقف آن اثر چندانی ندارد"},{v:0.1,l:"متوسط: بخشی از فعالیت مختل می‌شود"},{v:0.2,l:"زیاد: بخش اصلی فعالیت متوقف می‌شود"},{v:0.3,l:"حیاتی: خدمات ضروری (درمان، آب، برق، داده) قطع می‌شود"}]},
+    {id:"d2", t:"sel", l:"مدت لازم برای راه‌اندازی دوباره", o:[
+      {v:0,l:"کمتر از یک هفته"},{v:0.05,l:"چند هفته"},{v:0.1,l:"چند ماه یا بیشتر"}]},
+   ]},
+ { id:"np", title:"حفاظت معمولی", k:"N", tag:"N",
+   intro:"حداقل حفاظتی که هر ساختمانی باید داشته باشد. برای هر مورد وضعیت فعلی را انتخاب کنید. هر کمبود امتیاز منفی دارد و فاکتور N را کم می‌کند.",
+   fields:[
+    {id:"n1", t:"sel", l:"منبع آب آتش‌نشانی (شیر هیدرانت، مخزن ذخیره)", o:[
+      {v:0,l:"کافی و مطمئن، در فاصلهٔ کمتر از ۱۰۰ متر"},{v:2,l:"موجود ولی محدود یا دور"},{v:4,l:"ناکافی یا نامطمئن"},{v:6,l:"وجود ندارد"}]},
+    {id:"n2", t:"sel", l:"خاموش‌کننده‌های دستی", o:[
+      {v:0,l:"تعداد و نوع مناسب، شارژشده و در دسترس"},{v:2,l:"ناقص یا تاریخ شارژ گذشته"},{v:4,l:"وجود ندارد"}]},
+    {id:"n3", t:"sel", l:"جعبه آتش‌نشانی (هوزریل) داخل ساختمان", o:[
+      {v:0,l:"همهٔ نقاط را پوشش می‌دهد و فشار آب کافی است"},{v:2,l:"پوشش ناقص یا فشار نامطمئن"},{v:4,l:"وجود ندارد"}]},
+    {id:"n4", t:"sel", l:"آموزش کارکنان و تیم اطفای اولیه", o:[
+      {v:0,l:"تیم آموزش‌دیده در همهٔ شیفت‌ها"},{v:2,l:"آموزش محدود یا قدیمی"},{v:4,l:"آموزشی داده نشده"}]},
+    {id:"n5", t:"sel", l:"بازرسی و نگهداری تجهیزات ایمنی", o:[
+      {v:0,l:"برنامه‌ریزی‌شده و ثبت‌شده"},{v:2,l:"نامنظم یا بدون سابقه"}]},
+   ]},
+ { id:"sp", title:"حفاظت ویژه", k:"S", tag:"S",
+   intro:"سیستم‌هایی فراتر از حداقل که آتش را زودتر کشف یا مهار می‌کنند. هر مورد امتیاز مثبت دارد و فاکتور S را افزایش می‌دهد.",
+   fields:[
+    {id:"s1", t:"sel", l:"سیستم اعلام حریق", o:[
+      {v:0,l:"ندارد"},{v:2,l:"فقط شستی‌های دستی و آژیر"},{v:4,l:"دتکتور خودکار در بخشی از فضا"},{v:7,l:"دتکتور خودکار در کل فضا، با پنل مرکزی"}]},
+    {id:"s2", t:"sel", l:"ارسال خودکار هشدار به آتش‌نشانی یا اتاق کنترل ۲۴ ساعته", o:[
+      {v:0,l:"ندارد"},{v:3,l:"دارد"}]},
+    {id:"s3", t:"sel", l:"سیستم اطفای خودکار", o:[
+      {v:0,l:"ندارد"},{v:6,l:"اسپرینکلر در بخشی از فضا"},{v:8,l:"اطفای ویژه (گازی، فوم) برای تجهیزات حساس"},{v:11,l:"اسپرینکلر کامل مطابق استاندارد"}]},
+    {id:"s4", t:"sel", l:"ذخیرهٔ آب اختصاصی اطفاء و پمپ", o:[
+      {v:0,l:"ندارد / وابسته به شبکهٔ شهری"},{v:2,l:"مخزن اختصاصی با یک پمپ"},{v:4,l:"مخزن اختصاصی با پمپ اصلی و رزرو (دیزلی)"}]},
+    {id:"s5", t:"sel", l:"زمان رسیدن آتش‌نشانی", o:[
+      {v:0,l:"بیشتر از ۲۰ دقیقه"},{v:2,l:"۱۰ تا ۲۰ دقیقه"},{v:4,l:"کمتر از ۱۰ دقیقه"},{v:8,l:"تیم آتش‌نشانی دائمی در محل"}]},
+   ]},
+ { id:"fr", title:"مقاومت سازه", k:"F", tag:"F",
+   intro:"مدت زمانی که اجزای ساختمان در برابر آتش پایدار می‌مانند (بر حسب دقیقه). اگر مدرک فنی ندارید، از راهنمای هر گزینه استفاده کنید.",
+   fields:[
+    {id:"fs", t:"sel", l:"سازهٔ باربر (ستون، تیر، سقف سازه‌ای)", o:[
+      {v:0,l:"بدون مقاومت: فولاد بدون پوشش، چوب نازک"},{v:30,l:"۳۰ دقیقه: فولاد با پوشش سبک"},{v:60,l:"۶۰ دقیقه: بتن معمولی، فولاد با پوشش مناسب"},{v:90,l:"۹۰ دقیقه"},{v:120,l:"۱۲۰ دقیقه و بیشتر: بتن مسلح با پوشش کافی"}]},
+    {id:"ff", t:"sel", l:"کف‌ها و سقف بین طبقات", o:[
+      {v:0,l:"بدون مقاومت"},{v:30,l:"۳۰ دقیقه"},{v:60,l:"۶۰ دقیقه"},{v:90,l:"۹۰ دقیقه"},{v:120,l:"۱۲۰ دقیقه و بیشتر"}]},
+    {id:"fw", t:"sel", l:"دیوارهای خارجی", o:[
+      {v:0,l:"بدون مقاومت: نمای کامپوزیت/شیشه‌ای"},{v:30,l:"۳۰ دقیقه"},{v:60,l:"۶۰ دقیقه: بلوک یا آجر"},{v:120,l:"۱۲۰ دقیقه و بیشتر"}]},
+    {id:"fd", t:"sel", l:"دیوارها و درهای جداکنندهٔ داخلی", o:[
+      {v:0,l:"بدون جداسازی یا درهای معمولی"},{v:30,l:"۳۰ دقیقه: درهای ضدحریق خودبسته"},{v:60,l:"۶۰ دقیقه"},{v:120,l:"۱۲۰ دقیقه: دیوار آتش"}]},
+   ]},
+ { id:"esc", title:"فرار و تداوم فعالیت", k:"U · Y", tag:"U, Y",
+   intro:"دو گروه حفاظت: امکانات فرار امن افراد (فاکتور U) و اقداماتی که آسیب به فعالیت را کم می‌کنند (فاکتور Y).",
+   fields:[
+    {id:"u1", t:"sel", l:"پلکان و راهروهای فرار", g:"U", o:[
+      {v:0,l:"پلکان باز یا بدون جداسازی"},{v:3,l:"پلکان محصور با درهای ضدحریق"},{v:5,l:"پلکان محصور و فشار مثبت یا دودبند"}]},
+    {id:"u2", t:"sel", l:"تعداد مسیرهای فرار مستقل", g:"U", o:[
+      {v:0,l:"یک مسیر"},{v:2,l:"دو یا چند مسیر در جهت‌های مختلف"}]},
+    {id:"u3", t:"sel", l:"روشنایی اضطراری و علائم خروج", g:"U", o:[
+      {v:0,l:"ندارد یا ناقص"},{v:2,l:"کامل و سالم"}]},
+    {id:"u4", t:"sel", l:"هشدار تخلیه", g:"U", o:[
+      {v:0,l:"ندارد"},{v:2,l:"آژیر عمومی"},{v:3,l:"اعلام صوتی با پیام گفتاری"}]},
+    {id:"u5", t:"sel", l:"کنترل دود در مسیرهای فرار", g:"U", o:[
+      {v:0,l:"ندارد"},{v:3,l:"دارد (دریچه یا هواکش دود)"}]},
+    {id:"u6", t:"sel", l:"برنامهٔ واکنش در شرایط اضطراری و مانور تخلیه", g:"U", o:[
+      {v:0,l:"ندارد"},{v:1,l:"برنامه مکتوب بدون مانور"},{v:2,l:"برنامه مکتوب و مانور سالانه یا بیشتر"}]},
+    {id:"y1", t:"sel", l:"پشتیبان اطلاعات و اسناد خارج از محل", g:"Y", o:[
+      {v:0,l:"ندارد"},{v:2,l:"دارد"}]},
+    {id:"y2", t:"sel", l:"طرح تداوم کسب‌وکار (BCP)", g:"Y", o:[
+      {v:0,l:"ندارد"},{v:3,l:"مکتوب و تمرین‌شده"}]},
+    {id:"y3", t:"sel", l:"امکان جایگزینی (تجهیزات یدک، تأمین‌کنندهٔ دوم، محل جایگزین)", g:"Y", o:[
+      {v:0,l:"ندارد"},{v:2,l:"تا حدی"},{v:4,l:"کامل"}]},
+    {id:"y4", t:"sel", l:"حفاظت محتویات در برابر آب اطفاء و دود", g:"Y", o:[
+      {v:0,l:"ندارد"},{v:1,l:"دارد (پالت، پوشش، زهکشی کف)"}]},
+   ]},
+];
+const VIEWS = [
+  {id:"result", title:"نتیجه و پیشنهادها", k:"R · R1 · R2"},
+  {id:"report", title:"گزارش", k:"جمع‌بندی برای پرونده"},
+  {id:"formula", title:"فرمول‌ها و ضرایب", k:"برای تطبیق با منبع"},
+];
+
+const ALLFIELDS = [];
+SECTIONS.forEach(s => s.fields.forEach(f => (f.row||[f]).forEach(x => { x.sec=s.id; ALLFIELDS.push(x); })));
+const FIELD = Object.fromEntries(ALLFIELDS.map(f=>[f.id,f]));
+
+const DEFAULTS = {project:"",comp:"",assessor:"",date:"",use:"office",L:30,B:20,h:3,E:0,H:0,vent:0,sides:2,
+  Qm:420,Qi:0,M:1,T:100,m:0.2,a1:0,a2:0,a3:0,a4:0,a5:0,a6:0,a7:0,X:50,dist:30,W:1.8,K:1,delta:0.1,
+  c1:0.05,c2:0,d1:0.1,d2:0,n1:0,n2:0,n3:0,n4:2,n5:2,s1:0,s2:0,s3:0,s4:0,s5:2,fs:60,ff:60,fw:60,fd:0,
+  u1:0,u2:2,u3:0,u4:2,u5:0,u6:0,y1:0,y2:0,y3:0,y4:0};
+const SAMPLE = Object.assign({}, DEFAULTS, {project:"نمونه: بیمارستان عمومی",comp:"طبقهٔ دوم – بخش بستری داخلی",assessor:"(نمونه)",date:"۱۴۰۵/۰۷/۲۷",
+  use:"hosp",L:48,B:18,h:3.2,E:2,H:8,vent:0,sides:2,Qm:230,Qi:100,M:2,T:50,m:0.5,
+  a1:0,a2:0.05,a3:0.05,a4:0.1,a5:0,a6:0,a7:0.05,X:60,dist:45,W:2.4,K:0.3,delta:0.1,
+  c1:0.2,c2:0,d1:0.3,d2:0.05,n1:2,n2:0,n3:2,n4:2,n5:2,s1:4,s2:0,s3:0,s4:2,s5:2,
+  fs:90,ff:90,fw:60,fd:30,u1:3,u2:2,u3:2,u4:2,u5:0,u6:1,y1:2,y2:0,y3:2,y4:0});
+
+/* ---------- state ---------- */
+const KEY = "frame-risk-v1";
+let st = load() || {data:{...SAMPLE}, seen:[], view:"info", sample:true};
+function load(){ try{ const j = JSON.parse(localStorage.getItem(KEY)); if(j && j.data) { j.data = {...DEFAULTS, ...j.data}; return j; } }catch(e){} return null; }
+function save(){ try{ localStorage.setItem(KEY, JSON.stringify(st)); }catch(e){} }
+
+/* ---------- helpers ---------- */
+const fa = (x, d=2) => (x==null||!isFinite(x)) ? "—" : Number(x).toLocaleString("fa-IR",{minimumFractionDigits:d,maximumFractionDigits:d});
+const en = (x, d=2) => (x==null||!isFinite(x)) ? "—" : Number(x).toFixed(d);
+const toNum = s => { const t = String(s).replace(/[۰-۹]/g,c=>"۰۱۲۳۴۵۶۷۸۹".indexOf(c)).replace(/[٠-٩]/g,c=>"٠١٢٣٤٥٦٧٨٩".indexOf(c)).replace(/[٫,]/g,"."); const v = parseFloat(t); return isFinite(v)?v:0; };
+const esc = s => String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const $ = s => document.querySelector(s);
+
+/* ---------- calculation ---------- */
+function compute(d){
+  const Q = d.Qi + d.Qm;
+  const b = Math.min(d.L,d.B), l = Math.max(d.L,d.B), area = d.L*d.B;
+  const k = d.vent / Math.max(area,1);
+  const q = Math.max(CAL.q(Q), 0.2);
+  const i = Math.max(CAL.i(d.T, d.m, d.M), 0.2);
+  const g = CAL.g(b,l);
+  const e = CAL.e(d.E);
+  const v = Math.min(Math.max(CAL.v(Q,k,d.h),0.5),1.5);
+  const z = CAL.z(d.sides, d.H);
+  const a = d.a1+d.a2+d.a3+d.a4+d.a5+d.a6+d.a7;
+  const tu = CAL.tu(d.dist, d.K, d.X, d.W);
+  const t = CAL.t(tu);
+  const c = d.c1+d.c2;
+  const r = CAL.r(d.Qi, d.delta);
+  const dd = d.d1+d.d2;
+  const sumN = d.n1+d.n2+d.n3+d.n4+d.n5;
+  const sumS = d.s1+d.s2+d.s3+d.s4+d.s5;
+  const sumU = d.u1+d.u2+d.u3+d.u4+d.u5+d.u6;
+  const sumY = d.y1+d.y2+d.y3+d.y4;
+  const N = CAL.N(sumN), S = CAL.S(sumS), U = CAL.U(sumU), Y = CAL.Y(sumY);
+  const f = CAL.f(d.fs,d.ff,d.fw,d.fd), F = CAL.F(f);
+  const P  = q*i*g*e*v*z, P1 = q*i*e*v*z, P2 = i*g*e*v*z;
+  const A  = Math.max(CAL.base - a - t - c, CAL.minA);
+  const A1 = Math.max(CAL.base - a - t - r, CAL.minA);
+  const A2 = Math.max(CAL.base - a - c - dd, CAL.minA);
+  const D = N*S*F, D1 = N*U, D2 = N*S*Y;
+  return {Q,area,k,q,i,g,e,v,z,a,tu,t,c,r,d:dd,sumN,sumS,sumU,sumY,N,S,U,Y,f,F,P,P1,P2,A,A1,A2,D,D1,D2,
+    R:P/(A*D), R1:P1/(A1*D1), R2:P2/(A2*D2), R0:P/A, R10:P1/A1, R20:P2/A2};
+}
+const level = R => R <= 0.8 ? "ok" : R <= 1 ? "warn" : "bad";
+const levelTxt = R => R <= 0.8 ? "قابل‌قبول" : R <= 1 ? "مرزی" : "غیرقابل‌قبول";
+
+/* ---------- rendering ---------- */
+function renderSteps(){
+  const all = [...SECTIONS, ...VIEWS];
+  $("#steps").innerHTML = all.map((s,ix) => {
+    const isView = ix >= SECTIONS.length;
+    const sep = ix === SECTIONS.length ? '<div class="nav-sep"></div>' : '';
+    const done = !isView && st.seen.includes(s.id);
+    const n = isView ? ["✓","≡","ƒ"][ix-SECTIONS.length] : fa(ix+1,0);
+    return `${sep}<button type="button" class="step ${st.view===s.id?"on":""} ${done?"done":""}" data-go="${s.id}">
+      <span class="n">${done?"✓":n}</span><span class="t">${esc(s.title)}<span class="k">${esc(s.k)}</span></span></button>`;
+  }).join("");
+}
+
+function optHTML(f){
+  const cur = st.data[f.id];
+  return `<div class="opts" role="radiogroup" aria-label="${esc(f.l)}">` + f.o.map((o,ix)=>{
+    const sel = String(o.v)===String(cur);
+    const vshow = typeof o.v === "number" ? `<span class="ov">${o.v}</span>` : "";
+    return `<label class="opt ${sel?"sel":""}"><input type="radio" name="${f.id}" id="${f.id}_${ix}" value="${ix}" ${sel?"checked":""}>
+      <span class="ol">${esc(o.l)}</span>${f.id==="use"?"":vshow}</label>`;
+  }).join("") + `</div>`;
+}
+function fieldHTML(f){
+  let ctl;
+  if (f.t==="sel") ctl = optHTML(f);
+  else if (f.t==="num") ctl = `<div class="inp"><input id="${f.id}" inputmode="decimal" value="${esc(st.data[f.id])}" dir="ltr"><span class="u">${esc(f.u||"")}</span></div>`;
+  else ctl = `<div class="inp" style="max-width:480px"><input id="${f.id}" value="${esc(st.data[f.id])}"></div>`;
+  const lab = f.t==="sel" ? `<span class="lb">${esc(f.l)}</span>` : `<label class="lb" for="${f.id}">${esc(f.l)}</label>`;
+  return `<div class="field">${lab}${f.h?`<div class="help">${esc(f.h)}</div>`:""}${ctl}</div>`;
+}
+
+function calcLine(id, x){
+  const map = {
+    geo:`g = ${en(x.g)}   e = ${en(x.e)}   v = ${en(x.v)}   z = ${en(x.z)}   (area = ${en(x.area,0)} m²)`,
+    fuel:`Q = ${en(x.Q,0)} MJ/m²   q = ${en(x.q)}   i = ${en(x.i)}`,
+    ign:`a = ${en(x.a)}`,
+    ppl:`tu = ${en(x.tu,1)} min   t = ${en(x.t)}   r = ${en(x.r)}`,
+    val:`c = ${en(x.c)}   d = ${en(x.d)}`,
+    np:`ΣN = ${x.sumN}   N = 0.95^ΣN = ${en(x.N)}`,
+    sp:`ΣS = ${x.sumS}   S = 1.05^ΣS = ${en(x.S)}`,
+    fr:`f = ${en(x.f,0)} min   F = ${en(x.F)}`,
+    esc:`ΣU = ${x.sumU}   U = ${en(x.U)}      ΣY = ${x.sumY}   Y = ${en(x.Y)}`,
+  };
+  return map[id] ? `<div class="calc-line" id="calcline">${map[id]}</div>` : "";
+}
+
+function renderMain(){
+  const x = compute(st.data);
+  const sIx = SECTIONS.findIndex(s=>s.id===st.view);
+  let html = "";
+  if (sIx >= 0){
+    const s = SECTIONS[sIx];
+    html += `<div class="sec-head"><h2>${fa(sIx+1,0)}. ${esc(s.title)}</h2>${s.tag?`<span class="factor-tag">${esc(s.tag)}</span>`:""}</div>`;
+    if (st.sample && sIx===0) html += `<p><span class="sample-tag">داده‌های فعلی نمونه هستند</span> برای شروع ارزیابی خودتان «ارزیابی جدید» را بزنید.</p>`;
+    html += `<p class="intro">${esc(s.intro)}</p>`;
+    let lastG = null;
+    s.fields.forEach(f => {
+      if (f.row) html += `<div class="row2">${f.row.map(fieldHTML).join("")}</div>`;
+      else {
+        if (f.g && f.g!==lastG){ html += `<h3 class="sub">${f.g==="U"?"امکانات فرار افراد (U)":"تداوم فعالیت (Y)"}</h3>`; lastG=f.g; }
+        html += fieldHTML(f);
+      }
+    });
+    html += calcLine(s.id, x);
+    const prev = sIx>0 ? SECTIONS[sIx-1].id : null;
+    const next = sIx<SECTIONS.length-1 ? SECTIONS[sIx+1].id : "result";
+    html += `<div class="pager">${prev?`<button class="btn" type="button" data-go="${prev}">→ قبلی</button>`:"<span></span>"}
+      <button class="btn primary" type="button" data-confirm="${s.id}" data-go="${next}">تأیید و ${next==="result"?"دیدن نتیجه":"مرحلهٔ بعد"} ←</button></div>`;
+  }
+  else if (st.view==="result") html = resultHTML(x);
+  else if (st.view==="report") html = reportHTML(x);
+  else html = formulaHTML(x);
+  $("#main").innerHTML = html;
+}
+
+function riskRow(name, sym, R){
+  const lv = level(R), w = Math.min(R/2,1)*100;
+  return `<div class="risk"><div><div class="nm">${name} <span class="sym">${sym}</span></div><span class="pill ${lv}">${levelTxt(R)}</span></div>
+    <div class="val ${lv}">${en(R)}</div><div class="bar"><i class="${lv}" style="width:${w}%"></i></div><div class="scale"><span>0</span><span>1.0</span><span>2.0+</span></div></div>`;
+}
+function renderRes(){
+  const x = compute(st.data);
+  $("#res").innerHTML = `<div class="panel"><h3>ریسک محاسبه‌شده (حد مجاز ۱٫۰)</h3>
+      ${riskRow("ساختمان و دارایی","R",x.R)}${riskRow("افراد","R1",x.R1)}${riskRow("فعالیت","R2",x.R2)}</div>
+    <div class="panel"><h3>اجزای محاسبه</h3><div class="kv">
+      <span>P</span><span>ریسک بالقوه</span><span>${en(x.P)}</span><span>${en(x.P1)} · ${en(x.P2)}</span>
+      <span>A</span><span>ریسک قابل‌قبول</span><span>${en(x.A)}</span><span>${en(x.A1)} · ${en(x.A2)}</span>
+      <span>D</span><span>سطح حفاظت</span><span>${en(x.D)}</span><span>${en(x.D1)} · ${en(x.D2)}</span>
+    </div><p class="help" style="margin:8px 0 0">ستون اول برای ساختمان، ستون دوم برای افراد · فعالیت</p></div>`;
+  $("#mbar").innerHTML = [["ساختمان",x.R],["افراد",x.R1],["فعالیت",x.R2]].map(([n,R])=>`<div>${n}<b class="val ${level(R)}" style="font-size:19px">${en(R)}</b></div>`).join("");
+}
+
+/* improvement what-if */
+function suggestions(x){
+  const out = [];
+  ALLFIELDS.filter(f=>f.t==="sel" && ["ign","np","sp","fr","esc","fuel"].includes(f.sec) && !["T","m","Qi"].includes(f.id)).forEach(f=>{
+    let best=null;
+    f.o.forEach(o=>{
+      if (String(o.v)===String(st.data[f.id])) return;
+      const nx = compute({...st.data,[f.id]:o.v});
+      const gain = Math.max(x.R,x.R1,x.R2) - Math.max(nx.R,nx.R1,nx.R2);
+      const tot = (x.R+x.R1+x.R2)-(nx.R+nx.R1+nx.R2);
+      if (tot > 0.005 && (!best || tot > best.tot)) best = {f,o,nx,gain,tot};
+    });
+    if (best) out.push(best);
+  });
+  return out.sort((a,b)=>b.tot-a.tot).slice(0,7);
+}
+
+function resultHTML(x){
+  const worst = Math.max(x.R,x.R1,x.R2);
+  const vlv = level(worst);
+  const msg = vlv==="ok" ? "هر سه ریسک در محدودهٔ قابل‌قبول است. وضعیت فعلی را حفظ کنید و ارزیابی را دوره‌ای تکرار کنید."
+    : vlv==="warn" ? "دست‌کم یکی از ریسک‌ها نزدیک به حد مجاز است. اقدامات پیشنهادی زیر حاشیهٔ اطمینان را بیشتر می‌کنند."
+    : "دست‌کم یکی از ریسک‌ها از حد مجاز (۱٫۰) بیشتر است و نیاز به اقدام اصلاحی دارد.";
+  const card = (n,sym,R,R0) => `<div class="panel"><div class="nm" style="font-weight:700">${n} <span class="sym" style="font-family:var(--f-mono);color:var(--muted);font-size:12px">${sym}</span></div>
+     <div class="val ${level(R)}" style="font-size:34px;font-weight:800;direction:ltr;text-align:right">${en(R)}</div>
+     <span class="pill ${level(R)}">${levelTxt(R)}</span>
+     <p class="help" style="margin:8px 0 0">حفاظت لازم (P/A): ${fa(R0)} — حفاظت موجود (D): ${fa(R0/R)}</p></div>`;
+  const sg = suggestions(x);
+  const tips = [];
+  if (x.R1>1) tips.push("ریسک جانی بالاست: اولویت با کوتاه‌کردن زمان تخلیه (خروجی بیشتر یا عریض‌تر، مسیر کوتاه‌تر)، اعلام حریق خودکار و هشدار تخلیه است.");
+  if (x.tu>3) tips.push(`زمان تخلیهٔ برآوردی ${fa(x.tu,1)} دقیقه است. برای افراد کم‌تحرک، طرح تخلیهٔ افقی به کمپارتمان مجاور را بررسی کنید.`);
+  if (x.R>1 && st.data.s3===0) tips.push("برای کاهش ریسک ساختمان، اسپرینکلر معمولاً مؤثرترین اقدام است.");
+  if (x.R2>1) tips.push("ریسک فعالیت بالاست: طرح تداوم کسب‌وکار، پشتیبان‌گیری خارج از محل و تجهیزات جایگزین را در نظر بگیرید.");
+  if (x.sumN>=6) tips.push("کمبودهای حفاظت معمولی (آب، خاموش‌کننده، آموزش) زیاد است. این موارد ارزان‌ترین بهبودها هستند و هر سه ریسک را کاهش می‌دهند.");
+  return `<div class="sec-head"><h2>نتیجهٔ ارزیابی</h2><span class="factor-tag">R = P / (A·D)</span></div>
+    <p class="intro">${esc(st.data.project||"بدون نام")} ${st.data.comp?"— "+esc(st.data.comp):""}</p>
+    <div class="verdict ${vlv}">${msg}</div>
+    <div class="big3">${card("ساختمان و دارایی","R",x.R,x.R0)}${card("افراد","R1",x.R1,x.R10)}${card("فعالیت","R2",x.R2,x.R20)}</div>
+    <p class="help">معیار FRAME: اگر R کمتر یا مساوی ۱ باشد، حفاظت موجود برای ریسک بالقوه کافی است. در این نرم‌افزار بازهٔ ۰٫۸ تا ۱ «مرزی» نشان داده می‌شود.</p>
+    <h3 class="sub">اثربخش‌ترین بهبودها</h3>
+    ${sg.length?`<ul class="sugg">${sg.map(s=>`<li><b>${esc(s.f.l)}</b>: «${esc(s.o.l)}»<br>
+       <span class="help">ساختمان ${en(x.R)}→${en(s.nx.R)} · افراد ${en(x.R1)}→${en(s.nx.R1)} · فعالیت ${en(x.R2)}→${en(s.nx.R2)}</span></li>`).join("")}</ul>`
+      :`<p class="help">در چک‌لیست‌ها گزینهٔ بهتری باقی نمانده است.</p>`}
+    ${tips.length?`<h3 class="sub">نکات</h3><ul class="sugg">${tips.map(t=>`<li>${esc(t)}</li>`).join("")}</ul>`:""}
+    <div class="pager"><button class="btn" type="button" data-go="esc">→ بازگشت به چک‌لیست</button><button class="btn primary" type="button" data-go="report">دیدن گزارش ←</button></div>`;
+}
+
+function optLabel(f){ const o = f.o.find(o=>String(o.v)===String(st.data[f.id])); return o?o.l:"—"; }
+function reportRows(){
+  return SECTIONS.map(s=>{
+    const rows = s.fields.flatMap(f=>f.row||[f]).map(f=>{
+      const val = f.t==="sel" ? optLabel(f) : (f.t==="num" ? `${fa(st.data[f.id], Number.isInteger(st.data[f.id])?0:1)} ${f.u||""}` : (st.data[f.id]||"—"));
+      return {s:s.title, l:f.l, v:val};
+    });
+    return rows;
+  }).flat();
+}
+function reportHTML(x){
+  const rows = reportRows();
+  const fac = factorRows(x);
+  const inFrame = window.self !== window.top;
+  return `<div class="sec-head"><h2>گزارش ارزیابی ریسک حریق</h2><span class="factor-tag">FRAME</span></div>
+    <p class="intro">پروژه: ${esc(st.data.project||"—")} · فضا: ${esc(st.data.comp||"—")} · ارزیاب: ${esc(st.data.assessor||"—")} · تاریخ: ${esc(st.data.date||"—")}</p>
+    <div class="scroll"><table class="t"><thead><tr><th>ریسک</th><th>مقدار</th><th>P</th><th>A</th><th>D</th><th>وضعیت</th></tr></thead><tbody>
+      <tr><td>ساختمان و دارایی (R)</td><td class="num">${en(x.R)}</td><td class="num">${en(x.P)}</td><td class="num">${en(x.A)}</td><td class="num">${en(x.D)}</td><td>${levelTxt(x.R)}</td></tr>
+      <tr><td>افراد (R1)</td><td class="num">${en(x.R1)}</td><td class="num">${en(x.P1)}</td><td class="num">${en(x.A1)}</td><td class="num">${en(x.D1)}</td><td>${levelTxt(x.R1)}</td></tr>
+      <tr><td>فعالیت (R2)</td><td class="num">${en(x.R2)}</td><td class="num">${en(x.P2)}</td><td class="num">${en(x.A2)}</td><td class="num">${en(x.D2)}</td><td>${levelTxt(x.R2)}</td></tr>
+    </tbody></table></div>
+    <h3 class="sub">فاکتورها</h3>
+    <div class="scroll"><table class="t"><thead><tr><th>نماد</th><th>فاکتور</th><th>مقدار</th></tr></thead><tbody>
+      ${fac.map(r=>`<tr><td class="f">${r[0]}</td><td>${esc(r[1])}</td><td class="num">${r[2]}</td></tr>`).join("")}
+    </tbody></table></div>
+    <h3 class="sub">پاسخ‌های چک‌لیست</h3>
+    <div class="scroll"><table class="t"><thead><tr><th>بخش</th><th>مورد</th><th>وضعیت ثبت‌شده</th></tr></thead><tbody>
+      ${rows.map(r=>`<tr><td>${esc(r.s)}</td><td>${esc(r.l)}</td><td>${esc(r.v)}</td></tr>`).join("")}
+    </tbody></table></div>
+    <p class="help">نسخهٔ ضرایب: ${esc(CAL.version)}</p>
+    <div class="pager"><button class="btn" type="button" data-go="result">→ نتیجه</button>
+      <span style="display:flex;gap:8px;flex-wrap:wrap">${inFrame?"":`<button class="btn" type="button" id="btnPrint">چاپ / PDF</button>`}
+      <button class="btn primary" type="button" id="btnCopyRep">کپی متن گزارش</button></span></div>`;
+}
+function factorRows(x){
+  return [
+    ["q","بار حریق",en(x.q)],["i","گسترش آتش",en(x.i)],["g","مساحت",en(x.g)],["e","طبقه",en(x.e)],
+    ["v","تهویه",en(x.v)],["z","دسترسی",en(x.z)],["a","فعال‌سازی (منابع اشتعال)",en(x.a)],
+    ["t","زمان تخلیه ("+fa(x.tu,1)+" دقیقه)",en(x.t)],["c","ارزش",en(x.c)],["r","محیط (دود و سمیت)",en(x.r)],["d","وابستگی فعالیت",en(x.d)],
+    ["N","حفاظت معمولی (ΣN="+x.sumN+")",en(x.N)],["S","حفاظت ویژه (ΣS="+x.sumS+")",en(x.S)],["F","مقاومت سازه (f="+en(x.f,0)+")",en(x.F)],
+    ["U","فرار (ΣU="+x.sumU+")",en(x.U)],["Y","تداوم فعالیت (ΣY="+x.sumY+")",en(x.Y)],
+  ];
+}
+function reportText(){
+  const x = compute(st.data);
+  const L = [];
+  L.push("گزارش ارزیابی ریسک حریق به روش FRAME");
+  L.push(`پروژه: ${st.data.project||"—"} | فضا: ${st.data.comp||"—"} | ارزیاب: ${st.data.assessor||"—"} | تاریخ: ${st.data.date||"—"}`);
+  L.push("");
+  L.push(`ریسک ساختمان و دارایی R = ${en(x.R)} (${levelTxt(x.R)})`);
+  L.push(`ریسک افراد R1 = ${en(x.R1)} (${levelTxt(x.R1)})`);
+  L.push(`ریسک فعالیت R2 = ${en(x.R2)} (${levelTxt(x.R2)})`);
+  L.push("");
+  L.push("فاکتورها:"); factorRows(x).forEach(r=>L.push(`  ${r[0]} – ${r[1]}: ${r[2]}`));
+  L.push(""); L.push("پاسخ‌های چک‌لیست:"); reportRows().forEach(r=>L.push(`  [${r.s}] ${r.l}: ${r.v}`));
+  L.push(""); L.push("نسخهٔ ضرایب: "+CAL.version);
+  return L.join("\n");
+}
+
+function formulaHTML(x){
+  const U = '<span class="badge u">تطبیق‌نشده</span>', V = '<span class="badge v">مرجع</span>';
+  const rows = [
+    ["R","P / (A·D)","ریسک ساختمان و دارایی",V],
+    ["R1","P1 / (A1·D1)","ریسک افراد",V],
+    ["R2","P2 / (A2·D2)","ریسک فعالیت",V],
+    ["P","q·i·g·e·v·z","ریسک بالقوهٔ ساختمان",V],
+    ["P1","q·i·e·v·z","ریسک بالقوهٔ افراد",V],
+    ["P2","i·g·e·v·z","ریسک بالقوهٔ فعالیت",V],
+    ["A","1.6 − a − t − c","ریسک قابل‌قبول ساختمان",V],
+    ["A1","1.6 − a − t − r","ریسک قابل‌قبول افراد",V],
+    ["A2","1.6 − a − c − d","ریسک قابل‌قبول فعالیت",V],
+    ["D","N·S·F","حفاظت ساختمان",V],["D1","N·U","حفاظت افراد",V],["D2","N·S·Y","حفاظت فعالیت",V],
+    ["q","log10(Qi+Qm)/2 − 0.55   (min 0.2)","بار حریق",U],
+    ["i","1 − T/1000 − log10(m)/10 + M/10","گسترش آتش",U],
+    ["g","(5·∛b + ∛l) / 16","مساحت (b عرض، l طول)",U],
+    ["e","E≥0: ((E+3)/3)^0.25 ;  E<0: ((|E|+3)/3)^0.5","طبقه",U],
+    ["v","0.84 + 0.1·log10(Q) − √(k/h)   [0.5…1.5]","تهویه (k = مساحت دریچه ÷ مساحت کف)",U],
+    ["z","1 + 0.05·(4 − sides) + 0.05·⌊|H|/10⌋","دسترسی",U],
+    ["a","Σ a1…a7 (جدول چک‌لیست)","فعال‌سازی",U],
+    ["tu","dist/(60·K) + X/(80·W·K)   [min]","زمان تخلیه",U],
+    ["t","min(0.03·tu, 0.6)","زمان تخلیه",U],
+    ["c","c1 + c2","ارزش",U],["r","0.1·log10(Qi+1) + δ","محیط",U],["d","d1 + d2","وابستگی",U],
+    ["N","0.95^ΣN","حفاظت معمولی",V],["S","1.05^ΣS","حفاظت ویژه",V],["U","1.05^ΣU","فرار",V],["Y","1.05^ΣY","تداوم فعالیت",V],
+    ["f","fs + ff/2 + fw/3 + fd/4","مقاومت معادل (دقیقه)",U],["F","1 + f/200","مقاومت سازه",U],
+  ];
+  return `<div class="sec-head"><h2>فرمول‌ها و ضرایب</h2><span class="factor-tag">${esc(CAL.version)}</span></div>
+    <p class="intro">این جدول همهٔ روابط محاسبه را نشان می‌دهد. «مرجع» یعنی ساختار رابطه همان ساختار شناخته‌شدهٔ روش FRAME است. «تطبیق‌نشده» یعنی ضریب یا شکل دقیق رابطه باید با راهنمای رسمی FRAME (De Smet، نسخهٔ ۲۰۰۸) مقایسه و اصلاح شود. امتیازهای گزینه‌های چک‌لیست نیز (عددی که کنار هر گزینه آمده) همگی تطبیق‌نشده‌اند.</p>
+    <div class="scroll"><table class="t"><thead><tr><th>نماد</th><th>رابطه</th><th>شرح</th><th>وضعیت</th><th>مقدار فعلی</th></tr></thead><tbody>
+    ${rows.map(r=>{ const key=r[0]; const val = x[key]!==undefined?en(x[key]):""; return `<tr><td class="f">${r[0]}</td><td class="f">${esc(r[1])}</td><td>${esc(r[2])}</td><td>${r[3]}</td><td class="num">${val}</td></tr>`;}).join("")}
+    </tbody></table></div>
+    <h3 class="sub">بار حریق پیش‌فرض کاربری‌ها (MJ/m²)</h3>
+    <div class="scroll"><table class="t"><thead><tr><th>کاربری</th><th>Qm</th><th>a1 پیشنهادی</th></tr></thead><tbody>
+    ${USES.map(u=>`<tr><td>${esc(u.l)}</td><td class="num">${u.Qm}</td><td class="num">${u.act}</td></tr>`).join("")}
+    </tbody></table></div>
+    <p class="help">مقادیر Qm میانگین بار حریق در پیوست E استاندارد EN 1991-1-2 هستند.</p>`;
+}
+
+function renderAll(){ renderSteps(); renderMain(); renderRes(); save(); }
+
+/* ---------- events ---------- */
+document.addEventListener("click", ev=>{
+  const c = ev.target.closest("[data-confirm]");
+  if (c && !st.seen.includes(c.dataset.confirm)) st.seen.push(c.dataset.confirm);
+  const g = ev.target.closest("[data-go]");
+  if (g){ st.view = g.dataset.go; renderAll(); $("#main").scrollIntoView({block:"start",behavior:"smooth"}); return; }
+  if (ev.target.id==="btnCopyRep") copyText(reportText(),"متن گزارش کپی شد");
+  if (ev.target.id==="btnPrint") window.print();
+});
+document.addEventListener("change", ev=>{
+  const el = ev.target;
+  if (el.type==="radio"){
+    const f = FIELD[el.name]; const o = f.o[+el.value];
+    st.data[f.id] = o.v;
+    if (f.applyPreset){ const u = USES.find(u=>u.v===o.v); if (u){ st.data.Qm = u.Qm; st.data.a1 = u.act; toast(`بار حریق ${fa(u.Qm,0)} MJ/m² و فعالیت اصلی برای «${u.l}» تنظیم شد`); } }
+    st.sample = false;
+    renderAll();
+  }
+});
+document.addEventListener("input", ev=>{
+  const el = ev.target; const f = FIELD[el.id]; if (!f) return;
+  st.data[f.id] = f.t==="num" ? toNum(el.value) : el.value;
+  if (f.t==="num"){ const lo = f.min ?? -1e9; if (st.data[f.id] < lo) st.data[f.id] = lo; }
+  st.sample = false;
+  renderRes(); save();
+  const s = SECTIONS.find(s=>s.id===st.view); const cl = $("#calcline");
+  if (s && cl){ const tmp = document.createElement("div"); tmp.innerHTML = calcLine(s.id, compute(st.data)); cl.replaceWith(tmp.firstChild); }
+});
+
+$("#btnSample").onclick = ()=> ask("داده‌های فعلی با نمونهٔ بیمارستان جایگزین شوند؟", ()=>{ st = {data:{...SAMPLE}, seen:[], view:"info", sample:true}; renderAll(); });
+$("#btnNew").onclick = ()=> ask("ارزیابی فعلی پاک شود و ارزیابی جدید شروع شود؟ اگر لازم است، اول از «ذخیره / بازیابی» یک نسخه بردارید.", ()=>{ st = {data:{...DEFAULTS}, seen:[], view:"info", sample:false}; renderAll(); });
+$("#btnData").onclick = ()=> {
+  const m = document.createElement("div"); m.className="modal";
+  m.innerHTML = `<div class="box" style="max-width:560px"><h3 style="margin-bottom:8px">ذخیره و بازیابی</h3>
+    <p class="help">این صفحه پاسخ‌ها را خودکار در همین مرورگر نگه می‌دارد. برای نگه‌داشتن نسخهٔ جدا یا انتقال به دستگاه دیگر، متن زیر را کپی و جایی ذخیره کنید. برای بازیابی، متن ذخیره‌شده را اینجا بچسبانید یا فایل را انتخاب کنید.</p>
+    <textarea class="in" id="dataBox" style="width:100%">${esc(JSON.stringify({frame:1,data:st.data},null,1))}</textarea>
+    <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px">
+      <button class="btn primary" type="button" id="dCopy">کپی</button>
+      <button class="btn" type="button" id="dLoad">بازیابی از متن</button>
+      <label class="btn" style="cursor:pointer">انتخاب فایل<input type="file" id="dFile" accept=".json,.txt" hidden></label>
+      <button class="btn" type="button" id="dClose">بستن</button></div>
+    <p class="help" id="dMsg" style="margin-top:8px"></p></div>`;
+  document.body.appendChild(m);
+  const box = m.querySelector("#dataBox");
+  const doLoad = txt => { try{ const j = JSON.parse(txt); if(!j.data) throw 0; st = {data:{...DEFAULTS,...j.data}, seen:[], view:"info", sample:false}; m.remove(); renderAll(); toast("ارزیابی بازیابی شد"); }
+    catch(e){ m.querySelector("#dMsg").textContent = "متن قابل خواندن نیست. مطمئن شوید کل متن ذخیره‌شده را چسبانده‌اید."; } };
+  m.querySelector("#dCopy").onclick = ()=> copyText(box.value,"داده‌ها کپی شد", box);
+  m.querySelector("#dLoad").onclick = ()=> doLoad(box.value);
+  m.querySelector("#dFile").onchange = e => { const f = e.target.files[0]; if (!f) return; const r = new FileReader(); r.onload = ()=>doLoad(r.result); r.readAsText(f); };
+  m.querySelector("#dClose").onclick = ()=> m.remove();
+  m.onclick = e => { if (e.target===m) m.remove(); };
+};
+
+function ask(msg, yes){
+  const m = document.createElement("div"); m.className="modal";
+  m.innerHTML = `<div class="box"><p>${esc(msg)}</p><div style="display:flex;gap:8px;justify-content:flex-end">
+    <button class="btn" type="button" data-no>انصراف</button><button class="btn primary" type="button" data-yes>بله</button></div></div>`;
+  document.body.appendChild(m);
+  m.querySelector("[data-no]").onclick = ()=> m.remove();
+  m.querySelector("[data-yes]").onclick = ()=> { m.remove(); yes(); };
+}
+function toast(t){ const d = document.createElement("div"); d.className="toast"; d.textContent=t; document.body.appendChild(d); setTimeout(()=>d.remove(),2600); }
+function copyText(t, ok, sel){
+  try{ navigator.clipboard.writeText(t).then(()=>toast(ok), ()=>fallback()); }catch(e){ fallback(); }
+  function fallback(){ if (sel){ sel.focus(); sel.select(); toast("متن انتخاب شد؛ با Ctrl+C کپی کنید"); }
+    else { const ta = document.createElement("textarea"); ta.value=t; ta.className="in"; ta.style.cssText="width:100%;margin-top:12px"; $("#main").appendChild(ta); ta.select(); toast("متن زیر صفحه آمد؛ آن را کپی کنید"); } }
+}
+
+renderAll();
+</script>
