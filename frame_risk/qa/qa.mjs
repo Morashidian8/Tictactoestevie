@@ -8,7 +8,7 @@ execSync(`cat ${REPO}/frame_risk/pwa/head.html ${REPO}/frame_risk/index.html > $
 const srv = spawn('python3',['-m','http.server','8766'],{cwd:SITE,stdio:'ignore'});
 await new Promise(r=>setTimeout(r,800));
 const URL='http://localhost:8766/frame/';
-const VIEWS=['info','geo','fuel','ign','ppl','val','np','sp','fr','esc','result','report','formula'];
+const VIEWS=['start','info','geo','fuel','ign','ppl','val','np','sp','fr','esc','result','report','formula'];
 const b = await chromium.launch({executablePath:'/opt/pw-browsers/chromium'}).catch(()=>chromium.launch());
 const problems=[]; const P=(...a)=>{problems.push(a.join(' '));};
 for (const vp of [{n:'phone',width:390,height:844},{n:'desk',width:1366,height:900}]) for (const theme of ['light','dark']) {
@@ -17,7 +17,7 @@ for (const vp of [{n:'phone',width:390,height:844},{n:'desk',width:1366,height:9
   p.on('pageerror',e=>P('PAGEERROR',vp.n,theme,e.message)); p.on('console',m=>{if(m.type()==='error')P('CONSOLE',vp.n,theme,m.text())});
   await p.goto(URL); await p.waitForLoadState('networkidle').catch(()=>{});
   for (const v of VIEWS){
-    await p.evaluate(v=>{st.view=v;renderAll();window.scrollTo(0,0)},v); await p.waitForTimeout(120);
+    await p.evaluate(v=>{st.view=v;renderAll();window.scrollTo(0,0);document.querySelectorAll('main details').forEach(d=>d.open=true)},v); await p.waitForTimeout(120);
     const r = await p.evaluate(()=>{
       const de=document.documentElement, out=[];
       if (de.scrollWidth>de.clientWidth+1) out.push('HSCROLL '+de.scrollWidth+'>'+de.clientWidth);
@@ -71,9 +71,12 @@ const before = await p.textContent('#res');
 await p.fill('#L','120'); await p.waitForTimeout(100);
 if ((await p.textContent('#res'))===before) P('INTERACT number input did not update live panel');
 await p.evaluate(()=>{st.view='sp';renderAll()});
-await p.click('label.opt:has-text("اسپرینکلر کامل")'); await p.waitForTimeout(100);
+await p.click('label.opt:has-text("اسپرینکلر در همهٔ قسمت‌ها هست")'); await p.waitForTimeout(100);
 if (await p.evaluate(()=>st.data.s3)!==11) P('INTERACT radio did not set s3');
-if (!(await p.$('label.opt.sel:has-text("اسپرینکلر کامل")'))) P('INTERACT radio .sel class missing');
+if (!(await p.$('label.opt.sel:has-text("اسپرینکلر در همهٔ قسمت‌ها هست")'))) P('INTERACT radio .sel class missing');
+await p.click('#s4_unk'.replace('#','label[for="')+'"]').catch(()=>p.click('label:has(#s4_unk)'));
+if (!(await p.evaluate(()=>st.unk.s4 && st.data.s4===0))) P('INTERACT unknown option');
+await p.click('label:has(#s4_2)'); if (await p.evaluate(()=>st.unk.s4 || st.data.s4!==4)) P('INTERACT leaving unknown');
 await p.click('[data-confirm]'); await p.waitForTimeout(100);
 if (!(await p.evaluate(()=>st.seen.includes('sp')))) P('INTERACT confirm not recorded');
 if (await p.evaluate(()=>st.view)!=='fr') P('INTERACT next did not advance');
@@ -83,6 +86,16 @@ await p.click('#btnData'); const txt = await p.inputValue('#dataBox');
 await p.fill('#dataBox', txt.replace('"L": 30','"L": 77')); await p.click('#dLoad'); await p.waitForTimeout(100);
 if (await p.evaluate(()=>st.data.L)!==77) P('INTERACT data restore failed');
 await p.reload(); if (await p.evaluate(()=>st.data.L)!==77) P('INTERACT localStorage persistence failed');
+await p.evaluate(()=>{st.view='ppl';renderAll()}); await p.click('[data-est="X"]'); await p.waitForTimeout(80);
+if (await p.evaluate(()=>st.data.X!==Math.round(st.data.L*st.data.B/(DENSITY[st.data.use]||10)))) P('INTERACT estimate X');
+await p.click('details.how summary'); if (!(await p.$('details.how[open]'))) P('INTERACT how guide');
+await p.fill('#dist','150'); if (!(await p.textContent('#warn_dist')).trim()) P('INTERACT warning not shown');
+await p.evaluate(()=>{st.view='fuel';renderAll()}); await p.click('[data-qcalc]'); await p.fill('[data-q="i0"]','10'); await p.fill('[data-q="m3"]','100');
+await p.click('#qUse'); await p.waitForTimeout(80);
+if (await p.evaluate(()=>st.data.Qm!==Math.round((10*700+100*40)/(st.data.L*st.data.B)))) P('INTERACT fire-load calculator');
+await p.evaluate(()=>{st.view='start';renderAll()}); await p.click('[data-begin]'); await p.waitForTimeout(80);
+if (await p.$('.modal [data-yes]')) await p.click('.modal [data-yes]');
+if (await p.evaluate(()=>st.view)!=='info') P('INTERACT begin button');
 await p.evaluate(()=>{st.view='result';renderAll()}); await p.click('[data-drv="R1"]');
 if (!(await p.$('[data-drv="R1"].on'))) P('INTERACT driver tab');
 await b.close(); srv.kill();
