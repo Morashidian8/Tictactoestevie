@@ -62,6 +62,11 @@ const L = await p.evaluate(()=>{
   chk((()=>{const x=compute({...base,sAD:8,sTrans:true});return x.R<c.R&&x.R1<c.R1})(),'transmitted detection should lower R,R1');
   chk(compute({...base,sAD:8,sTrans:false}).R===c.R,'untransmitted detection should not count (FRAME rule)');
   chk(compute({...base,X:5000,Wex:0.6}).R1===Infinity,'too few exits → infinite R1');
+  chk(compute({...base,s6:0,u4:10}).R1===compute({...base,s6:0,u4:0}).R1,'escape-sprinkler credit must need sprinklers');
+  chk(compute({...base,sAD:0,uVent:true}).R1===c.R1,'hidden smoke-vent answer must not count');
+  chk(compute({...base,a3:0,a4:0.15}).R===c.R,'fuel question hidden when no heater in space');
+  chk(compute({...base,area:500,u2:4}).R1===compute({...base,area:500,u2:0}).R1,'sub-compartments only for >1000 m²');
+  chk(compute({...base,s6:11,u4:10}).R1<compute({...base,s6:11,u4:0}).R1,'escape-sprinkler credit counts with sprinklers');
   // fuzz
   const sels=ALLFIELDS.filter(f=>f.t==='sel'&&f.id!=='use');
   for(let n=0;n<3000;n++){ const d={...base}; sels.forEach(f=>d[f.id]=f.o[Math.floor(Math.random()*f.o.length)].v);
@@ -77,9 +82,9 @@ const before = await p.textContent('#res');
 await p.fill('#area','2400'); await p.waitForTimeout(100);
 if ((await p.textContent('#res'))===before) P('INTERACT number input did not update live panel');
 await p.evaluate(()=>{st.view='sp';renderAll()});
-await p.click('label.opt:has-text("دارد، با آب شبکهٔ شهری")'); await p.waitForTimeout(100);
+await p.click('label.opt:has-text("دارد، آب از شبکهٔ شهری")'); await p.waitForTimeout(100);
 if (await p.evaluate(()=>st.data.s6)!==11) P('INTERACT radio did not set s6');
-if (!(await p.$('label.opt.sel:has-text("دارد، با آب شبکهٔ شهری")'))) P('INTERACT radio .sel class missing');
+if (!(await p.$('label.opt.sel:has-text("دارد، آب از شبکهٔ شهری")'))) P('INTERACT radio .sel class missing');
 await p.click('label:has(#s8_unk)');
 if (!(await p.evaluate(()=>st.unk.s8 && st.data.s8===4))) P('INTERACT unknown option');
 await p.click('label:has(#s8_0)'); if (await p.evaluate(()=>st.unk.s8 || st.data.s8!==8)) P('INTERACT leaving unknown');
@@ -103,6 +108,12 @@ if (await p.evaluate(()=>st.data.Qm!==Math.round((10*700+100*40)/st.data.area)))
 await p.evaluate(()=>{st.view='start';renderAll()}); await p.click('[data-begin]'); await p.waitForTimeout(80);
 if (await p.$('.modal [data-yes]')) await p.click('.modal [data-yes]');
 if (await p.evaluate(()=>st.view)!=='info') P('INTERACT begin button');
+await p.evaluate(()=>{st.view='geo';renderAll()}); await p.fill('#area','3818'); await p.fill('#l','52'); await p.waitForTimeout(80);
+if (!(await p.textContent('#warn_l')).trim()) P('INTERACT width>length warning not shown');
+await p.evaluate(()=>{st.view='sp';st.data.sAD=0;renderAll()});
+if (await p.$('#fld_sTrans')) P('INTERACT transmission question should be hidden without detectors');
+await p.click('label:has(#sAD_4)'); await p.waitForTimeout(80);
+if (!(await p.$('#fld_sTrans'))) P('INTERACT transmission question should appear after choosing detectors');
 await p.evaluate(()=>{st.view='result';renderAll()}); await p.click('[data-drv="R1"]');
 if (!(await p.$('[data-drv="R1"].on'))) P('INTERACT driver tab');
 await b.close(); srv.kill();
