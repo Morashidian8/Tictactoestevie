@@ -307,6 +307,9 @@ table.sumt tr.badrow td{background:color-mix(in srgb, var(--bad-soft) 55%, trans
 .fm{border:1px solid var(--line);border-radius:12px;padding:10px 14px;margin-bottom:8px}
 .fm ul{margin:6px 0 0;padding-inline-start:18px;display:grid;gap:4px;font-size:14px}
 .fm em{font-style:normal;color:var(--accent)}
+.lvls{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.btn.lvl{display:grid;justify-items:start;gap:0;padding:10px 12px;text-align:right}
+.btn.lvl small{font-weight:400;color:var(--muted);font-size:12px}
 .ftab{display:grid;gap:2px}
 .ftab button,.ftab .fth{display:grid;grid-template-columns:minmax(0,1fr) repeat(3,46px);gap:6px;align-items:center;border:0;background:none;padding:6px 4px;border-radius:8px;cursor:pointer;text-align:right;font-size:13px;color:var(--ink)}
 .ftab button:hover{background:var(--surface-2)}
@@ -982,7 +985,9 @@ function floorData(fl){
   return e;
 }
 function floorUnk(fl){ const u = {}; Object.keys(P.bunk).forEach(k=>{ if (!fl.ovr[k] && P.bunk[k]) u[k]=true; }); Object.keys(fl.unk).forEach(k=>{ if (fl.unk[k]) u[k]=true; }); return u; }
-const floorName = (fl, i) => (fl.data.comp || "").trim() || `فضای ${fa((i ?? P.floors.indexOf(fl))+1,0)}`;
+const levelName = E => { E = +E||0; return E===0 ? "همکف" : E>0 ? `طبقهٔ ${fa(E,0)}` : `زیرزمین ${fa(-E,0)} (منفی ${fa(-E,0)})`; };
+const floorName = (fl, i) => (fl.data.comp || "").trim() || levelName(fl.data.E ?? 0);
+const sortFloors = () => P.floors.sort((a,b)=>(+a.data.E||0)-(+b.data.E||0));
 const inCtx = f => { const fl = curFloor(); return fl ? (!BFIELDS.has(f.id) || !!fl.ovr[f.id]) : BFIELDS.has(f.id); };
 
 /* st.data / st.unk / st.seen route reads and writes to the building or the current floor */
@@ -1007,12 +1012,28 @@ const st = {
 const ctxSections = () => P.ctx==="b" ? SECTIONS.filter(s=>s.fields.flatMap(f=>f.row||[f]).some(f=>BFIELDS.has(f.id))) : SECTIONS;
 
 function addFloor(){
-  const last = P.floors[P.floors.length-1], d = {...last.data};
-  d.E = (+d.E||0) + 1; d.H = Math.round(((+d.H||0) + 3.2)*10)/10;
-  d.comp = `طبقهٔ ${fa(d.E,0)}`;
-  const fl = {id:newId(), data:d, ovr:{...last.ovr}, unk:{...last.unk}, seen:[]};
-  P.floors.push(fl); P.ctx = fl.id; P.view = "info"; P.sample = false;
-  renderAll(); toast(`«${d.comp}» با کپی پاسخ‌های «${floorName(last)}» ساخته شد. فقط تفاوت‌ها را تغییر دهید.`);
+  const Es = P.floors.map(f=>+f.data.E||0), top = Math.max(...Es), bottom = Math.min(...Es);
+  const choice = (E, l, sub) => `<button type="button" class="btn lvl" data-lvl="${E}"><b>${esc(l)}</b><small>${esc(sub)}</small></button>`;
+  const m = document.createElement("div"); m.className = "modal";
+  m.innerHTML = `<div class="box" role="dialog" aria-modal="true" aria-labelledby="lvT"><h3 id="lvT" style="font-size:17px">فضای جدید در کدام طبقه است؟</h3>
+    <p class="help">پاسخ‌های نزدیک‌ترین طبقه کپی می‌شود؛ بعد فقط تفاوت‌ها را تغییر دهید.</p>
+    <div class="lvls">${choice(top+1, levelName(top+1), "یک طبقه بالاتر از بالاترین طبقه")}${choice(bottom-1, levelName(bottom-1), bottom-1===0 ? "همکف" : bottom-1<0 ? "یک طبقه پایین‌تر (زیرزمین)" : "یک طبقه پایین‌تر")}</div>
+    <label class="lb" for="lvN" style="font-size:14px">یا شمارهٔ طبقه را بنویسید <span class="help" style="font-weight:400">(همکف = ۰ ، زیرزمین با منفی: ‎-1، ‎-2)</span></label>
+    <div class="inrow"><div class="inp"><input id="lvN" inputmode="decimal" dir="ltr" placeholder="0"></div><button class="btn primary" type="button" id="lvGo">ساختن</button></div>
+    <p class="fwarn" id="lvMsg"></p>
+    <div class="acts"><button class="btn" type="button" data-no>انصراف</button></div></div>`;
+  document.body.appendChild(m);
+  const make = E => {
+    const near = P.floors.reduce((a,f)=>Math.abs((+f.data.E||0)-E) < Math.abs((+a.data.E||0)-E) ? f : a, P.floors[0]);
+    const d = {...near.data}; d.E = E; d.H = Math.round(E*3.2*10)/10; d.comp = levelName(E);
+    const fl = {id:newId(), data:d, ovr:{...near.ovr}, unk:{...near.unk}, seen:[]};
+    P.floors.push(fl); sortFloors(); P.ctx = fl.id; P.view = "info"; P.sample = false; m.remove();
+    renderAll(); toast(`«${d.comp}» با کپی پاسخ‌های «${floorName(near)}» ساخته شد. ارتفاع ${d.H<0 ? `${fa(-d.H,1)} متر پایین‌تر از زمین` : `${fa(d.H,1)} متر بالاتر از زمین`} تخمین زده شد؛ در بخش «اندازه و موقعیت» بررسی کنید.`);
+  };
+  m.querySelectorAll("[data-lvl]").forEach(bt=>bt.onclick = ()=>make(+bt.dataset.lvl));
+  m.querySelector("#lvGo").onclick = ()=>{ const v = toNum(m.querySelector("#lvN").value); if (v===null || v<-10 || v>200){ m.querySelector("#lvMsg").textContent = "یک عدد بین ‎-10 و ۲۰۰ بنویسید."; return; } make(v); };
+  m.querySelector("[data-no]").onclick = ()=>m.remove();
+  m.onclick = e => { if (e.target===m) m.remove(); };
 }
 function deleteFloor(){
   const fl = curFloor(); if (!fl || P.floors.length < 2) return;
@@ -1220,6 +1241,8 @@ function renderCtx(){
     <span class="cxsep" aria-hidden="true"></span>
     <button type="button" class="cx sum ${P.view==="summary"?"on":""}" data-go="summary">${svgI("report")}جمع‌بندی ساختمان</button>
     ${fl && P.floors.length>1 ? `<button type="button" class="cx del" data-delfloor title="حذف این فضا">حذف این فضا</button>` : ""}`;
+  const on = $("#ctxbar .cx.on");
+  if (on && window.matchMedia("(max-width:800px)").matches) on.scrollIntoView({block:"nearest",inline:"center"});
 }
 
 function renderSteps(){
@@ -1639,6 +1662,10 @@ document.addEventListener("input", ev=>{
   refreshLive(); updateWarn(f);
   if (f.id==="X") updateWarn(FIELD.Wex);
   if (f.id==="area") updateWarn(FIELD.l);
+  if (f.id==="E" && curFloor()){                        // automatic names follow the floor number; custom names stay
+    const fl = curFloor();
+    if (/^(همکف|طبقهٔ [۰-۹٫]+|زیرزمین [۰-۹٫]+ \(منفی [۰-۹٫]+\))$/.test(fl.data.comp||"")) { fl.data.comp = levelName(fl.data.E); const c = $("#comp"); if (c) c.value = fl.data.comp; }
+    sortFloors(); renderCtx(); renderTop(); }
 });
 const visSig = () => ALLFIELDS.map(f=>shown(f)?1:0).join("");
 let renderedVis = "";
