@@ -238,6 +238,10 @@ h3.sec{font-size:17px;font-weight:800;margin:28px 0 4px}
 .pkgbar ol{margin:6px 0 0;padding-inline-start:20px;display:grid;gap:3px}.pkgbar em{font-style:normal;color:var(--accent)}.pkgbar .btn{justify-self:start}
 @media print{.pkgact,.pkgbar .btn{display:none}}
 .sumt tr.mrow td:first-child{font-weight:600}
+.charts{display:grid;gap:12px}.charts img{width:100%;height:auto;border:1px solid var(--line);border-radius:10px;background:#fff}
+@media print{.charts img{break-inside:avoid}}
+.xbtns{display:flex;flex-wrap:wrap;gap:8px}.xbtns .btn{flex:1 1 150px;justify-content:center}
+@media print{.xport{display:none}}
 .verdict.slim{margin-top:10px;padding:10px 14px;font-size:14px}
 .chips{display:flex;flex-wrap:wrap;gap:6px}
 .chip{font-size:12px;border-radius:7px;padding:1px 8px;background:var(--surface-2);border:1px solid var(--line);font-variant-numeric:tabular-nums}
@@ -1076,6 +1080,133 @@ function goCtx(ctx){
   renderAll();
 }
 
+/* ---------- charts (canvas): summary page, Excel and Word exports ----------
+   lang "fa" or "en"; every chart is drawn on a white canvas at 2× for print. */
+const CHC = {ok:"#2e9e5b", warn:"#d99a00", bad:"#d64545", okS:"#dff3e6", warnS:"#fbf0cf", badS:"#fbe1df", grid:"#dde2e8", ink:"#1f2933", mute:"#66727f", base:"#f4f6f8",
+  R:"#3b6fd4", R1:"#d64a3c", R2:"#e0952a"};
+const CHT = {
+  fa:{R:"ساختمان و دارایی", R1:"افراد", R2:"فعالیت", lim:"حد مجاز ۱", ground:"تراز زمین", now:"وضع موجود", schem:"شماتیک ساختمان – ریسک هر فضا", bars:"ریسک هر فضا", r0:"ریسک اولیه Ro و سامانهٔ حفاظت پیشنهادی", steps:"ریسک پس از هر قدم اصلاحی",
+    ro:["حفاظت دستی","اعلام خودکار","اسپرینکلر","اسپرینکلر + آب بیشتر","کاهش ریسک"], leg:["قابل‌قبول (۰٫۸ ≥)","مرزی (۰٫۸ تا ۱)","غیرقابل‌قبول (۱ <)"]},
+  en:{R:"Property", R1:"Occupants", R2:"Activities", lim:"limit 1", ground:"Ground level", now:"Current", schem:"Building schematic – risk per space", bars:"Risk per space", r0:"Initial risk Ro and suggested protection", steps:"Risk after each corrective step",
+    ro:["Manual protection","Automatic detection","Sprinklers","Sprinklers + water","Reduce risk"], leg:["Acceptable (≤ 0.8)","Borderline (0.8–1)","Not acceptable (> 1)"]},
+};
+const chNum = (v, lang, d=2) => !isFinite(v) ? "∞" : lang==="fa" ? Number(v).toLocaleString("fa-IR",{minimumFractionDigits:d,maximumFractionDigits:d,useGrouping:false}) : Number(v).toFixed(d);
+const chFont = (w, s) => `${w} ${s}px Vazirmatn, Tahoma, "Segoe UI", sans-serif`;
+const chLv = v => !isFinite(v) || v > 1 ? "bad" : v > 0.8 ? "warn" : "ok";
+function chCanvas(w, h, lang, draw){
+  const s = 2, c = document.createElement("canvas"); c.width = w*s; c.height = h*s; c.dataset.w = w; c.dataset.h = h;
+  const g = c.getContext("2d"); g.scale(s, s); g.fillStyle = "#fff"; g.fillRect(0, 0, w, h);
+  g.direction = lang==="fa" ? "rtl" : "ltr"; g.textBaseline = "middle"; draw(g); return c;
+}
+function chTitle(g, w, t){ g.fillStyle = CHC.ink; g.font = chFont(700, 15); g.textAlign = "center"; g.fillText(t, w/2, 20); }
+function chLegend(g, w, y, items){            // items: [[color, text]] centred row; Persian runs right-to-left
+  g.font = chFont(500, 12); const gap = 22, sw = 12, rtl = g.direction==="rtl";
+  const widths = items.map(([,t])=>g.measureText(t).width + sw + 6), tot = widths.reduce((s,v)=>s+v,0) + gap*(items.length-1);
+  let x = rtl ? (w + tot)/2 : (w - tot)/2;
+  items.forEach(([c,t],i)=>{ const tw = widths[i] - sw - 6;
+    const sx = rtl ? x - sw : x, tx = rtl ? x - sw - 6 - tw : x + sw + 6;
+    g.fillStyle = c; g.fillRect(sx, y-6, sw, 12); g.fillStyle = CHC.ink; g.textAlign = "left"; g.fillText(t, tx, y);
+    x += rtl ? -(widths[i] + gap) : widths[i] + gap; });
+}
+// rows: [{name, E, x}] — section view: floors stacked by level, three coloured cells per floor
+function chSchematic(rows, lang){
+  const T = CHT[lang], fa_ = lang==="fa", list = [...rows].sort((a,b)=>(+b.E||0)-(+a.E||0));
+  const W = 720, rh = 34, top = 64, H = top + list.length*rh + 70, nameW = 250, cw = 120;
+  return chCanvas(W, H, lang, g=>{
+    chTitle(g, W, T.schem);
+    const bx = 40, bw = W - 80, cells = [ "R","R1","R2" ];
+    const cx = i => fa_ ? bx + bw - nameW - (i+1)*cw - 20 : bx + nameW + i*cw + 20;
+    g.font = chFont(700, 12); g.fillStyle = CHC.mute; g.textAlign = "center";
+    cells.forEach((k,i)=>g.fillText(`${T[k]} (${k})`, cx(i) + cw/2, top - 14));
+    list.forEach((r,j)=>{
+      const y = top + j*rh, below = (+r.E||0) < 0;
+      g.fillStyle = below ? "#eceff3" : "#fafbfc"; g.fillRect(bx, y, bw, rh);
+      g.strokeStyle = "#9aa5b1"; g.lineWidth = 1; g.strokeRect(bx + .5, y + .5, bw - 1, rh - 1);
+      g.fillStyle = CHC.ink; g.font = chFont(600, 13); g.textAlign = fa_ ? "right" : "left";
+      g.fillText(r.name, fa_ ? bx + bw - 12 : bx + 12, y + rh/2, nameW - 16);
+      cells.forEach((k,i)=>{ const v = r.x.invalid ? NaN : r.x[k], lv = isNaN(v) ? null : chLv(v);
+        g.fillStyle = lv ? CHC[lv+"S"] : "#eee"; g.fillRect(cx(i) + 3, y + 4, cw - 6, rh - 8);
+        g.fillStyle = lv ? CHC[lv] : CHC.mute; g.font = chFont(800, 14); g.textAlign = "center"; g.fillText(isNaN(v) ? "—" : chNum(v, lang), cx(i) + cw/2, y + rh/2 + 1); });
+    });
+    const gi = list.findIndex(r=>(+r.E||0) < 0);
+    if (gi > 0){ const y = top + gi*rh; g.strokeStyle = "#5b4636"; g.lineWidth = 3; g.beginPath(); g.moveTo(10, y); g.lineTo(W - 10, y); g.stroke();
+      g.fillStyle = "#5b4636"; g.font = chFont(600, 11); g.textAlign = fa_ ? "left" : "right"; g.fillText(T.ground, fa_ ? 12 : W - 12, y - 8); }
+    chLegend(g, W, H - 24, [[CHC.ok, T.leg[0]], [CHC.warn, T.leg[1]], [CHC.bad, T.leg[2]]]);
+  });
+}
+// groups: [{label, vals:{R,R1,R2}}] — grouped bars with the limit line at 1
+function chBars(groups, lang, title){
+  const T = CHT[lang], fa_ = lang==="fa", n = groups.length;
+  const W = Math.max(640, 140 + n*96), H = 380, L = 56, R = 70, top = 46, bot = 300;
+  const finite = groups.flatMap(gr=>["R","R1","R2"].map(k=>gr.vals[k]).filter(isFinite));
+  const ymax = Math.min(5, Math.max(2, Math.ceil(Math.max(0, ...finite)*2)/2));
+  const y = v => bot - Math.min(v, ymax)/ymax*(bot - top);
+  return chCanvas(W, H, lang, g=>{
+    chTitle(g, W, title || T.bars);
+    g.font = chFont(500, 11); g.textAlign = "right"; g.fillStyle = CHC.mute;
+    for (let v = 0; v <= ymax + 1e-9; v += ymax > 3 ? 1 : 0.5){ g.strokeStyle = CHC.grid; g.lineWidth = 1; g.beginPath(); g.moveTo(L, y(v)); g.lineTo(W - R, y(v)); g.stroke(); g.fillText(chNum(v, lang, 1), L - 6, y(v)); }
+    const gw = (W - L - R)/n, bw = Math.min(26, gw/4);
+    groups.forEach((gr,i)=>{ const j = fa_ ? n-1-i : i, x0 = L + j*gw + gw/2 - bw*1.5;
+      ["R","R1","R2"].forEach((k,q)=>{ const v = gr.vals[k]; if (v==null || Number.isNaN(v)) return; const x = x0 + q*bw;
+        g.fillStyle = CHC[k]; g.fillRect(x + 1, y(isFinite(v) ? v : ymax), bw - 2, bot - y(isFinite(v) ? v : ymax));
+        g.fillStyle = CHC.ink; g.font = chFont(600, 10); g.textAlign = "center"; g.save(); g.translate(x + bw/2, y(isFinite(v) ? v : ymax) - 4); g.rotate(-Math.PI/2); g.textAlign = "left"; g.fillText(chNum(v, lang), 0, 0); g.restore(); });
+      g.fillStyle = CHC.ink; g.font = chFont(600, 11); g.textAlign = "center";
+      wrapText(g, gr.label, L + j*gw + gw/2, bot + 16, gw - 6, 14); });
+    g.strokeStyle = CHC.bad; g.lineWidth = 2; g.setLineDash([6,4]); g.beginPath(); g.moveTo(L, y(1)); g.lineTo(W - R, y(1)); g.stroke(); g.setLineDash([]);
+    g.fillStyle = CHC.bad; g.font = chFont(700, 11); g.textAlign = "left"; g.fillText(T.lim, W - R + 6, y(1));
+    chLegend(g, W, H - 16, ["R","R1","R2"].map(k=>[CHC[k], `${T[k]} (${k})`]));
+  });
+}
+function wrapText(g, t, x, y, maxW, lh){
+  const words = String(t).split(/\s+/), lines = []; let cur = "";
+  words.forEach(wd=>{ const tst = cur ? cur + " " + wd : wd; if (g.measureText(tst).width > maxW && cur){ lines.push(cur); cur = wd; } else cur = tst; });
+  if (cur) lines.push(cur); lines.slice(0,3).forEach((l,i)=>g.fillText(l, x, y + i*lh, maxW));
+}
+// rows: [{name, ro}] — Ro per space against the FRAME protection bands
+function chRo(rows, lang){
+  const T = CHT[lang], fa_ = lang==="fa", n = rows.length, bands = [0,1,1.6,2.7,4.5];
+  const W = Math.max(640, 120 + n*70), H = 360, L = 56, R = 150, top = 46, bot = 290;
+  const ymax = Math.max(2, Math.min(6, Math.ceil(Math.max(...rows.map(r=>isFinite(r.ro)?r.ro:0))*1.15*2)/2));
+  const y = v => bot - Math.min(v, ymax)/ymax*(bot - top), cols = ["#e6f4ea","#eef5fb","#fdf3dc","#fde8d6","#fbe1df"];
+  return chCanvas(W, H, lang, g=>{
+    chTitle(g, W, T.r0);
+    bands.forEach((b,i)=>{ if (b >= ymax) return; const hi = Math.min(bands[i+1] ?? ymax, ymax); g.fillStyle = cols[i]; g.fillRect(L, y(hi), W - L - R, y(b) - y(hi));
+      g.fillStyle = CHC.mute; g.font = chFont(600, 11); g.textAlign = "left"; g.fillText(T.ro[i], W - R + 8, (y(b) + y(hi))/2); });
+    g.font = chFont(500, 11); g.textAlign = "right"; g.fillStyle = CHC.mute;
+    for (let v = 0; v <= ymax + 1e-9; v += ymax > 3 ? 1 : 0.5) g.fillText(chNum(v, lang, 1), L - 6, y(v));
+    const gw = (W - L - R)/n, bw = Math.min(34, gw*0.5);
+    rows.forEach((r,i)=>{ const j = fa_ ? n-1-i : i, x = L + j*gw + gw/2 - bw/2, v = isFinite(r.ro) ? r.ro : ymax;
+      g.fillStyle = "#4a5a6a"; g.fillRect(x, y(v), bw, bot - y(v));
+      g.fillStyle = CHC.ink; g.font = chFont(700, 11); g.textAlign = "center"; g.fillText(chNum(r.ro, lang), x + bw/2, y(v) - 9);
+      g.font = chFont(600, 11); wrapText(g, r.name, x + bw/2, bot + 16, gw - 6, 14); });
+  });
+}
+// steps chart for one space: categories = current + cumulative steps
+function chSteps(name, cats, series, lang){
+  return chBars(cats.map((c,i)=>({label:c, vals:{R:series[i].R, R1:series[i].R1, R2:series[i].R2}})), lang, `${CHT[lang].steps} – ${name}`);
+}
+const chPng = c => c.toDataURL("image/png");
+// chart data for the building: floors bottom-up plus combined compartments (short labels)
+function chartData(lang, xsOf = r=>r.x){
+  const rows = floorResults().sort((a,b)=>(+a.d.E||0)-(+b.d.E||0)), crows = compResults(floorResults());
+  const nm = r => lang==="fa" ? r.name : enSpaceName(r);
+  const sch = rows.map(r=>({name:nm(r), E:r.d.E, x:xsOf(r)}));
+  const bars = [...rows.map(r=>({label:nm(r), x:xsOf(r)})), ...crows.map((r,i)=>({label:lang==="fa" ? `واحد ترکیبی ${fa(i+1,0)}` : `Combined ${i+1}`, x:r.x}))]
+    .filter(b=>!b.x.invalid).map(b=>({label:b.label, vals:{R:b.x.R, R1:b.x.R1, R2:b.x.R2}, ro:b.x.Ro}));
+  return {sch, bars};
+}
+const enLevel = E => { E = +E||0; return E===0 ? "Ground floor" : E>0 ? `Floor ${E}` : `Basement ${-E}`; };
+const enSpaceName = r => {                    // "Floor 1 – <user's name>", without repeating the Persian level name
+  const ln = levelName(r.d.E), c = ((r.fl ? r.fl.data.comp : "") || "").trim().replace(new RegExp("^" + ln.replace(/[()]/g, "\\$&") + "\\s*[–-]?\\s*"), "");
+  return c ? `${enLevel(r.d.E)} – ${c}` : enLevel(r.d.E);
+};
+function drawSummaryCharts(){
+  const box = $("#sumCharts"); if (!box) return;
+  const {sch, bars} = chartData("fa");
+  const cs = [chSchematic(sch.map(r=>({...r})), "fa"), chBars(bars, "fa"), chRo(bars.map(b=>({name:b.label, ro:b.ro})), "fa")];
+  box.innerHTML = cs.map(c=>`<img src="${chPng(c)}" alt="" width="${c.dataset.w}" height="${c.dataset.h}">`).join("");
+}
+
 /* ---------- building summary ---------- */
 const capR = v => Math.min(isFinite(v) ? v : 10, 10);
 function floorResults(){ return P.floors.map((fl,i)=>({fl, i, name:floorName(fl,i), d:floorData(fl), x:compute(floorData(fl))})); }
@@ -1169,6 +1300,8 @@ function summaryHTML(){
           <td class="num hsm">${fa(r.x.Ro)}</td><td>${r.x.invalid?"—":`<span class="pill ${level(w)}" style="margin:0">${levelTxt(w)}</span>`}</td></tr>`; }).join("") : ""}
       </tbody></table></div>
       ${crows.length ? `<p class="sec-note">هر طبقه یک بار جدا و یک بار همراه طبقه‌هایی که با آن‌ها راه باز برای آتش دارد (رایزر، شافت یا پلهٔ باز) به‌عنوان یک واحد حریق حساب شده است. در واحد ترکیبی مساحت، افراد، عرض خروج و ارزش جمع شده‌اند و برای بقیهٔ موارد بدترین پاسخ طبقه‌ها ملاک است. بدترین نتیجهٔ هر دو حالت، ریسک ساختمان را تعیین می‌کند. آتش‌بند کردن عبورها این طبقه‌ها را دوباره از هم جدا می‌کند.</p>` : ""}
+      <h3 class="sec">شماتیک و نمودارها</h3>
+      <div class="charts" id="sumCharts"></div>
       <h3 class="sec">اقدام‌های مشترک (اثر روی همهٔ فضاها)</h3>
       <p class="sec-note">این اقدام‌ها یک‌بار در کل ساختمان انجام می‌شوند. ستون‌ها بدترین مقدار هر ریسک در ساختمان را قبل و بعد از اقدام نشان می‌دهند.</p>
       ${bm.length ? `<ol class="sugg">${bm.map(m=>{ const nb = RISKS.reduce((s,rk)=>s+m.nx.filter(x=>x[rk.k]>1).length,0), ob = RISKS.reduce((s,rk)=>s+valid.filter(r=>r.x[rk.k]>1).length,0);
@@ -1181,6 +1314,7 @@ function summaryHTML(){
       ${ovrRows.length ? `<h3 class="sec">فضاهایی که با پروفایل ساختمان فرق دارند</h3>
         <div class="scroll"><table class="t"><thead><tr><th>فضا</th><th>مورد</th><th>پاسخ این فضا</th><th>پاسخ مشترک ساختمان</th></tr></thead><tbody>
         ${ovrRows.map(({r,f})=>`<tr><td>${esc(r.name)}</td><td>${esc(f.l)}</td><td>${esc(fVal(r,f))}</td><td class="muted">${esc(bVal(f))}</td></tr>`).join("")}</tbody></table></div>` : ""}
+      ${exportBox()}
       <h3 class="sec">کامل بودن ارزیابی</h3>
       <div class="scroll"><table class="t"><thead><tr><th>فضا</th><th>بخش‌های تأییدشده</th><th>پاسخ‌های «نمی‌دانم»</th></tr></thead><tbody>
         <tr><td>پروفایل مشترک ساختمان</td><td class="num">${fa(P.bseen.length,0)} از ${fa(SECTIONS.filter(s=>s.fields.flatMap(f=>f.row||[f]).some(f=>BFIELDS.has(f.id))).length,0)}</td><td class="num">${fa(Object.keys(P.bunk).filter(k=>P.bunk[k]).length,0)}</td></tr>
@@ -1247,6 +1381,33 @@ function beforeAfterHTML(){
     ${RISKS.map(rk=>`<tr><td>بدترین ریسک ${rk.n}</td><td class="num">${sumBar(before.w[rk.k])}</td><td class="num">${sumBar(after.w[rk.k])}</td></tr>`).join("")}
     <tr><td>فضاها و واحدهای بالای ۱</td><td class="num">${fa(before.n,0)} از ${fa(before.all,0)}</td><td class="num">${fa(after.n,0)} از ${fa(r.length,0)}</td></tr></tbody></table></div>`;
 }
+/* ---------- file exports (Excel / Word, Persian / English): code and libraries load on first use ---------- */
+const loadScript = src => new Promise((ok, no)=>{
+  if (document.querySelector(`script[data-src="${src}"]`)) return ok();
+  const el = document.createElement("script"); el.src = src; el.dataset.src = src; el.onload = ok; el.onerror = ()=>{ el.remove(); no(new Error("بارگیری نشد: " + src)); }; document.head.appendChild(el);
+});
+let exporting = false;
+async function exportFile(kind, lang){
+  if (exporting) return; exporting = true;
+  try{
+    toast(kind==="xlsx" ? "در حال ساختن فایل اکسل…" : "در حال ساختن فایل ورد…");
+    await loadScript("./export.js"); await loadScript(kind==="xlsx" ? "./vendor/exceljs-4.4.0.min.js" : "./vendor/docx-8.5.0.umd.js");
+    if (document.fonts) await document.fonts.ready;
+    const blob = await FRAMEX[kind](lang);
+    const base = (P.building.project || "FRAME").replace(/[\\/:*?"<>|]+/g, " ").trim().slice(0, 60);
+    saveBlob(blob, `${kind==="xlsx" ? "FRAME" : "FRAME Report"} - ${base} - ${lang.toUpperCase()}.${kind}`);
+    toast("فایل آماده شد");
+  }catch(e){ toast("ساختن فایل ناموفق بود: " + (e && e.message || e)); console.error(e); }
+  finally{ exporting = false; }
+}
+function saveBlob(blob, name){
+  const a = document.createElement("a"), url = URL.createObjectURL(blob); a.href = url; a.download = name; document.body.appendChild(a); a.click();
+  setTimeout(()=>{ a.remove(); URL.revokeObjectURL(url); }, 4000);
+}
+const exportBox = () => `<div class="xport"><h3 class="sec">دریافت فایل‌های گزارش</h3>
+  <p class="sec-note">اکسل به سبک صفحه‌گستردهٔ FRAME 2015 (برگهٔ خلاصه، یک برگه برای هر فضا با محاسبهٔ P، A و D، و برگهٔ اقدامات اصلاحی) و گزارش ورد با شماتیک و نمودارها. همهٔ فضاهای ساختمان در فایل‌ها هستند.</p>
+  <div class="xbtns"><button class="btn" type="button" data-export="xlsx:fa">اکسل فارسی</button><button class="btn" type="button" data-export="xlsx:en">Excel (English)</button>
+  <button class="btn" type="button" data-export="docx:fa">گزارش ورد فارسی</button><button class="btn" type="button" data-export="docx:en">Word report (English)</button></div></div>`;
 function summaryText(){
   const rows = floorResults(), b = {...DEFAULTS, ...P.building}, L = [];
   L.push("گزارش جمع‌بندی ارزیابی ریسک حریق ساختمان (FRAME 2015)");
@@ -1488,6 +1649,7 @@ function renderMain(){
   else if (st.view==="report") html = reportHTML(x);
   else html = formulaHTML(x);
   $("#main").innerHTML = pkgBanner() + html;
+  if (st.view==="summary"){ drawSummaryCharts(); if (document.fonts && document.fonts.status!=="loaded") document.fonts.ready.then(()=>{ if (st.view==="summary") drawSummaryCharts(); }); }
   renderedVis = visSig();
 }
 
@@ -1800,6 +1962,7 @@ function reportHTML(x){
       <div class="scroll"><table class="t"><thead><tr><th>مورد</th><th>وضعیت ثبت‌شده</th></tr></thead><tbody>
         ${SECTIONS.map(s=>`<tr><td colspan="2" class="grp">${esc(s.title)}</td></tr>`+s.fields.flatMap(f=>f.row||[f]).map(f=>`<tr><td>${esc(f.l)}${BFIELDS.has(f.id)&&!META.has(f.id)?(curFloor()&&curFloor().ovr[f.id]?' <span class="tagx own">مخصوص این فضا</span>':' <span class="tagx">مشترک</span>'):""}</td><td>${esc(fieldVal(f))}</td></tr>`).join("")).join("")}
       </tbody></table></div>
+      ${exportBox()}
       <p class="sec-note" style="margin-top:12px">روش محاسبه: FRAME 2015 (مطابق صفحه‌گستردهٔ رسمی)</p>
     </div>
     <div class="pager"><button class="btn" type="button" data-go="result">→ نتیجه</button>
@@ -1889,6 +2052,8 @@ document.addEventListener("click", ev=>{
   const ap = ev.target.closest("[data-applypkg]");
   if (ap){ ask("اقدام‌های این بسته روی پاسخ‌ها اعمال شود؟ نتیجه «وضعیت بعد از اجرا» را نشان می‌دهد و پاسخ‌های فعلی برای مقایسه و بازگشت نگه داشته می‌شوند.", ()=>applyPackage(ap.dataset.applypkg)); return; }
   if (ev.target.closest("[data-undopkg]")){ ask("همهٔ پاسخ‌ها به وضع موجود (پیش از اعمال بسته) برگردد؟ تغییرهایی که بعد از اعمال بسته داده‌اید هم برمی‌گردند.", undoPackage); return; }
+  const xb = ev.target.closest("[data-export]");
+  if (xb){ const [k, l] = xb.dataset.export.split(":"); exportFile(k, l); return; }
   if (ev.target.closest("#btnCopySum")) copyText(summaryText(),"متن جمع‌بندی کپی شد");
   if (ev.target.closest("#btnCopyRep")) copyText(reportText(),"متن گزارش کپی شد");
   if (ev.target.closest("#btnPrint")) window.print();
