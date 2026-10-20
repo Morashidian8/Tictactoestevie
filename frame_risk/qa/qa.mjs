@@ -166,6 +166,22 @@ if (await p.evaluate(()=>st.view)!=='fr') P('INTERACT next did not advance');
     if (!/بستهٔ پیشنهادی/.test(summaryText())) out.push('package missing from summary text');
     P.ctx=P.floors[1].id; P.view='result'; renderAll();
     if (!/بستهٔ پیشنهادی/.test(document.querySelector('main').textContent)) out.push('space package not shown on result page');
+    // apply the building package, compare, undo
+    P.ctx='b'; P.view='summary'; renderAll();
+    const before = JSON.stringify(P.floors.map(f=>f.data)) + JSON.stringify(P.building);
+    const bp2 = buildingPackage(); applyPackage('b');
+    if (!P.prev || !(P.pkg||[]).length) out.push('package apply did not keep the previous state');
+    const fr = floorResults().filter(r=>!r.x.invalid);
+    if (bp2.ok && fr.some(r=>RISKS.some(rk=>r.x[rk.k]>1+1e-9))) out.push('applied package does not give the promised result');
+    if (!document.querySelector('.pkgbar') || !/مقایسهٔ قبل و بعد/.test(document.querySelector('main').textContent)) out.push('planned-state banner / before-after missing');
+    undoPackage();
+    if (P.prev || JSON.stringify(P.floors.map(f=>f.data)) + JSON.stringify(P.building) !== before) out.push('undo did not restore answers');
+    // space package apply
+    P.ctx=P.floors[P.floors.length-1].id; P.view='result'; renderAll();
+    const sp = spacePackage(compute(st.data));
+    if (sp && sp.steps.length){ applyPackage('space'); const x2 = compute(st.data);
+      if (sp.ok && RISKS.some(rk=>x2[rk.k]>1+1e-9)) out.push('applied space package does not give the promised result');
+      undoPackage(); }
     return out; });
   r.forEach(x=>P('MEASURES',x)); }
 await p.evaluate(()=>{P.ctx='b';st.view='sp';renderAll()});
