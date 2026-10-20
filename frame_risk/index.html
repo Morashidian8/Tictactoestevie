@@ -1395,14 +1395,21 @@ async function exportFile(kind, lang){
     if (document.fonts) await document.fonts.ready;
     const blob = await FRAMEX[kind](lang);
     const base = (P.building.project || "FRAME").replace(/[\\/:*?"<>|]+/g, " ").trim().slice(0, 60);
-    saveBlob(blob, `${kind==="xlsx" ? "FRAME" : "FRAME Report"} - ${base} - ${lang.toUpperCase()}.${kind}`);
-    toast("فایل آماده شد");
+    const st_ = await saveBlob(blob, `${kind==="xlsx" ? "FRAME" : "FRAME Report"} - ${base} - ${lang.toUpperCase()}.${kind}`);
+    toast(st_==="declined" ? "ذخیرهٔ فایل لغو شد" : "فایل آماده شد");
   }catch(e){ toast("ساختن فایل ناموفق بود: " + (e && e.message || e)); console.error(e); }
   finally{ exporting = false; }
 }
-function saveBlob(blob, name){
+// inside the claude.ai viewer files go through its "downloads" capability; elsewhere a normal download link
+async function saveBlob(blob, name){
+  const dl = window.claude && typeof window.claude.use==="function" ? await window.claude.use("downloads").catch(()=>null) : null;
+  if (dl){
+    try{ await dl.save({filename:name, data:blob}); return "saved"; }
+    catch(e){ if (e && e.code==="declined") return "declined"; if (e && ["rate_limited","bad_request","too_large","rejected_extension"].includes(e.code)) throw new Error(e.message || e.code); }
+  }
   const a = document.createElement("a"), url = URL.createObjectURL(blob); a.href = url; a.download = name; document.body.appendChild(a); a.click();
   setTimeout(()=>{ a.remove(); URL.revokeObjectURL(url); }, 4000);
+  return "saved";
 }
 const exportBox = () => `<div class="xport"><h3 class="sec">دریافت فایل‌های گزارش</h3>
   <p class="sec-note">اکسل به سبک صفحه‌گستردهٔ FRAME 2015 (برگهٔ خلاصه، یک برگه برای هر فضا با محاسبهٔ P، A و D، و برگهٔ اقدامات اصلاحی) و گزارش ورد با شماتیک و نمودارها. همهٔ فضاهای ساختمان در فایل‌ها هستند.</p>

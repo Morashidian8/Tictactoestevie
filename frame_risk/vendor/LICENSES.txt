@@ -2,6 +2,7 @@ Vendored for offline use by the FRAME tool's Excel/Word export (loaded only when
 
 exceljs 4.4.0 — MIT License — https://github.com/exceljs/exceljs
 docx 8.5.0 — MIT License — https://github.com/dolanmiu/docx
+  (build/index.umd.js; the four literal U+FFFD characters are written as the escape "\uFFFD", same behaviour)
 
 === exceljs LICENSE ===
 The MIT License (MIT)
