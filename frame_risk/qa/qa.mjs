@@ -209,5 +209,17 @@ await p.click('label:has(#sAD_4)'); await p.waitForTimeout(80);
 if (!(await p.$('#fld_sTrans'))) P('INTERACT transmission question should appear after choosing detectors');
 await p.evaluate(()=>{P.ctx=P.floors[0].id;st.view='result';renderAll()}); await p.click('[data-drv="R1"]');
 if (!(await p.$('[data-drv="R1"].on'))) P('INTERACT driver tab');
+// ---- phone: answering must not move the page (chip bars once dragged it to the top) ----
+{ const q = await b.newPage({viewport:{width:390,height:740}}); await q.goto(URL);
+  for (const [ctx,view,inp] of [['f','ppl','#Wex'],['b','water','#bar'],['f','ign',null],['b','sp',null]]){
+    await q.evaluate(([c,v])=>{ P.ctx = c==='b'?'b':P.floors[1].id; P.view=v; renderAll(); window.scrollTo(0, document.body.scrollHeight*0.5); },[ctx,view]);
+    if (inp){ await q.evaluate(i=>{ const e=document.querySelector(i); window.scrollTo(0, e.getBoundingClientRect().top + scrollY - 300); }, inp);
+      const y0 = await q.evaluate(()=>scrollY); await q.click(inp); await q.keyboard.type('4'); await q.waitForTimeout(80);
+      if (Math.abs(await q.evaluate(()=>scrollY) - y0) > 2) P('SCROLL', `typing in ${inp} moved the page`); }
+    const h = await q.evaluateHandle(()=>[...document.querySelectorAll('label.opt')].find(l=>{const r=l.getBoundingClientRect(); return r.top>150 && r.bottom<650 && !l.classList.contains('sel');}));
+    if (h.asElement()){ const y0 = await q.evaluate(()=>scrollY); await h.asElement().click(); await q.waitForTimeout(80);
+      if (Math.abs(await q.evaluate(()=>scrollY) - y0) > 2) P('SCROLL', `choosing an option in ${view} moved the page`); }
+  }
+  await q.close(); }
 await b.close(); srv.kill();
 console.log(problems.length? 'PROBLEMS:\n'+[...new Set(problems)].join('\n') : 'NO PROBLEMS');

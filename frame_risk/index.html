@@ -101,9 +101,9 @@ main.sheet{background:var(--surface);border:1px solid var(--line);border-radius:
 .inp.wide{max-width:520px}
 .opts{display:grid;gap:7px}
 .opts.cols{grid-template-columns:repeat(auto-fill,minmax(200px,1fr))}
-.opt{display:flex;gap:12px;align-items:center;border:1px solid var(--line);border-radius:10px;padding:9px 12px;cursor:pointer;background:var(--surface)}
+.opt{position:relative;display:flex;gap:12px;align-items:center;border:1px solid var(--line);border-radius:10px;padding:9px 12px;cursor:pointer;background:var(--surface)}
 .opt:hover{border-color:var(--line-2);background:var(--surface-2)}
-.opt input{position:absolute;opacity:0;pointer-events:none}
+.opt input{position:absolute;inset-inline-start:12px;top:50%;width:1px;height:1px;margin:0;opacity:0;pointer-events:none}
 .opt .rd{width:18px;height:18px;border-radius:50%;border:2px solid var(--line-2);flex:none;display:grid;place-items:center}
 .opt.sel{border-color:var(--accent);background:var(--accent-soft)}
 .opt.sel .rd{border-color:var(--accent)}
@@ -1290,7 +1290,14 @@ function renderCtx(){
     <button type="button" class="cx sum ${P.view==="summary"?"on":""}" data-go="summary">${svgI("report")}جمع‌بندی ساختمان</button>
     ${fl && P.floors.length>1 ? `<button type="button" class="cx del" data-delfloor title="حذف این فضا">حذف این فضا</button>` : ""}`;
   const on = $("#ctxbar .cx.on");
-  if (on && window.matchMedia("(max-width:800px)").matches) on.scrollIntoView({block:"nearest",inline:"center"});
+  centerChip($("#ctxbar"), on);
+}
+// keep the active chip visible by scrolling only the chip bar sideways; scrollIntoView would also
+// scroll the page up to the bar on every answer (the page jumped to the top while typing)
+function centerChip(bar, on){
+  if (!bar || !on || !window.matchMedia("(max-width:800px)").matches) return;
+  const b = bar.getBoundingClientRect(), o = on.getBoundingClientRect();
+  bar.scrollLeft += (o.left + o.width/2) - (b.left + b.width/2);
 }
 
 function renderSteps(){
@@ -1303,8 +1310,7 @@ function renderSteps(){
     return `${sep}<button type="button" class="step ${st.view===s.id?"on":""} ${done?"done":""}" data-go="${s.id}" ${st.view===s.id?'aria-current="step"':""}>
       <span class="ic">${svgI(s.id==="summary"?"report":s.id)}</span><span class="t">${esc(s.title)}${s.k?`<span class="k">${esc(s.k)}</span>`:""}</span></button>`;
   }).join("");
-  const on = $("#steps .step.on");
-  if (on && window.matchMedia("(max-width:800px)").matches) on.scrollIntoView({block:"nearest",inline:"center"});
+  centerChip($("#steps"), $("#steps .step.on"));
 }
 
 function optHTML(f){
