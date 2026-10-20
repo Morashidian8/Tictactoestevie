@@ -230,6 +230,10 @@ h3.sec{font-size:17px;font-weight:800;margin:28px 0 4px}
 .sugg li::before{content:counter(s,persian);grid-row:span 2;width:26px;height:26px;border-radius:50%;background:var(--ok-soft);color:var(--ok);display:grid;place-items:center;font-weight:800;font-size:13px}
 .sugg .st{font-weight:600;font-size:14px}
 .sugg .st em{font-style:normal;color:var(--accent)}
+.ctag{display:inline-block;font-size:11.5px;font-weight:600;border-radius:999px;padding:0 8px;white-space:nowrap;vertical-align:1px;background:var(--surface-2);border:1px solid var(--line)}
+.ctag.c1{background:var(--ok-soft);color:var(--ok);border-color:transparent}.ctag.c2{background:var(--warn-soft);color:var(--warn);border-color:transparent}.ctag.c3{background:var(--bad-soft);color:var(--bad);border-color:transparent}
+.ctag.sc{background:var(--accent-soft);color:var(--accent);border-color:transparent}
+.verdict.slim{margin-top:10px;padding:10px 14px;font-size:14px}
 .chips{display:flex;flex-wrap:wrap;gap:6px}
 .chip{font-size:12px;border-radius:7px;padding:1px 8px;background:var(--surface-2);border:1px solid var(--line);font-variant-numeric:tabular-nums}
 .chip b{color:var(--ok)}
@@ -1051,30 +1055,6 @@ function goCtx(ctx){
 const capR = v => Math.min(isFinite(v) ? v : 10, 10);
 function floorResults(){ return P.floors.map((fl,i)=>({fl, i, name:floorName(fl,i), d:floorData(fl), x:compute(floorData(fl))})); }
 function worstOf(rows, k){ return rows.reduce((w,r)=> (w===null || capR(r.x[k]) > capR(w.x[k])) ? r : w, null); }
-function buildingMeasures(rows){
-  const base = rows.map(r=>r.x), out = [];
-  ALLFIELDS.filter(f=>f.t==="sel" && BFIELDS.has(f.id) && !META.has(f.id)).forEach(f=>{
-    const old = P.building[f.id], oldU = P.bunk[f.id];
-    if (!shown(f, {...DEFAULTS, ...P.building})) return;
-    let best = null;
-    f.o.forEach(o=>{
-      if (String(o.v)===String(old ?? DEFAULTS[f.id]) && !oldU) return;
-      P.building[f.id] = o.v; delete P.bunk[f.id];
-      const nx = P.floors.map(fl=>compute(floorData(fl)));
-      const tot = base.reduce((s,x,i)=>s + RISKS.reduce((t,rk)=>t + capR(x[rk.k]) - capR(nx[i][rk.k]), 0), 0);
-      if (tot > 0.01 && (!best || tot > best.tot)) best = {f, o, nx, tot};
-    });
-    if (old===undefined) delete P.building[f.id]; else P.building[f.id] = old;
-    if (oldU) P.bunk[f.id] = oldU;
-    if (best) out.push(best);
-  });
-  return out.sort((a,b)=>b.tot-a.tot).slice(0,6);
-}
-function floorMeasures(r){
-  const saveCtx = P.ctx; P.ctx = r.fl.id;
-  const list = suggestions(r.x).filter(s=>inCtx(s.f)).slice(0,3);
-  P.ctx = saveCtx; return list;
-}
 function sumBar(v){
   const lv = level(v), w = Math.min(capR(v)/2,1)*100;
   return `<span class="sb"><b class="c-${lv}">${fa(v)}</b><span class="sbt"><i class="${lv}" style="width:${w.toFixed(1)}%"></i></span></span>`;
@@ -1089,7 +1069,7 @@ function summaryHTML(){
   const msg = vlv==="ok" ? `هر سه ریسک در همهٔ ${fa(rows.length,0)} فضای ارزیابی‌شده قابل‌قبول است.`
     : vlv==="warn" ? "هیچ فضایی از حد مجاز بیشتر نیست، ولی دست‌کم یک فضا در محدودهٔ مرزی (۰٫۸ تا ۱) است."
     : `${fa(badRows.length,0)} فضا از ${fa(rows.length,0)} دست‌کم در یک ریسک از حد مجاز (۱٫۰) بیشترند: ${badRows.map(r=>r.name).join("، ")}. ساختمان در وضعیت فعلی قابل‌قبول نیست.`;
-  const bm = buildingMeasures(rows);
+  const bm = buildingMeasures();
   const inFrame = (()=>{ try{ return window.self !== window.top; }catch(e){ return true; } })();
   const ovrRows = rows.flatMap(r=>Object.keys(r.fl.ovr).filter(k=>r.fl.ovr[k] && FIELD[k] && !META.has(k)).map(k=>({r, f:FIELD[k]})));
   const bVal = f => { const saveCtx = P.ctx; P.ctx = "b"; const v = fieldVal(f); P.ctx = saveCtx; return v; };
@@ -1119,11 +1099,12 @@ function summaryHTML(){
       <h3 class="sec">اقدام‌های مشترک (اثر روی همهٔ فضاها)</h3>
       <p class="sec-note">این اقدام‌ها یک‌بار در کل ساختمان انجام می‌شوند. ستون‌ها بدترین مقدار هر ریسک در ساختمان را قبل و بعد از اقدام نشان می‌دهند.</p>
       ${bm.length ? `<ol class="sugg">${bm.map(m=>{ const nb = RISKS.reduce((s,rk)=>s+m.nx.filter(x=>x[rk.k]>1).length,0), ob = RISKS.reduce((s,rk)=>s+valid.filter(r=>r.x[rk.k]>1).length,0);
-        return `<li><div class="st">${esc(m.f.l)}: <em>${esc(m.o.l)}</em></div>
-        <div class="chips">${RISKS.map(rk=>{ const before = Math.max(...valid.map(r=>capR(r.x[rk.k]))), after = Math.max(...m.nx.filter(x=>!x.invalid).map(x=>capR(x[rk.k]))); return `<span class="chip">${rk.n} ${fa(before)} ← <b>${fa(after)}</b></span>`; }).join("")}
-        ${ob ? `<span class="chip">موارد بالای ۱: ${fa(ob,0)} ← <b>${fa(nb,0)}</b></span>` : ""}</div></li>`; }).join("")}</ol>` : `<p class="sec-note">اقدام مشترکی که ریسک را کمتر کند پیدا نشد.</p>`}
-      ${badRows.length ? `<h3 class="sec">اقدام‌های خاص هر فضا</h3><p class="sec-note">برای فضاهایی که دست‌کم یک ریسک بالای ۱ دارند.</p>
-        ${badRows.map(r=>{ const ms = floorMeasures(r); return `<div class="fm"><b>${esc(r.name)}</b>${ms.length?`<ul>${ms.map(s=>`<li>${esc(s.f.l)}: <em>${esc(s.o.l)}</em> <span class="muted">(${RISKS.map(rk=>`${rk.sn||rk.n} ${fa(r.x[rk.k])}←${fa(s.nx[rk.k])}`).join(" · ")})</span></li>`).join("")}</ul>`:`<p class="muted">بهبود خاص این فضا در چک‌لیست باقی نمانده؛ اقدام‌های مشترک را ببینید.</p>`}</div>`; }).join("")}` : ""}
+        return measureLi(m, `${RISKS.map(rk=>{ const before = Math.max(...valid.map(r=>r.x[rk.k])), after = Math.max(...m.nx.map(x=>x[rk.k])); return `<span class="chip">${rk.n} ${fa(before)} ← <b>${fa(after)}</b></span>`; }).join("")}
+        ${ob ? `<span class="chip">موارد بالای ۱: ${fa(ob,0)} ← <b>${fa(nb,0)}</b></span>` : ""}`); }).join("")}</ol>` : `<p class="sec-note">اقدام مشترکی که ریسک را کمتر کند پیدا نشد.</p>`}
+      ${badRows.length ? `<h3 class="sec">اقدام‌های خاص هر فضا</h3><p class="sec-note">برای فضاهایی که دست‌کم یک ریسک بالای ۱ دارند؛ فقط اقدام‌هایی که مخصوص همان فضاست.</p>
+        ${badRows.map(r=>{ const ms = floorMeasures(r); return `<div class="fm"><b>${esc(r.name)}</b>${ms.length?`<ul>${ms.map(s=>`<li>${esc(s.t)}: <em>${esc(s.o)}</em> ${costTag(s.cost)} <span class="muted">(${RISKS.map(rk=>`${rk.sn||rk.n} ${fa(r.x[rk.k])}←${fa(s.nx[rk.k])}`).join(" · ")})</span></li>`).join("")}</ul>`:`<p class="muted">بهبود خاص این فضا در چک‌لیست باقی نمانده؛ اقدام‌های مشترک را ببینید.</p>`}</div>`; }).join("")}` : ""}
+      ${bldPkgHTML()}
+      ${bm.length || badRows.length ? `<p class="sec-note">${COST_NOTE}</p>` : ""}
       ${ovrRows.length ? `<h3 class="sec">فضاهایی که با پروفایل ساختمان فرق دارند</h3>
         <div class="scroll"><table class="t"><thead><tr><th>فضا</th><th>مورد</th><th>پاسخ این فضا</th><th>پاسخ مشترک ساختمان</th></tr></thead><tbody>
         ${ovrRows.map(({r,f})=>`<tr><td>${esc(r.name)}</td><td>${esc(f.l)}</td><td>${esc(fVal(r,f))}</td><td class="muted">${esc(bVal(f))}</td></tr>`).join("")}</tbody></table></div>` : ""}
@@ -1138,12 +1119,30 @@ function summaryHTML(){
       <span style="display:flex;gap:8px;flex-wrap:wrap">${inFrame?"":`<button class="btn" type="button" id="btnPrint">چاپ / PDF</button>`}
       <button class="btn primary" type="button" id="btnCopySum">کپی متن جمع‌بندی</button></span></div>`;
 }
+function bldPkgHTML(){
+  const pk = buildingPackage(); if (!pk) return "";
+  const nm = fl => floorName(fl, P.floors.indexOf(fl));
+  const chips = xs => RISKS.map(rk=>{ const w = Math.max(...xs.map(x=>x[rk.k])); return `<span class="chip">${rk.sn||rk.n} <b class="c-${level(w)}">${fa(w)}</b></span>`; }).join("")
+    + `<span class="chip">فضاهای بالای ۱: <b>${fa(xs.filter(x=>RISKS.some(rk=>x[rk.k]>1)).length,0)}</b></span>`;
+  const bad = pk.fls.filter((fl,i)=>RISKS.some(rk=>!(pk.final[i][rk.k] <= 1))).map(nm);
+  return `<h3 class="sec">بستهٔ پیشنهادی ساختمان</h3>
+    <p class="sec-note">کم‌هزینه‌ترین ترکیب اقدام‌های مشترک و اقدام‌های خاص هر فضا تا همهٔ فضاها در هر سه ریسک به ۱ یا کمتر برسند. هر قدم بیشترین کاهشِ ریسکِ بالای ۱ را نسبت به هزینه‌اش دارد. اعداد هر ردیف، بدترین مقدار هر ریسک در ساختمان بعد از همین قدم و قدم‌های قبلی است.</p>
+    ${pk.steps.length ? `<ol class="sugg pkg">${pk.steps.map(s=>measureLi(s, chips(s.nx), ` <span class="ctag sc">${s.scope==="b" ? "کل ساختمان" : esc(nm(s.fl))}</span>`)).join("")}</ol>` : ""}
+    <div class="verdict ${pk.ok?"ok":"bad"} slim">${VERDICT_ICON[pk.ok?"ok":"bad"]}<span>${pk.ok ? `با این ${fa(pk.steps.length,0)} اقدام همهٔ فضاها در هر سه ریسک قابل‌قبول می‌شوند.`
+      : `${pk.steps.length ? "حتی با این اقدام‌ها" : "با اقدام‌های چک‌لیست"} این فضاها به ۱ نمی‌رسند: ${bad.map(esc).join("، ")}. تغییر بزرگ‌تری لازم است (کم کردن افراد، تقسیم فضا، تغییر کاربری یا طراحی دوباره با متخصص).`}</span></div>`;
+}
 function summaryText(){
   const rows = floorResults(), b = {...DEFAULTS, ...P.building}, L = [];
   L.push("گزارش جمع‌بندی ارزیابی ریسک حریق ساختمان (FRAME 2015)");
   L.push(`ساختمان: ${b.project||"—"} | ارزیاب: ${b.assessor||"—"} | تاریخ: ${b.date||"—"}`); L.push("");
   rows.forEach(r=>L.push(`${r.name}: ${RISKS.map(rk=>`${rk.k}=${fa(r.x[rk.k])}`).join("  ")}  (${levelTxt(Math.max(...RISKS.map(rk=>capR(r.x[rk.k]))))})`));
   L.push(""); RISKS.forEach(rk=>{ const w = worstOf(rows.filter(r=>!r.x.invalid), rk.k); if (w) L.push(`ریسک تعیین‌کنندهٔ ${rk.n}: ${fa(w.x[rk.k])} — ${w.name}`); });
+  const pk = buildingPackage();
+  if (pk && pk.steps.length){
+    L.push(""); L.push("بستهٔ پیشنهادی (هزینه‌ها تقریبی):");
+    pk.steps.forEach((s,i)=>L.push(`${fa(i+1,0)}. ${s.t}: ${s.o} [${COST[s.cost]}، ${s.scope==="b" ? "کل ساختمان" : floorName(s.fl, P.floors.indexOf(s.fl))}]`));
+    L.push(pk.ok ? "نتیجه: همهٔ فضاها در هر سه ریسک قابل‌قبول می‌شوند." : "نتیجه: با این اقدام‌ها هم همهٔ فضاها به ۱ نمی‌رسند.");
+  }
   return L.join("\n");
 }
 function sampleProject(){
@@ -1436,21 +1435,138 @@ function driverHTML(x){
     <div class="drv-axis"><span></span><div><span>◀ افزایش ریسک</span><span>کاهش ریسک ▶</span></div><span></span></div></div>`;
 }
 
-/* ---------- improvement what-if ---------- */
-function suggestions(x){
+/* ---------- corrective measures: catalog, rough cost, recommended package ----------
+   A candidate is one concrete change to the answers. Not offered: what the owner cannot change
+   (construction type Qi, the public fire station s8 and its travel time n4, the activity itself,
+   the kind of occupants) and options that are not a step on their own (detection only through the
+   sprinkler flow switch, a 24 h private brigade, "4× more water than needed"). */
+const COST = {1:"کم‌هزینه", 2:"هزینهٔ متوسط", 3:"پرهزینه"}, CW = {1:1, 2:2.5, 3:6};
+const MSEL = {   // field → cost class of moving to another option (number, or (new value, current value) → number)
+  a2:3, a3:2, a4:2, a5:(v,c)=>c>=0.2?2:1, a6:2, a7:2, a10:2,
+  pPlan:1, M:2,
+  w1:(v,c)=>c===4?1:3, dia:3, looped:3, s3:2, s4:3, s5:3,
+  n1a:2, n1b:1, n1c:1, n1d:1, n2:1, n3:2, n5:1,
+  sAD:v=>v===2?1:2, sTrans:1, sFault:1, sZone:2, s6:3, s7:3, s9:3,
+  fs:3, fo:3, fc:3, fi:2,
+  uSt:3, uHe:2, u2:2, uSign:1, uVoice:2, uPartial:1, u4:2, uVent:2,
+  yFin:1, ySpare:2, yRep:2, yReloc:2, yCoop:1, yDet:1, ySpr:2, yOth:3,
+};
+const MSKIP = {sAD:[4], s9:[14]};
+const NO_S7 = ["office","home","school","hotel","hosp"];
+const MREQ = {sTrans:d=>d.sAD>2, sFault:d=>d.sAD>2, sZone:d=>d.sAD>2};   // a panel is needed first: no alarm transmission from stand-alone smoke alarms
+const waterReq = d => Math.ceil((d.Qi + d.Qm)/4);
+const MEXTRA = {w1:(v,d)=>v!==10 ? {store:Math.max(+d.store||0, waterReq(d))} : {}};   // a new tank comes with the required volume
+const MNUM = [
+  d => ({id:"exitW", t:"یک خروجی دیگر به عرض ۹۰ سانتی‌متر", o:"یا عریض کردن خروجی‌های موجود به همین اندازه", cost:2, patch:{Wex:Math.round((d.Wex+0.9)*100)/100}}),
+  d => d.O < 4 && {id:"exitO", t:"یک راه فرار جداگانهٔ دیگر تا فضای باز", o:`از ${fa(d.O,0)} به ${fa(d.O+1,0)} راه`, cost:3, patch:{O:d.O+1}},
+  d => { const t = Math.ceil(d.area*0.02); return d.vents < t && {id:"vents", t:"دریچهٔ تخلیهٔ دود", o:`حدود ${fa(t,0)} متر مربع (۲٪ مساحت کف)`, cost:2, patch:{vents:t}}; },
+  d => d.Qm > 50 && {id:"Qm", t:"کم کردن ۳۰٪ مواد سوختنی", o:"انبار نکردن کاغذ و کارتن، نظم و پاک‌سازی منظم", cost:1, patch:{Qm:Math.round(d.Qm*0.7)}},
+  d => d.w1 !== 10 && d.store < waterReq(d) && {id:"store", t:"بزرگ کردن ذخیرهٔ آب آتش‌نشانی", o:`به ${fa(waterReq(d),0)} متر مکعب`, ol:p=>`به ${fa(p.store,0)} متر مکعب`, cost:2, patch:{store:waterReq(d)}},
+  d => { const b = d.area/d.l, need = Math.ceil(2*(d.l+b)/50), conn = d.c70 + 2*d.c80 + 3*d.c110;
+    return conn < need && {id:"hyd", t:"اتصال آتش‌نشانی بیشتر دور ساختمان", o:`${fa(need-conn,0)} اتصال ۲٫۵ اینچی دیگر (فاصله حداکثر ۵۰ متر)`, ol:p=>`${fa(p.c70-d.c70,0)} اتصال ۲٫۵ اینچی دیگر (فاصله حداکثر ۵۰ متر)`, cost:2, patch:{c70:d.c70+need-conn}}; },
+  d => { const need = Math.ceil((d.H + d.h + 35)); return d.bar*10 < need && {id:"bar", t:"فشار کافی آب شبکهٔ آتش‌نشانی", o:`دست‌کم ${fa(need/10,1)} بار (پمپ تقویت فشار)`, ol:p=>`دست‌کم ${fa(p.bar,1)} بار (پمپ تقویت فشار)`, cost:2, patch:{bar:need/10}}; },
+];
+function candidates(d){
   const out = [];
-  const cap = v => Math.min(v, 10), base = cap(x.R) + cap(x.R1) + cap(x.R2);
-  ALLFIELDS.filter(f=>f.t==="sel" && ["ign","water","np","sp","fr","esc","cont"].includes(f.sec) && shown(f) && !(f.id==="s7" && ["office","home","school","hotel","hosp"].includes(st.data.use))).forEach(f=>{
-    let best=null;
+  ALLFIELDS.forEach(f=>{
+    const cost = MSEL[f.id];
+    if (cost===undefined || f.t!=="sel" || !shown(f, d) || (MREQ[f.id] && !MREQ[f.id](d)) || (f.id==="s7" && NO_S7.includes(d.use))) return;
     f.o.forEach(o=>{
-      if (String(o.v)===String(st.data[f.id])) return;
-      const nx = compute({...st.data,[f.id]:o.v});
-      const tot = base - (cap(nx.R)+cap(nx.R1)+cap(nx.R2));
-      if (tot > 0.005 && (!best || tot > best.tot)) best = {f,o,nx,tot};
+      if (String(o.v)===String(d[f.id]) || (MSKIP[f.id]||[]).includes(o.v)) return;
+      const patch = {[f.id]:o.v, ...(MEXTRA[f.id] ? MEXTRA[f.id](o.v, d) : {})};
+      out.push({key:f.id, id:f.id+"="+o.v, t:f.l, o:o.l, cost:typeof cost==="function" ? cost(o.v, d[f.id]) : cost, patch});
     });
-    if (best) out.push(best);
   });
-  return out.sort((a,b)=>b.tot-a.tot).slice(0,6);
+  MNUM.forEach(m=>{ const c = m(d); if (c) out.push({...c, key:c.id}); });
+  return out;
+}
+const isShared = c => Object.keys(c.patch).every(k=>BFIELDS.has(k));
+const riskSum = xs => xs.reduce((s,x)=>s + RISKS.reduce((t,rk)=>t + capR(x[rk.k]), 0), 0);
+const excess = xs => xs.reduce((s,x)=>s + RISKS.reduce((t,rk)=>t + Math.max(0, capR(x[rk.k]) - 1), 0), 0) + riskSum(xs)*1e-3;
+const allOk = xs => xs.every(x=>!x.invalid && RISKS.every(rk=>x[rk.k] <= 1));
+// best option per field/measure, ranked by effect per cost (the two biggest effects are always kept)
+function rankBest(list, n){
+  const best = {};
+  list.forEach(c=>{ if (c.tot > 0.005 && (!best[c.key] || c.tot > best[c.key].tot)) best[c.key] = c; });
+  const all = Object.values(best), big = [...all].sort((a,b)=>b.tot-a.tot).slice(0,2);
+  const eff = all.filter(c=>!big.includes(c)).sort((a,b)=>b.tot/CW[b.cost] - a.tot/CW[a.cost]);
+  return [...big, ...eff].slice(0,n).sort((a,b)=>b.tot/CW[b.cost] - a.tot/CW[a.cost]);
+}
+/* greedy: step by step take the candidate with the most excess-risk removed per unit of cost,
+   until every risk is ≤ 1 (or nothing helps any more). eval(acc) → results, cands(acc) → candidates. */
+function greedy(evalFn, candFn, max=10){
+  let acc = {}, cur = evalFn(acc); const steps = [], used = new Set();
+  for (let k=0; k<max && !allOk(cur); k++){
+    const e0 = excess(cur); let best = null;
+    candFn(acc).forEach(c=>{
+      if (used.has(c.key)) return;
+      const nacc = c.apply(acc), nx = evalFn(nacc);
+      if (nx.some(x=>x.invalid)) return;
+      const gain = e0 - excess(nx); if (gain < 0.01) return;
+      const sc = gain / CW[c.cost];
+      if (!best || sc > best.sc) best = {c, nx, nacc, sc};
+    });
+    if (!best) break;
+    used.add(best.c.key); acc = best.nacc; cur = best.nx; steps.push({...best.c, nx:best.nx});
+  }
+  return {steps, final:cur, ok:allOk(cur)};
+}
+// current space (st.data)
+function suggestions(x){
+  const d0 = {...st.data}, base = riskSum([x]);
+  return rankBest(candidates(d0).map(c=>{ const nx = compute({...d0, ...c.patch}); return nx.invalid ? null : {...c, nx, tot:base - riskSum([nx])}; }).filter(Boolean), 8);
+}
+function spacePackage(x){
+  if (x.invalid || allOk([x])) return null;
+  const d0 = {...st.data};
+  return greedy(acc=>[compute({...d0, ...acc})], acc=>candidates({...d0, ...acc}).map(c=>({...c, apply:a=>({...a, ...c.patch})})));
+}
+// building project: shared measures change the building profile (every floor that does not override
+// that answer); floor measures change one floor only
+const floorBase = (fl, acc) => ({...floorData(fl), ...pick(acc.b||{}, k=>!fl.ovr[k]), ...(acc[fl.id]||{})});
+function sharedCands(acc, fls){
+  const m = {};
+  fls.forEach(fl=>candidates(floorBase(fl, acc)).filter(c=>Object.keys(c.patch).every(k=>BFIELDS.has(k) && !fl.ovr[k])).forEach(c=>{
+    const g = m[c.id];
+    if (!g) { m[c.id] = {...c, patch:{...c.patch}}; return; }
+    Object.keys(c.patch).forEach(k=>{ if (typeof c.patch[k]==="number" && typeof g.patch[k]==="number") g.patch[k] = Math.max(g.patch[k], c.patch[k]); });
+    g.cost = Math.max(g.cost, c.cost);
+  }));
+  return Object.values(m).map(c=>({...c, o:c.ol ? c.ol(c.patch) : c.o, scope:"b", apply:a=>({...a, b:{...(a.b||{}), ...c.patch}})}));
+}
+function floorCands(acc, fls){
+  return fls.flatMap(fl=>candidates(floorBase(fl, acc)).filter(c=>Object.keys(c.patch).every(k=>!BFIELDS.has(k) || fl.ovr[k]))
+    .map(c=>({...c, key:fl.id+":"+c.key, fl, scope:fl.id, apply:a=>({...a, [fl.id]:{...(a[fl.id]||{}), ...c.patch}})})));
+}
+const validFloors = () => P.floors.filter(fl=>!compute(floorData(fl)).invalid);
+const floorsEval = fls => acc => fls.map(fl=>compute(floorBase(fl, acc)));
+function buildingMeasures(){
+  const fls = validFloors(), ev = floorsEval(fls), base = riskSum(ev({}));
+  return rankBest(sharedCands({}, fls).map(c=>{ const nx = ev(c.apply({})); return nx.some(x=>x.invalid) ? null : {...c, nx, tot:base - riskSum(nx)}; }).filter(Boolean), 6);
+}
+function floorMeasures(r){
+  const fls = [r.fl], base = riskSum([r.x]);
+  return rankBest(floorCands({}, fls).map(c=>{ const nx = compute(floorBase(r.fl, c.apply({}))); return nx.invalid ? null : {...c, key:c.key, nx, tot:base - riskSum([nx])}; }).filter(Boolean), 3);
+}
+function buildingPackage(){
+  const fls = validFloors(), ev = floorsEval(fls);
+  if (!fls.length || allOk(ev({}))) return null;
+  return {...greedy(ev, acc=>[...sharedCands(acc, fls), ...floorCands(acc, fls)], 14), fls};
+}
+const costTag = c => `<span class="ctag c${c}">${COST[c]}</span>`;
+const COST_NOTE = "برچسب‌های هزینه تقریبی‌اند (کم‌هزینه: کار مدیریتی یا تجهیز ساده؛ متوسط: نصب تجهیزات؛ پرهزینه: تغییر ساختمان یا تأسیسات بزرگ) و به شرایط هر ساختمان بستگی دارند. پیش از اجرا، اقدام‌ها را با متخصص ایمنی و مقررات ملی ساختمان (مبحث ۳) بررسی کنید.";
+function measureLi(c, chips, extra=""){
+  return `<li><div class="st">${esc(c.t)}: <em>${esc(c.o)}</em> ${costTag(c.cost)}${extra}</div><div class="chips">${chips}</div></li>`;
+}
+const sharedTag = c => { const fl = curFloor(); return P.floors.length>1 && fl && Object.keys(c.patch).every(k=>BFIELDS.has(k) && !fl.ovr[k]) ? ` <span class="ctag sc">برای کل ساختمان</span>` : ""; };
+function spacePkgHTML(x){
+  const pk = spacePackage(x); if (!pk) return "";
+  const fx = pk.final[0], left = RISKS.filter(rk=>!(fx[rk.k] <= 1)).map(rk=>rk.n);
+  return `<h3 class="sec">بستهٔ پیشنهادی</h3>
+    <p class="sec-note">کم‌هزینه‌ترین مسیری که ابزار پیدا کرد تا هر سه ریسک به ۱ یا کمتر برسد. در هر قدم اقدامی انتخاب شده که بیشترین کاهشِ ریسکِ بالای ۱ را نسبت به هزینه‌اش دارد. اعداد هر ردیف، ریسک‌ها بعد از اجرای همین قدم و قدم‌های قبلی است.</p>
+    ${pk.steps.length ? `<ol class="sugg pkg">${pk.steps.map(s=>measureLi(s, RISKS.map(rk=>`<span class="chip">${rk.n} <b class="c-${level(s.nx[0][rk.k])}">${fa(s.nx[0][rk.k])}</b></span>`).join(""), sharedTag(s))).join("")}</ol>` : ""}
+    <div class="verdict ${pk.ok?"ok":"bad"} slim">${VERDICT_ICON[pk.ok?"ok":"bad"]}<span>${pk.ok ? `با این ${fa(pk.steps.length,0)} اقدام هر سه ریسک قابل‌قبول (۱ یا کمتر) می‌شود.`
+      : `${pk.steps.length ? "حتی با این اقدام‌ها" : "با اقدام‌های چک‌لیست"} ریسک ${left.join(" و ")} به ۱ نمی‌رسد. تغییر بزرگ‌تری لازم است: کم کردن تعداد افراد، تقسیم فضا با دیوار ضدحریق، تغییر کاربری یا طراحی دوباره با کمک متخصص.`}</span></div>`;
 }
 
 const VERDICT_ICON = {
@@ -1487,10 +1603,11 @@ function resultHTML(x){
       <p class="sec-note">سهم هر فاکتور در ریسک انتخاب‌شده. نوار قرمز ریسک را بالا می‌برد و نوار سبز آن را پایین می‌آورد؛ طول نوار اندازهٔ اثر است.</p>
       <div id="drv">${driverHTML(x)}</div>
       <h3 class="sec">اثربخش‌ترین بهبودها</h3>
-      <p class="sec-note">هر ردیف نشان می‌دهد اگر فقط همین یک مورد بهتر شود، سه ریسک چقدر تغییر می‌کنند.</p>
-      ${sg.length?`<ol class="sugg">${sg.map(s=>`<li><div class="st">${esc(s.f.l)}: <em>${esc(s.o.l)}</em></div>
-         <div class="chips">${RISKS.map(rk=>`<span class="chip">${rk.n} ${fa(x[rk.k])} ← <b>${fa(s.nx[rk.k])}</b></span>`).join("")}</div></li>`).join("")}</ol>`
+      <p class="sec-note">هر ردیف نشان می‌دهد اگر فقط همین یک مورد بهتر شود، سه ریسک چقدر تغییر می‌کنند. ترتیب: بیشترین اثر نسبت به هزینه.</p>
+      ${sg.length?`<ol class="sugg">${sg.map(s=>measureLi(s, RISKS.map(rk=>`<span class="chip">${rk.n} ${fa(x[rk.k])} ← <b>${fa(s.nx[rk.k])}</b></span>`).join(""), sharedTag(s))).join("")}</ol>`
         :`<p class="sec-note">در چک‌لیست‌ها گزینهٔ بهتری باقی نمانده است.</p>`}
+      ${spacePkgHTML(x)}
+      ${sg.length?`<p class="sec-note">${COST_NOTE}</p>`:""}
       ${unkHTML()}
       ${tips.length?`<h3 class="sec">نکات</h3><ul class="tips">${tips.map(t=>`<li>${esc(t)}</li>`).join("")}</ul>`:""}
     </div>
