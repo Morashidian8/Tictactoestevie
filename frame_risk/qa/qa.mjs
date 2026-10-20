@@ -120,6 +120,54 @@ if (await p.evaluate(()=>st.view)!=='fr') P('INTERACT next did not advance');
     if (rows.some(r=>r.x.R1>w.x.R1)) out.push('governing R1 is not the maximum');
     return out; });
   r.forEach(x=>P('PROJECT',x)); }
+// ---- corrective measures: catalog, cost, package ----
+{ const r = await p.evaluate(()=>{ const out=[];
+    const NEVER = ['Qi','s8','n4','s2','a1','a8','a9','a11','p0','pPerc','pPanic','u300','yProd','T','m','use','d','c1','access','Z'];
+    const rnd = (f) => f.o[Math.floor(Math.random()*f.o.length)].v;
+    for (let k=0; k<150; k++){
+      const d = {...DEFAULTS};
+      ALLFIELDS.forEach(f=>{ if (f.t==='sel' && Math.random()<0.5) d[f.id] = rnd(f); });
+      d.use = rnd(FIELD.use); d.area = 100+Math.random()*3000; d.l = Math.sqrt(d.area)*(1+Math.random()*2); d.X = 5+Math.floor(Math.random()*400);
+      d.Wex = 0.9+Math.random()*4; d.O = 1+Math.floor(Math.random()*3); d.Qm = 100+Math.random()*2000; d.E = Math.floor(Math.random()*8)-2; d.H = d.E*3.2;
+      const c = candidates(d);
+      c.forEach(m=>{ const ks = Object.keys(m.patch);
+        if (ks.some(k=>NEVER.includes(k))) out.push('non-actionable measure offered: '+ks);
+        if (![1,2,3].includes(m.cost)) out.push('measure without cost class: '+m.id);
+        if (m.patch.sAD===4 || m.patch.s9===14) out.push('unrealistic option offered: '+m.id);
+        if (m.patch.s7 && NO_S7.includes(d.use)) out.push('s7 offered for '+d.use);
+        if ((m.patch.sTrans||m.patch.sFault||m.patch.sZone) && !(d.sAD>2)) out.push('panel feature offered without a panel'); });
+      const x0 = compute(d); if (x0.invalid) continue;
+      const ev = acc=>[compute({...d, ...acc})];
+      const pk = allOk([x0]) ? null : greedy(ev, acc=>candidates({...d, ...acc}).map(m=>({...m, apply:a=>({...a, ...m.patch})})));
+      if (!pk) continue;
+      if (pk.steps.length>10) out.push('package longer than 10 steps');
+      let e = excess([x0]), acc = {};
+      pk.steps.forEach(st_=>{ acc = {...acc, ...st_.patch}; const nx = ev(acc); if (!(excess(nx) < e)) out.push('package step does not reduce risk'); e = excess(nx); });
+      if (Math.abs(excess(ev(acc)) - excess(pk.final)) > 1e-9) out.push('package replay mismatch');
+      if (pk.ok !== allOk(pk.final)) out.push('package ok flag wrong');
+      if (new Set(pk.steps.map(s=>s.key)).size !== pk.steps.length) out.push('package repeats a measure');
+    }
+    const d = {...DEFAULTS, Wex:1.2, X:200, vents:0, Qm:900};
+    const ids = candidates(d).map(m=>m.id);
+    ['exitW','vents','Qm'].forEach(k=>{ if (!ids.includes(k)) out.push('numeric measure missing: '+k); });
+    if (!candidates({...d, pPlan:false}).some(m=>m.patch.pPlan===true)) out.push('evacuation plan not offered');
+    if (!candidates({...d, M:3}).some(m=>m.patch.M===0)) out.push('linings not offered');
+    // building package on a deliberately bad building
+    P.building.sAD=0; P.building.pPlan=false; P.floors.forEach(f=>{ f.data.X=150; f.data.Wex=1.2; f.data.Qm=1200; });
+    const bp = buildingPackage();
+    if (!bp || !bp.steps.length) out.push('building package empty for a bad building');
+    else { let acc = {}; bp.steps.forEach(s=>{ acc = s.apply(acc); });
+      const fx = floorsEval(bp.fls)(acc); if (Math.abs(excess(fx)-excess(bp.final))>1e-9) out.push('building package replay mismatch');
+      if (bp.steps.some(s=>s.scope==='b' && !Object.keys(s.patch).every(k=>BFIELDS.has(k)))) out.push('shared step changes a floor field');
+      if (bp.steps.some(s=>s.scope!=='b' && Object.keys(s.patch).some(k=>BFIELDS.has(k) && !s.fl.ovr[k]))) out.push('floor step changes a shared field'); }
+    P.view='summary'; P.ctx='b'; renderAll();
+    if (!/بستهٔ پیشنهادی ساختمان/.test(document.querySelector('main').textContent)) out.push('building package not shown in summary');
+    if (!document.querySelector('.ctag.c1, .ctag.c2, .ctag.c3')) out.push('cost tags not shown');
+    if (!/بستهٔ پیشنهادی/.test(summaryText())) out.push('package missing from summary text');
+    P.ctx=P.floors[1].id; P.view='result'; renderAll();
+    if (!/بستهٔ پیشنهادی/.test(document.querySelector('main').textContent)) out.push('space package not shown on result page');
+    return out; });
+  r.forEach(x=>P('MEASURES',x)); }
 await p.evaluate(()=>{P.ctx='b';st.view='sp';renderAll()});
 await p.click('#btnNew'); await p.click('.modal [data-yes]'); await p.waitForTimeout(100);
 if (await p.evaluate(()=>P.floors.length!==1 || P.floors[0].data.area!==600 || P.ctx!=='b')) P('INTERACT new assessment did not reset');
