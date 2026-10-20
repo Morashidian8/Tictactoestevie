@@ -233,6 +233,10 @@ h3.sec{font-size:17px;font-weight:800;margin:28px 0 4px}
 .ctag{display:inline-block;font-size:11.5px;font-weight:600;border-radius:999px;padding:0 8px;white-space:nowrap;vertical-align:1px;background:var(--surface-2);border:1px solid var(--line)}
 .ctag.c1{background:var(--ok-soft);color:var(--ok);border-color:transparent}.ctag.c2{background:var(--warn-soft);color:var(--warn);border-color:transparent}.ctag.c3{background:var(--bad-soft);color:var(--bad);border-color:transparent}
 .ctag.sc{background:var(--accent-soft);color:var(--accent);border-color:transparent}
+.pkgact{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:12px}
+.pkgbar{display:grid;gap:6px;margin:12px 12px 0;padding:12px 16px;border-radius:12px;background:var(--info-soft);border:1px solid var(--line);font-size:14px}
+.pkgbar ol{margin:6px 0 0;padding-inline-start:20px;display:grid;gap:3px}.pkgbar em{font-style:normal;color:var(--accent)}.pkgbar .btn{justify-self:start}
+@media print{.pkgact,.pkgbar .btn{display:none}}
 .verdict.slim{margin-top:10px;padding:10px 14px;font-size:14px}
 .chips{display:flex;flex-wrap:wrap;gap:6px}
 .chip{font-size:12px;border-radius:7px;padding:1px 8px;background:var(--surface-2);border:1px solid var(--line);font-variant-numeric:tabular-nums}
@@ -1083,6 +1087,7 @@ function summaryHTML(){
         <div><span>ارزیاب</span><b>${esc(b.assessor||"—")}</b></div><div><span>تاریخ</span><b>${esc(b.date||"—")}</b></div></div></div>
     <div class="sheet-body">
       <div class="verdict ${vlv}">${VERDICT_ICON[vlv]}<span>${esc(msg)}</span></div>
+      ${beforeAfterHTML()}
       <h3 class="sec">ریسک تعیین‌کنندهٔ ساختمان</h3>
       <p class="sec-note">در روش FRAME ریسک‌ها جمع یا میانگین گرفته نمی‌شوند. برای هر نوع ریسک، بدترین فضا وضعیت ساختمان را تعیین می‌کند.</p>
       <div class="big3">${RISKS.map(rk=>{ const w = worst[rk.k]; if (!w) return ""; const R = w.x[rk.k];
@@ -1129,11 +1134,55 @@ function bldPkgHTML(){
     <p class="sec-note">کم‌هزینه‌ترین ترکیب اقدام‌های مشترک و اقدام‌های خاص هر فضا تا همهٔ فضاها در هر سه ریسک به ۱ یا کمتر برسند. هر قدم بیشترین کاهشِ ریسکِ بالای ۱ را نسبت به هزینه‌اش دارد. اعداد هر ردیف، بدترین مقدار هر ریسک در ساختمان بعد از همین قدم و قدم‌های قبلی است.</p>
     ${pk.steps.length ? `<ol class="sugg pkg">${pk.steps.map(s=>measureLi(s, chips(s.nx), ` <span class="ctag sc">${s.scope==="b" ? "کل ساختمان" : esc(nm(s.fl))}</span>`)).join("")}</ol>` : ""}
     <div class="verdict ${pk.ok?"ok":"bad"} slim">${VERDICT_ICON[pk.ok?"ok":"bad"]}<span>${pk.ok ? `با این ${fa(pk.steps.length,0)} اقدام همهٔ فضاها در هر سه ریسک قابل‌قبول می‌شوند.`
-      : `${pk.steps.length ? "حتی با این اقدام‌ها" : "با اقدام‌های چک‌لیست"} این فضاها به ۱ نمی‌رسند: ${bad.map(esc).join("، ")}. تغییر بزرگ‌تری لازم است (کم کردن افراد، تقسیم فضا، تغییر کاربری یا طراحی دوباره با متخصص).`}</span></div>`;
+      : `${pk.steps.length ? "حتی با این اقدام‌ها" : "با اقدام‌های چک‌لیست"} این فضاها به ۱ نمی‌رسند: ${bad.map(esc).join("، ")}. تغییر بزرگ‌تری لازم است (کم کردن افراد، تقسیم فضا، تغییر کاربری یا طراحی دوباره با متخصص).`}</span></div>
+    ${pk.steps.length ? applyBtn("b") : ""}`;
+}
+/* ---------- apply the recommended package (planned state) ----------
+   The answers before the package are kept in P.prev, so the result can be compared and undone. */
+const applyBtn = kind => `<div class="pkgact"><button class="btn primary" type="button" data-applypkg="${kind}">اعمال این بسته روی پاسخ‌ها</button>
+  <span class="help">پاسخ‌های فعلی نگه داشته می‌شوند تا مقایسه «قبل و بعد» ببینید و هر وقت خواستید برگردید.</span></div>`;
+function setAnswer(fl, k, v, shared){
+  if (shared){ P.building[k] = v; delete P.bunk[k]; }
+  else { fl.data[k] = v; delete fl.unk[k]; }
+}
+function applyPackage(kind){
+  const fl = curFloor(), pk = kind==="b" ? buildingPackage() : (fl ? spacePackage(compute(st.data)) : null);
+  if (!pk || !pk.steps.length) return;
+  const snap = JSON.stringify({...P, prev:undefined, pkg:undefined});
+  const done = pk.steps.map(s=>({t:s.t, o:s.o, cost:s.cost, where: kind==="b" ? (s.scope==="b" ? "کل ساختمان" : floorName(s.fl)) : (sharedTag(s) ? "کل ساختمان" : floorName(fl))}));
+  if (kind==="b"){
+    let acc = {}; pk.steps.forEach(s=>{ acc = s.apply(acc); });
+    Object.entries(acc.b||{}).forEach(([k,v])=>setAnswer(null, k, v, true));
+    P.floors.forEach(f=>Object.entries(acc[f.id]||{}).forEach(([k,v])=>setAnswer(f, k, v, false)));
+  } else pk.steps.forEach(s=>Object.entries(s.patch).forEach(([k,v])=>setAnswer(fl, k, v, BFIELDS.has(k) && !fl.ovr[k])));
+  P.prev = P.prev || snap; P.pkg = [...(P.pkg||[]), ...done]; P.sample = false;
+  renderAll(); window.scrollTo({top:0}); toast(`${fa(done.length,0)} اقدام روی پاسخ‌ها اعمال شد`);
+}
+function undoPackage(){
+  const {ctx, view} = P, prev = JSON.parse(P.prev);
+  P = prev; P.ctx = ctx==="b" || floorOf(ctx) ? ctx : "b"; P.view = view; renderAll(); toast("پاسخ‌ها به وضع موجود برگشت");
+}
+function withPrev(fn){ const cur = P; P = JSON.parse(cur.prev); try { return fn(); } finally { P = cur; } }
+function pkgBanner(){
+  if (!P.prev) return "";
+  const list = P.pkg||[];
+  return `<div class="pkgbar"><div><b>پاسخ‌ها «بعد از اجرای بستهٔ پیشنهادی» است، نه وضع موجود.</b> ${fa(list.length,0)} اقدام اعمال شده است.</div>
+    <details><summary>اقدام‌های اعمال‌شده</summary><ol>${list.map(s=>`<li>${esc(s.t)}: <em>${esc(s.o)}</em> ${costTag(s.cost)} <span class="muted">(${esc(s.where)})</span></li>`).join("")}</ol></details>
+    <button class="btn mini" type="button" data-undopkg>بازگشت به وضع موجود</button></div>`;
+}
+function beforeAfterHTML(){
+  if (!P.prev) return "";
+  const worst = rows => Object.fromEntries(RISKS.map(rk=>[rk.k, Math.max(...rows.filter(r=>!r.x.invalid).map(r=>r.x[rk.k]))]));
+  const nBad = rows => rows.filter(r=>!r.x.invalid && RISKS.some(rk=>r.x[rk.k]>1)).length;
+  const before = withPrev(()=>{ const r = floorResults(); return {w:worst(r), n:nBad(r), all:r.length}; }), r = floorResults(), after = {w:worst(r), n:nBad(r)};
+  return `<h3 class="sec">مقایسهٔ قبل و بعد از بستهٔ پیشنهادی</h3><div class="scroll"><table class="t"><thead><tr><th></th><th>وضع موجود</th><th>بعد از بسته</th></tr></thead><tbody>
+    ${RISKS.map(rk=>`<tr><td>بدترین ریسک ${rk.n}</td><td class="num">${sumBar(before.w[rk.k])}</td><td class="num">${sumBar(after.w[rk.k])}</td></tr>`).join("")}
+    <tr><td>فضاهای بالای ۱</td><td class="num">${fa(before.n,0)} از ${fa(before.all,0)}</td><td class="num">${fa(after.n,0)} از ${fa(r.length,0)}</td></tr></tbody></table></div>`;
 }
 function summaryText(){
   const rows = floorResults(), b = {...DEFAULTS, ...P.building}, L = [];
   L.push("گزارش جمع‌بندی ارزیابی ریسک حریق ساختمان (FRAME 2015)");
+  if (P.prev) L.push(`وضعیت: بعد از اجرای بستهٔ پیشنهادی (${fa((P.pkg||[]).length,0)} اقدام) — نه وضع موجود`);
   L.push(`ساختمان: ${b.project||"—"} | ارزیاب: ${b.assessor||"—"} | تاریخ: ${b.date||"—"}`); L.push("");
   rows.forEach(r=>L.push(`${r.name}: ${RISKS.map(rk=>`${rk.k}=${fa(r.x[rk.k])}`).join("  ")}  (${levelTxt(Math.max(...RISKS.map(rk=>capR(r.x[rk.k]))))})`));
   L.push(""); RISKS.forEach(rk=>{ const w = worstOf(rows.filter(r=>!r.x.invalid), rk.k); if (w) L.push(`ریسک تعیین‌کنندهٔ ${rk.n}: ${fa(w.x[rk.k])} — ${w.name}`); });
@@ -1359,7 +1408,7 @@ function renderMain(){
   else if (st.view==="result") html = resultHTML(x);
   else if (st.view==="report") html = reportHTML(x);
   else html = formulaHTML(x);
-  $("#main").innerHTML = html;
+  $("#main").innerHTML = pkgBanner() + html;
   renderedVis = visSig();
 }
 
@@ -1566,7 +1615,8 @@ function spacePkgHTML(x){
     <p class="sec-note">کم‌هزینه‌ترین مسیری که ابزار پیدا کرد تا هر سه ریسک به ۱ یا کمتر برسد. در هر قدم اقدامی انتخاب شده که بیشترین کاهشِ ریسکِ بالای ۱ را نسبت به هزینه‌اش دارد. اعداد هر ردیف، ریسک‌ها بعد از اجرای همین قدم و قدم‌های قبلی است.</p>
     ${pk.steps.length ? `<ol class="sugg pkg">${pk.steps.map(s=>measureLi(s, RISKS.map(rk=>`<span class="chip">${rk.n} <b class="c-${level(s.nx[0][rk.k])}">${fa(s.nx[0][rk.k])}</b></span>`).join(""), sharedTag(s))).join("")}</ol>` : ""}
     <div class="verdict ${pk.ok?"ok":"bad"} slim">${VERDICT_ICON[pk.ok?"ok":"bad"]}<span>${pk.ok ? `با این ${fa(pk.steps.length,0)} اقدام هر سه ریسک قابل‌قبول (۱ یا کمتر) می‌شود.`
-      : `${pk.steps.length ? "حتی با این اقدام‌ها" : "با اقدام‌های چک‌لیست"} ریسک ${left.join(" و ")} به ۱ نمی‌رسد. تغییر بزرگ‌تری لازم است: کم کردن تعداد افراد، تقسیم فضا با دیوار ضدحریق، تغییر کاربری یا طراحی دوباره با کمک متخصص.`}</span></div>`;
+      : `${pk.steps.length ? "حتی با این اقدام‌ها" : "با اقدام‌های چک‌لیست"} ریسک ${left.join(" و ")} به ۱ نمی‌رسد. تغییر بزرگ‌تری لازم است: کم کردن تعداد افراد، تقسیم فضا با دیوار ضدحریق، تغییر کاربری یا طراحی دوباره با کمک متخصص.`}</span></div>
+    ${pk.steps.length ? applyBtn("space") : ""}`;
 }
 
 const VERDICT_ICON = {
@@ -1668,6 +1718,7 @@ function reportHTML(x){
 function reportText(){
   const x = compute(st.data), L = [];
   L.push("گزارش ارزیابی ریسک حریق به روش FRAME");
+  if (P.prev) L.push(`وضعیت: بعد از اجرای بستهٔ پیشنهادی (${fa((P.pkg||[]).length,0)} اقدام) — نه وضع موجود`);
   L.push(`پروژه: ${st.data.project||"—"} | فضا: ${st.data.comp||"—"} | ارزیاب: ${st.data.assessor||"—"} | تاریخ: ${st.data.date||"—"}`);
   L.push("");
   RISKS.forEach(rk=>L.push(`ریسک ${rk.n} ${rk.k} = ${fa(x[rk.k])} (${levelTxt(x[rk.k])})`));
@@ -1744,6 +1795,9 @@ document.addEventListener("click", ev=>{
     const y = window.scrollY; renderMain(); window.scrollTo(0,y); const el = document.getElementById("fld_"+k); if (el) el.scrollIntoView({block:"center"}); save(); return; }
   const uo = ev.target.closest("[data-unovr]");
   if (uo){ const fl = curFloor(), k = uo.dataset.unovr; delete fl.ovr[k]; delete fl.data[k]; delete fl.unk[k]; const y = window.scrollY; renderMain(); window.scrollTo(0,y); refreshLive(); return; }
+  const ap = ev.target.closest("[data-applypkg]");
+  if (ap){ ask("اقدام‌های این بسته روی پاسخ‌ها اعمال شود؟ نتیجه «وضعیت بعد از اجرا» را نشان می‌دهد و پاسخ‌های فعلی برای مقایسه و بازگشت نگه داشته می‌شوند.", ()=>applyPackage(ap.dataset.applypkg)); return; }
+  if (ev.target.closest("[data-undopkg]")){ ask("همهٔ پاسخ‌ها به وضع موجود (پیش از اعمال بسته) برگردد؟ تغییرهایی که بعد از اعمال بسته داده‌اید هم برمی‌گردند.", undoPackage); return; }
   if (ev.target.closest("#btnCopySum")) copyText(summaryText(),"متن جمع‌بندی کپی شد");
   if (ev.target.closest("#btnCopyRep")) copyText(reportText(),"متن گزارش کپی شد");
   if (ev.target.closest("#btnPrint")) window.print();
