@@ -1,7 +1,7 @@
 // Service Worker — اپ «ارزیاب ریسک حریق FRAME»
 // شبکه مقدم: هر بار که اپ باز می‌شود آخرین نسخهٔ منتشرشده گرفته می‌شود؛
 // کش فقط برای وقتی است که اینترنت نیست.
-const CACHE = "frame-risk-v3";
+const CACHE = "frame-risk-v4";
 const ASSETS = ["./", "./index.html", "./manifest.json", "./icons/icon-192.png", "./icons/icon-512.png"];
 
 self.addEventListener("install", (e) => {
