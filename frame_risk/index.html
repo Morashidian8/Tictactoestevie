@@ -237,6 +237,7 @@ h3.sec{font-size:17px;font-weight:800;margin:28px 0 4px}
 .pkgbar{display:grid;gap:6px;margin:12px 12px 0;padding:12px 16px;border-radius:12px;background:var(--info-soft);border:1px solid var(--line);font-size:14px}
 .pkgbar ol{margin:6px 0 0;padding-inline-start:20px;display:grid;gap:3px}.pkgbar em{font-style:normal;color:var(--accent)}.pkgbar .btn{justify-self:start}
 @media print{.pkgact,.pkgbar .btn{display:none}}
+.sumt tr.mrow td:first-child{font-weight:600}
 .verdict.slim{margin-top:10px;padding:10px 14px;font-size:14px}
 .chips{display:flex;flex-wrap:wrap;gap:6px}
 .chip{font-size:12px;border-radius:7px;padding:1px 8px;background:var(--surface-2);border:1px solid var(--line);font-variant-numeric:tabular-nums}
@@ -871,6 +872,26 @@ const SECTIONS = [
     {id:"fi", t:"sel", l:"دیوارهای داخلی که این فضا را از راهروها و فضاهای دیگر جدا می‌کنند", unk:0,
       h:"دیوارهای بین اتاق‌ها و راهروی اصلی را ببینید، نه پارتیشن‌های داخل یک اتاق.",
       o:MIN("پارتیشن شیشه‌ای، MDF یا کناف یک‌لایه","کناف دولایه از کف تا سقف اصلی","دیوار آجری یا بلوکی کامل از کف تا سقف اصلی","دیوار آجری یا بلوکی ضخیم","دیوار بتنی یا دیوار آتش","طبق مدرک فنی")},
+    {id:"vsep", t:"sel", l:"طبقه‌ها از نظر آتش از هم جدا هستند؟ (رایزر، شافت، داکت، پلهٔ باز)", unk:"none", when:()=>P.floors.length>1,
+      how:["روش FRAME هر «واحد حریق» را جدا حساب می‌کند و فرض می‌کند آتش از سقف و دیوارهای آن رد نمی‌شود. اگر بین دو طبقه راه باز برای آتش و دود هست، آن دو طبقه یک واحد حریق‌اند.",
+           "رایزرهای برق و تأسیسات، شافت‌ها و داکت‌ها را در هر طبقه باز کنید: جای عبور لوله و کابل از سقف باید با مادهٔ ضدحریق (ملات، فوم یا بالشتک ضدحریق) پر شده باشد.",
+           "راه‌پله و شافت آسانسور باید در هر طبقه با دیوار و در ضدحریق از طبقه جدا باشند. پلهٔ باز، نورگیر و آتریوم یعنی طبقه‌ها به هم راه دارند.",
+           "اگر مطمئن نیستید، «نمی‌دانم» بزنید؛ ابزار حالت محتاطانه (هیچ جداسازی) را حساب می‌کند."],
+      o:[{v:"all",l:"بله، همهٔ طبقه‌ها جدا هستند",hint:"عبورها آتش‌بند شده‌اند و پله‌ها و شافت‌ها محصورند."},
+         {v:"some",l:"بعضی طبقه‌ها به هم راه باز دارند",hint:"برای هر طبقه جداگانه می‌پرسیم که به طبقهٔ بالایی راه باز دارد یا نه."},
+         {v:"none",l:"نه، هیچ طبقه‌ای حوزه‌بندی نشده",hint:"کل ساختمان یک واحد حریق حساب می‌شود."}]},
+    {id:"vopen", t:"sel", l:"این فضا به طبقهٔ بالایی راه باز برای آتش دارد؟", when:d=>P.floors.length>1 && d.vsep==="some",
+      h:"مثلاً رایزری که در سقف این طبقه آتش‌بند نشده، داکت یا شافت باز، یا پله‌ای که در این طبقه در ضدحریق ندارد.",
+      o:YN("بله، دست‌کم یک مسیر باز به طبقهٔ بالا","نه، سقف و شافت‌های این طبقه آتش‌بند است")},
+    {id:"extH", t:"sel", l:"خطر بیرونی نزدیک ساختمان (مخزن سوخت، دیزل ژنراتور، پست برق، انشعاب گاز، انبار ضایعات)", unk:2,
+      how:["دور ساختمان را بگردید و هر چیزی را که می‌تواند آتش بگیرد و آتش را به ساختمان برساند پیدا کنید: مخزن گازوئیل، ژنراتور، ترانسفورماتور، رگولاتور گاز، انبار کارتن و ضایعات.",
+           "فاصلهٔ آن تا دیوار یا پنجرهٔ ساختمان را اندازه بگیرید. برای مخزن سوخت، فاصلهٔ مجاز را از مقررات (مبحث ۳ و NFPA 30) کنترل کنید.",
+           "«با جداسازی» یعنی فاصلهٔ کافی دارد، یا بین آن و ساختمان دیوار ضدحریق هست، یا داخل اتاقک استاندارد است.",
+           "روش FRAME خطر بیرونی را مستقیم ندارد. این ابزار برای فضاهای مجاور، آن را محتاطانه به‌صورت یک علت احتمالی آتش (+۰٫۲ در a) و بی‌اثر شدن مقاومت نما وارد می‌کند."],
+      o:[{v:0,l:"نه، چنین خطری نزدیک ساختمان نیست"},{v:1,l:"هست، ولی با جداسازی کافی (فاصله، دیوار ضدحریق یا اتاقک)"},{v:2,l:"هست و جداسازی ندارد (مثلاً مخزن گازوئیل چسبیده به ساختمان)"}]},
+    {id:"extNear", t:"sel", l:"این فضا کنار آن خطر بیرونی است؟", when:d=>d.extH>0,
+      h:"فضاهایی را «بله» بزنید که دیوار یا پنجره‌شان رو به آن خطر و هم‌تراز یا تا یک طبقه بالاتر از آن است.",
+      o:YN("بله، دیوار یا پنجره‌اش رو به آن خطر است","نه")},
    ]},
  { id:"esc", title:"راه‌های فرار", k:"",
    intro:"این بخش امکاناتی را می‌سنجد که به افراد کمک می‌کند سالم بیرون بروند. امتیاز دتکتورها، اسپرینکلرها و ایستگاه آتش‌نشانی از بخش‌های قبل خودکار حساب می‌شود.",
@@ -941,7 +962,7 @@ const DEFAULTS = {project:"",comp:"",assessor:"",date:"",use:"office",
   w1:0,store:0,dia:59.2,looped:false,c70:1,c80:0,c110:0,bar:4,
   n1a:true,n1b:true,n1c:false,n1d:true,n2:0,n3:0,n4:0,n5:2,
   sAD:0,sTrans:false,sFault:false,sZone:false,s6:0,s7:0,s2:false,s3:false,s4:false,s5:0,s8:8,s9:0,
-  fs:90,fo:60,fc:90,fi:30,
+  fs:90,fo:60,fc:90,fi:30,vsep:"all",vopen:false,extH:0,extNear:false,
   uSt:1,uHe:0,u2:0,uSign:false,uVoice:false,u300:true,uPartial:false,u4:0,uVent:false,
   yFin:false,ySpare:false,yRep:false,yReloc:false,yCoop:false,yProd:false,yDet:false,ySpr:false,yOth:false};
 const SAMPLE = Object.assign({}, DEFAULTS, {project:"نمونه: بیمارستان فرضی",comp:"طبقهٔ دوم – بخش بستری",assessor:"(نمونه)",date:"۱۴۰۵/۰۷/۲۷",
@@ -962,7 +983,7 @@ const KEY = "frame-risk-v3";
 const META = new Set(["project","assessor","date"]);
 const BFIELDS = new Set([...META, "access","Z","Qi","fs","fo","fc","a2","a3","a4","a5","pPlan",
   "w1","store","dia","looped","c70","c80","c110","bar","n1a","n1b","n1c","n1d","n2","n3","n4","n5",
-  "sAD","sTrans","sFault","sZone","s6","s2","s3","s4","s5","s8","s9","uSt","uVoice","u300","uSign",
+  "sAD","sTrans","sFault","sZone","s6","s2","s3","s4","s5","s8","s9","vsep","extH","uSt","uVoice","u300","uSign",
   "yFin","ySpare","yRep","yReloc","yCoop","yProd"]);
 const pick = (o, keep) => Object.fromEntries(Object.entries(o).filter(([k])=>keep(k)));
 let fid = 0;
@@ -1058,21 +1079,62 @@ function goCtx(ctx){
 /* ---------- building summary ---------- */
 const capR = v => Math.min(isFinite(v) ? v : 10, 10);
 function floorResults(){ return P.floors.map((fl,i)=>({fl, i, name:floorName(fl,i), d:floorData(fl), x:compute(floorData(fl))})); }
+/* floors that are not fire-separated (open riser, shaft, stair …) form one compartment. FRAME is then applied to
+   the combined compartment as well; the building is governed by the worst of the separate floors and these. */
+function linkGroups(ds){                      // ds: floor data → groups (index arrays, ≥ 2 floors, bottom-up)
+  if (ds.length < 2) return [];
+  const ord = ds.map((d,i)=>i).sort((a,b)=>(+ds[a].E||0)-(+ds[b].E||0)), out = [];
+  let cur = [ord[0]];
+  for (let j=1; j<ord.length; j++){
+    const lo = ds[ord[j-1]], open = lo.vsep==="none" || (lo.vsep==="some" && lo.vopen===true);
+    if (open) cur.push(ord[j]); else { if (cur.length>1) out.push(cur); cur = [ord[j]]; }
+  }
+  if (cur.length>1) out.push(cur);
+  return out;
+}
+const MG_SUM = ["area","win","vents","flow","X","Wex","value"];
+const MG_HIGHBAD = new Set(["Qi","M","a1","a2","a3","a4","a5","a6","a7","a10","p0","c1","d","w1","n2","n3","n4","n5","extH"]);
+const MG_TRUEBAD = new Set(["a8","a9","a11","extNear","vopen"]);
+const MG_KEEP = new Set(["project","comp","assessor","date","use","E","H","l","h","Qm","fc","u300","vsep","vopen", ...MG_SUM]);
+function mergeData(ds){                        // ds bottom-up; the worst answer of the member floors is taken
+  const ref = ds.reduce((a,d)=>Math.abs(+d.E||0) > Math.abs(+a.E||0) ? d : a, ds[ds.length-1]), m = {...ref};
+  MG_SUM.forEach(k=>m[k] = ds.reduce((t,d)=>t + (+d[k]||0), 0));
+  m.l = Math.max(...ds.map(d=>+d.l||0));
+  m.Qm = Math.round(ds.reduce((t,d)=>t + d.Qm*d.area, 0) / Math.max(1, m.area));
+  m.h = ds.reduce((t,d)=>t + (+d.h||0), 0);         // the engine limits h to 15 m
+  m.fc = ds[ds.length-1].fc;                          // the ceiling of the combined compartment is the top floor's
+  m.u300 = m.X < 300; m.vsep = "all"; m.vopen = false;
+  ALLFIELDS.forEach(f=>{
+    if (MG_KEEP.has(f.id) || f.t==="text") return;
+    const vs = ds.map(d=>d[f.id]);
+    if (typeof vs[0]==="boolean") m[f.id] = MG_TRUEBAD.has(f.id) ? vs.some(v=>v===true) : vs.every(v=>v===true);
+    else if (f.id==="access") m[f.id] = vs.includes("narrow") ? "narrow" : "long";
+    else if (vs.every(v=>typeof v==="number")) m[f.id] = MG_HIGHBAD.has(f.id) ? Math.max(...vs) : Math.min(...vs);
+  });
+  return m;
+}
+const groupName = names => `واحد ترکیبی: ${names.join(" + ")}`;
+function compResults(rows = floorResults()){
+  return linkGroups(rows.map(r=>r.d)).map(g=>{ const mem = g.map(i=>rows[i]), d = mergeData(mem.map(r=>r.d));
+    return {merged:true, members:mem, name:groupName(mem.map(r=>r.name)), d, x:compute(d)}; });
+}
+const allResults = () => { const r = floorResults(); return [...r, ...compResults(r)]; };
 function worstOf(rows, k){ return rows.reduce((w,r)=> (w===null || capR(r.x[k]) > capR(w.x[k])) ? r : w, null); }
 function sumBar(v){
   const lv = level(v), w = Math.min(capR(v)/2,1)*100;
   return `<span class="sb"><b class="c-${lv}">${fa(v)}</b><span class="sbt"><i class="${lv}" style="width:${w.toFixed(1)}%"></i></span></span>`;
 }
 function summaryHTML(){
-  const rows = floorResults(), valid = rows.filter(r=>!r.x.invalid);
+  const rows = floorResults(), crows = compResults(rows), valid = [...rows, ...crows].filter(r=>!r.x.invalid);
   const worst = Object.fromEntries(RISKS.map(rk=>[rk.k, worstOf(valid, rk.k)]));
-  const badRows = valid.filter(r=>RISKS.some(rk=>r.x[rk.k]>1));
+  const badAll = valid.filter(r=>RISKS.some(rk=>r.x[rk.k]>1)), badRows = badAll.filter(r=>!r.merged);
   const anyWarn = valid.some(r=>RISKS.some(rk=>r.x[rk.k]>0.8));
-  const vlv = badRows.length ? "bad" : anyWarn ? "warn" : "ok";
+  const vlv = badAll.length ? "bad" : anyWarn ? "warn" : "ok";
   const nBad = k => valid.filter(r=>r.x[k]>1).length;
   const msg = vlv==="ok" ? `هر سه ریسک در همهٔ ${fa(rows.length,0)} فضای ارزیابی‌شده قابل‌قبول است.`
     : vlv==="warn" ? "هیچ فضایی از حد مجاز بیشتر نیست، ولی دست‌کم یک فضا در محدودهٔ مرزی (۰٫۸ تا ۱) است."
-    : `${fa(badRows.length,0)} فضا از ${fa(rows.length,0)} دست‌کم در یک ریسک از حد مجاز (۱٫۰) بیشترند: ${badRows.map(r=>r.name).join("، ")}. ساختمان در وضعیت فعلی قابل‌قبول نیست.`;
+    : badRows.length ? `${fa(badRows.length,0)} فضا از ${fa(rows.length,0)} دست‌کم در یک ریسک از حد مجاز (۱٫۰) بیشترند: ${badAll.map(r=>r.name).join("، ")}. ساختمان در وضعیت فعلی قابل‌قبول نیست.`
+    : `هر طبقه به‌تنهایی قابل‌قبول است، ولی چون طبقه‌ها از نظر آتش از هم جدا نیستند، واحد حریق ترکیبی از حد مجاز بیشتر است: ${badAll.map(r=>r.name).join("، ")}. ساختمان در وضعیت فعلی قابل‌قبول نیست.`;
   const bm = buildingMeasures();
   const inFrame = (()=>{ try{ return window.self !== window.top; }catch(e){ return true; } })();
   const ovrRows = rows.flatMap(r=>Object.keys(r.fl.ovr).filter(k=>r.fl.ovr[k] && FIELD[k] && !META.has(k)).map(k=>({r, f:FIELD[k]})));
@@ -1100,7 +1162,13 @@ function summaryHTML(){
           <td class="num hsm">${fa(r.d.area,0)}</td><td class="num hsm">${fa(r.d.X,0)}</td>
           ${r.x.invalid ? `<td colspan="3">ورودی‌ها قابل محاسبه نیست</td>` : RISKS.map(rk=>`<td class="num">${sumBar(r.x[rk.k])}</td>`).join("")}
           <td class="num hsm">${fa(r.x.Ro)}</td><td>${r.x.invalid?"—":`<span class="pill ${level(w)}" style="margin:0">${levelTxt(w)}</span>`}</td></tr>`; }).join("")}
+        ${crows.length ? `<tr><td colspan="9" class="grp">واحدهای حریق ترکیبی (طبقه‌هایی که از هم جدا نیستند)</td></tr>` + crows.map(r=>{ const w = Math.max(...RISKS.map(rk=>capR(r.x[rk.k])));
+          return `<tr class="mrow${w>1?" badrow":""}"><td>${esc(r.name)}</td><td>${esc((USES.find(u=>u.v===r.d.use)||{}).l||"—")}</td>
+          <td class="num hsm">${fa(r.d.area,0)}</td><td class="num hsm">${fa(r.d.X,0)}</td>
+          ${r.x.invalid ? `<td colspan="3">ورودی‌ها قابل محاسبه نیست</td>` : RISKS.map(rk=>`<td class="num">${sumBar(r.x[rk.k])}</td>`).join("")}
+          <td class="num hsm">${fa(r.x.Ro)}</td><td>${r.x.invalid?"—":`<span class="pill ${level(w)}" style="margin:0">${levelTxt(w)}</span>`}</td></tr>`; }).join("") : ""}
       </tbody></table></div>
+      ${crows.length ? `<p class="sec-note">هر طبقه یک بار جدا و یک بار همراه طبقه‌هایی که با آن‌ها راه باز برای آتش دارد (رایزر، شافت یا پلهٔ باز) به‌عنوان یک واحد حریق حساب شده است. در واحد ترکیبی مساحت، افراد، عرض خروج و ارزش جمع شده‌اند و برای بقیهٔ موارد بدترین پاسخ طبقه‌ها ملاک است. بدترین نتیجهٔ هر دو حالت، ریسک ساختمان را تعیین می‌کند. آتش‌بند کردن عبورها این طبقه‌ها را دوباره از هم جدا می‌کند.</p>` : ""}
       <h3 class="sec">اقدام‌های مشترک (اثر روی همهٔ فضاها)</h3>
       <p class="sec-note">این اقدام‌ها یک‌بار در کل ساختمان انجام می‌شوند. ستون‌ها بدترین مقدار هر ریسک در ساختمان را قبل و بعد از اقدام نشان می‌دهند.</p>
       ${bm.length ? `<ol class="sugg">${bm.map(m=>{ const nb = RISKS.reduce((s,rk)=>s+m.nx.filter(x=>x[rk.k]>1).length,0), ob = RISKS.reduce((s,rk)=>s+valid.filter(r=>r.x[rk.k]>1).length,0);
@@ -1129,7 +1197,7 @@ function bldPkgHTML(){
   const nm = fl => floorName(fl, P.floors.indexOf(fl));
   const chips = xs => RISKS.map(rk=>{ const w = Math.max(...xs.map(x=>x[rk.k])); return `<span class="chip">${rk.sn||rk.n} <b class="c-${level(w)}">${fa(w)}</b></span>`; }).join("")
     + `<span class="chip">فضاهای بالای ۱: <b>${fa(xs.filter(x=>RISKS.some(rk=>x[rk.k]>1)).length,0)}</b></span>`;
-  const bad = pk.fls.filter((fl,i)=>RISKS.some(rk=>!(pk.final[i][rk.k] <= 1))).map(nm);
+  const bad = pk.final.map((x,i)=>RISKS.some(rk=>!(x[rk.k] <= 1)) ? pk.final.names[i] : null).filter(Boolean);
   return `<h3 class="sec">بستهٔ پیشنهادی ساختمان</h3>
     <p class="sec-note">کم‌هزینه‌ترین ترکیب اقدام‌های مشترک و اقدام‌های خاص هر فضا تا همهٔ فضاها در هر سه ریسک به ۱ یا کمتر برسند. هر قدم بیشترین کاهشِ ریسکِ بالای ۱ را نسبت به هزینه‌اش دارد. اعداد هر ردیف، بدترین مقدار هر ریسک در ساختمان بعد از همین قدم و قدم‌های قبلی است.</p>
     ${pk.steps.length ? `<ol class="sugg pkg">${pk.steps.map(s=>measureLi(s, chips(s.nx), ` <span class="ctag sc">${s.scope==="b" ? "کل ساختمان" : esc(nm(s.fl))}</span>`)).join("")}</ol>` : ""}
@@ -1174,18 +1242,19 @@ function beforeAfterHTML(){
   if (!P.prev) return "";
   const worst = rows => Object.fromEntries(RISKS.map(rk=>[rk.k, Math.max(...rows.filter(r=>!r.x.invalid).map(r=>r.x[rk.k]))]));
   const nBad = rows => rows.filter(r=>!r.x.invalid && RISKS.some(rk=>r.x[rk.k]>1)).length;
-  const before = withPrev(()=>{ const r = floorResults(); return {w:worst(r), n:nBad(r), all:r.length}; }), r = floorResults(), after = {w:worst(r), n:nBad(r)};
+  const before = withPrev(()=>{ const r = allResults(); return {w:worst(r), n:nBad(r), all:r.length}; }), r = allResults(), after = {w:worst(r), n:nBad(r)};
   return `<h3 class="sec">مقایسهٔ قبل و بعد از بستهٔ پیشنهادی</h3><div class="scroll"><table class="t"><thead><tr><th></th><th>وضع موجود</th><th>بعد از بسته</th></tr></thead><tbody>
     ${RISKS.map(rk=>`<tr><td>بدترین ریسک ${rk.n}</td><td class="num">${sumBar(before.w[rk.k])}</td><td class="num">${sumBar(after.w[rk.k])}</td></tr>`).join("")}
-    <tr><td>فضاهای بالای ۱</td><td class="num">${fa(before.n,0)} از ${fa(before.all,0)}</td><td class="num">${fa(after.n,0)} از ${fa(r.length,0)}</td></tr></tbody></table></div>`;
+    <tr><td>فضاها و واحدهای بالای ۱</td><td class="num">${fa(before.n,0)} از ${fa(before.all,0)}</td><td class="num">${fa(after.n,0)} از ${fa(r.length,0)}</td></tr></tbody></table></div>`;
 }
 function summaryText(){
   const rows = floorResults(), b = {...DEFAULTS, ...P.building}, L = [];
   L.push("گزارش جمع‌بندی ارزیابی ریسک حریق ساختمان (FRAME 2015)");
   if (P.prev) L.push(`وضعیت: بعد از اجرای بستهٔ پیشنهادی (${fa((P.pkg||[]).length,0)} اقدام) — نه وضع موجود`);
   L.push(`ساختمان: ${b.project||"—"} | ارزیاب: ${b.assessor||"—"} | تاریخ: ${b.date||"—"}`); L.push("");
-  rows.forEach(r=>L.push(`${r.name}: ${RISKS.map(rk=>`${rk.k}=${fa(r.x[rk.k])}`).join("  ")}  (${levelTxt(Math.max(...RISKS.map(rk=>capR(r.x[rk.k]))))})`));
-  L.push(""); RISKS.forEach(rk=>{ const w = worstOf(rows.filter(r=>!r.x.invalid), rk.k); if (w) L.push(`ریسک تعیین‌کنندهٔ ${rk.n}: ${fa(w.x[rk.k])} — ${w.name}`); });
+  const all = [...rows, ...compResults(rows)];
+  all.forEach(r=>L.push(`${r.name}: ${RISKS.map(rk=>`${rk.k}=${fa(r.x[rk.k])}`).join("  ")}  (${levelTxt(Math.max(...RISKS.map(rk=>capR(r.x[rk.k]))))})`));
+  L.push(""); RISKS.forEach(rk=>{ const w = worstOf(all.filter(r=>!r.x.invalid), rk.k); if (w) L.push(`ریسک تعیین‌کنندهٔ ${rk.n}: ${fa(w.x[rk.k])} — ${w.name}`); });
   const pk = buildingPackage();
   if (pk && pk.steps.length){
     L.push(""); L.push("بستهٔ پیشنهادی (هزینه‌ها تقریبی):");
@@ -1230,10 +1299,14 @@ function effective(d){                      // hidden (not applicable) questions
   ALLFIELDS.forEach(f=>{ if (f.when && !f.when(d)) e[f.id] = typeof d[f.id]==="boolean" ? false : 0; });
   return e;
 }
+// external hazard next to this space (not in FRAME itself): counted as an ignition source and the facade
+// towards it gives no protection when it is not separated
+const extExposed = d => !!d.extNear && d.extH===2;
+const extA = d => d.extNear ? (d.extH===2 ? 0.2 : d.extH===1 ? 0.05 : 0) : 0;
 function compute(d){
   d = effective(d);
   const x = FRAME.compute({...d,
-    a:[d.a1,d.a2,d.a3,d.a4,d.a5,d.a6,d.a7,d.a8?0.1:0,d.a9?0.1:0,d.a10,d.a11?0.1:0],
+    a:[d.a1,d.a2,d.a3,d.a4,d.a5,d.a6,d.a7,d.a8?0.1:0,d.a9?0.1:0,d.a10,(d.a11?0.1:0) + extA(d)], fo:extExposed(d) ? 0 : d.fo,
     x:Math.max(1, Math.floor(d.Wex/0.6 + 1e-9)), n1:[d.n1a,d.n1b,d.n1c,d.n1d], flowcap:d.dia,
     deflNow:309, defl2000:121, xr:1, kEst:0, rset:0});
   x.area = d.area; x.xUnits = Math.max(1, Math.floor(d.Wex/0.6 + 1e-9)); x.tuMin = x.tu/60;
@@ -1425,7 +1498,7 @@ function renderRes(){
       <div class="ftab">${rows.map(r=>`<button type="button" data-ctx="${r.fl.id}"><span>${esc(r.name)}</span>${RISKS.map(rk=>`<b class="c-${level(r.x[rk.k])}">${fa(r.x[rk.k])}</b>`).join("")}</button>`).join("")}
       <div class="fth"><span></span>${RISKS.map(rk=>`<span>${rk.sn||rk.n}</span>`).join("")}</div></div>
       <button class="btn primary" type="button" data-go="summary" style="width:100%;justify-content:center;margin-top:10px">جمع‌بندی ساختمان</button></div>`;
-    const v = rows.filter(r=>!r.x.invalid);
+    const v = [...rows, ...compResults(rows)].filter(r=>!r.x.invalid);
     $("#mbar").innerHTML = RISKS.map(rk=>{ const w = worstOf(v, rk.k); const R = w ? w.x[rk.k] : NaN; return `<button type="button" data-go="summary"><span><span class="dot" style="background:var(--${level(R)})"></span>بدترین ${rk.sn||rk.n}</span><b class="c-${level(R)}">${fa(R)}</b></button>`; }).join("");
     return;
   }
@@ -1502,11 +1575,11 @@ const MSEL = {   // field → cost class of moving to another option (number, or
   w1:(v,c)=>c===4?1:3, dia:3, looped:3, s3:2, s4:3, s5:3,
   n1a:2, n1b:1, n1c:1, n1d:1, n2:1, n3:2, n5:1,
   sAD:v=>v===2?1:2, sTrans:1, sFault:1, sZone:2, s6:3, s7:3, s9:3,
-  fs:3, fo:3, fc:3, fi:2,
+  fs:3, fo:3, fc:3, fi:2, vsep:(v,c)=>c==="none"?3:1, vopen:1, extH:v=>v===1?2:3,
   uSt:3, uHe:2, u2:2, uSign:1, uVoice:2, uPartial:1, u4:2, uVent:2,
   yFin:1, ySpare:2, yRep:2, yReloc:2, yCoop:1, yDet:1, ySpr:2, yOth:3,
 };
-const MSKIP = {sAD:[4], s9:[14]};
+const MSKIP = {sAD:[4], s9:[14], vsep:["some"]};
 const NO_S7 = ["office","home","school","hotel","hosp"];
 const MREQ = {sTrans:d=>d.sAD>2, sFault:d=>d.sAD>2, sZone:d=>d.sAD>2};   // a panel is needed first: no alarm transmission from stand-alone smoke alarms
 const waterReq = d => Math.ceil((d.Qi + d.Qm)/4);
@@ -1594,7 +1667,12 @@ function floorCands(acc, fls){
     .map(c=>({...c, key:fl.id+":"+c.key, fl, scope:fl.id, apply:a=>({...a, [fl.id]:{...(a[fl.id]||{}), ...c.patch}})})));
 }
 const validFloors = () => P.floors.filter(fl=>!compute(floorData(fl)).invalid);
-const floorsEval = fls => acc => fls.map(fl=>compute(floorBase(fl, acc)));
+const floorsEval = fls => acc => {
+  const ds = fls.map(fl=>floorBase(fl, acc)), xs = ds.map(d=>compute(d)), gs = linkGroups(ds);
+  xs.names = fls.map(fl=>floorName(fl, P.floors.indexOf(fl)));
+  gs.forEach(g=>{ xs.push(compute(mergeData(g.map(i=>ds[i])))); xs.names.push(groupName(g.map(i=>xs.names[i]))); });
+  return xs;
+};
 function buildingMeasures(){
   const fls = validFloors(), ev = floorsEval(fls), base = riskSum(ev({}));
   return rankBest(sharedCands({}, fls).map(c=>{ const nx = ev(c.apply({})); return nx.some(x=>x.invalid) ? null : {...c, nx, tot:base - riskSum(nx)}; }).filter(Boolean), 6);
@@ -1630,6 +1708,12 @@ const VERDICT_ICON = {
   warn:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5 2.8 19.5h18.4z"/><path d="M12 10v4.5M12 17.2v.3"/></svg>',
   bad:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7.5v5.5M12 16.2v.3"/></svg>',
 };
+function grpNote(){
+  const fl = curFloor(), g = fl && compResults().find(c=>c.members.some(m=>m.fl===fl));
+  if (!g) return "";
+  const w = Math.max(...RISKS.map(rk=>capR(g.x[rk.k]))), lv = g.x.invalid ? "bad" : level(w);
+  return `<div class="verdict ${lv} slim">${VERDICT_ICON[lv]}<span>این فضا با ${esc(g.members.filter(m=>m.fl!==fl).map(m=>m.name).join("، "))} راه باز برای آتش دارد (رایزر، شافت یا پلهٔ باز)، پس همه با هم یک واحد حریق‌اند. ریسک واحد ترکیبی: ${RISKS.map(rk=>`${rk.sn||rk.n} <b>${fa(g.x[rk.k])}</b>`).join("، ")}. ریسک ساختمان با بدترین این دو حالت سنجیده می‌شود. <button class="linkbtn" type="button" data-go="summary">جمع‌بندی ساختمان</button></span></div>`;
+}
 function resultHTML(x){
   if (x.invalid) return `<div class="sheet-head"><span class="eyebrow">نتیجهٔ ارزیابی</span><h2>ورودی‌ها قابل محاسبه نیستند</h2></div><div class="sheet-body"><div class="verdict bad">${VERDICT_ICON.bad}<span>${x.invalid==="vent" ? "با این ورودی‌ها فاکتور تهویه منفی می‌شود. مساحت پنجره‌ها و دریچه‌ها در بخش «سقف و تهویهٔ دود» را با مساحت کف مقایسه و اصلاح کنید." : "امتیاز سیستم‌های حفاظت ویژه آن‌قدر زیاد است که از محدودهٔ فرمول FRAME بیرون می‌رود. پاسخ‌های بخش «سیستم‌های خودکار» را دوباره بررسی کنید؛ معمولاً یک ساختمان همهٔ این سیستم‌ها را با هم ندارد."}</span></div></div><div class="pager"><button class="btn primary" type="button" data-go="${x.invalid==="vent"?"vent":"sp"}">رفتن به همان بخش</button></div>`;
   const worst = Math.max(x.R,x.R1,x.R2), vlv = level(worst);
@@ -1653,6 +1737,7 @@ function resultHTML(x){
     <div class="sheet-body">
       <div class="verdict ${vlv}">${VERDICT_ICON[vlv]}<span>${msg}</span></div>
       <div class="big3">${RISKS.map(card).join("")}</div>
+      ${grpNote()}
       <p class="sec-note" style="margin-top:12px">معیار FRAME: اگر R کمتر یا مساوی ۱ باشد، حفاظت موجود برای ریسک بالقوه کافی است. این ابزار بازهٔ ۰٫۸ تا ۱ را «مرزی» نشان می‌دهد تا حاشیهٔ اطمینان دیده شود.</p>
       <div class="ro"><div><span>ریسک اولیه R<sub>o</sub></span><b>${fa(x.Ro)}</b></div><p>بر اساس ریسک اولیه (فقط با استحکام سازه، بدون تجهیزات)، روش FRAME این سطح حفاظت را توصیه می‌کند: <b>${esc(FRAME.roAdvice(x.Ro))}</b></p></div>
       <h3 class="sec">چه چیزی ریسک را بالا یا پایین می‌برد؟</h3>

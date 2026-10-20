@@ -209,6 +209,33 @@ await p.click('label:has(#sAD_4)'); await p.waitForTimeout(80);
 if (!(await p.$('#fld_sTrans'))) P('INTERACT transmission question should appear after choosing detectors');
 await p.evaluate(()=>{P.ctx=P.floors[0].id;st.view='result';renderAll()}); await p.click('[data-drv="R1"]');
 if (!(await p.$('[data-drv="R1"].on'))) P('INTERACT driver tab');
+// ---- vertical links: combined compartments, external hazard ----
+{ const r = await p.evaluate(()=>{ const out=[];
+    P = sampleProject(); const n = P.floors.length;
+    if (compResults().length) out.push('separated floors must not form a combined compartment');
+    P.building.vsep='none'; let c = compResults();
+    if (c.length!==1 || c[0].members.length!==n) out.push('no compartmentation must give one compartment of all floors');
+    const sumA = P.floors.reduce((t,f)=>t+floorData(f).area,0), sumX = P.floors.reduce((t,f)=>t+floorData(f).X,0);
+    if (c[0].d.area!==sumA || c[0].d.X!==sumX) out.push('combined compartment must add areas and occupants');
+    if (RISKS.some(rk=>c[0].x[rk.k] + 1e-9 < Math.min(...P.floors.map(f=>compute(floorData(f))[rk.k])))) out.push('combined compartment better than every single floor');
+    P.building.vsep='some'; P.floors[1].data.vopen=true; P.floors[3].data.vopen=true;
+    c = compResults(); if (c.length!==2 || c.some(g=>g.members.length!==2)) out.push('open links must group only the linked floors');
+    P.view='summary'; P.ctx='b'; renderAll();
+    if (document.querySelectorAll('tr.mrow').length!==2) out.push('combined compartments missing in the summary table');
+    const all = allResults(), w = worstOf(all.filter(r=>!r.x.invalid),'R');
+    if (all.some(r=>!r.x.invalid && r.x.R > w.x.R)) out.push('governing risk ignores combined compartments');
+    P.building.vsep='none'; P.floors.forEach(f=>{ f.data.X=200; f.data.Wex=1.2; });
+    const bp = buildingPackage();
+    if (bp && !bp.steps.some(s=>'vsep' in s.patch)) out.push('compartmentation not offered although floors are linked');
+    if (!candidates({...floorData(P.floors[0]), vsep:'some', vopen:true}).some(m=>m.patch.vopen===false)) out.push('sealing an open riser not offered');
+    P.ctx=P.floors[1].id; P.view='result'; renderAll();
+    if (!/واحد حریق‌اند/.test(document.querySelector('main').textContent)) out.push('combined compartment note missing on the result page');
+    const d0 = {...floorData(P.floors[0]), extH:2, extNear:true}, x1 = compute(d0), x0 = compute({...d0, extNear:false}), xs = compute({...d0, extH:1});
+    if (!(x1.a > xs.a && xs.a > x0.a) || !(x1.f < x0.f)) out.push('external hazard not reflected in a / facade');
+    if (!candidates(d0).some(m=>m.patch.extH===1)) out.push('separating the external hazard not offered');
+    P = sampleProject(); renderAll();
+    return out; });
+  r.forEach(x=>P('COMPART',x)); }
 // ---- phone: answering must not move the page (chip bars once dragged it to the top) ----
 { const q = await b.newPage({viewport:{width:390,height:740}}); await q.goto(URL);
   for (const [ctx,view,inp] of [['f','ppl','#Wex'],['b','water','#bar'],['f','ign',null],['b','sp',null]]){
