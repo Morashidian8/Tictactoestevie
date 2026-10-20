@@ -4,7 +4,7 @@ import { execSync, spawn } from 'node:child_process';
 import fs from 'node:fs';
 const REPO=new globalThis.URL('../..', import.meta.url).pathname.replace(/\/$/,''), OUT=process.argv[2]||'shots', SITE=OUT+'/site';
 fs.rmSync(OUT,{recursive:true,force:true}); fs.mkdirSync(SITE+'/frame',{recursive:true});
-execSync(`cat ${REPO}/frame_risk/pwa/head.html ${REPO}/frame_risk/index.html > ${SITE}/frame/index.html && cp ${REPO}/frame_risk/pwa/manifest.json ${REPO}/frame_risk/pwa/sw.js ${SITE}/frame/ && cp -r ${REPO}/frame_risk/pwa/icons ${SITE}/frame/icons`);
+execSync(`cat ${REPO}/frame_risk/pwa/head.html ${REPO}/frame_risk/index.html > ${SITE}/frame/index.html && cp ${REPO}/frame_risk/pwa/manifest.json ${REPO}/frame_risk/pwa/sw.js ${SITE}/frame/ && cp -r ${REPO}/frame_risk/pwa/icons ${SITE}/frame/icons && cp ${REPO}/frame_risk/export.js ${SITE}/frame/ && cp -r ${REPO}/frame_risk/vendor ${SITE}/frame/vendor`);
 try{ execSync('fuser -k 8766/tcp',{stdio:'ignore'}); }catch(e){}
 const srv = spawn('python3',['-m','http.server','8766'],{cwd:SITE,stdio:'ignore'});
 await new Promise(r=>setTimeout(r,800));
@@ -236,6 +236,26 @@ if (!(await p.$('[data-drv="R1"].on'))) P('INTERACT driver tab');
     P = sampleProject(); renderAll();
     return out; });
   r.forEach(x=>P('COMPART',x)); }
+// ---- file exports: Excel / Word, Persian / English ----
+{ const r = await p.evaluate(async()=>{ const out=[];
+    P = sampleProject(); P.building.vsep='some'; P.floors[1].data.vopen=true; P.ctx='b'; P.view='summary'; renderAll();
+    if (document.querySelectorAll('[data-export]').length!==4) out.push('export buttons missing on the summary');
+    if (!document.querySelectorAll('#sumCharts img').length) out.push('charts missing on the summary');
+    await loadScript('./export.js'); await loadScript('./vendor/exceljs-4.4.0.min.js'); await loadScript('./vendor/docx-8.5.0.umd.js');
+    for (const k of ['xlsx','docx']) for (const l of ['fa','en']){
+      try{ const bl = await FRAMEX[k](l); const head = new Uint8Array(await bl.slice(0,2).arrayBuffer());
+        if (bl.size < 20000 || head[0]!==0x50 || head[1]!==0x4B) out.push(`${k}/${l} file looks wrong (${bl.size} bytes)`); }
+      catch(e){ out.push(`${k}/${l} failed: ${e.message}`); }
+    }
+    const wb = new ExcelJS.Workbook(); await wb.xlsx.load(await (await FRAMEX.xlsx('en')).arrayBuffer());
+    const names = wb.worksheets.map(w=>w.name), M = FRAMEX_MODEL.model();
+    if (names.length !== 2 + M.units.length) out.push('workbook sheets ≠ summary + measures + spaces: ' + names.join(','));
+    const sh = wb.getWorksheet(names[2]); let found = false;
+    sh.eachRow(row=>row.eachCell(c=>{ if (c.value && c.value.formula && /IF\(/.test(c.value.formula)) found = true; }));
+    if (!found) out.push('space sheet has no live R formula');
+    P = sampleProject(); renderAll();
+    return out; });
+  r.forEach(x=>P('EXPORT',x)); }
 // ---- phone: answering must not move the page (chip bars once dragged it to the top) ----
 { const q = await b.newPage({viewport:{width:390,height:740}}); await q.goto(URL);
   for (const [ctx,view,inp] of [['f','ppl','#Wex'],['b','water','#bar'],['f','ign',null],['b','sp',null]]){
