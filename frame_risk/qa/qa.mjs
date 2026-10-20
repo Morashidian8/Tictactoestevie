@@ -5,10 +5,11 @@ import fs from 'node:fs';
 const REPO=new globalThis.URL('../..', import.meta.url).pathname.replace(/\/$/,''), OUT=process.argv[2]||'shots', SITE=OUT+'/site';
 fs.rmSync(OUT,{recursive:true,force:true}); fs.mkdirSync(SITE+'/frame',{recursive:true});
 execSync(`cat ${REPO}/frame_risk/pwa/head.html ${REPO}/frame_risk/index.html > ${SITE}/frame/index.html && cp ${REPO}/frame_risk/pwa/manifest.json ${REPO}/frame_risk/pwa/sw.js ${SITE}/frame/ && cp -r ${REPO}/frame_risk/pwa/icons ${SITE}/frame/icons`);
+try{ execSync('fuser -k 8766/tcp',{stdio:'ignore'}); }catch(e){}
 const srv = spawn('python3',['-m','http.server','8766'],{cwd:SITE,stdio:'ignore'});
 await new Promise(r=>setTimeout(r,800));
 const URL='http://localhost:8766/frame/';
-const VIEWS=['start','info','geo','vent','fuel','ign','ppl','val','water','np','sp','fr','esc','cont','result','report','formula'];
+const VIEWS=['b:info','b:water','b:sp','summary','start','info','geo','vent','fuel','ign','ppl','val','water','np','sp','fr','esc','cont','result','report','formula'];
 const b = await chromium.launch({executablePath:'/opt/pw-browsers/chromium'}).catch(()=>chromium.launch());
 const problems=[]; const P=(...a)=>{problems.push(a.join(' '));};
 for (const vp of [{n:'phone',width:390,height:844},{n:'desk',width:1366,height:900}]) for (const theme of ['light','dark']) {
@@ -17,7 +18,7 @@ for (const vp of [{n:'phone',width:390,height:844},{n:'desk',width:1366,height:9
   p.on('pageerror',e=>P('PAGEERROR',vp.n,theme,e.message)); p.on('console',m=>{if(m.type()==='error')P('CONSOLE',vp.n,theme,m.text())});
   await p.goto(URL); await p.waitForLoadState('networkidle').catch(()=>{});
   for (const v of VIEWS){
-    await p.evaluate(v=>{st.view=v;renderAll();window.scrollTo(0,0);document.querySelectorAll('main details').forEach(d=>d.open=true)},v); await p.waitForTimeout(120);
+    await p.evaluate(v=>{ const b=v.startsWith('b:'); P.ctx = (b||v==='summary') ? 'b' : P.floors[0].id; st.view=b?v.slice(2):v; renderAll();window.scrollTo(0,0);document.querySelectorAll('main details').forEach(d=>d.open=true)},v); await p.waitForTimeout(120);
     const r = await p.evaluate(()=>{
       const de=document.documentElement, out=[];
       if (de.scrollWidth>de.clientWidth+1) out.push('HSCROLL '+de.scrollWidth+'>'+de.clientWidth);
@@ -31,7 +32,7 @@ for (const vp of [{n:'phone',width:390,height:844},{n:'desk',width:1366,height:9
       return out.slice(0,8);
     });
     r.forEach(x=>P('LAYOUT',vp.n,theme,v,x));
-    if (theme==='light' || ['info','result','report'].includes(v)) await p.screenshot({path:`${OUT}/${vp.n}-${theme}-${v}.png`,fullPage:true});
+    if (theme==='light' || ['info','result','report','summary'].includes(v)) await p.screenshot({path:`${OUT}/${vp.n}-${theme}-${v.replace(':','_')}.png`,fullPage:true});
   }
   await ctx.close();
 }
@@ -77,11 +78,11 @@ const L = await p.evaluate(()=>{
 L.out.forEach(x=>P('LOGIC',x));
 console.log('sample R/R1/R2', L.sample.R.toFixed(3), L.sample.R1.toFixed(3), L.sample.R2.toFixed(3), '| default', L.def.R.toFixed(3), L.def.R1.toFixed(3), L.def.R2.toFixed(3));
 // interaction: number input → live gauge, radio → selection, confirm → progress, new assessment, data round-trip
-await p.evaluate(()=>{st.view='geo';renderAll()});
+await p.evaluate(()=>{P.ctx=P.floors[0].id;st.view='geo';renderAll()});
 const before = await p.textContent('#res');
 await p.fill('#area','2400'); await p.waitForTimeout(100);
 if ((await p.textContent('#res'))===before) P('INTERACT number input did not update live panel');
-await p.evaluate(()=>{st.view='sp';renderAll()});
+await p.evaluate(()=>{P.ctx='b';st.view='sp';renderAll()});
 await p.click('label.opt:has-text("دارد، آب از شبکهٔ شهری")'); await p.waitForTimeout(100);
 if (await p.evaluate(()=>st.data.s6)!==11) P('INTERACT radio did not set s6');
 if (!(await p.$('label.opt.sel:has-text("دارد، آب از شبکهٔ شهری")'))) P('INTERACT radio .sel class missing');
@@ -91,14 +92,36 @@ await p.click('label:has(#s8_0)'); if (await p.evaluate(()=>st.unk.s8 || st.data
 await p.click('[data-confirm]'); await p.waitForTimeout(100);
 if (!(await p.evaluate(()=>st.seen.includes('sp')))) P('INTERACT confirm not recorded');
 if (await p.evaluate(()=>st.view)!=='fr') P('INTERACT next did not advance');
-await p.evaluate(()=>{st.view='sp';renderAll()});
+// ---- project: building profile, spaces, overrides, summary ----
+{ const r = await p.evaluate(()=>{ const out=[]; const n0 = P.floors.length;
+    const b6 = P.building.s6;                                      // building answer set above (sprinklers)
+    P.ctx = P.floors[1].id; if (st.data.s6 !== b6) out.push('floor does not inherit building answer');
+    P.view='sp'; renderAll();
+    if (document.querySelector('#fld_s6')) out.push('inherited question should be shown compact, not as a field');
+    document.querySelector('[data-ovr="s6"]').click();
+    if (!document.querySelector('#fld_s6')) out.push('override did not open the field');
+    document.querySelector('label:has(#s6_0)').click();
+    if (P.floors[1].data.s6!==0 || P.building.s6!==b6) out.push('override must change only this floor');
+    P.ctx = P.floors[2].id; if (st.data.s6!==b6) out.push('other floors must keep building answer');
+    P.ctx = P.floors[1].id; renderAll(); document.querySelector('[data-unovr="s6"]').click();
+    if (st.data.s6!==b6 || P.floors[1].ovr.s6) out.push('reset to building answer failed');
+    document.querySelector('[data-addfloor]').click();
+    if (P.floors.length!==n0+1 || P.ctx!==P.floors[n0].id) out.push('add floor failed');
+    if (P.floors[n0].data.E !== (+P.floors[n0-1].data.E||0)+1) out.push('new floor should be one level up');
+    P.view='summary'; P.ctx='b'; renderAll();
+    if (document.querySelectorAll('table.sumt tbody tr').length!==P.floors.length) out.push('summary table rows ≠ spaces');
+    const rows = floorResults(), w = worstOf(rows,'R1');
+    if (rows.some(r=>r.x.R1>w.x.R1)) out.push('governing R1 is not the maximum');
+    return out; });
+  r.forEach(x=>P('PROJECT',x)); }
+await p.evaluate(()=>{P.ctx='b';st.view='sp';renderAll()});
 await p.click('#btnNew'); await p.click('.modal [data-yes]'); await p.waitForTimeout(100);
-if (await p.evaluate(()=>st.data.area)!==600) P('INTERACT new assessment did not reset');
+if (await p.evaluate(()=>P.floors.length!==1 || P.floors[0].data.area!==600 || P.ctx!=='b')) P('INTERACT new assessment did not reset');
 await p.click('#btnData'); const txt = await p.inputValue('#dataBox');
 await p.fill('#dataBox', txt.replace('"area": 600','"area": 777')); await p.click('#dLoad'); await p.waitForTimeout(100);
-if (await p.evaluate(()=>st.data.area)!==777) P('INTERACT data restore failed');
-await p.reload(); if (await p.evaluate(()=>st.data.area)!==777) P('INTERACT localStorage persistence failed');
-await p.evaluate(()=>{st.view='ppl';renderAll()}); await p.click('[data-est="X"]'); await p.waitForTimeout(80);
+if (await p.evaluate(()=>P.floors[0].data.area)!==777) P('INTERACT data restore failed');
+await p.reload(); if (await p.evaluate(()=>P.floors[0].data.area)!==777) P('INTERACT localStorage persistence failed');
+await p.evaluate(()=>{P.ctx=P.floors[0].id;st.view='ppl';renderAll()}); await p.click('[data-est="X"]'); await p.waitForTimeout(80);
 if (await p.evaluate(()=>st.data.X!==Math.max(1,Math.round(st.data.area*USES.find(u=>u.v===st.data.use).dens)))) P('INTERACT estimate X');
 await p.click('details.how summary'); if (!(await p.$('details.how[open]'))) P('INTERACT how guide');
 await p.fill('#X','5000'); await p.fill('#Wex','0.6'); if (!(await p.textContent('#warn_Wex')).trim()) P('INTERACT warning not shown');
@@ -108,13 +131,13 @@ if (await p.evaluate(()=>st.data.Qm!==Math.round((10*700+100*40)/st.data.area)))
 await p.evaluate(()=>{st.view='start';renderAll()}); await p.click('[data-begin]'); await p.waitForTimeout(80);
 if (await p.$('.modal [data-yes]')) await p.click('.modal [data-yes]');
 if (await p.evaluate(()=>st.view)!=='info') P('INTERACT begin button');
-await p.evaluate(()=>{st.view='geo';renderAll()}); await p.fill('#area','3818'); await p.fill('#l','52'); await p.waitForTimeout(80);
+await p.evaluate(()=>{P.ctx=P.floors[0].id;st.view='geo';renderAll()}); await p.fill('#area','3818'); await p.fill('#l','52'); await p.waitForTimeout(80);
 if (!(await p.textContent('#warn_l')).trim()) P('INTERACT width>length warning not shown');
-await p.evaluate(()=>{st.view='sp';st.data.sAD=0;renderAll()});
+await p.evaluate(()=>{P.ctx='b';st.view='sp';st.data.sAD=0;renderAll()});
 if (await p.$('#fld_sTrans')) P('INTERACT transmission question should be hidden without detectors');
 await p.click('label:has(#sAD_4)'); await p.waitForTimeout(80);
 if (!(await p.$('#fld_sTrans'))) P('INTERACT transmission question should appear after choosing detectors');
-await p.evaluate(()=>{st.view='result';renderAll()}); await p.click('[data-drv="R1"]');
+await p.evaluate(()=>{P.ctx=P.floors[0].id;st.view='result';renderAll()}); await p.click('[data-drv="R1"]');
 if (!(await p.$('[data-drv="R1"].on'))) P('INTERACT driver tab');
 await b.close(); srv.kill();
 console.log(problems.length? 'PROBLEMS:\n'+[...new Set(problems)].join('\n') : 'NO PROBLEMS');

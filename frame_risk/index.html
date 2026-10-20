@@ -268,14 +268,69 @@ textarea.in{width:100%;min-height:150px;font-family:var(--f-mono);font-size:12px
 .mbar{display:none}
 .smn{display:none}
 
+
+/* ---- project: building profile + spaces ---- */
+.ctxbar{display:flex;gap:6px;flex-wrap:wrap;align-items:center;padding-block:16px 0}
+.cx{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line-2);background:var(--surface);color:var(--ink);border-radius:999px;padding:6px 14px;cursor:pointer;font-size:13.5px;font-weight:600;white-space:nowrap}
+.cx svg{width:15px;height:15px}
+.cx:hover{border-color:var(--muted)}
+.cx.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.cx .dot{width:8px;height:8px;border-radius:50%;flex:none}
+.cx.add{border-style:dashed;color:var(--info)}
+.cx.sum{color:var(--accent);border-color:var(--accent)}
+.cx.sum.on{background:var(--accent);color:var(--accent-ink)}
+.cx.del{color:var(--bad);border-color:transparent;background:none;font-weight:500}
+.cxsep{width:1px;height:22px;background:var(--line-2);margin:0 4px}
+.where{font-weight:700;color:var(--band-ink)}
+.ctxnote{display:flex;gap:8px;align-items:flex-start;font-size:13.5px;color:var(--muted);margin:2px 0 0}
+.ctxnote svg{width:16px;height:16px;flex:none;margin-top:4px;color:var(--info)}
+.shared{margin-top:20px;border:1px dashed var(--line-2);border-radius:12px;padding:12px 14px;background:var(--surface-2)}
+.shared .sh-t{display:flex;gap:7px;align-items:center;font-weight:700;font-size:13.5px;color:var(--info);margin-bottom:6px}
+.shared .sh-t svg{width:16px;height:16px}
+.shared ul{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.shared li{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 10px;align-items:center;font-size:13.5px;padding:6px 0;border-top:1px solid var(--line)}
+.shared li:first-child{border-top:0}
+.shared li .q{grid-column:1;color:var(--muted)}
+.shared li b{grid-column:1;font-weight:600}
+.shared li .btn{grid-column:2;grid-row:1/3;white-space:nowrap}
+.field.ovr{background:var(--accent-soft);margin-inline:-12px;padding-inline:12px;border-radius:10px}
+.ovnote{font-size:12.5px;color:var(--accent);font-weight:600}
+.ovnote .linkbtn{font-size:12.5px;margin-inline-start:6px}
+.tagx{font-size:11px;border-radius:6px;padding:0 6px;background:var(--surface-2);border:1px solid var(--line);color:var(--muted);font-weight:500;white-space:nowrap}
+.tagx.own{background:var(--accent-soft);color:var(--accent);border-color:transparent}
+.sb{display:grid;gap:3px;min-width:70px}
+.sbt{display:block;height:5px;border-radius:3px;background:var(--surface-2);position:relative;overflow:hidden;direction:ltr}
+.sbt::after{content:"";position:absolute;left:50%;top:0;bottom:0;width:1px;background:var(--muted);opacity:.6}
+.sbt i{position:absolute;left:0;top:0;bottom:0;border-radius:3px}
+.sbt i.ok{background:var(--ok)} .sbt i.warn{background:var(--warn)} .sbt i.bad{background:var(--bad)}
+table.sumt tr.badrow td{background:color-mix(in srgb, var(--bad-soft) 55%, transparent)}
+.fm{border:1px solid var(--line);border-radius:12px;padding:10px 14px;margin-bottom:8px}
+.fm ul{margin:6px 0 0;padding-inline-start:18px;display:grid;gap:4px;font-size:14px}
+.fm em{font-style:normal;color:var(--accent)}
+.ftab{display:grid;gap:2px}
+.ftab button,.ftab .fth{display:grid;grid-template-columns:minmax(0,1fr) repeat(3,46px);gap:6px;align-items:center;border:0;background:none;padding:6px 4px;border-radius:8px;cursor:pointer;text-align:right;font-size:13px;color:var(--ink)}
+.ftab button:hover{background:var(--surface-2)}
+.ftab button span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ftab button b{font-variant-numeric:tabular-nums;text-align:center}
+.ftab .fth{cursor:default;color:var(--muted);font-size:11px;order:-1}
+.ftab .fth span{text-align:center}
+.ftab .fth span:first-child{text-align:right}
+body.wide aside.res{display:none}
+body.wide .layout{grid-template-columns:236px minmax(0,1fr)}
+table.sumt td:first-child{min-width:150px}
+table.sumt td,table.sumt th{white-space:nowrap}
+table.sumt td:first-child .linkbtn{white-space:normal}
+@media print{ .ctxbar,.ctxnote,.shared .btn{display:none!important} }
 @media (max-width:1140px){
-  .layout{grid-template-columns:220px minmax(0,1fr)}
+  .layout,body.wide .layout{grid-template-columns:220px minmax(0,1fr)}
   aside.res{grid-column:2;position:static;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));order:3}
 }
 @media (max-width:800px){
   body{padding-block:0 92px}
-  .layout{grid-template-columns:minmax(0,1fr);gap:14px;padding-block:14px 0}
+  .layout,body.wide .layout{grid-template-columns:minmax(0,1fr);gap:14px;padding-block:14px 0}
   aside.res{display:none}
+  .ctxbar{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;padding-block:12px 0}
+  .ctxbar::-webkit-scrollbar{display:none}
   nav.steps{position:static;flex-direction:row;overflow-x:auto;gap:6px;padding:2px 2px 6px;scrollbar-width:none}
   nav.steps::-webkit-scrollbar{display:none}
   .step{width:auto;flex:none;padding:6px 10px 6px 12px;border:1px solid var(--line);background:var(--surface);border-radius:999px;gap:7px}
@@ -356,6 +411,7 @@ textarea.in{width:100%;min-height:150px;font-family:var(--f-mono);font-size:12px
 </header>
 
 <div class="wrap gut">
+  <div class="ctxbar" id="ctxbar" aria-label="ساختمان و فضاها"></div>
   <div class="layout">
     <nav class="steps" id="steps" aria-label="مراحل ارزیابی"></nav>
     <main class="sheet" id="main"></main>
@@ -886,13 +942,209 @@ const SAMPLE = Object.assign({}, DEFAULTS, {project:"نمونه: بیمارست�
   fs:120,fo:60,fc:120,fi:60,uSt:3,uHe:2,uSign:true,u300:true,yFin:true,ySpare:true});
 
 /* ---------- state ---------- */
-const KEY = "frame-risk-v2";
-let st = load() || fresh(SAMPLE, true, "start");
 let drvTab = "R";
 function today(){ try{ return new Date().toLocaleDateString("fa-IR-u-ca-persian",{year:"numeric",month:"2-digit",day:"2-digit"}); }catch(e){ return ""; } }
-function fresh(d, sample, view){ const data = {...d}; if (!sample && !data.date) data.date = today(); return {data, unk:{}, seen:[], view:view||"start", sample}; }
-function load(){ try{ const j = JSON.parse(localStorage.getItem(KEY)); if(j && j.data){ j.data = {...DEFAULTS, ...j.data}; j.seen = j.seen||[]; j.unk = j.unk||{}; return j; } }catch(e){} return null; }
-function save(){ try{ localStorage.setItem(KEY, JSON.stringify(st)); }catch(e){} }
+/* ---------- project: one building profile + several floors ----------
+   Questions in BFIELDS are answered once for the building; each floor answers the rest.
+   A floor can override any building answer (ovr) — e.g. the floor with the server room. */
+const KEY = "frame-risk-v3";
+const META = new Set(["project","assessor","date"]);
+const BFIELDS = new Set([...META, "access","Z","Qi","fs","fo","fc","a2","a3","a4","a5","pPlan",
+  "w1","store","dia","looped","c70","c80","c110","bar","n1a","n1b","n1c","n1d","n2","n3","n4","n5",
+  "sAD","sTrans","sFault","sZone","s6","s2","s3","s4","s5","s8","s9","uSt","uVoice","u300","uSign",
+  "yFin","ySpare","yRep","yReloc","yCoop","yProd"]);
+const pick = (o, keep) => Object.fromEntries(Object.entries(o).filter(([k])=>keep(k)));
+let fid = 0;
+const newId = () => "f" + Date.now().toString(36) + (fid++);
+function makeFloor(d, extra={}){ return {id:newId(), data:pick(d,k=>!BFIELDS.has(k)), ovr:{}, unk:{}, seen:[], ...extra}; }
+function makeProject(src, sample){
+  const p = {v:3, building:pick(src,k=>BFIELDS.has(k)), bunk:{}, bseen:[], floors:[makeFloor(src)], ctx:"b", view:"start", sample:!!sample};
+  if (!sample && !p.building.date) p.building.date = today();
+  return p;
+}
+function fromV2(j){ const p = makeProject({...DEFAULTS, ...j.data}, false); p.floors[0].unk = pick(j.unk||{},k=>!BFIELDS.has(k)); p.bunk = pick(j.unk||{},k=>BFIELDS.has(k)); p.view = "info"; p.ctx = p.floors[0].id; return p; }
+function load(){
+  try{ const j = JSON.parse(localStorage.getItem(KEY)); if (j && j.v===3 && j.floors && j.floors.length) return j; }catch(e){}
+  try{ const j = JSON.parse(localStorage.getItem("frame-risk-v2")); if (j && j.data) return fromV2(j); }catch(e){}
+  return null;
+}
+function save(){ try{ localStorage.setItem(KEY, JSON.stringify(P)); }catch(e){} }
+
+const floorOf = id => P.floors.find(f=>f.id===id);
+const curFloor = () => P.ctx==="b" ? null : floorOf(P.ctx);
+function floorData(fl){
+  const e = {...DEFAULTS};
+  for (const k of Object.keys(DEFAULTS)){
+    if (BFIELDS.has(k) && !fl.ovr[k]) e[k] = k in P.building ? P.building[k] : DEFAULTS[k];
+    else if (k in fl.data) e[k] = fl.data[k];
+    else if (BFIELDS.has(k)) e[k] = k in P.building ? P.building[k] : DEFAULTS[k];
+  }
+  return e;
+}
+function floorUnk(fl){ const u = {}; Object.keys(P.bunk).forEach(k=>{ if (!fl.ovr[k] && P.bunk[k]) u[k]=true; }); Object.keys(fl.unk).forEach(k=>{ if (fl.unk[k]) u[k]=true; }); return u; }
+const floorName = (fl, i) => (fl.data.comp || "").trim() || `فضای ${fa((i ?? P.floors.indexOf(fl))+1,0)}`;
+const inCtx = f => { const fl = curFloor(); return fl ? (!BFIELDS.has(f.id) || !!fl.ovr[f.id]) : BFIELDS.has(f.id); };
+
+/* st.data / st.unk / st.seen route reads and writes to the building or the current floor */
+const dataProxy = new Proxy({}, {
+  get(_, k){ const fl = curFloor(); if (!fl) return k in P.building ? P.building[k] : DEFAULTS[k]; return floorData(fl)[k]; },
+  set(_, k, v){ const fl = curFloor(); if (!fl) P.building[k] = v; else { if (BFIELDS.has(k)) fl.ovr[k] = true; fl.data[k] = v; } return true; },
+  ownKeys(){ return Object.keys(DEFAULTS); },
+  getOwnPropertyDescriptor(_, k){ return k in DEFAULTS ? {value:dataProxy[k], enumerable:true, configurable:true, writable:true} : undefined; },
+  has(_, k){ return k in DEFAULTS; },
+});
+const unkProxy = new Proxy({}, {
+  get(_, k){ const fl = curFloor(); if (!fl) return P.bunk[k]; return BFIELDS.has(k) && !fl.ovr[k] ? P.bunk[k] : fl.unk[k]; },
+  set(_, k, v){ const fl = curFloor(); if (!fl) P.bunk[k] = v; else { if (BFIELDS.has(k)) fl.ovr[k] = true; fl.unk[k] = v; } return true; },
+  deleteProperty(_, k){ const fl = curFloor(); if (!fl) delete P.bunk[k]; else if (BFIELDS.has(k) && !fl.ovr[k]) {} else delete fl.unk[k]; return true; },
+});
+const st = {
+  get data(){ return dataProxy; }, get unk(){ return unkProxy; },
+  get seen(){ const fl = curFloor(); return fl ? fl.seen : P.bseen; },
+  get view(){ return P.view; }, set view(v){ P.view = v; },
+  get sample(){ return P.sample; }, set sample(v){ P.sample = v; },
+};
+const ctxSections = () => P.ctx==="b" ? SECTIONS.filter(s=>s.fields.flatMap(f=>f.row||[f]).some(f=>BFIELDS.has(f.id))) : SECTIONS;
+
+function addFloor(){
+  const last = P.floors[P.floors.length-1], d = {...last.data};
+  d.E = (+d.E||0) + 1; d.H = Math.round(((+d.H||0) + 3.2)*10)/10;
+  d.comp = `طبقهٔ ${fa(d.E,0)}`;
+  const fl = {id:newId(), data:d, ovr:{...last.ovr}, unk:{...last.unk}, seen:[]};
+  P.floors.push(fl); P.ctx = fl.id; P.view = "info"; P.sample = false;
+  renderAll(); toast(`«${d.comp}» با کپی پاسخ‌های «${floorName(last)}» ساخته شد. فقط تفاوت‌ها را تغییر دهید.`);
+}
+function deleteFloor(){
+  const fl = curFloor(); if (!fl || P.floors.length < 2) return;
+  ask(`«${floorName(fl)}» و همهٔ پاسخ‌هایش حذف شود؟`, ()=>{ P.floors = P.floors.filter(f=>f!==fl); P.ctx = P.floors[0].id; P.view = "info"; renderAll(); });
+}
+function goCtx(ctx){
+  const wasSection = SECTIONS.some(s=>s.id===P.view);
+  P.ctx = ctx;
+  if (ctx==="b"){ if (!ctxSections().some(s=>s.id===P.view) && P.view!=="summary") P.view = "info"; }
+  else if (!wasSection && !["result","report","formula"].includes(P.view)) P.view = "info";
+  renderAll();
+}
+
+/* ---------- building summary ---------- */
+const capR = v => Math.min(isFinite(v) ? v : 10, 10);
+function floorResults(){ return P.floors.map((fl,i)=>({fl, i, name:floorName(fl,i), d:floorData(fl), x:compute(floorData(fl))})); }
+function worstOf(rows, k){ return rows.reduce((w,r)=> (w===null || capR(r.x[k]) > capR(w.x[k])) ? r : w, null); }
+function buildingMeasures(rows){
+  const base = rows.map(r=>r.x), out = [];
+  ALLFIELDS.filter(f=>f.t==="sel" && BFIELDS.has(f.id) && !META.has(f.id)).forEach(f=>{
+    const old = P.building[f.id], oldU = P.bunk[f.id];
+    if (!shown(f, {...DEFAULTS, ...P.building})) return;
+    let best = null;
+    f.o.forEach(o=>{
+      if (String(o.v)===String(old ?? DEFAULTS[f.id]) && !oldU) return;
+      P.building[f.id] = o.v; delete P.bunk[f.id];
+      const nx = P.floors.map(fl=>compute(floorData(fl)));
+      const tot = base.reduce((s,x,i)=>s + RISKS.reduce((t,rk)=>t + capR(x[rk.k]) - capR(nx[i][rk.k]), 0), 0);
+      if (tot > 0.01 && (!best || tot > best.tot)) best = {f, o, nx, tot};
+    });
+    if (old===undefined) delete P.building[f.id]; else P.building[f.id] = old;
+    if (oldU) P.bunk[f.id] = oldU;
+    if (best) out.push(best);
+  });
+  return out.sort((a,b)=>b.tot-a.tot).slice(0,6);
+}
+function floorMeasures(r){
+  const saveCtx = P.ctx; P.ctx = r.fl.id;
+  const list = suggestions(r.x).filter(s=>inCtx(s.f)).slice(0,3);
+  P.ctx = saveCtx; return list;
+}
+function sumBar(v){
+  const lv = level(v), w = Math.min(capR(v)/2,1)*100;
+  return `<span class="sb"><b class="c-${lv}">${fa(v)}</b><span class="sbt"><i class="${lv}" style="width:${w.toFixed(1)}%"></i></span></span>`;
+}
+function summaryHTML(){
+  const rows = floorResults(), valid = rows.filter(r=>!r.x.invalid);
+  const worst = Object.fromEntries(RISKS.map(rk=>[rk.k, worstOf(valid, rk.k)]));
+  const badRows = valid.filter(r=>RISKS.some(rk=>r.x[rk.k]>1));
+  const anyWarn = valid.some(r=>RISKS.some(rk=>r.x[rk.k]>0.8));
+  const vlv = badRows.length ? "bad" : anyWarn ? "warn" : "ok";
+  const nBad = k => valid.filter(r=>r.x[k]>1).length;
+  const msg = vlv==="ok" ? `هر سه ریسک در همهٔ ${fa(rows.length,0)} فضای ارزیابی‌شده قابل‌قبول است.`
+    : vlv==="warn" ? "هیچ فضایی از حد مجاز بیشتر نیست، ولی دست‌کم یک فضا در محدودهٔ مرزی (۰٫۸ تا ۱) است."
+    : `${fa(badRows.length,0)} فضا از ${fa(rows.length,0)} دست‌کم در یک ریسک از حد مجاز (۱٫۰) بیشترند: ${badRows.map(r=>r.name).join("، ")}. ساختمان در وضعیت فعلی قابل‌قبول نیست.`;
+  const bm = buildingMeasures(rows);
+  const inFrame = (()=>{ try{ return window.self !== window.top; }catch(e){ return true; } })();
+  const ovrRows = rows.flatMap(r=>Object.keys(r.fl.ovr).filter(k=>r.fl.ovr[k] && FIELD[k] && !META.has(k)).map(k=>({r, f:FIELD[k]})));
+  const bVal = f => { const saveCtx = P.ctx; P.ctx = "b"; const v = fieldVal(f); P.ctx = saveCtx; return v; };
+  const fVal = (r,f) => { const saveCtx = P.ctx; P.ctx = r.fl.id; const v = fieldVal(f); P.ctx = saveCtx; return v; };
+  const unkCount = r => Object.keys(floorUnk(r.fl)).length;
+  const secTot = SECTIONS.length;
+  const b = {...DEFAULTS, ...P.building};
+  return `<div class="sheet-head"><div class="sh-row"><span class="eyebrow">گزارش جمع‌بندی ساختمان</span><span class="ftag">FRAME 2015</span></div>
+      <h2>${esc(b.project||"ساختمان بدون نام")}</h2>
+      <div class="meta"><div><span>تعداد فضاهای ارزیابی‌شده</span><b>${fa(rows.length,0)}</b></div><div><span>مساحت کل</span><b>${fa(rows.reduce((s,r)=>s+(+r.d.area||0),0),0)} متر مربع</b></div>
+        <div><span>ارزیاب</span><b>${esc(b.assessor||"—")}</b></div><div><span>تاریخ</span><b>${esc(b.date||"—")}</b></div></div></div>
+    <div class="sheet-body">
+      <div class="verdict ${vlv}">${VERDICT_ICON[vlv]}<span>${esc(msg)}</span></div>
+      <h3 class="sec">ریسک تعیین‌کنندهٔ ساختمان</h3>
+      <p class="sec-note">در روش FRAME ریسک‌ها جمع یا میانگین گرفته نمی‌شوند. برای هر نوع ریسک، بدترین فضا وضعیت ساختمان را تعیین می‌کند.</p>
+      <div class="big3">${RISKS.map(rk=>{ const w = worst[rk.k]; if (!w) return ""; const R = w.x[rk.k];
+        return `<div class="rcard">${gauge(R,true)}<div class="g-name"><span class="lgn">${rk.n}</span><span class="smn">${rk.sn||rk.n}</span><span class="g-sym">${rk.k}</span></div><span class="pill ${level(R)}">${levelTxt(R)}</span>
+          <div class="need">بدترین فضا: <b>${esc(w.name)}</b><br>${nBad(rk.k) ? `${fa(nBad(rk.k),0)} فضا بالای ۱` : "همهٔ فضاها زیر ۱"}</div></div>`; }).join("")}</div>
+      <h3 class="sec">نتیجهٔ هر فضا</h3>
+      <div class="scroll"><table class="t sumt"><thead><tr><th>فضا</th><th>کاربری</th><th class="hsm">مساحت</th><th class="hsm">افراد</th>${RISKS.map(rk=>`<th>${rk.n} <span class="g-sym">${rk.k}</span></th>`).join("")}<th class="hsm">R<sub>o</sub></th><th>وضعیت</th></tr></thead><tbody>
+        ${rows.map(r=>{ const w = Math.max(...RISKS.map(rk=>capR(r.x[rk.k])));
+          return `<tr${w>1?' class="badrow"':""}><td><button class="linkbtn" type="button" data-floor="${r.fl.id}">${esc(r.name)}</button></td><td>${esc((USES.find(u=>u.v===r.d.use)||{}).l||"—")}</td>
+          <td class="num hsm">${fa(r.d.area,0)}</td><td class="num hsm">${fa(r.d.X,0)}</td>
+          ${r.x.invalid ? `<td colspan="3">ورودی‌ها قابل محاسبه نیست</td>` : RISKS.map(rk=>`<td class="num">${sumBar(r.x[rk.k])}</td>`).join("")}
+          <td class="num hsm">${fa(r.x.Ro)}</td><td>${r.x.invalid?"—":`<span class="pill ${level(w)}" style="margin:0">${levelTxt(w)}</span>`}</td></tr>`; }).join("")}
+      </tbody></table></div>
+      <h3 class="sec">اقدام‌های مشترک (اثر روی همهٔ فضاها)</h3>
+      <p class="sec-note">این اقدام‌ها یک‌بار در کل ساختمان انجام می‌شوند. ستون‌ها بدترین مقدار هر ریسک در ساختمان را قبل و بعد از اقدام نشان می‌دهند.</p>
+      ${bm.length ? `<ol class="sugg">${bm.map(m=>{ const nb = RISKS.reduce((s,rk)=>s+m.nx.filter(x=>x[rk.k]>1).length,0), ob = RISKS.reduce((s,rk)=>s+valid.filter(r=>r.x[rk.k]>1).length,0);
+        return `<li><div class="st">${esc(m.f.l)}: <em>${esc(m.o.l)}</em></div>
+        <div class="chips">${RISKS.map(rk=>{ const before = Math.max(...valid.map(r=>capR(r.x[rk.k]))), after = Math.max(...m.nx.filter(x=>!x.invalid).map(x=>capR(x[rk.k]))); return `<span class="chip">${rk.n} ${fa(before)} ← <b>${fa(after)}</b></span>`; }).join("")}
+        ${ob ? `<span class="chip">موارد بالای ۱: ${fa(ob,0)} ← <b>${fa(nb,0)}</b></span>` : ""}</div></li>`; }).join("")}</ol>` : `<p class="sec-note">اقدام مشترکی که ریسک را کمتر کند پیدا نشد.</p>`}
+      ${badRows.length ? `<h3 class="sec">اقدام‌های خاص هر فضا</h3><p class="sec-note">برای فضاهایی که دست‌کم یک ریسک بالای ۱ دارند.</p>
+        ${badRows.map(r=>{ const ms = floorMeasures(r); return `<div class="fm"><b>${esc(r.name)}</b>${ms.length?`<ul>${ms.map(s=>`<li>${esc(s.f.l)}: <em>${esc(s.o.l)}</em> <span class="muted">(${RISKS.map(rk=>`${rk.sn||rk.n} ${fa(r.x[rk.k])}←${fa(s.nx[rk.k])}`).join(" · ")})</span></li>`).join("")}</ul>`:`<p class="muted">بهبود خاص این فضا در چک‌لیست باقی نمانده؛ اقدام‌های مشترک را ببینید.</p>`}</div>`; }).join("")}` : ""}
+      ${ovrRows.length ? `<h3 class="sec">فضاهایی که با پروفایل ساختمان فرق دارند</h3>
+        <div class="scroll"><table class="t"><thead><tr><th>فضا</th><th>مورد</th><th>پاسخ این فضا</th><th>پاسخ مشترک ساختمان</th></tr></thead><tbody>
+        ${ovrRows.map(({r,f})=>`<tr><td>${esc(r.name)}</td><td>${esc(f.l)}</td><td>${esc(fVal(r,f))}</td><td class="muted">${esc(bVal(f))}</td></tr>`).join("")}</tbody></table></div>` : ""}
+      <h3 class="sec">کامل بودن ارزیابی</h3>
+      <div class="scroll"><table class="t"><thead><tr><th>فضا</th><th>بخش‌های تأییدشده</th><th>پاسخ‌های «نمی‌دانم»</th></tr></thead><tbody>
+        <tr><td>پروفایل مشترک ساختمان</td><td class="num">${fa(P.bseen.length,0)} از ${fa(SECTIONS.filter(s=>s.fields.flatMap(f=>f.row||[f]).some(f=>BFIELDS.has(f.id))).length,0)}</td><td class="num">${fa(Object.keys(P.bunk).filter(k=>P.bunk[k]).length,0)}</td></tr>
+        ${rows.map(r=>`<tr><td>${esc(r.name)}</td><td class="num">${fa(r.fl.seen.length,0)} از ${fa(secTot,0)}</td><td class="num">${fa(Object.keys(r.fl.unk).filter(k=>r.fl.unk[k]).length,0)}</td></tr>`).join("")}
+      </tbody></table></div>
+      <p class="sec-note" style="margin-top:12px">روش محاسبه: FRAME 2015 (مطابق صفحه‌گستردهٔ رسمی). هر فضا جداگانه محاسبه شده و جمع‌بندی بر اساس بدترین فضا برای هر نوع ریسک است. گزارش کامل هر فضا از صفحهٔ «گزارش» همان فضا در دسترس است.</p>
+    </div>
+    <div class="pager"><button class="btn" type="button" data-addfloor>+ افزودن فضا</button>
+      <span style="display:flex;gap:8px;flex-wrap:wrap">${inFrame?"":`<button class="btn" type="button" id="btnPrint">چاپ / PDF</button>`}
+      <button class="btn primary" type="button" id="btnCopySum">کپی متن جمع‌بندی</button></span></div>`;
+}
+function summaryText(){
+  const rows = floorResults(), b = {...DEFAULTS, ...P.building}, L = [];
+  L.push("گزارش جمع‌بندی ارزیابی ریسک حریق ساختمان (FRAME 2015)");
+  L.push(`ساختمان: ${b.project||"—"} | ارزیاب: ${b.assessor||"—"} | تاریخ: ${b.date||"—"}`); L.push("");
+  rows.forEach(r=>L.push(`${r.name}: ${RISKS.map(rk=>`${rk.k}=${fa(r.x[rk.k])}`).join("  ")}  (${levelTxt(Math.max(...RISKS.map(rk=>capR(r.x[rk.k]))))})`));
+  L.push(""); RISKS.forEach(rk=>{ const w = worstOf(rows.filter(r=>!r.x.invalid), rk.k); if (w) L.push(`ریسک تعیین‌کنندهٔ ${rk.n}: ${fa(w.x[rk.k])} — ${w.name}`); });
+  return L.join("\n");
+}
+function sampleProject(){
+  const p = makeProject({...DEFAULTS, project:"نمونه: ساختمان اداری ۵ طبقه", assessor:"(نمونه)", date:"۱۴۰۵/۰۷/۲۸",
+    access:"long", Z:2, Qi:100, fs:120, fo:60, fc:120, a2:0.05, a5:0.1, pPlan:false,
+    w1:0, store:60, dia:59.2, c70:1, bar:5, n1a:true, n1b:true, n1c:false, n1d:true, n2:0, n3:0, n4:0, n5:2,
+    sAD:8, sTrans:false, sFault:true, sZone:true, s6:0, s3:true, s4:true, s5:0, s8:8,
+    uSt:2, uSign:false, u300:true, yFin:true, ySpare:true, yRep:true, yProd:true}, true);
+  const base = {...DEFAULTS, use:"office", area:520, l:32, h:3.2, win:6, Qm:400, M:0.5, T:200, m:0.3, a1:0, a6:0.1, X:52, Wex:2.4, O:2, p0:1, pPanic:true, c1:0, d:0.8, fi:60};
+  const F = [
+    {comp:"همکف – لابی و پذیرش", E:0, H:0.6, X:80, Wex:3.6, O:2, p0:2, pPanic:false},
+    {comp:"طبقهٔ ۱ – اداری", E:1, H:3.8},
+    {comp:"طبقهٔ ۲ – اداری", E:2, H:7.0},
+    {comp:"طبقهٔ ۳ – اداری و اتاق سرور", E:3, H:10.2, T:100, c1:0.1, yOth:true, Wex:1.8},
+    {comp:"طبقهٔ ۴ – اداری و سالن جلسات", E:4, H:13.4, X:110, Wex:1.8, O:1},
+  ];
+  p.floors = F.map(f=>makeFloor({...base, ...f}));
+  const srv = p.floors[3]; srv.ovr.sTrans = true; srv.data.sTrans = true;   // server-room floor: detection wired to the 24 h control room
+  p.ctx = "b"; p.view = "start";
+  return p;
+}
+let P = load() || sampleProject();
 
 /* ---------- helpers ---------- */
 const fa = (x, d=2) => x===Infinity ? "∞" : Number.isNaN(x) ? "—" : (x==null||!isFinite(x)) ? "—" : Number(x).toLocaleString("fa-IR",{minimumFractionDigits:d,maximumFractionDigits:d,useGrouping:false});
@@ -952,19 +1204,33 @@ function gauge(R, big){
 
 /* ---------- rendering ---------- */
 function renderTop(){
-  const done = SECTIONS.filter(s=>st.seen.includes(s.id)).length, tot = SECTIONS.length;
-  $("#prog").innerHTML = `<span>${done===0?"هنوز بخشی تأیید نشده":done===tot?"<b>همهٔ بخش‌ها تأیید شده</b>":`<b>${fa(done,0)}</b> بخش از ${fa(tot,0)} تأیید شده`}</span>
-    <div class="track" role="progressbar" aria-valuemin="0" aria-valuemax="${tot}" aria-valuenow="${done}"><i style="width:${done/tot*100}%"></i></div>
+  const secs = P.view==="summary" ? [] : ctxSections(), done = secs.filter(s=>st.seen.includes(s.id)).length, tot = secs.length;
+  const fl = curFloor(), where = P.view==="summary" ? "جمع‌بندی ساختمان" : fl ? floorName(fl) : "پروفایل مشترک ساختمان";
+  $("#prog").innerHTML = `<span class="where">${esc(where)}</span>${tot?`<span>${done===0?"هنوز بخشی تأیید نشده":done===tot?"<b>همهٔ بخش‌ها تأیید شده</b>":`<b>${fa(done,0)}</b> بخش از ${fa(tot,0)} تأیید شده`}</span>
+    <div class="track" role="progressbar" aria-valuemin="0" aria-valuemax="${tot}" aria-valuenow="${done}"><i style="width:${done/tot*100}%"></i></div>`:'<span class="track" style="visibility:hidden"></span>'}
     <button class="cal ok" type="button" data-go="formula" title="محاسبات مطابق صفحه‌گسترده FRAME 2015">✓ روش رسمی FRAME 2015</button>`;
 }
+function renderCtx(){
+  const rows = P.floors.map((fl,i)=>{ const x = compute(floorData(fl)); const w = x.invalid ? null : Math.max(...RISKS.map(rk=>capR(x[rk.k]))); return {fl,i,w}; });
+  const fl = curFloor();
+  $("#ctxbar").innerHTML = `<button type="button" class="cx ${P.ctx==="b"&&P.view!=="summary"?"on":""}" data-ctx="b">${svgI("geo")}پروفایل مشترک ساختمان</button>
+    <span class="cxsep" aria-hidden="true"></span>
+    ${rows.map(r=>`<button type="button" class="cx ${P.ctx===r.fl.id?"on":""}" data-ctx="${r.fl.id}"><span class="dot" style="background:var(--${r.w===null?"muted":level(r.w)})"></span>${esc(floorName(r.fl,r.i))}</button>`).join("")}
+    <button type="button" class="cx add" data-addfloor title="فضای جدید با کپی پاسخ‌های آخرین فضا">+ فضای جدید</button>
+    <span class="cxsep" aria-hidden="true"></span>
+    <button type="button" class="cx sum ${P.view==="summary"?"on":""}" data-go="summary">${svgI("report")}جمع‌بندی ساختمان</button>
+    ${fl && P.floors.length>1 ? `<button type="button" class="cx del" data-delfloor title="حذف این فضا">حذف این فضا</button>` : ""}`;
+}
+
 function renderSteps(){
-  const all = [...SECTIONS, ...VIEWS];
+  const secs = ctxSections(), views = P.ctx==="b" ? [{id:"summary", title:"جمع‌بندی ساختمان", k:""}] : VIEWS;
+  const all = [...secs, ...views];
   $("#steps").innerHTML = `<button type="button" class="step ${st.view==="start"?"on":""}" data-go="start"><span class="ic">${svgI("start")}</span><span class="t">پیش از شروع</span></button>` + all.map((s,ix) => {
-    const isView = ix >= SECTIONS.length;
-    const sep = ix === SECTIONS.length ? '<div class="nav-sep"></div>' : '';
+    const isView = ix >= secs.length;
+    const sep = ix === secs.length ? '<div class="nav-sep"></div>' : '';
     const done = !isView && st.seen.includes(s.id);
     return `${sep}<button type="button" class="step ${st.view===s.id?"on":""} ${done?"done":""}" data-go="${s.id}" ${st.view===s.id?'aria-current="step"':""}>
-      <span class="ic">${svgI(s.id)}</span><span class="t">${esc(s.title)}${s.k?`<span class="k">${esc(s.k)}</span>`:""}</span></button>`;
+      <span class="ic">${svgI(s.id==="summary"?"report":s.id)}</span><span class="t">${esc(s.title)}${s.k?`<span class="k">${esc(s.k)}</span>`:""}</span></button>`;
   }).join("");
   const on = $("#steps .step.on");
   if (on && window.matchMedia("(max-width:800px)").matches) on.scrollIntoView({block:"nearest",inline:"center"});
@@ -991,7 +1257,8 @@ function fieldHTML(f, n){
   const num = n ? `<span class="qn">${fa(n,0)}</span>` : "";
   const lab = f.t==="sel" ? `<span class="lb" id="lb_${f.id}">${num}<span>${esc(f.l)}</span></span>` : `<label class="lb" for="${f.id}">${num}<span>${esc(f.l)}</span></label>`;
   const how = f.how ? `<details class="how"><summary>${svgI("info",2)}${f.t==="sel"?"چطور تشخیص بدهم؟":"چطور اندازه بگیرم؟"} <span class="cnt">${fa(f.how.length,0)} قدم</span></summary><ol>${f.how.map(x=>`<li>${esc(x)}</li>`).join("")}</ol></details>` : "";
-  return `<div class="field" id="fld_${f.id}">${lab}${f.h?`<p class="help">${esc(f.h)}</p>`:""}${how}${ctl}<p class="fwarn" id="warn_${f.id}" role="status">${esc(warnFor(f)||"")}</p></div>`;
+  const fl = curFloor(), ov = fl && BFIELDS.has(f.id) && fl.ovr[f.id] ? `<div class="ovnote">فقط برای این فضا (پاسخ مشترک ساختمان: ${esc((()=>{ const c = P.ctx; P.ctx = "b"; const v = fieldVal(f); P.ctx = c; return v; })())}) <button class="linkbtn" type="button" data-unovr="${f.id}">برگرداندن به پاسخ مشترک</button></div>` : "";
+  return `<div class="field${ov?" ovr":""}" id="fld_${f.id}">${lab}${ov}${f.h?`<p class="help">${esc(f.h)}</p>`:""}${how}${ctl}<p class="fwarn" id="warn_${f.id}" role="status">${esc(warnFor(f)||"")}</p></div>`;
 }
 function warnFor(f){
   const v = st.data[f.id], d = st.data;
@@ -1029,31 +1296,44 @@ function calcItems(id, x){
 
 function renderMain(){
   const x = compute(st.data);
-  const sIx = SECTIONS.findIndex(s=>s.id===st.view);
+  const secs = ctxSections(), fl = curFloor();
+  const sIx = secs.findIndex(s=>s.id===st.view);
+  if (sIx < 0 && SECTIONS.some(s=>s.id===st.view)) { P.view = secs[0].id; return renderAll(); }
   let html = "";
   if (sIx >= 0){
-    const s = SECTIONS[sIx];
-    html += `<div class="sheet-head"><div class="sh-row"><span class="eyebrow">بخش ${fa(sIx+1,0)} از ${fa(SECTIONS.length,0)}</span></div>
-      <h2>${esc(s.title)}</h2><p class="intro">${esc(s.intro)}</p>
-      ${st.sample && sIx===0 ? `<div class="sample"><span><b>دادهٔ نمونه:</b> فرم با یک بیمارستان فرضی پر شده تا کارکرد ابزار را ببینید.</span><button class="btn" type="button" id="btnNew2">شروع ارزیابی خودم</button></div>`:""}
+    const s = secs[sIx];
+    const ctxNote = fl ? `<p class="ctxnote">${svgI("info",2)}<span>در حال پر کردن <b>${esc(floorName(fl))}</b>. پاسخ‌های مشترک ساختمان پایین هر بخش آمده‌اند و فقط اگر این فضا فرق دارد تغییرشان دهید.</span></p>`
+      : `<p class="ctxnote">${svgI("info",2)}<span>این‌ها <b>سؤال‌های مشترک همهٔ فضاهای ساختمان</b> است و فقط یک بار پرسیده می‌شود. اگر یک فضا فرق دارد (مثلاً طبقهٔ دارای اتاق سرور)، همان‌جا قابل تغییر است.</span></p>`;
+    html += `<div class="sheet-head"><div class="sh-row"><span class="eyebrow">${fl ? esc(floorName(fl)) : "پروفایل مشترک ساختمان"} · بخش ${fa(sIx+1,0)} از ${fa(secs.length,0)}</span></div>
+      <h2>${esc(s.title)}</h2><p class="intro">${esc(s.intro)}</p>${ctxNote}
+      ${st.sample && sIx===0 ? `<div class="sample"><span><b>دادهٔ نمونه:</b> یک ساختمان اداری ۵ طبقهٔ فرضی پر شده تا کارکرد ابزار را ببینید.</span><button class="btn" type="button" id="btnNew2">شروع ارزیابی خودم</button></div>`:""}
       </div><div class="sheet-body">`;
     if (s.fields.some(f=>(f.row||[f]).some(x=>x.how))) html += `<p class="tipline">${svgI("info",2)}هر جا مطمئن نیستید، روی «چطور اندازه بگیرم؟» یا «چطور تشخیص بدهم؟» بزنید تا قدم‌به‌قدم راهنمایی شوید.</p>`;
     let lastG = null, n = 0;
     s.fields.forEach(f => {
-      if (f.row){ const vis = f.row.filter(r=>shown(r)); if (vis.length) html += `<div class="row2">${vis.map(r=>fieldHTML(r, ++n)).join("")}</div>`; }
-      else if (!shown(f)) return;
+      if (f.row){ const vis = f.row.filter(r=>shown(r) && inCtx(r)); if (vis.length) html += `<div class="row2">${vis.map(r=>fieldHTML(r, ++n)).join("")}</div>`; }
+      else if (!shown(f) || !inCtx(f)) return;
       else {
         if (f.g && f.g!==lastG){ html += `<h3 class="sub">${f.g==="U"?"امکانات فرار افراد":"تداوم فعالیت"} <span class="ftag">${f.g}</span></h3>`; lastG=f.g; }
         html += fieldHTML(f, ++n);
       }
     });
-    html += calcItems(s.id, x) + `</div>`;
-    const prev = sIx>0 ? SECTIONS[sIx-1].id : "start";
-    const next = sIx<SECTIONS.length-1 ? SECTIONS[sIx+1].id : "result";
-    html += `<div class="pager"><button class="btn" type="button" data-go="${prev}">→ ${prev==="start"?"راهنمای شروع":"بخش قبل"}</button>
-      <button class="btn primary" type="button" data-confirm="${s.id}" data-go="${next}">تأیید و ${next==="result"?"دیدن نتیجه":"بخش بعد"} ←</button></div>`;
+    if (!n) html += `<p class="sec-note" style="margin-top:16px">در این بخش سؤال مخصوص این فضا نیست.</p>`;
+    if (fl){
+      const shared = s.fields.flatMap(f=>f.row||[f]).filter(f=>BFIELDS.has(f.id) && !META.has(f.id) && !fl.ovr[f.id] && shown(f));
+      if (shared.length) html += `<div class="shared"><div class="sh-t">${svgI("geo",2)}پاسخ‌های مشترک ساختمان در این بخش</div><ul>${shared.map(f=>`<li><span class="q">${esc(f.l)}</span><b>${esc(fieldVal(f))}</b><button class="btn mini" type="button" data-ovr="${f.id}">در این فضا فرق دارد</button></li>`).join("")}</ul></div>`;
+      html += calcItems(s.id, x);
+    }
+    html += `</div>`;
+    const prev = sIx>0 ? secs[sIx-1].id : "start";
+    const next = sIx<secs.length-1 ? secs[sIx+1].id : (fl ? "result" : null);
+    const nextBtn = next ? `<button class="btn primary" type="button" data-confirm="${s.id}" data-go="${next}">تأیید و ${next==="result"?"دیدن نتیجهٔ این فضا":"بخش بعد"} ←</button>`
+      : `<button class="btn primary" type="button" data-confirm="${s.id}" data-ctx="${P.floors[0].id}">تأیید و رفتن به فضاها ←</button>`;
+    html += `<div class="pager"><button class="btn" type="button" data-go="${prev}">→ ${prev==="start"?"راهنمای شروع":"بخش قبل"}</button>${nextBtn}</div>`;
   }
   else if (st.view==="start") html = startHTML();
+  else if (st.view==="summary") html = summaryHTML();
+  else if (!fl && ["result","report"].includes(st.view)) { P.view = "summary"; return renderAll(); }
   else if (st.view==="result") html = resultHTML(x);
   else if (st.view==="report") html = reportHTML(x);
   else html = formulaHTML(x);
@@ -1062,6 +1342,16 @@ function renderMain(){
 }
 
 function renderRes(){
+  if (!curFloor()){
+    const rows = floorResults();
+    $("#res").innerHTML = `<div class="panel"><h3><span>نتیجهٔ فضاها</span><span>حد مجاز ۱٫۰</span></h3>
+      <div class="ftab">${rows.map(r=>`<button type="button" data-ctx="${r.fl.id}"><span>${esc(r.name)}</span>${RISKS.map(rk=>`<b class="c-${level(r.x[rk.k])}">${fa(r.x[rk.k])}</b>`).join("")}</button>`).join("")}
+      <div class="fth"><span></span>${RISKS.map(rk=>`<span>${rk.sn||rk.n}</span>`).join("")}</div></div>
+      <button class="btn primary" type="button" data-go="summary" style="width:100%;justify-content:center;margin-top:10px">جمع‌بندی ساختمان</button></div>`;
+    const v = rows.filter(r=>!r.x.invalid);
+    $("#mbar").innerHTML = RISKS.map(rk=>{ const w = worstOf(v, rk.k); const R = w ? w.x[rk.k] : NaN; return `<button type="button" data-go="summary"><span><span class="dot" style="background:var(--${level(R)})"></span>بدترین ${rk.sn||rk.n}</span><b class="c-${level(R)}">${fa(R)}</b></button>`; }).join("");
+    return;
+  }
   const x = compute(st.data);
   $("#res").innerHTML = `<div class="panel"><h3><span>ریسک لحظه‌ای</span><span>حد مجاز ۱٫۰</span></h3><div class="gauges">
       ${RISKS.map(rk=>`<div class="g-row">${gauge(x[rk.k])}<div><div class="g-name">${rk.n}<span class="g-sym">${rk.k}</span></div><span class="pill ${level(x[rk.k])}">${levelTxt(x[rk.k])}</span></div></div>`).join("")}
@@ -1077,11 +1367,12 @@ function renderRes(){
 
 function startHTML(){
   const steps = [
-    ["یک فضا انتخاب کنید","یک طبقه یا یک بخش از ساختمان. برای هر فضا یک ارزیابی جدا انجام می‌شود."],
+    ["پروفایل مشترک ساختمان را یک بار پر کنید","سؤال‌هایی که برای همهٔ طبقه‌ها یکی است (اسکلت، آب و پمپ آتش‌نشانی، ایستگاه آتش‌نشانی، سیستم اعلام حریق، راه‌پله‌ها، ادامهٔ کار) فقط یک بار پرسیده می‌شود."],
+    ["برای هر طبقه یا فضا یک ارزیابی بسازید","با «+ فضای جدید» طبقهٔ بعدی ساخته می‌شود و پاسخ‌های طبقهٔ قبل کپی می‌شود؛ فقط تفاوت‌ها را تغییر دهید. اگر یک طبقه با بقیه فرق دارد (مثلاً اتاق سرور یا دتکتور متفاوت)، روی «در این فضا فرق دارد» بزنید."],
     ["۱۰ بخش را به ترتیب پر کنید","هر بخش چند سؤال ساده دارد. بیشتر سؤال‌ها با نگاه کردن جواب داده می‌شوند و فقط چند تا اندازه‌گیری لازم دارند."],
     ["هر جا گیر کردید، راهنما را باز کنید","زیر سؤال‌ها دکمهٔ «چطور اندازه بگیرم؟» یا «چطور تشخیص بدهم؟» هست که قدم‌به‌قدم می‌گوید چه کنید."],
     ["اگر واقعاً نمی‌دانید، «نمی‌دانم» را بزنید","برنامه حالت محتاطانه را فرض می‌کند و آخر کار فهرست این موارد را نشان می‌دهد تا بعداً بررسی کنید."],
-    ["نتیجه را ببینید","برنامه سه عدد ریسک را حساب می‌کند و می‌گوید کدام اقدام بیشترین اثر را در کاهش ریسک دارد."],
+    ["نتیجهٔ هر فضا و جمع‌بندی ساختمان را ببینید","برای هر فضا سه عدد ریسک حساب می‌شود. «جمع‌بندی ساختمان» بدترین فضا را برای هر ریسک تعیین‌کننده می‌داند و اقدام‌های مشترک و خاص هر فضا را مرتب می‌کند."],
   ];
   const kit = ["متر نواری یا متر لیزری (اگر نیست، قدم شمردن هم کافی است: هر قدم حدود ۷۵ سانتی‌متر)","گوشی یا کاغذ برای یادداشت","دسترسی به همهٔ اتاق‌ها، راه‌پله‌ها و موتورخانه","اگر ممکن است، کسی که ساختمان را می‌شناسد (مسئول تأسیسات یا نگهبان)","حدود ۳۰ تا ۶۰ دقیقه وقت"];
   return `<div class="sheet-head"><div class="sh-row"><span class="eyebrow">راهنمای شروع</span></div>
@@ -1126,7 +1417,7 @@ function driverHTML(x){
 function suggestions(x){
   const out = [];
   const cap = v => Math.min(v, 10), base = cap(x.R) + cap(x.R1) + cap(x.R2);
-  ALLFIELDS.filter(f=>f.t==="sel" && ["ign","water","np","sp","fr","esc","cont"].includes(f.sec) && shown(f)).forEach(f=>{
+  ALLFIELDS.filter(f=>f.t==="sel" && ["ign","water","np","sp","fr","esc","cont"].includes(f.sec) && shown(f) && !(f.id==="s7" && ["office","home","school","hotel","hosp"].includes(st.data.use))).forEach(f=>{
     let best=null;
     f.o.forEach(o=>{
       if (String(o.v)===String(st.data[f.id])) return;
@@ -1226,7 +1517,7 @@ function reportHTML(x){
       </tbody></table></div>
       <h3 class="sec">پاسخ‌های چک‌لیست</h3>
       <div class="scroll"><table class="t"><thead><tr><th>مورد</th><th>وضعیت ثبت‌شده</th></tr></thead><tbody>
-        ${SECTIONS.map(s=>`<tr><td colspan="2" class="grp">${esc(s.title)}</td></tr>`+s.fields.flatMap(f=>f.row||[f]).map(f=>`<tr><td>${esc(f.l)}</td><td>${esc(fieldVal(f))}</td></tr>`).join("")).join("")}
+        ${SECTIONS.map(s=>`<tr><td colspan="2" class="grp">${esc(s.title)}</td></tr>`+s.fields.flatMap(f=>f.row||[f]).map(f=>`<tr><td>${esc(f.l)}${BFIELDS.has(f.id)&&!META.has(f.id)?(curFloor()&&curFloor().ovr[f.id]?' <span class="tagx own">مخصوص این فضا</span>':' <span class="tagx">مشترک</span>'):""}</td><td>${esc(fieldVal(f))}</td></tr>`).join("")).join("")}
       </tbody></table></div>
       <p class="sec-note" style="margin-top:12px">روش محاسبه: FRAME 2015 (مطابق صفحه‌گستردهٔ رسمی)</p>
     </div>
@@ -1284,9 +1575,9 @@ function formulaHTML(x){
     </div>`;
 }
 
-function renderAll(){ renderTop(); renderSteps(); renderMain(); renderRes(); save(); }
+function renderAll(){ document.body.classList.toggle("wide", P.view==="summary"); renderTop(); renderCtx(); renderSteps(); renderMain(); renderRes(); save(); }
 function refreshLive(){
-  renderRes(); save();
+  renderRes(); renderCtx(); save();
   const s = SECTIONS.find(s=>s.id===st.view), cl = $("#calcline");
   if (s && cl){ const tmp = document.createElement("div"); tmp.innerHTML = calcItems(s.id, compute(st.data)); cl.replaceWith(tmp.firstChild); }
 }
@@ -1302,11 +1593,23 @@ document.addEventListener("click", ev=>{
     const top = $("#main").getBoundingClientRect().top + window.scrollY - 12;
     if (window.scrollY > top) window.scrollTo({top, behavior:"smooth"});
     return; }
+  const cx = ev.target.closest("[data-ctx]");
+  if (cx){ if (cx.dataset.confirm && !st.seen.includes(cx.dataset.confirm)) st.seen.push(cx.dataset.confirm); goCtx(cx.dataset.ctx); return; }
+  const fb = ev.target.closest("[data-floor]");
+  if (fb){ P.ctx = fb.dataset.floor; P.view = "result"; renderAll(); return; }
+  if (ev.target.closest("[data-addfloor]")){ addFloor(); return; }
+  if (ev.target.closest("[data-delfloor]")){ deleteFloor(); return; }
+  const ov = ev.target.closest("[data-ovr]");
+  if (ov){ const fl = curFloor(), k = ov.dataset.ovr; fl.ovr[k] = true; fl.data[k] = k in P.building ? P.building[k] : DEFAULTS[k]; if (P.bunk[k]) fl.unk[k] = true; P.sample = false;
+    const y = window.scrollY; renderMain(); window.scrollTo(0,y); const el = document.getElementById("fld_"+k); if (el) el.scrollIntoView({block:"center"}); save(); return; }
+  const uo = ev.target.closest("[data-unovr]");
+  if (uo){ const fl = curFloor(), k = uo.dataset.unovr; delete fl.ovr[k]; delete fl.data[k]; delete fl.unk[k]; const y = window.scrollY; renderMain(); window.scrollTo(0,y); refreshLive(); return; }
+  if (ev.target.closest("#btnCopySum")) copyText(summaryText(),"متن جمع‌بندی کپی شد");
   if (ev.target.closest("#btnCopyRep")) copyText(reportText(),"متن گزارش کپی شد");
   if (ev.target.closest("#btnPrint")) window.print();
   if (ev.target.closest("#btnNew2")) newAssessment();
-  if (ev.target.closest("[data-begin]")){ if (st.sample) newAssessment(); else { st.view="info"; renderAll(); } }
-  if (ev.target.closest("[data-sample]")){ st = fresh(SAMPLE,true,"info"); renderAll(); }
+  if (ev.target.closest("[data-begin]")){ if (st.sample) newAssessment(); else { P.ctx = "b"; P.view = "info"; renderAll(); } }
+  if (ev.target.closest("[data-sample]")){ P = sampleProject(); P.view = "summary"; renderAll(); }
   const es = ev.target.closest("[data-est]");
   if (es){ const k = es.dataset.est, d = st.data;
     if (k==="H") d.H = Math.round(d.E*3.2*10)/10;
@@ -1351,7 +1654,7 @@ document.addEventListener("focusout", ev=>{
 });
 
 function newAssessment(){
-  const go = ()=>{ st = fresh(DEFAULTS,false,"info"); renderAll(); toast("فرم جدید آماده است. از بخش ۱ شروع کنید."); };
+  const go = ()=>{ P = makeProject(DEFAULTS,false); P.view = "info"; renderAll(); toast("ارزیابی جدید آماده است. اول پروفایل مشترک ساختمان را پر کنید، بعد فضاها را."); };
   if (st.sample) return go();
   ask("ارزیابی فعلی پاک شود و فرم خالی برای ارزیابی جدید باز شود؟ اگر لازم است، اول از «ذخیره / بازیابی» یک نسخه بردارید.", go);
 }
@@ -1381,12 +1684,12 @@ function qCalc(){
   m.onclick = e => { if (e.target===m) m.remove(); };
 }
 $("#btnNew").onclick = newAssessment;
-$("#btnSample").onclick = ()=> ask("داده‌های فعلی با نمونهٔ بیمارستان جایگزین شوند؟", ()=>{ st = fresh(SAMPLE,true,"info"); renderAll(); });
+$("#btnSample").onclick = ()=> ask("داده‌های فعلی با نمونهٔ ساختمان اداری ۵ طبقه جایگزین شوند؟", ()=>{ P = sampleProject(); P.view = "summary"; renderAll(); });
 $("#btnData").onclick = ()=> {
   const m = document.createElement("div"); m.className="modal";
   m.innerHTML = `<div class="box" role="dialog" aria-modal="true" aria-labelledby="dT" style="max-width:560px"><h3 id="dT" style="font-size:17px">ذخیره و بازیابی</h3>
     <p class="help">پاسخ‌ها خودکار در همین مرورگر نگه داشته می‌شوند. برای نسخهٔ جدا یا انتقال به دستگاه دیگر، متن زیر را کپی و جایی ذخیره کنید. برای بازیابی، متن ذخیره‌شده را اینجا بچسبانید یا فایل آن را انتخاب کنید.</p>
-    <textarea class="in" id="dataBox" aria-label="داده‌های ارزیابی">${esc(JSON.stringify({frame:1,data:st.data,unk:st.unk},null,1))}</textarea>
+    <textarea class="in" id="dataBox" aria-label="داده‌های ارزیابی">${esc(JSON.stringify(P,null,1))}</textarea>
     <div class="acts" style="justify-content:flex-start">
       <button class="btn primary" type="button" id="dCopy">کپی</button>
       <button class="btn" type="button" id="dLoad">بازیابی از متن</button>
@@ -1395,7 +1698,7 @@ $("#btnData").onclick = ()=> {
     <p class="help" id="dMsg" role="alert"></p></div>`;
   document.body.appendChild(m);
   const box = m.querySelector("#dataBox");
-  const doLoad = txt => { try{ const j = JSON.parse(txt); if(!j.data) throw 0; st = fresh({...DEFAULTS,...j.data},false,"info"); st.unk = j.unk||{}; m.remove(); renderAll(); toast("ارزیابی بازیابی شد"); }
+  const doLoad = txt => { try{ const j = JSON.parse(txt); if (j.v===3 && j.floors && j.floors.length) P = j; else if (j.data) P = fromV2(j); else throw 0; P.sample = false; m.remove(); renderAll(); toast("ارزیابی بازیابی شد"); }
     catch(e){ m.querySelector("#dMsg").textContent = "این متن قابل خواندن نیست. مطمئن شوید کل متن ذخیره‌شده را چسبانده‌اید."; } };
   m.querySelector("#dCopy").onclick = ()=> copyText(box.value,"داده‌ها کپی شد", box);
   m.querySelector("#dLoad").onclick = ()=> doLoad(box.value);
