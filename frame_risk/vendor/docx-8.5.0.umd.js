@@ -5651,17 +5651,17 @@ var __async = (__this, __arguments, generator) => {
     function utf8CheckExtraBytes(self2, buf, p) {
       if ((buf[0] & 192) !== 128) {
         self2.lastNeed = 0;
-        return "�";
+        return "\uFFFD";
       }
       if (self2.lastNeed > 1 && buf.length > 1) {
         if ((buf[1] & 192) !== 128) {
           self2.lastNeed = 1;
-          return "�";
+          return "\uFFFD";
         }
         if (self2.lastNeed > 2 && buf.length > 2) {
           if ((buf[2] & 192) !== 128) {
             self2.lastNeed = 2;
-            return "�";
+            return "\uFFFD";
           }
         }
       }
@@ -5690,7 +5690,7 @@ var __async = (__this, __arguments, generator) => {
     function utf8End(buf) {
       var r = buf && buf.length ? this.write(buf) : "";
       if (this.lastNeed)
-        return r + "�";
+        return r + "\uFFFD";
       return r;
     }
     function utf16Text(buf, i) {
