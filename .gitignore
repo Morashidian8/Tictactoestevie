@@ -27,3 +27,4 @@ research/btc5m/out/
 hse_src/
 manhole_pwa/podcasts/*.mp3
 manhole_pwa/podcasts/*.m4a
+storage_state.json

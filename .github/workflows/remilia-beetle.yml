@@ -1,0 +1,47 @@
+name: Remilia Beetle Claim
+
+on:
+  schedule:
+    # Claim window opens every few hours; checking every 30 min keeps the
+    # delay small. The script is a no-op while the timer is still running.
+    - cron: "*/30 * * * *"
+  workflow_dispatch: {}
+
+concurrency:
+  group: remilia-beetle
+  cancel-in-progress: false
+
+jobs:
+  claim:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Playwright
+        run: |
+          pip install playwright==1.48.0
+          playwright install --with-deps chromium
+
+      - name: Claim beetle
+        env:
+          REMILIA_STATE: ${{ secrets.REMILIA_STATE }}
+          REMILIA_URL: ${{ vars.REMILIA_URL || 'https://remilia.net/home' }}
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          SHOT_DIR: shots
+        run: python remilia_beetle/claim.py
+
+      - name: Upload screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: beetle-shots
+          path: shots/
+          retention-days: 3
