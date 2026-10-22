@@ -128,7 +128,9 @@ function optText(f, v, lang){
 const unitOf = (f, lang) => lang==="fa" ? (f.u||"") : (UNIT_EN[f.u] ?? f.u ?? "");
 function spaceName(r, lang){
   if (lang==="fa") return r.name;
-  return r.merged ? `Combined compartment: ${r.members.map(m=>enSpaceName(m)).join(" + ")}` : enSpaceName(r);
+  if (!r.merged) return enSpaceName(r);
+  const ns = r.members.map(m=>enSpaceName(m));
+  return `Combined compartment: ${ns.length > 3 ? `${ns[0]} to ${ns[ns.length-1]} (${ns.length} floors)` : ns.join(" + ")}`;
 }
 const levelCode = E => { E = +E||0; return `F${E>=0?"+":""}${E}`; };
 function measureText(s, lang){
