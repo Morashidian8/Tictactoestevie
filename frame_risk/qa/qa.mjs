@@ -253,6 +253,12 @@ if (!(await p.$('[data-drv="R1"].on'))) P('INTERACT driver tab');
     const sh = wb.getWorksheet(names[2]); let found = false;
     sh.eachRow(row=>row.eachCell(c=>{ if (c.value && c.value.formula && /IF\(/.test(c.value.formula)) found = true; }));
     if (!found) out.push('space sheet has no live R formula');
+    // a combined compartment whose acceptable risk is used up (A ≤ 0): R and Ro are ∞ and exports still work
+    const cx = compute({...DEFAULTS, area:42000, l:52, X:1024, Wex:61.2, h:15, E:6, H:21});
+    if (!(cx.A <= 0) || cx.R!==Infinity || cx.Ro!==Infinity) out.push('A ≤ 0 must give R = Ro = ∞');
+    P = sampleProject(); P.building.vsep='none'; P.floors.forEach(f=>{ f.data.area=8000; f.data.l=60; f.data.X=220; });
+    if (!(compResults()[0].x.A <= 0)) out.push('test building should have a combined compartment with A ≤ 0');
+    for (const k of ['xlsx','docx']) try{ await FRAMEX[k]('fa'); }catch(e){ out.push(`${k} with an ∞ compartment failed: ${e.message}`); }
     P = sampleProject(); renderAll();
     return out; });
   r.forEach(x=>P('EXPORT',x)); }

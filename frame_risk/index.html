@@ -1244,7 +1244,7 @@ function mergeData(ds){                        // ds bottom-up; the worst answer
   });
   return m;
 }
-const groupName = names => `واحد ترکیبی: ${names.join(" + ")}`;
+const groupName = names => `واحد ترکیبی: ${names.length > 3 ? `${names[0]} تا ${names[names.length-1]} (${fa(names.length,0)} طبقه)` : names.join(" + ")}`;
 function compResults(rows = floorResults()){
   return linkGroups(rows.map(r=>r.d)).map(g=>{ const mem = g.map(i=>rows[i]), d = mergeData(mem.map(r=>r.d));
     return {merged:true, members:mem, name:groupName(mem.map(r=>r.name)), d, x:compute(d)}; });
@@ -1478,7 +1478,7 @@ function compute(d){
     x:Math.max(1, Math.floor(d.Wex/0.6 + 1e-9)), n1:[d.n1a,d.n1b,d.n1c,d.n1d], flowcap:d.dia,
     deflNow:309, defl2000:121, xr:1, kEst:0, rset:0});
   x.area = d.area; x.xUnits = Math.max(1, Math.floor(d.Wex/0.6 + 1e-9)); x.tuMin = x.tu/60;
-  [["R","A"],["R1","A1"],["R2","A2"]].forEach(([r,a])=>{ if (!(x[a] > 0) || !isFinite(x[r])) x[r] = Infinity; });
+  [["R","A"],["R1","A1"],["R2","A2"],["Ro","A"]].forEach(([r,a])=>{ if (!(x[a] > 0) || !isFinite(x[r])) x[r] = Infinity; });
   // inputs outside the range of the FRAME formulas (the spreadsheet gives meaningless numbers too)
   x.invalid = !(x.v > 0) ? "vent" : !(x.F > 0) ? "S" : null;
   if (x.invalid) ["R","R1","R2"].forEach(k=>x[k]=NaN);
