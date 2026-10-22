@@ -221,7 +221,7 @@ async function excel(lang){
       put(ws, `A${r}`, T2(lang, "این طبقه‌ها از نظر آتش از هم جدا نیستند و با هم یک واحد حریق‌اند. مساحت، افراد، عرض خروج و ارزش جمع شده و برای بقیهٔ موارد بدترین پاسخ طبقه‌ها به کار رفته است.",
         "These floors are not fire-separated and form one compartment. Areas, occupants, exit widths and values are added; for the other inputs the worst answer of the floors is used."), {fill:"FFFFF4DB"});
       ws.getRow(r).height = 32; r += 2; }
-    if (u.x.invalid){ ws.mergeCells(`A${r}:${last}${r}`); put(ws, `A${r}`, T2(lang, "ورودی‌های این فضا خارج از محدودهٔ فرمول‌های FRAME است (تهویه یا حفاظت ویژه).", "The inputs of this space are outside the range of the FRAME formulas (venting or special protection)."), {fill:FILL.bad}); r += 2; }
+    if (u.x.invalid){ ws.mergeCells(`A${r}:${last}${r}`); put(ws, `A${r}`, T2(lang, "ورودی‌های این فضا خارج از محدودهٔ فرمول‌های FRAME است (بار حریق خیلی کم، تهویه یا حفاظت ویژه).", "The inputs of this space are outside the range of the FRAME formulas (very low fire load, venting or special protection)."), {fill:FILL.bad}); r += 2; }
     const head = () => { [T2(lang,"داده","DATA"), T2(lang,"نماد","Symbol"), T2(lang,"واحد","Unit"), T2(lang,"وضع موجود (مرجع)","Reference status"), T2(lang,"مقدار","Value"),
         ...(hasV && u.v ? [T2(lang,"گزینهٔ ۱ – پس از بستهٔ پیشنهادی","Variant 1 – after the recommended package"), T2(lang,"مقدار","Value")] : [])]
         .forEach((t,i)=>put(ws, `${"ABCDEFG"[i]}${r}`, t, {font:{bold:true, color:{argb:"FFFFFFFF"}}, fill:"FF34495E"})); r++; };
@@ -269,6 +269,7 @@ async function excel(lang){
 
   /* summary sheet (like the FRAME2015 sheet), measures, then the space sheets */
   const ws = wb.addWorksheet("FRAME2015", {views:[{rightToLeft:rtl}]});
+  const SC = scenarios(), wcmp = SC ? wb.addWorksheet(T2(lang, "مقایسه دو حالت", "Comparison"), {views:[{rightToLeft:rtl}]}) : null;
   const wm = wb.addWorksheet(T2(lang, "اقدامات اصلاحی", "Measures"), {views:[{rightToLeft:rtl}]});
   M.units.forEach(unitSheet);
 
@@ -313,6 +314,31 @@ async function excel(lang){
   r += 8;
   put(ws, `A${r}`, T2(lang, "شماتیک و نمودارها", "Schematic and charts"), {font:{bold:true, size:12}, border:false}); r++;
   r += addImg(ws, C.sch, r, 0, 760); r += addImg(ws, C.bars, r, 0, 760); r += addImg(ws, C.ro, r, 0, 760);
+
+  /* comparison sheet: every floor separate vs linked floors */
+  if (wcmp){ const [l1, l2] = scLabels(SC, lang), real = SC.cur==="all" ? 0 : 1;
+    wcmp.columns = [{width:42},{width:11},{width:11},{width:11},{width:11},{width:11},{width:11},{width:34}];
+    put(wcmp, "A1", T2(lang, "مقایسهٔ دو حالت: طبقه‌های جدا یا متصل", "Two cases: separate floors or linked floors"), {font:{bold:true, size:14}, border:false});
+    wcmp.mergeCells("A2:H2"); put(wcmp, "A2", T2(lang, `اگر رایزر، شافت یا پله‌ای که آتش‌بند و محصور نیست طبقه‌ها را به هم وصل کند، آن طبقه‌ها یک واحد حریق‌اند. حالت معتبر: «${[l1,l2][real]}» (مطابق پاسخ ارزیابی). «∞» یعنی ریسک قابل‌قبول (A) تمام شده است.`,
+      `Floors linked by a riser, shaft or stair that is not fire-stopped or enclosed form one compartment. Valid case: "${[l1,l2][real]}" (according to the assessment). "∞" means the acceptable risk (A) is used up.`), {border:false}); wcmp.getRow(2).height = 44;
+    let q = 4;
+    put(wcmp, `A${q}`, T2(lang,"بدترین ریسک ساختمان","Governing building risk"), {font:{bold:true, color:{argb:"FFFFFFFF"}}, fill:"FF34495E"});
+    put(wcmp, `B${q}`, l1, {font:{bold:true, color:{argb:"FFFFFFFF"}}, fill:"FF34495E", al:{horizontal:"center"}}); wcmp.mergeCells(`B${q}:D${q}`);
+    put(wcmp, `E${q}`, l2, {font:{bold:true, color:{argb:"FFFFFFFF"}}, fill:"FF34495E", al:{horizontal:"center"}}); wcmp.mergeCells(`E${q}:G${q}`); wcmp.getRow(q).height = 30;
+    [["R",FACT.R],["R1",FACT.R1],["R2",FACT.R2],["Ro",FACT.Ro]].forEach(([k,f])=>{ q++;
+      put(wcmp, `A${q}`, `${f[rtl?0:1]} (${k})`, {font:{bold:true}});
+      const a = put(wcmp, `B${q}`, res(SC.sep.w[k]), {fmt:"0.00", al:{horizontal:"center"}}); wcmp.mergeCells(`B${q}:D${q}`);
+      const b = put(wcmp, `E${q}`, res(SC.link.w[k]), {fmt:"0.00", al:{horizontal:"center"}}); wcmp.mergeCells(`E${q}:G${q}`);
+      if (k!=="Ro"){ lvCell(a, SC.sep.w[k]); lvCell(b, SC.link.w[k]); } });
+    q += 2;
+    [T2(lang,"فضا","Space"), ...["R","R1","R2"].map(k=>`${k} – ${T2(lang,"جدا","separate")}`), ...["R","R1","R2"].map(k=>`${k} – ${T2(lang,"متصل","linked")}`), T2(lang,"واحد حریق در حالت متصل","Compartment in the linked case")]
+      .forEach((t,i)=>put(wcmp, `${L(i)}${q}`, t, {font:{bold:true, color:{argb:"FFFFFFFF"}}, fill:"FF34495E", al:{horizontal:"center"}}));
+    SC.sep.rows.slice().sort((a,b)=>(+a.d.E||0)-(+b.d.E||0)).forEach(r=>{ q++; const i = SC.sep.rows.indexOf(r), g = SC.link.exp[i], x2 = g ? g.x : SC.link.rows[i].x;
+      put(wcmp, `A${q}`, spaceName(r, lang));
+      ["R","R1","R2"].forEach((k,j)=>{ lvCell(put(wcmp, `${L(1+j)}${q}`, res(r.x[k]), {fmt:"0.00", al:{horizontal:"center"}}), r.x[k]); lvCell(put(wcmp, `${L(4+j)}${q}`, res(x2[k]), {fmt:"0.00", al:{horizontal:"center"}}), x2[k]); });
+      put(wcmp, `H${q}`, g ? spaceName(g, lang) : T2(lang,"جدا","separate")); });
+    q += 2; addImg(wcmp, chCompare(SC, lang, scLabels(SC, lang)), q, 0, 720);
+  }
 
   /* measures sheet: the package and the risk after each cumulative step (like tables 7–10 of a FRAME report) */
   wm.columns = [{width:40},{width:44},{width:40},{width:16},{width:26}, ...Array.from({length:Math.max(0, M.steps.length - 4)}, ()=>({width:10}))];
@@ -455,6 +481,22 @@ async function word(lang){
     ...M.units.map(u=>[cell(nm(u), {size:16, b:u.kind==="comp"}), ...["R","R1","R2"].map(k=>u.x.invalid ? cell("—") : rcell(u.x[k])), cell(u.x.invalid ? "—" : n2(u.x.Ro)),
       cell(u.x.invalid ? "—" : rtl ? FRAME.roAdvice(u.x.Ro) : RO_EN[roIdx(u.x.Ro)], {size:15})])]), caption("tab", t("نتیجهٔ ارزیابی هر فضا (وضع موجود)","Result per space (current status)")));
   add(image(C.bars), caption("fig", t("ریسک‌های R، R1 و R2 در هر فضا","Risks R, R1 and R2 per space")), image(C.ro), caption("fig", t("ریسک اولیه Ro و سامانهٔ حفاظت پیشنهادی","Initial risk Ro and suggested protection")));
+  const SC = scenarios();
+  if (SC){ const [l1, l2] = scLabels(SC, lang), real = SC.cur==="all" ? 0 : 1;
+    add(H(t("۵-۱. مقایسهٔ دو حالت: طبقه‌های جدا یا متصل","5.1 Two cases: separate or linked floors"), 2),
+      body(t(`روش FRAME هر واحد حریق را جدا حساب می‌کند. اگر رایزر، شافت یا پله‌ای که آتش‌بند و محصور نیست طبقه‌ها را به هم وصل کند، آن طبقه‌ها یک واحد حریق‌اند. جدول و نمودار زیر بدترین ریسک ساختمان را در دو حالت «${l1}» و «${l2}» نشان می‌دهند. حالت معتبر برای این ساختمان «${[l1,l2][real]}» است.`,
+        `FRAME calculates every fire compartment separately. Floors linked by a riser, shaft or stair that is not fire-stopped or enclosed form one compartment. The table and chart below show the governing building risk in the two cases "${l1}" and "${l2}". The valid case for this building is "${[l1,l2][real]}".`)),
+      table([[hcell(t("ریسک","Risk")), hcell(l1), hcell(l2)], ...[["R",FACT.R],["R1",FACT.R1],["R2",FACT.R2],["Ro",FACT.Ro]].map(([k,f])=>[cell(`${f[rtl?0:1]} (${k})`, {size:16}),
+        k==="Ro" ? cell(n2(SC.sep.w[k])) : rcell(SC.sep.w[k]), k==="Ro" ? cell(n2(SC.link.w[k])) : rcell(SC.link.w[k])])]),
+      caption("tab", t("بدترین ریسک ساختمان در دو حالت","Governing building risk in the two cases")),
+      image(chCompare(SC, lang, scLabels(SC, lang)), 560), caption("fig", t("مقایسهٔ دو حالت","The two cases compared")),
+      table([[hcell(t("فضا","Space")), ...["R","R1","R2"].map(k=>hcell(`${k} ${t("جدا","sep.")}`)), ...["R","R1","R2"].map(k=>hcell(`${k} ${t("متصل","linked")}`))],
+        ...SC.sep.rows.slice().sort((a,b)=>(+a.d.E||0)-(+b.d.E||0)).map(r=>{ const i = SC.sep.rows.indexOf(r), g = SC.link.exp[i], x2 = g ? g.x : SC.link.rows[i].x;
+          return [cell(spaceName(r, lang), {size:15}), ...["R","R1","R2"].map(k=>rcell(r.x[k], {size:15})), ...["R","R1","R2"].map(k=>rcell(x2[k], {size:15}))]; })]),
+      caption("tab", t("ریسک هر فضا در دو حالت (در حالت متصل: ریسک واحد حریقی که فضا جزو آن است)","Risk per space in the two cases (linked case: the risk of the compartment the space belongs to)")),
+      body(t("«∞» یعنی ریسک قابل‌قبول (A) تمام شده است، معمولاً به‌خاطر زمان تخلیهٔ طولانیِ یک واحد حریق بسیار بزرگ، و با هیچ تجهیزاتی جبران نمی‌شود؛ تنها راه، جدا کردن طبقه‌ها از نظر آتش است.",
+        "\"∞\" means the acceptable risk (A) is used up, usually because of the long evacuation time of a very large compartment; no equipment can make up for it — the floors have to be fire-separated.")));
+  }
 
   /* 6 corrective measures */
   add(H(t("۶. اقدام‌های اصلاحی پیشنهادی","6. Recommended corrective measures")));

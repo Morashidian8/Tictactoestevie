@@ -241,6 +241,11 @@ if (!(await p.$('[data-drv="R1"].on'))) P('INTERACT driver tab');
     P = sampleProject(); P.building.vsep='some'; P.floors[1].data.vopen=true; P.ctx='b'; P.view='summary'; renderAll();
     if (document.querySelectorAll('[data-export]').length!==4) out.push('export buttons missing on the summary');
     if (!document.querySelectorAll('#sumCharts img').length) out.push('charts missing on the summary');
+    if (document.querySelectorAll('.cmp2 .cmpc').length!==2 || !document.querySelector('#cmpChart img')) out.push('two-case comparison missing on the summary');
+    const sc = scenarios();
+    if (sc.sep.comp.length || !sc.link.comp.length) out.push('comparison: separate case must have no combined compartment, linked case at least one');
+    if (RISKS.some(rk=>sc.link.w[rk.k] + 1e-9 < sc.sep.w[rk.k])) out.push('linked case cannot be better than the separate case');
+    if (P.building.vsep!=='some') out.push('comparison must not change the answer');
     await loadScript('./export.js'); await loadScript('./vendor/exceljs-4.4.0.min.js'); await loadScript('./vendor/docx-8.5.0.umd.js');
     for (const k of ['xlsx','docx']) for (const l of ['fa','en']){
       try{ const bl = await FRAMEX[k](l); const head = new Uint8Array(await bl.slice(0,2).arrayBuffer());
@@ -249,8 +254,8 @@ if (!(await p.$('[data-drv="R1"].on'))) P('INTERACT driver tab');
     }
     const wb = new ExcelJS.Workbook(); await wb.xlsx.load(await (await FRAMEX.xlsx('en')).arrayBuffer());
     const names = wb.worksheets.map(w=>w.name), M = FRAMEX_MODEL.model();
-    if (names.length !== 2 + M.units.length) out.push('workbook sheets ≠ summary + measures + spaces: ' + names.join(','));
-    const sh = wb.getWorksheet(names[2]); let found = false;
+    if (names.length !== 3 + M.units.length || names[1]!=='Comparison') out.push('workbook sheets ≠ summary + comparison + measures + spaces: ' + names.join(','));
+    const sh = wb.getWorksheet(names[3]); let found = false;
     sh.eachRow(row=>row.eachCell(c=>{ if (c.value && c.value.formula && /IF\(/.test(c.value.formula)) found = true; }));
     if (!found) out.push('space sheet has no live R formula');
     // a combined compartment whose acceptable risk is used up (A ≤ 0): R and Ro are ∞ and exports still work
