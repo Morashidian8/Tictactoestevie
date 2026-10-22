@@ -242,6 +242,12 @@ h3.sec{font-size:17px;font-weight:800;margin:28px 0 4px}
 @media print{.charts img{break-inside:avoid}}
 .xbtns{display:flex;flex-wrap:wrap;gap:8px}.xbtns .btn{flex:1 1 150px;justify-content:center}
 @media print{.xport{display:none}}
+.cmp2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:10px 0}
+.cmpc{border:1px solid var(--line);border-radius:12px;padding:12px 14px;background:var(--surface)}.cmpc.real{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset}
+.cmph{display:flex;justify-content:space-between;gap:8px;align-items:center;margin-bottom:6px;font-size:14px}
+.cmpr{display:flex;justify-content:space-between;align-items:baseline;padding:4px 0;border-bottom:1px dashed var(--line);font-size:14px}.cmpr b{font-size:18px;font-variant-numeric:tabular-nums}
+.cmpt tr.gov td{font-weight:700;background:var(--surface-2)}.cmpt th{text-align:center}
+@media (max-width:560px){.cmp2{grid-template-columns:1fr}}
 .verdict.slim{margin-top:10px;padding:10px 14px;font-size:14px}
 .chips{display:flex;flex-wrap:wrap;gap:6px}
 .chip{font-size:12px;border-radius:7px;padding:1px 8px;background:var(--surface-2);border:1px solid var(--line);font-variant-numeric:tabular-nums}
@@ -1186,6 +1192,28 @@ function chSteps(name, cats, series, lang){
   return chBars(cats.map((c,i)=>({label:c, vals:{R:series[i].R, R1:series[i].R1, R2:series[i].R2}})), lang, `${CHT[lang].steps} – ${name}`);
 }
 const chPng = c => c.toDataURL("image/png");
+// two cases side by side: governing R, R1, R2 with every floor separate vs with the linked floors
+function chCompare(sc, lang, labels){
+  const T = CHT[lang], fa_ = lang==="fa", keys = ["R","R1","R2"], cols = ["#7d8ea3", CHC.bad];
+  const vals = keys.map(k=>[sc.sep.w[k], sc.link.w[k]]), fin = vals.flat().filter(isFinite);
+  const W = 720, H = 380, L = 56, R = 70, top = 46, bot = 296, ymax = Math.min(12, Math.max(2, Math.ceil(Math.max(0, ...fin)*1.15*2)/2));
+  const y = v => bot - Math.min(isFinite(v) ? v : ymax, ymax)/ymax*(bot - top);
+  return chCanvas(W, H, lang, g=>{
+    chTitle(g, W, fa_ ? "مقایسهٔ دو حالت – بدترین ریسک ساختمان" : "Two cases compared – governing building risk");
+    g.font = chFont(500, 11); g.textAlign = "right"; g.fillStyle = CHC.mute;
+    const step = ymax > 6 ? 2 : ymax > 3 ? 1 : 0.5;
+    for (let v = 0; v <= ymax + 1e-9; v += step){ g.strokeStyle = CHC.grid; g.lineWidth = 1; g.beginPath(); g.moveTo(L, y(v)); g.lineTo(W - R, y(v)); g.stroke(); g.fillText(chNum(v, lang, 1), L - 6, y(v)); }
+    const gw = (W - L - R)/3, bw = Math.min(70, gw/3);
+    keys.forEach((k,i)=>{ const j = fa_ ? 2-i : i, cx = L + j*gw + gw/2;
+      vals[i].forEach((v,q)=>{ const x = cx - bw + q*bw; if (v==null || Number.isNaN(v)) return;
+        g.fillStyle = cols[q]; g.fillRect(x + 3, y(v), bw - 6, bot - y(v));
+        g.fillStyle = isFinite(v) ? CHC.ink : CHC.bad; g.font = chFont(800, isFinite(v) ? 13 : 18); g.textAlign = "center"; g.fillText(chNum(v, lang), x + bw/2, y(v) - 11); });
+      g.fillStyle = CHC.ink; g.font = chFont(700, 13); g.textAlign = "center"; g.fillText(`${T[k]} (${k})`, cx, bot + 18); });
+    g.strokeStyle = CHC.bad; g.lineWidth = 2; g.setLineDash([6,4]); g.beginPath(); g.moveTo(L, y(1)); g.lineTo(W - R, y(1)); g.stroke(); g.setLineDash([]);
+    g.fillStyle = CHC.bad; g.font = chFont(700, 11); g.textAlign = "left"; g.fillText(T.lim, W - R + 6, y(1));
+    chLegend(g, W, H - 22, [[cols[0], labels[0]], [cols[1], labels[1]]]);
+  });
+}
 // chart data for the building: floors bottom-up plus combined compartments (short labels)
 function chartData(lang, xsOf = r=>r.x){
   const rows = floorResults().sort((a,b)=>(+a.d.E||0)-(+b.d.E||0)), crows = compResults(floorResults());
@@ -1205,6 +1233,8 @@ function drawSummaryCharts(){
   const {sch, bars} = chartData("fa");
   const cs = [chSchematic(sch.map(r=>({...r})), "fa"), chBars(bars, "fa"), chRo(bars.map(b=>({name:b.label, ro:b.ro})), "fa")];
   box.innerHTML = cs.map(c=>`<img src="${chPng(c)}" alt="" width="${c.dataset.w}" height="${c.dataset.h}">`).join("");
+  const cb = $("#cmpChart"), sc = cb && scenarios();
+  if (sc){ const c = chCompare(sc, "fa", scLabels(sc)); cb.innerHTML = `<img src="${chPng(c)}" alt="" width="${c.dataset.w}" height="${c.dataset.h}">`; }
 }
 
 /* ---------- building summary ---------- */
@@ -1281,6 +1311,7 @@ function summaryHTML(){
     <div class="sheet-body">
       <div class="verdict ${vlv}">${VERDICT_ICON[vlv]}<span>${esc(msg)}</span></div>
       ${beforeAfterHTML()}
+      ${compareHTML()}
       <h3 class="sec">ریسک تعیین‌کنندهٔ ساختمان</h3>
       <p class="sec-note">در روش FRAME ریسک‌ها جمع یا میانگین گرفته نمی‌شوند. برای هر نوع ریسک، بدترین فضا وضعیت ساختمان را تعیین می‌کند.</p>
       <div class="big3">${RISKS.map(rk=>{ const w = worst[rk.k]; if (!w) return ""; const R = w.x[rk.k];
@@ -1381,6 +1412,43 @@ function beforeAfterHTML(){
     ${RISKS.map(rk=>`<tr><td>بدترین ریسک ${rk.n}</td><td class="num">${sumBar(before.w[rk.k])}</td><td class="num">${sumBar(after.w[rk.k])}</td></tr>`).join("")}
     <tr><td>فضاها و واحدهای بالای ۱</td><td class="num">${fa(before.n,0)} از ${fa(before.all,0)}</td><td class="num">${fa(after.n,0)} از ${fa(r.length,0)}</td></tr></tbody></table></div>`;
 }
+/* ---------- the two cases: every floor its own compartment, or the linked floors as one ----------
+   If the answer says all floors are separated, the linked case is the what-if "whole building as one compartment". */
+function withVsep(v, fn){ const had = "vsep" in P.building, old = P.building.vsep; P.building.vsep = v; try { return fn(); } finally { if (had) P.building.vsep = old; else delete P.building.vsep; } }
+function scenarios(){
+  if (P.floors.length < 2) return null;
+  const cur = {...DEFAULTS, ...P.building}.vsep, lv = cur==="all" ? "none" : cur;
+  const mk = v => withVsep(v, ()=>{ const rows = floorResults(), comp = compResults(rows), all = [...rows, ...comp].filter(r=>!r.x.invalid);
+    const pick = k => worstOf(all, k);
+    return {v, rows, comp, all, w:Object.fromEntries([...RISKS.map(rk=>[rk.k, pick(rk.k) ? pick(rk.k).x[rk.k] : NaN]), ["Ro", all.length ? Math.max(...all.map(r=>r.x.Ro)) : NaN]]),
+      wn:Object.fromEntries(RISKS.map(rk=>[rk.k, pick(rk.k) ? pick(rk.k) : null])),
+      exp:rows.map(r=>{ const g = comp.find(c=>c.members.some(m=>m.fl===r.fl)); return g || null; })}; });
+  return {cur, sep:mk("all"), link:mk(lv), linkWhole: lv==="none"};
+}
+const scLabels = (sc, lang="fa") => lang==="fa" ? ["هر طبقه یک واحد حریق جدا", sc.linkWhole ? "کل ساختمان یک واحد حریق" : "طبقه‌های متصل یک واحد حریق"]
+  : ["Every floor a separate compartment", sc.linkWhole ? "Whole building one compartment" : "Linked floors one compartment"];
+function compareHTML(){
+  const sc = scenarios(); if (!sc) return "";
+  const [l1, l2] = scLabels(sc), real = sc.cur==="all" ? 0 : 1;
+  const oneUnit = sc.link.comp.length===1 && sc.link.comp[0].members.length===sc.sep.rows.length;
+  const card = (c, lab, i) => { const w = Math.max(...RISKS.map(rk=>capR(c.w[rk.k]))), lv = level(w);
+    return `<div class="cmpc ${i===real?"real":""}"><div class="cmph"><b>${esc(lab)}</b>${i===real ? `<span class="pill ok" style="margin:0">مطابق پاسخ شما</span>` : `<span class="pill" style="margin:0">حالت فرضی</span>`}</div>
+      ${RISKS.map(rk=>`<div class="cmpr"><span>${rk.n} <span class="g-sym">${rk.k}</span></span><b class="c-${level(c.w[rk.k])}">${fa(c.w[rk.k])}</b></div>`).join("")}
+      <div class="cmpr"><span>ریسک اولیه R<sub>o</sub></span><b>${fa(c.w.Ro)}</b></div>
+      <span class="pill ${lv}" style="margin:6px 0 0">${levelTxt(w)}</span></div>`; };
+  const cell = v => `<td class="num"><b class="c-${level(v)}">${fa(v)}</b></td>`;
+  return `<h3 class="sec">مقایسهٔ دو حالت: طبقه‌های جدا یا متصل</h3>
+    <p class="sec-note">روش FRAME هر «واحد حریق» را جدا حساب می‌کند. اگر رایزر، شافت یا پله‌ای که آتش‌بند و محصور نیست طبقه‌ها را به هم وصل کند، آن طبقه‌ها یک واحد حریق‌اند. این بخش هر دو حالت را کنار هم نشان می‌دهد؛ حالتی معتبر است که با وضع واقعی ساختمان بخواند (پاسخ شما در بخش «مقاومت در برابر آتش»: <b>${esc(optLabel(FIELD.vsep))}</b>).</p>
+    <div class="cmp2">${card(sc.sep, l1, 0)}${card(sc.link, l2, 1)}</div>
+    <div class="charts" id="cmpChart"></div>
+    <div class="scroll"><table class="t cmpt"><thead><tr><th rowspan="2">فضا</th><th colspan="3">${esc(l1)}</th><th colspan="3">${esc(l2)}${oneUnit ? ` <span class="tagx">همهٔ ${fa(sc.sep.rows.length,0)} طبقه با هم</span>` : ""}</th></tr>
+      <tr>${RISKS.map(rk=>`<th>${rk.k}</th>`).join("")}${RISKS.map(rk=>`<th>${rk.k}</th>`).join("")}</tr></thead><tbody>
+      ${sc.sep.rows.map((r,i)=>{ const g = sc.link.exp[i], x = g ? g.x : sc.link.rows[i].x;
+        return `<tr><td>${esc(r.name)}${g && !oneUnit ? ` <span class="tagx">در ${esc(g.name.replace(/^واحد ترکیبی: /,"واحد "))}</span>` : ""}</td>${RISKS.map(rk=>cell(r.x[rk.k])).join("")}${RISKS.map(rk=>cell(x[rk.k])).join("")}</tr>`; }).join("")}
+      <tr class="gov"><td>بدترین (ریسک ساختمان)</td>${RISKS.map(rk=>cell(sc.sep.w[rk.k])).join("")}${RISKS.map(rk=>cell(sc.link.w[rk.k])).join("")}</tr>
+    </tbody></table></div>
+    <p class="sec-note">در ستون‌های حالت متصل، هر طبقه ریسکِ واحد حریقی را نشان می‌دهد که جزو آن است. «∞» یعنی ریسک قابل‌قبول (A) تمام شده است (معمولاً زمان تخلیهٔ طولانیِ یک واحد خیلی بزرگ) و با هیچ تجهیزاتی قابل جبران نیست؛ باید طبقه‌ها را از هم جدا کرد (آتش‌بند کردن رایزرها و عبورها، محصور کردن پله‌ها و شافت‌ها).</p>`;
+}
 /* ---------- file exports (Excel / Word, Persian / English): code and libraries load on first use ---------- */
 const loadScript = src => new Promise((ok, no)=>{
   if (document.querySelector(`script[data-src="${src}"]`)) return ok();
@@ -1480,7 +1548,7 @@ function compute(d){
   x.area = d.area; x.xUnits = Math.max(1, Math.floor(d.Wex/0.6 + 1e-9)); x.tuMin = x.tu/60;
   [["R","A"],["R1","A1"],["R2","A2"],["Ro","A"]].forEach(([r,a])=>{ if (!(x[a] > 0) || !isFinite(x[r])) x[r] = Infinity; });
   // inputs outside the range of the FRAME formulas (the spreadsheet gives meaningless numbers too)
-  x.invalid = !(x.v > 0) ? "vent" : !(x.F > 0) ? "S" : null;
+  x.invalid = !(x.q > 0) ? "q" : !(x.v > 0) ? "vent" : !(x.F > 0) ? "S" : null;
   if (x.invalid) ["R","R1","R2"].forEach(k=>x[k]=NaN);
   x.R0x = x.P/x.A; x.R10 = x.P1/x.A1; x.R20 = x.P2/x.A2;   // protection needed (P/A) per risk
   return x;
@@ -1884,7 +1952,7 @@ function grpNote(){
   return `<div class="verdict ${lv} slim">${VERDICT_ICON[lv]}<span>این فضا با ${esc(g.members.filter(m=>m.fl!==fl).map(m=>m.name).join("، "))} راه باز برای آتش دارد (رایزر، شافت یا پلهٔ باز)، پس همه با هم یک واحد حریق‌اند. ریسک واحد ترکیبی: ${RISKS.map(rk=>`${rk.sn||rk.n} <b>${fa(g.x[rk.k])}</b>`).join("، ")}. ریسک ساختمان با بدترین این دو حالت سنجیده می‌شود. <button class="linkbtn" type="button" data-go="summary">جمع‌بندی ساختمان</button></span></div>`;
 }
 function resultHTML(x){
-  if (x.invalid) return `<div class="sheet-head"><span class="eyebrow">نتیجهٔ ارزیابی</span><h2>ورودی‌ها قابل محاسبه نیستند</h2></div><div class="sheet-body"><div class="verdict bad">${VERDICT_ICON.bad}<span>${x.invalid==="vent" ? "با این ورودی‌ها فاکتور تهویه منفی می‌شود. مساحت پنجره‌ها و دریچه‌ها در بخش «سقف و تهویهٔ دود» را با مساحت کف مقایسه و اصلاح کنید." : "امتیاز سیستم‌های حفاظت ویژه آن‌قدر زیاد است که از محدودهٔ فرمول FRAME بیرون می‌رود. پاسخ‌های بخش «سیستم‌های خودکار» را دوباره بررسی کنید؛ معمولاً یک ساختمان همهٔ این سیستم‌ها را با هم ندارد."}</span></div></div><div class="pager"><button class="btn primary" type="button" data-go="${x.invalid==="vent"?"vent":"sp"}">رفتن به همان بخش</button></div>`;
+  if (x.invalid) return `<div class="sheet-head"><span class="eyebrow">نتیجهٔ ارزیابی</span><h2>ورودی‌ها قابل محاسبه نیستند</h2></div><div class="sheet-body"><div class="verdict bad">${VERDICT_ICON.bad}<span>${x.invalid==="q" ? "بار حریق این فضا (سازه + وسایل) کمتر از حدود ۷ مگاژول بر متر مربع است و در فرمول FRAME ضریب بار حریق منفی می‌شود. مقدار مواد سوختنی را در بخش «بار حریق» دوباره بررسی کنید؛ تقریباً هیچ فضای واقعی این‌قدر کم ندارد." : x.invalid==="vent" ? "با این ورودی‌ها فاکتور تهویه منفی می‌شود. مساحت پنجره‌ها و دریچه‌ها در بخش «سقف و تهویهٔ دود» را با مساحت کف مقایسه و اصلاح کنید." : "امتیاز سیستم‌های حفاظت ویژه آن‌قدر زیاد است که از محدودهٔ فرمول FRAME بیرون می‌رود. پاسخ‌های بخش «سیستم‌های خودکار» را دوباره بررسی کنید؛ معمولاً یک ساختمان همهٔ این سیستم‌ها را با هم ندارد."}</span></div></div><div class="pager"><button class="btn primary" type="button" data-go="${x.invalid==="vent"?"vent":x.invalid==="q"?"fuel":"sp"}">رفتن به همان بخش</button></div>`;
   const worst = Math.max(x.R,x.R1,x.R2), vlv = level(worst);
   const bads = RISKS.filter(rk=>x[rk.k]>1).map(rk=>rk.n);
   const msg = vlv==="ok" ? "هر سه ریسک در محدودهٔ قابل‌قبول است. وضعیت فعلی را حفظ کنید و ارزیابی را دوره‌ای یا پس از هر تغییر در کاربری و چیدمان تکرار کنید."
