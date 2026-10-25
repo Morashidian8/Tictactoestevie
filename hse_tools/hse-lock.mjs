@@ -11,7 +11,7 @@
 //   node hse_tools/hse-lock.mjs init                    کلید جدید + چاپ کلید بازیابی (فقط یک بار)
 //   node hse_tools/hse-lock.mjs build  <plain.html>     ساخت manhole_pwa/index.html (صفحهٔ ورود + اپ رمزشده)
 //   node hse_tools/hse-lock.mjs open   <out.html>       بازکردن اپ منتشرشده به HTML ساده برای ویرایش
-//   node hse_tools/hse-lock.mjs audio  <in.mp3> <out.enc>   رمزنگاری یک قسمت پادکست
+//   node hse_tools/hse-lock.mjs audio  <in.mp3> <out.enc>   رمزنگاری یک قسمت پادکست (یا هر فایل دیگر، مثل بستهٔ عکس‌ها)
 //   node hse_tools/hse-lock.mjs rekey                   تغییر رمز ورود (HSE_PASS یا HSE_RECOVERY → HSE_NEW_PASS)
 //
 // دسترسی اختصاصی همکاران (رمز جدا + واترمارک نام، قابل قطع در هر زمان):
@@ -153,13 +153,17 @@ if (cmd === 'init') {
   else die('HSE_RECOVERY (کلید بازیابی فعلی) را بدهید، یا HSE_NEW_RECOVERY=1 برای ساخت کلید بازیابی تازه.');
   const newCk = rand(32), oldK = await aesKey(oldCk), newK = await aesKey(newCk);
   // همه‌چیز اول در حافظه آماده می‌شود و بعد یک‌جا نوشته می‌شود تا نیمه‌کاره نماند
-  const podDir = path.join(ROOT, 'manhole_pwa', 'podcasts'), pods = [];
-  for (const f of fs.existsSync(podDir) ? fs.readdirSync(podDir) : []) {
-    if (!f.endsWith('.enc')) continue;
-    const buf = fs.readFileSync(path.join(podDir, f));
-    const plain = await subtle.decrypt({ name: 'AES-GCM', iv: buf.subarray(0, 12) }, oldK, buf.subarray(12));
-    const iv = rand(12), ct = new Uint8Array(await subtle.encrypt({ name: 'AES-GCM', iv }, newK, plain));
-    pods.push([path.join(podDir, f), Buffer.concat([Buffer.from(iv), Buffer.from(ct)])]);
+  // (همهٔ فایل‌های .enc: پادکست‌ها و بستهٔ عکس‌های درس‌آموزی)
+  const pods = [];
+  for (const sub of ['podcasts', 'lessons']) {
+    const dir = path.join(ROOT, 'manhole_pwa', sub);
+    for (const f of fs.existsSync(dir) ? fs.readdirSync(dir) : []) {
+      if (!f.endsWith('.enc')) continue;
+      const buf = fs.readFileSync(path.join(dir, f));
+      const plain = await subtle.decrypt({ name: 'AES-GCM', iv: buf.subarray(0, 12) }, oldK, buf.subarray(12));
+      const iv = rand(12), ct = new Uint8Array(await subtle.encrypt({ name: 'AES-GCM', iv }, newK, plain));
+      pods.push([path.join(dir, f), Buffer.concat([Buffer.from(iv), Buffer.from(ct)])]);
+    }
   }
   const remain = [];
   for (const u of list) {
@@ -172,7 +176,7 @@ if (cmd === 'init') {
   ks.recovery = await wrapWith(rec, newCk);
   for (const [p, data] of pods) fs.writeFileSync(p, data);
   saveKeystore(ks);
-  console.log('دسترسی «' + id + '» قطع شد؛ کلید محتوا عوض شد و ' + pods.length + ' پادکست دوباره رمز شد.');
+  console.log('دسترسی «' + id + '» قطع شد؛ کلید محتوا عوض شد و ' + pods.length + ' فایل رمزشده (پادکست/عکس) دوباره رمز شد.');
   if (process.env.HSE_NEW_RECOVERY && !process.env.HSE_RECOVERY) console.log('کلید بازیابی تازه (کلید قبلی دیگر کار نمی‌کند):\n' + rec.match(/.{4}/g).join('-'));
   console.log('⚠️ حالا حتماً build را اجرا و منتشر کنید؛ تا آن موقع پادکست‌های منتشرشده با اپ منتشرشده نمی‌خوانند.');
 } else {

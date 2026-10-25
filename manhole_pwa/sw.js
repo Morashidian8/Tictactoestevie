@@ -1,7 +1,9 @@
 // Service Worker — کش کامل برای کارکرد آفلاین اپ «ارزیابی ورود به منهول»
-const CACHE = "manhole-pwa-v45";
+const CACHE = "manhole-pwa-v46";
 // پادکست‌ها در کش جداگانه نگه داشته می‌شوند تا با آپدیت اپ پاک نشوند
 const POD_CACHE = "hse-podcasts-v1";
+// بستهٔ عکس‌های «درس‌آموزی از حوادث» هم جدا نگه داشته می‌شود (اپ خودش آن را در این کش می‌گذارد)
+const LES_CACHE = "hse-lessons-v1";
 const ASSETS = [
   "./",
   "./index.html",
@@ -24,7 +26,7 @@ self.addEventListener("install", (e) => {
 self.addEventListener("activate", (e) => {
   e.waitUntil(
     caches.keys().then((keys) =>
-      Promise.all(keys.filter((k) => k !== CACHE && !k.startsWith("hse-podcasts")).map((k) => caches.delete(k)))
+      Promise.all(keys.filter((k) => k !== CACHE && !k.startsWith("hse-podcasts") && !k.startsWith("hse-lessons")).map((k) => caches.delete(k)))
     ).then(() => self.clients.claim())
   );
 });
@@ -51,6 +53,11 @@ self.addEventListener("fetch", (e) => {
   if (new URL(e.request.url).pathname.includes("/podcasts/")) {
     e.respondWith(caches.open(POD_CACHE).then((c) => c.match(e.request.url))
       .then((r) => r ? rangeResponse(e.request, r) : fetch(e.request)));
+    return;
+  }
+  // بستهٔ عکس‌های درس‌آموزی: از کش خودش، وگرنه شبکه (ذخیره را خود اپ انجام می‌دهد)
+  if (new URL(e.request.url).pathname.includes("/lessons/")) {
+    e.respondWith(caches.open(LES_CACHE).then((c) => c.match(e.request.url)).then((r) => r || fetch(e.request)));
     return;
   }
   // سایر فایل‌ها Network-first: با هر رفرش آخرین نسخه از شبکه گرفته می‌شود تا آپدیت‌ها فوری
