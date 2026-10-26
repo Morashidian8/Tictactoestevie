@@ -1,0 +1,517 @@
+<title>Renewal Intelligence</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;700;800&family=Reem+Kufi:wght@600;700&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Layout: a renewal worksheet — summary strip, then one row per coverage that reads like a line on a policy schedule, then cost and data checks. */
+:root{
+  --paper:#f2f5f4; --surface:#ffffff; --ink:#14211f; --muted:#5a6a66; --line:#d3dcd9; --accent:#0e6a5b; --accent-soft:#dcefea;
+  --up:#1d7a3c; --up-bg:#e1f2e5; --minor:#4f7a1d; --minor-bg:#eef4dd; --down:#a86200; --down-bg:#fbeedb;
+  --keep:#56625f; --keep-bg:#eaefed; --protect:#3450a6; --protect-bg:#e3e9fa; --remove:#b0281f; --remove-bg:#fbe4e2;
+  --warn:#a86200; --crit:#b0281f;
+  --f-body:"Vazirmatn",Tahoma,"Segoe UI",sans-serif; --f-display:"Reem Kufi","Vazirmatn",Tahoma,sans-serif; --f-mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --paper:#0e1514; --surface:#151f1d; --ink:#e2eae7; --muted:#93a39f; --line:#2a3734; --accent:#52b9a4; --accent-soft:#173430;
+  --up:#6fd08c; --up-bg:#16301f; --minor:#a9cf6a; --minor-bg:#25301a; --down:#f0ad55; --down-bg:#35270f;
+  --keep:#a3b0ac; --keep-bg:#212c2a; --protect:#93a9f2; --protect-bg:#1c2442; --remove:#f28b82; --remove-bg:#3a1a18;
+  --warn:#f0ad55; --crit:#f28b82; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --paper:#0e1514; --surface:#151f1d; --ink:#e2eae7; --muted:#93a39f; --line:#2a3734; --accent:#52b9a4; --accent-soft:#173430;
+  --up:#6fd08c; --up-bg:#16301f; --minor:#a9cf6a; --minor-bg:#25301a; --down:#f0ad55; --down-bg:#35270f;
+  --keep:#a3b0ac; --keep-bg:#212c2a; --protect:#93a9f2; --protect-bg:#1c2442; --remove:#f28b82; --remove-bg:#3a1a18;
+  --warn:#f0ad55; --crit:#f28b82; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--paper);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.7;direction:rtl}
+.wrap{max-width:1080px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 48px;display:flex;flex-direction:column;gap:28px}
+h1,h2,h3{text-wrap:balance;margin:0}
+h1{font-family:var(--f-display);font-size:1.75rem;font-weight:700;letter-spacing:0;color:var(--accent)}
+h2{font-size:1.15rem;font-weight:800}
+.num{font-variant-numeric:tabular-nums}
+.mono{font-family:var(--f-mono);font-size:.8em;color:var(--muted);direction:ltr;unicode-bidi:isolate}
+.muted{color:var(--muted)}
+header{display:flex;flex-wrap:wrap;gap:16px;align-items:flex-end;justify-content:space-between;border-bottom:2px solid var(--ink);padding-bottom:16px}
+header .who{display:flex;flex-direction:column;gap:4px;min-width:0}
+.meta{display:flex;flex-wrap:wrap;gap:6px 14px;color:var(--muted);font-size:.9rem}
+.actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.btn{font:inherit;font-weight:700;border-radius:8px;padding:8px 14px;border:1.5px solid var(--accent);background:var(--accent);color:var(--surface);cursor:pointer}
+.btn.ghost{background:transparent;color:var(--accent)}
+.btn:focus-visible,input:focus-visible,summary:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.chip{display:inline-flex;align-items:center;gap:4px;font-size:.78rem;font-weight:700;padding:1px 10px;border-radius:999px;white-space:nowrap}
+.chip.sample{background:var(--down-bg);color:var(--down)}
+.chip.lvl-low{background:var(--remove-bg);color:var(--remove)}
+.chip.lvl-mid{background:var(--down-bg);color:var(--down)}
+.chip.lvl-high{background:var(--up-bg);color:var(--up)}
+.d-increase{background:var(--up-bg);color:var(--up)} .d-minor{background:var(--minor-bg);color:var(--minor)}
+.d-reduce{background:var(--down-bg);color:var(--down)} .d-keep{background:var(--keep-bg);color:var(--keep)}
+.d-protect{background:var(--protect-bg);color:var(--protect)} .d-remove{background:var(--remove-bg);color:var(--remove)}
+.cat{font-size:.72rem;font-weight:700;color:var(--muted);border:1px solid var(--line);border-radius:4px;padding:0 6px}
+.summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.fig{background:var(--surface);padding:14px 16px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.fig .k{font-size:.8rem;color:var(--muted);font-weight:500}
+.fig .v{font-size:1.45rem;font-weight:800}
+.fig .s{font-size:.78rem;color:var(--muted)}
+.fig .s.bad{color:var(--warn)}
+.note{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;font-size:.9rem}
+section{display:flex;flex-direction:column;gap:12px}
+.sec-head{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:baseline;justify-content:space-between}
+.legend{display:flex;flex-wrap:wrap;gap:6px}
+.rows{display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--line);border-radius:10px}
+.row{display:grid;grid-template-columns:minmax(150px,1.1fr) minmax(170px,1.2fr) minmax(150px,1fr) minmax(0,2fr);gap:12px 20px;padding:14px 16px;border-top:1px solid var(--line);border-inline-start:4px solid transparent;align-items:start}
+.row:first-child{border-top:0}
+.row.s-increase{border-inline-start-color:var(--up)} .row.s-minor{border-inline-start-color:var(--minor)} .row.s-reduce{border-inline-start-color:var(--down)}
+.row.s-protect{border-inline-start-color:var(--protect)} .row.s-remove{border-inline-start-color:var(--remove)}
+.row > div{min-width:0}
+.cov{display:flex;flex-direction:column;gap:4px}
+.cov b{font-size:1.02rem}
+.bar{height:6px;background:var(--keep-bg);border-radius:3px;overflow:hidden;margin-top:6px}
+.bar i{display:block;height:100%;background:var(--accent);border-radius:3px}
+.stats{display:grid;grid-template-columns:auto auto;gap:0 10px;font-size:.84rem;justify-content:start}
+.stats dt{color:var(--muted)} .stats dd{margin:0;font-weight:700}
+.cap{display:flex;flex-direction:column;gap:2px;font-size:.88rem}
+.cap .line{display:flex;gap:6px;align-items:baseline;flex-wrap:wrap}
+.cap .old{color:var(--muted)} .cap .new{font-weight:800}
+.why{font-size:.88rem;display:flex;flex-direction:column;gap:6px}
+.why p{margin:0}
+.cost{background:var(--surface);border:1px solid var(--line);border-radius:10px;overflow-x:auto}
+.cost table{width:100%;border-collapse:collapse;font-size:.92rem;min-width:420px}
+.cost td,.cost th{padding:9px 16px;border-top:1px solid var(--line);text-align:start}
+.cost tr:first-child td{border-top:0}
+.cost td:last-child{text-align:left;font-weight:700;white-space:nowrap}
+.cost tr.total td{border-top:2px solid var(--ink);font-weight:800}
+.issues{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--line);border-radius:10px}
+.issues li{padding:10px 16px;border-top:1px solid var(--line);display:flex;gap:10px;align-items:baseline}
+.issues li:first-child{border-top:0}
+.sev{flex:none;width:8px;height:8px;border-radius:50%;background:var(--warn);transform:translateY(-1px)}
+.sev.crit{background:var(--crit)} .sev.info{background:var(--muted)}
+details{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:4px 16px}
+summary{cursor:pointer;font-weight:700;padding:8px 0}
+.settings{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;padding:8px 0 16px}
+.settings label{display:flex;flex-direction:column;gap:4px;font-size:.86rem}
+.settings input[type=number]{font:inherit;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--paper);color:var(--ink);width:100%}
+.protect-list{display:flex;flex-wrap:wrap;gap:8px 16px;padding-bottom:14px}
+.protect-list label{display:flex;gap:6px;align-items:center;font-size:.9rem}
+.err{background:var(--remove-bg);color:var(--remove);border-radius:8px;padding:10px 14px;font-weight:500}
+footer{font-size:.82rem;color:var(--muted);border-top:1px solid var(--line);padding-top:14px;display:flex;flex-direction:column;gap:4px}
+@media (max-width:820px){
+  .summary{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .row{grid-template-columns:1fr 1fr}
+  .row .why{grid-column:1/-1}
+}
+@media (max-width:460px){.row{grid-template-columns:1fr}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="who">
+      <h1>Renewal Intelligence</h1>
+      <div style="font-weight:700;font-size:1.1rem" id="gName">—</div>
+      <div class="meta" id="gMeta"></div>
+    </div>
+    <div class="actions">
+      <span class="chip sample" id="sampleChip">دادهٔ نمونه</span>
+      <label class="btn" for="file" tabindex="0" id="uploadBtn">بارگذاری فایل اکسل</label>
+      <input type="file" id="file" accept=".xlsx,.xls" hidden>
+      <button class="btn ghost" id="resetBtn" type="button" hidden>بازگشت به نمونه</button>
+    </div>
+  </header>
+
+  <div id="error" class="err" hidden></div>
+
+  <section aria-label="خلاصه">
+    <div class="summary" id="summary"></div>
+    <div class="note" id="confNote"></div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>پیشنهاد برای بیمه‌نامهٔ جدید</h2>
+      <div class="legend">
+        <span class="chip d-increase">افزایش سقف</span><span class="chip d-minor">افزایش جزئی</span>
+        <span class="chip d-keep">بدون تغییر</span><span class="chip d-reduce">کاهش سقف</span>
+        <span class="chip d-remove">کاندید حذف</span><span class="chip d-protect">حفظ پوشش حمایتی</span>
+      </div>
+    </div>
+    <div class="rows" id="rows"></div>
+  </section>
+
+  <section>
+    <div class="sec-head"><h2>اثر تقریبی بر خسارت سال بعد</h2><span class="muted" style="font-size:.85rem">میلیون تومان؛ برآورد تحلیلی، نه نرخ بیمه‌گر</span></div>
+    <div class="cost" id="cost"></div>
+  </section>
+
+  <section>
+    <div class="sec-head"><h2>کنترل کیفیت داده</h2><span class="muted" style="font-size:.85rem" id="issueCount"></span></div>
+    <ul class="issues" id="issues"></ul>
+  </section>
+
+  <details id="settingsBox">
+    <summary>تنظیمات قواعد تحلیل</summary>
+    <div class="settings">
+      <label for="sPressure">آستانهٔ فشار سقف برای «افزایش سقف» (درصد)<input type="number" id="sPressure" min="0" max="100" step="0.5"></label>
+      <label for="sLowUtil">مصرف کم: درصد استفاده‌کنندگان از کل بیمه‌شدگان کمتر از<input type="number" id="sLowUtil" min="0" max="100" step="0.5"></label>
+      <label for="sLowClaim">مصرف کم (دادهٔ ناقص): سهم از تعداد خسارت کمتر از (درصد)<input type="number" id="sLowClaim" min="0" max="100" step="0.5"></label>
+      <label for="sLowPaid">و سهم از مبلغ خسارت کمتر از (درصد)<input type="number" id="sLowPaid" min="0" max="100" step="0.5"></label>
+    </div>
+    <div style="font-size:.86rem;font-weight:700">پوشش‌های حمایتی (هرگز پیشنهاد حذف یا کاهش نمی‌گیرند):</div>
+    <div class="protect-list" id="protectList"></div>
+  </details>
+
+  <footer>
+    <span>فایل فقط داخل مرورگر شما خوانده می‌شود و به هیچ سروری ارسال نمی‌شود.</span>
+    <span>خروجی این ابزار پیشنهاد برای مذاکرهٔ تمدید است؛ نرخ نهایی حق‌بیمه را بیمه‌گر و اکچوئر تعیین می‌کنند.</span>
+    <span>قالب ورودی: همان فایل Renewal Intelligence (شیت‌های ۰۱ تا ۰۷). جای ردیف‌ها مهم نیست؛ سرستون‌ها پیدا می‌شوند.</span>
+  </footer>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script id="sample" type="application/json">{"01_جمعیت":[["01 | اطلاعات گروه"],["اطلاعات پایه قرارداد و ساختار جمعیتی؛ از اطلاعات هویتی مستقیم استفاده نکنید."],[],[],[],["Group_ID","نام بیمه‌گذار","صنعت","استان","دوره قرارداد","تعداد کارکنان","اصلی","همسر","فرزند","سایر وابسته","کل نفرات","میانگین سن","میانه سن","درصد زن","درصد مرد","ماه-نفر","سطح اقتصادی نسبی","حساسیت به افزایش حق‌بیمه","اولویت کارفرما","بودجه افزایش حق‌بیمه"],["G-1405-001","گروه نمونه فولاد","صنعتی","تهران","1405/07/01-1406/06/31",850,850,610,420,35,null,39.5,38,0.31,0.69,null,"متوسط","زیاد","حفظ مزایا","25%"]],"02_تعهدات":[["02 | تعهدات قرارداد"],["مبالغ نمونه بر حسب «میلیون تومان»؛ اعداد را با قرارداد واقعی جایگزین کنید."],[],[],[],["Coverage_ID","پوشش","سقف سالانه فعلی","سقف هر مورد","فرانشیز","دوره انتظار","شرایط خاص","Priority Weight","حداقل پیشنهادی","حداکثر پیشنهادی"],["C01","بستری",500,500,0.1,"-","طبق قرارداد",1,400,2000],["C02","جراحی",700,700,0.1,"-","طبق قرارداد",1,500,2500],["C03","پاراکلینیک",40,10,0.1,"-","تصویربرداری/آزمایش",0.9,30,150],["C04","دارو",20,5,0.2,"-","داروهای مشمول قرارداد",1,15,100],["C05","دندانپزشکی",15,5,0.2,"-","طبق فهرست تعهدات",0.85,10,60],["C06","عینک",5,3,0.2,"-","هر دو سال یکبار",0.45,3,20],["C07","زایمان",80,80,0.1,"9 ماه","در صورت وجود تعهد",0.8,50,250],["C08","آمبولانس",10,10,0.1,"-","طبق قرارداد",0.35,5,30]],"03_خسارت":[["03 | خسارت‌ها"],["هر ردیف یک خدمت/خسارت. Member_ID باید ناشناس باشد."],[],[],[],["Claim_ID","Member_ID","Claim_Date","Coverage_ID","پوشش","نوع خدمت","نوع مرکز","مبلغ اولیه","فرانشیز","مبلغ تاییدشده","پرداختی","غیرقابل پرداخت","علت عدم پرداخت","وضعیت","خسارت بزرگ؟"],["CL001","M001","1405/07/12","C03","پاراکلینیک","MRI","بیمارستان",7.2,0.72,6.48,6.48,0,null,"پرداخت‌شده","خیر"],["CL002","M002","1405/07/18","C05","دندانپزشکی","ترمیم","کلینیک",8,1.6,6.4,6.4,0,null,"پرداخت‌شده","خیر"],["CL003","M003","1405/08/02","C04","دارو","داروهای تخصصی","داروخانه",9.5,1.9,7.6,7.6,0,null,"پرداخت‌شده","خیر"],["CL004","M004","1405/08/11","C01","بستری","بستری عمومی","بیمارستان",120,12,108,108,0,null,"پرداخت‌شده","بله"],["CL005","M005","1405/09/03","C03","پاراکلینیک","آزمایش","آزمایشگاه",3.5,0.35,3.15,3.15,0,null,"پرداخت‌شده","خیر"],["CL006","M006","1405/09/20","C05","دندانپزشکی","ایمپلنت","کلینیک",28,5.6,22.4,15,7.4,"اتمام سقف","بخشی پرداخت‌شده","خیر"],["CL007","M007","1405/10/04","C02","جراحی","جراحی قلب","بیمارستان",480,48,432,432,0,null,"پرداخت‌شده","بله"],["CL008","M008","1405/10/16","C04","دارو","داروی مزمن","داروخانه",4.2,0.84,3.36,3.36,0,null,"پرداخت‌شده","خیر"],["CL009","M009","1405/11/08","C06","عینک","لنز/عینک","اپتومتری",6.5,1.3,5.2,5,0.2,"اتمام سقف","بخشی پرداخت‌شده","خیر"],["CL010","M010","1405/11/21","C03","پاراکلینیک","CT","بیمارستان",12,1.2,10.8,8,2.8,"اتمام سقف","بخشی پرداخت‌شده","خیر"],["CL011","M011","1405/12/02","C07","زایمان","زایمان","بیمارستان",90,9,81,80,1,"سقف تعهد","بخشی پرداخت‌شده","خیر"],["CL012","M012","1406/01/14","C04","دارو","داروی تخصصی","داروخانه",14,2.8,11.2,11.2,0,null,"پرداخت‌شده","خیر"],["CL013","M013","1406/02/03","C03","پاراکلینیک","MRI","بیمارستان",8.5,0.85,7.65,7.65,0,null,"پرداخت‌شده","خیر"],["CL014","M014","1406/03/17","C05","دندانپزشکی","روکش","کلینیک",18,3.6,14.4,14.4,0,null,"پرداخت‌شده","خیر"],["CL015","M015","1406/04/09","C01","بستری","بستری","بیمارستان",95,9.5,85.5,85.5,0,null,"پرداخت‌شده","بله"],["CL016","M016","1406/05/11","C03","پاراکلینیک","آزمایش","آزمایشگاه",4.8,0.48,4.32,4.32,0,null,"پرداخت‌شده","خیر"],["CL017","M017","1406/06/02","C04","دارو","داروی مزمن","داروخانه",5.1,1.02,4.08,4.08,0,null,"پرداخت‌شده","خیر"],["CL018","M018","1406/06/14","C05","دندانپزشکی","جراحی لثه","کلینیک",10,2,8,8,0,null,"پرداخت‌شده","خیر"]],"04_غیرقابل_پرداخت":[["04 | غیرقابل پرداخت"],["علت عدم پرداخت را استاندارد کنید تا بتوان تشخیص داد کدام موارد با طراحی قرارداد قابل اصلاح‌اند."],[],[],[],["Claim_ID","Coverage_ID","پوشش","مبلغ غیرقابل پرداخت","علت استاندارد","تعداد درخواست","قابل اصلاح با تغییر قرارداد؟","اقدام پیشنهادی","یادداشت"],["CL006","C05","دندانپزشکی",7.4,"اتمام سقف",1,"بله","افزایش سقف/تفکیک خدمات","نمونه"],["CL009","C06","عینک",0.2,"اتمام سقف",1,"بله","بازنگری سقف","نمونه"],["CL010","C03","پاراکلینیک",2.8,"اتمام سقف",1,"بله","افزایش هدفمند سقف","نمونه"],["CL011","C07","زایمان",1,"سقف تعهد",1,"بله","بازنگری سقف","نمونه"],["CL019","C04","دارو",1.8,"خارج از تعهد",1,"خیر","حفظ کنترل","نمونه"],["CL020","C03","پاراکلینیک",0.9,"نقص مدارک",3,"خیر","آموزش/فرآیند خسارت","نمونه"]],"05_حق_بیمه":[["05 | حق‌بیمه و تجربه مالی"],["اعداد نمونه بر حسب میلیون تومان."],[],[],[],["دوره","نفر","حق‌بیمه کل",null,null,null,null,null,"نفر-ماه"],["سال 1404",900,105000,76000,79000,null,null,null,10800],["سال 1405",850,120000,null,null,null,null,null,10200]],"06_تعرفه_سال_بعد":[["06 | تعرفه و روند هزینه سال بعد"],["تعرفه‌های واقعی سال بعد را وارد کنید. ستون «ضریب انتقال به خسارت» برای جلوگیری از فرض ساده تورم=خسارت است."],[],[],[],["Service_ID","خدمت","تعرفه سال قبل","تعرفه سال بعد",null,"ضریب انتقال به خسارت",null,"منبع/تاریخ"],["T01","ویزیت",0.8,1,null,0.75,null,"ورودی کاربر"],["T02","MRI",5.5,7,null,0.9,null,"ورودی کاربر"],["T03","CT",4,5,null,0.9,null,"ورودی کاربر"],["T04","آزمایش",2.5,3.2,null,0.85,null,"ورودی کاربر"],["T05","جراحی",100,130,null,0.8,null,"ورودی کاربر"],["T06","دارو",1,1.25,null,0.95,null,"ورودی کاربر"],["T07","دندان",2,2.6,null,0.9,null,"ورودی کاربر"]],"07_اقتصادی_اجتماعی":[["07 | عوامل جمعیتی، اقتصادی و اجتماعی"],["این بخش ورودی تصمیم‌گیری است؛ امتیازها باید مستند و قابل توضیح باشند."],[],[],[],["Factor_ID","عامل","مقدار","مقیاس","وزن","امتیاز 0-100","توضیح/منبع"],["F01","میانگین سن",39.5,"سال",0.15,55,"نمونه"],["F02","درصد افراد بالای 50 سال",0.28,"نسبت",0.15,60,"نمونه"],["F03","افراد تحت تکفل به ازای اصلی",1.25,"نسبت",0.1,65,"نمونه"],["F04","حساسیت به افزایش حق‌بیمه",80,"0-100",0.2,80,"ارزیابی کارفرما"],["F05","اهمیت حفظ مزایا",90,"0-100",0.2,90,"ارزیابی کارفرما"],["F06","سطح اقتصادی نسبی",55,"0-100",0.1,"امتیاز کلی"],["F07","اولویت رضایت کارکنان",85,"0-100",0.1,85,"ارزیابی کارفرما"]]}</script>
+<script id="engine">
+/* ---------- parsing ---------- */
+const FA_DIGITS = "۰۱۲۳۴۵۶۷۸۹", AR_DIGITS = "٠١٢٣٤٥٦٧٨٩";
+function num(v){
+  if (v == null || v === "") return null;
+  if (typeof v === "number") return v;
+  let s = String(v).trim().replace(/[۰-۹]/g, d => FA_DIGITS.indexOf(d)).replace(/[٠-٩]/g, d => AR_DIGITS.indexOf(d)).replace(/[,٬\s]/g, "");
+  const pct = /%$/.test(s); s = s.replace(/%$/, "");
+  const n = parseFloat(s);
+  return isNaN(n) ? null : (pct ? n / 100 : n);
+}
+const str = v => v == null ? "" : String(v).trim();
+const norm = s => str(s).replace(/‌/g, "").replace(/ي/g, "ی").replace(/ك/g, "ک").replace(/\s+/g, " ");
+
+function findSheet(sheets, prefix, words){
+  const names = Object.keys(sheets);
+  return names.find(n => n.startsWith(prefix)) || names.find(n => words.some(w => norm(n).includes(w)));
+}
+// Header row is found by its first cell, so shifted rows don't break anything.
+function table(rows, first){
+  if (!rows) return null;
+  const hi = rows.findIndex(r => r && norm(r[0]).toLowerCase() === first.toLowerCase());
+  if (hi < 0) return null;
+  const out = [];
+  for (let i = hi + 1; i < rows.length; i++){
+    const r = rows[i] || [];
+    if (!str(r[0])) { if (out.length) break; else continue; }
+    out.push(r);
+  }
+  return { header: rows[hi].map(norm), rows: out };
+}
+function col(t, names, fallback){
+  for (const n of names){ const i = t.header.indexOf(norm(n)); if (i >= 0) return i; }
+  return fallback;
+}
+
+function parseWorkbook(sheets){
+  const warn = [];
+  const S = {
+    pop: sheets[findSheet(sheets, "01", ["جمعیت"])],
+    cov: sheets[findSheet(sheets, "02", ["تعهدات"])],
+    clm: sheets[findSheet(sheets, "03", ["خسارت"])],
+    unp: sheets[findSheet(sheets, "04", ["غیرقابل"])],
+    prm: sheets[findSheet(sheets, "05", ["حق"])],
+    trf: sheets[findSheet(sheets, "06", ["تعرفه"])],
+  };
+  const tc = table(S.cov, "Coverage_ID"), tl = table(S.clm, "Claim_ID");
+  if (!tc) throw new Error("جدول تعهدات پیدا نشد. شیتی با سرستون Coverage_ID لازم است.");
+  if (!tl) throw new Error("جدول خسارت‌ها پیدا نشد. شیتی با سرستون Claim_ID لازم است.");
+
+  let group = { name: "گروه بدون نام", total: null };
+  const tp = table(S.pop, "Group_ID");
+  if (tp && tp.rows[0]){
+    const r = tp.rows[0], c = n => col(tp, [n], -1), g = (n, f) => { const i = c(n); return r[i >= 0 ? i : f]; };
+    const parts = ["اصلی","همسر","فرزند","سایر وابسته"].map((n, k) => num(g(n, 6 + k)) || 0);
+    group = { id: str(r[0]), name: str(g("نام بیمه‌گذار", 1)) || "گروه بدون نام", industry: str(g("صنعت", 2)), province: str(g("استان", 3)),
+      period: str(g("دوره قرارداد", 4)), employees: num(g("تعداد کارکنان", 5)), parts,
+      total: num(g("کل نفرات", 10)) || parts.reduce((a, b) => a + b, 0) || null,
+      avgAge: num(g("میانگین سن", 11)), female: num(g("درصد زن", 13)), male: num(g("درصد مرد", 14)) };
+  } else warn.push({ sev: "warn", text: "اطلاعات جمعیت گروه پیدا نشد؛ نرخ استفاده نسبت به کل بیمه‌شدگان محاسبه نمی‌شود." });
+
+  const ci = n => col(tc, [n], -1);
+  const coverages = tc.rows.map(r => ({
+    id: str(r[0]), name: str(r[ci("پوشش") >= 0 ? ci("پوشش") : 1]),
+    annualCap: num(r[ci("سقف سالانه فعلی") >= 0 ? ci("سقف سالانه فعلی") : 2]),
+    perCase: num(r[ci("سقف هر مورد") >= 0 ? ci("سقف هر مورد") : 3]),
+    min: num(r[ci("حداقل پیشنهادی") >= 0 ? ci("حداقل پیشنهادی") : 8]),
+    max: num(r[ci("حداکثر پیشنهادی") >= 0 ? ci("حداکثر پیشنهادی") : 9]),
+  }));
+
+  const li = (n, f) => col(tl, [n], f);
+  const L = { member: li("Member_ID", 1), date: li("Claim_Date", 2), cov: li("Coverage_ID", 3), covName: li("پوشش", 4), service: li("نوع خدمت", 5),
+    approved: li("مبلغ تاییدشده", 9), paid: li("پرداختی", 10), unpaid: li("غیرقابل پرداخت", 11), reason: li("علت عدم پرداخت", 12) };
+  const claims = tl.rows.map(r => {
+    const approved = num(r[L.approved]) || 0, paid = num(r[L.paid]) || 0;
+    let unpaid = num(r[L.unpaid]); if (unpaid == null) unpaid = Math.max(0, approved - paid);
+    return { id: str(r[0]), member: str(r[L.member]), date: str(r[L.date]), cov: str(r[L.cov]), covName: str(r[L.covName]),
+      service: str(r[L.service]), approved, paid, unpaid, reason: norm(r[L.reason]) };
+  });
+
+  const tu = table(S.unp, "Claim_ID");
+  const unpaidList = tu ? tu.rows.map(r => ({ id: str(r[0]), cov: str(r[col(tu, ["Coverage_ID"], 1)]), amount: num(r[col(tu, ["مبلغ غیرقابل پرداخت"], 3)]) || 0,
+    reason: norm(r[col(tu, ["علت استاندارد"], 4)]), fixable: norm(r[col(tu, ["قابل اصلاح با تغییر قرارداد؟"], 6)]) })) : [];
+
+  const premiums = [];
+  (S.prm || []).forEach(r => {
+    if (!r || !/^(سال|\d{4})/.test(norm(r[0]))) return;
+    premiums.push({ label: norm(r[0]), persons: num(r[1]), premium: num(r[2]), paid: num(r[3]), approved: num(r[4]), personMonths: num(r[8]) });
+  });
+
+  const tt = table(S.trf, "Service_ID");
+  const tariffs = tt ? tt.rows.map(r => ({ name: str(r[1]), old: num(r[2]), next: num(r[3]), pt: num(r[4]) }))
+    .filter(t => t.old > 0 && t.next != null) : [];
+
+  return { group, coverages, claims, unpaidList, premiums, tariffs, warn };
+}
+
+/* ---------- analysis ---------- */
+const PROTECT_RE = /بستری|جراحی|زایمان|آمبولانس|سرطان|پیوند|دیالیز|اورژانس|شیمی/;
+const DEFAULTS = { pressureHigh: 5, lowUtil: 2, lowClaim: 8, lowPaid: 2 };
+
+function niceUp(x){
+  const step = x < 10 ? 1 : x < 50 ? 5 : x < 200 ? 10 : x < 1000 ? 50 : 100;
+  return Math.ceil(x / step - 1e-9) * step;
+}
+function monthIndex(d){
+  const m = norm(d).replace(/[۰-۹]/g, c => FA_DIGITS.indexOf(c)).match(/^(\d{4})[\/\-.](\d{1,2})/);
+  return m ? (+m[1]) * 12 + (+m[2]) : null;
+}
+const sum = (a, f) => a.reduce((s, x) => s + (f ? f(x) : x), 0);
+
+function analyze(data, settings, protectSet){
+  const st = Object.assign({}, DEFAULTS, settings || {});
+  const { group, coverages, claims, unpaidList, premiums, tariffs } = data;
+  const issues = data.warn.slice();
+
+  const trend = tariffs.length ? sum(tariffs, t => (t.next / t.old - 1) * (t.pt == null ? 1 : t.pt)) / tariffs.length : 0;
+  const totalPaid = sum(claims, c => c.paid), totalApproved = sum(claims, c => c.approved), totalUnpaid = sum(claims, c => c.unpaid);
+  const insured = group.total;
+  const current = premiums.length ? premiums[premiums.length - 1] : null;
+  const prior = premiums.filter(p => p.premium && p.paid).slice(-1)[0] || null;
+  const premiumNow = current && current.premium;
+  const complete = premiumNow ? totalPaid / premiumNow >= 0.1 : true;
+
+  const months = claims.map(c => monthIndex(c.date)).filter(m => m != null);
+  const span = months.length ? Math.max(...months) - Math.min(...months) + 1 : 0;
+  const level = claims.length >= 300 && span >= 24 ? "high" : claims.length >= 100 && span >= 12 ? "mid" : "low";
+
+  const covIds = new Set(coverages.map(c => c.id));
+  const rows = coverages.map(cv => {
+    const cl = claims.filter(c => c.cov === cv.id || (!c.cov && c.covName === cv.name));
+    const byMember = new Map();
+    cl.forEach(c => { const k = c.member || c.id; const m = byMember.get(k) || { approved: 0, paid: 0 }; m.approved += c.approved; m.paid += c.paid; byMember.set(k, m); });
+    const n = cl.length, users = byMember.size;
+    const paid = sum(cl, c => c.paid), approved = sum(cl, c => c.approved);
+    const capClaims = cl.filter(c => /سقف/.test(c.reason) && c.unpaid > 0);
+    const capUnpaid = sum(capClaims, c => c.unpaid);
+    const otherUnpaid = sum(cl, c => c.unpaid) - capUnpaid;
+    const peakMember = Math.max(0, ...[...byMember.values()].map(m => m.approved));
+    const maxClaim = Math.max(0, ...cl.map(c => c.approved));
+    // Which cap caused each cap-related shortfall: the member's yearly total over the annual cap, else the single claim over the per-case cap.
+    const memberKey = c => c.member || c.id;
+    const annualHit = c => cv.annualCap != null && byMember.get(memberKey(c)).approved > cv.annualCap + 1e-9;
+    const annualBinding = capClaims.some(annualHit);
+    const perCaseBinding = capClaims.some(c => !annualHit(c) && cv.perCase != null && c.approved > cv.perCase + 1e-9);
+    const caseMax = Math.max(0, ...capClaims.filter(c => !annualHit(c)).map(c => c.approved));
+    const pressure = approved ? capUnpaid / approved : 0;
+    const util = insured ? users / insured : null;
+    const claimShare = claims.length ? n / claims.length : 0, paidShare = totalPaid ? paid / totalPaid : 0;
+    const lowUse = complete && util != null ? util * 100 < st.lowUtil : (claimShare * 100 < st.lowClaim && paidShare * 100 < st.lowPaid);
+    const protect = protectSet ? protectSet.has(cv.id) : PROTECT_RE.test(cv.name);
+    const g = x => (1 + trend) * x;
+
+    let d, newAnnual = cv.annualCap, newPerCase = cv.perCase, extra = 0, saving = 0;
+    const why = [], notes = [];
+    const fmt = x => fmtNum(x), pct = x => fmtPct(x);
+    if (n === 0){
+      if (protect){ d = "protect"; why.push("در این دوره استفاده‌ای نداشته، ولی پوشش حمایتی است: برای رویدادهای نادر و پرهزینه. نبودِ خسارت در یک سال یعنی شانس، نه بی‌نیازی."); }
+      else { d = "remove"; why.push("در کل دوره هیچ خسارتی ثبت نشده است."); notes.push("صرفه‌جویی واقعی حذف را بیمه‌گر از نرخ این پوشش تعیین می‌کند؛ معمولاً کم است. می‌شود بودجه‌اش را به پوشش‌های پرفشار منتقل کرد."); }
+    } else if (capUnpaid > 0 && pressure * 100 >= st.pressureHigh){
+      d = "increase";
+      why.push(`${pct(pressure)} از مبلغ تأییدشده به خاطر سقف پرداخت نشده (${fmt(capUnpaid)} در ${fmtInt(capClaims.length)} مورد).`);
+    } else if (capUnpaid > 0){
+      d = "minor";
+      why.push(`به سقف خورده، ولی مبلغ پرداخت‌نشده کم است: ${fmt(capUnpaid)} (${pct(pressure)}).`);
+    } else if (lowUse && !protect){
+      d = "reduce";
+      why.push(complete && util != null ? `فقط ${pct(util)} از بیمه‌شدگان استفاده کرده‌اند.` : `فقط ${pct(claimShare)} از تعداد خسارت‌ها و ${pct(paidShare)} از مبلغ خسارت سهم این پوشش بوده است.`);
+    } else {
+      d = "keep";
+      if (cv.annualCap) why.push(`بیشترین مصرف یک نفر ${pct(peakMember / cv.annualCap)} سقف سالانه بوده؛ سقف فعلی کافی است.`);
+      else why.push("به سقف نخورده است.");
+      if (lowUse && protect) notes.push("مصرف کم است، ولی چون پوشش حمایتی است کاهش پیشنهاد نمی‌شود.");
+    }
+
+    if (d === "increase" || d === "minor"){
+      const bump = d === "increase" ? 0.2 : 0.1;
+      if (perCaseBinding){
+        newPerCase = niceUp(Math.max(cv.perCase * (1 + bump), g(caseMax)));
+        why.push(`سقف هر مورد محدودکننده بوده: خسارت ${fmt(caseMax)} در برابر سقف ${fmt(cv.perCase)}.`);
+      }
+      if (annualBinding || !perCaseBinding){
+        newAnnual = niceUp(Math.max(cv.annualCap * (1 + bump), g(peakMember)));
+        if (annualBinding) why.push(`سقف سالانه محدودکننده بوده: مصرف یک نفر ${fmt(peakMember)} در برابر سقف ${fmt(cv.annualCap)}.`);
+      }
+      // Single-event covers (per-case cap equal to the annual cap, e.g. maternity) keep both caps together.
+      if (cv.perCase != null && cv.annualCap != null && cv.perCase >= cv.annualCap) newPerCase = Math.max(newPerCase, newAnnual);
+      if (newPerCase != null && newAnnual != null && newPerCase > newAnnual) newAnnual = niceUp(newPerCase);
+      if (cv.max != null && newAnnual > cv.max){ notes.push(`نیاز برآوردی (${fmt(newAnnual)}) از حداکثر مجاز پیشنهادی (${fmt(cv.max)}) بیشتر است؛ به حداکثر محدود شد.`); newAnnual = cv.max; }
+      if (newPerCase != null && newAnnual != null && newPerCase > newAnnual) newPerCase = newAnnual;
+      extra = g(capUnpaid);
+      if (trend) notes.push(`سقف پیشنهادی با روند تعرفهٔ سال بعد (${pct(trend)}) تعدیل شده است.`);
+    }
+    if (d === "reduce"){
+      let target = niceUp(Math.max(cv.min || 0, g(peakMember) * 1.5));
+      if (cv.annualCap != null && target < cv.annualCap){
+        newAnnual = target;
+        if (newPerCase != null && newPerCase > newAnnual) newPerCase = newAnnual;
+        saving = sum([...byMember.values()], m => Math.max(0, g(m.paid) - newAnnual));
+        notes.push(`سقف جدید هنوز ۱٫۵ برابر بیشترین مصرف یک نفر (${fmt(peakMember)}) جا دارد.`);
+      } else { d = "keep"; why.length = 0; why.push("مصرف کم است، ولی سقف فعلی نزدیک حداقل پیشنهادی است؛ کاهش بیشتر منطقی نیست."); }
+    }
+    if (otherUnpaid > 0) notes.push(`${fmt(otherUnpaid)} به دلایل غیر از سقف پرداخت نشده؛ با تغییر سقف حل نمی‌شود.`);
+    if (n > 0 && n < 30) notes.push(`فقط ${fmtInt(n)} خسارت؛ برای تصمیم قطعی کم است.`);
+
+    return { cv, n, users, paid, approved, capUnpaid, pressure, util, claimShare, paidShare, peakMember, maxClaim,
+      protect, lowUse, d, newAnnual, newPerCase, extra, saving, why, notes };
+  });
+
+  // data quality
+  const claimIds = new Set(claims.map(c => c.id));
+  const missing = unpaidList.filter(u => !claimIds.has(u.id)).map(u => u.id);
+  if (missing.length) issues.push({ sev: "warn", text: `در شیت غیرقابل‌پرداخت به خسارت‌هایی اشاره شده که در شیت خسارت نیستند: ${missing.join("، ")}.` });
+  const capLabels = [...new Set(claims.map(c => c.reason).concat(unpaidList.map(u => u.reason)).filter(r => /سقف/.test(r)))];
+  if (capLabels.length > 1) issues.push({ sev: "warn", text: `علت «سقف» با چند عبارت مختلف نوشته شده (${capLabels.map(x => "«" + x + "»").join("، ")}). یکدست کنید تا تحلیل دقیق بماند.` });
+  const unknownCov = [...new Set(claims.filter(c => c.cov && !covIds.has(c.cov)).map(c => c.cov))];
+  if (unknownCov.length) issues.push({ sev: "crit", text: `خسارت با کد پوششی که در جدول تعهدات نیست: ${unknownCov.join("، ")}. این خسارت‌ها در تحلیل پوشش‌ها نیامده‌اند.` });
+  const overCase = claims.filter(c => { const cv = coverages.find(x => x.id === c.cov); return cv && cv.perCase != null && c.paid > cv.perCase + 1e-9; });
+  if (overCase.length) issues.push({ sev: "warn", text: `پرداختی بیشتر از سقف هر مورد: ${overCase.map(c => c.id).join("، ")}. یا سقف هر مورد اشتباه وارد شده یا پرداخت.` });
+  const mism = claims.filter(c => Math.abs(c.approved - c.paid - c.unpaid) > 0.01);
+  if (mism.length) issues.push({ sev: "warn", text: `در ${fmtInt(mism.length)} خسارت، تأییدشده منهای پرداختی با غیرقابل‌پرداخت نمی‌خواند: ${mism.slice(0, 6).map(c => c.id).join("، ")}.` });
+  if (!complete) issues.push({ sev: "crit", text: `جمع خسارت‌های ثبت‌شده (${fmtNum(totalPaid)}) فقط ${fmtPct(totalPaid / premiumNow)} حق‌بیمهٔ ${current.label} است. فهرست خسارت ناقص به نظر می‌رسد؛ Loss Ratio این سال معتبر نیست و «مصرف کم» به‌جای نرخ استفاده با سهم نسبی سنجیده شد.` });
+  if (current && current.persons && insured && Math.abs(current.persons - insured) / insured > 0.1)
+    issues.push({ sev: "warn", text: `تعداد نفر در شیت حق‌بیمه (${fmtInt(current.persons)}) با کل بیمه‌شدگان (${fmtInt(insured)}) فرق دارد؛ احتمالاً فقط افراد اصلی شمرده شده‌اند و سرانه‌ها اشتباه می‌شود.` });
+  if (group.female != null && group.male != null && Math.abs(group.female + group.male - 1) > 0.01)
+    issues.push({ sev: "warn", text: "جمع درصد زن و مرد ۱۰۰٪ نمی‌شود." });
+  if (span && span < 24) issues.push({ sev: "info", text: `دادهٔ خسارت ${fmtInt(span)} ماه را پوشش می‌دهد. برای پیشنهاد حذف یا کاهش، ۲۴ تا ۳۶ ماه داده بهتر است.` });
+  if (!tariffs.length) issues.push({ sev: "info", text: "تعرفهٔ سال بعد وارد نشده؛ روند هزینه صفر فرض شد." });
+
+  const baseNext = totalPaid * (1 + trend), extraSum = sum(rows, r => r.extra), saveSum = sum(rows, r => r.saving);
+  return { group, rows, trend, totalPaid, totalApproved, totalUnpaid, insured, current, prior, complete, span, level,
+    claimsCount: claims.length, baseNext, extraSum, saveSum, issues };
+}
+
+/* ---------- formatting ---------- */
+const nf1 = new Intl.NumberFormat("fa-IR", { maximumFractionDigits: 1 });
+const nf0 = new Intl.NumberFormat("fa-IR", { maximumFractionDigits: 0 });
+function fmtNum(x){ return x == null || isNaN(x) ? "—" : (Math.abs(x) >= 100 ? nf0 : nf1).format(x); }
+function fmtInt(x){ return x == null ? "—" : nf0.format(x); }
+function fmtPct(x){ if (x == null || isNaN(x)) return "—"; const v = x * 100; return new Intl.NumberFormat("fa-IR", { maximumFractionDigits: v < 1 ? 2 : 1 }).format(v) + "٪"; }
+if (typeof module !== "undefined") module.exports = { parseWorkbook, analyze, niceUp };
+</script>
+<script>
+const DLABEL = { increase: "افزایش سقف", minor: "افزایش جزئی", keep: "بدون تغییر", reduce: "کاهش سقف", remove: "کاندید حذف", protect: "حفظ پوشش حمایتی" };
+const ORDER = { increase: 0, minor: 1, remove: 2, reduce: 3, protect: 4, keep: 5 };
+const LVL = { low: ["lvl-low", "اطمینان پایین"], mid: ["lvl-mid", "اطمینان متوسط"], high: ["lvl-high", "اطمینان بالا"] };
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const $ = id => document.getElementById(id);
+
+let DATA = null, isSample = true, settings = Object.assign({}, DEFAULTS), protectSet = null;
+
+function load(sheets, sample){
+  try {
+    DATA = parseWorkbook(sheets);
+    isSample = sample;
+    protectSet = new Set(DATA.coverages.filter(c => PROTECT_RE.test(c.name)).map(c => c.id));
+    $("error").hidden = true;
+    renderSettings(); render();
+  } catch (e){
+    $("error").textContent = "فایل خوانده نشد: " + e.message;
+    $("error").hidden = false;
+  }
+}
+
+function render(){
+  const A = analyze(DATA, settings, protectSet), g = A.group;
+  $("sampleChip").hidden = !isSample; $("resetBtn").hidden = isSample;
+  $("gName").textContent = g.name;
+  $("gMeta").innerHTML = [g.industry, g.province, g.period && `<span class="num">${esc(g.period)}</span>`, g.id && `<span class="mono">${esc(g.id)}</span>`]
+    .filter(Boolean).map(x => `<span>${x.startsWith("<") ? x : esc(x)}</span>`).join("");
+
+  const lr = A.current && A.current.premium ? A.totalPaid / A.current.premium : null;
+  const priorLr = A.prior ? A.prior.paid / A.prior.premium : null;
+  const figs = [
+    ["بیمه‌شدگان", fmtInt(A.insured), g.parts ? `اصلی ${fmtInt(g.parts[0])} · وابسته ${fmtInt(g.parts[1] + g.parts[2] + g.parts[3])}` : "", false],
+    ["حق‌بیمهٔ دورهٔ جاری", fmtNum(A.current && A.current.premium), A.current ? `${A.current.label} · میلیون تومان` : "وارد نشده", false],
+    ["خسارت پرداختی ثبت‌شده", fmtNum(A.totalPaid), `${fmtInt(A.claimsCount)} خسارت · غیرقابل‌پرداخت ${fmtNum(A.totalUnpaid)}`, false],
+    ["Loss Ratio", A.complete ? fmtPct(lr) : (priorLr != null ? fmtPct(priorLr) : "—"),
+      A.complete ? (priorLr != null ? `${A.prior.label}: ${fmtPct(priorLr)}` : "خسارت ÷ حق‌بیمه") : (priorLr != null ? `از ${A.prior.label}؛ دادهٔ امسال ناقص است` : "دادهٔ امسال ناقص است"), !A.complete],
+  ];
+  $("summary").innerHTML = figs.map(([k, v, s, bad]) => `<div class="fig"><span class="k">${k}</span><span class="v num">${v}</span><span class="s${bad ? " bad" : ""}">${esc(s)}</span></div>`).join("");
+  const [lc, lt] = LVL[A.level];
+  $("confNote").innerHTML = `<span class="chip ${lc}">${lt}</span><span class="muted">${fmtInt(A.claimsCount)} خسارت در ${fmtInt(A.span)} ماه · روند تعرفهٔ سال بعد ${fmtPct(A.trend)}</span>`;
+
+  const rows = A.rows.slice().sort((a, b) => ORDER[a.d] - ORDER[b.d] || b.paid - a.paid);
+  const maxShare = Math.max(0.0001, ...rows.map(r => r.paidShare));
+  $("rows").innerHTML = rows.map(r => {
+    const cv = r.cv, capChanged = r.newAnnual !== cv.annualCap, pcChanged = r.newPerCase !== cv.perCase;
+    const capLine = (label, oldV, newV, changed) => oldV == null ? "" :
+      `<div class="line"><span class="muted">${label}</span>${changed ? `<span class="old num"><s>${fmtNum(oldV)}</s></span><span aria-hidden="true">←</span><span class="new num">${fmtNum(newV)}</span>` : `<span class="num">${fmtNum(oldV)}</span>`}</div>`;
+    return `<div class="row s-${r.d}">
+      <div class="cov"><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><b>${esc(cv.name)}</b><span class="mono">${esc(cv.id)}</span></div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap"><span class="chip d-${r.d}">${DLABEL[r.d]}</span>${r.protect ? '<span class="cat">حمایتی</span>' : '<span class="cat">روزمره</span>'}</div></div>
+      <div><dl class="stats"><dt>خسارت / نفر</dt><dd class="num">${fmtInt(r.n)} / ${fmtInt(r.users)}</dd>
+        <dt>پرداختی</dt><dd class="num">${fmtNum(r.paid)}</dd><dt>فشار سقف</dt><dd class="num">${r.capUnpaid ? fmtPct(r.pressure) : "—"}</dd></dl>
+        <div class="bar" title="سهم از کل خسارت"><i style="width:${(r.paidShare / maxShare * 100).toFixed(1)}%"></i></div>
+        <div class="muted" style="font-size:.76rem">سهم از خسارت ${fmtPct(r.paidShare)}</div></div>
+      <div class="cap">${capLine("سقف سالانه", cv.annualCap, r.newAnnual, capChanged)}${capLine("سقف هر مورد", cv.perCase, r.newPerCase, pcChanged)}
+        ${cv.min != null || cv.max != null ? `<div class="muted" style="font-size:.76rem">بازهٔ مجاز ${fmtNum(cv.min)} تا ${fmtNum(cv.max)}</div>` : ""}</div>
+      <div class="why">${r.why.map(w => `<p>${esc(w)}</p>`).join("")}${r.notes.map(w => `<p class="muted" style="font-size:.82rem">${esc(w)}</p>`).join("")}</div>
+    </div>`;
+  }).join("");
+
+  const total = A.baseNext + A.extraSum - A.saveSum;
+  const lines = [
+    ["خسارت پرداختی دورهٔ جاری", A.totalPaid],
+    [`با روند تعرفهٔ سال بعد (${fmtPct(A.trend)})`, A.baseNext],
+    ["+ هزینهٔ افزایش سقف‌ها (مبالغی که امسال به خاطر سقف پرداخت نشد)", A.extraSum],
+    ["− صرفه‌جویی کاهش سقف‌ها", -A.saveSum],
+  ];
+  $("cost").innerHTML = `<table><tbody>${lines.map(([k, v]) => `<tr><td>${esc(k)}</td><td class="num">${fmtNum(v)}</td></tr>`).join("")}
+    <tr class="total"><td>خسارت برآوردی سال بعد با بیمه‌نامهٔ پیشنهادی</td><td class="num">${fmtNum(total)} <span class="muted" style="font-weight:500">(${total >= A.totalPaid ? "+" : ""}${fmtPct(total / A.totalPaid - 1)})</span></td></tr></tbody></table>`;
+
+  const sevOrder = { crit: 0, warn: 1, info: 2 };
+  const iss = A.issues.slice().sort((a, b) => sevOrder[a.sev] - sevOrder[b.sev]);
+  $("issueCount").textContent = iss.length ? `${fmtInt(iss.length)} مورد` : "مشکلی پیدا نشد";
+  $("issues").innerHTML = iss.length ? iss.map(i => `<li><span class="sev ${i.sev}" aria-label="${i.sev}"></span><span>${esc(i.text)}</span></li>`).join("") : '<li class="muted">مشکلی پیدا نشد.</li>';
+}
+
+function renderSettings(){
+  [["sPressure", "pressureHigh"], ["sLowUtil", "lowUtil"], ["sLowClaim", "lowClaim"], ["sLowPaid", "lowPaid"]].forEach(([id, k]) => {
+    const el = $(id); el.value = settings[k];
+    el.oninput = () => { const v = parseFloat(el.value); if (!isNaN(v)) { settings[k] = v; render(); } };
+  });
+  $("protectList").innerHTML = DATA.coverages.map(c => `<label for="p-${esc(c.id)}"><input type="checkbox" id="p-${esc(c.id)}" data-id="${esc(c.id)}" ${protectSet.has(c.id) ? "checked" : ""}>${esc(c.name)}</label>`).join("");
+  $("protectList").querySelectorAll("input").forEach(el => el.onchange = () => { el.checked ? protectSet.add(el.dataset.id) : protectSet.delete(el.dataset.id); render(); });
+}
+
+$("file").addEventListener("change", e => {
+  const f = e.target.files[0]; if (!f) return;
+  if (typeof XLSX === "undefined"){ $("error").textContent = "کتابخانهٔ خواندن اکسل بارگذاری نشد؛ اتصال اینترنت را بررسی کنید و صفحه را دوباره باز کنید."; $("error").hidden = false; return; }
+  const rd = new FileReader();
+  rd.onload = () => {
+    try {
+      const wb = XLSX.read(new Uint8Array(rd.result), { type: "array" });
+      const sheets = {};
+      wb.SheetNames.forEach(n => { sheets[n] = XLSX.utils.sheet_to_json(wb.Sheets[n], { header: 1, raw: true, defval: null }); });
+      load(sheets, false);
+    } catch (err){ $("error").textContent = "فایل خوانده نشد: " + err.message; $("error").hidden = false; }
+  };
+  rd.readAsArrayBuffer(f);
+  e.target.value = "";
+});
+$("uploadBtn").addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " "){ e.preventDefault(); $("file").click(); } });
+$("resetBtn").addEventListener("click", () => load(JSON.parse($("sample").textContent), true));
+
+load(JSON.parse($("sample").textContent), true);
+</script>
