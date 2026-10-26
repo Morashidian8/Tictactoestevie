@@ -156,9 +156,9 @@ if (cmd === 'init') {
   else die('HSE_RECOVERY (کلید بازیابی فعلی) را بدهید، یا HSE_NEW_RECOVERY=1 برای ساخت کلید بازیابی تازه.');
   const newCk = rand(32), oldK = await aesKey(oldCk), newK = await aesKey(newCk);
   // همه‌چیز اول در حافظه آماده می‌شود و بعد یک‌جا نوشته می‌شود تا نیمه‌کاره نماند
-  // (همهٔ فایل‌های .enc: پادکست‌ها و بستهٔ عکس‌های درس‌آموزی)
+  // (همهٔ فایل‌های .enc: پادکست‌ها، بستهٔ عکس‌های درس‌آموزی و دادهٔ ارزیابی مخاطرات)
   const pods = [];
-  for (const sub of ['podcasts', 'lessons']) {
+  for (const sub of ['podcasts', 'lessons', 'risk']) {
     const dir = path.join(ROOT, 'manhole_pwa', sub);
     for (const f of fs.existsSync(dir) ? fs.readdirSync(dir) : []) {
       if (!f.endsWith('.enc')) continue;
