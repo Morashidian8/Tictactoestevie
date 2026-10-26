@@ -91,8 +91,11 @@ if (cmd === 'init') {
   const src = process.argv[3] || die('مسیر HTML سادهٔ اپ را بدهید.');
   const ks = loadKeystore(); const ck = await contentKeyRaw();
   if (!process.env.HSE_PASS) die('برای build رمز ورود (HSE_PASS) لازم است تا صفحهٔ ورود ساخته شود.');
-  const html = fs.readFileSync(src);
-  if (!/<html/i.test(html.slice(0, 2000).toString())) die('فایل ورودی HTML اپ نیست.');
+  let html = fs.readFileSync(src, 'utf8');
+  if (!/<html/i.test(html.slice(0, 2000))) die('فایل ورودی HTML اپ نیست.');
+  // نسخهٔ اپ از sw.js خوانده می‌شود تا اپ بتواند انتشار نسخهٔ تازه را تشخیص دهد و اعلان دهد
+  const ver = (fs.readFileSync(path.join(ROOT, 'manhole_pwa', 'sw.js'), 'utf8').match(/manhole-pwa-(v\d+)/) || [])[1] || '';
+  html = Buffer.from(html.replace("/*APP_VER*/''", JSON.stringify(ver)));
   const payload = { v: 1, pass: ks.pass, users: publicUsers(ks.users), app: await seal(await aesKey(ck), html) };
   const shell = fs.readFileSync(SHELL, 'utf8');
   if (!shell.includes('/*HSE_PAYLOAD*/')) die('shell.html نشانگر payload ندارد.');

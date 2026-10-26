@@ -1,5 +1,5 @@
 // Service Worker — کش کامل برای کارکرد آفلاین اپ «ارزیابی ورود به منهول»
-const CACHE = "manhole-pwa-v50";
+const CACHE = "manhole-pwa-v51";
 // پادکست‌ها در کش جداگانه نگه داشته می‌شوند تا با آپدیت اپ پاک نشوند
 const POD_CACHE = "hse-podcasts-v1";
 // بستهٔ عکس‌های «درس‌آموزی از حوادث» هم جدا نگه داشته می‌شود (اپ خودش آن را در این کش می‌گذارد)
@@ -62,8 +62,11 @@ self.addEventListener("fetch", (e) => {
   }
   // سایر فایل‌ها Network-first: با هر رفرش آخرین نسخه از شبکه گرفته می‌شود تا آپدیت‌ها فوری
   // دیده شوند؛ در حالت آفلاین از کش استفاده می‌شود.
+  // صفحه و sw.js همیشه از سرور دوباره‌سنجی می‌شوند (نه از کش HTTP مرورگر) تا نسخهٔ تازه فوراً برسد
+  const u = new URL(e.request.url);
+  const fresh = e.request.mode === "navigate" || /(\/|\.html|sw\.js)$/.test(u.pathname);
   e.respondWith(
-    fetch(e.request).then((res) => {
+    (fresh ? fetch(e.request.url, { cache: "no-cache", credentials: "same-origin" }) : fetch(e.request)).then((res) => {
       const copy = res.clone();
       caches.open(CACHE).then((c) => c.put(e.request, copy)).catch(() => {});
       return res;
