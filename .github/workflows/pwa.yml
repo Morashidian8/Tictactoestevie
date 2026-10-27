@@ -16,6 +16,7 @@ on:
       - "wallet_tracker/webui/**"
       - "kindergarten_site/**"
       - "frame_risk/**"
+      - "renewal_intel/**"
       - "build_pwa.py"
       - ".github/workflows/pwa.yml"
   schedule:
@@ -98,6 +99,16 @@ jobs:
           cp frame_risk/pwa/manifest.json frame_risk/pwa/sw.js site/frame/
           cp -r frame_risk/pwa/icons site/frame/icons
           cp frame_risk/export.js site/frame/ && cp -r frame_risk/vendor site/frame/vendor
+          # تحلیلگر تمدید درمان تکمیلی (کاملاً مرورگری) را زیر /renewal/ منتشر کن.
+          # index.html همان فایل Artifact است؛ head.html پوستهٔ PWA را اضافه می‌کند و
+          # کتابخانهٔ اکسل از CDN به نسخهٔ محلی vendor/ برمی‌گردد تا اپ آفلاین هم فایل بخواند.
+          mkdir -p site/renewal
+          cat renewal_intel/pwa/head.html renewal_intel/index.html \
+            | sed 's#https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js#vendor/xlsx.full.min.js#' \
+            > site/renewal/index.html
+          grep -q 'src="vendor/xlsx.full.min.js"' site/renewal/index.html || { echo "xlsx محلی جایگزین نشد"; exit 1; }
+          cp renewal_intel/pwa/manifest.json renewal_intel/pwa/sw.js site/renewal/
+          cp -r renewal_intel/pwa/icons renewal_intel/pwa/vendor renewal_intel/pwa/fonts site/renewal/
           # اگر داده‌ی بیت‌کوین در این اجرا ساخته نشد (مثلاً push اپ HSE)، پوسته‌ی
           # ثابت اپ بیت‌کوین را در ریشه قرار بده و آخرین data.json منتشرشده را از
           # سایت زنده بگیر تا اپ ریشه سالم بماند بدون نیاز به بیلد مجدد.
