@@ -42,6 +42,7 @@ header .who{display:flex;flex-direction:column;gap:4px;min-width:0}
 .btn:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible,tr[tabindex]:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
 .chip{display:inline-flex;align-items:center;gap:4px;font-size:.78rem;font-weight:700;padding:1px 10px;border-radius:999px;white-space:nowrap}
 .chip.sample{background:var(--down-bg);color:var(--down)}
+.chip.own{background:var(--protect-bg);color:var(--protect)}
 .chip.lvl-low{background:var(--remove-bg);color:var(--remove)} .chip.lvl-mid{background:var(--down-bg);color:var(--down)} .chip.lvl-high{background:var(--up-bg);color:var(--up)}
 .d-increase{background:var(--up-bg);color:var(--up)} .d-minor{background:var(--minor-bg);color:var(--minor)}
 .d-reduce{background:var(--down-bg);color:var(--down)} .d-keep{background:var(--keep-bg);color:var(--keep)}
@@ -130,7 +131,7 @@ footer{font-size:.82rem;color:var(--muted);border-top:1px solid var(--line);padd
       <div class="meta" id="meta"></div>
     </div>
     <div class="actions">
-      <span class="chip sample" id="sampleChip">دادهٔ نمونه</span>
+      <span class="chip sample" id="sampleChip">فایل شما + ۵ گروه نمونه</span>
       <label class="btn" for="file" tabindex="0" id="uploadBtn">افزودن فایل‌های اکسل</label>
       <input type="file" id="file" accept=".xlsx,.xls" multiple hidden>
       <button class="btn ghost" id="resetBtn" type="button" hidden>بازگشت به نمونه‌ها</button>
@@ -595,7 +596,7 @@ const $ = id => document.getElementById(id);
 const state = { groups: [], view: "portfolio", settings: Object.assign({}, DEFAULTS), protectNames: null, sort: "renewal", errors: [] };
 
 function sampleGroups(){
-  const foolad = { sample: true, data: parseWorkbook(JSON.parse($("sample").textContent)) };
+  const foolad = { sample: true, own: true, file: "Renewal_Intelligence_Takmili_Darman_v1.xlsx", data: parseWorkbook(JSON.parse($("sample").textContent)) };
   return [foolad].concat(makeSamples());
 }
 function setGroups(list){
@@ -649,7 +650,8 @@ function renderPortfolio(){
     need: (a, b) => (b.S.balanced.premiumChange ?? b.S.balanced.change ?? -1) - (a.S.balanced.premiumChange ?? a.S.balanced.change ?? -1),
     size: (a, b) => (b.A.insured || 0) - (a.A.insured || 0),
   };
-  const list = all.slice().sort(sorters[state.sort]);
+  // The workbook the user supplied stays pinned at the top while samples are shown.
+  const list = all.slice().sort((a, b) => (b.g.own ? 1 : 0) - (a.g.own ? 1 : 0) || sorters[state.sort](a, b));
   const counts = A => { const c = {}; A.rows.forEach(r => { c[r.d] = (c[r.d] || 0) + 1; });
     return ["increase", "minor", "reduce", "remove", "protect"].filter(k => c[k]).map(k => `<span class="chip d-${k}" title="${DLABEL[k]}">${DLABEL[k]} ${fmtInt(c[k])}</span>`).join(""); };
 
@@ -669,7 +671,7 @@ function renderPortfolio(){
       <tbody>${list.map(x => { const { A, S } = x, need = S.balanced.premiumChange;
         const days = A.renewal ? A.renewal.days : null;
         return `<tr class="pick" tabindex="0" data-open="${x.i}">
-          <td><b>${esc(A.group.name)}</b><div class="muted small">${esc([A.group.industry, A.group.province].filter(Boolean).join(" · "))}</div></td>
+          <td><b>${esc(A.group.name)}</b>${x.g.own ? ' <span class="chip own">فایل اکسل شما</span>' : ""}<div class="muted small">${esc([A.group.industry, A.group.province].filter(Boolean).join(" · "))}</div></td>
           <td class="n">${fmtInt(A.insured)}</td><td class="n">${fmtNum(A.premiumNow)}</td>
           <td class="n ${A.lr == null ? "" : A.lr >= 0.85 ? "bad" : A.lr >= 0.75 ? "warnc" : "ok"}">${A.lr != null ? fmtPct(A.lr) : `<span class="muted small">ناقص</span>`}</td>
           <td class="n ${days != null && days <= 30 ? "bad" : days != null && days <= 60 ? "warnc" : ""}">${days != null ? `${fmtInt(days)} روز` : "—"}</td>
@@ -689,7 +691,7 @@ function renderGroup(i){
   const { A, S } = compute(g), G = A.group;
   $("backBtn").hidden = false; $("removeBtn").hidden = false;
   $("title").textContent = G.name; $("subtitle").textContent = "";
-  $("meta").innerHTML = [G.industry, G.province, G.period && `<span class="num">${esc(G.period)}</span>`, A.renewal && `<span>تمدید ${fmtInt(A.renewal.days)} روز دیگر</span>`, G.id && `<span class="mono">${esc(G.id)}</span>`]
+  $("meta").innerHTML = [g.own && `<span class="chip own">فایل اکسل شما</span>`, g.file && `<span class="mono">${esc(g.file)}</span>`, G.industry, G.province, G.period && `<span class="num">${esc(G.period)}</span>`, A.renewal && `<span>تمدید ${fmtInt(A.renewal.days)} روز دیگر</span>`, G.id && `<span class="mono">${esc(G.id)}</span>`]
     .filter(Boolean).map(x => x.startsWith("<") ? x : `<span>${esc(x)}</span>`).join("");
 
   const figs = [
