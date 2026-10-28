@@ -72,6 +72,14 @@ def b32(b):
     return "-".join([s[0:5], s[5:10], s[10:15], s[15:20], s[20:]])  # 26 chars: 5-5-5-5-6
 
 
+def unb32(code):
+    clean = re.sub(r"[^A-Z2-7]", "", code.upper())
+    if len(clean) != 26:
+        raise SystemExit("--code must have 26 letters/digits (A-Z, 2-7)")
+    bits = "".join(f"{B32.index(c):05b}" for c in clean)
+    return bytes(int(bits[i:i + 8], 2) for i in range(0, 128, 8))
+
+
 def font_faces():
     out = []
     for name, weight in (("Regular", "400"), ("Medium", "500"), ("Bold", "700 800")):
@@ -249,6 +257,7 @@ def main():
     ap.add_argument("--contact", default="", help="shown when the copy has expired")
     ap.add_argument("--out", required=True, help="folder to create; copy it to the USB stick as is")
     ap.add_argument("--code-file", help="where to write the activation code (keep it off the stick)")
+    ap.add_argument("--code", help="reuse an existing activation code instead of making a new one")
     a = ap.parse_args()
 
     now = datetime.now(TEHRAN)
@@ -257,7 +266,8 @@ def main():
     expiry_ms = int(end.timestamp() * 1000)
     until = fa_date(end)
 
-    secret, salt, iv = secrets.token_bytes(16), secrets.token_bytes(16), secrets.token_bytes(12)
+    secret = unb32(a.code) if a.code else secrets.token_bytes(16)
+    salt, iv = secrets.token_bytes(16), secrets.token_bytes(12)
     key = HKDF(algorithm=hashes.SHA256(), length=32, salt=salt, info=b"renewal-intel-usb").derive(secret)
     aad = f"{a.customer}|{issue_ms}|{expiry_ms}".encode()
     ct = AESGCM(key).encrypt(iv, app_document(a.customer, expiry_ms, until).encode(), aad)
