@@ -8,7 +8,7 @@
   --bg:#F4F5FB; --surface:#FFFFFF; --surface2:#F8F8FD; --line:#E4E6F0; --line2:#EEF0F7; --input-line:#D9DCEA;
   --ink:#161A2E; --ink2:#5F6683; --ink3:#8C92AB;
   --brand-dark:#312E81; --brand:#4F46E5; --brand2:#7C6CF6; --brand-on:#FFFFFF; --focus:0 0 0 3px #DCDAFB; --brand-light:#A5B4FC; --logo:#4F46E5; --hl:#F0EFFE; --soft:#EEF0FF;
-  --hero-bg:radial-gradient(120% 140% at 0% 0%,#7C6CF6 0%,transparent 55%),linear-gradient(135deg,#4F46E5,#3730A3);
+  --hero-bg:radial-gradient(70% 120% at 0% 0%,#C084FC 0%,transparent 60%),radial-gradient(60% 120% at 100% 100%,#EC4899AA 0%,transparent 65%),linear-gradient(135deg,#4F46E5,#4338CA);
   --shadow:0 1px 2px rgba(20,20,50,.04),0 8px 24px -12px rgba(20,20,60,.14);
   --sb-bg:#0B3B34; --sb-active:#145247; --sb-dot:#3FD1B3; --sb-text:#C9DBD6; --sb-title:#7FA39A; --sb-line:#1F5B50;
   --inc:#1E7A46; --inc-bg:#E3F3E8; --minor:#55661A; --minor-bg:#EEF2DC; --red:#8A5A00; --red-bg:#FDF0DD;
@@ -22,7 +22,7 @@
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
   --bg:#0D0F1A; --surface:#161927; --surface2:#121522; --line:#262A3D; --line2:#1E2133; --input-line:#2E3350;
   --ink:#E8EAF6; --ink2:#9AA0BD; --ink3:#6F7594; --brand:#8B83FF; --brand2:#B49CFF; --brand-dark:#3A2F9C; --brand-on:#0D0F1A; --focus:0 0 0 3px #2E2A66; --hl:#1F2142; --soft:#22244A; --logo:#6D5CF0;
-  --hero-bg:radial-gradient(120% 140% at 0% 0%,#6D5CF055 0%,transparent 55%),linear-gradient(135deg,#3A2F9C,#17163F);
+  --hero-bg:radial-gradient(70% 120% at 0% 0%,#A855F766 0%,transparent 60%),radial-gradient(60% 120% at 100% 100%,#EC489955 0%,transparent 65%),linear-gradient(135deg,#3A2F9C,#1B1747);
   --shadow:0 1px 2px rgba(0,0,0,.3),0 10px 28px -14px rgba(0,0,0,.6);
   --inc:#4FD08A; --inc-bg:#123A2A; --minor:#C3D46A; --minor-bg:#2A3112; --red:#F5B451; --red-bg:#3A2A12;
   --rem:#F07A6C; --rem-bg:#3A1A17; --prot:#8DB8F0; --prot-bg:#152A44; --keep:#A9B4B1; --keep-bg:#1F2C29;
@@ -32,7 +32,7 @@
 :root[data-theme="dark"]{
   --bg:#0D0F1A; --surface:#161927; --surface2:#121522; --line:#262A3D; --line2:#1E2133; --input-line:#2E3350;
   --ink:#E8EAF6; --ink2:#9AA0BD; --ink3:#6F7594; --brand:#8B83FF; --brand2:#B49CFF; --brand-dark:#3A2F9C; --brand-on:#0D0F1A; --focus:0 0 0 3px #2E2A66; --hl:#1F2142; --soft:#22244A; --logo:#6D5CF0;
-  --hero-bg:radial-gradient(120% 140% at 0% 0%,#6D5CF055 0%,transparent 55%),linear-gradient(135deg,#3A2F9C,#17163F);
+  --hero-bg:radial-gradient(70% 120% at 0% 0%,#A855F766 0%,transparent 60%),radial-gradient(60% 120% at 100% 100%,#EC489955 0%,transparent 65%),linear-gradient(135deg,#3A2F9C,#1B1747);
   --shadow:0 1px 2px rgba(0,0,0,.3),0 10px 28px -14px rgba(0,0,0,.6);
   --inc:#4FD08A; --inc-bg:#123A2A; --minor:#C3D46A; --minor-bg:#2A3112; --red:#F5B451; --red-bg:#3A2A12;
   --rem:#F07A6C; --rem-bg:#3A1A17; --prot:#8DB8F0; --prot-bg:#152A44; --keep:#A9B4B1; --keep-bg:#1F2C29;
@@ -42,7 +42,7 @@
 *{box-sizing:border-box}
 [hidden]{display:none!important}
 html,body{margin:0}
-body{background:var(--bg);color:var(--ink);font-family:var(--f);font-size:13.5px;line-height:1.7;direction:rtl}
+body{background:radial-gradient(900px 500px at 100% -10%,color-mix(in srgb,var(--brand2) 12%,transparent),transparent 70%),radial-gradient(700px 500px at -10% 30%,color-mix(in srgb,#14B8A6 8%,transparent),transparent 70%),var(--bg);background-attachment:fixed;color:var(--ink);font-family:var(--f);font-size:13.5px;line-height:1.7;direction:rtl}
 button,input,select{font:inherit;color:inherit}
 .num,td,.kv,.big{font-feature-settings:"tnum";font-variant-numeric:tabular-nums}
 .nw{white-space:nowrap}
@@ -126,7 +126,11 @@ button.isl,.isl.click{cursor:pointer}
 button.isl:hover,.isl.click:hover{transform:translateY(-2px)}
 .isl.w2{grid-column:span 2}.isl.h2{grid-row:span 2}
 .isl-h{display:flex;align-items:center;gap:12px;min-width:0}
-.isl-h .ic{width:46px;height:46px;border-radius:14px;display:grid;place-items:center;background:var(--soft);color:var(--brand);flex:none}
+.isl-h .ic{width:46px;height:46px;border-radius:14px;display:grid;place-items:center;background:color-mix(in srgb,var(--h) 15%,var(--surface));color:var(--h);flex:none;box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--h) 18%,transparent)}
+:root[data-theme="dark"] .isl-h .ic,:root[data-theme="dark"] .mi .ic{color:color-mix(in srgb,var(--h) 65%,white);background:color-mix(in srgb,var(--h) 22%,var(--surface))}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .isl-h .ic,:root:not([data-theme="light"]) .mi .ic{color:color-mix(in srgb,var(--h) 65%,white);background:color-mix(in srgb,var(--h) 22%,var(--surface))}}
+.ic{--h:#6366F1}.ic-renewal{--h:#6366F1}.ic-action{--h:#F59E0B}.ic-tender{--h:#0D9488}.ic-cal{--h:#EC4899}.ic-ai{--h:#8B5CF6}.ic-docs{--h:#0EA5E9}.ic-settings{--h:#64748B}
+.ic-users{--h:#F43F5E}.ic-map{--h:#0EA5E9}.ic-link{--h:#14B8A6}.ic-market{--h:#F59E0B}.ic-clock{--h:#8B5CF6}.ic-upload{--h:#6366F1}.ic-search{--h:#0D9488}.ic-moon{--h:#475569}.ic-portfolio{--h:#4F46E5}.ic-urgent{--h:#EF4444}
 .isl-h .ic svg{width:23px;height:23px}
 .isl-h h3{font-size:15.5px;margin:0}
 .isl-h p{font-size:12.5px;color:var(--ink2)}
@@ -135,7 +139,7 @@ button.isl:hover,.isl.click:hover{transform:translateY(-2px)}
 .isl .krow{display:flex;gap:12px;align-items:center}
 .isl .foot2{margin-top:auto;font-size:12.5px;color:var(--brand);font-weight:700}
 .isl .badge2{position:absolute;top:14px;inset-inline-end:14px;font-size:11px;padding:1px 9px;border-radius:99px;background:var(--bg);color:var(--ink2);border:1px solid var(--line)}
-.isl.dim .isl-h .ic{background:var(--bg);color:var(--ink2)}
+.isl.dim .isl-h .ic{opacity:.75}
 .isl.ai-i{background:linear-gradient(160deg,var(--soft),var(--surface) 60%)}
 .hbars2{position:relative;display:flex;align-items:flex-end;gap:7px;flex:1;min-height:130px;padding-top:18px}
 .hbars2 .bar{flex:1;min-width:0;height:100%;display:flex;flex-direction:column;justify-content:flex-end;border:0;background:none;padding:0;cursor:pointer;position:relative;z-index:1}
@@ -154,6 +158,12 @@ button.isl:hover,.isl.click:hover{transform:translateY(-2px)}
 .sugs{display:flex;flex-wrap:wrap;gap:6px}
 .sugs button{font-size:12px;padding:4px 11px;border-radius:99px;border:1px solid var(--line);background:var(--surface);color:var(--ink2);cursor:pointer;font-family:inherit}
 .hask{display:flex;gap:8px;margin-top:auto}
+.hchat{max-height:300px;overflow-y:auto;display:flex;flex-direction:column;gap:8px;padding:2px}
+.ai-ul{margin:4px 0 0;padding-inline-start:18px;display:flex;flex-direction:column;gap:3px}
+.ai-next{display:flex;flex-wrap:wrap;gap:5px;margin-top:4px}
+.ai-next button{font-size:11.5px;border:1px solid var(--brand);color:var(--brand);background:var(--surface);border-radius:99px;padding:2px 10px;cursor:pointer;font-family:inherit}
+.ai-link{border:0;background:none;color:var(--brand);font-weight:800;cursor:pointer;padding:0;font-family:inherit;font-size:inherit}
+.ai-t{border-collapse:collapse;font-size:12px;width:100%}.ai-t td,.ai-t th{padding:4px 6px;border-bottom:1px solid var(--line2);position:static}
 .hask select{height:44px;border-radius:12px;border:1px solid var(--line);background:var(--surface);padding:0 8px;max-width:170px;font-family:inherit;color:inherit}
 .hask input{flex:1;min-width:0;height:44px;border-radius:12px;border:1px solid var(--line);background:var(--bg);padding:0 12px;font-family:inherit;color:inherit}
 .hask button{width:44px;height:44px;flex:none;border-radius:12px;border:0;background:linear-gradient(135deg,var(--brand),var(--brand2));color:#fff;font-size:18px;cursor:pointer}
@@ -173,8 +183,9 @@ button.isl:hover,.isl.click:hover{transform:translateY(-2px)}
 
 /* ---- two main jobs ---- */
 .missions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.mis:nth-child(2) .num{background:linear-gradient(135deg,#0D9488,#0EA5E9)}
 .mis{background:var(--surface);border:1px solid var(--line);border-radius:24px;padding:22px;display:flex;flex-direction:column;gap:14px;box-shadow:var(--shadow);min-width:0}
-.mis .num{width:30px;height:30px;border-radius:10px;background:linear-gradient(135deg,var(--brand),var(--brand2));color:#fff;display:grid;place-items:center;font-weight:800;flex:none}
+.mis .num{width:30px;height:30px;border-radius:10px;background:linear-gradient(135deg,#6366F1,#A855F7);color:#fff;display:grid;place-items:center;font-weight:800;flex:none}
 .mis-h{display:flex;gap:12px;align-items:flex-start}
 .mis-h h2{font-size:18px}
 .mis-h p{font-size:13px;color:var(--ink2);margin-top:2px}
@@ -386,6 +397,28 @@ tr.hl td{background:var(--hl)} tr.hl td:first-child{box-shadow:inset -3px 0 0 va
 
 /* mobile */
 .bottomnav,.fab,.drawer-bg,.mtop{display:none}
+.fab{display:none!important}
+/* ---- all-features menu ---- */
+.sheet{position:fixed;inset:0;z-index:65;display:flex;align-items:flex-end;justify-content:center}
+.sheet-bg{position:absolute;inset:0;background:rgba(15,12,40,.5);backdrop-filter:blur(3px)}
+.sheet-box{position:relative;width:min(760px,100%);max-height:86vh;overflow-y:auto;background:var(--surface);border-radius:28px 28px 0 0;padding:10px 20px calc(20px + env(safe-area-inset-bottom,0px));box-shadow:0 -20px 50px -20px rgba(0,0,0,.4);animation:up .22s ease-out}
+@media (min-width:861px){.sheet{align-items:center}.sheet-box{border-radius:28px;padding:16px 26px 26px}}
+@keyframes up{from{transform:translateY(40px);opacity:.4}to{transform:none;opacity:1}}
+.sheet-grip{width:44px;height:5px;border-radius:3px;background:var(--line);margin:4px auto 10px}
+.sheet-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.sheet-sec{font-size:12px;font-weight:800;color:var(--ink2);margin:14px 2px 8px}
+.mgrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+@media (max-width:520px){.mgrid{gap:8px} .mi{font-size:11px;padding:10px 2px 8px;border-radius:16px} .mi .ic{width:42px;height:42px;border-radius:14px} .mi .ic svg{width:22px;height:22px} .sheet-box{padding-inline:14px}}
+.mi{border:1px solid var(--line2);background:var(--surface2);border-radius:18px;padding:12px 6px 10px;display:flex;flex-direction:column;align-items:center;gap:7px;cursor:pointer;font:700 12px/1.45 var(--f);color:var(--ink);text-align:center;position:relative;min-width:0}
+.mi:hover{border-color:var(--line)}
+.mi .ic{width:48px;height:48px;border-radius:16px;display:grid;place-items:center;background:color-mix(in srgb,var(--h) 15%,var(--surface));color:var(--h)}
+.mi .ic svg{width:24px;height:24px}
+.mi .mb{position:absolute;top:6px;inset-inline-start:6px;font-size:9.5px;font-weight:800;border-radius:6px;padding:0 5px;background:var(--bg);color:var(--ink2);border:1px solid var(--line)}
+.mi .mn{position:absolute;top:6px;inset-inline-end:8px;min-width:18px;height:18px;border-radius:9px;background:#EF4444;color:#fff;font-size:10.5px;display:grid;place-items:center;padding:0 4px}
+.mgrid.two{grid-template-columns:repeat(2,minmax(0,1fr))}
+.mi.main{flex-direction:row;justify-content:flex-start;padding:14px;gap:12px;text-align:start;font-size:13.5px;background:linear-gradient(135deg,color-mix(in srgb,var(--h,#6366F1) 12%,var(--surface)),var(--surface))}
+.mi.main small{display:block;font-weight:500;color:var(--ink2);font-size:11.5px}
+@media (max-width:520px){.mi.main{flex-direction:column;align-items:flex-start;gap:8px}}
 @media (max-width:980px){
   .with-ai{grid-template-columns:1fr} .ai{position:static;max-height:none}
   .kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
@@ -406,11 +439,16 @@ tr.hl td{background:var(--hl)} tr.hl td:first-child{box-shadow:inset -3px 0 0 va
   .topbar .seg{width:100%} .topbar .seg button{flex:1;min-height:40px}
   .content{padding:16px max(16px,env(safe-area-inset-left,0px)) 110px max(16px,env(safe-area-inset-right,0px))}
   .foot{padding-bottom:96px}
-  .bottomnav{display:flex;position:fixed;bottom:0;inset-inline:0;z-index:40;background:var(--surface);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px)}
-  .bottomnav button{flex:1;border:0;background:none;display:flex;flex-direction:column;align-items:center;gap:3px;padding:7px 0 8px;min-height:64px;font-size:12px;font-weight:800;color:var(--ink);cursor:pointer}
-  .bottomnav svg{width:27px;height:27px;stroke-width:2.5;padding:3px 12px;box-sizing:content-box;border-radius:14px}
-  .bottomnav button[aria-current="true"]{color:var(--brand)}
-  .bottomnav button[aria-current="true"] svg{background:var(--soft)}
+  .bottomnav{display:flex;align-items:flex-end;position:fixed;bottom:0;inset-inline:0;z-index:40;background:color-mix(in srgb,var(--surface) 92%,transparent);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px);box-shadow:0 -6px 24px -14px rgba(30,27,75,.25)}
+  .bottomnav button{flex:1;border:0;background:none;display:flex;flex-direction:column;align-items:center;gap:2px;padding:7px 0 8px;min-height:66px;font-size:11.5px;font-weight:800;color:var(--ink2);cursor:pointer;position:relative;font-family:inherit}
+  .bottomnav .bi{--h:#6366F1;width:52px;height:34px;border-radius:17px;display:grid;place-items:center;color:var(--h);transition:background .15s}
+  .bottomnav .bi svg{width:27px;height:27px}
+  .bottomnav button[aria-current="true"]{color:var(--ink)}
+  .bottomnav button[aria-current="true"] .bi{background:color-mix(in srgb,var(--h) 16%,transparent)}
+  .bottomnav .bn-badge{position:absolute;top:4px;inset-inline-start:calc(50% + 6px);min-width:18px;height:18px;border-radius:9px;background:#EF4444;color:#fff;font-size:10.5px;font-weight:800;display:grid;place-items:center;padding:0 4px;border:2px solid var(--surface)}
+  .bottomnav .bn-menu{margin-top:-22px}
+  .bottomnav .orb{width:60px;height:60px;border-radius:20px;display:grid;place-items:center;color:#fff;background:linear-gradient(135deg,#6366F1,#A855F7 60%,#EC4899);box-shadow:0 10px 24px -8px #7C3AED,inset 0 1px 0 rgba(255,255,255,.35);border:4px solid var(--surface);transform:rotate(0);transition:transform .2s}
+  .bottomnav .bn-menu[aria-expanded="true"] .orb{transform:rotate(45deg)}
   .fab{display:inline-flex;position:fixed;left:max(16px,env(safe-area-inset-left,0px));bottom:calc(82px + env(safe-area-inset-bottom,0px));z-index:41;height:50px;padding:0 18px;border-radius:25px;background:var(--brand);color:var(--brand-on);border:0;font-weight:800;align-items:center;gap:6px;box-shadow:var(--float);cursor:pointer}
   .mobile-only{display:block} .desk-only{display:none}
   h1{font-size:17px}
@@ -420,9 +458,9 @@ tr.hl td{background:var(--hl)} tr.hl td:first-child{box-shadow:inset -3px 0 0 va
   .bidrow{grid-template-columns:1fr 1fr} .bidin{grid-column:1 / -1}
   .form{grid-template-columns:1fr}
   .hbar{grid-template-columns:110px 1fr 50px}
-  .mbar{position:fixed;bottom:calc(72px + env(safe-area-inset-bottom,0px));inset-inline:0;z-index:39;padding:10px 16px;background:var(--surface);border-top:1px solid var(--line)}
+  .mbar{position:fixed;bottom:calc(66px + env(safe-area-inset-bottom,0px));inset-inline:0;z-index:39;padding:10px 16px;background:var(--surface);border-top:1px solid var(--line)}
   .mbar .btn{width:100%;height:50px}
-  .content:has(.mbar){padding-bottom:180px}
+  .content:has(.mbar){padding-bottom:190px}
 }
 @media (min-width:861px){.mbar{display:none} .mobile-only{display:none!important}}
 @media (max-width:860px){.desk-only{display:none!important}}
@@ -462,6 +500,7 @@ tr.hl td{background:var(--hl)} tr.hl td:first-child{box-shadow:inset -3px 0 0 va
       <span class="tb-gap"></span>
       <span class="chip-smp hide-m" id="sampleChip">دادهٔ نمونه</span>
       <button class="link hide-m" id="resetBtn" type="button">بازگشت به نمونه‌ها</button>
+      <button class="iconbtn hide-m" type="button" data-menu aria-label="منوی همهٔ قابلیت‌ها"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><rect x="3.5" y="3.5" width="7" height="7" rx="2"/><rect x="13.5" y="3.5" width="7" height="7" rx="3.5"/><rect x="3.5" y="13.5" width="7" height="7" rx="2"/><rect x="13.5" y="13.5" width="7" height="7" rx="2"/></svg></button>
       <button class="iconbtn hide-m" type="button" data-theme-toggle aria-label="تغییر حالت روشن و تیره"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></button>
       <button class="iconbtn hide-m" id="bellBtn" type="button" aria-label="کارهای فوری"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9a6 6 0 1 1 12 0c0 6 2.5 7.5 2.5 7.5h-17S6 15 6 9"/><path d="M10 20a2 2 0 0 0 4 0"/></svg><span class="badge" id="bellDot" hidden></span></button>
       <label class="btn primary hide-m" for="file" tabindex="0" id="uploadBtn">＋ افزودن فایل‌های اکسل</label>
@@ -475,12 +514,13 @@ tr.hl td{background:var(--hl)} tr.hl td:first-child{box-shadow:inset -3px 0 0 va
   </div>
 </div>
 <nav class="bottomnav" aria-label="ناوبری پایین">
-  <button type="button" data-bn="home"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7v9H3z"/></svg>خانه</button>
-  <button type="button" data-bn="renewal"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 4v5h-5"/></svg>تمدید</button>
-  <button type="button" data-bn="tender"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21V8l8-5 8 5v13"/><path d="M9 21v-6h6v6"/></svg>مناقصه</button>
-  <button type="button" data-bn="ai"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.8 4.7 4.7 1.8-4.7 1.8L12 16l-1.8-4.7-4.7-1.8 4.7-1.8z"/></svg>دستیار</button>
-  <button type="button" data-bn="settings"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1 7 17M17 7l2.1-2.1"/></svg>تنظیمات</button>
+  <button type="button" data-bn="home"><span class="bi" style="--h:#6366F1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5 12 4l8 6.5V20H4z" fill="currentColor" fill-opacity=".2" stroke="none"/><path d="M3.5 11 12 4l8.5 7"/><path d="M5.5 9.5V20h13V9.5"/><path d="M10 20v-5.5h4V20"/></svg></span>خانه</button>
+  <button type="button" data-bn="renewal"><span class="bi" style="--h:#8B5CF6"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z" fill="currentColor" fill-opacity=".2" stroke="none"/><path d="M20 12a8 8 0 0 1-14.3 4.9"/><path d="M4 12a8 8 0 0 1 14.3-4.9"/><path d="M18.5 3.5v3.8h-3.8"/><path d="M5.5 20.5v-3.8h3.8"/></svg></span>تمدید</button>
+  <button type="button" class="bn-menu" data-menu aria-expanded="false" aria-label="منوی همهٔ قابلیت‌ها"><span class="orb"><svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor"><rect x="3.5" y="3.5" width="7" height="7" rx="2.2"/><rect x="13.5" y="3.5" width="7" height="7" rx="3.5" opacity=".85"/><rect x="3.5" y="13.5" width="7" height="7" rx="2.2" opacity=".85"/><rect x="13.5" y="13.5" width="7" height="7" rx="2.2"/></svg></span>منو</button>
+  <button type="button" data-bn="tender"><span class="bi" style="--h:#0D9488"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 12.2V4.5a1 1 0 0 1 1-1h7.7l8.3 8.3-8.7 8.7z" fill="currentColor" fill-opacity=".2" stroke="none"/><path d="M3.5 12.2V4.5a1 1 0 0 1 1-1h7.7l8.3 8.3-8.7 8.7z"/><circle cx="8.3" cy="8.3" r="1.5" fill="currentColor"/></svg></span>مناقصه</button>
+  <button type="button" data-bn="reminders"><span class="bi" style="--h:#EC4899"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h16v10.5a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 19.5z" fill="currentColor" fill-opacity=".2" stroke="none"/><rect x="4" y="5" width="16" height="16" rx="2.5"/><path d="M8 3v4M16 3v4M4 10h16"/><path d="M12 13.5v3l2 1.2"/></svg></span>یادآور<span class="bn-badge" id="bnBadge" hidden></span></button>
 </nav>
+<div class="sheet" id="sheet" hidden></div>
 <label class="fab" for="file" id="fab">＋ فایل اکسل</label>
 <div class="modal" id="modal" hidden></div>
 
@@ -1150,6 +1190,422 @@ if (typeof module !== "undefined") module.exports.makeTenders = makeTenders;
 
 </script>
 <script>
+/* ================= Offline assistant =================
+   Understands Persian questions with keyword intents plus entities (coverage, number, scenario,
+   decision) and answers only from the app's own calculations, always naming the source. Three
+   contexts: one renewal group, one tender, and the whole portfolio. No network, no model. */
+
+const qn = q => norm(q).toLowerCase()
+  .replace(/[۰-۹]/g, d => "۰۱۲۳۴۵۶۷۸۹".indexOf(d)).replace(/[٠-٩]/g, d => "٠١٢٣٤٥٦٧٨٩".indexOf(d))
+  .replace(/٫/g, ".").replace(/[ۀة]/g, "ه").replace(/[أإآ]/g, "ا").replace(/ؤ/g, "و").replace(/ئ/g, "ی").replace(/[ًٌٍَُِّْٔ]/g, "")
+  .replace(/[؟?!،,:;«»"'()\[\]]/g, " ").replace(/\s+/g, " ").trim();
+const compact = s => s.replace(/\s+/g, "");
+// Q wraps a question: has() matches keywords ignoring spaces and half-spaces; short words must match a whole token.
+function Q(raw){
+  const n = qn(raw), c = compact(n), toks = n.split(" ");
+  const one = k => { const kn = qn(k); return kn.length <= 3 && !/\s/.test(kn) ? toks.some(t => t === kn || t === kn + "ها" || t === kn + "ی") : c.includes(compact(kn)); };
+  const nums = (n.match(/\d+(?:\.\d+)?/g) || []).map(Number);
+  const mult = /سه ?برابر/.test(n) ? 3 : /دو ?برابر|دوبل/.test(n) ? 2 : /نصف|(^| )نیم( |$)/.test(n) ? 0.5 : null;
+  return { raw, n, toks, has: (...ks) => ks.some(one), all: (...gs) => gs.every(g => g.some(one)), nums, mult };
+}
+
+/* ---------- vocabulary ---------- */
+const ALIAS = [
+  [/دندان|دندون|ارتودنسی|ایمپلنت|عصب ?کشی|جرم ?گیری|کامپوزیت/, /دندان/], [/عینک|لنز|چشم ?پزشکی/, /عینک/], [/زایمان|سزارین|بارداری|طبیعی/, /زایمان/],
+  [/بستری|بیمارستان/, /بستری/], [/جراحی|عمل جراحی/, /جراحی/], [/آزمایش|سونو|رادیولوژی|ام ?آر ?ای|mri|سی ?تی|تصویربرداری|پاراکلینیک|نوار قلب/, /پاراکلینیک|تشخیص/],
+  [/ویزیت|دکتر|دارو|سرپایی|مطب/, /ویزیت|دارو|سرپایی/], [/فیزیوتراپی|فیزیو/, /فیزیو/], [/روانشناس|روانپزشک|مشاوره|روان/, /روان|مشاوره/],
+  [/لیزیک|لیزر|انکسار/, /لیزیک|انکسار/], [/آمبولانس|اورژانس/, /آمبولانس|اورژانس/], [/سمعک|شنوایی/, /سمعک|شنوایی/],
+  [/نازایی|ناباروری|ای ?وی ?اف|ivf/, /نازایی|ناباروری/], [/شیمی|سرطان|کموتراپی/, /سرطان|شیمی/], [/دیالیز/, /دیالیز/], [/پیوند/, /پیوند/],
+];
+function findCovs(q, rows, nameOf){
+  // Exact name first, then a word of the name, then everyday aliases (e.g. «سونوگرافی» → پاراکلینیک).
+  const qc = compact(q.n), info = rows.map(r => { const nm = qn(nameOf(r)); return { r, nm, words: nm.split(" ").filter(w => w.length >= 3 && !/^(هزینه|خدمات|پوشش)$/.test(w)) }; });
+  const exact = info.filter(x => qc.includes(compact(x.nm)));
+  if (exact.length) return exact.map(x => x.r);
+  const word = info.filter(x => x.words.some(w => q.toks.some(t => t.length >= 3 && (t === w || t.startsWith(w) || (w.startsWith(t) && t.length >= 4)))));
+  if (word.length) return word.map(x => x.r);
+  return info.filter(x => ALIAS.some(([a, b]) => a.test(q.n) && b.test(x.nm))).map(x => x.r);
+}
+const DEC_WORDS = {
+  increase: ["افزایش", "بالا ببر", "بالا بره", "بالا برود", "بیشتر کنیم", "زیاد کنیم", "بالاتر"],
+  reduce: ["کاهش", "پایین", "کمتر کنیم", "کم کنیم", "کم بشه"],
+  remove: ["حذف", "برداریم", "بی مصرف", "بیمصرف", "استفاده نشده", "بدون مصرف", "بدون خسارت"],
+  protect: ["حمایتی", "حفظ"],
+  keep: ["بدون تغییر", "ثابت", "دست نخورده", "تغییر نمی"],
+  outlier: ["استثنا", "چشم پوشی", "چشمپوشی", "اغماض", "موردی"],
+};
+const decOf = q => Object.keys(DEC_WORDS).find(k => q.has(...DEC_WORDS[k]));
+const ASKWORD = ["کدام", "کدوم", "چه پوشش", "چه آیتم", "لیست", "فهرست", "چندتا", "چند تا", "چند پوشش", "کجا", "کیا", "کدومش", "کدامش", "ها کدام", "هایی"];
+const WHATIF = ["اگر", "اگه", "چی میشه", "چه میشود", "چه می شود", "چقدر میشه", "فرض کن", "بذاریم", "بگذاریم", "کنیم", "برسونیم", "برسانیم", "بشه", "شود"];
+const WHY = ["چرا", "دلیل", "علت", "به چه دلیل", "چطور", "چگونه", "توضیح"];
+
+const GLOSS = [
+  [["loss ratio", "لاس", "ضریب خسارت", "نسبت خسارت", "lr"], "Loss Ratio یعنی چند درصد حق‌بیمه صرف خسارت شده: خسارت پرداختی ÷ حق‌بیمه. زیر ۷۵٪ برای بیمه‌گر سالم است، ۷۵ تا ۸۵٪ مرزی، و بالای ۸۵٪ زیان‌ده؛ بیمه‌گر در تمدید یا نرخ را بالا می‌برد یا سقف‌ها را پایین می‌آورد."],
+  [["فشار سقف"], "فشار سقف یعنی چه سهمی از مبلغ تأییدشدهٔ یک پوشش فقط به خاطر رسیدن به سقف پرداخت نشده. یعنی کارکنان هزینه داشته‌اند و بیمه به خاطر سقف کم نداده. از ۵٪ به بالا پیشنهاد «افزایش سقف» می‌گیرد."],
+  [["سقف سالانه"], "سقف سالانه حداکثر مبلغی است که بیمه در یک سال برای یک نفر در آن پوشش می‌پردازد، جمع همهٔ دفعات."],
+  [["سقف هر مورد", "هر مورد"], "سقف هر مورد حداکثر پرداخت برای یک بار خدمت است؛ مثلاً هر بار زایمان یا هر عینک. ممکن است فرد به سقف سالانه نرسیده باشد ولی یک خدمت گران از سقف هر مورد بیشتر شود."],
+  [["حمایتی"], "پوشش حمایتی برای رویدادهای نادر و پرهزینه است، مثل بستری، جراحی، زایمان و سرطان. اپ این‌ها را هیچ‌وقت کاندید حذف یا کاهش نمی‌کند، چون یک سال بدون خسارت یعنی شانس، نه بی‌نیازی."],
+  [["کاندید حذف", "حذف"], "کاندید حذف پوشش روزمره‌ای است که در کل دوره هیچ خسارتی نداشته. حذفش حق‌بیمه را کمی پایین می‌آورد، یا می‌شود بودجه‌اش را به پوشش‌های پرفشار داد."],
+  [["استثنا", "چشم پوشی", "چشمپوشی"], "مورد استثنایی یعنی فقط یک نفر به سقف خورده و بقیه فاصلهٔ زیادی تا سقف دارند. بالا بردن سقف همه برای یک نفر گران است؛ بهتر است کارفرما کمک موردی بدهد یا یک پوشش مازاد جدا بخرد."],
+  [["اقتصادی"], "سناریوی اقتصادی: فقط پوشش‌های پرفشار سقف بالاتر می‌گیرند، کم‌مصرف‌ها کاهش و بی‌مصرف‌ها حذف می‌شوند. کمترین افزایش حق‌بیمه."],
+  [["متعادل"], "سناریوی متعادل همهٔ پیشنهادهای اپ را با هم اجرا می‌کند: افزایش‌ها، کاهش‌ها و حذف‌ها. پیشنهاد اصلی برای جلسه است."],
+  [["ممتاز"], "سناریوی ممتاز: افزایش‌ها ۲۰٪ بیشتر و بقیهٔ سقف‌ها هم‌پای تورم تعرفه بالا می‌روند؛ بدون کاهش و حذف. بیشترین رضایت کارکنان، بیشترین هزینه."],
+  [["سناریو"], "اپ سه سناریو می‌سازد: اقتصادی، متعادل و ممتاز. در هر کدام خسارت سال گذشته با تورم تعرفه زیر سقف‌های جدید دوباره حساب می‌شود تا معلوم شود چه حق‌بیمه‌ای لازم است."],
+  [["بودجه"], "بودجهٔ کارفرما یعنی حداکثر درصدی که کارفرما حاضر است حق‌بیمه را بالا ببرد. اپ آن را به سقف خسارت مجاز تبدیل می‌کند: حق‌بیمه × (۱ + بودجه) × Loss Ratio هدف."],
+  [["سرانه"], "سرانه یعنی مبلغ به ازای هر نفر: حق‌بیمه یا خسارت تقسیم بر تعداد بیمه‌شدگان."],
+  [["تورم", "تعرفه", "روند"], "روند تعرفه یعنی میانگین رشد تعرفهٔ خدمات در سال بعد. اپ خسارت امسال را با همین نرخ بالا می‌برد تا هزینهٔ سال قرارداد را برآورد کند."],
+  [["سهم کارکنان", "پوشش نیاز", "نیاز کارکنان", "از جیب"], "پوشش نیاز کارکنان یعنی چند درصد از هزینهٔ درمانی که کارکنان داشته‌اند را بیمه داده. بقیه را خودشان از جیب پرداخته‌اند."],
+  [["کف قیمت", "کف"], "کف قیمت کمترین قیمتی است که Loss Ratio برآوردی را دقیقاً روی هدف (۷۵٪) نگه می‌دارد: خسارت برآوردی ÷ ۷۵٪. زیر کف، ریسک ضرر بالا می‌رود."],
+  [["حاشیه"], "حاشیهٔ اطمینان درصدی است که روی کف قیمت گذاشته می‌شود تا نوسان خسارت را بپوشاند. به‌طور خودکار از نوسان سال‌های سابقه، تعداد سال‌ها و حجم داده حساب می‌شود."],
+  [["اطمینان", "کیفیت داده"], "سطح اطمینان داده از تعداد خسارت‌ها و طول دورهٔ داده می‌آید: بالای ۳۰۰ خسارت و ۲۴ ماه = بالا. با دادهٔ کم، پیشنهادهای حذف و کاهش را با احتیاط بگویید."],
+];
+const DEF_Q = ["چیست", "چیه", "یعنی چه", "یعنی چی", "منظور از", "تعریف", "مفهوم", "معنی"];
+function glossary(q){
+  if (!q.has(...DEF_Q)) return null;
+  const g = GLOSS.find(([ks]) => q.has(...ks));
+  return g ? { h: `<div>${g[1]}</div>`, src: ["قاعده: تعریف‌های اپ"] } : null;
+}
+
+/* ---------- answer rendering ---------- */
+function aiCard(a, file){
+  if (typeof a === "string") a = { h: a };
+  const src = (a.src || []).map(s => s.replace("{file}", file || "فایل اکسل"));
+  return `${a.h}${src.length ? `<div class="ai-src">${src.map(x => `<span>${esc(x)}</span>`).join("")}</div>` : ""}${a.next && a.next.length ? `<div class="ai-next">${a.next.map(x => `<button type="button" data-ask="${esc(x)}">${esc(x)}</button>`).join("")}</div>` : ""}`;
+}
+const ul = items => `<ul class="ai-ul">${items.map(x => `<li>${x}</li>`).join("")}</ul>`;
+const capStr = r => r.d === "remove" ? "حذف" : r.newAnnual !== r.cv.annualCap ? `${fmtNum(r.cv.annualCap)} ← <b>${fmtNum(r.newAnnual)}</b>` : r.newPerCase !== r.cv.perCase ? `هر مورد ${fmtNum(r.cv.perCase)} ← <b>${fmtNum(r.newPerCase)}</b>` : `${fmtNum(r.cv.annualCap)} (بدون تغییر)`;
+const isOutlier = r => r.why.some(w => w.includes("استثنایی"));
+const RULE = () => ({ increase: `قاعده: فشار سقف ≥ ${fmtInt(state.settings.pressureHigh)}٪ ← افزایش سقف`, minor: `قاعده: فشار سقف ${fmtInt(state.settings.pressureMinor)} تا ${fmtInt(state.settings.pressureHigh)}٪ ← افزایش جزئی`,
+  reduce: `قاعده: استفادهٔ کمتر از ${fmtInt(state.settings.lowUtil)}٪ افراد، پوشش روزمره ← کاهش`, remove: "قاعده: صفر خسارت و پوشش روزمره ← کاندید حذف",
+  protect: "قاعده: پوشش حمایتی حذف یا کم نمی‌شود", keep: "قاعده: بدون فشار سقف و مصرف عادی ← بدون تغییر" });
+
+/* ---------- group (renewal) brain ---------- */
+function aiSuggest(A, S){
+  const by = d => A.rows.find(r => r.d === d);
+  const out = [];
+  const inc = by("increase") || by("minor"); if (inc) out.push(`چرا ${inc.cv.name} باید بالا برود؟`);
+  if (A.rows.some(r => r.d === "remove")) out.push("کدام پوشش‌ها را می‌شود حذف کرد؟");
+  out.push("کدام پوشش‌ها بیشترین استفاده را داشته‌اند؟");
+  if (inc && inc.cv.annualCap) out.push(`اگر سقف ${inc.cv.name} را دو برابر کنیم چه می‌شود؟`);
+  out.push(`با بودجهٔ ${fmtInt(Math.round(S.budgetPct * 100) + 10)}٪ چه چیزی جا می‌شود؟`, "کدام سناریو را پیشنهاد می‌کنی؟", "برای جلسه با کارفرما چه بگویم؟");
+  return out.slice(0, 6);
+}
+function aiAnswer(raw, A, S, g){
+  const a = groupBrain(Q(raw), A, S, g) || fallback(A, S);
+  return aiCard(a, g.file || (g.sample ? "دادهٔ نمونه" : "فایل اکسل"));
+}
+function fallback(A, S){
+  return { h: `<div>این را دقیق نفهمیدم. می‌توانم دربارهٔ این‌ها جواب بدهم: هر پوشش (چرا، چقدر، اگر سقفش را عوض کنیم)، پرمصرف‌ها و کم‌مصرف‌ها، حذف و کاهش، فشار سقف و علت پرداخت‌نشده‌ها، بودجه (با هر درصد)، سناریوها، Loss Ratio، حق‌بیمهٔ لازم، تاریخ تمدید، کیفیت داده، و نکته‌های جلسه با کارفرما.</div>`,
+    next: aiSuggest(A, S).slice(0, 3) };
+}
+function groupBrain(q, A, S, g){
+  if (!q.n) return null;
+  const rows = A.rows, name = r => r.cv.name, B = S.budget;
+  if (q.has("سلام", "درود", "کمک", "راهنما", "چی بپرسم", "چه بپرسم", "چه سوال", "چکار میکنی", "چه کار می کنی", "چه کاری"))
+    return { h: `<div>سلام. هرچه دربارهٔ تمدید <b>${esc(A.group.name)}</b> بپرسید، از روی همین فایل و قواعد اپ جواب می‌دهم و منبعش را می‌گویم. همه‌چیز روی همین دستگاه و بدون اینترنت حساب می‌شود.</div>`, next: aiSuggest(A, S).slice(0, 4) };
+  const gl = glossary(q); if (gl && !findCovs(q, rows, name).length) return gl;
+
+  // budget what-if: "با بودجهٔ ۳۰٪"
+  const pctNum = q.nums.find(x => x > 0 && x <= 200);
+  const covs = findCovs(q, rows, name);
+  if (pctNum != null && q.has("بودجه") && !covs.length){
+    const S2 = scenarios(A, pctNum / 100), B2 = S2.budget;
+    return { h: `<div>با بودجهٔ <b>${fmtPct(pctNum / 100)}</b>، سقف خسارت مجاز <b>${fmtNum(B2.allowed)}</b> می‌شود. ${B2.fits ? (B2.picked.length ? `جا می‌شود: <b>${esc(B2.picked.join("، "))}</b>` : "هیچ افزایشی جا نمی‌شود") + (B2.skipped.length ? `؛ جا نمی‌شود: ${esc(B2.skipped.join("، "))}` : "") + "." : `حتی سقف‌های فعلی جا نمی‌شوند؛ کسری <b>${fmtNum(B2.paid - B2.allowed)}</b>.`}</div>
+      <div class="small muted">برای مقایسه، بودجهٔ فعلی ${fmtPct(S.budgetPct)} است${B.picked.length ? ` و با آن ${esc(B.picked.join("، "))} جا می‌شود` : ""}. سناریوی متعادل ${S2.balanced.premiumChange != null ? `${fmtSignedPct(S2.balanced.premiumChange)} حق‌بیمه لازم دارد` : "با دادهٔ ناقص قابل تبدیل به حق‌بیمه نیست"}.</div>`,
+      src: ["منبع: {file} · ۰۵_حق_بیمه و ۰۳_خسارت", `قاعده: حق‌بیمه × (۱ + بودجه) × ${fmtPct(A.targetLR)}؛ افزایش‌ها به ترتیب فشار سقف`], next: [`با بودجهٔ ${fmtInt(pctNum + 10)}٪ چه؟`, "کدام سناریو را پیشنهاد می‌کنی؟"] };
+  }
+
+  if (covs.length){
+    const r = covs[0];
+    // remove what-if
+    if (q.has("حذف", "برداریم", "بردار") && (q.has(...WHATIF) || q.has("صرفه", "چقدر", "کم میشه", "کم می شود", "میشه"))){
+      const now = r.costOf(r.cv.annualCap, r.cv.perCase, false).paid;
+      const prem = A.complete && A.premiumNow ? now / A.targetLR : null;
+      return { h: `<div>با حذف <b>${esc(name(r))}</b>، خسارت برآوردی سال بعد حدود <b>${fmtNum(now)}</b> کم می‌شود${prem != null ? `؛ یعنی حدود <b>${fmtNum(prem)}</b> حق‌بیمه (${fmtPct(prem / A.premiumNow)})` : ""}.</div>
+        <div class="small muted">${r.protect ? "⚠️ این پوشش حمایتی است؛ اپ حذفش را پیشنهاد نمی‌کند. " : ""}${r.n ? `${fmtInt(r.users)} نفر از آن استفاده کرده‌اند (${fmtInt(r.n)} خسارت)؛ حذفش برای آن‌ها هزینه می‌سازد.` : "در این دوره خسارتی نداشته؛ صرفه‌جویی واقعی را بیمه‌گر از نرخ این پوشش تعیین می‌کند."}</div>`,
+        src: ["منبع: {file} · ۰۳_خسارت", `قاعده: خسارت امسال × رشد تعرفه (${fmtPct(A.trend)})`], next: [`چرا ${name(r)} ${VERB[r.d]}؟`] };
+    }
+    // cap what-if
+    const capNum = q.nums.find(x => x > 0);
+    if ((capNum != null || q.mult) && q.has("سقف", ...WHATIF) && r.cv.annualCap != null){
+      const target = q.mult ? r.cv.annualCap * q.mult : capNum;
+      const per = r.cv.perCase != null && r.cv.perCase === r.cv.annualCap ? target : r.cv.perCase;
+      const now = r.costOf(r.cv.annualCap, r.cv.perCase, false), nx = r.costOf(target, per, false);
+      const d = nx.paid - now.paid, prem = A.complete && A.premiumNow ? d / A.targetLR : null;
+      const range = r.cv.max != null && target > r.cv.max ? `<div class="small" style="color:var(--mid-ink)">بیشتر از حداکثر مجاز در فایل (${fmtNum(r.cv.max)}) است.</div>` : r.cv.min != null && target < r.cv.min ? `<div class="small" style="color:var(--mid-ink)">کمتر از حداقل مجاز در فایل (${fmtNum(r.cv.min)}) است.</div>` : "";
+      return { h: `<div>اگر سقف سالانهٔ <b>${esc(name(r))}</b> از ${fmtNum(r.cv.annualCap)} به <b>${fmtNum(target)}</b> برسد، خسارت برآوردی این پوشش <b>${fmtNum(now.paid)} ← ${fmtNum(nx.paid)}</b> (${d >= 0 ? "+" : ""}${fmtNum(d)}) می‌شود${prem != null ? `؛ حدود <b>${fmtSignedPct(prem / A.premiumNow)}</b> روی حق‌بیمه` : ""}.</div>
+        <div class="small muted">پوشش نیاز کارکنان در این پوشش: ${fmtPct(now.need ? now.paid / now.need : null)} ← ${fmtPct(nx.need ? nx.paid / nx.need : null)}. پیشنهاد اپ: ${capStr(r)}.</div>${range}`,
+        src: ["منبع: {file} · ۰۳_خسارت (خسارت‌های امسال با سقف جدید دوباره حساب شد)", `قاعده: × رشد تعرفه ${fmtPct(A.trend)} · حق‌بیمه = خسارت ÷ ${fmtPct(A.targetLR)}`], next: [`اگر ${name(r)} را حذف کنیم چه می‌شود؟`] };
+    }
+    // compare two coverages
+    if (covs.length >= 2 && q.has("مقایسه", "فرق", "تفاوت", "یا", "کدام", "کدوم")){
+      return { h: `<table class="ai-t"><tr><th></th>${covs.slice(0, 3).map(x => `<th>${esc(name(x))}</th>`).join("")}</tr>
+        <tr><td>خسارت / نفر</td>${covs.slice(0, 3).map(x => `<td>${fmtInt(x.n)} / ${fmtInt(x.users)}</td>`).join("")}</tr>
+        <tr><td>پرداختی</td>${covs.slice(0, 3).map(x => `<td>${fmtNum(x.paid)}</td>`).join("")}</tr>
+        <tr><td>فشار سقف</td>${covs.slice(0, 3).map(x => `<td>${x.capUnpaid ? fmtPct(x.pressure) : "—"}</td>`).join("")}</tr>
+        <tr><td>پیشنهاد</td>${covs.slice(0, 3).map(x => `<td><span class="tag ${DTAG[x.d]}">${DLABEL[x.d]}</span></td>`).join("")}</tr></table>`, src: ["منبع: {file} · ۰۲_تعهدات و ۰۳_خسارت"] };
+    }
+    // explain one coverage
+    return { h: `<div><b>${esc(name(r))}</b>: <span class="tag ${DTAG[r.d]}">${DLABEL[r.d]}</span> ${esc(r.why[0] || "")}</div>
+      ${ul([`سقف: ${capStr(r)}${r.cv.perCase != null && r.cv.perCase !== r.cv.annualCap ? ` · هر مورد ${fmtNum(r.cv.perCase)}${r.newPerCase !== r.cv.perCase ? ` ← <b>${fmtNum(r.newPerCase)}</b>` : ""}` : ""}`,
+        `${fmtInt(r.n)} خسارت از ${fmtInt(r.users)} نفر${r.util != null && A.complete ? ` (${fmtPct(r.util)} بیمه‌شدگان)` : ""} · پرداختی ${fmtNum(r.paid)} · ${fmtPct(r.paidShare)} کل خسارت`,
+        r.capUnpaid ? `به خاطر سقف پرداخت نشده: <b>${fmtNum(r.capUnpaid)}</b> (فشار ${fmtPct(r.pressure)})` : "به خاطر سقف چیزی کم نشده",
+        r.peakMember ? `بیشترین مصرف یک نفر: ${fmtNum(r.peakMember)}${r.cv.annualCap ? ` (${fmtPct(r.peakMember / r.cv.annualCap)} سقف)` : ""}` : null].concat(r.why.slice(1), r.notes).filter(Boolean).map(x => x.startsWith("<") || x.includes("<b>") ? x : esc(x)))}`,
+      src: ["منبع: {file} · ۰۳_خسارت · ستون پرداختی و علت عدم پرداخت", RULE()[r.d]],
+      next: [r.cv.annualCap ? `اگر سقف ${name(r)} را دو برابر کنیم؟` : null, r.d !== "protect" ? `اگر ${name(r)} را حذف کنیم؟` : null].filter(Boolean) };
+  }
+
+  // lists by decision
+  const dec = decOf(q);
+  if (dec && (q.has(...ASKWORD) || q.has("چه چیزی", "چیا", "موارد", "آیتم", "پوشش"))){
+    const list = dec === "outlier" ? rows.filter(isOutlier) : rows.filter(r => r.d === dec || (dec === "increase" && r.d === "minor"));
+    const title = { increase: "افزایش سقف", reduce: "کاهش سقف", remove: "کاندید حذف", protect: "حمایتی (حفظ می‌شوند)", keep: "بدون تغییر", outlier: "مورد استثنایی (چشم‌پوشی از افزایش)" }[dec];
+    if (!list.length) return { h: `<div>در این گروه هیچ پوششی «${title}» نیست.</div>`, src: [RULE()[dec] || "قاعده: یک نفر به سقف خورده ← استثنایی"] };
+    return { h: `<div><b>${fmtInt(list.length)} پوشش ${title}:</b></div>${ul(list.map(r => `<b>${esc(name(r))}</b>: ${capStr(r)} · <span class="muted">${esc(r.why[0] || "")}</span>`))}`,
+      src: ["منبع: {file} · ۰۲_تعهدات و ۰۳_خسارت", dec === "outlier" ? "قاعده: فقط یک نفر به سقف خورده و ≥ ۱۰ استفاده‌کننده" : RULE()[dec]], next: list.slice(0, 2).map(r => `چرا ${name(r)} ${VERB[r.d]}؟`) };
+  }
+
+  // usage ranking
+  const low = q.has("کمترین", "کم مصرف", "کممصرف", "کمتر استفاده", "استفاده نشده", "کم استفاده", "استفاده نکرده");
+  if (low || q.has("بیشترین", "پرمصرف", "پر مصرف", "بیشتر استفاده", "زیاد استفاده", "پرهزینه", "پر هزینه", "گران ترین", "بیشترین خسارت", "بیشترین هزینه")){
+    if (!q.has("نفر", "فرد", "عضو", "کارمند", "شخص") || q.has("پوشش", "آیتم")){
+      const by = q.has("نفر", "تعداد") && !q.has("مبلغ", "هزینه") ? "users" : "paid";
+      const sorted = rows.slice().sort((a, b) => low ? a[by] - b[by] || a.n - b.n : b[by] - a[by]).slice(0, low ? 4 : 3);
+      return { h: `<div>${low ? "کم‌مصرف‌ترین" : "پرمصرف‌ترین"} پوشش‌ها (بر اساس ${by === "paid" ? "مبلغ پرداختی" : "تعداد استفاده‌کننده"}):</div>${ul(sorted.map(r => `<b>${esc(name(r))}</b>: ${fmtNum(r.paid)} پرداختی · ${fmtInt(r.users)} نفر · ${fmtPct(r.paidShare)} کل · <span class="tag ${DTAG[r.d]}">${DLABEL[r.d]}</span>`))}`,
+        src: ["منبع: {file} · ۰۳_خسارت · جمع پرداختی هر پوشش"], next: [low ? "کدام پوشش‌ها را می‌شود حذف کرد؟" : "فشار سقف کجا بیشتر است؟"] };
+    }
+  }
+  // people
+  if (q.has("نفر", "فرد", "عضو", "کارمند", "شخص", "افراد") && q.has("بیشترین", "پرهزینه", "پر هزینه", "بیشتر", "کدام", "کدوم", "کی")){
+    const m = new Map(); g.data.claims.forEach(c => { const k = c.member || c.id; m.set(k, (m.get(k) || 0) + c.approved); });
+    const top = [...m.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5), tot = sum([...m.values()]);
+    return { h: `<div>پنج نفر با بیشترین مبلغ تأییدشده (با شناسهٔ عضو، بدون نام):</div>${ul(top.map(([k, v]) => `<span class="ltr">${esc(k)}</span>: ${fmtNum(v)} (${fmtPct(v / tot)} کل)`))}<div class="small muted">این ${fmtInt(top.length)} نفر ${fmtPct(sum(top, x => x[1]) / tot)} کل خسارت را ساخته‌اند.</div>`,
+      src: ["منبع: {file} · ۰۳_خسارت · ستون Member_ID و مبلغ تأییدشده"] };
+  }
+  // cap pressure
+  if (q.has("فشار", "به سقف", "سقف کم", "کم آورد", "کمبود سقف", "سقفش کمه", "سقف کافی")){
+    const list = rows.filter(r => r.capUnpaid > 0).sort((a, b) => b.capUnpaid - a.capUnpaid);
+    if (!list.length) return { h: "<div>در هیچ پوششی به خاطر سقف چیزی کم پرداخت نشده.</div>", src: ["منبع: {file} · ۰۳_خسارت · علت عدم پرداخت"] };
+    return { h: `<div>جاهایی که سقف کم آمده (مبلغ پرداخت‌نشده به خاطر سقف):</div>${ul(list.slice(0, 5).map(r => `<b>${esc(name(r))}</b>: ${fmtNum(r.capUnpaid)} · فشار ${fmtPct(r.pressure)} · ${capStr(r)}`))}<div class="small muted">جمع: ${fmtNum(sum(list, r => r.capUnpaid))}؛ این مبلغ را کارکنان از جیب داده‌اند.</div>`,
+      src: ["منبع: {file} · ۰۳_خسارت · علت عدم پرداخت «سقف»", RULE().increase] };
+  }
+  // unpaid reasons
+  if (q.has("پرداخت نشده", "پرداختنشده", "عدم پرداخت", "غیرقابل پرداخت", "غیر قابل پرداخت", "رد شده", "پرداخت نکرده", "کسر")){
+    const m = new Map(); g.data.claims.filter(c => c.unpaid > 0).forEach(c => { const k = c.reason || "بدون علت"; m.set(k, (m.get(k) || 0) + c.unpaid); });
+    const list = [...m.entries()].sort((a, b) => b[1] - a[1]), tot = sum(list, x => x[1]);
+    if (!list.length) return { h: "<div>همهٔ خسارت‌های تأییدشده کامل پرداخت شده‌اند.</div>", src: ["منبع: {file} · ۰۳_خسارت"] };
+    return { h: `<div>جمع پرداخت‌نشده: <b>${fmtNum(tot)}</b>. به تفکیک علت:</div>${ul(list.slice(0, 6).map(([k, v]) => `${esc(k)}: <b>${fmtNum(v)}</b> (${fmtPct(v / tot)})`))}<div class="small muted">فقط بخش «سقف» با تغییر قرارداد حل می‌شود؛ بقیه (مدارک، خارج از تعهد، …) را باید با بیمه‌گر یا کارکنان پیگیری کرد.</div>`,
+      src: ["منبع: {file} · ۰۳_خسارت · ستون علت عدم پرداخت"] };
+  }
+  // scenarios
+  const scnKey = q.has("اقتصادی") ? "economy" : q.has("متعادل") ? "balanced" : q.has("ممتاز") ? "premium" : null;
+  const scnRow = k => { const s = S[k], fits = s.paid <= B.allowed + 1e-9; return `<b>${SCN.find(x => x[0] === k)[1]}</b>: خسارت ${fmtNum(s.paid)} (${fmtSignedPct(s.change)}) · حق‌بیمه ${s.premiumChange != null ? fmtSignedPct(s.premiumChange) : "—"} · پوشش نیاز ${fmtPct(s.cover)} · ${fits ? "در بودجه" : "بیش از بودجه"}`; };
+  if (scnKey && !q.has("یعنی", "چیست", "چیه")){
+    const s = S[scnKey];
+    const ch = rows.map((r, i) => ({ r, c: s.caps[i] })).filter(({ r, c }) => c.removed || c.annual !== r.cv.annualCap);
+    return { h: `<div>${scnRow(scnKey)}.</div>${ch.length ? ul(ch.map(({ r, c }) => `${esc(name(r))}: ${c.removed ? "حذف" : `${fmtNum(r.cv.annualCap)} ← ${fmtNum(c.annual)}`}`)) : ""}`,
+      src: ["منبع: {file} · ۰۳_خسارت و ۰۶_تعرفه", `قاعده: خسارت امسال × رشد تعرفه (${fmtPct(A.trend)}) زیر سقف‌های سناریو`], next: ["کدام سناریو را پیشنهاد می‌کنی؟"] };
+  }
+  if (q.has("سناریو", "کدام گزینه", "بهترین", "پیشنهادت", "پیشنهاد میکنی", "پیشنهاد می کنی", "توصیه")){
+    const fit = ["balanced", "economy", "premium"].filter(k => S[k].paid <= B.allowed + 1e-9);
+    const pick = fit.includes("balanced") ? "balanced" : fit[0] || "economy";
+    return { h: `${ul(["economy", "balanced", "premium"].map(scnRow))}<div>پیشنهاد: <b>${SCN.find(x => x[0] === pick)[1]}</b>. ${pick === "balanced" ? "همهٔ مشکلات سقف حل می‌شود و در بودجه هم جا می‌شود." : fit.length ? "سناریوی متعادل از بودجه بیرون می‌زند؛ این گزینه در بودجه می‌ماند." : "هیچ سناریویی در بودجهٔ فعلی جا نمی‌شود؛ یا بودجه باید بالا برود یا بخشی از افزایش‌ها حذف شود."}</div>`,
+      src: [`منبع: بودجهٔ کارفرما ${fmtPct(S.budgetPct)} · سقف خسارت مجاز ${fmtNum(B.allowed)}`, "قاعده: اولویت با متعادل اگر در بودجه باشد"], next: ["برای جلسه با کارفرما چه بگویم؟"] };
+  }
+  // budget (no number)
+  if (q.has("بودجه")){
+    return { h: `<div>بودجهٔ کارفرما <b>${fmtPct(S.budgetPct)}</b> است؛ یعنی سقف خسارت مجاز <b>${fmtNum(B.allowed)}</b>. ${B.fits ? (B.picked.length ? `جا می‌شود: <b>${esc(B.picked.join("، "))}</b>.` : "هیچ افزایشی جا نمی‌شود.") + (B.skipped.length ? ` جا نمی‌شود: ${esc(B.skipped.join("، "))}.` : "") : `حتی سقف‌های فعلی جا نمی‌شوند؛ کسری <b>${fmtNum(B.paid - B.allowed)}</b>.`}</div>`,
+      src: ["منبع: {file} · ۰۱_جمعیت · بودجه افزایش حق‌بیمه", `قاعده: حق‌بیمه × (۱ + بودجه) × ${fmtPct(A.targetLR)}`], next: [`با بودجهٔ ${fmtInt(Math.round(S.budgetPct * 100) + 10)}٪ چه؟`] };
+  }
+  // premium needed
+  if (q.has("حق بیمه", "حقبیمه", "نرخ", "قیمت تمدید", "چقدر گران", "چقدر افزایش")){
+    const c = S.current, b = S.balanced;
+    if (c.premiumChange == null) return { h: `<div>دادهٔ خسارت امسال ناقص است، پس حق‌بیمهٔ لازم قابل محاسبهٔ دقیق نیست. خسارت با سقف‌های فعلی ${fmtSignedPct(c.change)} و با سناریوی متعادل ${fmtSignedPct(b.change)} تغییر می‌کند.</div>`, src: ["منبع: {file} · ۰۳_خسارت"] };
+    return { h: `<div>برای ماندن روی Loss Ratio ${fmtPct(A.targetLR)}:</div>${ul([`با سقف‌های فعلی: <b>${fmtNum(c.premiumNeeded)}</b> (${fmtSignedPct(c.premiumChange)})`, `با سناریوی متعادل: <b>${fmtNum(b.premiumNeeded)}</b> (${fmtSignedPct(b.premiumChange)})`, `حق‌بیمهٔ فعلی: ${fmtNum(A.premiumNow)} · سرانه ${fmtNum(A.premiumNow / A.insured)}`])}`,
+      src: ["منبع: {file} · ۰۵_حق_بیمه", `قاعده: حق‌بیمهٔ لازم = خسارت برآوردی ÷ ${fmtPct(A.targetLR)}`] };
+  }
+  // loss ratio
+  if (q.has("loss", "لاس", "ضریب خسارت", "نسبت خسارت", "ratio", "زیان", "ضرر", "سود")){
+    const lr = A.lr ?? A.priorLr, st = lrStat(lr);
+    return { h: `<div>Loss Ratio = خسارت پرداختی ÷ حق‌بیمه = <b>${fmtNum(A.totalPaid)} ÷ ${fmtNum(A.premiumNow)} = ${fmtPct(lr)}</b>${A.lr == null ? ` (دادهٔ امسال ناقص است؛ عدد ${A.prior ? A.prior.label : "سال قبل"})` : ""}. ${st ? `وضعیت: <b>${st[1]}</b>.` : ""}</div>${A.priorLr != null && A.lr != null ? `<div class="small muted">${A.prior.label}: ${fmtPct(A.priorLr)}.</div>` : ""}`,
+      src: ["منبع: {file} · ۰۳_خسارت · ستون پرداختی", "منبع: {file} · ۰۵_حق_بیمه", `قاعده: زیر ${fmtPct(A.targetLR)} سالم · بالای ۸۵٪ زیان‌ده`] };
+  }
+  if (q.has("سهم کارکنان", "از جیب", "پوشش نیاز", "رضایت")){
+    return { h: `<div>الان بیمه <b>${fmtPct(S.current.cover)}</b> هزینهٔ درمانی کارکنان را پرداخته؛ یعنی <b>${fmtPct(1 - S.current.cover)}</b> از جیب خودشان. با سناریوی متعادل: ${fmtPct(S.balanced.cover)} و با ممتاز: ${fmtPct(S.premium.cover)}.</div>`, src: ["منبع: {file} · ۰۳_خسارت · تأییدشده و پرداختی"] };
+  }
+  if (q.has("تمدید", "سررسید", "پایان قرارداد", "تموم", "تمام می", "مانده", "چند روز")){
+    const r = A.renewal;
+    return { h: r ? `<div>قرارداد <b>${esc(r.end)}</b> تمام می‌شود؛ ${r.days < 0 ? `<b>${fmtInt(-r.days)} روز گذشته</b>` : `<b>${fmtInt(r.days)} روز</b> مانده`}. ${r.days >= 0 && r.days <= 30 ? "پیشنهاد را همین هفته برای کارفرما بفرستید." : ""}</div>` : "<div>تاریخ پایان قرارداد در فایل نیست.</div>", src: ["منبع: {file} · ۰۱_جمعیت · دورهٔ قرارداد"] };
+  }
+  if (q.has("کیفیت", "مشکل", "خطا", "ناقص", "اطمینان", "معتبر", "درسته", "درست است", "ایراد")){
+    const iss = A.issues;
+    return { h: `<div>سطح اطمینان داده: <b>${LVL[A.level][1]}</b> (${fmtInt(A.claimsCount)} خسارت در ${fmtInt(A.span)} ماه).</div>${iss.length ? ul(iss.slice(0, 5).map(x => `<span class="tag ${SEVTAG[x.sev][0]}">${SEVTAG[x.sev][1]}</span> ${esc(x.text)}`)) : "<div>مشکلی پیدا نشد.</div>"}`, src: ["قاعده: بررسی‌های کیفیت دادهٔ اپ"] };
+  }
+  if (q.has("تورم", "تعرفه", "روند")) return { h: `<div>روند تعرفهٔ سال بعد: <b>${fmtPct(A.trend)}</b>. همهٔ برآوردها خسارت امسال را با این نرخ بالا برده‌اند.</div>`, src: ["منبع: {file} · ۰۶_تعرفه"] };
+  if (q.has("سرانه")) return { h: `<div>سرانهٔ حق‌بیمه: <b>${fmtNum(A.premiumNow && A.insured ? A.premiumNow / A.insured : null)}</b> · سرانهٔ خسارت: <b>${fmtNum(A.insured ? A.totalPaid / A.insured : null)}</b> (برای ${fmtInt(A.insured)} نفر).</div>`, src: ["منبع: {file} · ۰۱_جمعیت و ۰۵_حق_بیمه"] };
+  if (q.has("چند نفر", "جمعیت", "بیمه شده", "نفرات", "تعداد افراد", "کارکنان")) return { h: `<div><b>${fmtInt(A.insured)}</b> بیمه‌شده${A.group.female != null ? ` · ${fmtPct(A.group.female)} زن` : ""}.</div>`, src: ["منبع: {file} · ۰۱_جمعیت"] };
+  if (q.has("چند خسارت", "تعداد خسارت", "جمع خسارت", "کل خسارت")) return { h: `<div>${fmtInt(A.claimsCount)} خسارت؛ تأییدشده ${fmtNum(A.totalApproved)}، پرداختی <b>${fmtNum(A.totalPaid)}</b>، پرداخت‌نشده ${fmtNum(A.totalUnpaid)}.</div>`, src: ["منبع: {file} · ۰۳_خسارت"] };
+  if (q.has("نامه")) return { h: `<div>نامهٔ پیشنهاد تمدید از روی همین تحلیل آماده است.</div><button class="btn" type="button" onclick="document.getElementById('letterBtn').click()">باز کردن نامه</button>` };
+  // summary / meeting
+  if (q.has("خلاصه", "وضعیت", "گزارش", "چه کنم", "چکار کنم", "چی کار کنم", "جلسه", "مذاکره", "کارفرما", "بگم", "بگویم", "استدلال", "نتیجه")){
+    const cnt = d => rows.filter(r => r.d === d), lr = A.lr ?? A.priorLr;
+    const pts = [
+      lr != null ? `Loss Ratio ${fmtPct(lr)} (${lrStat(lr)[1]})؛ ${S.current.premiumChange != null ? `حتی بدون تغییر سقف‌ها حق‌بیمه باید ${fmtSignedPct(S.current.premiumChange)} تغییر کند.` : ""}` : null,
+      cnt("increase").concat(cnt("minor")).length ? `کارکنان در ${esc(cnt("increase").concat(cnt("minor")).map(name).join("، "))} به سقف خورده‌اند؛ جمعاً ${fmtNum(sum(rows, r => r.capUnpaid))} از جیب داده‌اند.` : null,
+      cnt("remove").length || cnt("reduce").length ? `صرفه‌جویی: ${esc(cnt("remove").map(name).concat(cnt("reduce").map(name)).join("، "))} کم‌مصرف یا بی‌مصرف‌اند.` : null,
+      rows.some(isOutlier) ? `${esc(rows.filter(isOutlier).map(name).join("، "))}: فقط یک مورد استثنایی؛ افزایش سقف همه لازم نیست.` : null,
+      `پیشنهاد: سناریوی متعادل ${S.balanced.premiumChange != null ? `با ${fmtSignedPct(S.balanced.premiumChange)} حق‌بیمه` : ""}؛ پوشش نیاز کارکنان ${fmtPct(S.current.cover)} ← ${fmtPct(S.balanced.cover)}.`,
+      `بودجهٔ ${fmtPct(S.budgetPct)} ${B.fits ? (B.picked.length ? `برای ${esc(B.picked.join("، "))} کافی است.` : "فقط کاهش‌ها را می‌پوشاند.") : "حتی برای حفظ وضع فعلی کافی نیست."}`,
+    ].filter(Boolean);
+    return { h: `<div>نکته‌های کلیدی برای جلسه با کارفرمای <b>${esc(A.group.name)}</b>:</div>${ul(pts)}`, src: ["منبع: کل تحلیل همین فایل"], next: ["نامهٔ پیشنهاد تمدید", "کدام سناریو را پیشنهاد می‌کنی؟"] };
+  }
+  if (dec) { // a decision word without a list word: "حذف" alone
+    return groupBrain(Q(raw2(q) + " کدام پوشش‌ها"), A, S, g);
+  }
+  return gl;
+}
+const raw2 = q => q.raw;
+
+/* ---------- tender brain ---------- */
+function tenderSuggest(R){
+  const inc = R.rows.find(r => r.d === "increase"), gr = R.rows.find(r => r.d === "growth");
+  return ["این قیمت چطور ساخته شد؟", `اگر ${fmtInt(Math.round(R.floor * 0.95 / 100) * 100)} پیشنهاد بدهیم ریسکش چیست؟`, R.priorScaled ? "بیمه‌گر قبلی چه وضعی داشت؟" : null,
+    gr ? `چرا ${gr.cv.name} گران شده؟` : "کدام پوشش‌ها گران‌تر شده‌اند؟", inc ? `چرا ${inc.cv.name} امتیاز است؟` : null, "حاشیهٔ اطمینان از کجا آمده؟"].filter(Boolean).slice(0, 5);
+}
+function tenderAnswer(raw, R, t){
+  const q = Q(raw), file = t.file || (t.sample ? "دادهٔ نمونه" : "فایل اکسل");
+  return aiCard(tenderBrain(q, R, t) || { h: "<div>این را دقیق نفهمیدم. دربارهٔ قیمت پیشنهادی، کف قیمت، ریسک یک قیمت مشخص، حاشیهٔ اطمینان، بیمه‌گر قبلی، رشد پوشش‌ها، سابقه و کیفیت داده بپرسید.</div>", next: tenderSuggest(R).slice(0, 3) }, file);
+}
+function tenderBrain(q, R, t){
+  if (!q.n) return null;
+  const gl = glossary(q); if (gl) return gl;
+  const last = R.hist[R.hist.length - 1];
+  const big = q.nums.filter(x => x >= 1000);
+  if (big.length){
+    const v = big[0], z = RISK[R.risk(v)[0]];
+    return { h: `<div>با قیمت <b>${fmtNum(v)}</b>: Loss Ratio مورد انتظار <b>${fmtPct(R.expected / v)}</b> · ریسک <span class="tag ${z[3]}">${z[1]}</span></div>${ul([`کف قیمت (LR ${fmtPct(R.LR)}): ${fmtNum(R.floor)} · ${v >= R.floor ? `${fmtNum(v - R.floor)} بالاتر` : `${fmtNum(R.floor - v)} پایین‌تر`}`, `قیمت پیشنهادی اپ: ${fmtNum(R.price)}`, R.priorScaled ? `بیمه‌گر قبلی: ${fmtNum(R.priorScaled)} · ${v < R.priorScaled ? `${fmtPct(1 - v / R.priorScaled)} ارزان‌تر` : `${fmtPct(v / R.priorScaled - 1)} گران‌تر`}` : null, `سرانه: ${fmtNum(v / R.insuredNext)}`].filter(Boolean))}`,
+      src: ["منبع: {file} · سابقهٔ خسارت", `قاعده: LR = ${fmtNum(R.expected)} ÷ قیمت`] };
+  }
+  if (q.has("حاشیه", "اطمینان", "مارجین", "margin")){
+    const parts = [`پایه ۳٪`, `نصف نوسان سال‌ها (${fmtPct(R.vol)}) = ${fmtPct(R.vol / 2)}`, R.n === 1 ? "+۵٪ چون فقط یک سال سابقه هست" : null, R.claimsLast < 300 ? "+۵٪ چون دادهٔ خسارت کم است" : null].filter(Boolean);
+    return { h: `<div>حاشیهٔ ${t.margin == null ? "خودکار" : "دستی"}: <b>${fmtPct(R.margin)}</b>${t.margin != null ? ` (خودکار بود ${fmtPct(R.autoMargin)})` : ""}.</div>${t.margin == null ? ul(parts) + '<div class="small muted">بین ۳٪ تا ۲۵٪ محدود می‌شود.</div>' : ""}`, src: ["قاعده: حاشیهٔ خودکار اپ"] };
+  }
+  if (q.has("چطور", "چگونه", "محاسبه", "ساخته", "از کجا", "فرمول", "چرا این قیمت", "قیمت پیشنهادی")){
+    return { h: `<div>قیمت در چهار قدم:</div>${ul([`سرانهٔ خسارت هر سال: ${R.hist.map(h => fmtNum(h.pc)).join(" · ")}`, `با تورم ${fmtPct(R.trend)} به سال قرارداد و میانگین وزنی (سال آخر وزن بیشتر)`, `× ${fmtInt(R.insuredNext)} نفر = خسارت برآوردی <b>${fmtNum(R.expected)}</b>`, `÷ ${fmtPct(R.LR)} = کف <b>${fmtNum(R.floor)}</b>؛ + حاشیه ${fmtPct(R.margin)} = <b>${fmtNum(R.price)}</b>`])}`,
+      src: ["منبع: {file} · سابقهٔ خسارت و جمعیت", "قاعده: وزن سال‌ها ۴۰/۶۰ یا ۲۰/۳۰/۵۰"] };
+  }
+  if (q.has("قبلی", "بیمه گر قبل", "بیمهگر قبل", "رقیب", "قبلا", "سال قبل")){
+    if (!R.priorScaled) return { h: "<div>حق‌بیمهٔ بیمه‌گر قبلی در فایل نیست.</div>" };
+    return { h: `<div>بیمه‌گر قبلی (برای ${fmtInt(R.insuredNext)} نفر): <b>${fmtNum(R.priorScaled)}</b>؛ Loss Ratio سال آخرش <b>${fmtPct(last.lr)}</b> (${lrStat(last.lr)[1]}).</div><div>${R.priorScaled < R.floor ? `قیمت او زیر کف است؛ اگر تکرارش کنید LR شما ${fmtPct(R.expected / R.priorScaled)} می‌شود.` : `می‌توانید تا ${fmtPct(1 - R.floor / R.priorScaled)} ارزان‌تر از او بدهید و هنوز روی هدف بمانید.`}</div>`,
+      src: ["منبع: {file} · حق‌بیمه و خسارت سال‌های سابقه"] };
+  }
+  if (q.has("ریسک", "خطر")){
+    return { h: `${ul([`<span class="tag t-good">کم</span> بالای ${fmtNum(R.floor)} (LR ≤ ${fmtPct(R.LR)})`, `<span class="tag t-mid">متوسط</span> ${fmtNum(R.floor85)} تا ${fmtNum(R.floor)} (LR تا ۸۵٪)`, `<span class="tag t-bad">زیاد</span> زیر ${fmtNum(R.floor85)}`])}`, src: [`قاعده: LR = ${fmtNum(R.expected)} ÷ قیمت`] };
+  }
+  const covs = findCovs(q, R.rows, r => r.cv.name);
+  if (covs.length){
+    const r = covs[0];
+    return { h: `<div><b>${esc(r.cv.name)}</b>: <span class="tag ${TTAG[r.d]}">${TLABEL[r.d]}</span> ${esc(r.why)}</div>${ul([`سرانه در سال‌ها: ${r.per.map(p => fmtNum(p.pc)).join(" · ")}`, `سرانهٔ برآوردی: <b>${fmtNum(r.projPc)}</b>${r.growth != null ? ` · رشد ${fmtSignedPct(r.growth)}` : ""}`, `سقف قبلی ${fmtNum(r.oldCap)} ← جدید ${fmtNum(r.cv.annualCap)}`, r.capCost ? `هزینهٔ بالا بردن سقف: حدود ${fmtNum(r.capCost)} حق‌بیمه` : null].filter(Boolean))}`, src: ["منبع: {file} · سابقهٔ خسارت به تفکیک پوشش"] };
+  }
+  if (q.has("گران", "رشد", "سریع", "افزایش", "بیشترین")){
+    const list = R.rows.filter(r => r.growth != null).sort((a, b) => b.growth - a.growth).slice(0, 4);
+    return { h: `<div>بیشترین رشد سرانه (تورم تعرفه ${fmtPct(R.trend)}):</div>${ul(list.map(r => `<b>${esc(r.cv.name)}</b>: ${fmtSignedPct(r.growth)} · سرانه ${fmtNum(r.projPc)}`))}`, src: ["منبع: {file} · سابقهٔ خسارت"] };
+  }
+  if (q.has("سابقه", "سال", "تاریخچه")) return { h: ul(R.hist.map(h => `${fmtInt(h.year).replace(/٬/g, "")}: ${fmtInt(h.insured)} نفر · خسارت ${fmtNum(h.paid)} · حق‌بیمه ${fmtNum(h.premium)} · LR ${fmtPct(h.lr)}`)), src: ["منبع: {file} · سابقه"] };
+  if (q.has("کیفیت", "مشکل", "خطا", "ناقص")) return { h: R.issues.length ? ul(R.issues.map(x => `<span class="tag ${SEVTAG[x.sev][0]}">${SEVTAG[x.sev][1]}</span> ${esc(x.text)}`)) : "<div>مشکلی پیدا نشد.</div>" };
+  if (q.has("کف")) return { h: `<div>کف قیمت: <b>${fmtNum(R.floor)}</b> = خسارت برآوردی ${fmtNum(R.expected)} ÷ ${fmtPct(R.LR)}.</div>` };
+  if (q.has("سرانه")) return { h: `<div>سرانهٔ پیشنهادی: <b>${fmtNum(R.price / R.insuredNext)}</b> · سرانهٔ خسارت برآوردی: ${fmtNum(R.expected / R.insuredNext)}.</div>` };
+  return null;
+}
+
+/* ---------- portfolio brain (home) ---------- */
+function portfolioSuggest(){
+  return ["کدام گروه‌ها زیان‌ده‌اند؟", "تمدیدهای نزدیک کدام‌اند؟", "کدام گروه‌ها بودجه‌شان کافی نیست؟", "دندانپزشکی در همهٔ گروه‌ها چه وضعی دارد؟", "خلاصهٔ پرتفوی"];
+}
+function portfolioAnswer(raw){
+  const all = state.groups.map((g, i) => Object.assign({ i, g }, compute(g)));
+  const q = Q(raw);
+  return aiCard(portfolioBrain(q, all) || { h: "<div>این را دقیق نفهمیدم. دربارهٔ گروه‌های زیان‌ده، تمدیدهای نزدیک، بودجه‌های ناکافی، یک پوشش در همهٔ گروه‌ها، یا نام یک گروه بپرسید.</div>", next: portfolioSuggest().slice(0, 3) }, "همهٔ فایل‌ها");
+}
+function portfolioBrain(q, all){
+  if (!q.n) return null;
+  const nm = x => esc(short(x.A.group.name)), open = x => `<button class="ai-link" type="button" data-open="${x.i}">${nm(x)}</button>`;
+  const gl = glossary(q); if (gl) return gl;
+  // a group by name
+  const named = all.filter(x => { const w = qn(short(x.A.group.name)).split(" ").filter(s => s.length >= 3 && !/^(شرکت|گروه|نمونه)$/.test(s)); return w.some(s => q.toks.some(t => t.length >= 3 && (t.startsWith(s.slice(0, 4)) || s.startsWith(t)))); });
+  // a coverage across groups
+  const covHits = all.map(x => ({ x, r: findCovs(q, x.A.rows, r => r.cv.name)[0] })).filter(y => y.r);
+  if (covHits.length && (!named.length || q.has("همه", "گروه ها", "گروهها", "تمام", "کل"))){
+    return { h: `<div><b>${esc(covHits[0].r.cv.name)}</b> در ${fmtInt(covHits.length)} گروه:</div>${ul(covHits.map(({ x, r }) => `${open(x)}: <span class="tag ${DTAG[r.d]}">${DLABEL[r.d]}</span> ${capStr(r)}${r.capUnpaid ? ` · فشار ${fmtPct(r.pressure)}` : ""}`))}`, src: ["منبع: فایل هر گروه · ۰۳_خسارت"] };
+  }
+  if (named.length === 1){
+    const x = named[0], A = x.A, S = x.S, st = lrStat(A.lr ?? A.priorLr);
+    const c = d => A.rows.filter(r => r.d === d).length;
+    return { h: `<div>${open(x)}: ${fmtInt(A.insured)} نفر · Loss Ratio ${fmtPct(A.lr ?? A.priorLr)}${st ? ` (${st[1]})` : ""} · ${A.renewal ? (A.renewal.days < 0 ? `${fmtInt(-A.renewal.days)} روز از تمدید گذشته` : `تمدید ${fmtInt(A.renewal.days)} روز دیگر`) : ""}</div>${ul([`${fmtInt(c("increase") + c("minor"))} افزایش · ${fmtInt(c("reduce"))} کاهش · ${fmtInt(c("remove"))} حذف`, `سناریوی متعادل: ${S.balanced.premiumChange != null ? fmtSignedPct(S.balanced.premiumChange) : "—"} حق‌بیمه · بودجه ${fmtPct(S.budgetPct)} ${S.budget.fits ? "کافی" : "ناکافی"}`])}<div class="small muted">برای جزئیات، روی نام گروه بزنید.</div>`, src: [`منبع: ${x.g.file || "دادهٔ نمونه"}`] };
+  }
+  if (q.has("مناقصه")){
+    const ts = state.tenders.map((t, i) => ({ i, R: computeTender(t) }));
+    return { h: ul(ts.map(({ i, R }) => `<button class="ai-link" type="button" data-tender="${i}">${esc(short(R.group.name))}</button>: قیمت پیشنهادی ${fmtNum(R.price)}${R.priorScaled ? ` · بیمه‌گر قبلی ${fmtNum(R.priorScaled)} (ریسک ${RISK[R.risk(R.priorScaled)[0]][1]})` : ""}`)), src: ["منبع: سابقهٔ هر مناقصه"] };
+  }
+  if (q.has("زیان", "ضرر", "loss", "لاس", "بحرانی", "بد", "خطرناک", "مرزی")){
+    const list = all.filter(x => (x.A.lr ?? x.A.priorLr) != null).sort((a, b) => (b.A.lr ?? b.A.priorLr) - (a.A.lr ?? a.A.priorLr));
+    const bad = list.filter(x => (x.A.lr ?? x.A.priorLr) >= 0.75);
+    return { h: bad.length ? `<div>${fmtInt(bad.length)} گروه بالای ۷۵٪:</div>${ul(bad.map(x => `${open(x)}: <b style="color:${lrStat(x.A.lr ?? x.A.priorLr)[2]}">${fmtPct(x.A.lr ?? x.A.priorLr)}</b> ${lrStat(x.A.lr ?? x.A.priorLr)[1]}`))}` : "<div>هیچ گروهی بالای ۷۵٪ نیست.</div>", src: ["قاعده: زیر ۷۵٪ سالم · ۷۵ تا ۸۵٪ مرزی · بالای ۸۵٪ زیان‌ده"] };
+  }
+  if (q.has("تمدید", "نزدیک", "سررسید", "مانده", "فوری")){
+    const list = all.filter(x => x.A.renewal).sort((a, b) => a.A.renewal.days - b.A.renewal.days).slice(0, 5);
+    return { h: ul(list.map(x => `${open(x)}: ${x.A.renewal.days < 0 ? `<b style="color:var(--bad)">${fmtInt(-x.A.renewal.days)} روز گذشته</b>` : `${fmtInt(x.A.renewal.days)} روز`} (${esc(x.A.renewal.end)})`)), src: ["منبع: دورهٔ قرارداد هر گروه"] };
+  }
+  if (q.has("بودجه")){
+    const bad = all.filter(x => !x.S.budget.fits);
+    return { h: bad.length ? `<div>${fmtInt(bad.length)} گروه با بودجهٔ ناکافی:</div>${ul(bad.map(x => `${open(x)}: بودجه ${fmtPct(x.S.budgetPct)}، لازم ${x.S.current.premiumChange != null ? fmtSignedPct(x.S.current.premiumChange) : "—"}`))}` : "<div>بودجهٔ همهٔ گروه‌ها دست‌کم برای حفظ وضع فعلی کافی است.</div>", src: ["قاعده: حق‌بیمه × (۱ + بودجه) × Loss Ratio هدف"] };
+  }
+  if (q.has("حق بیمه", "حقبیمه", "افزایش لازم", "گران")){
+    const list = all.filter(x => x.S.balanced.premiumChange != null).sort((a, b) => b.S.balanced.premiumChange - a.S.balanced.premiumChange).slice(0, 5);
+    return { h: `<div>بیشترین افزایش حق‌بیمهٔ لازم (سناریوی متعادل):</div>${ul(list.map(x => `${open(x)}: <b>${fmtSignedPct(x.S.balanced.premiumChange)}</b>`))}`, src: ["قاعده: خسارت برآوردی ÷ Loss Ratio هدف"] };
+  }
+  const dec = decOf(q);
+  if (dec && dec !== "outlier"){
+    const list = all.map(x => ({ x, rs: x.A.rows.filter(r => r.d === dec || (dec === "increase" && r.d === "minor")) })).filter(y => y.rs.length);
+    return { h: list.length ? ul(list.map(({ x, rs }) => `${open(x)}: ${esc(rs.map(r => r.cv.name).join("، "))}`)) : "<div>موردی نیست.</div>", src: [RULE()[dec]] };
+  }
+  if (q.has("کیفیت", "ناقص", "مشکل", "خطا")){
+    const list = all.filter(x => x.A.issues.some(i => i.sev === "crit"));
+    return { h: list.length ? ul(list.map(x => `${open(x)}: ${esc(x.A.issues.find(i => i.sev === "crit").text)}`)) : "<div>هیچ گروهی مشکل بحرانی داده ندارد.</div>", src: ["قاعده: بررسی‌های کیفیت دادهٔ اپ"] };
+  }
+  if (q.has("بزرگ", "بیشترین نفر", "پرجمعیت")){
+    const list = all.slice().sort((a, b) => (b.A.insured || 0) - (a.A.insured || 0)).slice(0, 5);
+    return { h: ul(list.map(x => `${open(x)}: ${fmtInt(x.A.insured)} نفر · حق‌بیمه ${fmtNum(x.A.premiumNow)}`)) };
+  }
+  if (q.has("خلاصه", "وضعیت", "پرتفوی", "کل", "همه", "گزارش", "چند گروه")){
+    const comp = all.filter(x => x.A.complete && x.A.premiumNow), plr = sum(comp, x => x.A.premiumNow) ? sum(comp, x => x.A.totalPaid) / sum(comp, x => x.A.premiumNow) : null;
+    const todo = buildTodo(all);
+    return { h: ul([`${fmtInt(all.length)} گروه · ${fmtInt(sum(all, x => x.A.insured || 0))} نفر · حق‌بیمه ${fmtNum(sum(all, x => x.A.premiumNow || 0))}`, `Loss Ratio پرتفوی ${fmtPct(plr)}${lrStat(plr) ? ` (${lrStat(plr)[1]})` : ""}`, `${fmtInt(all.filter(x => (x.A.lr ?? 0) >= 0.85).length)} گروه زیان‌ده · ${fmtInt(all.filter(x => !x.S.budget.fits).length)} بودجهٔ ناکافی`, `${fmtInt(todo.filter(t => t.sev === "crit").length)} کار فوری · ${fmtInt(todo.filter(t => t.sev === "ok").length)} فرصت`]), next: ["کدام گروه‌ها زیان‌ده‌اند؟", "تمدیدهای نزدیک کدام‌اند؟"] };
+  }
+  return null;
+}
+
+/* ---------- panel ---------- */
+function assistant(key, A, S, g){
+  return chatPanel(key, "g-ai", aiSuggest(A, S), q => aiAnswer(q, A, S, g), "مثلاً: اگر سقف دندان را ۴۰ کنیم؟");
+}
+function chatPanel(key, id, sugs, answer, ph){
+  const msgs = state.chat[key] || [];
+  return `<aside class="panel ai anchor" id="${id}" aria-label="دستیار">
+    <div class="panel-h"><h2>دستیار</h2><span class="tag t-line">آفلاین · از قواعد اپ</span></div>
+    <div class="ai-body" id="aiBody">${msgs.length ? msgs.map(m => `<div class="ai-q">${esc(m.q)}</div><div class="ai-a">${answer(m.q)}</div>`).join("") : '<p class="small muted">هر عدد را با منبعش توضیح می‌دهم؛ «اگر …» هم بپرسید تا دوباره حساب کنم. همه‌چیز روی همین دستگاه و بدون اینترنت است.</p>'}</div>
+    <div class="ai-sug">${sugs.map(q => `<button type="button" data-ask="${esc(q)}">${esc(q)}</button>`).join("")}</div>
+    <form class="ai-in" id="aiForm"><input id="aiQ" placeholder="${esc(ph)}" autocomplete="off"><button class="btn primary" type="submit">ارسال</button></form>
+  </aside>`;
+}
+function ask(q){
+  const key = state.page === "home" ? "p" : (state.page === "tenderp" ? "t" : "g") + state.idx;
+  (state.chat[key] = state.chat[key] || []).push({ q });
+  render();
+  const b = state.page === "home" ? $("homeChat") : $("aiBody"); if (b) b.scrollTop = b.scrollHeight;
+  if (state.page === "home"){ const f = $("homeAiQ"); if (f) f.focus(); }
+}
+
 /* ================= UI (DESIGN_PROMPT_1) ================= */
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -1250,8 +1706,13 @@ const ICON = {
   link: '<path d="M9 7H6a5 5 0 0 0 0 10h3M15 7h3a5 5 0 0 1 0 10h-3M8 12h8"/>',
   map: '<path d="M4 6h10M4 12h16M4 18h7"/><path d="m17 3 3 3-3 3"/>',
   clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+  upload: '<path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/>',
+  search: '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/><path d="M8.5 11h5M11 8.5v5"/>',
+  moon: '<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/>',
+  portfolio: '<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M3 13h18"/>',
+  urgent: '<path d="M12 3 2 20h20z"/><path d="M12 10v4M12 17.5v.5"/>',
 };
-const ic = k => `<span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICON[k]}</svg></span>`;
+const ic = k => `<span class="ic ic-${k}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICON[k]}</svg></span>`;
 const islHead = (k, title, sub, go) => `<div class="isl-h">${ic(k)}<div><h3>${title}</h3><p>${sub}</p></div>${go ? `<span class="go" aria-hidden="true">←</span>` : ""}</div>`;
 
 /* ---------- home: islands ---------- */
@@ -1268,7 +1729,8 @@ function renderHome(){
   const t = state.settings.targetLR / 100, top = Math.max(1.2, ...bars.map(x => x.A.lr)) * 1.05;
   const L = window.RI_LICENSE;
   const dayTag = d => d < 0 ? ["t-bad", `${fmtInt(-d)} روز گذشته`] : d <= 30 ? ["t-bad", `${fmtInt(d)} روز`] : d <= 60 ? ["t-mid", `${fmtInt(d)} روز`] : ["t-protect", `${fmtInt(d)} روز`];
-  const aiPick = state.homeAi ?? (all.find(x => x.g.own) || all[0] || {}).i;
+  const aiPick = state.homeAi ?? "p";
+  const pChat = state.chat.p || [];
   setHead("Renewal Intelligence", todayFa());
   $("view").innerHTML = `
   <section class="hh">
@@ -1321,8 +1783,9 @@ function renderHome(){
     </div>
     <div class="isl w2 ai-i">
       ${islHead("ai", "دستیار هوشمند", "از دادهٔ هر گروه بپرسید؛ جواب با منبع", false)}
-      <div class="sugs">${(all.find(x => x.i === aiPick) ? aiSuggest(all.find(x => x.i === aiPick).A, all.find(x => x.i === aiPick).S).slice(0, 3) : []).map(q => `<button type="button" data-hask="${esc(q)}">${esc(q)}</button>`).join("")}</div>
-      <form class="hask" id="homeAsk"><select id="homeAiG" aria-label="گروه">${all.map(x => `<option value="${x.i}"${x.i === aiPick ? " selected" : ""}>${esc(short(x.A.group.name))}</option>`).join("")}</select><input id="homeAiQ" placeholder="مثلاً: بودجه چقدر است؟" aria-label="سؤال"><button type="submit" aria-label="پرسیدن">↑</button></form>
+      ${pChat.length ? `<div class="hchat" id="homeChat">${pChat.slice(-3).map(m => `<div class="ai-q">${esc(m.q)}</div><div class="ai-a">${portfolioAnswer(m.q)}</div>`).join("")}</div>` : ""}
+      <div class="sugs">${(aiPick === "p" ? portfolioSuggest() : all.find(x => x.i === aiPick) ? aiSuggest(all.find(x => x.i === aiPick).A, all.find(x => x.i === aiPick).S) : []).slice(0, 3).map(q => `<button type="button" data-hask="${esc(q)}">${esc(q)}</button>`).join("")}</div>
+      <form class="hask" id="homeAsk"><select id="homeAiG" aria-label="دربارهٔ"><option value="p"${aiPick === "p" ? " selected" : ""}>همهٔ گروه‌ها</option>${all.map(x => `<option value="${x.i}"${x.i === aiPick ? " selected" : ""}>${esc(short(x.A.group.name))}</option>`).join("")}</select><input id="homeAiQ" placeholder="مثلاً: بودجه چقدر است؟" aria-label="سؤال"><button type="submit" aria-label="پرسیدن">↑</button></form>
     </div>
     <button class="isl" type="button" data-go="docs">${islHead("docs", "اسناد و گزارش‌ها", "نامهٔ تمدید، گزارش PDF", false)}<span class="foot2">نامهٔ پیشنهاد از صفحهٔ هر گروه ←</span></button>
     <button class="isl" type="button" data-go="settings">${islHead("settings", "قواعد و تنظیمات", "آستانه‌ها و پوشش‌های حمایتی", false)}<span class="foot2">Loss Ratio هدف: ${fmtPct(t)} ←</span></button>
@@ -1335,7 +1798,7 @@ function renderHome(){
     <button class="isl dim" type="button" data-go="market"><span class="badge2">به‌زودی</span>${islHead("market", "مقایسه با بازار", "در برابر گروه‌های مشابه", false)}</button>
     <button class="isl dim" type="button" data-go="history"><span class="badge2">به‌زودی</span>${islHead("clock", "تاریخچهٔ قراردادها", "سال‌به‌سال هر گروه", false)}</button>
   </div>`;
-  $("homeAiG").onchange = e => { state.homeAi = +e.target.value; render(); };
+  $("homeAiG").onchange = e => { state.homeAi = e.target.value === "p" ? "p" : +e.target.value; render(); };
   const dz = $("dropR");
   dz.ondragover = e => { e.preventDefault(); dz.classList.add("over"); };
   dz.ondragleave = () => dz.classList.remove("over");
@@ -1505,55 +1968,6 @@ function renderGroup(i){
 
 /* ---------- assistant (rule-based, with sources) ---------- */
 const VERB = { increase: "باید سقفش بالا برود", minor: "افزایش جزئی می‌گیرد", reduce: "کاهش سقف می‌گیرد", remove: "کاندید حذف است", protect: "حذف نمی‌شود", keep: "تغییر نمی‌کند" };
-function aiSuggest(A, S){
-  const q = A.rows.filter(r => r.d !== "keep").sort((a, b) => ORDER[a.d] - ORDER[b.d]).slice(0, 4).map(r => `چرا ${r.cv.name} ${VERB[r.d]}؟`);
-  return q.concat([`با بودجهٔ ${fmtPct(S.budgetPct)} چه چیزی جا می‌شود؟`, "Loss Ratio این گروه چطور حساب شد؟"]);
-}
-function aiAnswer(q, A, S, g){
-  const file = g.file || (g.sample ? "دادهٔ نمونه" : "فایل اکسل");
-  const src = (...xs) => `<div class="ai-src">${xs.map(x => `<span>${esc(x)}</span>`).join("")}</div>`;
-  const nq = norm(q);
-  const r = A.rows.find(x => nq.includes(norm(x.cv.name)));
-  if (r){
-    const rule = { increase: `قاعده: فشار سقف ≥ ${fmtInt(state.settings.pressureHigh)}٪ ← افزایش سقف`, minor: `قاعده: فشار سقف ${fmtInt(state.settings.pressureMinor)} تا ${fmtInt(state.settings.pressureHigh)}٪ ← افزایش جزئی`,
-      reduce: `قاعده: استفاده کمتر از ${fmtInt(state.settings.lowUtil)}٪ افراد و پوشش روزمره ← کاهش`, remove: "قاعده: صفر خسارت و پوشش روزمره ← کاندید حذف",
-      protect: "قاعده: پوشش حمایتی هیچ‌وقت حذف نمی‌شود", keep: "قاعده: بدون فشار سقف و مصرف عادی ← بدون تغییر" }[r.d];
-    const capTxt = r.d === "remove" ? "پیشنهاد: <b>حذف از بیمه‌نامه</b>." : r.newAnnual !== r.cv.annualCap ? `سقف سالانه <b>${fmtNum(r.cv.annualCap)} ← ${fmtNum(r.newAnnual)}</b>.` : r.newPerCase !== r.cv.perCase ? `سقف هر مورد <b>${fmtNum(r.cv.perCase)} ← ${fmtNum(r.newPerCase)}</b>.` : "سقف فعلی می‌ماند.";
-    return `<div>${esc(r.cv.name)}: <b>${DLABEL[r.d]}</b>. ${esc(r.why[0] || "")} ${capTxt}</div>
-      <div class="small muted">${fmtInt(r.n)} خسارت از ${fmtInt(r.users)} نفر؛ پرداختی <b>${fmtNum(r.paid)}</b>؛ ${r.capUnpaid ? `پرداخت‌نشده به خاطر سقف <b>${fmtNum(r.capUnpaid)}</b>` : "بدون کمبود سقف"}.</div>
-      ${src(`منبع: ${file} · ۰۳_خسارت · ستون پرداختی و علت عدم پرداخت`, rule)}`;
-  }
-  if (/بودجه/.test(nq)){
-    const B = S.budget;
-    return `<div>سقف خسارت مجاز با بودجهٔ <b>${fmtPct(S.budgetPct)}</b>: <b>${fmtNum(B.allowed)}</b>. ${B.fits ? (B.picked.length ? `جا می‌شود: <b>${esc(B.picked.join("، "))}</b>.` : "هیچ افزایشی جا نمی‌شود.") + (B.skipped.length ? ` جا نمی‌شود: ${esc(B.skipped.join("، "))}.` : "") : `حتی سقف‌های فعلی جا نمی‌شوند؛ کسری <b>${fmtNum(B.paid - B.allowed)}</b>.`}</div>
-      ${src(`منبع: ${file} · ۰۱_جمعیت · بودجه افزایش حق‌بیمه`, `قاعده: حق‌بیمه × (۱ + بودجه) × ${fmtPct(A.targetLR)}`)}`;
-  }
-  if (/loss|لاس|نسبت خسارت|ratio/i.test(q)){
-    const lr = A.lr ?? A.priorLr;
-    return `<div>Loss Ratio = خسارت پرداختی ÷ حق‌بیمه = <b>${fmtNum(A.totalPaid)} ÷ ${fmtNum(A.premiumNow)} = ${fmtPct(lr)}</b>${A.lr == null ? " (دادهٔ امسال ناقص است؛ عدد سال قبل)" : ""}. ${lrStat(lr) ? `وضعیت: <b>${lrStat(lr)[1]}</b>.` : ""}</div>
-      ${src(`منبع: ${file} · ۰۳_خسارت · ستون پرداختی`, `منبع: ${file} · ۰۵_حق_بیمه`, `قاعده: زیر ${fmtPct(A.targetLR)} سالم · بالای ۸۵٪ زیان‌ده`)}`;
-  }
-  if (/سناریو|متعادل|حق.?بیمه/.test(nq)){
-    const b = S.balanced;
-    return `<div>سناریوی متعادل: خسارت برآوردی <b>${fmtNum(b.paid)}</b>، تغییر حق‌بیمه <b>${fmtSignedPct(b.premiumChange)}</b>، سهم کارکنان از هزینهٔ درمان <b>${fmtPct(1 - S.current.cover)} ← ${fmtPct(1 - b.cover)}</b>.</div>
-      ${src(`منبع: ${file} · ۰۳_خسارت و ۰۶_تعرفه`, `قاعده: خسارت امسال × رشد تعرفه (${fmtPct(A.trend)}) زیر سقف‌های هر سناریو`)}`;
-  }
-  return `<div>این نسخه از قواعد خود اپ جواب می‌دهد: اسم یک پوشش، «بودجه»، «Loss Ratio» یا «سناریو» را در سؤال بیاورید، یا یکی از پرسش‌های پیشنهادی را بزنید. گفت‌وگوی آزاد در نسخهٔ آنلاین می‌آید.</div>`;
-}
-function assistant(key, A, S, g){
-  const msgs = state.chat[key] || [];
-  return `<aside class="panel ai anchor" id="g-ai" aria-label="دستیار">
-    <div class="panel-h"><h2>دستیار</h2><span class="tag t-line">پاسخ از قواعد اپ</span></div>
-    <div class="ai-body" id="aiBody">${msgs.length ? msgs.map(m => `<div class="ai-q">${esc(m.q)}</div><div class="ai-a">${aiAnswer(m.q, A, S, g)}</div>`).join("") : '<p class="small muted">هر عدد را با منبعش توضیح می‌دهم. یکی از پرسش‌ها را بزنید یا بپرسید.</p>'}</div>
-    <div class="ai-sug">${aiSuggest(A, S).map(q => `<button type="button" data-ask="${esc(q)}">${esc(q)}</button>`).join("")}</div>
-    <form class="ai-in" id="aiForm"><input id="aiQ" placeholder="مثلاً: چرا زایمان باید بالا برود؟" autocomplete="off"><button class="btn primary" type="submit">ارسال</button></form>
-  </aside>`;
-}
-function ask(q){
-  const key = "g" + state.idx; (state.chat[key] = state.chat[key] || []).push({ q });
-  render(); const b = $("aiBody"); if (b) b.scrollTop = b.scrollHeight;
-}
-
 /* ---------- letter ---------- */
 function openLetter(A, S, g){
   const G = A.group, b = S.balanced, B = S.budget;
@@ -1644,7 +2058,7 @@ function renderTender(i){
   <div class="ph"><div style="display:flex;flex-direction:column;gap:6px"><div class="hchips"><h1>${esc(G.name)}</h1><span class="tag t-line">${fmtInt(n)} سال سابقه</span><span class="tag ${LVL[R.level][0]}">اطمینان داده: ${LVL[R.level][1]}</span></div>
     <div class="infoline">${[G.industry, G.province, `سابقه: ${R.hist.map(h => fmtInt(h.year).replace(/٬/g, "")).join(" و ")}`, `نفرات قرارداد جدید: ${fmtInt(R.insuredNext)}`].filter(Boolean).map(x => `<span>${esc(x)}</span>`).join("")}</div></div>
     <div class="actions"><button class="btn danger" type="button" id="removeBtn">حذف این مناقصه</button></div></div>
-  ${ptabs([["t-sum", "خلاصه"], ["t-bid", "قیمت شما"], ["t-hist", "سابقه"], ["t-cov", "پوشش‌ها"], ["t-dq", "کیفیت داده", nIss]])}
+  ${ptabs([["t-sum", "خلاصه"], ["t-bid", "قیمت شما"], ["t-hist", "سابقه"], ["t-cov", "پوشش‌ها"], ["t-dq", "کیفیت داده", nIss], ["t-ai", "دستیار"]])}
   <div class="kpis anchor" id="t-sum">
     ${kpi("خسارت برآوردی سال قرارداد", fmtNum(R.expected), `سرانه ${fmtNum(R.expected / R.insuredNext)}`)}
     ${kpi("کف قیمت", fmtNum(R.floor), `زیر این، Loss Ratio بالای ${fmtPct(R.LR)}`)}
@@ -1692,6 +2106,7 @@ function renderTender(i){
       <td style="min-width:260px"><span class="tag ${TTAG[r.d]}">${TLABEL[r.d]}</span><div class="small muted" style="margin-top:4px;line-height:1.7">${esc(r.why)}${r.capCost ? ` هزینهٔ تقریبی: ${fmtNum(r.capCost)} حق‌بیمه.` : ""}</div></td></tr>`).join("")}
     </tbody></table></div></section>
   <section class="panel anchor" id="t-dq"><div class="panel-h"><h2>کیفیت داده</h2></div><div class="panel-b">${dqList(R.issues)}</div></section>
+  ${chatPanel("t" + i, "t-ai", tenderSuggest(R), q => tenderAnswer(q, R, t), "مثلاً: اگر ۴۵۰۰۰ پیشنهاد بدهیم؟")}
   <div class="mbar"><button class="btn primary" type="button" id="saveBid">ثبت این قیمت</button></div>`;
 
   const setLive = v => {
@@ -1779,8 +2194,9 @@ function render(){
   renderSidebar();
   document.querySelectorAll("[data-back]").forEach(b => { b.hidden = p === "home"; });
   document.querySelector(".mtop .tb-brand").hidden = p !== "home";
-  $("fab").hidden = !["renewal","group","tender"].includes(p);
-  const bn = { home: ["home"], renewal: ["renewal", "group", "reminders"], tender: ["tender", "tenderp"], ai: ["soon:ai"], settings: ["settings"] };
+  const bn = { home: ["home"], renewal: ["renewal", "group"], tender: ["tender", "tenderp"], reminders: ["reminders"] };
+  const due = state.groups.filter(g => { const r = renewalInfo(g.data.group.period); return r && r.days <= 30; }).length;
+  $("bnBadge").hidden = !due; $("bnBadge").textContent = fmtInt(due);
   document.querySelectorAll(".bottomnav button").forEach(b => b.setAttribute("aria-current", String((bn[b.dataset.bn] || []).includes(p))));
 }
 function go(page, idx, back){
@@ -1798,7 +2214,7 @@ function goBack(){
   const p = state.hist.pop();
   if (p) go(p[0], p[1], true); else go(PARENT[state.page] || "home", null, true);
 }
-addEventListener("popstate", () => { state.pushed = Math.max(0, state.pushed - 1); $("modal").hidden = true; goBack(); });
+addEventListener("popstate", () => { state.pushed = Math.max(0, state.pushed - 1); $("modal").hidden = true; closeMenu(); goBack(); });
 function bindStepper(id, fn){ const el = $(id); if (el) el.onchange = () => { const v = parseFloat(el.value); if (!isNaN(v)) fn(v); }; }
 /* Theme: follows the system until the user picks; the choice is remembered on this device. */
 function applyTheme(t){ if (t) document.documentElement.dataset.theme = t; else delete document.documentElement.dataset.theme; }
@@ -1812,6 +2228,15 @@ function jump(id){ const el = $(id); if (el) el.scrollIntoView({ behavior: reduc
 
 document.addEventListener("click", e => {
   const t = e.target;
+  if (t.closest("[data-menu]")){ $("sheet").hidden ? openMenu() : closeMenu(); return; }
+  if (t.closest("[data-sheet-close]")){ closeMenu(); return; }
+  if (t.closest("#sheet .mi")) closeMenu();
+  const act = t.closest("[data-act]");
+  if (act){ const k = act.dataset.act;
+    if (k === "upload"){ state.mode = "renewal"; $("file").click(); }
+    else if (k === "tsearch"){ go("home"); setTimeout(() => { $("tq").scrollIntoView({ block: "center" }); $("tq").focus(); }, 0); }
+    else if (k === "ai"){ if (state.page === "group") jump("g-ai"); else if (state.page === "tenderp") jump("t-ai"); else { go("home"); setTimeout(() => { $("homeAsk").scrollIntoView({ block: "center" }); $("homeAiQ").focus(); }, 0); } }
+    return; }
   if (t.closest("[data-theme-toggle]")){ toggleTheme(); return; }
   if (t.closest("[data-back]")){ if (state.pushed > 0) history.back(); else goBack(); return; }
   const tq = t.closest("[data-tq]"); if (tq){ $("tq").value = tq.dataset.tq; tenderSearch(tq.dataset.tq); return; }
@@ -1819,7 +2244,7 @@ document.addEventListener("click", e => {
   const tn = t.closest("[data-tender]"); if (tn){ go("tenderp", +tn.dataset.tender); return; }
   const op0 = t.closest("[data-open]"); if (op0 && state.page === "home"){ go("group", +op0.dataset.open); return; }
   const cat = t.closest("[data-cat]"); if (cat){ state.mcat = cat.dataset.cat; state.more[cat.dataset.cat] = true; go("renewal"); setTimeout(() => { const el = $(innerWidth <= 860 ? "acm" : "ac"); if (el) el.scrollIntoView({ block: "start" }); }, 0); return; }
-  const ha = t.closest("[data-hask]"); if (ha){ go("group", +$("homeAiG").value); ask(ha.dataset.hask); return; }
+  const ha = t.closest("[data-hask]"); if (ha){ homeAsk(ha.dataset.hask); return; }
   const goEl = t.closest("[data-go]"); if (goEl){ go(goEl.dataset.go); return; }
   const j = t.closest("[data-jump]"); if (j){ jump(j.dataset.jump); return; }
   const m = t.closest("[data-more]"); if (m){ state.more[m.dataset.more] = true; render(); return; }
@@ -1831,7 +2256,7 @@ document.addEventListener("click", e => {
   const o = t.closest("[data-open]"); if (o && $("view").contains(o)){ go(state.mode === "tender" ? "tenderp" : "group", +o.dataset.open); return; }
 });
 document.addEventListener("keydown", e => {
-  if (e.key === "Escape") $("modal").hidden = true;
+  if (e.key === "Escape"){ $("modal").hidden = true; closeMenu(); }
   const lk = e.target.closest && e.target.closest(".isl[data-go][role=link]");
   if (lk && e.target === lk && (e.key === "Enter" || e.key === " ")){ e.preventDefault(); go(lk.dataset.go); }
   const r = e.target.closest && e.target.closest("tr[data-open]");
@@ -1840,18 +2265,48 @@ document.addEventListener("keydown", e => {
 document.addEventListener("submit", e => {
   if (e.target.id === "aiForm"){ e.preventDefault(); const q = $("aiQ").value.trim(); if (q) ask(q); }
   if (e.target.id === "tenderQ"){ e.preventDefault(); tenderSearch($("tq").value); }
-  if (e.target.id === "homeAsk"){ e.preventDefault(); const q = $("homeAiQ").value.trim(), gi = +$("homeAiG").value; if (q){ go("group", gi); ask(q); } }
+  if (e.target.id === "homeAsk"){ e.preventDefault(); const q = $("homeAiQ").value.trim(); if (q) homeAsk(q); }
 });
 $("q").addEventListener("input", e => { state.q = e.target.value; if (state.page !== "renewal" && state.page !== "tender") go(state.mode === "tender" ? "tender" : "renewal"); else render(); $("q").focus(); });
 const toUrgent = () => { go("renewal"); setTimeout(() => { const el = $(innerWidth <= 860 ? "acm" : "ac"); if (el) el.scrollIntoView({ block: "start" }); state.mcat = "urgent"; }, 0); };
 $("bellBtn").onclick = toUrgent; $("bellBtnM").onclick = toUrgent;
 $("resetBtn").onclick = () => { if (state.mode === "tender"){ state.tenders = makeTenders(); addProtect(state.tenders); go("tender"); } else { setGroups(sampleGroups()); go(state.page === "home" ? "home" : "renewal"); } state.errors = []; render(); };
 $("uploadBtn").addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " "){ e.preventDefault(); $("file").click(); } });
-document.querySelectorAll(".bottomnav button").forEach(b => b.addEventListener("click", () => {
-  const k = b.dataset.bn;
-  if (k === "ai"){ if (state.page === "group") jump("g-ai"); else { go("home"); setTimeout(() => { const el = $("homeAsk"); if (el){ el.scrollIntoView({ block: "center" }); $("homeAiQ").focus(); } }, 0); } }
-  else go(k);
-}));
+document.querySelectorAll(".bottomnav button[data-bn]").forEach(b => b.addEventListener("click", () => go(b.dataset.bn)));
+
+/* ---------- all-features menu ---------- */
+function openMenu(){
+  const due = state.groups.filter(g => { const r = renewalInfo(g.data.group.period); return r && r.days <= 30; }).length;
+  const urgent = buildTodo(state.groups.map((g, i) => Object.assign({ i, g }, compute(g)))).filter(t => t.sev === "crit").length;
+  const mi = (k, label, attrs, extra) => `<button class="mi" type="button" ${attrs}>${ic(k)}<span>${label}</span>${extra || ""}</button>`;
+  const soon = '<span class="mb">به‌زودی</span>';
+  $("sheet").innerHTML = `<div class="sheet-bg" data-sheet-close></div><div class="sheet-box" role="dialog" aria-modal="true" aria-label="همهٔ قابلیت‌ها">
+    <div class="sheet-grip"></div>
+    <div class="sheet-h"><h2>همهٔ قابلیت‌ها</h2><button class="iconbtn" type="button" data-sheet-close aria-label="بستن">✕</button></div>
+    <div class="sheet-sec">دو کار اصلی</div>
+    <div class="mgrid two">
+      <button class="mi main" type="button" data-act="upload" style="--h:#6366F1">${ic("upload")}<span>تحلیل تمدید<small>فایل اکسل قرارداد را بدهید</small></span></button>
+      <button class="mi main" type="button" data-act="tsearch" style="--h:#0D9488">${ic("search")}<span>برآورد قیمت مناقصه<small>نام سازمان را بزنید</small></span></button>
+    </div>
+    <div class="sheet-sec">تحلیل</div>
+    <div class="mgrid">
+      ${mi("portfolio", "پرتفوی تمدید", 'data-go="renewal"')}${mi("tender", "مناقصه‌ها", 'data-go="tender"')}
+      ${mi("urgent", "کارهای فوری", 'data-cat="urgent"', urgent ? `<span class="mn">${fmtInt(urgent)}</span>` : "")}${mi("cal", "یادآور تمدید", 'data-go="reminders"', due ? `<span class="mn">${fmtInt(due)}</span>` : "")}
+    </div>
+    <div class="sheet-sec">ابزار</div>
+    <div class="mgrid">
+      ${mi("ai", "دستیار هوشمند", 'data-act="ai"')}${mi("docs", "اسناد و گزارش‌ها", 'data-go="docs"')}${mi("settings", "قواعد تحلیل", 'data-go="settings"')}${mi("moon", "حالت روشن / تیره", "data-theme-toggle")}
+    </div>
+    <div class="sheet-sec">مدیریت و نقشهٔ راه</div>
+    <div class="mgrid">
+      ${mi("users", "کاربران و اشتراک‌ها", 'data-go="admin"', '<span class="mb">پیش‌نمایش</span>')}${mi("link", "اتصال داده‌پردازان", 'data-go="dadeh"', soon)}${mi("map", "ورود داده و نگاشت", 'data-go="mapping"', soon)}${mi("market", "مقایسه با بازار", 'data-go="market"', soon)}${mi("clock", "تاریخچهٔ قراردادها", 'data-go="history"', soon)}
+    </div></div>`;
+  $("sheet").hidden = false;
+  document.querySelectorAll("[data-menu]").forEach(b => b.setAttribute("aria-expanded", "true"));
+}
+function closeMenu(){ $("sheet").hidden = true; document.querySelectorAll("[data-menu]").forEach(b => b.setAttribute("aria-expanded", "false")); }
+
+function homeAsk(q){ const v = $("homeAiG").value; if (v === "p") ask(q); else { go("group", +v); ask(q); } }
 
 /* ---------- smart flows ---------- */
 const wait = ms => new Promise(r => setTimeout(r, reduced() ? 0 : ms));
