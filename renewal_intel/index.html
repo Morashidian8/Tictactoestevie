@@ -1,218 +1,371 @@
 <title>Renewal Intelligence</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;700;800&family=Reem+Kufi:wght@600;700&family=IBM+Plex+Mono:wght@500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800&display=swap">
 <style>
-/* Layout: a broker's renewal desk — portfolio ledger first (one line per group, sorted by what needs action), then a group sheet with scenarios and one row per coverage. */
+/* Layout: right sidebar (brand-dark) + white top bar + content column; group pages add a 320px assistant column on the left. Phones: drawer, bottom nav, FAB. Tokens follow DESIGN_PROMPT_1. */
 :root{
-  --paper:#f2f5f4; --surface:#ffffff; --ink:#14211f; --muted:#5a6a66; --line:#d3dcd9; --accent:#0e6a5b; --accent-soft:#dcefea;
-  --up:#1d7a3c; --up-bg:#e1f2e5; --minor:#4f7a1d; --minor-bg:#eef4dd; --down:#a86200; --down-bg:#fbeedb;
-  --keep:#56625f; --keep-bg:#eaefed; --protect:#3450a6; --protect-bg:#e3e9fa; --remove:#b0281f; --remove-bg:#fbe4e2;
-  --warn:#a86200; --crit:#b0281f; --brand:#0b3b34; --brand-ink:#eaf5f2; --brand-muted:#9fc8be; --shadow:0 1px 2px rgba(16,40,35,.05),0 6px 20px rgba(16,40,35,.06);
-  --f-body:"Vazirmatn",Tahoma,"Segoe UI",sans-serif; --f-display:"Reem Kufi","Vazirmatn",Tahoma,sans-serif; --f-mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  --bg:#F5F6F4; --surface:#FFFFFF; --surface2:#F8F9F8; --line:#E2E6E3; --line2:#EEF1EF; --input-line:#D6DBD8;
+  --ink:#15201D; --ink2:#5E6B67; --ink3:#8A9692;
+  --brand-dark:#0B3B34; --brand:#0E6A5B; --brand-on:#FFFFFF; --focus:0 0 0 3px #D5ECE6; --brand-light:#3FD1B3; --logo:#13A08A; --hl:#F1F8F6;
+  --sb-bg:#0B3B34; --sb-active:#145247; --sb-dot:#3FD1B3; --sb-text:#C9DBD6; --sb-title:#7FA39A; --sb-line:#1F5B50;
+  --inc:#1E7A46; --inc-bg:#E3F3E8; --minor:#55661A; --minor-bg:#EEF2DC; --red:#8A5A00; --red-bg:#FDF0DD;
+  --rem:#A3261B; --rem-bg:#FBE7E5; --prot:#1F5590; --prot-bg:#E5EEF8; --keep:#4B5563; --keep-bg:#EEF0F2;
+  --good:#1E7A46; --good-bg:#E3F3E8; --mid:#D97706; --mid-ink:#B45F06; --mid-bg:#FDF0DD; --bad:#C0392B; --bad-bg:#FBE7E5;
+  --c-urgent:#FDF5F4; --c-opp:#F3F9F5; --c-warn:#FEF8EE; --c-note:#F4F8FC; --note:#1F5590;
+  --smp:#8A5A00; --smp-bg:#FFF4DC; --smp-line:#F1D9A6; --danger-line:#F1C9C4;
+  --float:0 6px 24px rgba(11,59,52,.16);
+  --f:"Vazirmatn",Tahoma,"Segoe UI",sans-serif; --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
-  --paper:#0e1514; --surface:#151f1d; --ink:#e2eae7; --muted:#93a39f; --line:#2a3734; --accent:#52b9a4; --accent-soft:#173430;
-  --up:#6fd08c; --up-bg:#16301f; --minor:#a9cf6a; --minor-bg:#25301a; --down:#f0ad55; --down-bg:#35270f;
-  --keep:#a3b0ac; --keep-bg:#212c2a; --protect:#93a9f2; --protect-bg:#1c2442; --remove:#f28b82; --remove-bg:#3a1a18;
-  --warn:#f0ad55; --crit:#f28b82; --brand:#0a1f1c; --brand-ink:#e2eae7; --brand-muted:#8fb3aa; --shadow:none; color-scheme:dark}}
+  --bg:#0E1A18; --surface:#13221F; --surface2:#0F1C1A; --line:#22332F; --line2:#1D2C29; --input-line:#2C403B;
+  --ink:#E4ECEA; --ink2:#93A6A1; --ink3:#6E827D; --brand:#3FD1B3; --brand-on:#06201B; --focus:0 0 0 3px #1D4A41; --hl:#15302A;
+  --inc:#4FD08A; --inc-bg:#123A2A; --minor:#C3D46A; --minor-bg:#2A3112; --red:#F5B451; --red-bg:#3A2A12;
+  --rem:#F07A6C; --rem-bg:#3A1A17; --prot:#8DB8F0; --prot-bg:#152A44; --keep:#A9B4B1; --keep-bg:#1F2C29;
+  --good:#4FD08A; --good-bg:#123A2A; --mid:#F5B451; --mid-ink:#F5B451; --mid-bg:#3A2A12; --bad:#F07A6C; --bad-bg:#3A1A17;
+  --c-urgent:#241816; --c-opp:#142620; --c-warn:#2A2214; --c-note:#152230; --note:#8DB8F0;
+  --smp:#F5B451; --smp-bg:#3A2A12; --smp-line:#5A4318; --danger-line:#5A2620; --float:0 6px 24px rgba(0,0,0,.45); color-scheme:dark}}
 :root[data-theme="dark"]{
-  --paper:#0e1514; --surface:#151f1d; --ink:#e2eae7; --muted:#93a39f; --line:#2a3734; --accent:#52b9a4; --accent-soft:#173430;
-  --up:#6fd08c; --up-bg:#16301f; --minor:#a9cf6a; --minor-bg:#25301a; --down:#f0ad55; --down-bg:#35270f;
-  --keep:#a3b0ac; --keep-bg:#212c2a; --protect:#93a9f2; --protect-bg:#1c2442; --remove:#f28b82; --remove-bg:#3a1a18;
-  --warn:#f0ad55; --crit:#f28b82; --brand:#0a1f1c; --brand-ink:#e2eae7; --brand-muted:#8fb3aa; --shadow:none; color-scheme:dark}
+  --bg:#0E1A18; --surface:#13221F; --surface2:#0F1C1A; --line:#22332F; --line2:#1D2C29; --input-line:#2C403B;
+  --ink:#E4ECEA; --ink2:#93A6A1; --ink3:#6E827D; --brand:#3FD1B3; --brand-on:#06201B; --focus:0 0 0 3px #1D4A41; --hl:#15302A;
+  --inc:#4FD08A; --inc-bg:#123A2A; --minor:#C3D46A; --minor-bg:#2A3112; --red:#F5B451; --red-bg:#3A2A12;
+  --rem:#F07A6C; --rem-bg:#3A1A17; --prot:#8DB8F0; --prot-bg:#152A44; --keep:#A9B4B1; --keep-bg:#1F2C29;
+  --good:#4FD08A; --good-bg:#123A2A; --mid:#F5B451; --mid-ink:#F5B451; --mid-bg:#3A2A12; --bad:#F07A6C; --bad-bg:#3A1A17;
+  --c-urgent:#241816; --c-opp:#142620; --c-warn:#2A2214; --c-note:#152230; --note:#8DB8F0;
+  --smp:#F5B451; --smp-bg:#3A2A12; --smp-line:#5A4318; --danger-line:#5A2620; --float:0 6px 24px rgba(0,0,0,.45); color-scheme:dark}
 *{box-sizing:border-box}
-body{background:var(--paper);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.7;direction:rtl}
-.wrap{max-width:1120px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 48px;display:flex;flex-direction:column;gap:28px}
-h1,h2,h3{text-wrap:balance;margin:0}
-h1{font-size:1.6rem;font-weight:800;line-height:1.35}
-h2{font-size:1.12rem;font-weight:800;border-inline-start:4px solid var(--accent);padding-inline-start:10px;line-height:1.4}
-.num{font-variant-numeric:tabular-nums}
-.mono{font-family:var(--f-mono);font-size:.8em;color:var(--muted);direction:ltr;unicode-bidi:isolate}
-.muted{color:var(--muted)} .small{font-size:.84rem}
-header{display:flex;flex-wrap:wrap;gap:16px;align-items:flex-end;justify-content:space-between}
-header .who{display:flex;flex-direction:column;gap:4px;min-width:0}
-.crumb{font-size:.9rem;font-weight:700}
-.meta{display:flex;flex-wrap:wrap;gap:6px 14px;color:var(--muted);font-size:.9rem}
-.actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
-.btn{font:inherit;font-weight:700;border-radius:8px;padding:8px 14px;border:1.5px solid var(--accent);background:var(--accent);color:var(--surface);cursor:pointer;line-height:1.5}
-.btn.ghost{background:transparent;color:var(--accent)}
-.btn.link{border:0;background:none;color:var(--accent);padding:0;text-align:start}
-.btn.danger{background:transparent;color:var(--remove);border-color:var(--remove)}
-.btn:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible,tr[tabindex]:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
-.chip{display:inline-flex;align-items:center;gap:4px;font-size:.78rem;font-weight:700;padding:1px 10px;border-radius:999px;white-space:nowrap}
-.chip.sample{background:var(--down-bg);color:var(--down)}
-.chip.own{background:var(--protect-bg);color:var(--protect)}
-.chip.lvl-low{background:var(--remove-bg);color:var(--remove)} .chip.lvl-mid{background:var(--down-bg);color:var(--down)} .chip.lvl-high{background:var(--up-bg);color:var(--up)}
-.d-increase{background:var(--up-bg);color:var(--up)} .d-minor{background:var(--minor-bg);color:var(--minor)}
-.d-reduce{background:var(--down-bg);color:var(--down)} .d-keep{background:var(--keep-bg);color:var(--keep)}
-.d-protect{background:var(--protect-bg);color:var(--protect)} .d-remove{background:var(--remove-bg);color:var(--remove)}
-.ok{color:var(--up);font-weight:700} .bad{color:var(--crit);font-weight:700} .warnc{color:var(--warn);font-weight:700}
-.cat{font-size:.72rem;font-weight:700;color:var(--muted);border:1px solid var(--line);border-radius:4px;padding:0 6px}
-.summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
-.fig{background:var(--surface);padding:14px 16px;display:grid;grid-template-columns:auto 1fr;grid-template-rows:auto auto auto;column-gap:12px;min-width:0;border-radius:12px;box-shadow:var(--shadow);border:1px solid var(--line);border-top:3px solid var(--accent)}
-.fig > *{grid-column:2}
-.fig .ic{grid-column:1;grid-row:1 / span 3;width:40px;height:40px;border-radius:10px;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center;align-self:start}
-.fig.t-bad{border-top-color:var(--crit)} .fig.t-bad .ic{background:var(--remove-bg);color:var(--crit)}
-.fig.t-warn{border-top-color:var(--warn)} .fig.t-warn .ic{background:var(--down-bg);color:var(--warn)}
-.fig.t-good{border-top-color:var(--up)} .fig.t-good .ic{background:var(--up-bg);color:var(--up)}
-.fig .k{font-size:.8rem;color:var(--muted);font-weight:500}
-.fig .v{font-size:1.45rem;font-weight:800}
-.fig .s{font-size:.78rem;color:var(--muted)}
-.fig .s.bad{color:var(--warn);font-weight:500}
-.note{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;font-size:.9rem}
-section{display:flex;flex-direction:column;gap:12px}
-.sec-head{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:baseline;justify-content:space-between}
-.legend{display:flex;flex-wrap:wrap;gap:6px}
-.panel{background:var(--surface);border:1px solid var(--line);border-radius:10px}
-.scroll{overflow-x:auto}
-table.grid{width:100%;border-collapse:collapse;font-size:.9rem}
-table.grid th{font-size:.78rem;font-weight:700;color:var(--muted);text-align:start;padding:10px 12px;border-bottom:1px solid var(--line);white-space:nowrap}
-table.grid td{padding:10px 12px;border-top:1px solid var(--line);vertical-align:top}
-table.grid tr:first-child td{border-top:0}
-table.grid td.n{white-space:nowrap;font-variant-numeric:tabular-nums}
-table.grid tbody tr.pick{cursor:pointer}
-table.grid tbody tr.pick:hover{background:var(--accent-soft)}
-table.grid tr.hl td{background:var(--accent-soft)}
-table.grid td.chg{font-weight:800}
-.counts{display:flex;flex-wrap:wrap;gap:4px}
-.todo{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
-.todo li{display:flex;gap:10px;align-items:baseline;padding:10px 16px;border-top:1px solid var(--line)}
-.todo li:first-child{border-top:0}
-.todo .t{flex:1;min-width:0}
-.sev{flex:none;width:8px;height:8px;border-radius:50%;background:var(--warn);transform:translateY(-1px)}
-.sev.crit{background:var(--crit)} .sev.info{background:var(--muted)} .sev.ok{background:var(--up)}
-.rows{display:flex;flex-direction:column}
-.row{display:grid;grid-template-columns:minmax(150px,1.1fr) minmax(170px,1.2fr) minmax(150px,1fr) minmax(0,2fr);gap:12px 20px;padding:14px 16px;border-top:1px solid var(--line);border-inline-start:4px solid transparent;align-items:start}
-.row:first-child{border-top:0}
-.row.s-increase{border-inline-start-color:var(--up)} .row.s-minor{border-inline-start-color:var(--minor)} .row.s-reduce{border-inline-start-color:var(--down)}
-.row.s-protect{border-inline-start-color:var(--protect)} .row.s-remove{border-inline-start-color:var(--remove)}
-.row > div{min-width:0}
-.cov{display:flex;flex-direction:column;gap:4px}
-.cov b{font-size:1.02rem}
-.bar{height:6px;background:var(--keep-bg);border-radius:3px;overflow:hidden;margin-top:6px}
-.bar i{display:block;height:100%;background:var(--accent);border-radius:3px}
-.stats{display:grid;grid-template-columns:auto auto;gap:0 10px;font-size:.84rem;justify-content:start;margin:0}
-.stats dt{color:var(--muted)} .stats dd{margin:0;font-weight:700}
-.cap{display:flex;flex-direction:column;gap:2px;font-size:.88rem}
-.cap .line{display:flex;gap:6px;align-items:baseline;flex-wrap:wrap}
-.cap .old{color:var(--muted)} .cap .new{font-weight:800}
-.why{font-size:.88rem;display:flex;flex-direction:column;gap:6px}
-.why p{margin:0}
-.budget-bar{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;padding:12px 16px;border-bottom:1px solid var(--line)}
-.budget-bar label{display:flex;gap:8px;align-items:center;font-weight:700;font-size:.9rem}
-.budget-bar input{font:inherit;width:84px;padding:4px 8px;border:1px solid var(--line);border-radius:6px;background:var(--paper);color:var(--ink)}
-.explain{padding:12px 16px;border-top:1px solid var(--line);font-size:.88rem;display:flex;flex-direction:column;gap:4px}
-.explain p{margin:0}
-.capcell s{color:var(--muted)}
-.capcell.ch{font-weight:800;color:var(--accent)}
-.capcell.rm{color:var(--remove);font-weight:700}
-details.panel{padding:4px 16px}
-summary{cursor:pointer;font-weight:700;padding:8px 0}
-.settings{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;padding:8px 0 16px}
-.settings label{display:flex;flex-direction:column;gap:4px;font-size:.86rem}
-.settings input[type=number],select{font:inherit;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--paper);color:var(--ink)}
-.settings input[type=number]{width:100%}
-.protect-list{display:flex;flex-wrap:wrap;gap:8px 16px;padding-bottom:14px}
-.protect-list label{display:flex;gap:6px;align-items:center;font-size:.9rem}
-.err{background:var(--remove-bg);color:var(--remove);border-radius:8px;padding:10px 14px;font-weight:500}
+[hidden]{display:none!important}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--f);font-size:13.5px;line-height:1.7;direction:rtl}
+button,input,select{font:inherit;color:inherit}
+.num,td,.kv,.big{font-feature-settings:"tnum";font-variant-numeric:tabular-nums}
+.nw{white-space:nowrap}
+h1,h2,h3{margin:0;text-wrap:balance}
+h1{font-size:23px;font-weight:800;line-height:1.4}
+h2{font-size:16.5px;font-weight:700;line-height:1.5}
+h3{font-size:14px;font-weight:700}
+p{margin:0}
+.muted{color:var(--ink2)} .faint{color:var(--ink3)} .small{font-size:12px}
+.ltr{direction:ltr;unicode-bidi:isolate} .plain{unicode-bidi:plaintext}
+a{color:var(--brand)}
+:focus-visible{outline:none;box-shadow:var(--focus)}
+
+/* ---- shell ---- */
+.app{display:flex;min-height:100vh}
+.sidebar{width:248px;flex:none;background:var(--sb-bg);color:var(--sb-text);display:flex;flex-direction:column;gap:14px;padding:18px 14px;position:sticky;top:0;height:100vh;overflow-y:auto;padding-top:max(18px,env(safe-area-inset-top,0px))}
+.sb-brand{display:flex;gap:10px;align-items:center;padding:2px 6px 14px;border-bottom:1px solid var(--sb-line)}
+.logo{width:38px;height:38px;border-radius:10px;background:var(--logo);color:#fff;display:grid;place-items:center;font-weight:800;font-size:14px;letter-spacing:.02em;flex:none;direction:ltr}
+.sb-brand b{display:block;color:#fff;font-size:14.5px;font-weight:800;line-height:1.3;direction:ltr;text-align:right}
+.sb-brand div span{display:block;font-size:11.5px;color:var(--sb-title)}
+.sb-group{display:flex;flex-direction:column;gap:2px}
+.sb-title{font-size:11.5px;font-weight:700;color:var(--sb-title);padding:4px 10px}
+.sb-item{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;border:0;background:none;color:var(--sb-text);text-align:start;cursor:pointer;width:100%;white-space:nowrap}
+.sb-item .dot{width:6px;height:6px;border-radius:50%;background:var(--sb-title);flex:none}
+.sb-item:hover{background:rgba(255,255,255,.05)}
+.sb-item[aria-current="page"]{background:var(--sb-active);color:#fff;font-weight:700}
+.sb-item[aria-current="page"] .dot{background:var(--sb-dot)}
+.sb-item .cnt{margin-inline-start:auto;font-size:11px;font-weight:700;background:rgba(255,255,255,.1);border-radius:10px;padding:0 7px}
+.sb-item .sb-soon{margin-inline-start:auto;font-size:10.5px;font-weight:700;color:var(--sb-dot);border:1px solid var(--sb-line);border-radius:6px;padding:0 6px}
+.sb-foot{margin-top:auto;display:flex;flex-direction:column;gap:10px}
+.sb-card{border:1px solid var(--sb-line);border-radius:12px;padding:10px 12px;font-size:12px;display:flex;flex-direction:column;gap:6px}
+.sb-card b{color:#fff}
+.sb-prog{height:4px;border-radius:2px;background:var(--sb-line);overflow:hidden}
+.sb-prog i{display:block;height:100%;background:var(--sb-dot)}
+.main{flex:1;min-width:0;display:flex;flex-direction:column}
+.topbar{height:64px;background:var(--surface);border-bottom:1px solid var(--line);display:flex;align-items:center;gap:14px;padding-inline:max(28px,env(safe-area-inset-right,0px)) max(28px,env(safe-area-inset-left,0px));position:sticky;top:0;z-index:20}
+.seg{display:inline-flex;background:var(--line2);border-radius:10px;padding:3px;gap:2px;flex:none}
+.seg button{border:0;background:none;padding:6px 14px;border-radius:8px;font-weight:700;color:var(--ink2);cursor:pointer;white-space:nowrap}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.08)}
+.search{flex:1;max-width:360px;position:relative}
+.search input{width:100%;height:36px;border:1px solid var(--input-line);border-radius:10px;background:var(--surface2);padding-inline:34px 12px}
+.search svg{position:absolute;inset-inline-start:10px;top:9px;color:var(--ink3)}
+.tb-gap{flex:1}
+.chip-smp{font-size:11.5px;font-weight:700;color:var(--smp);background:var(--smp-bg);border:1px solid var(--smp-line);border-radius:6px;padding:1px 8px;white-space:nowrap}
+.link{border:0;background:none;color:var(--brand);font-weight:700;cursor:pointer;padding:0;white-space:nowrap}
+.iconbtn{position:relative;width:38px;height:38px;border-radius:10px;border:1px solid var(--line);background:var(--surface);display:grid;place-items:center;cursor:pointer;color:var(--ink2);flex:none}
+.iconbtn .badge{position:absolute;top:6px;inset-inline-end:7px;width:8px;height:8px;border-radius:50%;background:var(--bad);border:2px solid var(--surface)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:36px;padding:0 14px;border-radius:9px;border:1px solid var(--input-line);background:var(--surface);color:var(--ink);font-weight:700;cursor:pointer;white-space:nowrap;text-decoration:none}
+.btn.primary{background:var(--brand);border-color:var(--brand);color:var(--brand-on)}
+.btn.danger{color:var(--bad);border-color:var(--danger-line)}
+.btn[disabled]{opacity:.55;cursor:not-allowed}
+.content{padding:22px max(28px,env(safe-area-inset-left,0px)) 28px max(28px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:20px;flex:1;min-width:0}
+.foot{border-top:1px solid var(--line);padding:14px 28px;display:flex;flex-wrap:wrap;gap:6px 18px;font-size:12px;color:var(--ink2)}
+.mobile-only{display:none}
+
+/* ---- page parts ---- */
+.ph{display:flex;flex-wrap:wrap;gap:12px 18px;align-items:flex-end;justify-content:space-between}
+.ph .date{font-size:12px;color:var(--ink3)}
+.ph .sub{font-size:12.5px;color:var(--ink2)}
+.crumb{font-size:12.5px;color:var(--ink2);display:flex;gap:6px;align-items:center}
+.crumb button{border:0;background:none;color:var(--brand);font-weight:700;cursor:pointer;padding:0}
+.hchips{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.infoline{display:flex;flex-wrap:wrap;gap:4px 16px;font-size:12.5px;color:var(--ink2)}
+.actions{display:flex;flex-wrap:wrap;gap:8px}
+.tag{display:inline-flex;align-items:center;gap:4px;font-size:11.5px;font-weight:700;border-radius:6px;padding:1px 8px;white-space:nowrap}
+.t-inc{color:var(--inc);background:var(--inc-bg)} .t-minor{color:var(--minor);background:var(--minor-bg)} .t-reduce{color:var(--red);background:var(--red-bg)}
+.t-remove{color:var(--rem);background:var(--rem-bg)} .t-protect{color:var(--prot);background:var(--prot-bg)} .t-keep{color:var(--keep);background:var(--keep-bg)}
+.t-good{color:var(--good);background:var(--good-bg)} .t-mid{color:var(--mid-ink);background:var(--mid-bg)} .t-bad{color:var(--bad);background:var(--bad-bg)}
+.t-line{color:var(--ink2);border:1px solid var(--line)}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:14px}
+.panel-h{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--line2)}
+.panel-b{padding:14px 18px}
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+.kpi{padding:14px 16px;display:flex;flex-direction:column;gap:4px;min-width:0}
+.kpi .kl{font-size:12.5px;color:var(--ink2);white-space:nowrap}
+.kpi .kv{font-size:27px;font-weight:800;line-height:1.25}
+.kpi .ks{font-size:12px;color:var(--ink2)}
+.kpi.accent{border-color:var(--brand);box-shadow:inset 0 0 0 1px var(--brand)}
+.kpi .row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.mini{position:relative;height:4px;border-radius:2px;background:var(--line2);margin-top:4px}
+.mini i{position:absolute;inset-block:0;inset-inline-start:0;border-radius:2px}
+.mini b{position:absolute;top:-3px;bottom:-3px;width:1.5px;background:var(--ink3)}
+
+/* action center */
+.ac{display:grid;grid-template-columns:repeat(4,minmax(0,1fr))}
+.ac-col{padding:12px 14px;display:flex;flex-direction:column;gap:8px;min-width:0;border-inline-start:1px solid var(--line2)}
+.ac-col:first-child{border-inline-start:0}
+.ac-col.c-urgent{background:var(--c-urgent)} .ac-col.c-opp{background:var(--c-opp)} .ac-col.c-warn{background:var(--c-warn)} .ac-col.c-note{background:var(--c-note)}
+.ac-h{display:flex;align-items:center;gap:8px;font-weight:700;white-space:nowrap}
+.ac-h .d{width:8px;height:8px;border-radius:50%}
+.ac-h .n{margin-inline-start:auto;font-size:11.5px;font-weight:700;border-radius:20px;padding:0 9px}
+.c-urgent .d{background:var(--bad)} .c-urgent .n{background:var(--bad-bg);color:var(--bad)}
+.c-opp .d{background:var(--good)} .c-opp .n{background:var(--good-bg);color:var(--good)}
+.c-warn .d{background:var(--mid)} .c-warn .n{background:var(--mid-bg);color:var(--mid-ink)}
+.c-note .d{background:var(--note)} .c-note .n{background:var(--prot-bg);color:var(--note)}
+.ac-item{background:var(--surface);border:1px solid var(--line2);border-radius:10px;padding:8px 10px;font-size:12.5px;line-height:1.7;cursor:pointer;text-align:start;width:100%}
+.ac-item:hover{border-color:var(--line)}
+.ac-item b{display:block;font-size:12.5px}
+.c-urgent .ac-item b{color:var(--bad)} .c-opp .ac-item b{color:var(--good)} .c-warn .ac-item b{color:var(--mid-ink)} .c-note .ac-item b{color:var(--note)}
+.ac-more{border:0;background:none;color:var(--brand);font-weight:700;font-size:12.5px;cursor:pointer;text-align:start;padding:2px 0}
+
+/* column chart */
+.cchart{position:relative;height:240px;display:flex;align-items:flex-end;gap:10px;padding:26px 8px 0;margin:0 0 6px}
+.cchart .ref{position:absolute;inset-inline:0;border-top:1.5px dashed;height:0}
+.cchart .ref span{position:absolute;inset-inline-end:0;top:-18px;font-size:11px;font-weight:700;background:var(--surface);padding:0 4px}
+.cchart .col{flex:1;min-width:34px;height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;cursor:pointer;position:relative;z-index:1;border:0;background:none;padding:0}
+.cchart .col .v{font-size:11.5px;font-weight:800;margin-bottom:3px}
+.cchart .col .b{width:min(42px,70%);border-radius:6px 6px 0 0}
+.cnames{display:flex;gap:10px;padding:6px 8px 0;border-top:1px solid var(--line)}
+.cnames span{flex:1;min-width:34px;font-size:11px;color:var(--ink2);text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* tables */
+.tw{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{position:sticky;top:0;background:var(--surface2);font-size:12px;font-weight:700;color:var(--ink2);text-align:start;padding:9px 12px;border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:10px 12px;border-bottom:1px solid var(--line2);vertical-align:middle}
+tr.click{cursor:pointer} tr.click:hover td{background:var(--surface2)}
+tbody tr:last-child td{border-bottom:0}
+.nm b{display:block;white-space:nowrap} .nm span{font-size:12px;color:var(--ink2);white-space:nowrap}
+.nm.wrapsub span{white-space:normal;display:block;max-width:240px}
+.lrcell{min-width:96px}
+.lrcell .mini{width:80px}
+.sortseg{display:inline-flex;gap:4px;flex-wrap:wrap}
+.sortseg button{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:3px 10px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;color:var(--ink2)}
+.sortseg button[aria-pressed="true"]{background:var(--brand-dark);border-color:var(--brand-dark);color:#fff}
+tr.hl td{background:var(--hl)} tr.hl td:first-child{box-shadow:inset -3px 0 0 var(--brand)}
+.prog{height:6px;border-radius:3px;background:var(--line2);min-width:44px;position:relative}
+.prog i{position:absolute;inset-block:0;inset-inline-start:0;border-radius:3px;background:var(--brand)}
+.sumline{background:var(--prot-bg);color:var(--note);border-radius:10px;padding:10px 14px;font-weight:600}
+
+/* in-page tabs */
+.ptabs{display:flex;gap:18px;border-bottom:1px solid var(--line);overflow-x:auto;position:sticky;top:64px;background:var(--bg);z-index:10}
+.ptabs button{border:0;background:none;padding:10px 2px;font-weight:700;color:var(--ink2);border-bottom:2.5px solid transparent;cursor:pointer;white-space:nowrap;display:inline-flex;gap:6px;align-items:center}
+.ptabs button[aria-current="true"]{color:var(--brand);border-bottom-color:var(--brand)}
+.ptabs .n{font-size:11px;background:var(--bad-bg);color:var(--bad);border-radius:10px;padding:0 7px}
+.anchor{scroll-margin-top:120px}
+
+/* group layout with assistant */
+.with-ai{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:20px;align-items:start}
+.with-ai > .colmain{display:flex;flex-direction:column;gap:20px;min-width:0}
+.ai{position:sticky;top:120px;display:flex;flex-direction:column;max-height:calc(100vh - 140px)}
+.ai .panel-h{flex:none}
+.ai-body{padding:12px 14px;display:flex;flex-direction:column;gap:10px;overflow-y:auto;flex:1}
+.ai-q{align-self:flex-start;max-width:90%;background:var(--brand-dark);color:#fff;border-radius:12px 12px 4px 12px;padding:8px 12px;font-size:12.5px}
+.ai-a{background:var(--surface2);border:1px solid var(--line2);border-radius:12px;padding:10px 12px;font-size:12.5px;line-height:1.8;display:flex;flex-direction:column;gap:6px}
+.ai-a b{font-weight:800}
+.ai-src{display:flex;flex-wrap:wrap;gap:4px}
+.ai-src span{font-size:10.5px;font-weight:600;color:var(--ink2);border:1px solid var(--line);border-radius:6px;padding:0 6px;background:var(--surface)}
+.ai-sug{display:flex;flex-direction:column;gap:6px;padding:10px 14px;border-top:1px solid var(--line2)}
+.ai-sug button{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:5px 10px;font-size:12px;text-align:start;cursor:pointer;color:var(--ink)}
+.ai-in{display:flex;gap:6px;padding:10px 14px;border-top:1px solid var(--line2)}
+.ai-in input{flex:1;min-width:0;height:36px;border:1px solid var(--input-line);border-radius:9px;background:var(--surface);padding:0 10px}
+
+/* coverage cards */
+.covs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.cov{padding:14px 16px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.cov-h{display:flex;gap:8px;align-items:flex-start;justify-content:space-between}
+.cov-h b{font-size:14.5px}
+.cov-h .meta{font-size:12px;color:var(--ink2)}
+.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.stats div{background:var(--surface2);border-radius:8px;padding:6px 8px;min-width:0}
+.stats span{display:block;font-size:11.5px;color:var(--ink2);white-space:nowrap}
+.stats b{font-size:14px}
+.share{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--ink2)}
+.capbox{display:flex;flex-wrap:wrap;gap:4px 14px;align-items:center;border:1px dashed var(--line);border-radius:10px;padding:8px 12px;font-size:12.5px}
+.capbox s{color:var(--ink3)}
+.capbox .new{font-weight:800;font-size:15px}
+.why b{display:block;font-weight:700;line-height:1.7}
+.why span{display:block;color:var(--ink2);font-size:12px;line-height:1.7}
+
+/* stepper */
+.stepper{display:inline-flex;align-items:center;border:1.5px solid var(--brand);border-radius:10px;overflow:hidden;background:var(--surface)}
+.stepper button{width:34px;height:34px;border:0;background:none;color:var(--brand);font-size:18px;font-weight:700;cursor:pointer}
+.stepper input{width:64px;height:34px;border:0;text-align:center;font-weight:800;background:none}
+.stepper input:focus{outline:none}
+.stepper:focus-within{box-shadow:var(--focus)}
+
+/* tender price */
+.bidrow{display:grid;grid-template-columns:minmax(0,1.4fr) repeat(2,minmax(0,1fr));gap:14px;align-items:stretch}
+.bidin{display:flex;flex-direction:column;gap:6px}
+.bidin input{height:54px;border:1.5px solid var(--brand);border-radius:10px;background:var(--surface);font-size:26px;font-weight:800;padding:0 14px;width:100%}
+.bidin input:focus{outline:none;box-shadow:var(--focus)}
+.live{border-radius:12px;padding:10px 14px;display:flex;flex-direction:column;gap:2px;border:1px solid var(--line)}
+.live span{font-size:12px;color:var(--ink2)}
+.live b{font-size:22px;font-weight:800}
+.live.z-low{background:var(--good-bg);border-color:transparent} .live.z-low b{color:var(--good)}
+.live.z-mid{background:var(--mid-bg);border-color:transparent} .live.z-mid b{color:var(--mid-ink)}
+.live.z-high{background:var(--bad-bg);border-color:transparent} .live.z-high b{color:var(--bad)}
+.zone{position:relative;padding:30px 0 22px}
+.zone input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:12px;border-radius:6px;background:var(--zg);direction:rtl;margin:0}
+.zone input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:24px;height:24px;border-radius:50%;background:#fff;border:3px solid var(--zc,var(--brand));box-shadow:var(--float);cursor:grab}
+.zone input[type=range]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;background:#fff;border:3px solid var(--zc,var(--brand));box-shadow:var(--float);cursor:grab}
+.zone .mk{position:absolute;top:0;bottom:16px;width:0;border-inline-start:1.5px solid var(--ink3);pointer-events:none}
+.zone .mk span{position:absolute;top:-2px;right:0;transform:translateX(50%);font-size:11px;font-weight:700;white-space:nowrap;color:var(--ink2);background:var(--surface);padding:0 3px}
+.zone .ax{display:flex;justify-content:space-between;font-size:11px;color:var(--ink3);margin-top:6px}
+.zlegend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12px;color:var(--ink2)}
+.zlegend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-inline-end:4px;vertical-align:-1px}
+.msg-bad{background:var(--bad-bg);color:var(--bad);border-radius:10px;padding:9px 12px;font-weight:600}
+.msg-good{background:var(--good-bg);color:var(--good);border-radius:10px;padding:9px 12px;font-weight:600}
+.steps{display:flex;flex-direction:column;gap:10px}
+.step{display:grid;grid-template-columns:28px 1fr auto;gap:10px;align-items:center}
+.step .sn{width:28px;height:28px;border-radius:50%;background:var(--brand-dark);color:#fff;display:grid;place-items:center;font-weight:800;font-size:12.5px}
+:root[data-theme="dark"] .step .sn{background:var(--brand);color:var(--brand-on)}
+.step .sv{font-weight:800;white-space:nowrap}
+.hbars{display:flex;flex-direction:column;gap:8px}
+.hbar{display:grid;grid-template-columns:minmax(150px,1fr) 3fr minmax(56px,auto);gap:12px;align-items:center;font-size:12.5px}
+.hbar .t{height:12px;border-radius:6px;background:var(--line2);position:relative}
+.hbar .t i{position:absolute;inset-block:0;inset-inline-start:0;border-radius:6px}
+.dq li{display:flex;gap:10px;align-items:baseline;padding:9px 0;border-bottom:1px solid var(--line2)}
+.dq{list-style:none;margin:0;padding:0}
+.dq li:last-child{border-bottom:0}
+.sev{flex:none;font-size:11px;font-weight:700;border-radius:6px;padding:0 7px}
+
+/* settings & preview */
+.form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.field{display:flex;flex-direction:column;gap:6px;font-size:12.5px;font-weight:600}
+.field input[type=number],.field input[type=text],.field input[type=password]{height:38px;border:1px solid var(--input-line);border-radius:9px;background:var(--surface);padding:0 12px}
+.checks{display:flex;flex-wrap:wrap;gap:8px 18px}
+.checks label{display:flex;gap:6px;align-items:center;white-space:nowrap}
+.preview-banner{display:flex;gap:10px;align-items:center;background:var(--smp-bg);color:var(--smp);border:1px solid var(--smp-line);border-radius:10px;padding:8px 12px;font-weight:600}
+.soon{max-width:620px;margin:20px auto;text-align:center;display:flex;flex-direction:column;gap:12px;align-items:center;padding:28px}
+.soon .ic{width:56px;height:56px;border-radius:14px;background:var(--hl);color:var(--brand);display:grid;place-items:center}
+.otp{display:flex;gap:8px;direction:ltr;justify-content:center}
+.otp input{width:44px;height:50px;text-align:center;font-size:20px;font-weight:800;border:1px solid var(--input-line);border-radius:10px;background:var(--surface)}
+.err{background:var(--bad-bg);color:var(--bad);border-radius:10px;padding:10px 14px}
 .err p{margin:0}
-footer{font-size:.82rem;color:var(--muted);border-top:1px solid var(--line);padding-top:14px;display:flex;flex-direction:column;gap:4px}
-@media (max-width:820px){
-  .summary{grid-template-columns:repeat(2,minmax(0,1fr))}
-  .row{grid-template-columns:1fr 1fr}
-  .row .why{grid-column:1/-1}
+
+/* modal */
+.modal{position:fixed;inset:0;z-index:60;background:rgba(6,20,17,.55);display:grid;place-items:center;padding:16px}
+.modal .box{background:var(--surface);border-radius:14px;box-shadow:var(--float);width:min(680px,100%);max-height:90vh;display:flex;flex-direction:column}
+.modal textarea{width:100%;min-height:340px;border:1px solid var(--line);border-radius:10px;padding:12px;background:var(--surface2);color:var(--ink);font:inherit;line-height:1.9;resize:vertical}
+
+/* mobile */
+.bottomnav,.fab,.drawer-bg,.mtop{display:none}
+@media (max-width:980px){
+  .with-ai{grid-template-columns:1fr} .ai{position:static;max-height:none}
+  .kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .ac{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .ac-col:nth-child(3){border-inline-start:0}
+  .covs{grid-template-columns:1fr}
 }
-@media (max-width:460px){.row{grid-template-columns:1fr}}
-.appbar{background:var(--brand);color:var(--brand-ink)}
-.appbar-in{max-width:1120px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:12px;display:flex;flex-wrap:wrap;gap:12px 20px;align-items:center;justify-content:space-between}
-.brand{display:flex;gap:10px;align-items:center;min-width:0}
-.brand .logo{width:38px;height:38px;border-radius:10px;background:var(--brand-ink);color:var(--brand);display:grid;place-items:center;flex:none}
-.brand b{display:block;font-family:var(--f-display);font-size:1.2rem;line-height:1.2;letter-spacing:.01em}
-.brand span{display:block;font-size:.76rem;color:var(--brand-muted)}
-.tabs{display:flex;gap:4px;background:rgba(255,255,255,.08);border-radius:10px;padding:4px}
-.tabs button{font:inherit;font-weight:700;padding:7px 16px;border:0;border-radius:8px;background:transparent;color:var(--brand-ink);cursor:pointer;display:inline-flex;gap:8px;align-items:center}
-.tabs button[aria-pressed="true"]{background:var(--brand-ink);color:var(--brand)}
-.tabs button:focus-visible{outline:2px solid var(--brand-ink);outline-offset:2px}
-.appbar .actions .btn{background:var(--brand-ink);color:var(--brand);border-color:var(--brand-ink)}
-.appbar .actions .btn.ghost{background:transparent;color:var(--brand-ink);border-color:var(--brand-muted)}
-.appbar .chip.sample{background:rgba(255,255,255,.12);color:var(--brand-ink)}
-.panel,.rows,.todo.panel{box-shadow:var(--shadow)}
-.subnav{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;display:flex;gap:6px;flex-wrap:wrap;padding-block:8px;background:var(--paper);border-bottom:1px solid var(--line)}
-.subnav button{font:inherit;font-size:.86rem;font-weight:700;padding:5px 14px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer}
-.subnav button:hover{border-color:var(--accent);color:var(--accent)}
-.subnav button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
-#view > section{scroll-margin-top:64px}
-.cats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
-.catbox{background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);display:flex;flex-direction:column;min-width:0;overflow:hidden}
-.catbox .ch{display:flex;gap:8px;align-items:center;padding:10px 16px;font-weight:800;border-bottom:1px solid var(--line)}
-.catbox .ch .cnt{margin-inline-start:auto;font-size:.78rem;font-weight:800;border-radius:999px;padding:0 9px}
-.catbox.c-urgent .ch{color:var(--crit)} .catbox.c-urgent .cnt{background:var(--remove-bg);color:var(--crit)}
-.catbox.c-warn .ch{color:var(--warn)} .catbox.c-warn .cnt{background:var(--down-bg);color:var(--warn)}
-.catbox.c-opp .ch{color:var(--up)} .catbox.c-opp .cnt{background:var(--up-bg);color:var(--up)}
-.catbox.c-note .ch{color:var(--muted)} .catbox.c-note .cnt{background:var(--keep-bg);color:var(--keep)}
-.catbox .todo{border:0;border-radius:0;box-shadow:none}
-.catbox .more{font:inherit;font-size:.85rem;font-weight:700;color:var(--accent);background:none;border:0;border-top:1px solid var(--line);padding:8px 16px;text-align:start;cursor:pointer}
-.lrbar{position:relative;width:72px;height:6px;border-radius:3px;background:var(--keep-bg);margin-top:4px;overflow:visible}
-.lrbar i{position:absolute;inset-block:0;inset-inline-start:0;border-radius:3px}
-.lrbar .m{position:absolute;top:-3px;bottom:-3px;width:1.5px;background:var(--ink);opacity:.5}
-.bars{padding:10px 16px;display:flex;flex-direction:column;gap:2px}
-.bar-row{display:grid;grid-template-columns:minmax(120px,1.3fr) 3fr minmax(64px,auto);gap:12px;align-items:center;padding:5px 4px;border-radius:6px}
-.bar-row[data-open]{cursor:pointer} .bar-row[data-open]:hover{background:var(--accent-soft)}
-.bar-row .bl{font-size:.88rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
-.bar-row .bt{position:relative;height:12px;background:var(--keep-bg);border-radius:6px}
-.bar-row .bt i{position:absolute;inset-block:0;inset-inline-start:0;border-radius:6px}
-.bar-row .bt .mk{position:absolute;top:-4px;bottom:-4px;width:2px;background:var(--ink);opacity:.45}
-.bar-row .bv{font-size:.85rem;font-weight:800;text-align:end}
-.legend-line{display:flex;gap:14px;flex-wrap:wrap;font-size:.8rem;color:var(--muted)}
-@media (max-width:820px){.cats{grid-template-columns:1fr}}
-@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+@media (max-width:860px){
+  .sidebar{position:fixed;top:0;bottom:0;right:0;z-index:70;width:316px;transform:translateX(105%);transition:transform .2s;padding-bottom:max(18px,env(safe-area-inset-bottom,0px))}
+  .sidebar.open{transform:none}
+  .drawer-bg.open{display:block;position:fixed;inset:0;z-index:65;background:rgba(6,20,17,.55)}
+  .topbar{height:auto;flex-wrap:wrap;padding:10px max(16px,env(safe-area-inset-left,0px)) 10px max(16px,env(safe-area-inset-right,0px));gap:10px;top:0}
+  .topbar .search,.topbar .tb-gap,.topbar .hide-m{display:none}
+  .mtop{display:flex;align-items:center;gap:10px;width:100%}
+  .mtop .hello{flex:1;min-width:0}
+  .mtop .hello b{display:block;font-size:16px;font-weight:800;line-height:1.3}
+  .mtop .hello span{font-size:12px;color:var(--ink2)}
+  .topbar .seg{width:100%} .topbar .seg button{flex:1;min-height:40px}
+  .content{padding:16px max(16px,env(safe-area-inset-left,0px)) 110px max(16px,env(safe-area-inset-right,0px))}
+  .foot{padding-bottom:96px}
+  .bottomnav{display:flex;position:fixed;bottom:0;inset-inline:0;z-index:40;background:var(--surface);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px)}
+  .bottomnav button{flex:1;border:0;background:none;display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 0;min-height:56px;font-size:11.5px;font-weight:700;color:var(--ink2);cursor:pointer}
+  .bottomnav button[aria-current="true"]{color:var(--brand)}
+  .fab{display:inline-flex;position:fixed;left:max(16px,env(safe-area-inset-left,0px));bottom:calc(72px + env(safe-area-inset-bottom,0px));z-index:41;height:50px;padding:0 18px;border-radius:25px;background:var(--brand);color:var(--brand-on);border:0;font-weight:800;align-items:center;gap:6px;box-shadow:var(--float);cursor:pointer}
+  .mobile-only{display:block} .desk-only{display:none}
+  h1{font-size:17px}
+  .ptabs{top:118px}
+  .anchor{scroll-margin-top:170px}
+  .btn{height:44px}
+  .bidrow{grid-template-columns:1fr 1fr} .bidin{grid-column:1 / -1}
+  .form{grid-template-columns:1fr}
+  .hbar{grid-template-columns:110px 1fr 50px}
+  .mbar{position:fixed;bottom:calc(64px + env(safe-area-inset-bottom,0px));inset-inline:0;z-index:39;padding:10px 16px;background:var(--surface);border-top:1px solid var(--line)}
+  .mbar .btn{width:100%;height:50px}
+  .content:has(.mbar){padding-bottom:180px}
+}
+@media (min-width:861px){.mbar{display:none} .mobile-only{display:none!important}}
+@media (max-width:860px){.desk-only{display:none!important}}
+@media (max-width:520px){.ac{grid-template-columns:1fr} .ac-col{border-inline-start:0;border-top:1px solid var(--line2)} .stats{grid-template-columns:repeat(3,minmax(0,1fr))}}
+/* mobile home */
+.hero{background:var(--brand-dark);color:#fff;border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:10px}
+.hero .big{font-size:34px;font-weight:800;line-height:1.2}
+.hero .hs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.hero .hs div{background:rgba(255,255,255,.08);border-radius:10px;padding:6px 8px}
+.hero .hs span{display:block;font-size:11px;color:var(--sb-text)}
+.hero .hs b{font-size:15px}
+.fchips{display:flex;gap:6px;overflow-x:auto}
+.fchips button{flex:none;border:1px solid var(--line);background:var(--surface);border-radius:20px;padding:6px 12px;font-weight:700;font-size:12.5px;cursor:pointer;white-space:nowrap;min-height:40px}
+.fchips button[aria-pressed="true"]{background:var(--brand-dark);border-color:var(--brand-dark);color:#fff}
+.mlist{display:flex;flex-direction:column;gap:8px}
+.mrow{display:flex;gap:10px;align-items:center;padding:12px 14px;border-radius:14px;background:var(--surface);border:1px solid var(--line);cursor:pointer;text-align:start;width:100%}
+.mrow .tx{flex:1;min-width:0}
+.mrow .tx b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mrow .tx span{font-size:12px;color:var(--ink2)}
+.mrow .lr{text-align:end;font-weight:800}
+@media print{.sidebar,.topbar,.bottomnav,.fab,.ai,.ptabs,.foot,.actions,.mbar{display:none!important} .content{padding:0} .panel,.card{break-inside:avoid}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
 </style>
 
-<div class="appbar"><div class="appbar-in">
-  <div class="brand"><span class="logo" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 4.5-3 8.2-7 10-4-1.8-7-5.5-7-10V6z"/><path d="M8.5 12.5l2.3 2.3 4.7-5"/></svg></span>
-    <div><b>Renewal Intelligence</b><span>دستیار هوشمند بیمهٔ درمان تکمیلی</span></div></div>
-  <nav class="tabs" aria-label="بخش‌ها"><button type="button" data-mode="renewal"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg>تمدید قراردادها</button><button type="button" data-mode="tender"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h9l4 4v14H6z"/><path d="M9 12h7M9 16h5"/></svg>مناقصه و قرارداد جدید</button></nav>
-  <div class="actions">
-    <span class="chip sample" id="sampleChip">فایل شما + ۱۰ گروه نمونه</span>
-    <label class="btn" for="file" tabindex="0" id="uploadBtn">افزودن فایل‌های اکسل</label>
-    <input type="file" id="file" accept=".xlsx,.xls" multiple hidden>
-    <button class="btn ghost" id="resetBtn" type="button" hidden>بازگشت به نمونه‌ها</button>
+<div class="app">
+  <aside class="sidebar" id="sidebar" aria-label="منوی اصلی"></aside>
+  <div class="drawer-bg" id="drawerBg"></div>
+  <div class="main">
+    <header class="topbar">
+      <div class="mtop">
+        <button class="iconbtn" id="menuBtn" type="button" aria-label="باز کردن منو"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+        <div class="hello"><b id="mTitle">Renewal Intelligence</b><span id="mSub">دستیار تمدید و مناقصه</span></div>
+        <button class="iconbtn" id="bellBtnM" type="button" aria-label="کارهای فوری"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9a6 6 0 1 1 12 0c0 6 2.5 7.5 2.5 7.5h-17S6 15 6 9"/><path d="M10 20a2 2 0 0 0 4 0"/></svg><span class="badge" id="bellDotM" hidden></span></button>
+      </div>
+      <div class="seg" role="group" aria-label="بخش اصلی"><button type="button" data-mode="renewal">تمدید قراردادها</button><button type="button" data-mode="tender">مناقصه و قرارداد جدید</button></div>
+      <label class="search" for="q"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><input id="q" type="search" placeholder="جست‌وجوی گروه یا مناقصه…" autocomplete="off"></label>
+      <span class="tb-gap"></span>
+      <span class="chip-smp hide-m" id="sampleChip">دادهٔ نمونه</span>
+      <button class="link hide-m" id="resetBtn" type="button">بازگشت به نمونه‌ها</button>
+      <button class="iconbtn hide-m" id="bellBtn" type="button" aria-label="کارهای فوری"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9a6 6 0 1 1 12 0c0 6 2.5 7.5 2.5 7.5h-17S6 15 6 9"/><path d="M10 20a2 2 0 0 0 4 0"/></svg><span class="badge" id="bellDot" hidden></span></button>
+      <label class="btn primary hide-m" for="file" tabindex="0" id="uploadBtn">＋ افزودن فایل‌های اکسل</label>
+      <input type="file" id="file" accept=".xlsx,.xls" multiple hidden>
+    </header>
+    <div class="content">
+      <div id="error" class="err" hidden></div>
+      <main id="view" style="display:flex;flex-direction:column;gap:20px;min-width:0"></main>
+    </div>
+    <footer class="foot"><button class="link" type="button" data-go="settings">تنظیمات قواعد تحلیل</button><span>فایل‌ها فقط روی همین دستگاه خوانده می‌شوند.</span><span id="footLic"></span><span>برآوردها تحلیلی‌اند؛ نرخ نهایی را بیمه‌گر تعیین می‌کند. مبالغ به میلیون تومان.</span></footer>
   </div>
-</div></div>
-<div class="wrap">
-  <header>
-    <div class="who">
-      <button class="btn link crumb" id="backBtn" type="button" hidden>→ همهٔ گروه‌ها</button>
-      <h1 id="title">Renewal Intelligence</h1>
-      <div style="font-weight:700;font-size:1.05rem;color:var(--muted)" id="subtitle"></div>
-      <div class="meta" id="meta"></div>
-    </div>
-    <div class="actions"><button class="btn danger" id="removeBtn" type="button" hidden>حذف این گروه</button></div>
-  </header>
-  <div id="error" class="err" hidden></div>
-  <main id="view" style="display:flex;flex-direction:column;gap:28px"></main>
-
-  <details class="panel" id="settingsBox">
-    <summary>تنظیمات قواعد تحلیل</summary>
-    <div class="settings">
-      <label for="sPressure">فشار سقف برای «افزایش سقف» (درصد)<input type="number" id="sPressure" min="0" max="100" step="0.5"></label>
-      <label for="sMinor">فشار سقف برای «افزایش جزئی» (درصد)<input type="number" id="sMinor" min="0" max="100" step="0.5"></label>
-      <label for="sLowUtil">مصرف کم: استفاده‌کنندگان کمتر از (درصد بیمه‌شدگان)<input type="number" id="sLowUtil" min="0" max="100" step="0.5"></label>
-      <label for="sLowClaim">مصرف کم (دادهٔ ناقص): سهم تعداد خسارت کمتر از (درصد)<input type="number" id="sLowClaim" min="0" max="100" step="0.5"></label>
-      <label for="sLowPaid">و سهم مبلغ خسارت کمتر از (درصد)<input type="number" id="sLowPaid" min="0" max="100" step="0.5"></label>
-      <label for="sTarget">Loss Ratio هدف برای محاسبهٔ حق‌بیمهٔ لازم (درصد)<input type="number" id="sTarget" min="30" max="100" step="1"></label>
-    </div>
-    <div class="small" style="font-weight:700">پوشش‌های حمایتی (هرگز پیشنهاد حذف یا کاهش نمی‌گیرند):</div>
-    <div class="protect-list" id="protectList"></div>
-  </details>
-
-  <footer>
-    <span>فایل‌ها فقط داخل مرورگر شما خوانده می‌شوند و به هیچ سروری ارسال نمی‌شوند. با بستن صفحه پاک می‌شوند.</span>
-    <span>خروجی‌ها برآورد تحلیلی برای مذاکرهٔ تمدید است؛ نرخ نهایی حق‌بیمه را بیمه‌گر و اکچوئر تعیین می‌کنند.</span>
-    <span>قالب ورودی: فایل Renewal Intelligence (شیت‌های ۰۱ تا ۰۶)، هر گروه یک فایل. برای مناقصه: شیت «سابقه» با یک ردیف برای هر سال و پوشش (سال، Coverage_ID، پوشش، تعداد بیمه‌شده، تعداد خسارت، تعداد استفاده‌کننده، مبلغ تاییدشده، پرداختی، پرداخت‌نشده به خاطر سقف، سقف سالانه) و حق‌بیمهٔ هر سال در شیت ۰۵. مبالغ به میلیون تومان.</span>
-  </footer>
 </div>
+<nav class="bottomnav" aria-label="ناوبری پایین">
+  <button type="button" data-bn="home"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7v9H3z"/></svg>خانه</button>
+  <button type="button" data-bn="groups"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h10"/></svg>گروه‌ها</button>
+  <button type="button" data-bn="ai"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v11H9l-5 4z"/></svg>دستیار</button>
+  <button type="button" data-bn="docs"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h9l4 4v14H6z"/><path d="M9 12h7M9 16h5"/></svg>اسناد</button>
+  <button type="button" data-bn="more"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>بیشتر</button>
+</nav>
+<label class="fab" for="file" id="fab">＋ فایل اکسل</label>
+<div class="modal" id="modal" hidden></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script id="sample" type="application/json">{"01_جمعیت":[["01 | اطلاعات گروه"],["اطلاعات پایه قرارداد و ساختار جمعیتی؛ از اطلاعات هویتی مستقیم استفاده نکنید."],[],[],[],["Group_ID","نام بیمه‌گذار","صنعت","استان","دوره قرارداد","تعداد کارکنان","اصلی","همسر","فرزند","سایر وابسته","کل نفرات","میانگین سن","میانه سن","درصد زن","درصد مرد","ماه-نفر","سطح اقتصادی نسبی","حساسیت به افزایش حق‌بیمه","اولویت کارفرما","بودجه افزایش حق‌بیمه"],["G-1405-001","گروه نمونه فولاد","صنعتی","تهران","1405/07/01-1406/06/31",850,850,610,420,35,null,39.5,38,0.31,0.69,null,"متوسط","زیاد","حفظ مزایا","25%"]],"02_تعهدات":[["02 | تعهدات قرارداد"],["مبالغ نمونه بر حسب «میلیون تومان»؛ اعداد را با قرارداد واقعی جایگزین کنید."],[],[],[],["Coverage_ID","پوشش","سقف سالانه فعلی","سقف هر مورد","فرانشیز","دوره انتظار","شرایط خاص","Priority Weight","حداقل پیشنهادی","حداکثر پیشنهادی"],["C01","بستری",500,500,0.1,"-","طبق قرارداد",1,400,2000],["C02","جراحی",700,700,0.1,"-","طبق قرارداد",1,500,2500],["C03","پاراکلینیک",40,10,0.1,"-","تصویربرداری/آزمایش",0.9,30,150],["C04","دارو",20,5,0.2,"-","داروهای مشمول قرارداد",1,15,100],["C05","دندانپزشکی",15,5,0.2,"-","طبق فهرست تعهدات",0.85,10,60],["C06","عینک",5,3,0.2,"-","هر دو سال یکبار",0.45,3,20],["C07","زایمان",80,80,0.1,"9 ماه","در صورت وجود تعهد",0.8,50,250],["C08","آمبولانس",10,10,0.1,"-","طبق قرارداد",0.35,5,30]],"03_خسارت":[["03 | خسارت‌ها"],["هر ردیف یک خدمت/خسارت. Member_ID باید ناشناس باشد."],[],[],[],["Claim_ID","Member_ID","Claim_Date","Coverage_ID","پوشش","نوع خدمت","نوع مرکز","مبلغ اولیه","فرانشیز","مبلغ تاییدشده","پرداختی","غیرقابل پرداخت","علت عدم پرداخت","وضعیت","خسارت بزرگ؟"],["CL001","M001","1405/07/12","C03","پاراکلینیک","MRI","بیمارستان",7.2,0.72,6.48,6.48,0,null,"پرداخت‌شده","خیر"],["CL002","M002","1405/07/18","C05","دندانپزشکی","ترمیم","کلینیک",8,1.6,6.4,6.4,0,null,"پرداخت‌شده","خیر"],["CL003","M003","1405/08/02","C04","دارو","داروهای تخصصی","داروخانه",9.5,1.9,7.6,7.6,0,null,"پرداخت‌شده","خیر"],["CL004","M004","1405/08/11","C01","بستری","بستری عمومی","بیمارستان",120,12,108,108,0,null,"پرداخت‌شده","بله"],["CL005","M005","1405/09/03","C03","پاراکلینیک","آزمایش","آزمایشگاه",3.5,0.35,3.15,3.15,0,null,"پرداخت‌شده","خیر"],["CL006","M006","1405/09/20","C05","دندانپزشکی","ایمپلنت","کلینیک",28,5.6,22.4,15,7.4,"اتمام سقف","بخشی پرداخت‌شده","خیر"],["CL007","M007","1405/10/04","C02","جراحی","جراحی قلب","بیمارستان",480,48,432,432,0,null,"پرداخت‌شده","بله"],["CL008","M008","1405/10/16","C04","دارو","داروی مزمن","داروخانه",4.2,0.84,3.36,3.36,0,null,"پرداخت‌شده","خیر"],["CL009","M009","1405/11/08","C06","عینک","لنز/عینک","اپتومتری",6.5,1.3,5.2,5,0.2,"اتمام سقف","بخشی پرداخت‌شده","خیر"],["CL010","M010","1405/11/21","C03","پاراکلینیک","CT","بیمارستان",12,1.2,10.8,8,2.8,"اتمام سقف","بخشی پرداخت‌شده","خیر"],["CL011","M011","1405/12/02","C07","زایمان","زایمان","بیمارستان",90,9,81,80,1,"سقف تعهد","بخشی پرداخت‌شده","خیر"],["CL012","M012","1406/01/14","C04","دارو","داروی تخصصی","داروخانه",14,2.8,11.2,11.2,0,null,"پرداخت‌شده","خیر"],["CL013","M013","1406/02/03","C03","پاراکلینیک","MRI","بیمارستان",8.5,0.85,7.65,7.65,0,null,"پرداخت‌شده","خیر"],["CL014","M014","1406/03/17","C05","دندانپزشکی","روکش","کلینیک",18,3.6,14.4,14.4,0,null,"پرداخت‌شده","خیر"],["CL015","M015","1406/04/09","C01","بستری","بستری","بیمارستان",95,9.5,85.5,85.5,0,null,"پرداخت‌شده","بله"],["CL016","M016","1406/05/11","C03","پاراکلینیک","آزمایش","آزمایشگاه",4.8,0.48,4.32,4.32,0,null,"پرداخت‌شده","خیر"],["CL017","M017","1406/06/02","C04","دارو","داروی مزمن","داروخانه",5.1,1.02,4.08,4.08,0,null,"پرداخت‌شده","خیر"],["CL018","M018","1406/06/14","C05","دندانپزشکی","جراحی لثه","کلینیک",10,2,8,8,0,null,"پرداخت‌شده","خیر"]],"04_غیرقابل_پرداخت":[["04 | غیرقابل پرداخت"],["علت عدم پرداخت را استاندارد کنید تا بتوان تشخیص داد کدام موارد با طراحی قرارداد قابل اصلاح‌اند."],[],[],[],["Claim_ID","Coverage_ID","پوشش","مبلغ غیرقابل پرداخت","علت استاندارد","تعداد درخواست","قابل اصلاح با تغییر قرارداد؟","اقدام پیشنهادی","یادداشت"],["CL006","C05","دندانپزشکی",7.4,"اتمام سقف",1,"بله","افزایش سقف/تفکیک خدمات","نمونه"],["CL009","C06","عینک",0.2,"اتمام سقف",1,"بله","بازنگری سقف","نمونه"],["CL010","C03","پاراکلینیک",2.8,"اتمام سقف",1,"بله","افزایش هدفمند سقف","نمونه"],["CL011","C07","زایمان",1,"سقف تعهد",1,"بله","بازنگری سقف","نمونه"],["CL019","C04","دارو",1.8,"خارج از تعهد",1,"خیر","حفظ کنترل","نمونه"],["CL020","C03","پاراکلینیک",0.9,"نقص مدارک",3,"خیر","آموزش/فرآیند خسارت","نمونه"]],"05_حق_بیمه":[["05 | حق‌بیمه و تجربه مالی"],["اعداد نمونه بر حسب میلیون تومان."],[],[],[],["دوره","نفر","حق‌بیمه کل",null,null,null,null,null,"نفر-ماه"],["سال 1404",900,105000,76000,79000,null,null,null,10800],["سال 1405",850,120000,null,null,null,null,null,10200]],"06_تعرفه_سال_بعد":[["06 | تعرفه و روند هزینه سال بعد"],["تعرفه‌های واقعی سال بعد را وارد کنید. ستون «ضریب انتقال به خسارت» برای جلوگیری از فرض ساده تورم=خسارت است."],[],[],[],["Service_ID","خدمت","تعرفه سال قبل","تعرفه سال بعد",null,"ضریب انتقال به خسارت",null,"منبع/تاریخ"],["T01","ویزیت",0.8,1,null,0.75,null,"ورودی کاربر"],["T02","MRI",5.5,7,null,0.9,null,"ورودی کاربر"],["T03","CT",4,5,null,0.9,null,"ورودی کاربر"],["T04","آزمایش",2.5,3.2,null,0.85,null,"ورودی کاربر"],["T05","جراحی",100,130,null,0.8,null,"ورودی کاربر"],["T06","دارو",1,1.25,null,0.95,null,"ورودی کاربر"],["T07","دندان",2,2.6,null,0.9,null,"ورودی کاربر"]],"07_اقتصادی_اجتماعی":[["07 | عوامل جمعیتی، اقتصادی و اجتماعی"],["این بخش ورودی تصمیم‌گیری است؛ امتیازها باید مستند و قابل توضیح باشند."],[],[],[],["Factor_ID","عامل","مقدار","مقیاس","وزن","امتیاز 0-100","توضیح/منبع"],["F01","میانگین سن",39.5,"سال",0.15,55,"نمونه"],["F02","درصد افراد بالای 50 سال",0.28,"نسبت",0.15,60,"نمونه"],["F03","افراد تحت تکفل به ازای اصلی",1.25,"نسبت",0.1,65,"نمونه"],["F04","حساسیت به افزایش حق‌بیمه",80,"0-100",0.2,80,"ارزیابی کارفرما"],["F05","اهمیت حفظ مزایا",90,"0-100",0.2,90,"ارزیابی کارفرما"],["F06","سطح اقتصادی نسبی",55,"0-100",0.1,"امتیاز کلی"],["F07","اولویت رضایت کارکنان",85,"0-100",0.1,85,"ارزیابی کارفرما"]]}</script>
@@ -804,7 +957,9 @@ function tenderAnalyze(T, settings, protectNames, opts){
   const priorScaled = last.premium ? last.premium * insuredNext / last.insured : null;
   const hist = years.map(Y => { const paid = sum(Object.values(Y.cov), c => c.paid); return { year: Y.year, insured: Y.insured, paid, premium: Y.premium, lr: Y.premium ? paid / Y.premium : null, pc: paid / Y.insured }; });
   const level = n >= 2 && claimsLast >= 1000 ? "high" : (n >= 2 && claimsLast >= 300) || (n === 1 && claimsLast >= 1000) ? "mid" : "low";
-  const risk = bid => bid >= price - 1e-9 ? ["low", "کم"] : bid >= floor - 1e-9 ? ["mid", "متوسط"] : ["high", "زیاد"];
+  // Risk follows the expected loss ratio of a bid: at or under target = low, up to 85% = medium, above = high.
+  const floor85 = expected / 0.85;
+  const risk = bid => bid >= floor - 1e-9 ? ["low", "کم"] : bid >= floor85 - 1e-9 ? ["mid", "متوسط"] : ["high", "زیاد"];
 
   if (n === 1) issues.push({ sev: "warn", text: "فقط یک سال سابقه هست؛ روند قابل تشخیص نیست و حاشیهٔ اطمینان بیشتری گذاشته شد. سابقهٔ دو ساله بگیرید." });
   if (!last.premium) issues.push({ sev: "info", text: "حق‌بیمهٔ بیمه‌گر قبلی وارد نشده؛ مقایسه با قیمت قبلی ممکن نیست." });
@@ -814,7 +969,7 @@ function tenderAnalyze(T, settings, protectNames, opts){
   const unknown = years.flatMap(Y => Object.values(Y.cov)).filter(c => !T.coverages.some(cv => cv.id === c.id || cv.name === c.name));
   if (unknown.length) issues.push({ sev: "crit", text: `در سابقه پوشش‌هایی هست که در تعهدات قرارداد جدید نیست: ${[...new Set(unknown.map(c => c.name || c.id))].join("، ")}. هزینهٔ آن‌ها در قیمت نیامده.` });
 
-  return { group: T.group, years, hist, rows, trend, insuredNext, expected, margin, autoMargin, vol, floor, price, priorScaled, LR, level, risk, issues, n, claimsLast };
+  return { group: T.group, years, hist, rows, trend, insuredNext, expected, margin, autoMargin, vol, floor, floor85, price, priorScaled, LR, level, risk, issues, n, claimsLast };
 }
 if (typeof module !== "undefined") Object.assign(module.exports, { parseTender, tenderAnalyze });
 
@@ -878,411 +1033,584 @@ if (typeof module !== "undefined") module.exports.makeTenders = makeTenders;
 
 </script>
 <script>
-const DLABEL = { increase: "افزایش سقف", minor: "افزایش جزئی", keep: "بدون تغییر", reduce: "کاهش سقف", remove: "کاندید حذف", protect: "حفظ پوشش حمایتی" };
-const ORDER = { increase: 0, minor: 1, remove: 2, reduce: 3, protect: 4, keep: 5 };
-const LVL = { low: ["lvl-low", "اطمینان پایین"], mid: ["lvl-mid", "اطمینان متوسط"], high: ["lvl-high", "اطمینان بالا"] };
-const SCN = [
-  ["current", "سقف‌های فعلی", "بدون تغییر بیمه‌نامه، فقط با رشد تعرفه"],
-  ["economy", "اقتصادی", "فقط پوشش‌های پرفشار بالا می‌روند؛ کم‌مصرف‌ها کم یا حذف می‌شوند"],
-  ["balanced", "متعادل", "همهٔ پیشنهادهای بخش پوشش‌ها"],
-  ["premium", "ممتاز", "افزایش‌ها ۲۰٪ بیشتر، بقیهٔ سقف‌ها هم‌پای تعرفه؛ بدون کاهش"],
-  ["budget", "در سقف بودجه", "کاهش‌ها اعمال، بعد افزایش‌ها به ترتیب فشار تا جایی که بودجه اجازه دهد"],
-];
-const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+/* ================= UI (DESIGN_PROMPT_1) ================= */
 const $ = id => document.getElementById(id);
-const ICON = {
-  folder: '<path d="M3 7h6l2 2h10v10H3z"/>',
-  users: '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.6 3.4-5.5 6.5-5.5s5.7 1.9 6.5 5.5"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 14.8c1.9.8 3.1 2.6 3.5 5.2"/>',
-  wallet: '<rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18M16 14.5h2"/>',
-  gauge: '<path d="M4 18a8 8 0 1 1 16 0"/><path d="M12 18l4-6"/>',
-  receipt: '<path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6"/>',
-  floor: '<path d="M4 20h16"/><path d="M7 16V9M12 16V5M17 16v-4"/>',
-  tag: '<path d="M3 12V4h8l10 10-8 8z"/><circle cx="7.5" cy="8" r="1.3"/>',
-  history: '<path d="M4 12a8 8 0 1 0 2.4-5.7"/><path d="M4 4v4h4"/><path d="M12 8v4l3 2"/>',
-};
-const ico = k => `<span class="ic" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICON[k]}</svg></span>`;
-function figsHTML(figs, icons, tones){
-  return `<div class="summary">${figs.map((f, i) => { const [k, v, s, bad] = f;
-    return `<div class="fig${tones && tones[i] ? " t-" + tones[i] : ""}">${ico(icons[i])}<span class="k">${k}</span><span class="v num">${v}</span><span class="s${bad ? " bad" : ""}">${esc(s)}</span></div>`; }).join("")}</div>`;
-}
-const lrTone = lr => lr == null ? "" : lr >= 0.85 ? "bad" : lr >= 0.75 ? "warn" : "good";
-const lrColor = lr => lr >= 0.85 ? "var(--crit)" : lr >= 0.75 ? "var(--warn)" : "var(--up)";
-function subnav(items){ return `<nav class="subnav" aria-label="بخش‌های این صفحه">${items.map(([id, label]) => `<button type="button" data-jump="${id}">${label}</button>`).join("")}</nav>`; }
-// Horizontal bar chart rows: [label, value, max, colour, sub, openIndex]
-function barChart(rows, marks){
-  return `<div class="panel bars">${rows.map(([label, v, max, color, sub, open]) => `<div class="bar-row"${open != null ? ` data-open="${open}" tabindex="0" role="button"` : ""}>
-    <span class="bl">${esc(label)}</span>
-    <span class="bt"><i style="width:${Math.max(1, Math.min(100, v / max * 100)).toFixed(1)}%;background:${color}"></i>${(marks || []).map(m => `<b class="mk" style="inset-inline-start:${(m / max * 100).toFixed(1)}%"></b>`).join("")}</span>
-    <span class="bv num">${sub}</span></div>`).join("")}</div>`;
-}
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const DLABEL = { increase: "افزایش سقف", minor: "افزایش جزئی", keep: "بدون تغییر", reduce: "کاهش سقف", remove: "کاندید حذف", protect: "حفظ پوشش حمایتی" };
+const DTAG = { increase: "t-inc", minor: "t-minor", keep: "t-keep", reduce: "t-reduce", remove: "t-remove", protect: "t-protect" };
+const DCOLOR = { increase: "var(--inc)", minor: "var(--minor)", keep: "var(--keep)", reduce: "var(--red)", remove: "var(--rem)", protect: "var(--prot)" };
+const ORDER = { increase: 0, minor: 1, reduce: 2, remove: 3, protect: 4, keep: 5 };
+const LVL = { low: ["t-bad", "پایین"], mid: ["t-mid", "متوسط"], high: ["t-good", "بالا"] };
+const SCN = [
+  ["current", "سقف‌های فعلی", "بیمه‌نامه بدون تغییر، فقط با رشد تعرفه"],
+  ["economy", "اقتصادی", "فقط پوشش‌های پرفشار بالا؛ کم‌مصرف‌ها کم یا حذف"],
+  ["balanced", "متعادل", "همهٔ پیشنهادهای بخش پوشش‌ها"],
+  ["premium", "ممتاز", "افزایش‌ها ۲۰٪ بیشتر، بقیه هم‌پای تعرفه؛ بدون کاهش"],
+  ["budget", "در سقف بودجه", "کاهش‌ها، سپس افزایش‌ها به ترتیب فشار تا سقف بودجه"],
+];
+const TLABEL = { increase: "سقف بالاتر = امتیاز", growth: "رشد سریع", reduce: "کاهش سقف", remove: "کاندید حذف", protect: "حفظ پوشش حمایتی", keep: "عادی" };
+const TTAG = { increase: "t-inc", growth: "t-reduce", reduce: "t-reduce", remove: "t-remove", protect: "t-protect", keep: "t-keep" };
+const lrStat = lr => lr == null ? null : lr >= 0.85 ? ["t-bad", "زیان‌ده", "var(--bad)"] : lr >= 0.75 ? ["t-mid", "مرزی", "var(--mid)"] : ["t-good", "سالم", "var(--good)"];
+const RISK = { low: ["z-low", "کم", "var(--good)", "t-good"], mid: ["z-mid", "متوسط", "var(--mid)", "t-mid"], high: ["z-high", "زیاد", "var(--bad)", "t-bad"] };
+const SEVTAG = { crit: ["t-bad", "بحرانی"], warn: ["t-mid", "هشدار"], info: ["t-protect", "اطلاع"] };
+const inFrame = (() => { try { return window.self !== window.top; } catch (e) { return true; } })();
+const reduced = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-const state = { groups: [], view: "portfolio", settings: Object.assign({}, DEFAULTS), protectNames: null, sort: "renewal", errors: [], allTodo: {}, mode: "renewal", tenders: [], tview: "list" };
+const state = { page: "renewal", idx: null, mode: "renewal", groups: [], tenders: [], settings: Object.assign({}, DEFAULTS), protectNames: new Set(),
+  sort: "renewal", q: "", errors: [], more: {}, mcat: "urgent", chat: {}, tab: null };
 
+/* ---------- data ---------- */
 function sampleGroups(){
   const foolad = { sample: true, own: true, file: "Renewal_Intelligence_Takmili_Darman_v1.xlsx", data: parseWorkbook(JSON.parse($("sample").textContent)) };
   return [foolad].concat(makeSamples());
 }
-function setGroups(list){
-  state.groups = list.map(g => Object.assign({ budget: null }, g));
-  const names = new Set(); state.groups.forEach(g => g.data.coverages.forEach(c => { if (PROTECT_RE.test(c.name)) names.add(c.name); }));
-  state.protectNames = names;
-}
+function addProtect(list){ list.forEach(g => g.data.coverages.forEach(c => { if (PROTECT_RE.test(c.name)) state.protectNames.add(c.name); })); }
+function setGroups(list){ state.groups = list.map(g => Object.assign({ budget: null }, g)); addProtect(state.groups); }
 const isSample = () => state.groups.length > 0 && state.groups.every(g => g.sample);
+const tenderSample = () => state.tenders.length > 0 && state.tenders.every(t => t.sample);
+function compute(g){ const A = analyze(g.data, state.settings, state.protectNames); return { A, S: scenarios(A, g.budget) }; }
+function computeTender(t){ return tenderAnalyze(t.data, state.settings, state.protectNames, { margin: t.margin }); }
+const short = n => String(n || "").replace(/^نمونه: /, "");
+const match = n => !state.q || norm(n).includes(norm(state.q));
 
-function compute(g){
-  const A = analyze(g.data, state.settings, state.protectNames);
-  const S = scenarios(A, g.budget);
-  return { A, S };
-}
-
-/* ---------- portfolio ---------- */
-function renderPortfolio(){
-  const all = state.groups.map((g, i) => Object.assign({ i, g }, compute(g)));
-  $("backBtn").hidden = true; $("removeBtn").hidden = true;
-  $("title").textContent = "پرتفوی تمدید درمان تکمیلی";
-  $("subtitle").textContent = "";
-  $("meta").innerHTML = `<span>${fmtInt(all.length)} گروه</span><span>مبالغ به میلیون تومان</span>`;
-
-  const comp = all.filter(x => x.A.complete && x.A.premiumNow);
-  const prem = sum(all, x => x.A.premiumNow || 0), paidC = sum(comp, x => x.A.totalPaid), premC = sum(comp, x => x.A.premiumNow);
-  const insured = sum(all, x => x.A.insured || 0);
-  const figs = [
-    ["گروه‌ها", fmtInt(all.length), `${fmtInt(all.filter(x => x.A.renewal && x.A.renewal.days <= 90 && x.A.renewal.days >= 0).length)} تمدید در ۹۰ روز آینده`],
-    ["بیمه‌شدگان", fmtInt(insured), "جمع همهٔ گروه‌ها"],
-    ["حق‌بیمهٔ دورهٔ جاری", fmtNum(prem), "میلیون تومان"],
-    ["Loss Ratio پرتفوی", premC ? fmtPct(paidC / premC) : "—", comp.length < all.length ? `از ${fmtInt(comp.length)} گروه با دادهٔ کامل` : "خسارت ÷ حق‌بیمه"],
-  ];
+function buildTodo(all){
   const todo = [];
   all.forEach(x => {
     const { A, S } = x, name = A.group.name;
-    if (A.renewal && A.renewal.days >= 0 && A.renewal.days <= 60) todo.push({ sev: A.renewal.days <= 30 ? "crit" : "warn", w: 100 - A.renewal.days, i: x.i, name, text: `تمدید ${fmtInt(A.renewal.days)} روز دیگر (${A.renewal.end}). پیشنهاد سقف‌ها و سناریوها را برای جلسه آماده کنید.` });
-    if (A.renewal && A.renewal.days < 0) todo.push({ sev: "crit", w: 120, i: x.i, name, text: `تاریخ پایان قرارداد (${A.renewal.end}) گذشته است.` });
-    if (A.lr != null && A.lr >= 0.85) todo.push({ sev: "crit", w: 90, i: x.i, name, text: `زیان‌ده: Loss Ratio ${fmtPct(A.lr)}. حتی با سقف‌های فعلی، حق‌بیمه باید ${fmtSignedPct(S.current.premiumChange)} تغییر کند.` });
-    if (!S.budget.fits) todo.push({ sev: "warn", w: 70, i: x.i, name, text: `بودجهٔ کارفرما (${fmtSignedPct(S.budgetPct)}) حتی برای حفظ سقف‌های فعلی کافی نیست${S.current.premiumChange != null ? `؛ لازم: ${fmtSignedPct(S.current.premiumChange)}` : ""}.` });
-    const inc = A.rows.filter(r => r.d === "increase").length;
-    if (inc >= 3) todo.push({ sev: "info", w: 40, i: x.i, name, text: `${fmtInt(inc)} پوشش زیر فشار سقف است؛ کارکنان بخشی از هزینه را خودشان می‌دهند.` });
-    const rm = A.rows.filter(r => r.d === "remove" || r.d === "reduce");
+    if (A.renewal && A.renewal.days >= 0 && A.renewal.days <= 60) todo.push({ sev: A.renewal.days <= 30 ? "crit" : "warn", w: 100 - A.renewal.days, i: x.i, name, text: `تمدید ${fmtInt(A.renewal.days)} روز دیگر؛ پیشنهاد سقف‌ها و سناریوها را برای جلسه آماده کنید.` });
+    if (A.renewal && A.renewal.days < 0) todo.push({ sev: "crit", w: 120, i: x.i, name, text: `قرارداد ${fmtInt(-A.renewal.days)} روز پیش تمام شده است.` });
+    if (A.lr != null && A.lr >= 0.85) todo.push({ sev: "crit", w: 90, i: x.i, name, text: `زیان‌ده: Loss Ratio ${fmtPct(A.lr)}؛ حتی با سقف‌های فعلی حق‌بیمه باید ${fmtSignedPct(S.current.premiumChange)} تغییر کند.` });
+    if (!S.budget.fits) todo.push({ sev: "warn", w: 70, i: x.i, name, text: `بودجهٔ کارفرما (${fmtSignedPct(S.budgetPct)}) حتی برای حفظ وضع فعلی کافی نیست${S.current.premiumChange != null ? `؛ لازم: ${fmtSignedPct(S.current.premiumChange)}` : ""}.` });
+    if (!A.complete) todo.push({ sev: "warn", w: 50, i: x.i, name, text: "فهرست خسارت ناقص است؛ پیش از مذاکره دادهٔ کامل بگیرید." });
     const bal = S.balanced, cur = S.current;
     if (bal.premiumChange != null && bal.premiumChange <= 0.02 && A.rows.some(r => r.d === "increase" || r.d === "minor"))
-      todo.push({ sev: "ok", w: 60, i: x.i, name, text: `فرصت: با پیشنهادهای متعادل حق‌بیمه ${fmtSignedPct(bal.premiumChange)} تغییر می‌کند و سهم کارکنان از هزینهٔ درمان از ${fmtPct(1 - cur.cover)} به ${fmtPct(1 - bal.cover)} می‌رسد. مزایای بهتر بدون افزایش حق‌بیمه.` });
+      todo.push({ sev: "ok", w: 60, i: x.i, name, text: `مزایای بهتر با حق‌بیمهٔ ${fmtPct(Math.abs(bal.premiumChange))} ${bal.premiumChange < 0 ? "کمتر" : "بیشتر"}؛ سهم کارکنان ${fmtPct(1 - cur.cover)} ← ${fmtPct(1 - bal.cover)}.` });
+    const rm = A.rows.filter(r => r.d === "remove" || r.d === "reduce");
+    if (rm.length) todo.push({ sev: "ok", w: 30, i: x.i, name, text: `صرفه‌جویی: ${rm.map(r => r.cv.name).join("، ")} کم‌مصرف یا بی‌مصرف.` });
     if (S.budget.fits && S.budget.picked.length && S.budget.skipped.length)
-      todo.push({ sev: "info", w: 35, i: x.i, name, text: `با بودجهٔ ${fmtSignedPct(S.budgetPct)}: ${S.budget.picked.join("، ")} جا می‌شود، ${S.budget.skipped.join("، ")} نه. برای مذاکره اولویت را از کارفرما بپرسید.` });
+      todo.push({ sev: "info", w: 35, i: x.i, name, text: `با بودجهٔ ${fmtSignedPct(S.budgetPct)}: ${S.budget.picked.join("، ")} جا می‌شود، ${S.budget.skipped.join("، ")} نه.` });
     A.rows.filter(r => r.why.some(w => w.includes("استثنایی")) && r.pressure * 100 >= state.settings.pressureHigh).forEach(r =>
-      todo.push({ sev: "info", w: 33, i: x.i, name, text: `یک مورد استثنایی در ${r.cv.name}: افزایش سقف همه پیشنهاد نشد؛ کمک موردی ارزان‌تر است.` }));
-    if (rm.length) todo.push({ sev: "info", w: 30, i: x.i, name, text: `فرصت صرفه‌جویی: ${rm.map(r => r.cv.name).join("، ")} کم‌مصرف یا بی‌مصرف بوده.` });
-    if (!A.complete) todo.push({ sev: "warn", w: 50, i: x.i, name, text: "فهرست خسارت ناقص است؛ پیش از مذاکره دادهٔ کامل بگیرید." });
+      todo.push({ sev: "info", w: 33, i: x.i, name, text: `مورد استثنایی در ${r.cv.name}؛ سقف همه بالا نرفت، کمک موردی ارزان‌تر است.` }));
   });
-  // Opportunities come right after urgent items so the short list shows both risks and wins.
-  const SEV = { crit: 0, ok: 1, warn: 2, info: 3 };
-  todo.sort((a, b) => SEV[a.sev] - SEV[b.sev] || b.w - a.w);
-  // Grouped by what the broker has to do: act now, watch, take the opportunity, or note.
-  const CATS = [["urgent", "فوری"], ["opp", "فرصت‌ها"], ["warn", "هشدار"], ["note", "نکته‌ها"]];
-  const catOf = t => t.sev === "crit" ? "urgent" : t.sev === "warn" ? "warn" : (t.sev === "ok" || t.text.startsWith("فرصت")) ? "opp" : "note";
+  return todo;
+}
+const CATS = [["urgent", "فوری"], ["opp", "فرصت‌ها"], ["warn", "هشدار"], ["note", "نکته‌ها"]];
+const catOf = t => t.sev === "crit" ? "urgent" : t.sev === "warn" ? "warn" : t.sev === "ok" ? "opp" : "note";
 
+/* ---------- small builders ---------- */
+function kpi(label, value, sub, opts){
+  const o = opts || {};
+  return `<div class="card kpi${o.accent ? " accent" : ""}"><span class="kl">${label}</span><div class="row"><span class="kv">${value}</span>${o.tag || ""}</div>${sub ? `<span class="ks"${o.subColor ? ` style="color:${o.subColor}"` : ""}>${sub}</span>` : ""}${o.lr != null ? miniLR(o.lr) : ""}</div>`;
+}
+function miniLR(lr, w){
+  const st = lrStat(lr), t = state.settings.targetLR / 100;
+  return `<div class="mini" aria-hidden="true"${w ? ` style="width:${w}px"` : ""}><i style="width:${Math.min(100, lr / 1.2 * 100).toFixed(1)}%;background:${st[2]}"></i><b style="inset-inline-start:${(t / 1.2 * 100).toFixed(1)}%"></b><b style="inset-inline-start:${(0.85 / 1.2 * 100).toFixed(1)}%"></b></div>`;
+}
+const lrTag = lr => { const s = lrStat(lr); return s ? `<span class="tag ${s[0]}">${s[1]}</span>` : ""; };
+const ptabs = items => `<nav class="ptabs" aria-label="بخش‌های این صفحه">${items.map(([id, label, n], k) => `<button type="button" data-jump="${id}"${k === 0 ? ' aria-current="true"' : ""}>${label}${n ? `<span class="n">${fmtInt(n)}</span>` : ""}</button>`).join("")}</nav>`;
+function stepper(id, value, step){ return `<span class="stepper"><button type="button" data-step="${id}" data-d="${step}" aria-label="افزایش">＋</button><input id="${id}" type="number" value="${value}" inputmode="decimal"><button type="button" data-step="${id}" data-d="${-step}" aria-label="کاهش">−</button></span>`; }
+function dqList(iss){
+  const o = { crit: 0, warn: 1, info: 2 };
+  return iss.length ? `<ul class="dq">${iss.slice().sort((a, b) => o[a.sev] - o[b.sev]).map(x => `<li><span class="sev tag ${SEVTAG[x.sev][0]}">${SEVTAG[x.sev][1]}</span><span>${esc(x.text)}</span></li>`).join("")}</ul>` : '<p class="muted">مشکلی پیدا نشد.</p>';
+}
+const todayFa = () => {
+  const d = new Date(), [y, m, dd] = g2j(d.getFullYear(), d.getMonth() + 1, d.getDate());
+  const M = ["فروردین","اردیبهشت","خرداد","تیر","مرداد","شهریور","مهر","آبان","آذر","دی","بهمن","اسفند"], W = ["یکشنبه","دوشنبه","سه‌شنبه","چهارشنبه","پنجشنبه","جمعه","شنبه"];
+  const fa = n => String(n).replace(/\d/g, c => "۰۱۲۳۴۵۶۷۸۹"[c]);
+  return `${W[d.getDay()]} ${fa(dd)} ${M[m - 1]} ${fa(y)}`;
+};
+const nowFa = () => { try { return new Intl.DateTimeFormat("fa-IR", { hour: "2-digit", minute: "2-digit" }).format(new Date()); } catch (e) { return ""; } };
+
+/* ---------- sidebar ---------- */
+const SOON = {
+  market: ["مقایسه با بازار", "سرانه و Loss Ratio هر گروه در برابر میانگین ناشناس گروه‌های مشابه همان صنعت. وقتی چند کارگزار به نسخهٔ آنلاین وصل شوند فعال می‌شود."],
+  ai: ["دستیار هوشمند", "در این نسخه، دستیار داخل صفحهٔ هر گروه است و از قواعد اپ با ذکر منبع جواب می‌دهد. گفت‌وگوی آزاد با هوش مصنوعی در نسخهٔ آنلاین می‌آید."],
+  docs: ["اسناد و گزارش‌ها", "گزارش PDF/Word با لوگوی کارگزاری و بایگانی نامه‌ها. نامهٔ پیشنهاد تمدید همین حالا از صفحهٔ هر گروه ساخته می‌شود."],
+  history: ["تاریخچهٔ قراردادها", "ذخیرهٔ قراردادها و مقایسهٔ سال‌به‌سال هر گروه؛ نیاز به ذخیره‌سازی نسخهٔ آنلاین دارد."],
+  mapping: ["ورود داده و نگاشت", "جادوی تطبیق ستون‌های هر فایل اکسل با فیلدهای اپ، تا فایل هر بیمه‌گر بدون تغییر خوانده شود."],
+  dadeh: ["اتصال داده‌پردازان", "دریافت مستقیم دادهٔ خسارت از نرم‌افزار داده‌پردازان، با وضعیت اتصال و آخرین همگام‌سازی. آخرین فاز پروژه است."],
+};
+function renderSidebar(){
+  const urgent = state.groups.length ? buildTodo(state.groups.map((g, i) => Object.assign({ i, g }, compute(g)))).filter(t => t.sev === "crit").length : 0;
+  const renewSoon = state.groups.filter(g => { const r = renewalInfo(g.data.group.period); return r && r.days >= 0 && r.days <= 90; }).length;
+  const cur = k => (k === "renewal" && (state.page === "renewal" || state.page === "group")) || (k === "tender" && (state.page === "tender" || state.page === "tenderp")) || state.page === k || state.page === "soon:" + k ? ' aria-current="page"' : "";
+  const item = (k, label, extra) => `<button class="sb-item" type="button" data-go="${k}"${cur(k)}><span class="dot"></span>${label}${extra || ""}</button>`;
+  const cnt = n => `<span class="cnt">${fmtInt(n)}</span>`, soon = '<span class="sb-soon">به‌زودی</span>';
+  const L = window.RI_LICENSE;
+  $("sidebar").innerHTML = `
+    <div class="sb-brand"><span class="logo">RI</span><div><b>Renewal Intelligence</b><span>${esc(L && L.broker ? L.broker : "دستیار کارگزاری بیمه")}</span></div></div>
+    <div class="sb-group"><span class="sb-title">تحلیل</span>${item("renewal", "تمدید قراردادها", cnt(state.groups.length))}${item("tender", "مناقصه و قرارداد جدید", cnt(state.tenders.length))}${item("market", "مقایسه با بازار", soon)}</div>
+    <div class="sb-group"><span class="sb-title">فضای کار</span>${item("ai", "دستیار هوشمند")}${item("docs", "اسناد و گزارش‌ها")}${item("reminders", "یادآور تمدید", cnt(renewSoon))}${item("history", "تاریخچهٔ قراردادها", soon)}</div>
+    <div class="sb-group"><span class="sb-title">داده و تنظیمات</span>${item("mapping", "ورود داده و نگاشت", soon)}${item("dadeh", "اتصال داده‌پردازان", soon)}${item("admin", "کاربران و نقش‌ها")}${item("settings", "قواعد تحلیل")}</div>
+    <div class="sb-foot">${L ? `<div class="sb-card"><span>مجوز: <b>${esc(L.name)}</b></span><span>معتبر تا ${esc(L.until)} · ${fmtInt(L.days)} روز</span><div class="sb-prog"><i style="width:${Math.max(3, Math.min(100, L.days / L.total * 100))}%"></i></div></div>` :
+      `<div class="sb-card"><b>نسخهٔ آفلاین</b><span>فایل‌ها فقط روی همین دستگاه خوانده می‌شوند.</span></div>`}</div>`;
+  $("bellDot").hidden = $("bellDotM").hidden = !urgent;
+  $("bellBtn").setAttribute("aria-label", `${fmtInt(urgent)} کار فوری`);
+  $("footLic").textContent = L ? `مجوز: ${L.name} · معتبر تا ${L.until}` : "";
+}
+
+/* ---------- renewal portfolio ---------- */
+function renderRenewal(){
+  const all = state.groups.map((g, i) => Object.assign({ i, g }, compute(g)));
+  const comp = all.filter(x => x.A.complete && x.A.premiumNow);
+  const paidC = sum(comp, x => x.A.totalPaid), premC = sum(comp, x => x.A.premiumNow), plr = premC ? paidC / premC : null;
+  const todo = buildTodo(all);
+  const SEVW = { crit: 0, ok: 1, warn: 2, info: 3 };
+  todo.sort((a, b) => SEVW[a.sev] - SEVW[b.sev] || b.w - a.w);
+  const soon90 = all.filter(x => x.A.renewal && x.A.renewal.days >= 0 && x.A.renewal.days <= 90).length;
+  const insured = sum(all, x => x.A.insured || 0), prem = sum(all, x => x.A.premiumNow || 0);
+  const shown = all.filter(x => match(x.A.group.name));
   const sorters = {
     renewal: (a, b) => (a.A.renewal ? a.A.renewal.days : 1e9) - (b.A.renewal ? b.A.renewal.days : 1e9),
     lr: (a, b) => (b.A.lr ?? -1) - (a.A.lr ?? -1),
-    need: (a, b) => (b.S.balanced.premiumChange ?? b.S.balanced.change ?? -1) - (a.S.balanced.premiumChange ?? a.S.balanced.change ?? -1),
+    need: (a, b) => (b.S.balanced.premiumChange ?? -1) - (a.S.balanced.premiumChange ?? -1),
     size: (a, b) => (b.A.insured || 0) - (a.A.insured || 0),
   };
-  // The workbook the user supplied stays pinned at the top while samples are shown.
-  const list = all.slice().sort((a, b) => (b.g.own ? 1 : 0) - (a.g.own ? 1 : 0) || sorters[state.sort](a, b));
+  const list = shown.slice().sort((a, b) => (b.g.own ? 1 : 0) - (a.g.own ? 1 : 0) || sorters[state.sort](a, b));
   const counts = A => { const c = {}; A.rows.forEach(r => { c[r.d] = (c[r.d] || 0) + 1; });
-    return ["increase", "minor", "reduce", "remove", "protect"].filter(k => c[k]).map(k => `<span class="chip d-${k}" title="${DLABEL[k]}">${DLABEL[k]} ${fmtInt(c[k])}</span>`).join(""); };
+    return ["increase", "minor", "reduce", "remove", "protect"].filter(k => c[k]).map(k => `<span class="tag ${DTAG[k]}">${DLABEL[k]} ${fmtInt(c[k])}</span>`).join(" "); };
+  const st = lrStat(plr);
+  const chartRows = shown.filter(x => x.A.lr != null).sort((a, b) => b.A.lr - a.A.lr);
+  const t = state.settings.targetLR / 100, top = 1.2;
+  setHead("پرتفوی تمدید", `${fmtInt(all.length)} گروه · ${fmtInt(insured)} نفر`);
 
   $("view").innerHTML = `
-  <section aria-label="خلاصهٔ پرتفوی">${figsHTML(figs, ["folder", "users", "wallet", "gauge"], ["", "", "", lrTone(premC ? paidC / premC : null)])}</section>
-  <section>
-    <div class="sec-head"><h2>نیاز به اقدام</h2><span class="muted small">${fmtInt(todo.length)} مورد</span></div>
-    <div class="cats">${CATS.map(([key, label]) => { const items = todo.filter(t => catOf(t) === key); if (!items.length) return "";
-      const shownC = state.allTodo[key] ? items : items.slice(0, 4);
-      return `<div class="catbox c-${key}"><div class="ch">${label}<span class="cnt">${fmtInt(items.length)}</span></div>
-        <ul class="todo">${shownC.map(t => `<li><span class="sev ${t.sev}"></span><span class="t"><button class="btn link" data-open="${t.i}" type="button">${esc(t.name)}</button> · ${esc(t.text)}</span></li>`).join("")}</ul>
-        ${items.length > shownC.length ? `<button class="more" type="button" data-more="${key}">${fmtInt(items.length - shownC.length)} مورد دیگر</button>` : ""}</div>`; }).join("")}</div>
+  <div class="ph"><div><span class="date">${todayFa()}</span><h1>پرتفوی تمدید</h1><span class="sub">مبالغ به میلیون تومان · آخرین به‌روزرسانی ${nowFa()}</span></div></div>
+  <div class="hero mobile-only"><span class="small" style="color:var(--sb-text)">Loss Ratio پرتفوی</span><div style="display:flex;gap:10px;align-items:center"><span class="big">${fmtPct(plr)}</span>${st ? `<span class="tag ${st[0]}">${st[1]}</span>` : ""}</div>
+    <div class="hs"><div><span>گروه‌ها</span><b>${fmtInt(all.length)}</b></div><div><span>بیمه‌شدگان</span><b>${fmtInt(insured)}</b></div><div><span>تمدید ۹۰ روز</span><b>${fmtInt(soon90)}</b></div></div></div>
+  <div class="kpis desk-only">
+    ${kpi("گروه‌ها", fmtInt(all.length), `${fmtInt(soon90)} تمدید در ۹۰ روز آینده`)}
+    ${kpi("بیمه‌شدگان", fmtInt(insured), "جمع همهٔ گروه‌ها")}
+    ${kpi("حق‌بیمهٔ دورهٔ جاری", fmtNum(prem), "میلیون تومان")}
+    ${kpi("Loss Ratio پرتفوی", fmtPct(plr), `از ${fmtInt(comp.length)} گروه با دادهٔ کامل`, { tag: lrTag(plr), lr: plr })}
+  </div>
+  <section class="panel desk-only anchor" id="ac">
+    <div class="panel-h"><h2>مرکز اقدام</h2><span class="small muted">${fmtInt(todo.length)} مورد</span></div>
+    <div class="ac">${CATS.map(([k, label]) => { const items = todo.filter(x => catOf(x) === k); const open = state.more[k]; const sh = open ? items : items.slice(0, 2);
+      return `<div class="ac-col c-${k}"><div class="ac-h"><span class="d"></span>${label}<span class="n">${fmtInt(items.length)}</span></div>
+        ${sh.map(x => `<button class="ac-item" type="button" data-open="${x.i}"><b>${esc(short(x.name))}</b>${esc(x.text)}</button>`).join("") || '<span class="small muted">موردی نیست.</span>'}
+        ${items.length > sh.length ? `<button class="ac-more" type="button" data-more="${k}">${fmtInt(items.length - sh.length)} مورد دیگر ←</button>` : ""}</div>`; }).join("")}</div>
   </section>
-  <section>
-    <div class="sec-head"><h2>Loss Ratio گروه‌ها</h2><span class="legend-line"><span>خط اول: ${fmtPct(state.settings.targetLR / 100)} هدف</span><span>خط دوم: ۸۵٪ زیان‌ده</span></span></div>
-    ${barChart(all.filter(x => x.A.lr != null).sort((a, b) => b.A.lr - a.A.lr).map(x => [x.A.group.name.replace(/^نمونه: /, ""), x.A.lr, 1.2, lrColor(x.A.lr), fmtPct(x.A.lr), x.i]), [state.settings.targetLR / 100, 0.85])}
+  <section class="mobile-only" style="display:flex;flex-direction:column;gap:10px" id="acm">
+    <div class="fchips" role="group" aria-label="دستهٔ اقدام">${CATS.map(([k, label]) => `<button type="button" data-mcat="${k}" aria-pressed="${state.mcat === k}">${label} ${fmtInt(todo.filter(x => catOf(x) === k).length)}</button>`).join("")}</div>
+    <div class="mlist">${todo.filter(x => catOf(x) === state.mcat).slice(0, 6).map(x => `<button class="ac-item c-${state.mcat}" type="button" data-open="${x.i}" style="background:var(--surface)"><b style="color:inherit">${esc(short(x.name))}</b>${esc(x.text)}</button>`).join("") || '<p class="muted">موردی نیست.</p>'}</div>
   </section>
-  <section>
-    <div class="sec-head"><h2>گروه‌ها</h2>
-      <label class="small" for="sortSel">مرتب‌سازی <select id="sortSel">
-        <option value="renewal">نزدیک‌ترین تمدید</option><option value="lr">بیشترین Loss Ratio</option>
-        <option value="need">بیشترین افزایش لازم</option><option value="size">بزرگ‌ترین گروه</option></select></label></div>
-    <div class="panel scroll"><table class="grid">
-      <thead><tr><th>گروه</th><th>بیمه‌شده</th><th>حق‌بیمه</th><th>Loss Ratio</th><th>تمدید</th><th>پیشنهادها</th><th>حق‌بیمهٔ لازم (متعادل)</th><th>بودجهٔ کارفرما</th><th>داده</th></tr></thead>
-      <tbody>${list.map(x => { const { A, S } = x, need = S.balanced.premiumChange;
-        const days = A.renewal ? A.renewal.days : null;
-        return `<tr class="pick" tabindex="0" data-open="${x.i}">
-          <td><b>${esc(A.group.name)}</b>${x.g.own ? ' <span class="chip own">فایل اکسل شما</span>' : ""}<div class="muted small">${esc([A.group.industry, A.group.province].filter(Boolean).join(" · "))}</div></td>
-          <td class="n">${fmtInt(A.insured)}</td><td class="n">${fmtNum(A.premiumNow)}${A.premiumNow && A.insured ? `<div class="muted small">سرانه ${fmtNum(A.premiumNow / A.insured)}</div>` : ""}</td>
-          <td class="n ${A.lr == null ? "" : A.lr >= 0.85 ? "bad" : A.lr >= 0.75 ? "warnc" : "ok"}">${A.lr != null ? `${fmtPct(A.lr)}<div class="lrbar" aria-hidden="true"><i style="width:${Math.min(100, A.lr / 1.2 * 100).toFixed(1)}%;background:${lrColor(A.lr)}"></i><span class="m" style="inset-inline-start:${(state.settings.targetLR / 120 * 100).toFixed(1)}%"></span></div>` : `<span class="muted small">ناقص</span>`}</td>
-          <td class="n ${days != null && days <= 30 ? "bad" : days != null && days <= 60 ? "warnc" : ""}">${days != null ? (days < 0 ? `${fmtInt(-days)} روز گذشته` : `${fmtInt(days)} روز`) : "—"}</td>
-          <td><div class="counts">${counts(A) || '<span class="muted small">بدون تغییر</span>'}</div></td>
-          <td class="n">${need != null ? fmtSignedPct(need) : `<span class="muted small">خسارت ${fmtSignedPct(S.balanced.change)}</span>`}</td>
-          <td class="n">${fmtSignedPct(S.budgetPct)} ${S.budget.fits ? "" : '<span class="bad small">ناکافی</span>'}</td>
-          <td><span class="chip ${LVL[A.level][0]}">${LVL[A.level][1].replace("اطمینان ", "")}</span></td></tr>`; }).join("")}</tbody></table></div>
-    <p class="muted small" style="margin:0">«حق‌بیمهٔ لازم» یعنی تغییر حق‌بیمه برای رسیدن به Loss Ratio هدف (${fmtPct(state.settings.targetLR / 100)}) با سناریوی متعادل. برای دیدن جزئیات روی هر گروه بزنید.</p>
+  <section class="panel">
+    <div class="panel-h"><h2>Loss Ratio گروه‌ها</h2><span class="small muted">خط‌چین: ${fmtPct(t)} هدف · ۸۵٪ زیان‌ده · روی میله بزنید</span></div>
+    <div class="panel-b tw"><div style="min-width:${Math.max(560, chartRows.length * 64)}px">
+      <div class="cchart">
+        <div class="ref" style="bottom:${(t / top * 100).toFixed(1)}%;border-color:var(--mid)"><span style="color:var(--mid-ink)">${fmtPct(t)}</span></div>
+        <div class="ref" style="bottom:${(0.85 / top * 100).toFixed(1)}%;border-color:var(--bad)"><span style="color:var(--bad)">۸۵٪</span></div>
+        ${chartRows.map(x => { const s = lrStat(x.A.lr); return `<button class="col" type="button" data-open="${x.i}" aria-label="${esc(x.A.group.name)}: ${fmtPct(x.A.lr)} ${s[1]}"><span class="v" style="color:${s[2]}">${fmtPct(x.A.lr)}</span><span class="b" style="height:${Math.min(100, x.A.lr / top * 100).toFixed(1)}%;background:${s[2]}"></span></button>`; }).join("")}
+      </div>
+      <div class="cnames">${chartRows.map(x => `<span title="${esc(x.A.group.name)}">${esc(short(x.A.group.name))}</span>`).join("")}</div>
+    </div></div>
+  </section>
+  <section class="panel anchor" id="groups">
+    <div class="panel-h"><h2>گروه‌ها</h2><div class="sortseg" role="group" aria-label="مرتب‌سازی">${[["renewal", "نزدیک‌ترین تمدید"], ["lr", "بیشترین Loss Ratio"], ["need", "بیشترین افزایش لازم"], ["size", "بزرگ‌ترین گروه"]].map(([k, l]) => `<button type="button" data-sort="${k}" aria-pressed="${state.sort === k}">${l}</button>`).join("")}</div></div>
+    <div class="tw desk-only"><table><thead><tr><th>گروه</th><th>بیمه‌شده</th><th>حق‌بیمه</th><th>Loss Ratio</th><th>تمدید</th><th>خلاصهٔ پیشنهادها</th><th>حق‌بیمهٔ لازم</th><th>بودجهٔ کارفرما</th><th>اطمینان</th></tr></thead><tbody>
+      ${list.map(x => { const { A, S } = x, d = A.renewal ? A.renewal.days : null, s = lrStat(A.lr);
+        return `<tr class="click" tabindex="0" data-open="${x.i}">
+          <td class="nm"><b>${esc(A.group.name)} ${x.g.own ? '<span class="tag t-protect">فایل اکسل شما</span>' : ""}</b><span>${esc([A.group.industry, A.group.province].filter(Boolean).join(" · "))}</span></td>
+          <td class="nw">${fmtInt(A.insured)}</td>
+          <td class="nw">${fmtNum(A.premiumNow)}<div class="small muted">سرانه ${fmtNum(A.premiumNow && A.insured ? A.premiumNow / A.insured : null)}</div></td>
+          <td class="lrcell nw">${s ? `<b style="color:${s[2]}">${fmtPct(A.lr)}</b> · <span class="small" style="color:${s[2]}">${s[1]}</span>${miniLR(A.lr)}` : '<span class="small muted">داده ناقص</span>'}</td>
+          <td class="nw" style="${d != null && d <= 30 ? "color:var(--bad);font-weight:700" : d != null && d <= 60 ? "color:var(--mid-ink);font-weight:700" : ""}">${d == null ? "—" : d < 0 ? `${fmtInt(-d)} روز گذشته` : `${fmtInt(d)} روز`}</td>
+          <td>${counts(A) || '<span class="small muted">بدون تغییر</span>'}</td>
+          <td class="nw">${S.balanced.premiumChange != null ? fmtSignedPct(S.balanced.premiumChange) : `<span class="small muted">خسارت ${fmtSignedPct(S.balanced.change)}</span>`}</td>
+          <td class="nw">${fmtSignedPct(S.budgetPct)} ${S.budget.fits ? "" : '<span class="tag t-bad">ناکافی</span>'}</td>
+          <td><span class="tag ${LVL[A.level][0]}">${LVL[A.level][1]}</span></td></tr>`; }).join("") || '<tr><td colspan="9" class="muted">گروهی با این نام پیدا نشد.</td></tr>'}
+    </tbody></table></div>
+    <div class="mlist mobile-only panel-b">${list.map(x => { const { A } = x, s = lrStat(A.lr), d = A.renewal ? A.renewal.days : null;
+      return `<button class="mrow" type="button" data-open="${x.i}"><span class="tx"><b>${esc(short(A.group.name))}</b><span>${fmtInt(A.insured)} نفر · ${d == null ? "—" : d < 0 ? `${fmtInt(-d)} روز گذشته` : `${fmtInt(d)} روز`}</span></span><span class="lr" style="color:${s ? s[2] : "var(--ink3)"}">${s ? fmtPct(A.lr) : "—"}<div class="small">${s ? s[1] : "ناقص"}</div></span></button>`; }).join("")}</div>
   </section>`;
-  $("sortSel").value = state.sort;
-  $("sortSel").onchange = e => { state.sort = e.target.value; render(); };
 }
 
-/* ---------- one group ---------- */
+/* ---------- group page ---------- */
 function renderGroup(i){
-  const g = state.groups[i]; if (!g){ state.view = "portfolio"; return render(); }
-  const { A, S } = compute(g), G = A.group;
-  $("backBtn").hidden = false; $("removeBtn").hidden = false;
-  $("title").textContent = G.name; $("subtitle").textContent = "";
-  $("meta").innerHTML = [g.own && `<span class="chip own">فایل اکسل شما</span>`, g.file && `<span class="mono">${esc(g.file)}</span>`, G.industry, G.province, G.period && `<span class="num">${esc(G.period)}</span>`, A.renewal && `<span>${A.renewal.days < 0 ? `قرارداد ${fmtInt(-A.renewal.days)} روز پیش تمام شده` : `تمدید ${fmtInt(A.renewal.days)} روز دیگر`}</span>`, G.id && `<span class="mono">${esc(G.id)}</span>`]
-    .filter(Boolean).map(x => x.startsWith("<") ? x : `<span>${esc(x)}</span>`).join("");
-
-  const figs = [
-    ["بیمه‌شدگان", fmtInt(A.insured), G.parts ? `اصلی ${fmtInt(G.parts[0])} · وابسته ${fmtInt(G.parts[1] + G.parts[2] + G.parts[3])}` : "", false],
-    ["حق‌بیمهٔ دورهٔ جاری", fmtNum(A.premiumNow), A.current ? `${A.current.label} · سرانه ${fmtNum(A.premiumNow && A.insured ? A.premiumNow / A.insured : null)}` : "وارد نشده", false],
-    ["خسارت پرداختی", fmtNum(A.totalPaid), `${fmtInt(A.claimsCount)} خسارت · غیرقابل‌پرداخت ${fmtNum(A.totalUnpaid)}`, false],
-    ["Loss Ratio", A.lr != null ? fmtPct(A.lr) : (A.priorLr != null ? fmtPct(A.priorLr) : "—"),
-      A.lr != null ? (A.priorLr != null ? `${A.prior.label}: ${fmtPct(A.priorLr)}` : "خسارت ÷ حق‌بیمه") : (A.priorLr != null ? `از ${A.prior.label}؛ دادهٔ امسال ناقص است` : "دادهٔ امسال ناقص است"), A.lr == null],
-  ];
-
-  const scnRows = SCN.map(([k, label, desc]) => { const s = S[k];
-    const fits = s.paid <= S.budget.allowed + 1e-9;
-    return `<tr class="${k === "balanced" ? "hl" : ""}"><td><b>${label}</b><div class="muted small">${desc}</div></td>
-      <td class="n">${fmtNum(s.paid)}</td><td class="n chg">${fmtSignedPct(s.change)}</td><td class="n">${fmtPct(s.cover)}</td>
-      <td class="n">${s.premiumNeeded != null ? fmtNum(s.premiumNeeded) : "—"}</td><td class="n chg">${s.premiumChange != null ? fmtSignedPct(s.premiumChange) : "—"}</td>
-      <td class="n">${fits ? '<span class="ok">در بودجه</span>' : '<span class="bad">بیش از بودجه</span>'}</td></tr>`; }).join("");
-
-  const B = S.budget;
-  const budgetText = !B.fits
-    ? `<p class="bad">با بودجهٔ ${fmtSignedPct(S.budgetPct)} حتی سقف‌های فعلی هم پوشش داده نمی‌شوند (پس از کاهش‌های پیشنهادی هنوز ${fmtNum(B.paid - B.allowed)} کسری). باید یا حق‌بیمه بیشتر بالا برود، یا فرانشیز و سقف پوشش‌های پرهزینه بازطراحی شود.</p>`
-    : `<p>${B.picked.length ? `با این بودجه این افزایش‌ها جا می‌شوند: <b>${esc(B.picked.join("، "))}</b>.` : "با این بودجه هیچ افزایشی جا نمی‌شود."}${B.skipped.length ? ` جا نشد: ${esc(B.skipped.join("، "))}.` : ""}</p>`;
-
-  const capTable = A.rows.map((r, ri) => {
-    const cell = k => { const c = S[k].caps[ri];
-      if (c.removed) return `<td class="capcell rm">حذف</td>`;
-      const ch = c.annual !== r.cv.annualCap || c.perCase !== r.cv.perCase;
-      const pc = c.perCase != null && c.perCase !== c.annual ? `<div class="muted small">هر مورد ${fmtNum(c.perCase)}</div>` : "";
-      return `<td class="n capcell${ch && k !== "current" ? " ch" : ""}">${fmtNum(c.annual)}${pc}</td>`; };
-    return `<tr><td><b>${esc(r.cv.name)}</b></td>${["current", "economy", "balanced", "premium", "budget"].map(cell).join("")}</tr>`; }).join("");
-
+  const g = state.groups[i]; if (!g){ state.page = "renewal"; return render(); }
+  const { A, S } = compute(g), G = A.group, key = "g" + i;
+  const st = lrStat(A.lr ?? A.priorLr), d = A.renewal ? A.renewal.days : null;
+  const B = S.budget, nIss = A.issues.filter(x => x.sev !== "info").length;
+  setHead(short(G.name), "صفحهٔ گروه");
   const rows = A.rows.slice().sort((a, b) => ORDER[a.d] - ORDER[b.d] || b.paid - a.paid);
-  const maxShare = Math.max(0.0001, ...rows.map(r => r.paidShare));
-  const covRows = rows.map(r => {
-    const cv = r.cv;
-    const capLine = (label, oldV, newV) => oldV == null ? "" :
-      `<div class="line"><span class="muted">${label}</span>${newV !== oldV ? `<span class="old num"><s>${fmtNum(oldV)}</s></span><span aria-hidden="true">←</span><span class="new num">${fmtNum(newV)}</span>` : `<span class="num">${fmtNum(oldV)}</span>`}</div>`;
-    return `<div class="row s-${r.d}">
-      <div class="cov"><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><b>${esc(cv.name)}</b><span class="mono">${esc(cv.id)}</span></div>
-        <div style="display:flex;gap:6px;flex-wrap:wrap"><span class="chip d-${r.d}">${DLABEL[r.d]}</span><span class="cat">${r.protect ? "حمایتی" : "روزمره"}</span></div></div>
-      <div><dl class="stats"><dt>خسارت / نفر</dt><dd class="num">${fmtInt(r.n)} / ${fmtInt(r.users)}</dd>
-        <dt>پرداختی</dt><dd class="num">${fmtNum(r.paid)}</dd><dt>فشار سقف</dt><dd class="num">${r.capUnpaid ? fmtPct(r.pressure) : "—"}</dd></dl>
-        <div class="bar" title="سهم از کل خسارت"><i style="width:${(r.paidShare / maxShare * 100).toFixed(1)}%"></i></div>
-        <div class="muted" style="font-size:.76rem">سهم از خسارت ${fmtPct(r.paidShare)}${r.util != null && A.complete ? ` · استفاده ${fmtPct(r.util)} از افراد` : ""}</div></div>
-      <div class="cap">${r.d === "remove" ? '<div class="line"><span class="new" style="color:var(--remove)">حذف از بیمه‌نامه</span></div>' : ""}${capLine("سقف سالانه", cv.annualCap, r.d === "remove" ? cv.annualCap : r.newAnnual)}${capLine("سقف هر مورد", cv.perCase, r.d === "remove" ? cv.perCase : r.newPerCase)}
-        ${cv.min != null || cv.max != null ? `<div class="muted" style="font-size:.76rem">بازهٔ مجاز ${fmtNum(cv.min)} تا ${fmtNum(cv.max)}</div>` : ""}</div>
-      <div class="why">${r.why.map(w => `<p>${esc(w)}</p>`).join("")}${r.notes.map(w => `<p class="muted" style="font-size:.82rem">${esc(w)}</p>`).join("")}</div>
-    </div>`; }).join("");
-
-  const sevOrder = { crit: 0, warn: 1, info: 2 };
-  const iss = A.issues.slice().sort((a, b) => sevOrder[a.sev] - sevOrder[b.sev]);
-  const [lc, lt] = LVL[A.level];
+  const scnRows = SCN.map(([k, label, desc]) => { const s = S[k], fits = s.paid <= B.allowed + 1e-9;
+    return `<tr class="${k === "balanced" ? "hl" : ""}"><td class="nm wrapsub"><b>${label} ${k === "balanced" ? '<span class="tag t-good">پیشنهاد اصلی</span>' : ""}</b><span>${desc}</span></td>
+      <td class="nw">${fmtNum(s.paid)}</td><td class="nw"><b>${fmtSignedPct(s.change)}</b></td>
+      <td><div style="display:flex;gap:8px;align-items:center"><div class="prog" style="flex:1"><i style="width:${(s.cover * 100).toFixed(1)}%"></i></div><span class="nw small">${fmtPct(s.cover)}</span></div></td>
+      <td class="nw">${s.premiumNeeded != null ? fmtNum(s.premiumNeeded) : "—"}</td><td class="nw"><b>${s.premiumChange != null ? fmtSignedPct(s.premiumChange) : "—"}</b></td>
+      <td><span class="tag ${fits ? "t-good" : "t-bad"}">${fits ? "در بودجه" : "بیش از بودجه"}</span></td></tr>`; }).join("");
+  const budgetText = !B.fits ? `با بودجهٔ ${fmtSignedPct(S.budgetPct)} حتی سقف‌های فعلی پوشش داده نمی‌شوند؛ کسری حدود ${fmtNum(B.paid - B.allowed)}.`
+    : B.picked.length ? `با این بودجه ${B.picked.join(" و ")} جا می‌شوند${B.skipped.length ? `؛ ${B.skipped.join(" و ")} نه` : ""}.` : "با این بودجه هیچ افزایشی جا نمی‌شود.";
+  const capRows = A.rows.map((r, ri) => `<tr><td><b>${esc(r.cv.name)}</b></td>${["current", "economy", "balanced", "premium", "budget"].map(k => { const c = S[k].caps[ri];
+    if (c.removed) return '<td><span class="tag t-remove">حذف</span></td>';
+    const ch = k !== "current" && (c.annual !== r.cv.annualCap || c.perCase !== r.cv.perCase);
+    return `<td class="nw"${ch ? ' style="font-weight:800;color:var(--brand)"' : ""}>${fmtNum(c.annual)}${c.perCase != null && c.perCase !== c.annual ? `<div class="small muted">هر مورد ${fmtNum(c.perCase)}</div>` : ""}</td>`; }).join("")}</tr>`).join("");
+  const covCards = rows.map(r => { const cv = r.cv, col = DCOLOR[r.d];
+    const capLine = (label, o, n) => o == null ? "" : `<span>${label}: ${n !== o && r.d !== "remove" ? `<s>${fmtNum(o)}</s> ← <span class="new" style="color:${col}">${fmtNum(n)}</span>` : `<b>${fmtNum(o)}</b>`}</span>`;
+    return `<div class="card cov"><div class="cov-h"><div><b>${esc(cv.name)}</b><div class="meta"><span class="ltr">${esc(cv.id)}</span> · ${r.protect ? "حمایتی" : "روزمره"}</div></div><span class="tag ${DTAG[r.d]}">${DLABEL[r.d]}</span></div>
+      <div class="stats"><div><span>خسارت / نفر</span><b>${fmtInt(r.n)} / ${fmtInt(r.users)}</b></div><div><span>پرداختی</span><b>${fmtNum(r.paid)}</b></div><div><span>فشار سقف</span><b style="color:${col}">${r.capUnpaid ? fmtPct(r.pressure) : "—"}</b></div></div>
+      <div class="share"><div class="prog"><i style="width:${Math.max(1, r.paidShare * 100).toFixed(1)}%;background:${col}"></i></div><span>سهم از کل خسارت ${fmtPct(r.paidShare)}${r.util != null && A.complete ? ` · استفاده ${fmtPct(r.util)} از افراد` : ""}</span></div>
+      <div class="capbox">${r.d === "remove" ? `<span class="new" style="color:var(--rem)">حذف از بیمه‌نامه</span>` : ""}${capLine("سالانه", cv.annualCap, r.newAnnual)}${capLine("هر مورد", cv.perCase, r.newPerCase)}${cv.min != null || cv.max != null ? `<span class="small muted">بازهٔ مجاز ${fmtNum(cv.min)} تا ${fmtNum(cv.max)}</span>` : ""}</div>
+      <div class="why"><b>${esc(r.why[0] || "")}</b>${r.why.slice(1).concat(r.notes).map(w => `<span>${esc(w)}</span>`).join("")}</div></div>`; }).join("");
 
   $("view").innerHTML = `
-  ${subnav([["s-sum", "خلاصه"], ["s-scn", "سناریوها"], ["s-caps", "جدول سقف‌ها"], ["s-cov", "پوشش‌ها"], ["s-dq", "کیفیت داده"]])}
-  <section id="s-sum" aria-label="خلاصه">${figsHTML(figs, ["users", "wallet", "receipt", "gauge"], ["", "", "", lrTone(A.lr ?? A.priorLr)])}
-    <div class="note"><span class="chip ${lc}">${lt}</span><span class="muted">${fmtInt(A.claimsCount)} خسارت در ${fmtInt(A.span)} ماه · روند تعرفهٔ سال بعد ${fmtPct(A.trend)}</span></div></section>
-  <section id="s-scn">
-    <div class="sec-head"><h2>سناریوهای تمدید</h2><span class="muted small">خسارت سال بعد = خسارت‌های امسال با رشد تعرفه، زیر سقف‌های هر سناریو</span></div>
-    <div class="panel">
-      <div class="budget-bar"><label for="budgetIn">بودجهٔ افزایش حق‌بیمهٔ کارفرما <input type="number" id="budgetIn" min="0" max="300" step="1" value="${Math.round(S.budgetPct * 100)}"> ٪</label>
-        <span class="muted small">${A.complete ? `سقف خسارت مجاز با LR هدف ${fmtPct(A.targetLR)}: ${fmtNum(B.allowed)}` : `دادهٔ ناقص: بودجه روی رشد خسارت ثبت‌شده اعمال شد (سقف ${fmtNum(B.allowed)})`}</span></div>
-      <div class="scroll"><table class="grid" style="min-width:720px"><thead><tr><th>سناریو</th><th>خسارت برآوردی</th><th>تغییر نسبت به امسال</th><th>پوشش نیاز کارکنان</th><th>حق‌بیمهٔ لازم</th><th>تغییر حق‌بیمه</th><th>بودجه</th></tr></thead><tbody>${scnRows}</tbody></table></div>
-      <div class="explain">${budgetText}<p class="muted">«پوشش نیاز کارکنان» یعنی چه درصدی از هزینهٔ درمانِ تأییدشده را بیمه می‌پردازد؛ بقیه را کارکنان خودشان می‌دهند.</p></div>
+  <div class="crumb"><button type="button" data-go="renewal">پرتفوی تمدید</button><span>/</span><span>${esc(short(G.name))}</span></div>
+  <div class="ph"><div style="display:flex;flex-direction:column;gap:6px">
+      <div class="hchips"><h1>${esc(G.name)}</h1>${d != null ? `<span class="tag ${d < 0 || d <= 30 ? "t-bad" : d <= 60 ? "t-mid" : "t-line"}">${d < 0 ? `${fmtInt(-d)} روز از پایان قرارداد گذشته` : `تمدید ${fmtInt(d)} روز دیگر`}</span>` : ""}<span class="tag ${LVL[A.level][0]}">اطمینان داده: ${LVL[A.level][1]}</span>${g.own ? '<span class="tag t-protect">فایل اکسل شما</span>' : ""}</div>
+      <div class="infoline">${[G.industry, G.province, G.period && `دوره ${G.period}`, G.id && `کد ${G.id}`, g.file].filter(Boolean).map(x => `<span>${esc(x)}</span>`).join("")}</div></div>
+    <div class="actions"><button class="btn danger" type="button" id="removeBtn">حذف این گروه</button><button class="btn" type="button" id="letterBtn">نامهٔ پیشنهاد تمدید</button>${inFrame ? "" : '<button class="btn primary" type="button" id="pdfBtn">گزارش PDF</button>'}</div></div>
+  ${ptabs([["g-sum", "خلاصه"], ["g-scn", "سناریوها"], ["g-caps", "جدول سقف‌ها"], ["g-cov", "پوشش‌ها"], ["g-dq", "کیفیت داده", nIss], ["g-ai", "دستیار"]])}
+  <div class="with-ai"><div class="colmain">
+    <div class="kpis anchor" id="g-sum">
+      ${kpi("بیمه‌شدگان", fmtInt(A.insured), G.parts ? `اصلی ${fmtInt(G.parts[0])} · وابسته ${fmtInt(G.parts[1] + G.parts[2] + G.parts[3])}` : "")}
+      ${kpi("حق‌بیمهٔ دورهٔ جاری", fmtNum(A.premiumNow), `سرانه ${fmtNum(A.premiumNow && A.insured ? A.premiumNow / A.insured : null)}`)}
+      ${kpi("خسارت پرداختی", fmtNum(A.totalPaid), `${fmtInt(A.claimsCount)} خسارت · پرداخت‌نشده ${fmtNum(A.totalUnpaid)}`)}
+      ${kpi("Loss Ratio", fmtPct(A.lr ?? A.priorLr), A.lr != null ? (A.priorLr != null ? `${A.prior.label}: ${fmtPct(A.priorLr)} · روند تعرفه ${fmtPct(A.trend)}` : "") : `از ${A.prior ? A.prior.label : "—"}؛ دادهٔ امسال ناقص`, { tag: st ? `<span class="tag ${st[0]}">${st[1]}</span>` : "", lr: A.lr ?? A.priorLr, subColor: A.lr == null ? "var(--mid-ink)" : null })}
     </div>
-    <div class="panel scroll" id="s-caps" style="scroll-margin-top:64px"><table class="grid" style="min-width:600px"><thead><tr><th>سقف سالانه</th><th>فعلی</th><th>اقتصادی</th><th>متعادل</th><th>ممتاز</th><th>در سقف بودجه</th></tr></thead><tbody>${capTable}</tbody></table></div>
-  </section>
-  <section id="s-cov">
-    <div class="sec-head"><h2>پیشنهاد برای هر پوشش</h2>
-      <div class="legend">${Object.keys(DLABEL).map(k => `<span class="chip d-${k}">${DLABEL[k]}</span>`).join("")}</div></div>
-    <div class="panel rows">${covRows}</div>
-  </section>
-  <section id="s-dq">
-    <div class="sec-head"><h2>کنترل کیفیت داده</h2><span class="muted small">${iss.length ? `${fmtInt(iss.length)} مورد` : "مشکلی پیدا نشد"}</span></div>
-    <ul class="todo panel">${iss.length ? iss.map(x => `<li><span class="sev ${x.sev}"></span><span class="t">${esc(x.text)}</span></li>`).join("") : '<li class="muted">مشکلی پیدا نشد.</li>'}</ul>
-  </section>`;
-  $("budgetIn").onchange = e => { const v = parseFloat(e.target.value); if (!isNaN(v) && v >= 0){ g.budget = v / 100; render(); } };
+    <section class="panel anchor" id="g-scn">
+      <div class="panel-h"><h2>سناریوهای تمدید</h2><div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><span class="small nw">بودجهٔ کارفرما (٪)</span>${stepper("budgetIn", Math.round(S.budgetPct * 100), 5)}<span class="small muted">${A.complete ? `سقف خسارت مجاز با Loss Ratio هدف ${fmtPct(A.targetLR)}: <b>${fmtNum(B.allowed)}</b>` : `دادهٔ ناقص؛ سقف رشد خسارت: <b>${fmtNum(B.allowed)}</b>`}</span></div></div>
+      <div class="tw"><table style="min-width:700px"><thead><tr><th>سناریو</th><th>خسارت برآوردی</th><th>تغییر نسبت به امسال</th><th>پوشش نیاز کارکنان</th><th>حق‌بیمهٔ لازم</th><th>تغییر حق‌بیمه</th><th>بودجه</th></tr></thead><tbody>${scnRows}</tbody></table></div>
+      <div class="panel-b"><p class="sumline">${esc(budgetText)}</p></div>
+    </section>
+    <section class="panel anchor" id="g-caps">
+      <div class="panel-h"><h2>جدول سقف‌ها <span class="small muted">برگهٔ مذاکره</span></h2><span class="small muted">سقف سالانه در هر سناریو؛ تغییرها پررنگ</span></div>
+      <div class="tw"><table style="min-width:620px"><thead><tr><th>پوشش</th><th>فعلی</th><th>اقتصادی</th><th>متعادل</th><th>ممتاز</th><th>در سقف بودجه</th></tr></thead><tbody>${capRows}</tbody></table></div>
+    </section>
+    <section class="anchor" id="g-cov" style="display:flex;flex-direction:column;gap:12px">
+      <div class="ph"><h2>پوشش‌ها</h2><div class="hchips">${Object.keys(DLABEL).map(k => `<span class="tag ${DTAG[k]}">${DLABEL[k]}</span>`).join("")}</div></div>
+      <div class="covs">${covCards}</div>
+    </section>
+    <section class="panel anchor" id="g-dq"><div class="panel-h"><h2>کیفیت داده</h2><span class="small muted">${fmtInt(A.issues.length)} مورد</span></div><div class="panel-b">${dqList(A.issues)}</div></section>
+  </div>
+  ${assistant(key, A, S, g)}
+  </div>`;
+  bindStepper("budgetIn", v => { g.budget = Math.max(0, v) / 100; render(); });
+  $("removeBtn").onclick = () => { state.groups.splice(i, 1); if (!state.groups.length) setGroups(sampleGroups()); go("renewal"); };
+  $("letterBtn").onclick = () => openLetter(A, S, g);
+  if ($("pdfBtn")) $("pdfBtn").onclick = () => window.print();
+}
+
+/* ---------- assistant (rule-based, with sources) ---------- */
+const VERB = { increase: "باید سقفش بالا برود", minor: "افزایش جزئی می‌گیرد", reduce: "کاهش سقف می‌گیرد", remove: "کاندید حذف است", protect: "حذف نمی‌شود", keep: "تغییر نمی‌کند" };
+function aiSuggest(A, S){
+  const q = A.rows.filter(r => r.d !== "keep").sort((a, b) => ORDER[a.d] - ORDER[b.d]).slice(0, 4).map(r => `چرا ${r.cv.name} ${VERB[r.d]}؟`);
+  return q.concat([`با بودجهٔ ${fmtPct(S.budgetPct)} چه چیزی جا می‌شود؟`, "Loss Ratio این گروه چطور حساب شد؟"]);
+}
+function aiAnswer(q, A, S, g){
+  const file = g.file || (g.sample ? "دادهٔ نمونه" : "فایل اکسل");
+  const src = (...xs) => `<div class="ai-src">${xs.map(x => `<span>${esc(x)}</span>`).join("")}</div>`;
+  const nq = norm(q);
+  const r = A.rows.find(x => nq.includes(norm(x.cv.name)));
+  if (r){
+    const rule = { increase: `قاعده: فشار سقف ≥ ${fmtInt(state.settings.pressureHigh)}٪ ← افزایش سقف`, minor: `قاعده: فشار سقف ${fmtInt(state.settings.pressureMinor)} تا ${fmtInt(state.settings.pressureHigh)}٪ ← افزایش جزئی`,
+      reduce: `قاعده: استفاده کمتر از ${fmtInt(state.settings.lowUtil)}٪ افراد و پوشش روزمره ← کاهش`, remove: "قاعده: صفر خسارت و پوشش روزمره ← کاندید حذف",
+      protect: "قاعده: پوشش حمایتی هیچ‌وقت حذف نمی‌شود", keep: "قاعده: بدون فشار سقف و مصرف عادی ← بدون تغییر" }[r.d];
+    const capTxt = r.d === "remove" ? "پیشنهاد: <b>حذف از بیمه‌نامه</b>." : r.newAnnual !== r.cv.annualCap ? `سقف سالانه <b>${fmtNum(r.cv.annualCap)} ← ${fmtNum(r.newAnnual)}</b>.` : r.newPerCase !== r.cv.perCase ? `سقف هر مورد <b>${fmtNum(r.cv.perCase)} ← ${fmtNum(r.newPerCase)}</b>.` : "سقف فعلی می‌ماند.";
+    return `<div>${esc(r.cv.name)}: <b>${DLABEL[r.d]}</b>. ${esc(r.why[0] || "")} ${capTxt}</div>
+      <div class="small muted">${fmtInt(r.n)} خسارت از ${fmtInt(r.users)} نفر؛ پرداختی <b>${fmtNum(r.paid)}</b>؛ ${r.capUnpaid ? `پرداخت‌نشده به خاطر سقف <b>${fmtNum(r.capUnpaid)}</b>` : "بدون کمبود سقف"}.</div>
+      ${src(`منبع: ${file} · ۰۳_خسارت · ستون پرداختی و علت عدم پرداخت`, rule)}`;
+  }
+  if (/بودجه/.test(nq)){
+    const B = S.budget;
+    return `<div>سقف خسارت مجاز با بودجهٔ <b>${fmtPct(S.budgetPct)}</b>: <b>${fmtNum(B.allowed)}</b>. ${B.fits ? (B.picked.length ? `جا می‌شود: <b>${esc(B.picked.join("، "))}</b>.` : "هیچ افزایشی جا نمی‌شود.") + (B.skipped.length ? ` جا نمی‌شود: ${esc(B.skipped.join("، "))}.` : "") : `حتی سقف‌های فعلی جا نمی‌شوند؛ کسری <b>${fmtNum(B.paid - B.allowed)}</b>.`}</div>
+      ${src(`منبع: ${file} · ۰۱_جمعیت · بودجه افزایش حق‌بیمه`, `قاعده: حق‌بیمه × (۱ + بودجه) × ${fmtPct(A.targetLR)}`)}`;
+  }
+  if (/loss|لاس|نسبت خسارت|ratio/i.test(q)){
+    const lr = A.lr ?? A.priorLr;
+    return `<div>Loss Ratio = خسارت پرداختی ÷ حق‌بیمه = <b>${fmtNum(A.totalPaid)} ÷ ${fmtNum(A.premiumNow)} = ${fmtPct(lr)}</b>${A.lr == null ? " (دادهٔ امسال ناقص است؛ عدد سال قبل)" : ""}. ${lrStat(lr) ? `وضعیت: <b>${lrStat(lr)[1]}</b>.` : ""}</div>
+      ${src(`منبع: ${file} · ۰۳_خسارت · ستون پرداختی`, `منبع: ${file} · ۰۵_حق_بیمه`, `قاعده: زیر ${fmtPct(A.targetLR)} سالم · بالای ۸۵٪ زیان‌ده`)}`;
+  }
+  if (/سناریو|متعادل|حق.?بیمه/.test(nq)){
+    const b = S.balanced;
+    return `<div>سناریوی متعادل: خسارت برآوردی <b>${fmtNum(b.paid)}</b>، تغییر حق‌بیمه <b>${fmtSignedPct(b.premiumChange)}</b>، سهم کارکنان از هزینهٔ درمان <b>${fmtPct(1 - S.current.cover)} ← ${fmtPct(1 - b.cover)}</b>.</div>
+      ${src(`منبع: ${file} · ۰۳_خسارت و ۰۶_تعرفه`, `قاعده: خسارت امسال × رشد تعرفه (${fmtPct(A.trend)}) زیر سقف‌های هر سناریو`)}`;
+  }
+  return `<div>این نسخه از قواعد خود اپ جواب می‌دهد: اسم یک پوشش، «بودجه»، «Loss Ratio» یا «سناریو» را در سؤال بیاورید، یا یکی از پرسش‌های پیشنهادی را بزنید. گفت‌وگوی آزاد در نسخهٔ آنلاین می‌آید.</div>`;
+}
+function assistant(key, A, S, g){
+  const msgs = state.chat[key] || [];
+  return `<aside class="panel ai anchor" id="g-ai" aria-label="دستیار">
+    <div class="panel-h"><h2>دستیار</h2><span class="tag t-line">پاسخ از قواعد اپ</span></div>
+    <div class="ai-body" id="aiBody">${msgs.length ? msgs.map(m => `<div class="ai-q">${esc(m.q)}</div><div class="ai-a">${aiAnswer(m.q, A, S, g)}</div>`).join("") : '<p class="small muted">هر عدد را با منبعش توضیح می‌دهم. یکی از پرسش‌ها را بزنید یا بپرسید.</p>'}</div>
+    <div class="ai-sug">${aiSuggest(A, S).map(q => `<button type="button" data-ask="${esc(q)}">${esc(q)}</button>`).join("")}</div>
+    <form class="ai-in" id="aiForm"><input id="aiQ" placeholder="مثلاً: چرا زایمان باید بالا برود؟" autocomplete="off"><button class="btn primary" type="submit">ارسال</button></form>
+  </aside>`;
+}
+function ask(q){
+  const key = "g" + state.idx; (state.chat[key] = state.chat[key] || []).push({ q });
+  render(); const b = $("aiBody"); if (b) b.scrollTop = b.scrollHeight;
+}
+
+/* ---------- letter ---------- */
+function openLetter(A, S, g){
+  const G = A.group, b = S.balanced, B = S.budget;
+  const ch = A.rows.filter(r => r.d !== "keep" && r.d !== "protect").map(r => r.d === "remove" ? `- ${r.cv.name}: حذف از بیمه‌نامه (${r.why[0]})`
+    : `- ${r.cv.name}: سقف سالانه از ${fmtNum(r.cv.annualCap)} به ${fmtNum(r.newAnnual)}${r.newPerCase !== r.cv.perCase ? ` و سقف هر مورد از ${fmtNum(r.cv.perCase)} به ${fmtNum(r.newPerCase)}` : ""} (${r.why[0]})`);
+  const kept = A.rows.filter(r => r.d === "protect").map(r => r.cv.name);
+  const txt = `به نام خدا
+
+مدیر محترم منابع انسانی ${short(G.name)}
+موضوع: پیشنهاد تمدید قرارداد بیمهٔ درمان تکمیلی
+
+با سلام و احترام،
+بر اساس تحلیل ${fmtInt(A.claimsCount)} خسارت ثبت‌شده در دورهٔ جاری${A.lr != null ? ` (Loss Ratio ${fmtPct(A.lr)})` : ""} و پیش‌بینی ${fmtPct(A.trend)} رشد تعرفهٔ درمان در سال آینده، پیشنهاد ما برای قرارداد جدید به شرح زیر است:
+
+${ch.join("\n") || "- سقف‌های فعلی کافی است و تغییری پیشنهاد نمی‌شود."}
+${kept.length ? `\nپوشش‌های حمایتی (${kept.join("، ")}) با وجود مصرف کم حفظ می‌شوند.\n` : ""}
+با اجرای این پیشنهاد (سناریوی متعادل)، سهم کارکنان از هزینهٔ درمان از ${fmtPct(1 - S.current.cover)} به ${fmtPct(1 - b.cover)} کاهش می‌یابد و تغییر حق‌بیمهٔ برآوردی ${b.premiumChange != null ? fmtSignedPct(b.premiumChange) : "—"} است.
+${B.fits ? (B.picked.length ? `در صورت محدود بودن بودجه به ${fmtPct(S.budgetPct)}، اولویت با ${B.picked.join(" و ")} است${B.skipped.length ? ` و ${B.skipped.join(" و ")} به سال بعد موکول می‌شود` : ""}.` : "") : `توجه: بودجهٔ ${fmtPct(S.budgetPct)} حتی برای حفظ شرایط فعلی کافی نیست و افزایش حدود ${fmtSignedPct(S.current.premiumChange)} لازم است.`}
+
+ارقام بالا برآورد تحلیلی است و نرخ نهایی پس از استعلام از بیمه‌گر اعلام می‌شود.
+
+با تشکر،
+[نام کارگزاری]
+[نام و امضا]`;
+  $("modal").innerHTML = `<div class="box" role="dialog" aria-modal="true" aria-labelledby="mt"><div class="panel-h"><h2 id="mt">نامهٔ پیشنهاد تمدید</h2><button class="btn" type="button" data-close>بستن</button></div>
+    <div class="panel-b" style="display:flex;flex-direction:column;gap:10px;overflow:auto"><textarea id="letterTxt" readonly>${esc(txt)}</textarea>
+    <div class="actions"><button class="btn primary" type="button" id="copyLetter">کپی متن</button><span class="small muted" id="copyMsg"></span></div></div></div>`;
+  $("modal").hidden = false;
+  $("copyLetter").onclick = () => { const t = $("letterTxt");
+    navigator.clipboard && navigator.clipboard.writeText(t.value).then(() => { $("copyMsg").textContent = "کپی شد."; }, () => { t.select(); $("copyMsg").textContent = "متن انتخاب شد؛ کپی کنید."; })
+    || (t.select(), $("copyMsg").textContent = "متن انتخاب شد؛ کپی کنید."); };
 }
 
 /* ---------- tenders ---------- */
-const TLABEL = { increase: "سقف بالاتر = امتیاز", growth: "رشد سریع", reduce: "کاهش سقف", remove: "کاندید حذف", protect: "حفظ پوشش حمایتی", keep: "عادی" };
-const TCHIP = { increase: "d-increase", growth: "d-reduce", reduce: "d-reduce", remove: "d-remove", protect: "d-protect", keep: "d-keep" };
-const RISK = { low: ["lvl-high", "ریسک کم"], mid: ["lvl-mid", "ریسک متوسط"], high: ["lvl-low", "ریسک زیاد"] };
-
-function computeTender(t){ return tenderAnalyze(t.data, state.settings, state.protectNames, { margin: t.margin }); }
-
 function renderTenderList(){
-  const all = state.tenders.map((t, i) => ({ i, t, R: computeTender(t) }));
-  $("backBtn").hidden = true; $("removeBtn").hidden = true;
-  $("title").textContent = "مناقصه و قرارداد جدید";
-  $("subtitle").textContent = "";
-  $("meta").innerHTML = `<span>${fmtInt(all.length)} مناقصه</span><span>مبالغ به میلیون تومان</span>`;
-  const figs = [
-    ["مناقصه‌ها", fmtInt(all.length), "سابقهٔ ۱ تا ۲ ساله"],
-    ["بیمه‌شدگان", fmtInt(sum(all, x => x.R.insuredNext)), "قراردادهای جدید"],
-    ["خسارت برآوردی", fmtNum(sum(all, x => x.R.expected)), "سال قرارداد، میلیون تومان"],
-    ["قیمت پیشنهادی", fmtNum(sum(all, x => x.R.price)), `با Loss Ratio هدف ${fmtPct(state.settings.targetLR / 100)}`],
-  ];
+  const all = state.tenders.map((t, i) => ({ i, t, R: computeTender(t) })), shown = all.filter(x => match(x.R.group.name));
+  setHead("مناقصه و قرارداد جدید", `${fmtInt(all.length)} مناقصه`);
   $("view").innerHTML = `
-  <section aria-label="خلاصه">${figsHTML(figs, ["folder", "users", "receipt", "tag"])}</section>
-  <section>
-    <div class="sec-head"><h2>چطور قیمت پیشنهادی ساخته می‌شود</h2></div>
-    <div class="panel" style="padding:14px 16px;display:flex;flex-direction:column;gap:6px;font-size:.92rem">
-      <p style="margin:0"><b>۱.</b> هزینهٔ سرانهٔ هر پوشش در هر سال سابقه، با بیمه‌گرهای قبلی.</p>
-      <p style="margin:0"><b>۲.</b> هر سال با تورم تعرفه به سال قرارداد آورده می‌شود؛ سال جدیدتر وزن بیشتری دارد.</p>
-      <p style="margin:0"><b>۳.</b> ضرب در تعداد نفرات قرارداد جدید = خسارت برآوردی.</p>
-      <p style="margin:0"><b>۴.</b> ÷ Loss Ratio هدف = <b>کف قیمت</b>. به‌علاوهٔ حاشیهٔ اطمینان (بر اساس نوسان سابقه و حجم داده) = <b>قیمت پیشنهادی</b>.</p>
-    </div>
-  </section>
-  <section>
-    <div class="sec-head"><h2>مناقصه‌ها</h2></div>
-    <div class="panel scroll"><table class="grid">
-      <thead><tr><th>مناقصه</th><th>نفرات</th><th>سابقه</th><th>Loss Ratio بیمه‌گر قبلی</th><th>خسارت برآوردی</th><th>قیمت پیشنهادی</th><th>سرانه</th><th>در برابر قیمت قبلی</th><th>داده</th></tr></thead>
-      <tbody>${all.map(({ i, R }) => { const h = R.hist[R.hist.length - 1], vs = R.priorScaled ? R.price / R.priorScaled - 1 : null;
-        return `<tr class="pick" tabindex="0" data-open="${i}">
-          <td><b>${esc(R.group.name)}</b><div class="muted small">${esc([R.group.industry, R.group.province].filter(Boolean).join(" · "))}</div></td>
-          <td class="n">${fmtInt(R.insuredNext)}</td>
-          <td class="n">${R.hist.map(x => x.year).join("، ")}</td>
-          <td class="n ${h.lr == null ? "" : h.lr >= 0.85 ? "bad" : h.lr >= 0.75 ? "warnc" : "ok"}">${h.lr != null ? fmtPct(h.lr) : "—"}</td>
-          <td class="n">${fmtNum(R.expected)}</td><td class="n"><b>${fmtNum(R.price)}</b></td><td class="n">${fmtNum(R.price / R.insuredNext)}</td>
-          <td class="n ${vs == null ? "" : vs > 0 ? "warnc" : "ok"}">${vs == null ? "—" : `${fmtSignedPct(vs)}`}</td>
-          <td><span class="chip ${LVL[R.level][0]}">${LVL[R.level][1].replace("اطمینان ", "")}</span></td></tr>`; }).join("")}</tbody></table></div>
-    <p class="muted small" style="margin:0">«در برابر قیمت قبلی»: قیمت پیشنهادی در مقایسه با حق‌بیمه‌ای که بیمه‌گر قبلی سال آخر گرفته (هم‌اندازه با نفرات جدید). روی هر مناقصه بزنید.</p>
-  </section>`;
+  <div class="ph"><div><span class="date">${todayFa()}</span><h1>مناقصه و قرارداد جدید</h1><span class="sub">قیمت‌گذاری با Loss Ratio هدف ${fmtPct(state.settings.targetLR / 100)} · مبالغ به میلیون تومان</span></div></div>
+  <div class="kpis">
+    ${kpi("مناقصه‌ها", fmtInt(all.length), "سابقهٔ ۱ تا ۲ ساله")}
+    ${kpi("بیمه‌شدگان", fmtInt(sum(all, x => x.R.insuredNext)), "قراردادهای جدید")}
+    ${kpi("خسارت برآوردی", fmtNum(sum(all, x => x.R.expected)), "سال قرارداد")}
+    ${kpi("قیمت پیشنهادی", fmtNum(sum(all, x => x.R.price)), "جمع همهٔ مناقصه‌ها", { accent: true })}
+  </div>
+  <section class="panel"><div class="panel-h"><h2>قیمت چطور ساخته می‌شود</h2></div><div class="panel-b steps">
+    ${[["هزینهٔ سرانهٔ هر پوشش در هر سال سابقه، با بیمه‌گرهای قبلی", ""], ["آوردن هر سال به قیمت سال قرارداد با تورم تعرفه؛ سال جدیدتر وزن بیشتر", ""], ["ضرب در نفرات قرارداد جدید = خسارت برآوردی", ""], [`÷ ${fmtPct(state.settings.targetLR / 100)} = کف قیمت؛ + حاشیهٔ اطمینان = قیمت پیشنهادی`, ""]].map(([t], k) => `<div class="step"><span class="sn">${fmtInt(k + 1)}</span><span>${t}</span><span></span></div>`).join("")}
+  </div></section>
+  <section class="panel"><div class="panel-h"><h2>مناقصه‌ها</h2></div>
+    <div class="tw"><table style="min-width:900px"><thead><tr><th>مناقصه</th><th>نفرات</th><th>سابقه</th><th>Loss Ratio بیمه‌گر قبلی</th><th>خسارت برآوردی</th><th>قیمت پیشنهادی</th><th>سرانه</th><th>در برابر قیمت قبلی</th><th>اطمینان</th></tr></thead><tbody>
+    ${shown.map(({ i, R }) => { const h = R.hist[R.hist.length - 1], vs = R.priorScaled ? R.price / R.priorScaled - 1 : null, s = lrStat(h.lr);
+      return `<tr class="click" tabindex="0" data-open="${i}"><td class="nm"><b>${esc(R.group.name)}</b><span>${esc([R.group.industry, R.group.province].filter(Boolean).join(" · "))}</span></td>
+        <td class="nw">${fmtInt(R.insuredNext)}</td><td class="nw">${R.hist.map(x => fmtInt(x.year).replace(/٬/g, "")).join("، ")}</td>
+        <td class="lrcell nw">${s ? `<b style="color:${s[2]}">${fmtPct(h.lr)}</b> · <span class="small" style="color:${s[2]}">${s[1]}</span>${miniLR(h.lr)}` : "—"}</td>
+        <td class="nw">${fmtNum(R.expected)}</td><td class="nw"><b>${fmtNum(R.price)}</b></td><td class="nw">${fmtNum(R.price / R.insuredNext)}</td>
+        <td class="nw" style="color:${vs == null ? "inherit" : vs > 0 ? "var(--mid-ink)" : "var(--good)"};font-weight:700">${vs == null ? "—" : fmtSignedPct(vs)}</td>
+        <td><span class="tag ${LVL[R.level][0]}">${LVL[R.level][1]}</span></td></tr>`; }).join("")}
+    </tbody></table></div></section>`;
 }
 
 function renderTender(i){
-  const t = state.tenders[i]; if (!t){ state.tview = "list"; return render(); }
-  const R = computeTender(t), G = R.group, n = R.n;
-  $("backBtn").hidden = false; $("removeBtn").hidden = false;
-  $("backBtn").textContent = "→ همهٔ مناقصه‌ها";
-  $("title").textContent = G.name; $("subtitle").textContent = "";
-  $("meta").innerHTML = [G.industry, G.province, `سابقه: ${R.hist.map(h => h.year).join(" و ")}`, `نفرات قرارداد جدید: ${fmtInt(R.insuredNext)}`].filter(Boolean).map(x => `<span>${esc(x)}</span>`).join("");
+  const t = state.tenders[i]; if (!t){ state.page = "tender"; return render(); }
+  const R = computeTender(t), G = R.group, n = R.n, last = R.hist[R.hist.length - 1];
   const bid = t.bid != null ? t.bid : Math.ceil(R.price / 10) * 10;
-  const [rc, rl] = RISK[R.risk(bid)[0]];
-  const last = R.hist[R.hist.length - 1];
-  const figs = [
-    ["خسارت برآوردی سال قرارداد", fmtNum(R.expected), `سرانه ${fmtNum(R.expected / R.insuredNext)}`],
-    ["کف قیمت", fmtNum(R.floor), `زیر این، Loss Ratio بالای ${fmtPct(R.LR)} می‌رود`],
-    ["قیمت پیشنهادی", fmtNum(R.price), `سرانه ${fmtNum(R.price / R.insuredNext)} · حاشیهٔ اطمینان ${fmtPct(R.margin)}`],
-    ["بیمه‌گر قبلی", R.priorScaled ? fmtNum(R.priorScaled) : "—", last.lr != null ? `Loss Ratio سال آخرش ${fmtPct(last.lr)}` : "حق‌بیمه وارد نشده"],
-  ];
-  const refs = [["کف قیمت (بدون حاشیه)", R.floor], ["قیمت پیشنهادی", R.price], R.priorScaled ? ["همان قیمت بیمه‌گر قبلی", R.priorScaled] : null, ["قیمت پیشنهادی ۵٪ بیشتر", R.price * 1.05]].filter(Boolean);
-  const hy = R.years.map(Y => Y.year);
-  const rows = R.rows.slice().sort((a, b) => b.projPc - a.projPc);
-  const totalPc = sum(rows, r => r.projPc) || 1;
+  setHead(short(G.name), "قیمت مناقصه");
   const pcTr = R.years.map((Y, k) => sum(R.rows, r => r.per[k].pcTrended));
   const w = n === 1 ? [1] : n === 2 ? [0.4, 0.6] : [0.2, 0.3, 0.5];
-  const verdict = R.priorScaled == null ? "" : R.price > R.priorScaled
-    ? `<p class="bad">بیمه‌گر قبلی با این قیمت ضرر کرده (Loss Ratio ${fmtPct(last.lr)}). اگر قیمت او را تکرار کنید، Loss Ratio مورد انتظار شما ${fmtPct(R.expected / R.priorScaled)} می‌شود.</p>`
-    : `<p class="ok">می‌توانید ${fmtPct(1 - R.price / R.priorScaled)} ارزان‌تر از بیمه‌گر قبلی پیشنهاد بدهید و هنوز زیر ${fmtPct(R.LR)} بمانید؛ امتیاز رقابتی در مناقصه.</p>`;
-  const sevOrder = { crit: 0, warn: 1, info: 2 };
-  const iss = R.issues.slice().sort((a, b) => sevOrder[a.sev] - sevOrder[b.sev]);
+  const step = Math.pow(10, Math.floor(Math.log10(R.price))) / 2;
+  const lo = Math.floor(Math.min(R.priorScaled || Infinity, R.floor85 * 0.85) / step) * step, hi = Math.ceil(Math.max(R.price * 1.12, R.priorScaled || 0) / step) * step;
+  const pos = v => ((v - lo) / (hi - lo) * 100).toFixed(2);
+  const p85 = pos(R.floor85), p75 = pos(R.floor);
+  const zg = `linear-gradient(to left, var(--bad) 0%, var(--bad) ${p85}%, var(--mid) ${p85}%, var(--mid) ${p75}%, var(--good) ${p75}%, var(--good) 100%)`;
+  const marks = [[R.priorScaled, "بیمه‌گر قبلی"], [R.floor, "کف"], [R.price, "پیشنهادی"]].filter(([v]) => v && v >= lo && v <= hi);
+  const refs = [["کف قیمت", R.floor], ["قیمت پیشنهادی", R.price], R.priorScaled ? ["قیمت بیمه‌گر قبلی", R.priorScaled] : null, R.priorScaled ? ["قیمت قبلی + ۵٪", R.priorScaled * 1.05] : null].filter(Boolean);
+  const rows = R.rows.slice().sort((a, b) => b.projPc - a.projPc), totalPc = sum(rows, r => r.projPc) || 1;
+  const nIss = R.issues.filter(x => x.sev !== "info").length;
+  const M = Math.max(...pcTr, R.expected / R.insuredNext, bid / R.insuredNext) * 1.1;
+  const hb = (label, v, color) => `<div class="hbar"><span>${label}</span><span class="t"><i style="width:${(v / M * 100).toFixed(1)}%;background:${color}"></i></span><b class="nw">${fmtNum(v)}</b></div>`;
+  const msgs = () => { const out = [];
+    if (R.priorScaled && R.priorScaled < R.floor) out.push(`<p class="msg-bad">بیمه‌گر قبلی با این قیمت ضرر کرده (Loss Ratio ${fmtPct(last.lr)}). اگر قیمت او را تکرار کنید، Loss Ratio شما ${fmtPct(R.expected / R.priorScaled)} می‌شود.</p>`);
+    if (R.priorScaled && R.price < R.priorScaled) out.push(`<p class="msg-good">می‌توانید ${fmtPct(1 - R.price / R.priorScaled)} ارزان‌تر از بیمه‌گر قبلی پیشنهاد بدهید و هنوز زیر ${fmtPct(R.LR)} بمانید.</p>`);
+    else out.push(`<p class="msg-good">با قیمت پیشنهادی ${fmtNum(R.price)}، Loss Ratio مورد انتظار ${fmtPct(R.expected / R.price)} است؛ ${fmtPct(R.margin)} حاشیه برای نوسان خسارت.</p>`);
+    return out.join(""); };
 
   $("view").innerHTML = `
-  ${subnav([["t-sum", "خلاصه"], ["t-bid", "قیمت شما"], ["t-hist", "سابقه"], ["t-cov", "پوشش‌ها"], ["t-dq", "کیفیت داده"]])}
-  <section id="t-sum" aria-label="خلاصه">${figsHTML(figs, ["receipt", "floor", "tag", "history"], ["", "warn", "good", lrTone(last.lr)])}
-    <div class="note"><span class="chip ${LVL[R.level][0]}">${LVL[R.level][1]}</span><span class="muted">${fmtInt(n)} سال سابقه · ${fmtInt(R.claimsLast)} خسارت در سال آخر · روند تعرفه ${fmtPct(R.trend)}</span></div></section>
-  <section id="t-bid">
-    <div class="sec-head"><h2>قیمت شما در مناقصه</h2><span class="muted small">عدد را عوض کنید؛ ریسک همان لحظه حساب می‌شود</span></div>
-    <div class="panel">
-      <div class="budget-bar"><label for="bidIn">قیمت پیشنهادی شما (کل، میلیون تومان) <input type="number" id="bidIn" min="0" step="10" value="${bid}" style="width:130px"></label>
-        <span><span class="chip ${rc}">${rl}</span> <span class="small">Loss Ratio مورد انتظار <b>${fmtPct(R.expected / bid)}</b> · سرانه ${fmtNum(bid / R.insuredNext)}</span></span></div>
-      <div class="scroll"><table class="grid"><thead><tr><th>قیمت مرجع</th><th>مبلغ</th><th>سرانه</th><th>Loss Ratio مورد انتظار</th><th>ریسک</th></tr></thead><tbody>
-        ${refs.map(([k, v]) => { const [c, l] = RISK[R.risk(v)[0]]; return `<tr><td>${k}</td><td class="n">${fmtNum(v)}</td><td class="n">${fmtNum(v / R.insuredNext)}</td><td class="n">${fmtPct(R.expected / v)}</td><td><span class="chip ${c}">${l}</span></td></tr>`; }).join("")}
+  <div class="crumb"><button type="button" data-go="tender">مناقصه‌ها</button><span>/</span><span>${esc(short(G.name))}</span></div>
+  <div class="ph"><div style="display:flex;flex-direction:column;gap:6px"><div class="hchips"><h1>${esc(G.name)}</h1><span class="tag t-line">${fmtInt(n)} سال سابقه</span><span class="tag ${LVL[R.level][0]}">اطمینان داده: ${LVL[R.level][1]}</span></div>
+    <div class="infoline">${[G.industry, G.province, `سابقه: ${R.hist.map(h => fmtInt(h.year).replace(/٬/g, "")).join(" و ")}`, `نفرات قرارداد جدید: ${fmtInt(R.insuredNext)}`].filter(Boolean).map(x => `<span>${esc(x)}</span>`).join("")}</div></div>
+    <div class="actions"><button class="btn danger" type="button" id="removeBtn">حذف این مناقصه</button></div></div>
+  ${ptabs([["t-sum", "خلاصه"], ["t-bid", "قیمت شما"], ["t-hist", "سابقه"], ["t-cov", "پوشش‌ها"], ["t-dq", "کیفیت داده", nIss]])}
+  <div class="kpis anchor" id="t-sum">
+    ${kpi("خسارت برآوردی سال قرارداد", fmtNum(R.expected), `سرانه ${fmtNum(R.expected / R.insuredNext)}`)}
+    ${kpi("کف قیمت", fmtNum(R.floor), `زیر این، Loss Ratio بالای ${fmtPct(R.LR)}`)}
+    ${kpi("قیمت پیشنهادی", fmtNum(R.price), `سرانه ${fmtNum(R.price / R.insuredNext)} · حاشیه ${fmtPct(R.margin)}`, { accent: true })}
+    ${kpi("بیمه‌گر قبلی", R.priorScaled ? fmtNum(R.priorScaled) : "—", last.lr != null ? `Loss Ratio سال آخر ${fmtPct(last.lr)}` : "حق‌بیمه وارد نشده", { tag: lrTag(last.lr), subColor: last.lr != null ? lrStat(last.lr)[2] : null })}
+  </div>
+  <section class="panel anchor" id="t-bid">
+    <div class="panel-h"><h2>قیمت شما در مناقصه</h2><span class="small muted">عدد یا نوار را تغییر دهید؛ ریسک زنده حساب می‌شود</span></div>
+    <div class="panel-b" style="display:flex;flex-direction:column;gap:16px">
+      <div class="bidrow">
+        <label class="bidin" for="bidIn"><span class="small muted">قیمت پیشنهادی شما (کل، میلیون تومان)</span><input id="bidIn" type="number" step="10" min="0" value="${bid}" inputmode="numeric"></label>
+        <div class="live" id="liveLR"><span>Loss Ratio مورد انتظار</span><b></b></div>
+        <div class="live" id="liveRisk"><span>ریسک قیمت</span><b></b></div>
+      </div>
+      <div class="zone" style="--zg:${zg}">
+        ${marks.map(([v, l]) => `<span class="mk" style="inset-inline-start:${pos(v)}%"><span>${l}</span></span>`).join("")}
+        <input type="range" id="bidRange" min="${lo}" max="${hi}" step="10" value="${Math.min(hi, Math.max(lo, bid))}" aria-label="قیمت پیشنهادی">
+        <div class="ax"><span>${fmtNum(lo)}</span><span>${fmtNum(hi)}</span></div>
+      </div>
+      <div class="zlegend"><span><i style="background:var(--bad)"></i>ریسک زیاد: زیر ${fmtNum(R.floor85)}</span><span><i style="background:var(--mid)"></i>متوسط: ${fmtNum(R.floor85)} تا ${fmtNum(R.floor)}</span><span><i style="background:var(--good)"></i>کم: بالای ${fmtNum(R.floor)}</span><span class="plain">LR = ${fmtNum(R.expected)} ÷ قیمت</span></div>
+      <div class="tw"><table><thead><tr><th>قیمت مرجع</th><th>مبلغ</th><th class="desk-only">سرانه</th><th>LR</th><th>ریسک</th></tr></thead><tbody>
+        ${refs.map(([k, v]) => { const z = RISK[R.risk(v)[0]]; return `<tr><td>${k}</td><td class="nw">${fmtNum(v)}</td><td class="nw desk-only">${fmtNum(v / R.insuredNext)}</td><td class="nw">${fmtPct(R.expected / v)}</td><td><span class="tag ${z[3]}">ریسک ${z[1]}</span></td></tr>`; }).join("")}
       </tbody></table></div>
-      <div class="explain">${verdict}
-        <p class="muted">حاشیهٔ اطمینان ${fmtPct(R.margin)}${t.margin == null ? ` (خودکار: نوسان سابقه ${fmtPct(R.vol)}${n === 1 ? "، فقط یک سال سابقه" : ""}${R.claimsLast < 300 ? "، دادهٔ کم" : ""})` : " (دستی)"}. <label for="marginIn">تغییر: <input type="number" id="marginIn" min="0" max="50" step="1" value="${Math.round(R.margin * 100)}" style="width:64px;font:inherit;padding:2px 6px;border:1px solid var(--line);border-radius:6px;background:var(--paper);color:var(--ink)"> ٪</label></p></div>
+      ${msgs()}
+      <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center"><span class="nw">حاشیهٔ اطمینان</span><span class="tag ${t.margin == null ? "t-good" : "t-line"}">${t.margin == null ? "خودکار" : "دستی"}</span>${stepper("marginIn", Math.round(R.margin * 100), 1)}<span class="small muted">${t.margin == null ? `بر اساس نوسان سابقه ${fmtPct(R.vol)}${n === 1 ? "، فقط یک سال سابقه" : ""}${R.claimsLast < 300 ? "، دادهٔ کم" : ""}` : ""}</span></div>
     </div>
   </section>
-  <section id="t-hist">
-    <div class="sec-head"><h2>سابقهٔ گروه با بیمه‌گرهای قبلی</h2><span class="muted small">هزینهٔ سرانه به قیمت سال قرارداد</span></div>
-    ${(() => { const M = Math.max(...pcTr, R.expected / R.insuredNext, bid / R.insuredNext) * 1.1;
-      return barChart(R.hist.map((h, k) => [`هزینهٔ سرانهٔ ${h.year}`, pcTr[k], M, "var(--keep)", fmtNum(pcTr[k])])
-        .concat([["هزینهٔ سرانهٔ سال قرارداد", R.expected / R.insuredNext, M, "var(--accent)", fmtNum(R.expected / R.insuredNext)], ["حق‌بیمهٔ سرانهٔ پیشنهادی شما", bid / R.insuredNext, M, "var(--up)", fmtNum(bid / R.insuredNext)]])); })()}
-    <div class="panel scroll"><table class="grid"><thead><tr><th>سال</th><th>نفرات</th><th>خسارت پرداختی</th><th>سرانه</th><th>سرانه به قیمت سال قرارداد</th><th>وزن</th><th>حق‌بیمهٔ بیمه‌گر قبلی</th><th>Loss Ratio</th></tr></thead><tbody>
-      ${R.hist.map((h, k) => `<tr><td class="n"><b>${h.year}</b></td><td class="n">${fmtInt(h.insured)}</td><td class="n">${fmtNum(h.paid)}</td><td class="n">${fmtNum(h.pc)}</td><td class="n">${fmtNum(pcTr[k])}</td><td class="n">${fmtPct(w[k])}</td><td class="n">${fmtNum(h.premium)}</td><td class="n ${h.lr == null ? "" : h.lr >= 0.85 ? "bad" : h.lr >= 0.75 ? "warnc" : "ok"}">${h.lr != null ? fmtPct(h.lr) : "—"}</td></tr>`).join("")}
-      <tr class="hl"><td><b>سال قرارداد</b></td><td class="n">${fmtInt(R.insuredNext)}</td><td class="n"><b>${fmtNum(R.expected)}</b></td><td class="n" colspan="2"><b>${fmtNum(R.expected / R.insuredNext)}</b> (میانگین وزنی)</td><td></td><td class="n"><b>${fmtNum(R.price)}</b></td><td class="n">${fmtPct(R.LR / (1 + R.margin))}</td></tr>
-    </tbody></table></div>
-  </section>
-  <section id="t-cov">
-    <div class="sec-head"><h2>هر پوشش: مصرف و پیشنهاد برای قرارداد جدید</h2>
-      <div class="legend">${Object.keys(TLABEL).map(k => `<span class="chip ${TCHIP[k]}">${TLABEL[k]}</span>`).join("")}</div></div>
-    <div class="panel scroll"><table class="grid" style="min-width:860px"><thead><tr><th>پوشش</th>${hy.map(y => `<th>سرانه ${y}</th>`).join("")}<th>رشد</th><th>سرانهٔ برآوردی</th><th>سهم</th><th>سقف قبلی ← جدید</th><th>یافته</th></tr></thead><tbody>
-      ${rows.map(r => `<tr><td><b>${esc(r.cv.name)}</b><div class="muted small">${r.protect ? "حمایتی" : "روزمره"}</div></td>
-        ${r.per.map(p => `<td class="n">${fmtNum(p.pc)}</td>`).join("")}
-        <td class="n ${r.growth != null && r.growth > R.trend + 0.15 ? "warnc" : ""}">${r.growth != null ? fmtSignedPct(r.growth) : "—"}</td>
-        <td class="n"><b>${fmtNum(r.projPc)}</b></td><td class="n">${fmtPct(r.projPc / totalPc)}</td>
-        <td class="n">${fmtNum(r.oldCap)} ← ${fmtNum(r.cv.annualCap)}</td>
-        <td style="min-width:260px"><span class="chip ${TCHIP[r.d]}">${TLABEL[r.d]}</span><div class="small" style="margin-top:4px">${esc(r.why)}${r.capCost ? ` هزینهٔ تقریبی برای پوشش کامل این کمبود: ${fmtNum(r.capCost)} حق‌بیمه (${fmtSignedPct(r.capCost / R.price)}).` : ""}</div></td></tr>`).join("")}
-    </tbody></table></div>
-    <p class="muted small" style="margin:0">سرانه‌ها به میلیون تومان برای هر نفر در سال. سقف «جدید» همان سقفی است که در شیت تعهدات برای قرارداد جدید وارد شده؛ اگر از سقف قبلی بیشتر باشد، بخشی از کمبود سال قبل در قیمت لحاظ می‌شود.</p>
-  </section>
-  <section id="t-dq">
-    <div class="sec-head"><h2>کنترل کیفیت داده</h2><span class="muted small">${iss.length ? `${fmtInt(iss.length)} مورد` : "مشکلی پیدا نشد"}</span></div>
-    <ul class="todo panel">${iss.length ? iss.map(x => `<li><span class="sev ${x.sev}"></span><span class="t">${esc(x.text)}</span></li>`).join("") : '<li class="muted">مشکلی پیدا نشد.</li>'}</ul>
-  </section>`;
-  $("bidIn").onchange = e => { const v = parseFloat(e.target.value); if (!isNaN(v) && v > 0){ t.bid = v; render(); } };
-  $("marginIn").onchange = e => { const v = parseFloat(e.target.value); if (!isNaN(v) && v >= 0){ t.margin = v / 100; t.bid = null; render(); } };
+  <section class="panel"><div class="panel-h"><h2>قیمت چطور ساخته می‌شود</h2></div><div class="panel-b steps">
+    <div class="step"><span class="sn">۱</span><span>هزینهٔ سرانه در سال‌های سابقه</span><span class="sv plain">${R.hist.map(h => fmtNum(h.pc)).join(" · ")}</span></div>
+    <div class="step"><span class="sn">۲</span><span>به قیمت سال قرارداد (تورم ${fmtPct(R.trend)}) و میانگین وزنی (${w.map(x => fmtPct(x)).join(" / ")})</span><span class="sv plain">${pcTr.map(v => fmtNum(v)).join(" · ")} ← ${fmtNum(R.expected / R.insuredNext)}</span></div>
+    <div class="step"><span class="sn">۳</span><span>× ${fmtInt(R.insuredNext)} نفر = خسارت برآوردی</span><span class="sv plain">${fmtNum(R.expected)}</span></div>
+    <div class="step"><span class="sn">۴</span><span>÷ ${fmtPct(R.LR)} = کف قیمت؛ × (۱ + ${fmtPct(R.margin)}) = قیمت پیشنهادی</span><span class="sv plain">${fmtNum(R.floor)} ← ${fmtNum(R.price)}</span></div>
+  </div></section>
+  <section class="panel anchor" id="t-hist"><div class="panel-h"><h2>سابقه با بیمه‌گرهای قبلی</h2><span class="small muted">هزینهٔ سرانه به قیمت سال قرارداد</span></div>
+    <div class="panel-b hbars">${R.hist.map((h, k) => hb(`هزینهٔ سرانهٔ ${fmtInt(h.year).replace(/٬/g, "")}`, pcTr[k], "var(--keep)")).join("")}${hb("هزینهٔ سرانهٔ سال قرارداد", R.expected / R.insuredNext, "var(--brand)")}${hb("حق‌بیمهٔ سرانهٔ پیشنهادی شما", bid / R.insuredNext, "var(--good)")}</div>
+    <div class="tw"><table style="min-width:760px"><thead><tr><th>سال</th><th>نفرات</th><th>خسارت پرداختی</th><th>سرانه</th><th>سرانه به قیمت سال قرارداد</th><th>وزن</th><th>حق‌بیمهٔ بیمه‌گر قبلی</th><th>Loss Ratio</th></tr></thead><tbody>
+      ${R.hist.map((h, k) => { const s = lrStat(h.lr); return `<tr><td><b>${fmtInt(h.year).replace(/٬/g, "")}</b></td><td class="nw">${fmtInt(h.insured)}</td><td class="nw">${fmtNum(h.paid)}</td><td class="nw">${fmtNum(h.pc)}</td><td class="nw">${fmtNum(pcTr[k])}</td><td class="nw">${fmtPct(w[k])}</td><td class="nw">${fmtNum(h.premium)}</td><td class="nw">${s ? `<b style="color:${s[2]}">${fmtPct(h.lr)}</b> · <span class="small" style="color:${s[2]}">${s[1]}</span>` : "—"}</td></tr>`; }).join("")}
+      <tr class="hl"><td><b>سال قرارداد</b></td><td class="nw">${fmtInt(R.insuredNext)}</td><td class="nw"><b>${fmtNum(R.expected)}</b></td><td colspan="2" class="nw"><b>${fmtNum(R.expected / R.insuredNext)}</b> (میانگین وزنی)</td><td></td><td class="nw"><b>${fmtNum(R.price)}</b></td><td class="nw">${fmtPct(R.expected / R.price)}</td></tr>
+    </tbody></table></div></section>
+  <section class="panel anchor" id="t-cov"><div class="panel-h"><h2>هر پوشش: مصرف و پیشنهاد</h2><div class="hchips">${Object.keys(TLABEL).map(k => `<span class="tag ${TTAG[k]}">${TLABEL[k]}</span>`).join("")}</div></div>
+    <div class="tw"><table style="min-width:900px"><thead><tr><th>پوشش</th>${R.years.map(Y => `<th>سرانه ${fmtInt(Y.year).replace(/٬/g, "")}</th>`).join("")}<th>رشد</th><th>سرانهٔ برآوردی</th><th>سهم</th><th>سقف قبلی ← جدید</th><th>یافته</th></tr></thead><tbody>
+    ${rows.map(r => `<tr><td class="nm"><b>${esc(r.cv.name)}</b><span>${r.protect ? "حمایتی" : "روزمره"}</span></td>${r.per.map(p => `<td class="nw">${fmtNum(p.pc)}</td>`).join("")}
+      <td class="nw"${r.growth != null && r.growth > R.trend + 0.15 ? ' style="color:var(--mid-ink);font-weight:700"' : ""}>${r.growth != null ? fmtSignedPct(r.growth) : "—"}</td><td class="nw"><b>${fmtNum(r.projPc)}</b></td><td class="nw">${fmtPct(r.projPc / totalPc)}</td>
+      <td class="nw">${fmtNum(r.oldCap)} ← <b>${fmtNum(r.cv.annualCap)}</b></td>
+      <td style="min-width:260px"><span class="tag ${TTAG[r.d]}">${TLABEL[r.d]}</span><div class="small muted" style="margin-top:4px;line-height:1.7">${esc(r.why)}${r.capCost ? ` هزینهٔ تقریبی: ${fmtNum(r.capCost)} حق‌بیمه.` : ""}</div></td></tr>`).join("")}
+    </tbody></table></div></section>
+  <section class="panel anchor" id="t-dq"><div class="panel-h"><h2>کیفیت داده</h2></div><div class="panel-b">${dqList(R.issues)}</div></section>
+  <div class="mbar"><button class="btn primary" type="button" id="saveBid">ثبت این قیمت</button></div>`;
+
+  const setLive = v => {
+    const z = RISK[R.risk(v)[0]];
+    $("liveLR").className = "live " + z[0]; $("liveLR").querySelector("b").textContent = v > 0 ? fmtPct(R.expected / v) : "—";
+    $("liveRisk").className = "live " + z[0]; $("liveRisk").querySelector("b").textContent = z[1];
+    $("bidRange").style.setProperty("--zc", z[2]);
+  };
+  setLive(bid);
+  $("bidIn").oninput = e => { const v = parseFloat(e.target.value); if (v > 0){ setLive(v); $("bidRange").value = Math.min(hi, Math.max(lo, v)); } };
+  $("bidIn").onchange = e => { const v = parseFloat(e.target.value); if (v > 0){ t.bid = v; render(); } };
+  $("bidRange").oninput = e => { const v = +e.target.value; $("bidIn").value = v; setLive(v); };
+  $("bidRange").onchange = e => { t.bid = +e.target.value; render(); };
+  bindStepper("marginIn", v => { t.margin = Math.max(0, v) / 100; t.bid = null; render(); });
+  $("removeBtn").onclick = () => { state.tenders.splice(i, 1); if (!state.tenders.length) state.tenders = makeTenders(); go("tender"); };
+  $("saveBid").onclick = () => { t.bid = parseFloat($("bidIn").value) || bid; $("saveBid").textContent = "قیمت ثبت شد ✓"; };
 }
 
+/* ---------- other pages ---------- */
+function renderSettings(){
+  setHead("قواعد تحلیل", "تنظیمات");
+  const names = [...new Set(state.groups.concat(state.tenders).flatMap(g => g.data.coverages.map(c => c.name)))];
+  const F = [["sPressure", "pressureHigh", "فشار سقف برای «افزایش سقف» (٪)"], ["sMinor", "pressureMinor", "فشار سقف برای «افزایش جزئی» (٪)"], ["sLowUtil", "lowUtil", "مصرف کم: استفاده‌کنندگان کمتر از (٪ افراد)"],
+    ["sLowClaim", "lowClaim", "دادهٔ ناقص: سهم تعداد خسارت کمتر از (٪)"], ["sLowPaid", "lowPaid", "دادهٔ ناقص: سهم مبلغ خسارت کمتر از (٪)"], ["sTarget", "targetLR", "Loss Ratio هدف (٪)"]];
+  $("view").innerHTML = `<div class="ph"><div><h1>قواعد تحلیل</h1><span class="sub">هر تغییر همان لحظه روی همهٔ گروه‌ها و مناقصه‌ها اعمال می‌شود.</span></div></div>
+  <section class="panel"><div class="panel-h"><h2>آستانه‌ها</h2></div><div class="panel-b form">${F.map(([id, k, l]) => `<label class="field" for="${id}">${l}<input type="number" id="${id}" data-k="${k}" value="${state.settings[k]}" step="0.5"></label>`).join("")}</div></section>
+  <section class="panel"><div class="panel-h"><h2>پوشش‌های حمایتی</h2><span class="small muted">هرگز پیشنهاد حذف یا کاهش نمی‌گیرند</span></div><div class="panel-b checks">${names.map((n, k) => `<label for="p${k}"><input type="checkbox" id="p${k}" data-name="${esc(n)}" ${state.protectNames.has(n) ? "checked" : ""}>${esc(n)}</label>`).join("")}</div></section>`;
+  $("view").querySelectorAll("input[data-k]").forEach(el => el.onchange = () => { const v = parseFloat(el.value); if (!isNaN(v)){ state.settings[el.dataset.k] = v; renderSidebar(); } });
+  $("view").querySelectorAll("input[data-name]").forEach(el => el.onchange = () => { el.checked ? state.protectNames.add(el.dataset.name) : state.protectNames.delete(el.dataset.name); });
+}
+function renderReminders(){
+  setHead("یادآور تمدید", "تمدیدهای پیش رو");
+  const list = state.groups.map((g, i) => ({ i, g, r: renewalInfo(g.data.group.period) })).filter(x => x.r).sort((a, b) => a.r.days - b.r.days);
+  $("view").innerHTML = `<div class="ph"><div><h1>یادآور تمدید</h1><span class="sub">ترتیب بر اساس روزهای مانده. ارسال خودکار پیامک و ایمیل ۹۰، ۶۰ و ۳۰ روز قبل در نسخهٔ آنلاین می‌آید.</span></div></div>
+  <section class="panel"><div class="tw"><table><thead><tr><th>گروه</th><th>پایان قرارداد</th><th>روز مانده</th><th>یادآور</th></tr></thead><tbody>
+  ${list.map(x => { const d = x.r.days, tag = d < 0 ? ["t-bad", "گذشته"] : d <= 30 ? ["t-bad", "۳۰ روز"] : d <= 60 ? ["t-mid", "۶۰ روز"] : d <= 90 ? ["t-protect", "۹۰ روز"] : ["t-line", "بعداً"];
+    return `<tr class="click" tabindex="0" data-open="${x.i}"><td class="nm"><b>${esc(x.g.data.group.name)}</b><span>${esc(x.g.data.group.industry || "")}</span></td><td class="nw">${esc(x.r.end)}</td><td class="nw"><b>${d < 0 ? `${fmtInt(-d)} روز گذشته` : fmtInt(d)}</b></td><td><span class="tag ${tag[0]}">${tag[1]}</span></td></tr>`; }).join("")}
+  </tbody></table></div></section>`;
+}
+function renderSoon(k){
+  const [title, desc] = SOON[k] || ["به‌زودی", ""];
+  setHead(title, "به‌زودی");
+  $("view").innerHTML = `<div class="panel soon"><span class="ic"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1"/></svg></span>
+    <h1>${title}</h1><span class="tag t-mid">در نقشهٔ راه</span><p class="muted">${desc}</p>
+    <div class="actions" style="justify-content:center"><button class="btn primary" type="button" data-go="renewal">برگشت به پرتفوی</button></div></div>`;
+}
+function renderAdmin(){
+  setHead("کاربران و نقش‌ها", "پیش‌نمایش");
+  const B = [["کارگزاری نمونهٔ الف", "alef.broker", "سالانه", 214, "۴ از ۵", 38, true], ["کارگزاری نمونهٔ ب", "b.insure", "سالانه", 22, "۲ از ۳", 12, true], ["کارگزاری نمونهٔ پ", "pe.agency", "ماهانه", 9, "۱ از ۱", 4, true], ["کارگزاری نمونهٔ ت", "te.co", "سالانه", -6, "۳ از ۵", 21, false], ["کارگزاری نمونهٔ ث", "se.partners", "سالانه", 301, "۵ از ۱۰", 57, true]];
+  $("view").innerHTML = `<p class="preview-banner">پیش‌نمایش طراحی نسخهٔ آنلاین: داده‌ها ساختگی‌اند و دکمه‌ها هنوز کار نمی‌کنند. این پنل با راه‌اندازی سرور فعال می‌شود.</p>
+  <div class="ph"><div><h1>کاربران و اشتراک‌ها</h1><span class="sub">مدیریت کارگزاران مشترک، نام کاربری و تاریخ انقضا</span></div><div class="actions"><button class="btn" type="button" data-go="login">پیش‌نمایش صفحهٔ ورود</button><button class="btn primary" type="button" disabled>＋ کارگزار جدید</button></div></div>
+  <div class="kpis">${kpi("مشترک فعال", "۱۲", "۴ اشتراک ماهانه")}<div class="card kpi" style="background:var(--mid-bg);border-color:transparent"><span class="kl">رو به انقضا</span><span class="kv" style="color:var(--mid-ink)">۳</span><span class="ks">کمتر از ۳۰ روز</span></div>${kpi("کاربران", "۴۸", "در همهٔ کارگزاری‌ها")}${kpi("قراردادهای تحلیل‌شده", "۳۱۲", "از ابتدای سال")}</div>
+  <section class="panel"><div class="panel-h"><h2>کارگزاران</h2></div><div class="tw"><table style="min-width:820px"><thead><tr><th>کارگزاری</th><th>نوع اشتراک</th><th>انقضا</th><th>کاربر</th><th>قرارداد</th><th>وضعیت</th><th>اقدام</th></tr></thead><tbody>
+  ${B.map(([n, u, type, d, users, c, act]) => `<tr><td class="nm"><b>${n}</b><span class="ltr">${u}</span></td><td>${type}</td><td class="nw" style="${d < 0 ? "color:var(--bad);font-weight:700" : d < 30 ? "color:var(--mid-ink);font-weight:700" : ""}">${d < 0 ? `${fmtInt(-d)} روز گذشته` : `${fmtInt(d)} روز مانده`}</td><td class="nw">${users}</td><td class="nw">${fmtInt(c)}</td><td><span class="tag ${act ? "t-good" : "t-bad"}">${act ? "فعال" : "تعلیق"}</span></td><td class="nw"><button class="btn" type="button" disabled>تمدید</button> <button class="btn ${act ? "danger" : ""}" type="button" disabled>${act ? "تعلیق" : "فعال‌سازی"}</button></td></tr>`).join("")}
+  </tbody></table></div></section>`;
+}
+function renderLogin(){
+  setHead("ورود", "پیش‌نمایش");
+  $("view").innerHTML = `<p class="preview-banner">پیش‌نمایش صفحهٔ ورود نسخهٔ آنلاین؛ هنوز فعال نیست.</p>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:20px;max-width:820px">
+    <div class="panel panel-b" style="display:flex;flex-direction:column;gap:12px"><span class="logo">RI</span><h1>ورود به Renewal Intelligence</h1>
+      <label class="field" for="lu">نام کاربری یا ایمیل<input id="lu" type="text" class="ltr" disabled></label>
+      <label class="field" for="lp">رمز عبور<input id="lp" type="password" disabled></label>
+      <div style="display:flex;justify-content:space-between"><button class="link" type="button" disabled>نمایش رمز</button><button class="link" type="button" disabled>فراموشی رمز</button></div>
+      <button class="btn primary" type="button" disabled>ورود</button></div>
+    <div class="panel panel-b" style="display:flex;flex-direction:column;gap:12px;align-items:center;text-align:center"><h2>ورود دومرحله‌ای</h2><p class="muted small">کد ۶ رقمی ارسال‌شده به تلفن همراه را وارد کنید.</p>
+      <div class="otp">${"123456".split("").map((_, k) => `<input aria-label="رقم ${k + 1}" maxlength="1" disabled>`).join("")}</div>
+      <span class="small muted">ارسال دوباره تا <span class="ltr">0:42</span></span><button class="btn primary" type="button" disabled style="width:100%">تأیید</button></div>
+  </div>`;
+}
 
 /* ---------- shell ---------- */
+function setHead(title, sub){ $("mTitle").textContent = title; $("mSub").textContent = sub; }
 function render(){
-  const tenderSample = state.tenders.length > 0 && state.tenders.every(t => t.sample);
-  const sampleMode = state.mode === "tender" ? tenderSample : isSample();
-  $("sampleChip").textContent = state.mode === "tender" ? `${fmtInt(state.tenders.length)} مناقصهٔ نمونه` : "فایل شما + ۱۰ گروه نمونه";
-  $("sampleChip").hidden = !sampleMode; $("resetBtn").hidden = sampleMode;
-  $("removeBtn").textContent = state.mode === "tender" ? "حذف این مناقصه" : "حذف این گروه";
-  document.querySelectorAll(".tabs button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.mode === state.mode)));
+  const sm = state.mode === "tender" ? tenderSample() : isSample();
+  $("sampleChip").hidden = !sm; $("resetBtn").hidden = false; $("resetBtn").textContent = sm ? "بارگذاری دوبارهٔ نمونه‌ها" : "بازگشت به نمونه‌ها";
+  document.querySelectorAll(".seg button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.mode === state.mode)));
   if (state.errors.length){ $("error").innerHTML = state.errors.map(e => `<p>${esc(e)}</p>`).join(""); $("error").hidden = false; } else $("error").hidden = true;
-  if (state.mode === "tender"){ if (state.tview === "list" || !state.tenders.length) renderTenderList(); else renderTender(state.tview); }
-  else { $("backBtn").textContent = "→ همهٔ گروه‌ها"; if (state.view === "portfolio" || !state.groups.length) renderPortfolio(); else renderGroup(state.view); }
-  renderSettings();
+  const p = state.page;
+  if (p === "renewal") renderRenewal(); else if (p === "group") renderGroup(state.idx);
+  else if (p === "tender") renderTenderList(); else if (p === "tenderp") renderTender(state.idx);
+  else if (p === "settings") renderSettings(); else if (p === "reminders") renderReminders();
+  else if (p === "admin") renderAdmin(); else if (p === "login") renderLogin();
+  else if (p.startsWith("soon:")) renderSoon(p.slice(5));
+  renderSidebar();
+  $("fab").hidden = !["renewal","group","tender"].includes(p);
+  document.querySelectorAll(".bottomnav button").forEach(b => b.setAttribute("aria-current", String((b.dataset.bn === "home" && (p === "renewal" || p === "tender")) || (b.dataset.bn === "docs" && p === "soon:docs"))));
 }
-function openGroup(i){ if (state.mode === "tender") state.tview = i; else state.view = i; render(); window.scrollTo(0, 0); }
-document.querySelectorAll(".tabs button").forEach(b => b.addEventListener("click", () => { state.mode = b.dataset.mode; state.errors = []; render(); window.scrollTo(0, 0); }));
-
-function renderSettings(){
-  [["sPressure", "pressureHigh"], ["sMinor", "pressureMinor"], ["sLowUtil", "lowUtil"], ["sLowClaim", "lowClaim"], ["sLowPaid", "lowPaid"], ["sTarget", "targetLR"]].forEach(([id, k]) => {
-    const el = $(id); if (document.activeElement !== el) el.value = state.settings[k];
-    el.onchange = () => { const v = parseFloat(el.value); if (!isNaN(v)) { state.settings[k] = v; render(); } };
-  });
-  const names = [...new Set(state.groups.concat(state.tenders).flatMap(g => g.data.coverages.map(c => c.name)))];
-  $("protectList").innerHTML = names.map((n, k) => `<label for="p-${k}"><input type="checkbox" id="p-${k}" data-name="${esc(n)}" ${state.protectNames.has(n) ? "checked" : ""}>${esc(n)}</label>`).join("");
-  $("protectList").querySelectorAll("input").forEach(el => el.onchange = () => { el.checked ? state.protectNames.add(el.dataset.name) : state.protectNames.delete(el.dataset.name); render(); });
+function go(page, idx){
+  if (page === "tender" || page === "tenderp") state.mode = "tender"; else if (page === "renewal" || page === "group") state.mode = "renewal";
+  if (SOON[page]) page = "soon:" + page;
+  state.page = page; state.idx = idx ?? null; closeDrawer(); render(); window.scrollTo(0, 0);
 }
+function bindStepper(id, fn){ const el = $(id); if (el) el.onchange = () => { const v = parseFloat(el.value); if (!isNaN(v)) fn(v); }; }
+function openDrawer(){ $("sidebar").classList.add("open"); $("drawerBg").classList.add("open"); }
+function closeDrawer(){ $("sidebar").classList.remove("open"); $("drawerBg").classList.remove("open"); }
+function jump(id){ const el = $(id); if (el) el.scrollIntoView({ behavior: reduced() ? "auto" : "smooth", block: "start" });
+  document.querySelectorAll(".ptabs button").forEach(b => b.setAttribute("aria-current", String(b.dataset.jump === id))); }
 
-$("view").addEventListener("click", e => {
-  const j = e.target.closest("[data-jump]"); if (j){ const el = $(j.dataset.jump); if (el) el.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" }); return; }
-  const m = e.target.closest("[data-more]"); if (m){ state.allTodo[m.dataset.more] = true; render(); return; }
-  const t = e.target.closest("[data-open]"); if (t) openGroup(+t.dataset.open);
+document.addEventListener("click", e => {
+  const t = e.target;
+  const goEl = t.closest("[data-go]"); if (goEl){ go(goEl.dataset.go); return; }
+  const j = t.closest("[data-jump]"); if (j){ jump(j.dataset.jump); return; }
+  const m = t.closest("[data-more]"); if (m){ state.more[m.dataset.more] = true; render(); return; }
+  const mc = t.closest("[data-mcat]"); if (mc){ state.mcat = mc.dataset.mcat; render(); return; }
+  const so = t.closest("[data-sort]"); if (so){ state.sort = so.dataset.sort; render(); return; }
+  const st = t.closest("[data-step]"); if (st){ const el = $(st.dataset.step); el.value = (parseFloat(el.value) || 0) + parseFloat(st.dataset.d); el.dispatchEvent(new Event("change")); return; }
+  const a = t.closest("[data-ask]"); if (a){ ask(a.dataset.ask); return; }
+  if (t.closest("[data-close]") || t.id === "modal"){ $("modal").hidden = true; return; }
+  const o = t.closest("[data-open]"); if (o && $("view").contains(o)){ go(state.mode === "tender" ? "tenderp" : "group", +o.dataset.open); return; }
 });
-$("view").addEventListener("keydown", e => { const t = e.target.closest("tr[data-open], .bar-row[data-open]"); if (t && (e.key === "Enter" || e.key === " ")){ e.preventDefault(); openGroup(+t.dataset.open); } });
-$("backBtn").addEventListener("click", () => { if (state.mode === "tender") state.tview = "list"; else state.view = "portfolio"; render(); });
-$("removeBtn").addEventListener("click", () => {
-  if (state.mode === "tender"){
-    if (typeof state.tview !== "number") return;
-    state.tenders.splice(state.tview, 1); state.tview = "list";
-    if (!state.tenders.length) state.tenders = makeTenders();
-    return render();
-  }
-  if (typeof state.view !== "number") return;
-  state.groups.splice(state.view, 1); state.view = "portfolio";
-  if (!state.groups.length) setGroups(sampleGroups());
-  render();
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape"){ $("modal").hidden = true; closeDrawer(); }
+  const r = e.target.closest && e.target.closest("tr[data-open]");
+  if (r && (e.key === "Enter" || e.key === " ")){ e.preventDefault(); go(state.mode === "tender" ? "tenderp" : "group", +r.dataset.open); }
 });
-$("resetBtn").addEventListener("click", () => { if (state.mode === "tender"){ state.tenders = makeTenders(); state.tview = "list"; } else { setGroups(sampleGroups()); state.view = "portfolio"; } state.errors = []; render(); });
+document.addEventListener("submit", e => { if (e.target.id === "aiForm"){ e.preventDefault(); const q = $("aiQ").value.trim(); if (q) ask(q); } });
+document.querySelectorAll(".seg button").forEach(b => b.addEventListener("click", () => go(b.dataset.mode === "tender" ? "tender" : "renewal")));
+$("q").addEventListener("input", e => { state.q = e.target.value; if (state.page !== "renewal" && state.page !== "tender") go(state.mode); else render(); $("q").focus(); });
+$("menuBtn").onclick = openDrawer; $("drawerBg").onclick = closeDrawer;
+const toUrgent = () => { go("renewal"); setTimeout(() => { const el = $(innerWidth <= 860 ? "acm" : "ac"); if (el) el.scrollIntoView({ block: "start" }); state.mcat = "urgent"; }, 0); };
+$("bellBtn").onclick = toUrgent; $("bellBtnM").onclick = toUrgent;
+$("resetBtn").onclick = () => { if (state.mode === "tender"){ state.tenders = makeTenders(); addProtect(state.tenders); go("tender"); } else { setGroups(sampleGroups()); go("renewal"); } state.errors = []; render(); };
 $("uploadBtn").addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " "){ e.preventDefault(); $("file").click(); } });
+document.querySelectorAll(".bottomnav button").forEach(b => b.addEventListener("click", () => {
+  const k = b.dataset.bn;
+  if (k === "home") go(state.mode);
+  else if (k === "groups"){ go(state.mode); setTimeout(() => jump(state.mode === "tender" ? "view" : "groups"), 0); }
+  else if (k === "ai"){ if (state.page === "group") jump("g-ai"); else go("ai"); }
+  else if (k === "docs") go("docs");
+  else if (k === "more") openDrawer();
+}));
 
 function readFile(f){
   return new Promise(resolve => {
@@ -1308,30 +1636,20 @@ $("file").addEventListener("change", async e => {
   const res = await Promise.all(files.map(readFile));
   const ok = res.filter(r => r.ok).map(r => r.g);
   state.errors = res.filter(r => !r.ok).map(r => r.msg);
-  if (ok.length && state.mode === "tender"){
-    // Same rule as renewals: the first real tender replaces the samples.
-    const list = state.tenders.every(t => t.sample) ? [] : state.tenders.slice();
-    ok.forEach(g => { const k = list.findIndex(x => x.data.group.name === g.data.group.name); if (k >= 0) list[k] = g; else list.push(g); });
-    state.tenders = list;
-    ok.forEach(g => g.data.coverages.forEach(c => { if (PROTECT_RE.test(c.name)) state.protectNames.add(c.name); }));
-    state.tview = ok.length === 1 && list.length === 1 ? 0 : "list";
-  } else if (ok.length){
-    // The first real upload replaces the samples; later uploads add to the portfolio (same group id or name replaces).
-    let list = isSample() ? [] : state.groups.slice();
-    ok.forEach(g => {
-      const k = list.findIndex(x => (g.data.group.id && x.data.group.id === g.data.group.id) || x.data.group.name === g.data.group.name);
-      if (k >= 0) list[k] = g; else list.push(g);
-    });
-    const keepProtect = state.protectNames;
-    setGroups(list);
-    keepProtect.forEach(n => state.protectNames.add(n));
-    state.view = ok.length === 1 && list.length === 1 ? 0 : "portfolio";
+  if (ok.length){
+    // The first real upload replaces the samples; later uploads add (same id or name replaces).
+    const tender = state.mode === "tender";
+    const list = (tender ? tenderSample() : isSample()) ? [] : (tender ? state.tenders : state.groups).slice();
+    ok.forEach(g => { const k = list.findIndex(x => (g.data.group.id && x.data.group.id === g.data.group.id) || x.data.group.name === g.data.group.name); if (k >= 0) list[k] = g; else list.push(g); });
+    if (tender){ state.tenders = list; addProtect(list); } else setGroups(list);
+    if (ok.length === 1 && list.length === 1) return go(tender ? "tenderp" : "group", 0);
+    return go(tender ? "tender" : "renewal");
   }
   render();
 });
 
 setGroups(sampleGroups());
-state.tenders = makeTenders();
-state.tenders.forEach(t => t.data.coverages.forEach(c => { if (PROTECT_RE.test(c.name)) state.protectNames.add(c.name); }));
+state.tenders = makeTenders(); addProtect(state.tenders);
 render();
+
 </script>

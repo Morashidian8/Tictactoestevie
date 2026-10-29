@@ -88,7 +88,7 @@ def font_faces():
     return "".join(out)
 
 
-def app_document(customer, expiry_ms, expiry_label):
+def app_document(customer, expiry_ms, expiry_label, total_days):
     page = APP.read_text(encoding="utf-8")
     if CDN_XLSX not in page:
         raise SystemExit("Excel library tag not found in index.html; update CDN_XLSX.")
@@ -97,6 +97,11 @@ def app_document(customer, expiry_ms, expiry_label):
     # Offline copy: no Google Fonts; Vazirmatn is embedded below.
     page = re.sub(r'<link rel="(?:preconnect|stylesheet)" href="https://fonts\.g[^"]*"[^>]*>\n?', "", page)
     who = json.dumps(customer, ensure_ascii=False)
+    # License card in the sidebar; days left are counted on the customer's clock.
+    lic = f"""<script>window.RI_LICENSE = {{ name: {who}, until: {json.dumps(expiry_label, ensure_ascii=False)}, total: {total_days},
+  days: Math.min({total_days}, Math.max(0, Math.ceil(({expiry_ms} - Date.now()) / 86400000))) }};</script>
+<style>@media (max-width:860px){{#ri-mark{{left:auto!important;right:12px;bottom:calc(72px + env(safe-area-inset-bottom,0px))!important}}}}</style>
+"""
     guard = f"""
 <div id="ri-mark" style="position:fixed;left:12px;bottom:12px;z-index:50;font:500 12px Vazirmatn,Tahoma,sans-serif;background:rgba(14,106,91,.92);color:#fff;padding:4px 12px;border-radius:999px;pointer-events:none">مجوز: {customer} · معتبر تا {expiry_label}</div>
 <script>
@@ -107,7 +112,7 @@ console.info("Renewal Intelligence — licensed to " + {who});
     return ("<!DOCTYPE html><html lang=\"fa\" dir=\"rtl\"><head><meta charset=\"utf-8\">"
             "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">"
             f"<style>{font_faces()}body{{margin:0}}[hidden]{{display:none!important}}</style></head><body>"
-            + page + guard + "</body></html>")
+            + lic + page + guard + "</body></html>")
 
 
 LOADER = r"""<!DOCTYPE html>
@@ -270,7 +275,7 @@ def main():
     salt, iv = secrets.token_bytes(16), secrets.token_bytes(12)
     key = HKDF(algorithm=hashes.SHA256(), length=32, salt=salt, info=b"renewal-intel-usb").derive(secret)
     aad = f"{a.customer}|{issue_ms}|{expiry_ms}".encode()
-    ct = AESGCM(key).encrypt(iv, app_document(a.customer, expiry_ms, until).encode(), aad)
+    ct = AESGCM(key).encrypt(iv, app_document(a.customer, expiry_ms, until, a.days).encode(), aad)
 
     lock = {"id": secrets.token_hex(6), "name": a.customer, "issue": issue_ms, "expiry": expiry_ms,
             "untilLabel": until, "contact": a.contact, "salt": b64(salt), "iv": b64(iv), "ct": b64(ct)}
