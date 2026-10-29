@@ -169,6 +169,41 @@ button.isl:hover,.isl.click:hover{transform:translateY(-2px)}
 }
 @media (max-width:520px){.bento .isl.w2,.bento .isl.lst{grid-column:1 / -1} .bento .isl:not(.w2):not(.lst) .isl-h,.road .isl-h{flex-direction:column;align-items:flex-start;gap:8px} .road .isl{padding-top:40px} .isl .foot2{font-size:12px}}
 
+/* ---- two main jobs ---- */
+.missions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.mis{background:var(--surface);border:1px solid var(--line);border-radius:24px;padding:22px;display:flex;flex-direction:column;gap:14px;box-shadow:var(--shadow);min-width:0}
+.mis .num{width:30px;height:30px;border-radius:10px;background:linear-gradient(135deg,var(--brand),var(--brand2));color:#fff;display:grid;place-items:center;font-weight:800;flex:none}
+.mis-h{display:flex;gap:12px;align-items:flex-start}
+.mis-h h2{font-size:18px}
+.mis-h p{font-size:13px;color:var(--ink2);margin-top:2px}
+.drop{border:2px dashed var(--input-line);border-radius:18px;padding:20px;display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center;background:var(--surface2);cursor:pointer;transition:border-color .15s,background .15s}
+.drop:hover,.drop.over{border-color:var(--brand);background:var(--hl)}
+.drop .di{width:52px;height:52px;border-radius:16px;background:var(--soft);color:var(--brand);display:grid;place-items:center}
+.drop b{font-size:14.5px}
+.drop span{font-size:12.5px;color:var(--ink2)}
+.does{display:flex;flex-wrap:wrap;gap:6px}
+.does span{font-size:11.5px;font-weight:700;border-radius:99px;padding:2px 10px}
+.qbox{display:flex;gap:8px}
+.qbox input{flex:1;min-width:0;height:50px;border:1.5px solid var(--input-line);border-radius:14px;background:var(--surface2);padding:0 14px;font-size:15px}
+.qbox input:focus{outline:none;border-color:var(--brand);box-shadow:var(--focus)}
+.qbox .btn{height:50px;border-radius:14px;padding:0 18px}
+.qsug{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:12px;color:var(--ink2)}
+.qsug button{font-size:12px;padding:3px 11px;border-radius:99px;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer}
+.conn{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--ink2);background:var(--surface2);border:1px solid var(--line2);border-radius:12px;padding:8px 12px}
+.conn i{width:8px;height:8px;border-radius:50%;background:var(--mid);flex:none}
+.flow{display:flex;flex-direction:column;gap:4px;padding:6px 0}
+.fs{display:grid;grid-template-columns:30px 1fr;gap:12px;align-items:start;padding:8px 0;opacity:.45;transition:opacity .2s}
+.fs.on,.fs.ok,.fs.bad{opacity:1}
+.fs .fi{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;border:2px solid var(--line);font-weight:800;font-size:13px;color:var(--ink2);background:var(--surface)}
+.fs.on .fi{border-color:var(--brand);color:var(--brand);animation:pulse 1s infinite}
+.fs.ok .fi{background:var(--good);border-color:var(--good);color:#fff}
+.fs.bad .fi{background:var(--mid);border-color:var(--mid);color:#fff}
+.fs b{display:block;font-size:14px}
+.fs span{font-size:12.5px;color:var(--ink2)}
+@keyframes pulse{50%{box-shadow:0 0 0 6px var(--hl)}}
+@media (max-width:980px){.missions{grid-template-columns:1fr}}
+@media (max-width:860px){.mis{padding:18px;border-radius:22px} .qbox{flex-direction:column} .qbox input{flex:none} .qbox .btn{width:100%}}
+
 /* ---- page parts ---- */
 .ph{display:flex;flex-wrap:wrap;gap:12px 18px;align-items:flex-end;justify-content:space-between}
 .ph .date{font-size:12px;color:var(--ink3)}
@@ -370,9 +405,11 @@ tr.hl td{background:var(--hl)} tr.hl td:first-child{box-shadow:inset -3px 0 0 va
   .content{padding:16px max(16px,env(safe-area-inset-left,0px)) 110px max(16px,env(safe-area-inset-right,0px))}
   .foot{padding-bottom:96px}
   .bottomnav{display:flex;position:fixed;bottom:0;inset-inline:0;z-index:40;background:var(--surface);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px)}
-  .bottomnav button{flex:1;border:0;background:none;display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 0;min-height:56px;font-size:11.5px;font-weight:700;color:var(--ink2);cursor:pointer}
+  .bottomnav button{flex:1;border:0;background:none;display:flex;flex-direction:column;align-items:center;gap:3px;padding:7px 0 8px;min-height:64px;font-size:12px;font-weight:800;color:var(--ink);cursor:pointer}
+  .bottomnav svg{width:27px;height:27px;stroke-width:2.5;padding:3px 12px;box-sizing:content-box;border-radius:14px}
   .bottomnav button[aria-current="true"]{color:var(--brand)}
-  .fab{display:inline-flex;position:fixed;left:max(16px,env(safe-area-inset-left,0px));bottom:calc(72px + env(safe-area-inset-bottom,0px));z-index:41;height:50px;padding:0 18px;border-radius:25px;background:var(--brand);color:var(--brand-on);border:0;font-weight:800;align-items:center;gap:6px;box-shadow:var(--float);cursor:pointer}
+  .bottomnav button[aria-current="true"] svg{background:var(--soft)}
+  .fab{display:inline-flex;position:fixed;left:max(16px,env(safe-area-inset-left,0px));bottom:calc(82px + env(safe-area-inset-bottom,0px));z-index:41;height:50px;padding:0 18px;border-radius:25px;background:var(--brand);color:var(--brand-on);border:0;font-weight:800;align-items:center;gap:6px;box-shadow:var(--float);cursor:pointer}
   .mobile-only{display:block} .desk-only{display:none}
   h1{font-size:17px}
   .ptabs{top:62px}
@@ -381,7 +418,7 @@ tr.hl td{background:var(--hl)} tr.hl td:first-child{box-shadow:inset -3px 0 0 va
   .bidrow{grid-template-columns:1fr 1fr} .bidin{grid-column:1 / -1}
   .form{grid-template-columns:1fr}
   .hbar{grid-template-columns:110px 1fr 50px}
-  .mbar{position:fixed;bottom:calc(64px + env(safe-area-inset-bottom,0px));inset-inline:0;z-index:39;padding:10px 16px;background:var(--surface);border-top:1px solid var(--line)}
+  .mbar{position:fixed;bottom:calc(72px + env(safe-area-inset-bottom,0px));inset-inline:0;z-index:39;padding:10px 16px;background:var(--surface);border-top:1px solid var(--line)}
   .mbar .btn{width:100%;height:50px}
   .content:has(.mbar){padding-bottom:180px}
 }
@@ -1118,11 +1155,9 @@ const DCOLOR = { increase: "var(--inc)", minor: "var(--minor)", keep: "var(--kee
 const ORDER = { increase: 0, minor: 1, reduce: 2, remove: 3, protect: 4, keep: 5 };
 const LVL = { low: ["t-bad", "پایین"], mid: ["t-mid", "متوسط"], high: ["t-good", "بالا"] };
 const SCN = [
-  ["current", "سقف‌های فعلی", "بیمه‌نامه بدون تغییر، فقط با رشد تعرفه"],
   ["economy", "اقتصادی", "فقط پوشش‌های پرفشار بالا؛ کم‌مصرف‌ها کم یا حذف"],
   ["balanced", "متعادل", "همهٔ پیشنهادهای بخش پوشش‌ها"],
   ["premium", "ممتاز", "افزایش‌ها ۲۰٪ بیشتر، بقیه هم‌پای تعرفه؛ بدون کاهش"],
-  ["budget", "در سقف بودجه", "کاهش‌ها، سپس افزایش‌ها به ترتیب فشار تا سقف بودجه"],
 ];
 const TLABEL = { increase: "سقف بالاتر = امتیاز", growth: "رشد سریع", reduce: "کاهش سقف", remove: "کاندید حذف", protect: "حفظ پوشش حمایتی", keep: "عادی" };
 const TTAG = { increase: "t-inc", growth: "t-reduce", reduce: "t-reduce", remove: "t-remove", protect: "t-protect", keep: "t-keep" };
@@ -1241,6 +1276,21 @@ function renderHome(){
       <div><span>Loss Ratio پرتفوی</span><b>${fmtPct(plr)}${st ? `<span class="pill">${st[1]}</span>` : ""}</b><small>هدف ${fmtPct(t)}</small></div>
     </div>
   </section>
+  <div class="sec-t"><h2>دو کار اصلی</h2><span class="small muted">فایل بدهید یا نام سازمان را بزنید؛ بقیه را اپ انجام می‌دهد.</span></div>
+  <div class="missions">
+    <section class="mis">
+      <div class="mis-h"><span class="num">۱</span><div><h2>تحلیل تمدید قرارداد</h2><p>فایل اکسل قرارداد فعلی را بدهید؛ برای تک‌تک پوشش‌ها می‌گوییم چه کنید و حق‌بیمهٔ لازم چقدر است.</p></div></div>
+      <label class="drop" id="dropR" for="file"><span class="di"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg></span><b>فایل اکسل را اینجا بکشید یا بزنید</b><span>خسارت‌ها، سقف پوشش‌ها و حق‌بیمه · چند فایل با هم هم می‌شود</span></label>
+      <div class="does"><span class="t-inc">پرمصرف و زیر فشار سقف ← افزایش</span><span class="t-reduce">کم‌مصرف ← کاهش</span><span class="t-remove">بدون مصرف ← حذف</span><span class="t-protect">حمایتی ← حفظ</span><span class="t-keep">مورد استثنایی ← چشم‌پوشی</span></div>
+      <button class="link" type="button" data-go="renewal" style="align-self:flex-start">یا تحلیل ${fmtInt(all.length)} گروه نمونه را ببینید ←</button>
+    </section>
+    <section class="mis">
+      <div class="mis-h"><span class="num">۲</span><div><h2>برآورد قیمت مناقصه</h2><p>نام سازمان را بزنید؛ سابقهٔ خسارتش را می‌گیریم، تحلیل می‌کنیم و قیمتی می‌دهیم که Loss Ratio زیر ${fmtPct(t)} بماند.</p></div></div>
+      <form class="qbox" id="tenderQ"><input id="tq" placeholder="نام سازمان یا شرکت، مثلاً شرکت گاز" autocomplete="off" aria-label="نام سازمان یا شرکت"><button class="btn primary" type="submit">دریافت سابقه و برآورد</button></form>
+      <div class="qsug">امتحان کنید: ${tenders.map(x => `<button type="button" data-tq="${esc(short(x.R.group.name).replace(/^مناقصهٔ\s*/, ""))}">${esc(short(x.R.group.name).replace(/^مناقصهٔ\s*/, ""))}</button>`).join("")}</div>
+      <div class="conn"><i></i><span>داده‌پردازان: اتصال مستقیم در فاز آخر پروژه. تا آن موقع سابقه از دادهٔ نمونه یا فایل اکسل خروجی داده‌پردازان خوانده می‌شود.</span></div>
+    </section>
+  </div>
   <div class="sec-t"><h2>میز کار</h2><span class="small muted">هر جزیره یک بخش از برنامه است؛ روی آن بزنید تا باز شود.</span></div>
   <div class="bento">
     <div class="isl w2 h2 click" data-go="renewal" role="link" tabindex="0">
@@ -1282,6 +1332,10 @@ function renderHome(){
     <button class="isl dim" type="button" data-go="history"><span class="badge2">به‌زودی</span>${islHead("clock", "تاریخچهٔ قراردادها", "سال‌به‌سال هر گروه", false)}</button>
   </div>`;
   $("homeAiG").onchange = e => { state.homeAi = +e.target.value; render(); };
+  const dz = $("dropR");
+  dz.ondragover = e => { e.preventDefault(); dz.classList.add("over"); };
+  dz.ondragleave = () => dz.classList.remove("over");
+  dz.ondrop = e => { e.preventDefault(); dz.classList.remove("over"); state.mode = "renewal"; handleFiles([...e.dataTransfer.files]); };
 }
 
 /* ---------- chrome ---------- */
@@ -1396,7 +1450,7 @@ function renderGroup(i){
       <td><span class="tag ${fits ? "t-good" : "t-bad"}">${fits ? "در بودجه" : "بیش از بودجه"}</span></td></tr>`; }).join("");
   const budgetText = !B.fits ? `با بودجهٔ ${fmtSignedPct(S.budgetPct)} حتی سقف‌های فعلی پوشش داده نمی‌شوند؛ کسری حدود ${fmtNum(B.paid - B.allowed)}.`
     : B.picked.length ? `با این بودجه ${B.picked.join(" و ")} جا می‌شوند${B.skipped.length ? `؛ ${B.skipped.join(" و ")} نه` : ""}.` : "با این بودجه هیچ افزایشی جا نمی‌شود.";
-  const capRows = A.rows.map((r, ri) => `<tr><td><b>${esc(r.cv.name)}</b></td>${["current", "economy", "balanced", "premium", "budget"].map(k => { const c = S[k].caps[ri];
+  const capRows = A.rows.map((r, ri) => `<tr><td><b>${esc(r.cv.name)}</b></td>${["current", "economy", "balanced", "premium"].map(k => { const c = S[k].caps[ri];
     if (c.removed) return '<td><span class="tag t-remove">حذف</span></td>';
     const ch = k !== "current" && (c.annual !== r.cv.annualCap || c.perCase !== r.cv.perCase);
     return `<td class="nw"${ch ? ' style="font-weight:800;color:var(--brand)"' : ""}>${fmtNum(c.annual)}${c.perCase != null && c.perCase !== c.annual ? `<div class="small muted">هر مورد ${fmtNum(c.perCase)}</div>` : ""}</td>`; }).join("")}</tr>`).join("");
@@ -1425,11 +1479,11 @@ function renderGroup(i){
     <section class="panel anchor" id="g-scn">
       <div class="panel-h"><h2>سناریوهای تمدید</h2><div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><span class="small nw">بودجهٔ کارفرما (٪)</span>${stepper("budgetIn", Math.round(S.budgetPct * 100), 5)}<span class="small muted">${A.complete ? `سقف خسارت مجاز با Loss Ratio هدف ${fmtPct(A.targetLR)}: <b>${fmtNum(B.allowed)}</b>` : `دادهٔ ناقص؛ سقف رشد خسارت: <b>${fmtNum(B.allowed)}</b>`}</span></div></div>
       <div class="tw"><table style="min-width:700px"><thead><tr><th>سناریو</th><th>خسارت برآوردی</th><th>تغییر نسبت به امسال</th><th>پوشش نیاز کارکنان</th><th>حق‌بیمهٔ لازم</th><th>تغییر حق‌بیمه</th><th>بودجه</th></tr></thead><tbody>${scnRows}</tbody></table></div>
-      <div class="panel-b"><p class="sumline">${esc(budgetText)}</p></div>
+      <div class="panel-b" style="display:flex;flex-direction:column;gap:8px"><p class="small muted">مبنای مقایسه: اگر سقف‌ها همین بمانند، خسارت برآوردی ${fmtNum(S.current.paid)} و تغییر حق‌بیمهٔ لازم ${S.current.premiumChange != null ? fmtSignedPct(S.current.premiumChange) : "—"} است.</p><p class="sumline">${esc(budgetText)}</p></div>
     </section>
     <section class="panel anchor" id="g-caps">
       <div class="panel-h"><h2>جدول سقف‌ها <span class="small muted">برگهٔ مذاکره</span></h2><span class="small muted">سقف سالانه در هر سناریو؛ تغییرها پررنگ</span></div>
-      <div class="tw"><table style="min-width:620px"><thead><tr><th>پوشش</th><th>فعلی</th><th>اقتصادی</th><th>متعادل</th><th>ممتاز</th><th>در سقف بودجه</th></tr></thead><tbody>${capRows}</tbody></table></div>
+      <div class="tw"><table style="min-width:620px"><thead><tr><th>پوشش</th><th>فعلی (امسال)</th><th>اقتصادی</th><th>متعادل</th><th>ممتاز</th></tr></thead><tbody>${capRows}</tbody></table></div>
     </section>
     <section class="anchor" id="g-cov" style="display:flex;flex-direction:column;gap:12px">
       <div class="ph"><h2>پوشش‌ها</h2><div class="hchips">${Object.keys(DLABEL).map(k => `<span class="tag ${DTAG[k]}">${DLABEL[k]}</span>`).join("")}</div></div>
@@ -1719,7 +1773,7 @@ function render(){
   else if (p === "admin") renderAdmin(); else if (p === "login") renderLogin();
   else if (p.startsWith("soon:")) renderSoon(p.slice(5));
   renderSidebar();
-  $("fab").hidden = !["home","renewal","group","tender"].includes(p);
+  $("fab").hidden = !["renewal","group","tender"].includes(p);
   const bn = { home: ["home"], renewal: ["renewal", "group", "reminders"], tender: ["tender", "tenderp"], ai: ["soon:ai"], settings: ["settings"] };
   document.querySelectorAll(".bottomnav button").forEach(b => b.setAttribute("aria-current", String((bn[b.dataset.bn] || []).includes(p))));
 }
@@ -1742,6 +1796,8 @@ function jump(id){ const el = $(id); if (el) el.scrollIntoView({ behavior: reduc
 document.addEventListener("click", e => {
   const t = e.target;
   if (t.closest("[data-theme-toggle]")){ toggleTheme(); return; }
+  const tq = t.closest("[data-tq]"); if (tq){ $("tq").value = tq.dataset.tq; tenderSearch(tq.dataset.tq); return; }
+  if (t.closest("[data-tupload]")){ $("modal").hidden = true; state.mode = "tender"; $("file").click(); return; }
   const tn = t.closest("[data-tender]"); if (tn){ go("tenderp", +tn.dataset.tender); return; }
   const op0 = t.closest("[data-open]"); if (op0 && state.page === "home"){ go("group", +op0.dataset.open); return; }
   const cat = t.closest("[data-cat]"); if (cat){ state.mcat = cat.dataset.cat; state.more[cat.dataset.cat] = true; go("renewal"); setTimeout(() => { const el = $(innerWidth <= 860 ? "acm" : "ac"); if (el) el.scrollIntoView({ block: "start" }); }, 0); return; }
@@ -1765,6 +1821,7 @@ document.addEventListener("keydown", e => {
 });
 document.addEventListener("submit", e => {
   if (e.target.id === "aiForm"){ e.preventDefault(); const q = $("aiQ").value.trim(); if (q) ask(q); }
+  if (e.target.id === "tenderQ"){ e.preventDefault(); tenderSearch($("tq").value); }
   if (e.target.id === "homeAsk"){ e.preventDefault(); const q = $("homeAiQ").value.trim(), gi = +$("homeAiG").value; if (q){ go("group", gi); ask(q); } }
 });
 $("q").addEventListener("input", e => { state.q = e.target.value; if (state.page !== "renewal" && state.page !== "tender") go(state.mode === "tender" ? "tender" : "renewal"); else render(); $("q").focus(); });
@@ -1777,6 +1834,53 @@ document.querySelectorAll(".bottomnav button").forEach(b => b.addEventListener("
   if (k === "ai"){ if (state.page === "group") jump("g-ai"); else { go("home"); setTimeout(() => { const el = $("homeAsk"); if (el){ el.scrollIntoView({ block: "center" }); $("homeAiQ").focus(); } }, 0); } }
   else go(k);
 }));
+
+/* ---------- smart flows ---------- */
+const wait = ms => new Promise(r => setTimeout(r, reduced() ? 0 : ms));
+async function runFlow(title, sub, steps){
+  $("modal").innerHTML = `<div class="box" role="dialog" aria-modal="true" aria-label="${esc(title)}"><div class="panel-h"><h2>${esc(title)}</h2><button class="iconbtn" type="button" data-close aria-label="بستن">✕</button></div>
+    <div class="panel-b"><p class="small muted">${sub}</p><div class="flow">${steps.map((x, k) => `<div class="fs" id="fs${k}"><span class="fi">${fmtInt(k + 1)}</span><div><b>${esc(x.t)}</b><span></span></div></div>`).join("")}</div><div id="flowEnd"></div></div></div>`;
+  $("modal").hidden = false;
+  for (let k = 0; k < steps.length; k++){
+    const el = $("fs" + k); el.className = "fs on"; await wait(420);
+    const r = steps[k].run();
+    if (r && r.stop){ el.className = "fs bad"; el.querySelector(".fi").textContent = "!"; el.querySelector(":scope > div > span").textContent = r.text; $("flowEnd").innerHTML = r.html || ""; return false; }
+    el.className = "fs ok"; el.querySelector(".fi").textContent = "✓"; el.querySelector(":scope > div > span").textContent = r || "";
+  }
+  await wait(500); $("modal").hidden = true; return true;
+}
+const issueText = iss => { const c = iss.filter(x => x.sev === "crit").length, w = iss.filter(x => x.sev === "warn").length; return c + w ? `${c ? `${fmtInt(c)} مورد بحرانی، ` : ""}${fmtInt(w)} هشدار؛ جزئیات در «کیفیت داده»` : "مشکلی پیدا نشد"; };
+function renewalFlow(list){
+  const an = list.map(g => compute(Object.assign({ budget: null }, g)));
+  const cnt = {}; an.forEach(({ A }) => A.rows.forEach(r => { cnt[r.d] = (cnt[r.d] || 0) + 1; }));
+  return runFlow("تحلیل تمدید", list.length > 1 ? `${fmtInt(list.length)} فایل` : esc(list[0].file), [
+    { t: "خواندن فایل", run: () => list.map(g => g.data.group.name).join("، ") },
+    { t: "شناسایی پوشش‌ها، سقف‌ها و خسارت‌ها", run: () => `${fmtInt(sum(list, g => g.data.coverages.length))} پوشش · ${fmtInt(sum(list, g => g.data.claims.length))} خسارت` },
+    { t: "کنترل کیفیت داده", run: () => issueText(an.flatMap(x => x.A.issues)) },
+    { t: "تحلیل مصرف هر پوشش", run: () => ["increase", "minor", "reduce", "remove", "protect"].filter(k => cnt[k]).map(k => `${fmtInt(cnt[k])} ${DLABEL[k]}`).join("، ") || "همه بدون تغییر" },
+    { t: "ساخت ۳ سناریو و مقایسه با بودجه", run: () => list.length === 1 && an[0].S.balanced.premiumChange != null ? `سناریوی متعادل: تغییر حق‌بیمه ${fmtSignedPct(an[0].S.balanced.premiumChange)}` : "آماده" },
+  ]);
+}
+function tenderSteps(R){
+  return [
+    { t: "دریافت سابقهٔ خسارت", run: () => `${fmtInt(R.hist.length)} سال سابقه · ${R.hist.map(h => fmtInt(h.year).replace(/٬/g, "")).join(" و ")}` },
+    { t: "کنترل کیفیت داده", run: () => issueText(R.issues) },
+    { t: "برآورد هزینهٔ سال قرارداد", run: () => `${fmtInt(R.insuredNext)} نفر · خسارت برآوردی ${fmtNum(R.expected)} (تورم ${fmtPct(R.trend)})` },
+    { t: "قیمت پیشنهادی و ریسک", run: () => `${fmtNum(R.price)} میلیون تومان · Loss Ratio ${fmtPct(R.expected / R.price)}` },
+  ];
+}
+const STOP = new Set(["شرکت", "سازمان", "مناقصه", "مناقصهٔ", "مناقصه‌ی", "اداره", "کل", "گروه", "و", "بیمه", "متقاضی"]);
+async function tenderSearch(q){
+  state.tq = q.trim(); if (!state.tq) return;
+  const words = norm(state.tq).split(/\s+/).filter(w => w.length > 1 && !STOP.has(w));
+  const i = state.tenders.findIndex(t => words.length && words.some(w => norm(t.data.group.name).includes(w)));
+  const R = i >= 0 ? computeTender(state.tenders[i]) : null;
+  const ok = await runFlow(`برآورد قیمت مناقصه: ${state.tq}`, "اتصال مستقیم به داده‌پردازان در فاز آخر فعال می‌شود؛ در این نسخه سابقه از دادهٔ نمونهٔ اپ یا فایل اکسل خوانده می‌شود.", [
+    { t: "جست‌وجو در داده‌پردازان", run: () => R ? `پیدا شد در دادهٔ نمونه: ${short(R.group.name)}` : { stop: true, text: `«${state.tq}» در دادهٔ نمونه نیست و اتصال مستقیم هنوز برقرار نیست.`,
+      html: `<div style="display:flex;flex-direction:column;gap:10px;margin-top:8px"><p class="small">خروجی اکسل سابقهٔ خسارت این سازمان را از داده‌پردازان بگیرید و اینجا بدهید؛ بقیهٔ مراحل خودکار انجام می‌شود.</p><button class="btn primary" type="button" data-tupload>بارگذاری فایل سابقهٔ «${esc(state.tq)}»</button></div>` } },
+  ].concat(R ? tenderSteps(R) : []));
+  if (ok) go("tenderp", i);
+}
 
 function readFile(f){
   return new Promise(resolve => {
@@ -1795,24 +1899,31 @@ function readFile(f){
     rd.readAsArrayBuffer(f);
   });
 }
-$("file").addEventListener("change", async e => {
-  const files = [...e.target.files]; e.target.value = "";
+async function handleFiles(files){
   if (!files.length) return;
   if (typeof XLSX === "undefined"){ state.errors = ["کتابخانهٔ خواندن اکسل بارگذاری نشد؛ اتصال اینترنت را بررسی کنید و صفحه را دوباره باز کنید."]; return render(); }
   const res = await Promise.all(files.map(readFile));
   const ok = res.filter(r => r.ok).map(r => r.g);
   state.errors = res.filter(r => !r.ok).map(r => r.msg);
-  if (ok.length){
-    // The first real upload replaces the samples; later uploads add (same id or name replaces).
-    const tender = state.mode === "tender";
-    const list = (tender ? tenderSample() : isSample()) ? [] : (tender ? state.tenders : state.groups).slice();
-    ok.forEach(g => { const k = list.findIndex(x => (g.data.group.id && x.data.group.id === g.data.group.id) || x.data.group.name === g.data.group.name); if (k >= 0) list[k] = g; else list.push(g); });
-    if (tender){ state.tenders = list; addProtect(list); } else setGroups(list);
-    if (ok.length === 1 && list.length === 1) return go(tender ? "tenderp" : "group", 0);
-    return go(tender ? "tender" : "renewal");
+  if (!ok.length) return render();
+  const tender = state.mode === "tender";
+  if (tender && state.tq && ok.length === 1 && ok[0].data.group.name === ok[0].file.replace(/\.[^.]+$/, "")) ok[0].data.group.name = state.tq;
+  // The first real upload replaces the samples; later uploads add (same id or name replaces).
+  const list = (tender ? tenderSample() : isSample()) ? [] : (tender ? state.tenders : state.groups).slice();
+  ok.forEach(g => { const k = list.findIndex(x => (g.data.group.id && x.data.group.id === g.data.group.id) || x.data.group.name === g.data.group.name); if (k >= 0) list[k] = g; else list.push(g); });
+  if (tender){
+    addProtect(ok);
+    let R; try { R = computeTender(ok[0]); } catch (err){ state.errors.push(`«${ok[0].file}» تحلیل نشد: ${err.message}`); return render(); }
+    state.tenders = list;
+    await runFlow(`برآورد قیمت مناقصه: ${ok[0].data.group.name}`, esc(ok[0].file), tenderSteps(R));
+    return go(ok.length === 1 ? "tenderp" : "tender", ok.length === 1 ? list.indexOf(ok[0]) : null);
   }
-  render();
-});
+  addProtect(ok);
+  await renewalFlow(ok);
+  setGroups(list);
+  return ok.length === 1 ? go("group", list.findIndex(x => x.file === ok[0].file && x.data === ok[0].data)) : go("renewal");
+}
+$("file").addEventListener("change", e => { const files = [...e.target.files]; e.target.value = ""; handleFiles(files); });
 
 setGroups(sampleGroups());
 state.tenders = makeTenders(); addProtect(state.tenders);
