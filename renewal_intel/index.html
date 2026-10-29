@@ -537,19 +537,21 @@ function makeSamples(today){
     ["C01", "بستری", 0.035, 1.2, 55], ["C02", "جراحی", 0.025, 1.1, 140], ["C03", "پاراکلینیک", 0.22, 2, 4],
     ["C04", "دارو", 0.28, 3, 2.4], ["C05", "دندانپزشکی", 0.11, 1.5, 8], ["C06", "عینک", 0.05, 1, 4],
     ["C07", "زایمان", 0.012, 1, 55], ["C08", "آمبولانس", 0.002, 1, 3],
+    // Elective covers: every group shows some that are unused (drop) or barely used (shrink).
+    ["C09", "فیزیوتراپی", 0.03, 2, 1.5], ["C10", "مشاوره روانشناسی", 0.012, 2, 1.2], ["C11", "لیزیک", 0, 1, 28],
   ];
   // Default caps are roomy, so a group only shows cap pressure where its story puts it.
-  const CAPS = { C01: [600, 600], C02: [900, 900], C03: [60, 25], C04: [40, 15], C05: [40, 40], C06: [12, 12], C07: [120, 120], C08: [10, 10] };
-  const RANGE = { C01: [400, 2000], C02: [500, 2500], C03: [30, 150], C04: [15, 100], C05: [10, 60], C06: [3, 20], C07: [50, 250], C08: [5, 30] };
+  const CAPS = { C01: [600, 600], C02: [900, 900], C03: [60, 25], C04: [40, 15], C05: [40, 40], C06: [12, 12], C07: [120, 120], C08: [10, 10], C09: [20, 5], C10: [30, 30], C11: [40, 40] };
+  const RANGE = { C01: [400, 2000], C02: [500, 2500], C03: [30, 150], C04: [15, 100], C05: [10, 60], C06: [3, 20], C07: [50, 250], C08: [5, 30], C09: [5, 40], C10: [5, 40], C11: [20, 80] };
   const TARIFFS = [["ویزیت", 0.8, 1, 0.75], ["MRI", 5.5, 7, 0.9], ["CT", 4, 5, 0.9], ["آزمایش", 2.5, 3.2, 0.85], ["جراحی", 100, 130, 0.8], ["دارو", 1, 1.25, 0.95], ["دندان", 2, 2.6, 0.9]];
 
   const groups = [
     { id: "S-01", name: "نمونه: پخش دارو البرز", industry: "توزیع", province: "البرز", days: 18, parts: [140, 95, 80, 0], age: 36, female: 0.42, budget: 0.15, lr: 0.62, priorLr: 0.6,
       freq: { C06: 0, C05: 0.16 }, sev: { C07: 0.6 }, caps: { C05: [10, 10], C07: [200, 200] } },
     { id: "S-02", name: "نمونه: بانک شهر", industry: "مالی", province: "تهران", days: 45, parts: [1300, 980, 870, 50], age: 44, female: 0.47, budget: 0.1, lr: 0.55, priorLr: 0.58,
-      freq: { C08: 0, C07: 0.014 }, sev: { C07: 1.6 }, caps: { C07: [70, 70] } },
+      freq: { C08: 0, C07: 0.014, C09: 0 }, sev: { C07: 1.6 }, caps: { C07: [70, 70] } },
     { id: "S-03", name: "نمونه: پتروشیمی بندر", industry: "صنعتی", province: "بوشهر", days: 75, parts: [620, 450, 310, 20], age: 41, female: 0.18, budget: 0.2, lr: 1.04, priorLr: 0.92,
-      sev: { C01: 1.3 }, outliers: [{ cov: "C02", approved: 2400, service: "جراحی قلب باز" }] },
+      sev: { C01: 1.3 }, caps: { C01: [90, 90], C02: [1300, 1300] }, outliers: [{ cov: "C02", approved: 2400, service: "جراحی قلب باز" }] },
     { id: "S-04", name: "نمونه: شرکت نرم‌افزاری آوا", industry: "فناوری", province: "تهران", days: 140, parts: [260, 110, 50, 0], age: 31, female: 0.44, budget: 0.3, lr: 0.74, priorLr: 0.7,
       freq: { C07: 0.05, C05: 0.2 }, sev: { C07: 1.3 }, caps: { C07: [50, 50], C05: [12, 12] } },
     { id: "S-05", name: "نمونه: دانشگاه علوم پایه", industry: "آموزشی", province: "اصفهان", days: 260, parts: [900, 640, 520, 40], age: 47, female: 0.39, budget: 0.35, lr: 0.74, priorLr: 0.71,
@@ -558,11 +560,11 @@ function makeSamples(today){
     { id: "S-06", name: "نمونه: معدن مس کرمان", industry: "معدن", province: "کرمان", days: 7, parts: [700, 180, 60, 0], age: 39, female: 0.05, budget: 0.25, lr: 0.88, priorLr: 0.8,
       trendK: 1.4, freq: { C08: 0.03, C07: 0.004 }, sev: { C08: 3 }, caps: { C08: [10, 10] } },
     { id: "S-07", name: "نمونه: هلدینگ خودروسازی", industry: "خودروسازی", province: "تهران", days: 120, parts: [2600, 1900, 1450, 50], age: 42, female: 0.12, budget: 0.3, lr: 0.79, priorLr: 0.76,
-      caps: { C03: [40, 12] } },
+      caps: { C03: [40, 12], C07: [70, 70] } },
     { id: "S-08", name: "نمونه: کلینیک دندانپزشکی لبخند", industry: "خدمات درمانی", province: "شیراز", days: 200, parts: [38, 14, 8, 0], age: 33, female: 0.62, budget: 0.1, lr: 0.45, priorLr: 0.5,
-      trendK: 0.65 },
+      trendK: 0.65, freq: { C05: 0.25, C10: 0.017 }, caps: { C05: [8, 8] } },
     { id: "S-09", name: "نمونه: پیمانکاری ساختمانی آرمان", industry: "ساختمان", province: "قم", days: -5, parts: [480, 210, 150, 0], age: 38, female: 0.04, budget: 0, lr: 0.95, priorLr: 0.9,
-      freq: { C06: 0, C05: 0.012 }, caps: { C05: [60, 60] } },
+      freq: { C06: 0, C05: 0.012 }, caps: { C05: [60, 60], C03: [60, 6] } },
     { id: "S-10", name: "نمونه: بیمارستان خصوصی مهر", industry: "بیمارستانی", province: "مشهد", days: 28, parts: [700, 260, 180, 0], age: 35, female: 0.7, budget: 0.2, lr: 0.69, priorLr: 0.66,
       trendK: 1.15, freq: { C07: 0.03, C03: 0.35 }, caps: { C07: [80, 80], C03: [40, 10] } },
   ];
@@ -628,7 +630,7 @@ const SCN = [
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const $ = id => document.getElementById(id);
 
-const state = { groups: [], view: "portfolio", settings: Object.assign({}, DEFAULTS), protectNames: null, sort: "renewal", errors: [] };
+const state = { groups: [], view: "portfolio", settings: Object.assign({}, DEFAULTS), protectNames: null, sort: "renewal", errors: [], allTodo: false };
 
 function sampleGroups(){
   const foolad = { sample: true, own: true, file: "Renewal_Intelligence_Takmili_Darman_v1.xlsx", data: parseWorkbook(JSON.parse($("sample").textContent)) };
@@ -679,13 +681,16 @@ function renderPortfolio(){
       todo.push({ sev: "ok", w: 60, i: x.i, name, text: `فرصت: با پیشنهادهای متعادل حق‌بیمه ${fmtSignedPct(bal.premiumChange)} تغییر می‌کند و سهم کارکنان از هزینهٔ درمان از ${fmtPct(1 - cur.cover)} به ${fmtPct(1 - bal.cover)} می‌رسد. مزایای بهتر بدون افزایش حق‌بیمه.` });
     if (S.budget.fits && S.budget.picked.length && S.budget.skipped.length)
       todo.push({ sev: "info", w: 35, i: x.i, name, text: `با بودجهٔ ${fmtSignedPct(S.budgetPct)}: ${S.budget.picked.join("، ")} جا می‌شود، ${S.budget.skipped.join("، ")} نه. برای مذاکره اولویت را از کارفرما بپرسید.` });
-    A.rows.filter(r => r.why.some(w => w.includes("استثنایی"))).forEach(r =>
+    A.rows.filter(r => r.why.some(w => w.includes("استثنایی")) && r.pressure * 100 >= state.settings.pressureHigh).forEach(r =>
       todo.push({ sev: "info", w: 33, i: x.i, name, text: `یک مورد استثنایی در ${r.cv.name}: افزایش سقف همه پیشنهاد نشد؛ کمک موردی ارزان‌تر است.` }));
     if (rm.length) todo.push({ sev: "info", w: 30, i: x.i, name, text: `فرصت صرفه‌جویی: ${rm.map(r => r.cv.name).join("، ")} کم‌مصرف یا بی‌مصرف بوده.` });
     if (!A.complete) todo.push({ sev: "warn", w: 50, i: x.i, name, text: "فهرست خسارت ناقص است؛ پیش از مذاکره دادهٔ کامل بگیرید." });
   });
-  const SEV = { crit: 0, warn: 1, ok: 2, info: 3 };
+  // Opportunities come right after urgent items so the short list shows both risks and wins.
+  const SEV = { crit: 0, ok: 1, warn: 2, info: 3 };
   todo.sort((a, b) => SEV[a.sev] - SEV[b.sev] || b.w - a.w);
+  // The 10 most urgent items; the rest behind a button so the list stays scannable.
+  const shown = state.allTodo ? todo : todo.slice(0, 10);
 
   const sorters = {
     renewal: (a, b) => (a.A.renewal ? a.A.renewal.days : 1e9) - (b.A.renewal ? b.A.renewal.days : 1e9),
@@ -702,7 +707,8 @@ function renderPortfolio(){
   <section aria-label="خلاصهٔ پرتفوی"><div class="summary">${figs.map(([k, v, s]) => `<div class="fig"><span class="k">${k}</span><span class="v num">${v}</span><span class="s">${esc(s)}</span></div>`).join("")}</div></section>
   <section>
     <div class="sec-head"><h2>نیاز به اقدام</h2><span class="muted small">${fmtInt(todo.length)} مورد</span></div>
-    <ul class="todo panel">${todo.length ? todo.map(t => `<li><span class="sev ${t.sev}"></span><span class="t"><button class="btn link" data-open="${t.i}" type="button">${esc(t.name)}</button> · ${esc(t.text)}</span></li>`).join("") : '<li class="muted">موردی نیست.</li>'}</ul>
+    <ul class="todo panel">${todo.length ? shown.map(t => `<li><span class="sev ${t.sev}"></span><span class="t"><button class="btn link" data-open="${t.i}" type="button">${esc(t.name)}</button> · ${esc(t.text)}</span></li>`).join("") : '<li class="muted">موردی نیست.</li>'}</ul>
+    ${todo.length > shown.length ? `<button class="btn ghost" id="moreTodo" type="button" style="align-self:start">نمایش همهٔ ${fmtInt(todo.length)} مورد</button>` : ""}
   </section>
   <section>
     <div class="sec-head"><h2>گروه‌ها</h2>
@@ -726,6 +732,7 @@ function renderPortfolio(){
   </section>`;
   $("sortSel").value = state.sort;
   $("sortSel").onchange = e => { state.sort = e.target.value; render(); };
+  if ($("moreTodo")) $("moreTodo").onclick = () => { state.allTodo = true; render(); };
 }
 
 /* ---------- one group ---------- */
