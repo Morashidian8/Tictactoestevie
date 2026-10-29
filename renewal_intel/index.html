@@ -103,6 +103,8 @@ a{color:var(--brand)}
 .tb-brand .tx b{display:block;font-size:14.5px;font-weight:800;line-height:1.3;direction:ltr;text-align:right}
 .tb-brand .tx span{display:block;font-size:11.5px;color:var(--ink2)}
 .topbar .search{margin-inline-start:18px}
+.btn.backbtn{margin-inline-start:14px;padding:0 12px 0 16px;border-radius:10px}
+.iconbtn.backbtn{color:var(--brand);border-color:var(--brand)}
 .content{max-width:1320px;width:100%;margin-inline:auto}
 
 /* ---- home (islands) ---- */
@@ -449,11 +451,13 @@ tr.hl td{background:var(--hl)} tr.hl td:first-child{box-shadow:inset -3px 0 0 va
   <div class="main">
     <header class="topbar">
       <div class="mtop">
+        <button class="iconbtn backbtn" type="button" data-back aria-label="بازگشت" hidden><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></button>
         <button class="tb-brand" type="button" data-go="home" aria-label="خانه"><span class="logo">RI</span></button>
         <div class="hello"><b id="mTitle">Renewal Intelligence</b><span id="mSub">دستیار تمدید و مناقصه</span></div>
         <button class="iconbtn" type="button" data-theme-toggle aria-label="تغییر حالت روشن و تیره"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></button><button class="iconbtn" id="bellBtnM" type="button" aria-label="کارهای فوری"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9a6 6 0 1 1 12 0c0 6 2.5 7.5 2.5 7.5h-17S6 15 6 9"/><path d="M10 20a2 2 0 0 0 4 0"/></svg><span class="badge" id="bellDotM" hidden></span></button>
       </div>
       <button class="tb-brand hide-m" type="button" data-go="home" aria-label="خانه"><span class="logo">RI</span><span class="tx"><b>Renewal Intelligence</b><span id="brandSub">دستیار کارگزاری بیمه</span></span></button>
+      <button class="btn hide-m backbtn" type="button" data-back hidden><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>بازگشت</button>
       <label class="search" for="q"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><input id="q" type="search" placeholder="جست‌وجوی گروه یا مناقصه…" autocomplete="off"></label>
       <span class="tb-gap"></span>
       <span class="chip-smp hide-m" id="sampleChip">دادهٔ نمونه</span>
@@ -1168,7 +1172,7 @@ const inFrame = (() => { try { return window.self !== window.top; } catch (e) { 
 const reduced = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 const state = { page: "home", idx: null, mode: "renewal", groups: [], tenders: [], settings: Object.assign({}, DEFAULTS), protectNames: new Set(),
-  sort: "renewal", q: "", errors: [], more: {}, mcat: "urgent", chat: {}, tab: null };
+  sort: "renewal", q: "", errors: [], hist: [], pushed: 0, more: {}, mcat: "urgent", chat: {}, tab: null };
 
 /* ---------- data ---------- */
 function sampleGroups(){
@@ -1773,15 +1777,28 @@ function render(){
   else if (p === "admin") renderAdmin(); else if (p === "login") renderLogin();
   else if (p.startsWith("soon:")) renderSoon(p.slice(5));
   renderSidebar();
+  document.querySelectorAll("[data-back]").forEach(b => { b.hidden = p === "home"; });
+  document.querySelector(".mtop .tb-brand").hidden = p !== "home";
   $("fab").hidden = !["renewal","group","tender"].includes(p);
   const bn = { home: ["home"], renewal: ["renewal", "group", "reminders"], tender: ["tender", "tenderp"], ai: ["soon:ai"], settings: ["settings"] };
   document.querySelectorAll(".bottomnav button").forEach(b => b.setAttribute("aria-current", String((bn[b.dataset.bn] || []).includes(p))));
 }
-function go(page, idx){
+function go(page, idx, back){
   if (page === "tender" || page === "tenderp") state.mode = "tender"; else if (page === "home" || page === "renewal" || page === "group") state.mode = "renewal";
   if (SOON[page]) page = "soon:" + page;
+  if (!back && (page !== state.page || (idx ?? null) !== state.idx)){
+    state.hist.push([state.page, state.idx]);
+    // Mirror each step in the browser history so the phone's back gesture works too.
+    try { history.pushState({ ri: state.hist.length }, ""); state.pushed++; } catch (e) {}
+  }
   state.page = page; state.idx = idx ?? null; render(); window.scrollTo(0, 0);
 }
+const PARENT = { group: "renewal", tenderp: "tender", login: "admin" };
+function goBack(){
+  const p = state.hist.pop();
+  if (p) go(p[0], p[1], true); else go(PARENT[state.page] || "home", null, true);
+}
+addEventListener("popstate", () => { state.pushed = Math.max(0, state.pushed - 1); $("modal").hidden = true; goBack(); });
 function bindStepper(id, fn){ const el = $(id); if (el) el.onchange = () => { const v = parseFloat(el.value); if (!isNaN(v)) fn(v); }; }
 /* Theme: follows the system until the user picks; the choice is remembered on this device. */
 function applyTheme(t){ if (t) document.documentElement.dataset.theme = t; else delete document.documentElement.dataset.theme; }
@@ -1796,6 +1813,7 @@ function jump(id){ const el = $(id); if (el) el.scrollIntoView({ behavior: reduc
 document.addEventListener("click", e => {
   const t = e.target;
   if (t.closest("[data-theme-toggle]")){ toggleTheme(); return; }
+  if (t.closest("[data-back]")){ if (state.pushed > 0) history.back(); else goBack(); return; }
   const tq = t.closest("[data-tq]"); if (tq){ $("tq").value = tq.dataset.tq; tenderSearch(tq.dataset.tq); return; }
   if (t.closest("[data-tupload]")){ $("modal").hidden = true; state.mode = "tender"; $("file").click(); return; }
   const tn = t.closest("[data-tender]"); if (tn){ go("tenderp", +tn.dataset.tender); return; }
