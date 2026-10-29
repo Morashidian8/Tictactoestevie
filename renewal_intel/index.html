@@ -131,7 +131,7 @@ footer{font-size:.82rem;color:var(--muted);border-top:1px solid var(--line);padd
       <div class="meta" id="meta"></div>
     </div>
     <div class="actions">
-      <span class="chip sample" id="sampleChip">فایل شما + ۵ گروه نمونه</span>
+      <span class="chip sample" id="sampleChip">فایل شما + ۱۰ گروه نمونه</span>
       <label class="btn" for="file" tabindex="0" id="uploadBtn">افزودن فایل‌های اکسل</label>
       <input type="file" id="file" accept=".xlsx,.xls" multiple hidden>
       <button class="btn ghost" id="resetBtn" type="button" hidden>بازگشت به نمونه‌ها</button>
@@ -554,6 +554,17 @@ function makeSamples(today){
       freq: { C07: 0.05, C05: 0.2 }, sev: { C07: 1.3 }, caps: { C07: [50, 50], C05: [12, 12] } },
     { id: "S-05", name: "نمونه: دانشگاه علوم پایه", industry: "آموزشی", province: "اصفهان", days: 260, parts: [900, 640, 520, 40], age: 47, female: 0.39, budget: 0.35, lr: 0.74, priorLr: 0.71,
       freq: { C04: 0.42, C06: 0.004 }, sev: { C04: 2.6 }, caps: { C04: [60, 5], C06: [30, 30], C07: [200, 200] }, capLabelMix: 0.4, docGaps: 0.06 },
+    // Added groups widen the range: loss ratio 45%–95%, cost growth ~15%–33%, 60 to 6,000 people, renewal overdue to 200 days, budget 0%–25%.
+    { id: "S-06", name: "نمونه: معدن مس کرمان", industry: "معدن", province: "کرمان", days: 7, parts: [700, 180, 60, 0], age: 39, female: 0.05, budget: 0.25, lr: 0.88, priorLr: 0.8,
+      trendK: 1.4, freq: { C08: 0.03, C07: 0.004 }, sev: { C08: 3 }, caps: { C08: [10, 10] } },
+    { id: "S-07", name: "نمونه: هلدینگ خودروسازی", industry: "خودروسازی", province: "تهران", days: 120, parts: [2600, 1900, 1450, 50], age: 42, female: 0.12, budget: 0.3, lr: 0.79, priorLr: 0.76,
+      caps: { C03: [40, 12] } },
+    { id: "S-08", name: "نمونه: کلینیک دندانپزشکی لبخند", industry: "خدمات درمانی", province: "شیراز", days: 200, parts: [38, 14, 8, 0], age: 33, female: 0.62, budget: 0.1, lr: 0.45, priorLr: 0.5,
+      trendK: 0.65 },
+    { id: "S-09", name: "نمونه: پیمانکاری ساختمانی آرمان", industry: "ساختمان", province: "قم", days: -5, parts: [480, 210, 150, 0], age: 38, female: 0.04, budget: 0, lr: 0.95, priorLr: 0.9,
+      freq: { C06: 0, C05: 0.012 }, caps: { C05: [60, 60] } },
+    { id: "S-10", name: "نمونه: بیمارستان خصوصی مهر", industry: "بیمارستانی", province: "مشهد", days: 28, parts: [700, 260, 180, 0], age: 35, female: 0.7, budget: 0.2, lr: 0.69, priorLr: 0.66,
+      trendK: 1.15, freq: { C07: 0.03, C03: 0.35 }, caps: { C07: [80, 80], C03: [40, 10] } },
   ];
 
   return groups.map(G => {
@@ -593,7 +604,8 @@ function makeSamples(today){
           avgAge: G.age, female: G.female, male: 1 - G.female, budget: G.budget },
         coverages, claims, unpaidList: [],
         premiums: [{ label: "سال قبل", persons: total, premium: priorPremium, paid: Math.round(priorPremium * G.priorLr) }, { label: "سال جاری", persons: total, premium }],
-        tariffs: TARIFFS.map(([name, old, next, pt]) => ({ name, old, next, pt })),
+        // trendK scales next year's tariff increase: remote or hospital-heavy groups face steeper cost growth.
+        tariffs: TARIFFS.map(([name, old, next, pt]) => ({ name, old, next: old * (1 + (next / old - 1) * (G.trendK || 1)), pt })),
         warn: [],
       },
     };
@@ -703,9 +715,9 @@ function renderPortfolio(){
         const days = A.renewal ? A.renewal.days : null;
         return `<tr class="pick" tabindex="0" data-open="${x.i}">
           <td><b>${esc(A.group.name)}</b>${x.g.own ? ' <span class="chip own">فایل اکسل شما</span>' : ""}<div class="muted small">${esc([A.group.industry, A.group.province].filter(Boolean).join(" · "))}</div></td>
-          <td class="n">${fmtInt(A.insured)}</td><td class="n">${fmtNum(A.premiumNow)}</td>
+          <td class="n">${fmtInt(A.insured)}</td><td class="n">${fmtNum(A.premiumNow)}${A.premiumNow && A.insured ? `<div class="muted small">سرانه ${fmtNum(A.premiumNow / A.insured)}</div>` : ""}</td>
           <td class="n ${A.lr == null ? "" : A.lr >= 0.85 ? "bad" : A.lr >= 0.75 ? "warnc" : "ok"}">${A.lr != null ? fmtPct(A.lr) : `<span class="muted small">ناقص</span>`}</td>
-          <td class="n ${days != null && days <= 30 ? "bad" : days != null && days <= 60 ? "warnc" : ""}">${days != null ? `${fmtInt(days)} روز` : "—"}</td>
+          <td class="n ${days != null && days <= 30 ? "bad" : days != null && days <= 60 ? "warnc" : ""}">${days != null ? (days < 0 ? `${fmtInt(-days)} روز گذشته` : `${fmtInt(days)} روز`) : "—"}</td>
           <td><div class="counts">${counts(A) || '<span class="muted small">بدون تغییر</span>'}</div></td>
           <td class="n">${need != null ? fmtSignedPct(need) : `<span class="muted small">خسارت ${fmtSignedPct(S.balanced.change)}</span>`}</td>
           <td class="n">${fmtSignedPct(S.budgetPct)} ${S.budget.fits ? "" : '<span class="bad small">ناکافی</span>'}</td>
@@ -722,12 +734,12 @@ function renderGroup(i){
   const { A, S } = compute(g), G = A.group;
   $("backBtn").hidden = false; $("removeBtn").hidden = false;
   $("title").textContent = G.name; $("subtitle").textContent = "";
-  $("meta").innerHTML = [g.own && `<span class="chip own">فایل اکسل شما</span>`, g.file && `<span class="mono">${esc(g.file)}</span>`, G.industry, G.province, G.period && `<span class="num">${esc(G.period)}</span>`, A.renewal && `<span>تمدید ${fmtInt(A.renewal.days)} روز دیگر</span>`, G.id && `<span class="mono">${esc(G.id)}</span>`]
+  $("meta").innerHTML = [g.own && `<span class="chip own">فایل اکسل شما</span>`, g.file && `<span class="mono">${esc(g.file)}</span>`, G.industry, G.province, G.period && `<span class="num">${esc(G.period)}</span>`, A.renewal && `<span>${A.renewal.days < 0 ? `قرارداد ${fmtInt(-A.renewal.days)} روز پیش تمام شده` : `تمدید ${fmtInt(A.renewal.days)} روز دیگر`}</span>`, G.id && `<span class="mono">${esc(G.id)}</span>`]
     .filter(Boolean).map(x => x.startsWith("<") ? x : `<span>${esc(x)}</span>`).join("");
 
   const figs = [
     ["بیمه‌شدگان", fmtInt(A.insured), G.parts ? `اصلی ${fmtInt(G.parts[0])} · وابسته ${fmtInt(G.parts[1] + G.parts[2] + G.parts[3])}` : "", false],
-    ["حق‌بیمهٔ دورهٔ جاری", fmtNum(A.premiumNow), A.current ? `${A.current.label} · میلیون تومان` : "وارد نشده", false],
+    ["حق‌بیمهٔ دورهٔ جاری", fmtNum(A.premiumNow), A.current ? `${A.current.label} · سرانه ${fmtNum(A.premiumNow && A.insured ? A.premiumNow / A.insured : null)}` : "وارد نشده", false],
     ["خسارت پرداختی", fmtNum(A.totalPaid), `${fmtInt(A.claimsCount)} خسارت · غیرقابل‌پرداخت ${fmtNum(A.totalUnpaid)}`, false],
     ["Loss Ratio", A.lr != null ? fmtPct(A.lr) : (A.priorLr != null ? fmtPct(A.priorLr) : "—"),
       A.lr != null ? (A.priorLr != null ? `${A.prior.label}: ${fmtPct(A.priorLr)}` : "خسارت ÷ حق‌بیمه") : (A.priorLr != null ? `از ${A.prior.label}؛ دادهٔ امسال ناقص است` : "دادهٔ امسال ناقص است"), A.lr == null],
