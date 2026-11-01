@@ -1197,7 +1197,7 @@ if (typeof module !== "undefined") module.exports.makeTenders = makeTenders;
 // load from jsDelivr. Nothing about the document itself ever leaves the device.
 const DR = { worker: null, eng: null, pdf: null, src: null,
   bases: [
-    { pdf: "vendor/pdf/", tjs: "vendor/ocr/tesseract.min.js", worker: "vendor/ocr/worker.min.js", core: "vendor/ocr/", fas: "vendor/ocr/", eng: "vendor/ocr/" },
+    { pdf: "vendor/pdf/", tjs: "vendor/ocr/tesseract.min.js", worker: "vendor/ocr/worker.min.js", core: "vendor/ocr/", fas: "vendor/ocr/", eng: "vendor/ocr/", b64: true },
     { pdf: "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/", tjs: "https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js",
       worker: "https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/worker.min.js", core: "https://cdn.jsdelivr.net/npm/tesseract.js-core@5.1.1/",
       fas: "https://cdn.jsdelivr.net/npm/@tesseract.js-data/fas@1.0.0/4.0.0_best_int/", eng: "https://cdn.jsdelivr.net/npm/@tesseract.js-data/eng@1.0.0/4.0.0_best_int/" },
@@ -1218,11 +1218,22 @@ async function drPDF(){
     return (DR.pdf = pdfjsLib);
   });
 }
+// Language data: shipped as base64 text next to the page (every host serves .txt), gzip on the CDN.
+// tesseract.js fetches "<langPath>/<code>.traineddata.gz"; a blob URL ending in "#" makes that suffix a
+// fragment, so the decoded bytes are fetched from memory. (Passing the bytes directly hangs in 5.1.1.)
+async function drLangPath(b, code){
+  if (!b.b64) return drAbs(b[code]);
+  const r = await fetch(drAbs(b[code] + code + ".traineddata.b64.txt"));
+  if (!r.ok) throw new Error(`داده‌ی زبان ${code} دریافت نشد (${r.status})`);
+  const bin = atob((await r.text()).trim()), data = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) data[i] = bin.charCodeAt(i);
+  return URL.createObjectURL(new Blob([data], { type: "application/gzip" })) + "#";
+}
 async function drOCR(){
   if (DR.worker) return DR.worker;
   return drTry(async b => {
     if (!window.Tesseract) await drScript(b.tjs);
-    DR.worker = await Tesseract.createWorker("fas", 1, { workerPath: drAbs(b.worker), corePath: drAbs(b.core), langPath: drAbs(b.fas), gzip: true, cacheMethod: "none" });
+    DR.worker = await Tesseract.createWorker("fas", 1, { workerPath: drAbs(b.worker), corePath: drAbs(b.core), langPath: await drLangPath(b, "fas"), gzip: true, cacheMethod: "none" });
     return DR.worker;
   });
 }
@@ -1361,7 +1372,7 @@ function drCrop(c, cell, k){
 async function drEng(){
   if (DR.eng) return DR.eng;
   const b = DR.src || DR.bases[0];
-  DR.eng = await Tesseract.createWorker("eng", 1, { workerPath: drAbs(b.worker), corePath: drAbs(b.core), langPath: drAbs(b.eng), gzip: true, cacheMethod: "none" });
+  DR.eng = await Tesseract.createWorker("eng", 1, { workerPath: drAbs(b.worker), corePath: drAbs(b.core), langPath: await drLangPath(b, "eng"), gzip: true, cacheMethod: "none" });
   await DR.eng.setParameters({ tessedit_pageseg_mode: "7", tessedit_char_whitelist: "0123456789/,." });
   return DR.eng;
 }
@@ -2270,15 +2281,21 @@ function compareView(G, all){
   const market = k => median(others.map(c => c.caps[k]));
   const sugg = [];
   pairs.forEach(([a, b]) => {
-    const pc = pctCh(a.premium, b.premium), capCh = cats.map(k => pctCh(a.caps[k], b.caps[k])).filter(v => v != null), mc = median(capCh);
-    if (pc != null && mc != null){
-      if (pc > mc + 0.1) sugg.push(["warn", `نرخ ${b.plan ? `«${b.plan}» ` : ""}${fmtSignedPct(pc)} بالا رفته ولی میانهٔ تغییر سقف‌ها ${fmtSignedPct(mc)} بوده؛ قیمت به ازای هر واحد پوشش حدود ${fmtPct((1 + pc) / (1 + mc) - 1)} گران‌تر شده. در مذاکرهٔ سال بعد سقف افزایش نرخ را با افزایش تعهدات گره بزنید.`]);
-      else if (pc < mc - 0.1) sugg.push(["ok", `سقف‌ها (میانه ${fmtSignedPct(mc)}) تندتر از نرخ (${fmtSignedPct(pc)}) بالا رفته‌اند؛ قرارداد ${label(b)} نسبت به سال قبل خرید خوبی بوده است.`]);
-      else sugg.push(["note", `نرخ (${fmtSignedPct(pc)}) تقریباً هم‌پای سقف‌ها (میانه ${fmtSignedPct(mc)}) تغییر کرده؛ قیمت به ازای پوشش ثابت مانده.`]);
+    // hospital and special surgery carry most of the cost, so they are judged apart from outpatient items;
+    // shared and total caps differ in what they cover and are never compared year to year
+    const pc = pctCh(a.premium, b.premium), ch = k => pctCh(a.caps[k], b.caps[k]);
+    const main = median(["hosp", "special"].map(ch).filter(v => v != null)), rest = median(cats.filter(k => !["hosp", "special", "combo", "total"].includes(k)).map(ch).filter(v => v != null));
+    const tag = b.plan ? `«${b.plan}» ` : "";
+    if (pc != null && (main != null || rest != null)){
+      const ref = main ?? rest;
+      if (pc > Math.max(main ?? -1, rest ?? -1) + 0.1) sugg.push(["warn", `نرخ ${tag}${fmtSignedPct(pc)} بالا رفته، بیشتر از سقف‌ها (${main != null ? `بستری و جراحی ${fmtSignedPct(main)}` : ""}${main != null && rest != null ? "، " : ""}${rest != null ? `بقیهٔ بندها میانه ${fmtSignedPct(rest)}` : ""}). قیمت به ازای پوشش حدود ${fmtPct((1 + pc) / (1 + ref) - 1)} گران‌تر شده؛ در مذاکرهٔ سال بعد افزایش نرخ را به افزایش تعهدات گره بزنید.`]);
+      else if (main != null && Math.abs(pc - main) <= 0.1) sugg.push(["note", `نرخ ${tag}(${fmtSignedPct(pc)}) هم‌پای سقف‌های اصلی بستری و جراحی (${fmtSignedPct(main)}) بالا رفته؛ قیمت به ازای پوشش اصلی ثابت مانده.${rest != null && rest < main - 0.2 ? ` ولی بندهای سرپایی کمتر افزایش گرفته‌اند (میانه ${fmtSignedPct(rest)})؛ سال بعد سهم آن‌ها را بخواهید.` : ""}`]);
+      else if (pc < ref - 0.1) sugg.push(["ok", `سقف‌ها تندتر از نرخ (${fmtSignedPct(pc)}) بالا رفته‌اند؛ قرارداد ${label(b)} نسبت به سال قبل خرید خوبی بوده است.`]);
+      else sugg.push(["note", `نرخ ${tag}${fmtSignedPct(pc)} تغییر کرده و سقف‌ها ${main != null ? `بستری و جراحی ${fmtSignedPct(main)}` : `میانه ${fmtSignedPct(rest)}`}.`]);
     }
     const flat = cats.filter(k => a.caps[k] != null && b.caps[k] != null && a.caps[k] === b.caps[k] && isFinite(a.caps[k]));
     if (flat.length && (pc || 0) > 0.05) sugg.push(["warn", `این سقف‌ها در ${label(b)} افزایش نگرفته‌اند و با تورم ارزش واقعی‌شان کم شده: ${flat.map(k => CCAT_NAME[k]).join("، ")}. برای سال بعد دست‌کم هم‌پای تورم بالا بروند.`]);
-    const big = cats.map(k => [k, pctCh(a.caps[k], b.caps[k])]).filter(([, v]) => v != null && v >= 1).sort((x, y) => y[1] - x[1]);
+    const big = cats.filter(k => k !== "combo" && k !== "total").map(k => [k, pctCh(a.caps[k], b.caps[k])]).filter(([, v]) => v != null && v >= 1).sort((x, y) => y[1] - x[1]);
     if (big.length) sugg.push(["note", `بیشترین بهبود: ${big.slice(0, 4).map(([k, v]) => `${CCAT_NAME[k]} ×${fmtNum(1 + v)}`).join("، ")}. با فایل خسارت معلوم می‌شود این افزایش‌ها لازم بوده یا نه.`]);
   });
   const latest = list.slice().sort((a, b) => b.year - a.year)[0];
@@ -2297,7 +2314,7 @@ function compareView(G, all){
   <section class="panel"><div class="panel-h"><h2>${esc(G.name)}</h2><span class="small muted">میلیون تومان برای هر نفر در سال · ${fmtInt(list.length)} قرارداد</span></div>
     <div class="tw"><table style="min-width:${300 + list.length * 120 + pairs.length * 80}px"><thead><tr><th>پوشش</th>${list.map(c => `<th>${label(c)}${c.sample ? ' <span class="tag t-line">نمونه</span>' : ""}</th>`).join("")}${pairs.map(([a, b]) => `<th>تغییر ${b.plan ? b.plan + " " : ""}${fmtInt(a.year).replace(/٬/g, "")}←${fmtInt(b.year).replace(/٬/g, "")}</th>`).join("")}${others.length ? "<th>میانهٔ بازار</th>" : ""}</tr></thead><tbody>
       <tr style="background:var(--hl)"><td><b>حق‌بیمهٔ سالانهٔ هر نفر</b></td>${list.map(c => `<td class="nw"><b>${c.premium ? fmtNum(c.premium) : "—"}</b></td>`).join("")}${pairs.map(([a, b]) => { const v = pctCh(a.premium, b.premium); return `<td class="nw"><b>${v == null ? "—" : fmtSignedPct(v)}</b></td>`; }).join("")}${others.length ? `<td class="nw">${fmtNum(median(others.map(c => c.premium)))}</td>` : ""}</tr>
-      ${cats.map(k => `<tr><td>${CCAT_NAME[k]}</td>${list.map(c => `<td class="nw">${c.caps[k] == null ? '<span class="faint">—</span>' : MT(c.caps[k])}</td>`).join("")}${pairs.map(([a, b]) => { const v = pctCh(a.caps[k], b.caps[k]); return `<td class="nw" style="${v == null ? "" : v === 0 ? "color:var(--mid-ink);font-weight:700" : v >= 1 ? "color:var(--good);font-weight:700" : ""}">${v == null ? "—" : v === 0 ? "بدون تغییر" : fmtSignedPct(v)}</td>`; }).join("")}${others.length ? `<td class="nw muted">${market(k) == null ? "—" : MT(market(k))}</td>` : ""}</tr>`).join("")}
+      ${cats.map(k => `<tr><td>${CCAT_NAME[k]}</td>${list.map(c => `<td class="nw">${c.caps[k] == null ? '<span class="faint">—</span>' : MT(c.caps[k])}</td>`).join("")}${pairs.map(([a, b]) => { const v = k === "combo" || k === "total" ? null : pctCh(a.caps[k], b.caps[k]); return `<td class="nw" style="${v == null ? "" : v === 0 ? "color:var(--mid-ink);font-weight:700" : v >= 1 ? "color:var(--good);font-weight:700" : ""}">${v == null ? "—" : v === 0 ? "بدون تغییر" : fmtSignedPct(v)}</td>`; }).join("")}${others.length ? `<td class="nw muted">${market(k) == null ? "—" : MT(market(k))}</td>` : ""}</tr>`).join("")}
     </tbody></table></div></section>
   <section class="panel"><div class="panel-h"><h2>پیشنهاد برای سال بعد</h2><span class="small muted">از مقایسهٔ قراردادها؛ بدون دادهٔ خسارت</span></div>
     <div class="panel-b"><ul class="dq">${sugg.map(([k, t]) => `<li><span class="sev tag ${SG[k][0]}">${SG[k][1]}</span><span>${esc(t)}</span></li>`).join("")}</ul></div></section>`;
