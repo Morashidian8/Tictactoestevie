@@ -504,7 +504,7 @@ tr.hl td{background:var(--hl)} tr.hl td:first-child{box-shadow:inset -3px 0 0 va
       <button class="iconbtn hide-m" type="button" data-theme-toggle aria-label="تغییر حالت روشن و تیره"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></button>
       <button class="iconbtn hide-m" id="bellBtn" type="button" aria-label="کارهای فوری"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9a6 6 0 1 1 12 0c0 6 2.5 7.5 2.5 7.5h-17S6 15 6 9"/><path d="M10 20a2 2 0 0 0 4 0"/></svg><span class="badge" id="bellDot" hidden></span></button>
       <label class="btn primary hide-m" for="file" tabindex="0" id="uploadBtn">＋ افزودن فایل‌های اکسل</label>
-      <input type="file" id="file" accept=".xlsx,.xls" multiple hidden>
+      <input type="file" id="file" accept=".xlsx,.xls,.csv,.pdf,.jpg,.jpeg,.png,.webp,.docx,.txt" multiple hidden>
     </header>
     <div class="content">
       <div id="error" class="err" hidden></div>
@@ -1188,6 +1188,514 @@ function makeTenders(today){
 }
 if (typeof module !== "undefined") module.exports.makeTenders = makeTenders;
 
+/* ================= Document reader =================
+   Reads PDF (text or scanned), photos, Word and text files on the device. Scanned pages go through
+   on-device OCR (Tesseract, Persian model): table lines are found first and every cell is read on its
+   own, so amounts are not mixed with the long coverage descriptions. Libraries load on first use. */
+
+// Libraries ship next to the page (vendor/); if that fails (some viewers block it) the same versions
+// load from jsDelivr. Nothing about the document itself ever leaves the device.
+const DR = { worker: null, eng: null, pdf: null, src: null,
+  bases: [
+    { pdf: "vendor/pdf/", tjs: "vendor/ocr/tesseract.min.js", worker: "vendor/ocr/worker.min.js", core: "vendor/ocr/", fas: "vendor/ocr/", eng: "vendor/ocr/" },
+    { pdf: "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/", tjs: "https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js",
+      worker: "https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/worker.min.js", core: "https://cdn.jsdelivr.net/npm/tesseract.js-core@5.1.1/",
+      fas: "https://cdn.jsdelivr.net/npm/@tesseract.js-data/fas@1.0.0/4.0.0_best_int/", eng: "https://cdn.jsdelivr.net/npm/@tesseract.js-data/eng@1.0.0/4.0.0_best_int/" },
+  ] };
+const drScript = src => new Promise((ok, bad) => { const s = document.createElement("script"); s.src = src; s.onload = ok; s.onerror = () => bad(new Error("بارگذاری " + src + " نشد")); document.head.appendChild(s); });
+const drAbs = p => new URL(p, location.href).href;
+async function drTry(fn){
+  if (location.protocol === "file:") throw new Error("خواندن PDF و عکس در نسخهٔ فلش فعال نیست؛ از نسخهٔ نصب‌شده روی گوشی یا لینک آنلاین استفاده کنید.");
+  let last;
+  for (const b of DR.src ? [DR.src] : DR.bases){ try { const r = await fn(b); DR.src = b; return r; } catch (e){ last = e; } }
+  throw new Error("ابزار خواندن مدرک بارگذاری نشد" + (last ? ` (${last.message})` : ""));
+}
+async function drPDF(){
+  if (DR.pdf) return DR.pdf;
+  return drTry(async b => {
+    if (!window.pdfjsLib) await drScript(b.pdf + "pdf.min.js");
+    pdfjsLib.GlobalWorkerOptions.workerSrc = drAbs(b.pdf + "pdf.worker.min.js");
+    return (DR.pdf = pdfjsLib);
+  });
+}
+async function drOCR(){
+  if (DR.worker) return DR.worker;
+  return drTry(async b => {
+    if (!window.Tesseract) await drScript(b.tjs);
+    DR.worker = await Tesseract.createWorker("fas", 1, { workerPath: drAbs(b.worker), corePath: drAbs(b.core), langPath: drAbs(b.fas), gzip: true, cacheMethod: "none" });
+    return DR.worker;
+  });
+}
+
+/* ---------- pages ---------- */
+function drCanvas(w, h){ const c = document.createElement("canvas"); c.width = Math.round(w); c.height = Math.round(h); return c; }
+function drFit(src, width){ // scale an image/canvas to a working width (OCR likes ~1800px wide A4)
+  const s = width / (src.width || src.naturalWidth), c = drCanvas((src.width || src.naturalWidth) * s, (src.height || src.naturalHeight) * s);
+  const g = c.getContext("2d"); g.fillStyle = "#fff"; g.fillRect(0, 0, c.width, c.height); g.imageSmoothingQuality = "high"; g.drawImage(src, 0, 0, c.width, c.height); return c;
+}
+function drRotate(c, deg){
+  if (!deg) return c;
+  const r = deg % 180 ? drCanvas(c.height, c.width) : drCanvas(c.width, c.height), g = r.getContext("2d");
+  g.translate(r.width / 2, r.height / 2); g.rotate(deg * Math.PI / 180); g.drawImage(c, -c.width / 2, -c.height / 2); return r;
+}
+async function drImagePages(file){
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await new Promise((ok, bad) => { const i = new Image(); i.onload = () => ok(i); i.onerror = () => bad(new Error("تصویر باز نشد")); i.src = url; });
+    return [{ canvas: drFit(img, 1800), scanned: true }];
+  } finally { URL.revokeObjectURL(url); }
+}
+async function drPdfPages(file, progress){
+  const lib = await drPDF();
+  const doc = await lib.getDocument({ data: new Uint8Array(await file.arrayBuffer()) }).promise;
+  const pages = [];
+  for (let n = 1; n <= doc.numPages; n++){
+    progress && progress(`صفحهٔ ${fmtInt(n)} از ${fmtInt(doc.numPages)}`);
+    const p = await doc.getPage(n), v1 = p.getViewport({ scale: 1 });
+    const scale = 1800 / Math.min(v1.width, v1.height), vp = p.getViewport({ scale });
+    const canvas = drCanvas(vp.width, vp.height), g = canvas.getContext("2d");
+    g.fillStyle = "#fff"; g.fillRect(0, 0, canvas.width, canvas.height);
+    await p.render({ canvasContext: g, viewport: vp }).promise;
+    const tc = await p.getTextContent();
+    const items = tc.items.filter(it => it.str && it.str.trim()).map(it => {
+      const [a, b, c, d, e, f] = lib.Util.transform(vp.transform, it.transform), h = Math.hypot(c, d);
+      return { text: it.str, x0: e - (it.width * scale) * (it.dir === "rtl" ? 0 : 0), y0: f - h, x1: e + it.width * scale, y1: f, conf: 99 };
+    });
+    const words = drJoin(items), textLen = words.reduce((s, it) => s + it.text.trim().length, 0);
+    pages.push({ canvas, scanned: textLen < 40, words: textLen >= 40 ? words : null });
+  }
+  return pages;
+}
+// PDF text often stores Persian as separate presentation-form glyphs (ﺟ ﺒ ﺮ). NFKC turns them into normal
+// letters; touching glyphs on one line are joined right to left into words.
+function drJoin(items){
+  const fa = t => /^[\u0600-\u06FF\u200c\s]+$/.test(t);
+  const list = items.map(it => Object.assign({}, it, { text: it.text.normalize("NFKC") })).filter(it => it.text.trim());
+  list.sort((a, b) => Math.abs(a.y1 - b.y1) > (a.y1 - a.y0) * 0.5 ? a.y1 - b.y1 : b.x1 - a.x1);
+  const out = [];
+  list.forEach(it => {
+    const p = out[out.length - 1], h = it.y1 - it.y0;
+    if (p && fa(p.text) && fa(it.text) && Math.abs(p.y1 - it.y1) < h * 0.5 && p.x0 - it.x1 < h * 0.25){ p.text = it.text.trim() ? p.text + it.text : p.text; p.x0 = Math.min(p.x0, it.x0); }
+    else out.push(Object.assign({}, it));
+  });
+  // a real gap between glyph runs is a space: split merged runs back on wide gaps is not needed (PDF keeps spaces as items)
+  return out.map(w => Object.assign(w, { text: w.text.replace(/\s+/g, " ").trim() })).filter(w => w.text);
+}
+async function drDocx(file){
+  const z = XLSX.CFB.read(new Uint8Array(await file.arrayBuffer()), { type: "array" });
+  const ent = XLSX.CFB.find(z, "word/document.xml") || XLSX.CFB.find(z, "/word/document.xml");
+  if (!ent) throw new Error("محتوای Word پیدا نشد");
+  const xml = new TextDecoder().decode(ent.content), dom = new DOMParser().parseFromString(xml, "application/xml");
+  const W = "http://schemas.openxmlformats.org/wordprocessingml/2006/main", txt = el => [...el.getElementsByTagNameNS(W, "t")].map(t => t.textContent).join("");
+  const tables = [...dom.getElementsByTagNameNS(W, "tbl")].map(t => [...t.getElementsByTagNameNS(W, "tr")].map(tr => [...tr.getElementsByTagNameNS(W, "tc")].map(tc => ({ text: txt(tc), conf: 99 }))));
+  const text = [...dom.getElementsByTagNameNS(W, "p")].map(txt).join("\n");
+  return { text, tables, pages: [] };
+}
+
+/* ---------- layout: table grid from ruling lines ---------- */
+function drInk(c, thr){
+  const g = c.getContext("2d"), { data } = g.getImageData(0, 0, c.width, c.height), W = c.width, H = c.height, ink = new Uint8Array(W * H);
+  for (let i = 0, p = 0; i < ink.length; i++, p += 4){ const r = data[p], gg = data[p + 1], b = data[p + 2];
+    // dark and not strongly coloured (blue stamps and signatures are mostly saturated)
+    ink[i] = (r * 0.3 + gg * 0.59 + b * 0.11) < (thr || 150) && Math.max(r, gg, b) - Math.min(r, gg, b) < 70 ? 1 : 0; }
+  return { ink, W, H };
+}
+function drRuns(get, len, other, gap){ // longest dark run along a line, tolerating small gaps
+  let best = 0, cur = 0, miss = 0;
+  for (let i = 0; i < len; i++){ if (get(i)){ cur += 1 + miss; miss = 0; if (cur > best) best = cur; } else if (cur && miss < gap) miss++; else { cur = 0; miss = 0; } }
+  return best;
+}
+function drMerge(list, d){ const out = []; list.forEach(v => { const l = out[out.length - 1]; if (l && v - l.e <= d){ l.e = v; } else out.push({ s: v, e: v }); }); return out.map(x => Math.round((x.s + x.e) / 2)); }
+function drGrid(c){
+  // ruling lines in scans are often faint and broken: a lighter threshold and larger gaps
+  const { ink, W, H } = drInk(c, 195);
+  const hs = [], vs = [];
+  for (let y = 0; y < H; y++) if (drRuns(x => ink[y * W + x], W, 0, 12) > W * 0.3) hs.push(y);
+  const hl = drMerge(hs, 6);
+  if (hl.length < 3) return null;
+  const top = hl[0], bot = hl[hl.length - 1];
+  for (let x = 0; x < W; x++){ let run = 0; for (let y = top; y <= bot; y++) if (ink[y * W + x]) run++; if (run > (bot - top) * 0.35) vs.push(x); }
+  const vl = drMerge(vs, 6);
+  if (vl.length < 2) return null;
+  // cells: for every band between two horizontal lines, split at the vertical lines that cross that band
+  const rows = [];
+  for (let i = 0; i < hl.length - 1; i++){
+    const y0 = hl[i], y1 = hl[i + 1]; if (y1 - y0 < 16) continue;
+    const cuts = vl.filter(x => { let d = 0; for (let y = y0 + 3; y < y1 - 3; y++){ for (let k = -2; k <= 2; k++) if (ink[y * W + x + k]){ d++; break; } } return d > (y1 - y0 - 6) * 0.7; });
+    if (cuts.length < 2) continue;
+    const cells = []; for (let k = cuts.length - 1; k > 0; k--) cells.push({ x0: cuts[k - 1], x1: cuts[k], y0, y1 }); // right-to-left
+    rows.push(cells);
+  }
+  return rows.length ? { rows, W, H } : null;
+}
+
+/* ---------- OCR ---------- */
+function drWords(data){
+  const out = [];
+  (data.blocks || []).forEach(b => b.paragraphs.forEach(p => p.lines.forEach(l => l.words.forEach(w => out.push({ text: w.text, conf: w.confidence, x0: w.bbox.x0, y0: w.bbox.y0, x1: w.bbox.x1, y1: w.bbox.y1 })))));
+  return out;
+}
+// Orientation: text lines make the ink profile across rows spiky; on a page turned 90° the spikes are
+// across columns. Only then OCR decides between 90° and 270° (and 0° vs 180° when confidence is very low).
+function drSpiky(c){
+  const { ink, W, H } = drInk(drFit(c, 700)), rows = new Float64Array(H), cols = new Float64Array(W);
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (ink[y * W + x]){ rows[y]++; cols[x]++; }
+  const cv = a => { const m = a.reduce((s, v) => s + v, 0) / a.length; return m ? Math.sqrt(a.reduce((s, v) => s + (v - m) ** 2, 0) / a.length) / m : 0; };
+  return { rows: cv(rows), cols: cv(cols) };
+}
+async function drOrient(c){
+  const w = await drOCR(), small = drFit(c, 900), sp = drSpiky(c);
+  await w.setParameters({ tessedit_pageseg_mode: "3", tessedit_char_whitelist: "" });
+  const conf = async deg => (await w.recognize(drRotate(small, deg))).data.confidence;
+  if (sp.cols > sp.rows * 1.15){ const a = await conf(90), b = await conf(270); return { deg: a >= b ? 90 : 270, margin: Math.abs(a - b), turned: true }; }
+  const c0 = await conf(0); if (c0 >= 45) return { deg: 0, margin: 99 };
+  const c1 = await conf(180); return c1 > c0 + 20 ? { deg: 180, margin: c1 - c0 } : { deg: 0, margin: 99 };
+}
+function drCrop(c, cell, k){
+  const pad = 4, cw = cell.x1 - cell.x0 - pad * 2, ch = cell.y1 - cell.y0 - pad * 2;
+  if (cw < 8 || ch < 8) return null;
+  const out = drCanvas(cw * k + 40, ch * k + 40), g = out.getContext("2d");
+  g.fillStyle = "#fff"; g.fillRect(0, 0, out.width, out.height); g.imageSmoothingQuality = "high";
+  g.drawImage(c, cell.x0 + pad, cell.y0 + pad, cw, ch, 20, 20, cw * k, ch * k); return out;
+}
+async function drEng(){
+  if (DR.eng) return DR.eng;
+  const b = DR.src || DR.bases[0];
+  DR.eng = await Tesseract.createWorker("eng", 1, { workerPath: drAbs(b.worker), corePath: drAbs(b.core), langPath: drAbs(b.eng), gzip: true, cacheMethod: "none" });
+  await DR.eng.setParameters({ tessedit_pageseg_mode: "7", tessedit_char_whitelist: "0123456789/,." });
+  return DR.eng;
+}
+const drNorm = s => String(s || "").replace(/[۰-۹]/g, d => "۰۱۲۳۴۵۶۷۸۹".indexOf(d)).replace(/[٠-٩]/g, d => "٠١٢٣٤٥٦٧٨٩".indexOf(d)).replace(/[٬،]/g, ",");
+function drParseAmount(t){
+  const m = drNorm(t).replace(/\s+/g, "").match(/\d{1,3}(?:[\/,.]\d{3})+|\d{4,}/);
+  return m ? +m[0].replace(/[\/,.]/g, "") : null;
+}
+// One table cell. Narrow cells try the amount readers first (the Persian model turns numbers into letters);
+// whatever is not an amount is read as text. Wide description cells: only their first lines are read.
+async function drCell(w, c, cell, wide){
+  if (wide){
+    const top = Object.assign({}, cell, { y1: Math.min(cell.y1, cell.y0 + 130) }), crop = drCrop(c, top, 2);
+    if (!crop) return {};
+    await w.setParameters({ tessedit_pageseg_mode: "6", tessedit_char_whitelist: "" });
+    const r = await w.recognize(crop); return { text: r.data.text.replace(/\s+/g, " ").trim(), conf: r.data.confidence };
+  }
+  const crop = drCrop(c, cell, (cell.y1 - cell.y0) < 260 ? 3 : 2);
+  if (!crop) return { text: "", conf: 0 };
+  const a = await drAmount(w, crop);
+  if (a && a.value >= 1000) return { text: a.text, conf: a.conf, value: a.value, vconf: a.conf };
+  await w.setParameters({ tessedit_pageseg_mode: "6", tessedit_char_whitelist: "" });
+  const r = await w.recognize(crop), text = r.data.text.replace(/\s+/g, " ").trim(), out = { text, conf: r.data.confidence };
+  if (text.length < 30 && /بدون\s*سق|بدونسق|نامحدود/.test(text)){ out.value = Infinity; out.vconf = r.data.confidence; return out; }
+  if (!/[0-9۰-۹]/.test(text) && (text.match(/[آ-ی]/g) || []).length > 6) return out;
+  const e = await (await drEng()).recognize(crop), v = drParseAmount(e.data.text);
+  if (v != null && e.data.confidence >= 60){ out.value = v; out.vconf = e.data.confidence; }
+  return out;
+}
+async function drReadPage(page, progress, ctx){
+  let c = page.canvas;
+  if (page.words){ // text PDF: no OCR, just place the words in the grid
+    const grid = drGrid(c);
+    return { canvas: c, text: page.words.map(w => w.text).join(" "), tables: grid ? [drValues(drFill(grid, page.words))] : [], conf: 99 };
+  }
+  const w = await drOCR();
+  progress && progress("تشخیص جهت صفحه");
+  const o = await drOrient(c);
+  // pages of one scan are turned the same way: an unsure page follows the surest earlier one
+  let deg = o.deg; if (o.turned){ if (ctx.turn && (o.margin < 12 || ctx.turn.margin > o.margin)) deg = ctx.turn.deg; else ctx.turn = o; }
+  if (deg) c = drRotate(c, deg);
+  progress && progress("خواندن متن صفحه");
+  await w.setParameters({ tessedit_pageseg_mode: "3", preserve_interword_spaces: "1" });
+  const full = await w.recognize(c, {}, { text: true, blocks: true });
+  const words = drWords(full.data), grid = drGrid(c), tables = [];
+  if (grid){
+    const t = drFill(grid, words);
+    // narrow cells (titles and amounts) are read again on their own: page-level OCR mixes table columns
+    await w.setParameters({ tessedit_pageseg_mode: "6" });
+    let n = 0; const all = t.rows.flat(), total = all.length;
+    for (const cell of all){
+      n++; if (n % 4 === 0) progress && progress(`خواندن خانه‌های جدول ${fmtInt(n)} از ${fmtInt(total)}`);
+      const wide = (cell.x1 - cell.x0) >= grid.W * 0.4, r = await drCell(w, c, cell, wide);
+      if (wide){ if (r.text && (r.conf || 0) >= (cell.conf || 0) - 5) Object.assign(cell, r); } else Object.assign(cell, r);
+    }
+    tables.push(t);
+  }
+  return { canvas: c, text: full.data.text, tables, conf: full.data.confidence };
+}
+function drFill(grid, words){
+  const rows = grid.rows.map(cells => cells.map(cell => {
+    const ws = words.filter(w => { const cx = (w.x0 + w.x1) / 2, cy = (w.y0 + w.y1) / 2; return cx > cell.x0 && cx < cell.x1 && cy > cell.y0 && cy < cell.y1; });
+    ws.sort((a, b) => Math.abs(a.y0 - b.y0) > 12 ? a.y0 - b.y0 : b.x1 - a.x1);
+    return Object.assign({}, cell, { text: ws.map(w => w.text).join(" "), conf: ws.length ? ws.reduce((s, w) => s + w.conf, 0) / ws.length : 0 });
+  }));
+  return { rows, W: grid.W, H: grid.H };
+}
+
+// Text sources (text PDF, Word): amounts come straight from the cell text.
+function drValues(t){
+  t.rows.forEach(cells => cells.forEach((c, i) => {
+    if (c.x0 == null){ c.x0 = (cells.length - 1 - i) * 100; c.x1 = c.x0 + 90; c.y0 = 0; c.y1 = 0; }
+    if (c.value != null) return;
+    const txt = c.text || "";
+    if (txt.length < 30 && /بدون\s*سق|بدونسق|نامحدود/.test(txt)){ c.value = Infinity; c.vconf = 99; return; }
+    const v = drParseAmount(txt); if (v != null && v >= 1000 && txt.replace(/[^آ-ی]/g, "").length < 25){ c.value = v; c.vconf = 99; }
+  }));
+  return t;
+}
+
+/* ---------- entry ---------- */
+async function readDocument(file, progress){
+  const name = file.name.toLowerCase();
+  if (/\.docx$/.test(name)){ const d = await drDocx(file); d.tables = d.tables.map(rows => drValues({ rows, page: 0 })); return Object.assign(d, { file: file.name }); }
+  if (/\.(txt|csv)$/.test(name)) return { file: file.name, text: await file.text(), tables: [], pages: [] };
+  const pages = /\.pdf$/.test(name) ? await drPdfPages(file, progress) : await drImagePages(file);
+  const out = { file: file.name, text: "", tables: [], pages: [] };
+  const ctx = {};
+  for (let i = 0; i < pages.length; i++){
+    const r = await drReadPage(pages[i], s => progress && progress(`صفحهٔ ${fmtInt(i + 1)} از ${fmtInt(pages.length)}: ${s}`), ctx);
+    out.pages.push(r); out.text += "\n" + r.text; r.tables.forEach(t => out.tables.push(Object.assign(t, { page: i })));
+  }
+  return out;
+}
+
+/* Amount reader for Persian-digit numbers (۲,۵۰۰,۰۰۰,۰۰۰): Tesseract misses the dot-shaped zeros,
+   so the line is split into connected shapes; dots become ۰, low marks are separators, and only the
+   remaining real digits are recognised one by one. */
+function drBinary(c){
+  const g = c.getContext("2d"), d = g.getImageData(0, 0, c.width, c.height), a = d.data, n = c.width * c.height;
+  const hist = new Array(256).fill(0), gray = new Uint8Array(n);
+  for (let i = 0, p = 0; i < n; i++, p += 4){ const v = (a[p] * 0.3 + a[p + 1] * 0.59 + a[p + 2] * 0.11) | 0; gray[i] = Math.max(a[p], a[p + 1], a[p + 2]) - Math.min(a[p], a[p + 1], a[p + 2]) > 80 ? 255 : v; hist[gray[i]]++; }
+  let sum = 0; for (let i = 0; i < 256; i++) sum += i * hist[i];
+  let sB = 0, wB = 0, max = 0, t = 128;
+  for (let i = 0; i < 256; i++){ wB += hist[i]; if (!wB) continue; const wF = n - wB; if (!wF) break; sB += i * hist[i]; const mB = sB / wB, mF = (sum - sB) / wF, v = wB * wF * (mB - mF) ** 2; if (v > max){ max = v; t = i; } }
+  const bin = new Uint8Array(n); for (let i = 0; i < n; i++) bin[i] = gray[i] < Math.min(t, 170) ? 1 : 0;
+  return { bin, W: c.width, H: c.height };
+}
+function drComponents({ bin, W, H }){
+  const lab = new Int32Array(W * H), comps = []; let id = 0;
+  for (let s = 0; s < W * H; s++){
+    if (!bin[s] || lab[s]) continue;
+    id++; const st = [s]; lab[s] = id; let x0 = W, x1 = 0, y0 = H, y1 = 0, area = 0;
+    while (st.length){ const p = st.pop(), x = p % W, y = (p / W) | 0; area++; if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y;
+      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++){ const nx = x + dx, ny = y + dy; if (nx < 0 || ny < 0 || nx >= W || ny >= H) continue; const q = ny * W + nx; if (bin[q] && !lab[q]){ lab[q] = id; st.push(q); } } }
+    comps.push({ id, x0, x1, y0, y1, w: x1 - x0 + 1, h: y1 - y0 + 1, area });
+  }
+  return comps;
+}
+// Split a cell into text lines by horizontal ink projection.
+function drLines(c){
+  const B = drBinary(c), { bin, W, H } = B, rows = [];
+  for (let y = 0; y < H; y++){ let n = 0; for (let x = 0; x < W; x++) n += bin[y * W + x]; rows.push(n); }
+  const out = []; let s = -1;
+  for (let y = 0; y <= H; y++){ const on = y < H && rows[y] > 0; if (on && s < 0) s = y; if (!on && s >= 0){ if (y - s > 4) out.push([s, y]); s = -1; } }
+  // merge lines closer than a few pixels (dots above/below letters)
+  const m = []; out.forEach(l => { const p = m[m.length - 1]; if (p && l[0] - p[1] < 6) p[1] = l[1]; else m.push(l.slice()); });
+  return m;
+}
+// ۸ is a Λ: its top row of ink is much narrower than its bottom; ۵ is round
+function drTopBottom({ bin, W }, k){
+  const span = (ya, yb) => { let lo = 1e9, hi = -1; for (let y = ya; y < yb; y++) for (let x = k.x0; x <= k.x1; x++) if (bin[y * W + x]){ if (x < lo) lo = x; if (x > hi) hi = x; } return hi < 0 ? 0 : hi - lo + 1; };
+  const b = Math.max(2, Math.round(k.h * 0.25)), top = span(k.y0, k.y0 + b), bot = span(k.y1 - b + 1, k.y1 + 1);
+  return bot ? top / bot : 1;
+}
+function drHole({ bin, W }, k){
+  // background pixels inside the shape's box that cannot reach the box edge
+  const w = k.w + 2, h = k.h + 2, seen = new Uint8Array(w * h), at = (x, y) => { const X = k.x0 - 1 + x, Y = k.y0 - 1 + y; return X >= k.x0 && X <= k.x1 && Y >= k.y0 && Y <= k.y1 && bin[Y * W + X]; };
+  const st = [0]; seen[0] = 1;
+  while (st.length){ const p = st.pop(), x = p % w, y = (p / w) | 0; [[1,0],[-1,0],[0,1],[0,-1]].forEach(([dx, dy]) => { const nx = x + dx, ny = y + dy; if (nx < 0 || ny < 0 || nx >= w || ny >= h) return; const q = ny * w + nx; if (!seen[q] && !at(nx, ny)){ seen[q] = 1; st.push(q); } }); }
+  let n = 0; for (let y = 1; y < h - 1; y++) for (let x = 1; x < w - 1; x++) if (!seen[y * w + x] && !at(x, y)) n++;
+  return n > k.w * k.h * 0.02;
+}
+function drSlant({ bin, W }, k){
+  const band = Math.max(2, Math.round(k.h * 0.3)), cx = (ya, yb) => { let s = 0, n = 0; for (let y = ya; y < yb; y++) for (let x = k.x0; x <= k.x1; x++) if (bin[y * W + x]){ s += x; n++; } return n ? s / n : 0; };
+  return cx(k.y0, k.y0 + band) - cx(k.y1 - band + 1, k.y1 + 1);
+}
+async function drAmountLine(w, c){
+  const B = drBinary(c), comps = drComponents(B).filter(k => k.area > 6 && !(k.w > B.W * 0.6) && !(k.h > B.H * 0.9 && k.w < 6));
+  if (comps.length < 3) return null;
+  const H = Math.max(...comps.map(k => k.h));
+  const big = comps.filter(k => k.h >= H * 0.5), small = comps.filter(k => k.h < H * 0.5);
+  if (!big.length || big.length > 8) return null;
+  const base = big.map(k => k.y1).sort((a, b) => a - b)[big.length >> 1];
+  // the number reads left to right
+  const seq = comps.slice().sort((a, b) => a.x0 - b.x0);
+  let out = "", conf = 100, digits = 0;
+  for (const k of seq){
+    if (k.h < H * 0.5){
+      const comma = k.y0 > base - H * 0.18 || k.y1 > base + H * 0.15; // separators hang at or below the baseline; zeros sit mid-height
+      if (comma) out += ","; else if (k.w < H * 0.6 && k.h < H * 0.45){ out += "0"; digits++; }
+      continue;
+    }
+    // a slanted stroke is the «/» thousands separator (۱/۶۰۰/۰۰۰): its top leans right of its bottom
+    if (k.w < H * 0.6 && drSlant(B, k) > k.h * 0.22){ out += ","; continue; }
+    // one real digit: recognise it alone
+    const pad = Math.round(H * 0.4), g = drCanvas(k.w + pad * 2, H + pad * 2), cx = g.getContext("2d");
+    cx.fillStyle = "#fff"; cx.fillRect(0, 0, g.width, g.height);
+    const src = c.getContext("2d").getImageData(k.x0, Math.max(0, base - H + 1), k.w, H), d = src.data;
+    for (let i = 0; i < d.length; i += 4){ const v = (d[i] * 0.3 + d[i + 1] * 0.59 + d[i + 2] * 0.11) < 150 ? 0 : 255; d[i] = d[i + 1] = d[i + 2] = v; }
+    cx.putImageData(src, pad, pad);
+    // read the digit at two sizes; if they disagree the amount is flagged for checking
+    const read = async img => { const r = await w.recognize(img); return { ch: (r.data.text || "").trim().replace(/[۰-۹]/g, x => "۰۱۲۳۴۵۶۷۸۹".indexOf(x)), conf: r.data.confidence }; };
+    const a1 = await read(g), a2 = await read(drFit(g, Math.round(g.width * 0.7)));
+    const pick = /^\d$/.test(a1.ch) && (a1.conf >= a2.conf || !/^\d$/.test(a2.ch)) ? a1 : a2;
+    if (!/^\d$/.test(pick.ch)) return null;
+    // ۵ and ۹ enclose a hole, ۸ and ۲ never do: the shape overrules a confused recogniser
+    if (pick.ch === "8" || pick.ch === "5"){ const r = drTopBottom(B, k); pick.ch = r < 0.6 ? "8" : "5"; }
+    out += pick.ch; digits++; conf = Math.min(conf, /^\d$/.test(a1.ch) && /^\d$/.test(a2.ch) && a1.ch !== a2.ch ? 40 : pick.conf);
+  }
+  const clean = out.replace(/^,+|,+$/g, "");
+  if (!/^\d{1,3}(,\d{3})+$/.test(clean) && !/^\d+$/.test(clean)) return { text: clean, value: null, conf: 20 };
+  return { text: clean, value: +clean.replace(/,/g, ""), conf };
+}
+async function drAmount(w, c){
+  await w.setParameters({ tessedit_pageseg_mode: "10", tessedit_char_whitelist: "۱۲۳۴۵۶۷۸۹" });
+  for (const [y0, y1] of drLines(c)){
+    const line = drCanvas(c.width, y1 - y0 + 8); const g = line.getContext("2d"); g.fillStyle = "#fff"; g.fillRect(0, 0, line.width, line.height); g.drawImage(c, 0, y0, c.width, y1 - y0, 0, 4, c.width, y1 - y0);
+    const r = await drAmountLine(w, line);
+    if (r && r.value != null) return r;
+  }
+  return null;
+}
+
+/* ================= Contract understanding =================
+   Turns what the reader found (text + tables) into a contract: who, which insurer, which year,
+   premium, head count and the cap of every coverage per plan. Every value keeps the image of the
+   row it came from, so the broker can check it against the paper before it is used. */
+
+const CCAT = [ // order matters: the first rule that matches wins
+  ["combo", "سقف مشترک چند بند", /(?!.*(نازایی|ناباروری|سال(ی)?انه))(?:حداکثر\s*(?:\S+\s*)?تعه[دذ]ات?\s*(ردیف|بند)|جمع\s*تعهدات|حداکثر\s*سقف\s*تعهدات)/],
+  ["total", "حداکثر تعهد سالانه", /حداکثر\s*تعهدات\s*سال(ی)?انه|سقف\s*کل/],
+  ["visitdrug", "ویزیت، دارو و اورژانس", /ویزیت.*دارو|دارو.*ویزیت|ویزیت\s*و\s*دارو/],
+  ["dental", "دندانپزشکی", /دندا|دندن/],
+  ["special", "جراحی‌های خاص و تخصصی", /جراحی.{0,4}(های)?\s*تخصصی|سرطان|شیمی\s*در|رادیوترا|پیوند|گامانایف|تخصصی\s*و\s*فوق/],
+  ["delivery", "زایمان", /زایمان|سزارین/],
+  ["infert", "نازایی و ناباروری", /نازایی|ناباروری/],
+  ["lab", "آزمایش‌ها (پاراکلینیک ۳)", /پاراکلینیک\S*\s*[3۳]|آزمایشگاه|آزمایش\s*های\s*تشخیصی|پاتولوژی/],
+  ["diag", "تست‌های تشخیصی (پاراکلینیک ۲)", /پاراکلینیک\S*\s*[2۲]|تست\s*ورزش|آندوسکوپی|نوار\s*(قلب|مغز|عصب)|الکترو|مانیتورینگ|هولتر/],
+  ["fetal", "غربالگری جنین", /غربالگری|جنین/],
+  ["para", "تصویربرداری (پاراکلینیک ۱)", /پاراکلینیک|رادیولوژی|رادیوگرافی|سونوگرافی|تصویربرداری|اسکن|ام\s*آر\s*آی|ماموگرافی/],
+  ["outsurg", "اعمال جراحی مجاز سرپایی", /سرپایی|شکستگی|گچ\s*گیری|بخیه/],
+  ["ambOut", "آمبولانس خارج شهر", /آم.?ولانس.*(خارج|بین)\s*شهر|خارج\s*شهر|بین\s*شهری/],
+  ["ambIn", "آمبولانس داخل شهر", /آم.?ولانس.*(داخل\s*شهر|(?<!بین\s?)شهری)|داخل\s*شهر/],
+  ["amb", "آمبولانس", /آم.?ولانس|امبولانس/],
+  ["refractive", "رفع عیوب انکساری چشم", /ان[کگ]سار|لیزیک|عیوب\s*چشم/],
+  ["glasses", "عینک و لنز", /عین[کگ]|لنز/],
+  ["hearing", "سمعک", /سمع[کگ]/],
+  ["organs", "اعضای طبیعی بدن", /اعضا\S*\s*طبیعی/],
+  ["orthosis", "اروتز", /اروتز/],
+  ["prosthesis", "پروتز", /پروتز/],
+  ["supplies", "لوازم پزشکی", /لوازم\s*(طبی|پزشکی)|دستگاه\s*تست\s*قند/],
+  ["specialDis", "بیماران خاص و صعب‌العلاج", /بیماران\s*خاص|صعب\s*العلاج|داروها?ی?\s*خاص/],
+  ["rehab", "فیزیوتراپی و توانبخشی", /فیزیوتراپی|گفتار\s*درمانی|کار\s*درمانی|توان\s*\S?\s*بخش|توان,/],
+  ["emergency", "اورژانس", /اورژانس/],
+  ["visit", "ویزیت", /ویزیت/],
+  ["drug", "دارو", /دارو/],
+  ["hosp", "بستری و جراحی عمومی", /بستری|جراحی|day\s*care/i],
+];
+const CCAT_NAME = Object.fromEntries(CCAT.map(([k, n]) => [k, n]));
+const INSURERS = /بیمه\s*(آسیا|ایران|البرز|دانا|پارسیان|ملت|سامان|معلم|رازی|کوثر|ما|سینا|نوین|تعاون|دی|آرمان|حافظ|میهن|سرمد|تجارت\s*نو|کارآفرین|پاسارگاد|ایران\s*معین|امید|آسماری|زندگی\s*خاورمیانه|حکمت)(?![آ-ی])/;
+const enDigits = s => drNorm(s);
+const toMT = rial => rial == null ? null : rial === Infinity ? Infinity : rial / 1e7; // ریال → میلیون تومان
+
+// The keyword that appears first decides: «بستری، جراحی، آنژیوگرافی قلب، گامانایف…» is a hospital row
+// even though it also names a special surgery further on.
+// Short title cells: a distinctive word wins wherever it sits («پاراکلینیکی ۲ (خدمات آزمایشگاهی)» is lab).
+const STRONG = [["lab", /آزمایشگاه/], ["outsurg", /سرپایی/], ["specialDis", /بیماران\s*خاص|صعب|داروها?ی?\s*خاص/], ["dental", /دندا|دندن/], ["delivery", /زایمان/], ["infert", /نازایی|ناباروری/],
+  ["organs", /اعضا\S*\s*طبیعی/], ["prosthesis", /پروتز/], ["orthosis", /اروتز/], ["hearing", /سمع[کگ]/], ["glasses", /عین[کگ]/], ["refractive", /ان[کگ]سار/], ["rehab", /توان|فیزیو|گفتار/], ["fetal", /غربالگری/], ["supplies", /لوازم/]];
+function catOfRow(text, title){
+  const t = norm(text); let best = null;
+  if (title){ const s = STRONG.find(([, re]) => re.test(t)); if (s && !/حداکثر/.test(t)) return s[0]; }
+  CCAT.forEach(([k, , re], order) => { const m = t.match(re); if (m && (!best || m.index < best.i || (m.index === best.i && order < best.o))) best = { k, i: m.index, o: order }; });
+  return best ? best.k : null;
+}
+function planOfHeader(t){
+  t = norm(t);
+  if (/نقره/.test(t)) return "نقره‌ای"; if (/طلا/.test(t)) return "طلایی"; if (/برنز/.test(t)) return "برنزی";
+  const m = t.match(/طرح\s*(یک|دو|سه|الف|ب|ج|[1-3۱-۳])/); if (m) return "طرح " + ({ "یک": "۱", "دو": "۲", "سه": "۳", "1": "۱", "2": "۲", "3": "۳" }[m[1]] || m[1]);
+  if (/خانواده/.test(t)) return "#family"; if (/فرانشیز/.test(t)) return "#franchise";
+  if (/نفر|سقف|تعهد|ریال|مبلغ/.test(t)) return "اصلی";
+  return null;
+}
+
+// Pull the contract out of one document.
+function understand(doc){
+  const T = norm(enDigits(doc.text)).replace(/[ـ]/g, ""), issues = [];
+  const out = { file: doc.file, kind: "سند", org: null, insurer: null, year: null, start: null, end: null, insured: null, premium: null, premiumPer: null, franchise: null, plans: {}, rows: [], issues };
+  // kind
+  if (/شماره\s*بیمه\s*نامه|شرح\s*تعهدات\s*بیمه\s*گر/.test(T)) out.kind = "بیمه‌نامه";
+  else if (/الحاقیه/.test(T)) out.kind = "الحاقیه";
+  else if (/استعلام/.test(T)) out.kind = "استعلام قیمت";
+  else if (/مناقصه/.test(T)) out.kind = "مناقصه";
+  else if (/قسط|اقساط|سررسید/.test(T)) out.kind = "اقساط";
+  // who
+  const org = T.match(/بیمه\s*گذار\s*:?\s*([^\n:]{3,40}?)\s*(?:کد|\n|نشانی|شماره)/) || T.match(/تکمیلی\s*(?:کار\s*کنان\s*)?((?:دانشگاه|شرکت|موسسه|سازمان|اداره|بانک|مجتمع|بیمارستان)[^\n(]{2,60}?)\s*(?:\(|سال|\d{4}|\n)/) || T.match(/((?:دانشگاه|شرکت|موسسه|سازمان|مجتمع|بانک)\s+[^\n]{2,40}?)\s*(?:\n|کد)/);
+  if (org) out.org = org[1].replace(/\s+/g, " ").replace(/^محترم\s+/, "").trim();
+  const ins = T.match(INSURERS); if (ins) out.insurer = ins[0].replace(/\s+/g, " ");
+  // when
+  const dates = [...T.matchAll(/(1[34]\d{2})\/(\d{1,2})\/(\d{1,2})/g)].map(m => m[0]);
+  const range = T.match(/(?:سال\s*)?(14\d{2})\s*[-–]\s*(14\d{2})/);
+  const start = T.match(/(?:از\s*روز|شروع)[^\d]{0,20}(1[34]\d{2}\/\d{1,2}\/\d{1,2})/), end = T.match(/(?:خاتمه|پایان)[^\d]{0,20}(1[34]\d{2}\/\d{1,2}\/\d{1,2})|(1[34]\d{2}\/\d{1,2}\/\d{1,2})\s*خاتمه/);
+  if (start) out.start = start[1]; if (end) out.end = end[1] || end[2];
+  if (out.start) out.year = +out.start.slice(0, 4);
+  else if (range) out.year = Math.min(+range[1], +range[2]);
+  else if (dates.length) out.year = Math.min(...dates.map(d => +d.slice(0, 4)));
+  // how many people
+  // the largest head count wins: a policy issued for 50 is often raised to thousands by an addendum
+  const heads = [...T.matchAll(/(?:تعداد\s*بیمه\s*شدگا\s*ن|مجموعا|تعداد\s*نفرات)[^\d\n]{0,14}([\d,]{2,7})\s*:?\s*نفر/g)].map(m => +m[1].replace(/,/g, "")).filter(v => v > 1);
+  if (heads.length) out.insured = Math.max(...heads);
+  // premium per person
+  const pr = T.match(/حق\s*بیمه\s*هر\s*بیمه\s*شده[^\d]{0,40}([\d,\/]{6,})/);
+  if (pr){ out.premium = drParseAmount(pr[1]); out.premiumPer = "year"; }
+  // premium from an addendum: extra premium ÷ people added
+  const add = T.match(/تعداد\s*([\d,]{2,7})\s*نفر\s*مطابق\s*الحاقیه/), extra = T.match(/حق\s*بیمه\s*اضافی[^\d]{0,30}([\d,]{9,})/);
+  if (!out.premium && add && extra){ const n = +add[1].replace(/,/g, ""), v = drParseAmount(extra[1]); if (n && v){ out.premium = v / n; out.premiumPer = "year"; out.premiumNote = `از الحاقیه: حق‌بیمهٔ اضافی ÷ ${fmtInt(n)} نفر`; } }
+  // premium from the instalment total when the per-person figure is unreadable
+  const tot = T.match(/جمع\s*(?:کل)?\s*:?\s*([\d,]{11,})/);
+  if (!out.premium && tot && out.insured){ out.premium = drParseAmount(tot[1]) / out.insured; out.premiumPer = "year"; out.premiumNote = "از جمع اقساط ÷ تعداد نفرات"; }
+  const fr = T.match(/فرانشیز[^\d\n]{0,40}(\d{1,2})\s*(?:درصد|٪|%)/); if (fr) out.franchise = +fr[1];
+
+  // tables → coverage rows
+  let cols = null; // [{x0,x1,plan}] — header columns carry over to the next pages of the same table
+  doc.tables.forEach(t => {
+    t.rows.forEach(cells => {
+      const plans = cells.map(c => planOfHeader(c.text || ""));
+      const numeric = cells.filter(c => c.value != null).length;
+      const headerLike = cells.every(c => (c.text || "").length < 40) && plans.filter(p => p && !p.startsWith("#")).length && (cols === null || plans.some(p => p && p !== "اصلی"));
+      if (!numeric && headerLike){ cols = cells.map((c, i) => ({ x0: c.x0, x1: c.x1, plan: plans[i] })).filter(c => c.plan); return; }
+      if (!numeric) return;
+      const textCells = cells.filter(c => c.value == null && (c.text || "").length > 1);
+      const label = textCells.map(c => c.text).join(" — ");
+      // the short title cell decides first; the long description only when the title says nothing
+      const byLen = textCells.slice().sort((a, b) => a.text.length - b.text.length);
+      const cat = byLen.map(c => catOfRow(c.text, c.text.length < 45)).find(Boolean) || null;
+      const vals = {};
+      cells.forEach(c => {
+        if (c.value == null) return;
+        let plan = "اصلی";
+        if (cols){ const mid = (c.x0 + c.x1) / 2, col = cols.find(k => mid > k.x0 - 5 && mid < k.x1 + 5); if (col) plan = col.plan; }
+        if (plan === "#franchise"){ if (c.value <= 100) out.franchise = out.franchise || c.value; return; }
+        if (plan === "#family" || c.value < 1e5) return; // family caps and stray small numbers
+        if (c.value !== Infinity && c.value > 1e13){ issues.push(`یک مبلغ ناخوانا (${c.text}) کنار گذاشته شد؛ اگر لازم است دستی وارد کنید.`); return; }
+        if (vals[plan] == null) vals[plan] = { rial: c.value, conf: Math.round(c.vconf || c.conf || 0) };
+      });
+      if (!Object.keys(vals).length) return;
+      Object.keys(vals).forEach(p => { out.plans[p] = true; });
+      const box = cells.reduce((b, c) => ({ x0: Math.min(b.x0, c.x0), x1: Math.max(b.x1, c.x1), y0: Math.min(b.y0, c.y0), y1: Math.max(b.y1, c.y1) }), { x0: 1e9, x1: 0, y0: 1e9, y1: 0 });
+      const uni = list => list.length ? list.reduce((b, c) => ({ x0: Math.min(b.x0, c.x0), x1: Math.max(b.x1, c.x1), y0: Math.min(b.y0, c.y0), y1: Math.max(b.y1, c.y1) }), { x0: 1e9, x1: 0, y0: 1e9, y1: 0 }) : null;
+      out.rows.push({ cat, label: label.slice(0, 140), vals, page: t.page, box, vbox: uni(cells.filter(c => c.value != null && c.value >= 1e5)), lbox: uni(textCells) });
+    });
+  });
+  out.plans = Object.keys(out.plans);
+  // checks
+  if (!out.org) issues.push("نام بیمه‌گذار پیدا نشد؛ وارد کنید.");
+  if (!out.year) issues.push("سال قرارداد پیدا نشد؛ وارد کنید.");
+  if (out.kind !== "استعلام قیمت" && !out.premium) issues.push("حق‌بیمه پیدا نشد (اگر دست‌نویس است، وارد کنید).");
+  if (!out.rows.length && doc.tables.length) issues.push("جدول پیدا شد ولی مبلغی در آن خوانده نشد.");
+  out.rows.forEach(r => { if (!r.cat) issues.push(`ردیف «${r.label.slice(0, 40)}…» به هیچ پوششی نخورد؛ نوعش را انتخاب کنید.`); });
+  const low = out.rows.filter(r => Object.values(r.vals).some(v => v.conf < 70)).length;
+  if (low) issues.push(`${fmtInt(low)} مبلغ با اطمینان کم خوانده شد؛ با تصویر کنارش مقایسه کنید.`);
+  return out;
+}
+
 </script>
 <script>
 /* ================= Offline assistant =================
@@ -1606,6 +2114,195 @@ function ask(q){
   if (state.page === "home"){ const f = $("homeAiQ"); if (f) f.focus(); }
 }
 
+/* ---------- documents & contracts ---------- */
+// PDF, photos, Word and text files are read on the device; each read value is shown next to the image of
+// its row so the broker confirms it before it becomes a contract. Saved contracts feed the year-to-year
+// comparison and the market benchmark.
+const DOC_RE = /\.(pdf|jpe?g|png|webp|docx|txt)$/i;
+const isDocFile = f => DOC_RE.test(f.name);
+const MT = v => v === Infinity ? "بدون سقف" : fmtNum(v);
+const pctCh = (a, b) => a == null || b == null || a === Infinity || b === Infinity || !a ? null : b / a - 1;
+const median = a => { const s = a.filter(v => v != null && isFinite(v)).sort((x, y) => x - y); return s.length ? (s.length % 2 ? s[s.length >> 1] : (s[s.length / 2 - 1] + s[s.length / 2]) / 2) : null; };
+const orgKey = s => norm(s || "").replace(/^(مجتمع|شرکت|موسسه|دانشگاه|سازمان)\s+/, "").replace(/\s+/g, "");
+
+async function handleDocs(files){
+  const box = n => `<div class="box" role="dialog" aria-modal="true" aria-label="خواندن مدارک"><div class="panel-h"><h2>خواندن مدارک</h2></div><div class="panel-b" style="display:flex;flex-direction:column;gap:10px">
+    <p class="small muted">همه‌چیز روی همین دستگاه خوانده می‌شود؛ فایلی به جایی فرستاده نمی‌شود. اسکن و عکس چند ثانیه برای هر صفحه طول می‌کشد.</p>
+    <div class="fs on"><span class="fi">${fmtInt(n)}</span><div><b id="docFile"></b><span id="docStep">آماده‌سازی…</span></div></div><div class="prog"><i id="docBar" style="width:3%"></i></div></div></div>`;
+  let last = null;
+  for (let i = 0; i < files.length; i++){
+    const f = files[i];
+    $("modal").innerHTML = box(i + 1); $("modal").hidden = false; $("docFile").textContent = `${f.name} (${fmtInt(i + 1)} از ${fmtInt(files.length)})`;
+    let ticks = 0;
+    try {
+      const doc = await readDocument(f, s => { ticks++; $("docStep").textContent = s; $("docBar").style.width = Math.min(95, 3 + ticks * 2.5) + "%"; });
+      const u = understand(doc);
+      u.planPremium = {}; (u.plans.length ? u.plans : ["اصلی"]).forEach((p, k) => { u.planPremium[p] = { v: k === 0 && u.premium ? u.premium / 1e7 : null, per: "year" }; });
+      state.docs.push({ id: "d" + Date.now() + i, file: f.name, doc, u, saved: false });
+      last = state.docs.length - 1;
+    } catch (err){ state.errors.push(`«${f.name}» خوانده نشد: ${err.message}`); }
+  }
+  $("modal").hidden = true;
+  if (last != null) go("doc", last); else render();
+}
+
+// The row as it looks on paper: the start of its title (Persian starts at the right) next to its amounts,
+// so the number is large enough to check even on a phone.
+function rowSnip(d, r){
+  if (r.img !== undefined) return r.img;
+  const pg = d.doc.pages[r.page]; if (!pg || !pg.canvas || !r.box) return (r.img = "");
+  const parts = [];
+  if (r.lbox){ const w = Math.min(r.lbox.x1 - r.lbox.x0, (r.box.y1 - r.box.y0) * 5); parts.push({ x0: r.lbox.x1 - w, x1: r.lbox.x1 }); }
+  if (r.vbox) parts.push({ x0: r.vbox.x0, x1: r.vbox.x1 });
+  if (!parts.length) parts.push({ x0: r.box.x0, x1: r.box.x1 });
+  const y0 = r.box.y0, h = r.box.y1 - r.box.y0, total = parts.reduce((s, p) => s + p.x1 - p.x0, 0) + (parts.length - 1) * 12;
+  const sc = Math.min(1.2, 640 / total), c = document.createElement("canvas");
+  c.width = Math.round(total * sc); c.height = Math.round(h * sc);
+  const g = c.getContext("2d"); g.fillStyle = "#fff"; g.fillRect(0, 0, c.width, c.height);
+  let x = c.width; // right to left, like the page
+  parts.forEach(p => { const w = (p.x1 - p.x0) * sc; x -= w; g.drawImage(pg.canvas, p.x0, y0, p.x1 - p.x0, h, x, 0, w, c.height); x -= 12 * sc; });
+  return (r.img = c.toDataURL("image/jpeg", 0.85));
+}
+const catOptions = sel => `<option value="">— نادیده گرفتن —</option>` + CCAT.map(([k, n]) => `<option value="${k}"${k === sel ? " selected" : ""}>${n}</option>`).join("");
+
+function renderDoc(i){
+  const d = state.docs[i]; if (!d){ state.page = "docs"; return render(); }
+  const u = d.u, plans = u.plans.length ? u.plans : ["اصلی"];
+  setHead(d.file, "خواندن مدرک");
+  const lowRows = u.rows.filter(r => Object.values(r.vals).some(v => v.conf < 70)).length;
+  $("view").innerHTML = `
+  ${crumb(["docs", "مدارک و قراردادها"], [null, esc(d.file)])}
+  <div class="ph"><div style="display:flex;flex-direction:column;gap:6px"><div class="hchips"><h1>${esc(d.file)}</h1><span class="tag t-protect">${esc(u.kind)}</span>${d.saved ? '<span class="tag t-good">ذخیره شد</span>' : ""}</div>
+    <span class="sub">${fmtInt(d.doc.pages.length || 1)} صفحه · ${fmtInt(u.rows.length)} ردیف پوشش پیدا شد${lowRows ? ` · <b style="color:var(--mid-ink)">${fmtInt(lowRows)} ردیف نیاز به بررسی</b>` : ""}</span></div>
+    <div class="actions"><button class="btn" type="button" id="docDel">حذف</button><button class="btn primary" type="button" id="docSave">${d.saved ? "به‌روزرسانی قرارداد" : "ذخیره به‌عنوان قرارداد"}</button></div></div>
+  <section class="panel"><div class="panel-h"><h2>مشخصات</h2><span class="small muted">هر چیزی را که درست خوانده نشده اصلاح کنید</span></div>
+    <div class="panel-b form">
+      <label class="field">بیمه‌گذار (سازمان)<input type="text" data-df="org" value="${esc(u.org || "")}" placeholder="مثلاً مجتمع فولاد گیلان"></label>
+      <label class="field">بیمه‌گر<input type="text" data-df="insurer" value="${esc(u.insurer || "")}" placeholder="مثلاً بیمه آسیا"></label>
+      <label class="field">سال قرارداد (شروع)<input type="number" data-df="year" value="${u.year || ""}" placeholder="۱۴۰۵"></label>
+      <label class="field">تعداد بیمه‌شدگان<input type="number" data-df="insured" value="${u.insured || ""}"></label>
+      <label class="field">فرانشیز (٪)<input type="number" data-df="franchise" value="${u.franchise ?? ""}"></label>
+      ${plans.map(p => { const pp = u.planPremium[p] || { v: null, per: "year" }; return `<label class="field">حق‌بیمهٔ هر نفر${plans.length > 1 ? ` — ${esc(p)}` : ""} (میلیون تومان)
+        <span style="display:flex;gap:6px"><input type="number" step="0.01" data-dp="${esc(p)}" value="${pp.v != null ? +pp.v.toFixed(3) : ""}" style="flex:1" placeholder="${u.kind === "استعلام قیمت" ? "هنوز قیمتی نیست" : "وارد کنید"}">
+        <select data-dper="${esc(p)}" style="border:1px solid var(--input-line);border-radius:9px;background:var(--surface);padding:0 8px"><option value="year"${pp.per === "year" ? " selected" : ""}>سالانه</option><option value="month"${pp.per === "month" ? " selected" : ""}>ماهانه</option></select></span>
+        ${p === plans[0] && u.premiumNote ? `<span class="small muted">${esc(u.premiumNote)}</span>` : ""}</label>`; }).join("")}
+    </div></section>
+  <section class="panel"><div class="panel-h"><h2>پوشش‌ها و سقف‌ها</h2><span class="small muted">میلیون تومان · «بدون سقف» را خالی بگذارید و بنویسید ∞</span></div>
+    <div class="mobile-only panel-b" style="display:flex;flex-direction:column;gap:12px">${u.rows.map((r, ri) => `<div class="card" style="padding:10px;display:flex;flex-direction:column;gap:8px">
+      ${rowSnip(d, r) ? `<img src="${rowSnip(d, r)}" alt="" style="width:100%;border:1px solid var(--line);border-radius:6px">` : `<span class="small muted">${esc(r.label)}</span>`}
+      <select data-dc="${ri}" style="height:40px;border:1px solid var(--input-line);border-radius:9px;background:var(--surface);padding:0 8px">${catOptions(r.cat)}</select>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">${plans.map(p => { const v = r.vals[p], low = v && v.conf < 70; return `<label class="small" style="flex:1;min-width:120px;display:flex;flex-direction:column;gap:3px">${plans.length > 1 ? esc(p) : "سقف (میلیون تومان)"}<input data-dv="${ri}|${esc(p)}" value="${v ? (v.rial === Infinity ? "∞" : +(v.rial / 1e7).toFixed(2)) : ""}" inputmode="decimal" style="height:40px;border:1.5px solid ${low ? "var(--mid)" : "var(--input-line)"};border-radius:9px;background:${low ? "var(--mid-bg)" : "var(--surface)"};padding:0 10px"><span class="muted" data-rial="${ri}|${esc(p)}">${v ? (v.rial === Infinity ? "بدون سقف" : fmtInt(v.rial) + " ریال") : ""}</span>${low ? '<span style="color:var(--mid-ink)">با تصویر مقایسه کنید</span>' : ""}</label>`; }).join("")}</div></div>`).join("")}</div>
+    <div class="tw desk-only"><table style="min-width:${640 + plans.length * 130}px"><thead><tr><th>تصویر ردیف در مدرک</th><th>پوشش</th>${plans.map(p => `<th>${esc(p)}</th>`).join("")}</tr></thead><tbody>
+    ${u.rows.map((r, ri) => `<tr>
+      <td style="width:46%">${rowSnip(d, r) ? `<img src="${rowSnip(d, r)}" alt="" style="max-width:100%;border:1px solid var(--line);border-radius:6px;display:block">` : `<span class="small muted">${esc(r.label)}</span>`}</td>
+      <td><select data-dc="${ri}" style="max-width:190px;border:1px solid var(--input-line);border-radius:8px;background:var(--surface);padding:4px">${catOptions(r.cat)}</select></td>
+      ${plans.map(p => { const v = r.vals[p]; const low = v && v.conf < 70; return `<td><input data-dv="${ri}|${esc(p)}" value="${v ? (v.rial === Infinity ? "∞" : +(v.rial / 1e7).toFixed(2)) : ""}" style="width:110px;height:34px;border:1.5px solid ${low ? "var(--mid)" : "var(--input-line)"};border-radius:8px;background:${low ? "var(--mid-bg)" : "var(--surface)"};padding:0 8px" inputmode="decimal"><div class="small muted" data-rial="${ri}|${esc(p)}">${v ? (v.rial === Infinity ? "بدون سقف" : fmtInt(v.rial) + " ریال") : ""}</div>${low ? '<div class="small" style="color:var(--mid-ink)">بررسی کنید</div>' : ""}</td>`; }).join("")}
+    </tr>`).join("") || `<tr><td colspan="${2 + plans.length}" class="muted">جدول پوششی پیدا نشد. اگر مدرک جدول دارد، عکس واضح‌تر یا PDF اصلی را امتحان کنید.</td></tr>`}
+    </tbody></table></div>
+    <div class="panel-b"><button class="btn" type="button" id="docAddRow">＋ افزودن ردیف</button></div></section>
+  ${u.issues.length ? `<section class="panel"><div class="panel-h"><h2>نیاز به توجه</h2></div><div class="panel-b"><ul class="dq">${u.issues.map(x => `<li><span class="sev tag t-mid">بررسی</span><span>${esc(x)}</span></li>`).join("")}</ul></div></section>` : ""}
+  <details class="panel"><summary class="panel-h" style="cursor:pointer"><h2>متن کامل خوانده‌شده</h2></summary><div class="panel-b"><pre style="white-space:pre-wrap;font:inherit;font-size:12.5px;max-height:420px;overflow:auto;margin:0">${esc(d.doc.text.trim())}</pre></div></details>`;
+
+  const num = s => { s = drNorm(String(s)).trim(); if (/^(∞|بدون|بی)/.test(s)) return Infinity; const v = parseFloat(s.replace(/,/g, "")); return isNaN(v) ? null : v; };
+  $("view").querySelectorAll("[data-df]").forEach(el => el.onchange = () => { const k = el.dataset.df; u[k] = el.type === "number" ? (el.value === "" ? null : +el.value) : el.value.trim(); });
+  $("view").querySelectorAll("[data-dp]").forEach(el => el.onchange = () => { const p = el.dataset.dp; (u.planPremium[p] = u.planPremium[p] || { per: "year" }).v = num(el.value); });
+  $("view").querySelectorAll("[data-dper]").forEach(el => el.onchange = () => { const p = el.dataset.dper; (u.planPremium[p] = u.planPremium[p] || { v: null }).per = el.value; });
+  $("view").querySelectorAll("[data-dc]").forEach(el => el.onchange = () => { u.rows[+el.dataset.dc].cat = el.value || null; });
+  $("view").querySelectorAll("[data-dv]").forEach(el => el.onchange = () => { const [ri, p] = el.dataset.dv.split("|"), v = num(el.value), r = u.rows[+ri];
+    if (v == null) delete r.vals[p]; else r.vals[p] = { rial: v === Infinity ? Infinity : v * 1e7, conf: 100 }; el.style.borderColor = "var(--input-line)"; el.style.background = "var(--surface)";
+    $("view").querySelectorAll(`[data-rial="${el.dataset.dv}"]`).forEach(x => { x.textContent = v == null ? "" : v === Infinity ? "بدون سقف" : fmtInt(v * 1e7) + " ریال"; });
+    $("view").querySelectorAll(`[data-dv="${el.dataset.dv}"]`).forEach(x => { if (x !== el) x.value = el.value; }); });
+  $("docAddRow").onclick = () => { u.rows.push({ cat: null, label: "ردیف دستی", vals: {}, page: 0, box: null, img: "" }); render(); };
+  $("docDel").onclick = () => { state.contracts = state.contracts.filter(c => c.src !== d.id); state.docs.splice(i, 1); go("docs"); };
+  $("docSave").onclick = () => {
+    if (!u.org || !u.year){ alert("نام بیمه‌گذار و سال قرارداد را وارد کنید."); return; }
+    state.contracts = state.contracts.filter(c => c.src !== d.id);
+    plans.forEach(p => {
+      const caps = {}; u.rows.forEach(r => { if (r.cat && r.vals[p]) { const v = r.vals[p].rial === Infinity ? Infinity : r.vals[p].rial / 1e7; if (caps[r.cat] == null) caps[r.cat] = v; } });
+      if (!Object.keys(caps).length) return;
+      const pp = u.planPremium[p] || {}, prem = pp.v == null ? null : pp.per === "month" ? pp.v * 12 : pp.v;
+      state.contracts.push({ id: d.id + p, src: d.id, org: u.org, insurer: u.insurer, year: u.year, plan: plans.length > 1 ? p : "", premium: prem, insured: u.insured, franchise: u.franchise, caps, kind: u.kind });
+    });
+    d.saved = true; state.cmpOrg = orgKey(u.org); go("docs");
+  };
+}
+
+function sampleContracts(){
+  // Synthetic two-year sample so the comparison page shows what it does before real documents are read.
+  const base = { hosp: 120, special: 240, delivery: 12, para: 20, diag: 20, lab: 20, outsurg: 20, rehab: 20, combo: 20, ambIn: 0.5, ambOut: 1, refractive: 10, glasses: 2, dental: 8, visitdrug: 7, hearing: 18, infert: 12 };
+  const next = { hosp: 250, special: 500, delivery: 20, para: 25, diag: 25, lab: 25, outsurg: 25, rehab: 25, combo: 75, ambIn: 2, ambOut: 4, refractive: 15, glasses: 2, dental: 8, visitdrug: 7, hearing: 18, infert: 12 };
+  return [
+    { id: "s1", src: "sample", sample: true, org: "نمونه: شرکت پتروشیمی بندر", insurer: "بیمهٔ نمونه", year: 1404, plan: "", premium: 11.28, insured: 2400, franchise: 10, caps: base },
+    { id: "s2", src: "sample", sample: true, org: "نمونه: شرکت پتروشیمی بندر", insurer: "بیمهٔ نمونه", year: 1405, plan: "", premium: 23.4, insured: 2400, franchise: 10, caps: next },
+    { id: "s3", src: "sample", sample: true, org: "نمونه: دانشگاه شهر", insurer: "", year: 1405, plan: "نقره‌ای", premium: 17.04, insured: 900, franchise: 10, caps: { hosp: 95, special: 110, delivery: 20, para: 38, diag: 30, lab: 15, outsurg: 9, ambIn: 3, ambOut: 6, dental: 18, glasses: 5, rehab: 4, visitdrug: 15, refractive: 12.5, hearing: 4 } },
+  ];
+}
+
+function renderDocs(){
+  setHead("مدارک و قراردادها", "خواندن و مقایسه");
+  const all = state.contracts, groups = {};
+  all.forEach(c => { const k = orgKey(c.org); (groups[k] = groups[k] || { name: c.org, list: [] }).list.push(c); });
+  const keys = Object.keys(groups);
+  if (!state.cmpOrg || !groups[state.cmpOrg]) state.cmpOrg = keys.find(k => groups[k].list.length > 1) || keys[0];
+  const G = groups[state.cmpOrg];
+  $("view").innerHTML = `
+  ${crumb([null, "مدارک و قراردادها"])}
+  <div class="ph"><div><h1>مدارک و قراردادها</h1><span class="sub">بیمه‌نامه، الحاقیه، شرایط مناقصه یا استعلام را بدهید (PDF، عکس، Word)؛ سقف‌ها و نرخ خوانده و سال‌به‌سال مقایسه می‌شود.</span></div></div>
+  <label class="drop" for="docFileIn" id="docDrop"><span class="di"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M12 18v-6M9 15l3-3 3 3"/></svg></span><b>مدرک را اینجا بکشید یا بزنید</b><span>PDF (متنی یا اسکن)، عکس با گوشی، Word یا متن · چند فایل با هم</span></label>
+  <input type="file" id="docFileIn" accept=".pdf,.jpg,.jpeg,.png,.webp,.docx,.txt" multiple hidden>
+  ${state.docs.length ? `<section class="panel"><div class="panel-h"><h2>مدارک خوانده‌شده</h2></div><div class="panel-b ilist">${state.docs.map((d, i) => `<button class="ili" type="button" data-doc="${i}"><span>${esc(d.file)} · ${esc(d.u.org || "بیمه‌گذار نامعلوم")} · ${d.u.year ? fmtInt(d.u.year).replace(/٬/g, "") : "سال نامعلوم"}</span><em class="tag ${d.saved ? "t-good" : "t-mid"}">${d.saved ? "ذخیره شد" : "بررسی و ذخیره"}</em></button>`).join("")}</div></section>` : ""}
+  ${keys.length ? `<div class="fchips" role="group" aria-label="سازمان" style="flex-wrap:wrap">${keys.map(k => `<button type="button" data-org="${esc(k)}" aria-pressed="${k === state.cmpOrg}">${esc(short(groups[k].name))} ${fmtInt(groups[k].list.length)}</button>`).join("")}</div>${compareView(G, all)}` : ""}`;
+  $("docFileIn").onchange = e => { const f = [...e.target.files]; e.target.value = ""; if (f.length) handleDocs(f); };
+  const dz = $("docDrop"); dz.ondragover = e => { e.preventDefault(); dz.classList.add("over"); }; dz.ondragleave = () => dz.classList.remove("over");
+  dz.ondrop = e => { e.preventDefault(); dz.classList.remove("over"); const f = [...e.dataTransfer.files].filter(isDocFile); if (f.length) handleDocs(f); };
+}
+
+function compareView(G, all){
+  const list = G.list.slice().sort((a, b) => (a.plan || "").localeCompare(b.plan || "") || a.year - b.year);
+  const ORDER = ["hosp", "special", "delivery", "infert", "para", "diag", "lab", "fetal", "outsurg", "rehab", "visitdrug", "visit", "drug", "emergency", "dental", "refractive", "glasses", "hearing", "ambIn", "ambOut", "amb", "organs", "prosthesis", "orthosis", "supplies", "specialDis", "combo", "total"];
+  const cats = ORDER.filter(k => list.some(c => c.caps[k] != null));
+  const label = c => `${fmtInt(c.year).replace(/٬/g, "")}${c.plan ? " · " + c.plan : ""}`;
+  // consecutive years of the same plan
+  const pairs = []; list.forEach((c, i) => { const prev = list.slice(0, i).reverse().find(x => (x.plan || "") === (c.plan || "") && x.year < c.year); if (prev) pairs.push([prev, c]); });
+  // the market benchmark only uses real contracts (samples only benchmark other samples)
+  const isSample = list.every(c => c.sample);
+  const others = all.filter(c => orgKey(c.org) !== orgKey(G.name) && (isSample || !c.sample));
+  const market = k => median(others.map(c => c.caps[k]));
+  const sugg = [];
+  pairs.forEach(([a, b]) => {
+    const pc = pctCh(a.premium, b.premium), capCh = cats.map(k => pctCh(a.caps[k], b.caps[k])).filter(v => v != null), mc = median(capCh);
+    if (pc != null && mc != null){
+      if (pc > mc + 0.1) sugg.push(["warn", `نرخ ${b.plan ? `«${b.plan}» ` : ""}${fmtSignedPct(pc)} بالا رفته ولی میانهٔ تغییر سقف‌ها ${fmtSignedPct(mc)} بوده؛ قیمت به ازای هر واحد پوشش حدود ${fmtPct((1 + pc) / (1 + mc) - 1)} گران‌تر شده. در مذاکرهٔ سال بعد سقف افزایش نرخ را با افزایش تعهدات گره بزنید.`]);
+      else if (pc < mc - 0.1) sugg.push(["ok", `سقف‌ها (میانه ${fmtSignedPct(mc)}) تندتر از نرخ (${fmtSignedPct(pc)}) بالا رفته‌اند؛ قرارداد ${label(b)} نسبت به سال قبل خرید خوبی بوده است.`]);
+      else sugg.push(["note", `نرخ (${fmtSignedPct(pc)}) تقریباً هم‌پای سقف‌ها (میانه ${fmtSignedPct(mc)}) تغییر کرده؛ قیمت به ازای پوشش ثابت مانده.`]);
+    }
+    const flat = cats.filter(k => a.caps[k] != null && b.caps[k] != null && a.caps[k] === b.caps[k] && isFinite(a.caps[k]));
+    if (flat.length && (pc || 0) > 0.05) sugg.push(["warn", `این سقف‌ها در ${label(b)} افزایش نگرفته‌اند و با تورم ارزش واقعی‌شان کم شده: ${flat.map(k => CCAT_NAME[k]).join("، ")}. برای سال بعد دست‌کم هم‌پای تورم بالا بروند.`]);
+    const big = cats.map(k => [k, pctCh(a.caps[k], b.caps[k])]).filter(([, v]) => v != null && v >= 1).sort((x, y) => y[1] - x[1]);
+    if (big.length) sugg.push(["note", `بیشترین بهبود: ${big.slice(0, 4).map(([k, v]) => `${CCAT_NAME[k]} ×${fmtNum(1 + v)}`).join("، ")}. با فایل خسارت معلوم می‌شود این افزایش‌ها لازم بوده یا نه.`]);
+  });
+  const latest = list.slice().sort((a, b) => b.year - a.year)[0];
+  if (latest){
+    if (latest.caps.combo != null && cats.some(k => !["combo", "total", "hosp", "special"].includes(k) && latest.caps[k] != null && latest.caps[k] >= latest.caps.combo))
+      sugg.push(["warn", `سقف مشترک (${MT(latest.caps.combo)}) از سقف بعضی بندها کمتر یا برابر است؛ یعنی یک بند می‌تواند کل سقف را مصرف کند. در سال بعد سقف مشترک دست‌کم جمع بندهای پرمصرف باشد.`]);
+    if (others.length){
+      const low = cats.filter(k => { const m = market(k); return m && isFinite(latest.caps[k]) && latest.caps[k] < m * 0.6; });
+      if (low.length) sugg.push(["warn", `پایین‌تر از بازار (کمتر از ۶۰٪ میانهٔ ${fmtInt(new Set(others.map(c => orgKey(c.org))).size)} سازمان دیگر): ${low.map(k => `${CCAT_NAME[k]} ${MT(latest.caps[k])} در برابر ${MT(market(k))}`).join("، ")}.`]);
+    }
+    if (latest.premium) sugg.push(["note", `با حق‌بیمهٔ ${fmtNum(latest.premium)} برای هر نفر، بیمه‌گر تا خسارت سرانهٔ ${fmtNum(latest.premium * 0.75)} (Loss Ratio ۷۵٪) سالم و تا ${fmtNum(latest.premium * 0.85)} مرزی است. فایل خسارت که برسد، اپ دقیقاً می‌گوید کجای این بازه‌اید.`]);
+  }
+  sugg.push(["info", "پیشنهاد حذف یا کاهش هر پوشش فقط با فایل خسارت ممکن است؛ آن را در «تحلیل تمدید» بدهید تا به همین قرارداد وصل شود."]);
+  const SG = { warn: ["t-mid", "هشدار"], ok: ["t-good", "خوب"], note: ["t-protect", "نکته"], info: ["t-line", "بعدی"] };
+  return `
+  <section class="panel"><div class="panel-h"><h2>${esc(G.name)}</h2><span class="small muted">میلیون تومان برای هر نفر در سال · ${fmtInt(list.length)} قرارداد</span></div>
+    <div class="tw"><table style="min-width:${300 + list.length * 120 + pairs.length * 80}px"><thead><tr><th>پوشش</th>${list.map(c => `<th>${label(c)}${c.sample ? ' <span class="tag t-line">نمونه</span>' : ""}</th>`).join("")}${pairs.map(([a, b]) => `<th>تغییر ${b.plan ? b.plan + " " : ""}${fmtInt(a.year).replace(/٬/g, "")}←${fmtInt(b.year).replace(/٬/g, "")}</th>`).join("")}${others.length ? "<th>میانهٔ بازار</th>" : ""}</tr></thead><tbody>
+      <tr style="background:var(--hl)"><td><b>حق‌بیمهٔ سالانهٔ هر نفر</b></td>${list.map(c => `<td class="nw"><b>${c.premium ? fmtNum(c.premium) : "—"}</b></td>`).join("")}${pairs.map(([a, b]) => { const v = pctCh(a.premium, b.premium); return `<td class="nw"><b>${v == null ? "—" : fmtSignedPct(v)}</b></td>`; }).join("")}${others.length ? `<td class="nw">${fmtNum(median(others.map(c => c.premium)))}</td>` : ""}</tr>
+      ${cats.map(k => `<tr><td>${CCAT_NAME[k]}</td>${list.map(c => `<td class="nw">${c.caps[k] == null ? '<span class="faint">—</span>' : MT(c.caps[k])}</td>`).join("")}${pairs.map(([a, b]) => { const v = pctCh(a.caps[k], b.caps[k]); return `<td class="nw" style="${v == null ? "" : v === 0 ? "color:var(--mid-ink);font-weight:700" : v >= 1 ? "color:var(--good);font-weight:700" : ""}">${v == null ? "—" : v === 0 ? "بدون تغییر" : fmtSignedPct(v)}</td>`; }).join("")}${others.length ? `<td class="nw muted">${market(k) == null ? "—" : MT(market(k))}</td>` : ""}</tr>`).join("")}
+    </tbody></table></div></section>
+  <section class="panel"><div class="panel-h"><h2>پیشنهاد برای سال بعد</h2><span class="small muted">از مقایسهٔ قراردادها؛ بدون دادهٔ خسارت</span></div>
+    <div class="panel-b"><ul class="dq">${sugg.map(([k, t]) => `<li><span class="sev tag ${SG[k][0]}">${SG[k][1]}</span><span>${esc(t)}</span></li>`).join("")}</ul></div></section>`;
+}
+
 /* ================= UI (DESIGN_PROMPT_1) ================= */
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -1627,7 +2324,7 @@ const SEVTAG = { crit: ["t-bad", "بحرانی"], warn: ["t-mid", "هشدار"],
 const inFrame = (() => { try { return window.self !== window.top; } catch (e) { return true; } })();
 const reduced = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-const state = { page: "home", idx: null, mode: "renewal", groups: [], tenders: [], settings: Object.assign({}, DEFAULTS), protectNames: new Set(),
+const state = { docs: [], contracts: [], cmpOrg: null, page: "home", idx: null, mode: "renewal", groups: [], tenders: [], settings: Object.assign({}, DEFAULTS), protectNames: new Set(),
   sort: "renewal", q: "", errors: [], hist: [], pushed: 0, more: {}, mcat: "urgent", chat: {}, tab: null };
 
 /* ---------- data ---------- */
@@ -1746,7 +2443,7 @@ function renderHome(){
   <div class="missions">
     <section class="mis">
       <div class="mis-h"><span class="num">۱</span><div><h2>تحلیل تمدید قرارداد</h2><p>فایل اکسل قرارداد فعلی را بدهید؛ برای تک‌تک پوشش‌ها می‌گوییم چه کنید و حق‌بیمهٔ لازم چقدر است.</p></div></div>
-      <label class="drop" id="dropR" for="file"><span class="di"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg></span><b>فایل اکسل را اینجا بکشید یا بزنید</b><span>خسارت‌ها، سقف پوشش‌ها و حق‌بیمه · چند فایل با هم هم می‌شود</span></label>
+      <label class="drop" id="dropR" for="file"><span class="di"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg></span><b>فایل را اینجا بکشید یا بزنید</b><span>اکسل خسارت برای تحلیل کامل · PDF، عکس یا Word بیمه‌نامه برای مقایسهٔ قرارداد</span></label>
       <div class="does"><span class="t-inc">پرمصرف و زیر فشار سقف ← افزایش</span><span class="t-reduce">کم‌مصرف ← کاهش</span><span class="t-remove">بدون مصرف ← حذف</span><span class="t-protect">حمایتی ← حفظ</span><span class="t-keep">مورد استثنایی ← چشم‌پوشی</span></div>
       <button class="link" type="button" data-go="renewal" style="align-self:flex-start">یا تحلیل ${fmtInt(all.length)} گروه نمونه را ببینید ←</button>
     </section>
@@ -1787,7 +2484,7 @@ function renderHome(){
       <div class="sugs">${(aiPick === "p" ? portfolioSuggest() : all.find(x => x.i === aiPick) ? aiSuggest(all.find(x => x.i === aiPick).A, all.find(x => x.i === aiPick).S) : []).slice(0, 3).map(q => `<button type="button" data-hask="${esc(q)}">${esc(q)}</button>`).join("")}</div>
       <form class="hask" id="homeAsk"><select id="homeAiG" aria-label="دربارهٔ"><option value="p"${aiPick === "p" ? " selected" : ""}>همهٔ گروه‌ها</option>${all.map(x => `<option value="${x.i}"${x.i === aiPick ? " selected" : ""}>${esc(short(x.A.group.name))}</option>`).join("")}</select><input id="homeAiQ" placeholder="مثلاً: بودجه چقدر است؟" aria-label="سؤال"><button type="submit" aria-label="پرسیدن">↑</button></form>
     </div>
-    <button class="isl" type="button" data-go="docs">${islHead("docs", "اسناد و گزارش‌ها", "نامهٔ تمدید، گزارش PDF", false)}<span class="foot2">نامهٔ پیشنهاد از صفحهٔ هر گروه ←</span></button>
+    <button class="isl" type="button" data-go="docs">${islHead("docs", "مدارک و قراردادها", "خواندن PDF و عکس بیمه‌نامه", false)}<span class="foot2">${state.contracts.filter(c => !c.sample).length ? `${fmtInt(state.contracts.filter(c => !c.sample).length)} قرارداد خوانده‌شده ←` : "مقایسهٔ دو سال قرارداد ←"}</span></button>
     <button class="isl" type="button" data-go="settings">${islHead("settings", "قواعد و تنظیمات", "آستانه‌ها و پوشش‌های حمایتی", false)}<span class="foot2">Loss Ratio هدف: ${fmtPct(t)} ←</span></button>
   </div>
   <div class="sec-t"><h2>مدیریت و نقشهٔ راه</h2><span class="small muted">بخش‌هایی که با نسخهٔ آنلاین فعال می‌شوند</span></div>
@@ -1809,7 +2506,6 @@ function renderHome(){
 const SOON = {
   market: ["مقایسه با بازار", "سرانه و Loss Ratio هر گروه در برابر میانگین ناشناس گروه‌های مشابه همان صنعت. وقتی چند کارگزار به نسخهٔ آنلاین وصل شوند فعال می‌شود."],
   ai: ["دستیار هوشمند", "در این نسخه، دستیار داخل صفحهٔ هر گروه است و از قواعد اپ با ذکر منبع جواب می‌دهد. گفت‌وگوی آزاد با هوش مصنوعی در نسخهٔ آنلاین می‌آید."],
-  docs: ["اسناد و گزارش‌ها", "گزارش PDF/Word با لوگوی کارگزاری و بایگانی نامه‌ها. نامهٔ پیشنهاد تمدید همین حالا از صفحهٔ هر گروه ساخته می‌شود."],
   history: ["تاریخچهٔ قراردادها", "ذخیرهٔ قراردادها و مقایسهٔ سال‌به‌سال هر گروه؛ نیاز به ذخیره‌سازی نسخهٔ آنلاین دارد."],
   mapping: ["ورود داده و نگاشت", "جادوی تطبیق ستون‌های هر فایل اکسل با فیلدهای اپ، تا فایل هر بیمه‌گر بدون تغییر خوانده شود."],
   dadeh: ["اتصال داده‌پردازان", "دریافت مستقیم دادهٔ خسارت از نرم‌افزار داده‌پردازان، با وضعیت اتصال و آخرین همگام‌سازی. آخرین فاز پروژه است."],
@@ -2189,6 +2885,7 @@ function render(){
   else if (p === "renewal") renderRenewal(); else if (p === "group") renderGroup(state.idx);
   else if (p === "tender") renderTenderList(); else if (p === "tenderp") renderTender(state.idx);
   else if (p === "settings") renderSettings(); else if (p === "reminders") renderReminders();
+  else if (p === "docs") renderDocs(); else if (p === "doc") renderDoc(state.idx);
   else if (p === "admin") renderAdmin(); else if (p === "login") renderLogin();
   else if (p.startsWith("soon:")) renderSoon(p.slice(5));
   renderSidebar();
@@ -2253,6 +2950,8 @@ document.addEventListener("click", e => {
   const st = t.closest("[data-step]"); if (st){ const el = $(st.dataset.step); el.value = (parseFloat(el.value) || 0) + parseFloat(st.dataset.d); el.dispatchEvent(new Event("change")); return; }
   const a = t.closest("[data-ask]"); if (a){ ask(a.dataset.ask); return; }
   if (t.closest("[data-close]") || t.id === "modal"){ $("modal").hidden = true; return; }
+  const dc = t.closest("[data-doc]"); if (dc){ go("doc", +dc.dataset.doc); return; }
+  const og = t.closest("[data-org]"); if (og){ state.cmpOrg = og.dataset.org; render(); return; }
   const o = t.closest("[data-open]"); if (o && $("view").contains(o)){ go(state.mode === "tender" ? "tenderp" : "group", +o.dataset.open); return; }
 });
 document.addEventListener("keydown", e => {
@@ -2295,7 +2994,7 @@ function openMenu(){
     </div>
     <div class="sheet-sec">ابزار</div>
     <div class="mgrid">
-      ${mi("ai", "دستیار هوشمند", 'data-act="ai"')}${mi("docs", "اسناد و گزارش‌ها", 'data-go="docs"')}${mi("settings", "قواعد تحلیل", 'data-go="settings"')}${mi("moon", "حالت روشن / تیره", "data-theme-toggle")}
+      ${mi("ai", "دستیار هوشمند", 'data-act="ai"')}${mi("docs", "مدارک و قراردادها", 'data-go="docs"')}${mi("settings", "قواعد تحلیل", 'data-go="settings"')}${mi("moon", "حالت روشن / تیره", "data-theme-toggle")}
     </div>
     <div class="sheet-sec">مدیریت و نقشهٔ راه</div>
     <div class="mgrid">
@@ -2374,6 +3073,9 @@ function readFile(f){
 }
 async function handleFiles(files){
   if (!files.length) return;
+  const docs = files.filter(isDocFile); files = files.filter(f => !isDocFile(f));
+  if (docs.length && !files.length) return handleDocs(docs);
+  if (docs.length) setTimeout(() => handleDocs(docs), 0);
   if (typeof XLSX === "undefined"){ state.errors = ["کتابخانهٔ خواندن اکسل بارگذاری نشد؛ اتصال اینترنت را بررسی کنید و صفحه را دوباره باز کنید."]; return render(); }
   const res = await Promise.all(files.map(readFile));
   const ok = res.filter(r => r.ok).map(r => r.g);
@@ -2399,6 +3101,7 @@ async function handleFiles(files){
 $("file").addEventListener("change", e => { const files = [...e.target.files]; e.target.value = ""; handleFiles(files); });
 
 setGroups(sampleGroups());
+state.contracts = sampleContracts();
 state.tenders = makeTenders(); addProtect(state.tenders);
 render();
 
