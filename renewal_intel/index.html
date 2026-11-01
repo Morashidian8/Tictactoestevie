@@ -162,6 +162,7 @@ button.isl:hover,.isl.click:hover{transform:translateY(-2px)}
 .ai-ul{margin:4px 0 0;padding-inline-start:18px;display:flex;flex-direction:column;gap:3px}
 .ai-next{display:flex;flex-wrap:wrap;gap:5px;margin-top:4px}
 .ai-next button{font-size:11.5px;border:1px solid var(--brand);color:var(--brand);background:var(--surface);border-radius:99px;padding:2px 10px;cursor:pointer;font-family:inherit}
+mark.lexfix{background:var(--mid-bg);color:inherit;border-bottom:1.5px dotted var(--mid);border-radius:3px;padding:0 1px}
 .ai-link{border:0;background:none;color:var(--brand);font-weight:800;cursor:pointer;padding:0;font-family:inherit;font-size:inherit}
 .ai-t{border-collapse:collapse;font-size:12px;width:100%}.ai-t td,.ai-t th{padding:4px 6px;border-bottom:1px solid var(--line2);position:static}
 .hask select{height:44px;border-radius:12px;border:1px solid var(--line);background:var(--surface);padding:0 8px;max-width:170px;font-family:inherit;color:inherit}
@@ -1537,21 +1538,19 @@ async function drAmountLine(w, c){
       continue;
     }
     // a slanted stroke is the «/» thousands separator (۱/۶۰۰/۰۰۰): its top leans right of its bottom
-    if (k.w < H * 0.6 && drSlant(B, k) > k.h * 0.22){ out += ","; continue; }
+    if (window.DR_SLANT && k.w < H * 0.6 && drSlant(B, k) > k.h * 0.22){ out += ","; continue; }
     // one real digit: recognise it alone
     const pad = Math.round(H * 0.4), g = drCanvas(k.w + pad * 2, H + pad * 2), cx = g.getContext("2d");
     cx.fillStyle = "#fff"; cx.fillRect(0, 0, g.width, g.height);
     const src = c.getContext("2d").getImageData(k.x0, Math.max(0, base - H + 1), k.w, H), d = src.data;
     for (let i = 0; i < d.length; i += 4){ const v = (d[i] * 0.3 + d[i + 1] * 0.59 + d[i + 2] * 0.11) < 150 ? 0 : 255; d[i] = d[i + 1] = d[i + 2] = v; }
     cx.putImageData(src, pad, pad);
-    // read the digit at two sizes; if they disagree the amount is flagged for checking
+    // read the digit; if the first read is not a digit, try a smaller rendering
     const read = async img => { const r = await w.recognize(img); return { ch: (r.data.text || "").trim().replace(/[۰-۹]/g, x => "۰۱۲۳۴۵۶۷۸۹".indexOf(x)), conf: r.data.confidence }; };
-    const a1 = await read(g), a2 = await read(drFit(g, Math.round(g.width * 0.7)));
-    const pick = /^\d$/.test(a1.ch) && (a1.conf >= a2.conf || !/^\d$/.test(a2.ch)) ? a1 : a2;
+    let pick = await read(g);
+    if (!/^\d$/.test(pick.ch)) pick = await read(drFit(g, Math.round(g.width * 0.7)));
     if (!/^\d$/.test(pick.ch)) return null;
-    // ۵ and ۹ enclose a hole, ۸ and ۲ never do: the shape overrules a confused recogniser
-    if (pick.ch === "8" || pick.ch === "5"){ const r = drTopBottom(B, k); pick.ch = r < 0.6 ? "8" : "5"; }
-    out += pick.ch; digits++; conf = Math.min(conf, /^\d$/.test(a1.ch) && /^\d$/.test(a2.ch) && a1.ch !== a2.ch ? 40 : pick.conf);
+    out += pick.ch; digits++; conf = Math.min(conf, pick.conf);
   }
   const clean = out.replace(/^,+|,+$/g, "");
   if (!/^\d{1,3}(,\d{3})+$/.test(clean) && !/^\d+$/.test(clean)) return { text: clean, value: null, conf: 20 };
@@ -1565,6 +1564,74 @@ async function drAmount(w, c){
     if (r && r.value != null) return r;
   }
   return null;
+}
+
+/* ================= Persian OCR correction =================
+   Most OCR mistakes in Persian are in the dots (ب/پ/ت/ث/ن/ی، ج/چ/ح/خ، د/ذ، ر/ز/ژ، س/ش، ص/ض، ط/ظ، ع/غ، ف/ق، ک/گ).
+   A word is reduced to its dotless skeleton; if the skeleton (or one letter off it) matches a word of the
+   insurance vocabulary, that word is used and the change is recorded so the screen can show it. */
+const LEX_WORDS = (`بیمه بیمه‌نامه بیمه‌گذار بیمه‌گر بیمه‌شده بیمه‌شدگان شدگان شده الحاقیه قرارداد مناقصه استعلام تکمیلی درمان درمانی تعهدات تعهد سقف سقف‌ها سالانه سالیانه
+حداکثر حداقل فرانشیز حق‌بیمه حق نفر نفرات خانواده اصلی فرعی تحت تکفل کارکنان کارمندان شرکت سازمان موسسه دانشگاه مجتمع اداره بانک صنایع فولاد گیلان
+جبران هزینه هزینه‌های های بستری جراحی جراحی‌های عمومی تخصصی فوق اعمال مجاز سرپایی زایمان طبیعی سزارین کورتاژ نازایی ناباروری
+پاراکلینیک پاراکلینیکی رادیوگرافی رادیولوژی سونوگرافی ماموگرافی اسکن آنژیوگرافی آندوسکوپی کولونوسکوپی تصویربرداری آزمایش آزمایش‌های آزمایشگاهی تشخیصی تشخیص پاتولوژی ژنتیک
+شیمی رادیوتراپی سرطان پیوند کلیه قلب مغز اعصاب نخاع ستون فقرات دیسک گامانایف آنژیوپلاستی عروق کرونر
+آمبولانس فوریت فوریت‌های پزشکی پزشک پزشکان مشروط داخل خارج شهر شهری مراکز مرکز بیمارستان بیمارستانی
+دندانپزشکی دندان عینک لنز طبی انکساری عیوب چشم لیزیک سمعک فیزیوتراپی گفتار کاردرمانی توانبخشی ویزیت دارو داروها دارویی اورژانس
+اعضای اعضا طبیعی بدن پروتز اروتز لوازم بیماران بیماری خاص صعب‌العلاج غربالگری جنین شکستگی گچ‌گیری ختنه بخیه
+مبلغ ریال تومان میلیون میلیارد ماهانه ماهیانه سالانه نقره‌ای طلایی برنزی طرح ردیف شرح عنوان کد شماره تاریخ صدور شروع خاتمه پایان مدت اعتبار روز
+نشانی تلفن اقتصادی ملی واحد معرف نمایندگی کارگزاری کارگزار رسمی مستقیم شعبه حساب پرداخت اقساط قسط سررسید مالیات ارزش افزوده عوارض
+آسیا ایران البرز دانا پارسیان ملت سامان معلم رازی کوثر سینا نوین تعاون آرمان حافظ میهن سرمد پاسارگاد کارآفرین
+مطابق مجموعا تعداد افزایش کاهش برگشتی اضافی ابطال سایر شرایط مقررات قانون عمومی خصوصی مندرج متن پیوست صادر گردیده است می‌باشد باشد
+گروه سنین کلیه کلیهٔ برای هر نوع انواع شامل همچنین بدون استثنا مربوط مربوطه تایید تأیید دستور معالج معتمد حدود نفرات`).split(/\s+/).filter(Boolean);
+
+// Common general words: never "corrected" into a vocabulary word that merely looks similar.
+const LEX_COMMON = `این آن که را با از به در بر تا یا اگر هم نیز چه چون پس بعد قبل بین زیر روی پیش همه هیچ برخی دیگر خود ما شما آنها ایشان او
+است هست بود شد شود کرد کند کنند دارد دارند داشت گردد گرفت گیرد داد دهد دهند باید نباید می‌شود می‌باشد نمی‌باشد گردیده
+تهیه تحقیقات اصلاح نهال بذر سهامی کشاورزی جهاد وزارت آموزش ترویج رئیس نامه موضوع پیوست احترام سلام خواهشمند دستور فرمایید اقدام لازم مبذول
+تجمیع آتش‌سوزی مسئولیت مدنی حرفه‌ای ثالث بدنه خودروهای اداری شخصی همکاران سن سال سالگی کمتر بیشتر بالای زیر حدود تقریبا کل جمع
+اول دوم سوم یک دو سه چهار پنج شش هفت هشت نه ده صد هزار نوبت مرحله برنده مبنای تصمیم معرفی قیمت مبلغ ارقام
+استان تهران خیابان بلوار پلاک طبقه کدپستی ایمیل تلفن نمابر فکس همراه واریز شناسه شبا کارت بانکی
+مدیریت محترم صورتحساب شرح ذیل بررسی نسبت پرداخت مطابق تاریخ‌های اعلامی فیش اسرع وقت`.split(/\s+/).filter(Boolean);
+const SKEL = { "ب": "ٮ", "پ": "ٮ", "ت": "ٮ", "ث": "ٮ", "ن": "ٮ", "ی": "ٮ", "ي": "ٮ", "ئ": "ٮ", "ج": "ح", "چ": "ح", "خ": "ح", "ذ": "د", "ز": "ر", "ژ": "ر", "ش": "س", "ض": "ص", "ظ": "ط", "غ": "ع", "ق": "ف", "گ": "ک", "ك": "ک", "ة": "ه", "ۀ": "ه", "أ": "ا", "إ": "ا", "آ": "ا" };
+const skel = w => [...w.replace(/[‌\s]/g, "")].map(c => SKEL[c] || c).join("");
+const LEX = (() => { const m = new Map(); LEX_WORDS.forEach(w => { const k = skel(w); if (!m.has(k)) m.set(k, w.replace(/‌/g, "")); }); return m; })();
+const LEX_SET = new Set(LEX_WORDS.map(w => w.replace(/‌/g, "")));
+function lexEdit1(a, b){ // true when b is a with at most one letter inserted, deleted or changed
+  if (Math.abs(a.length - b.length) > 1) return false;
+  let i = 0, j = 0, e = 0;
+  while (i < a.length && j < b.length){ if (a[i] === b[j]){ i++; j++; continue; } if (++e > 1) return false; if (a.length > b.length) i++; else if (a.length < b.length) j++; else { i++; j++; } }
+  return e + (a.length - i) + (b.length - j) <= 1;
+}
+// Correct one word; returns the word and whether it changed.
+function lexOne(plain){
+  if (LEX_SET.has(plain)) return plain;
+  const k = skel(plain); let hit = LEX.get(k);
+  if (!hit && plain.length >= 5) for (const [lk, lw] of LEX) if (lk.length >= 5 && lexEdit1(k, lk)){ hit = lw; break; }
+  return hit || null;
+}
+function lexFix(w){
+  const core = w.replace(/^[^آ-ی]+|[^آ-ی]+$/g, ""), plain = core.replace(/‌/g, "");
+  if (plain.length < 3 || LEX_SET.has(plain)) return { w, fixed: false };
+  let hit = lexOne(plain);
+  // «وبستری» → «و بستری»: the conjunction glued to the next word
+  if (plain[0] === "و" && plain.length > 3){ const r = lexOne(plain.slice(1)); if (r && (!hit || r === hit)) hit = "و " + r; }
+  // «طبیعیبدن» → «طبیعی بدن»: two words glued together
+  if (!hit && plain.length >= 6) for (let i = 3; i <= plain.length - 3 && !hit; i++){ const x = lexOne(plain.slice(0, i)), y = lexOne(plain.slice(i)); if (x && y) hit = x + " " + y; }
+  if (!hit || hit === plain) return { w, fixed: false };
+  return { w: w.replace(core, hit), fixed: true, from: core };
+}
+function lexText(text){
+  const fixes = [];
+  const out = String(text || "").replace(/[آ-ی‌]{3,}/g, m => { const r = lexFix(m); if (r.fixed) fixes.push([r.from, r.w]); return r.w; });
+  return { text: out, fixes };
+}
+
+// Text for the screen: corrected words are highlighted and keep what was read in a tooltip.
+function lexHtml(text){
+  return String(text || "").split(/([آ-ی‌]{3,})/).map((part, i) => {
+    if (i % 2 === 0) return esc(part);
+    const r = lexFix(part); return r.fixed ? `<mark class="lexfix" title="خوانده‌شده: ${esc(r.from)}">${esc(r.w)}</mark>` : esc(part);
+  }).join("");
 }
 
 /* ================= Contract understanding =================
@@ -1629,8 +1696,8 @@ function planOfHeader(t){
 
 // Pull the contract out of one document.
 function understand(doc){
-  const T = norm(enDigits(doc.text)).replace(/[ـ]/g, ""), issues = [];
-  const out = { file: doc.file, kind: "سند", org: null, insurer: null, year: null, start: null, end: null, insured: null, premium: null, premiumPer: null, franchise: null, plans: {}, rows: [], issues };
+  const LX = lexText(doc.text), T = norm(enDigits(LX.text)).replace(/[ـ]/g, ""), issues = [];
+  const out = { fixes: LX.fixes.length, file: doc.file, kind: "سند", org: null, insurer: null, year: null, start: null, end: null, insured: null, premium: null, premiumPer: null, franchise: null, plans: {}, rows: [], issues };
   // kind
   if (/شماره\s*بیمه\s*نامه|شرح\s*تعهدات\s*بیمه\s*گر/.test(T)) out.kind = "بیمه‌نامه";
   else if (/الحاقیه/.test(T)) out.kind = "الحاقیه";
@@ -1673,6 +1740,7 @@ function understand(doc){
       const headerLike = cells.every(c => (c.text || "").length < 40) && plans.filter(p => p && !p.startsWith("#")).length && (cols === null || plans.some(p => p && p !== "اصلی"));
       if (!numeric && headerLike){ cols = cells.map((c, i) => ({ x0: c.x0, x1: c.x1, plan: plans[i] })).filter(c => c.plan); return; }
       if (!numeric) return;
+      cells.forEach(c => { if (c.text && c.raw == null){ c.raw = c.text; c.text = lexText(c.text).text; } });
       const textCells = cells.filter(c => c.value == null && (c.text || "").length > 1);
       const label = textCells.map(c => c.text).join(" — ");
       // the short title cell decides first; the long description only when the title says nothing
@@ -2180,6 +2248,11 @@ function renderDoc(i){
   const d = state.docs[i]; if (!d){ state.page = "docs"; return render(); }
   const u = d.u, plans = u.plans.length ? u.plans : ["اصلی"];
   setHead(d.file, "خواندن مدرک");
+  // a cap that jumps more than ×3 or halves against the same organisation's earlier contract is flagged too
+  const prev = state.contracts.filter(c => c.src !== d.id && u.org && orgKey(c.org) === orgKey(u.org) && c.year < (u.year || 0)).sort((x, y) => y.year - x.year)[0];
+  u.rows.forEach(r => { r.odd = null; if (!prev || !r.cat) return; const pv = prev.caps[r.cat]; Object.entries(r.vals).forEach(([p, v]) => {
+    if (pv == null || !isFinite(pv) || v.rial === Infinity || r.cat === "combo" || r.cat === "total") return; const ratio = v.rial / 1e7 / pv;
+    if (ratio > 3 || ratio < 0.5){ v.conf = Math.min(v.conf, 60); r.odd = `در ${fmtInt(prev.year).replace(/٬/g, "")} ${MT(pv)} بود (×${fmtNum(ratio)})؛ با تصویر مقایسه کنید.`; } }); });
   const lowRows = u.rows.filter(r => Object.values(r.vals).some(v => v.conf < 70)).length;
   $("view").innerHTML = `
   ${crumb(["docs", "مدارک و قراردادها"], [null, esc(d.file)])}
@@ -2200,19 +2273,19 @@ function renderDoc(i){
     </div></section>
   <section class="panel"><div class="panel-h"><h2>پوشش‌ها و سقف‌ها</h2><span class="small muted">میلیون تومان · «بدون سقف» را خالی بگذارید و بنویسید ∞</span></div>
     <div class="mobile-only panel-b" style="display:flex;flex-direction:column;gap:12px">${u.rows.map((r, ri) => `<div class="card" style="padding:10px;display:flex;flex-direction:column;gap:8px">
-      ${rowSnip(d, r) ? `<img src="${rowSnip(d, r)}" alt="" style="width:100%;border:1px solid var(--line);border-radius:6px">` : `<span class="small muted">${esc(r.label)}</span>`}
-      <select data-dc="${ri}" style="height:40px;border:1px solid var(--input-line);border-radius:9px;background:var(--surface);padding:0 8px">${catOptions(r.cat)}</select>
+      ${rowSnip(d, r) ? `<img src="${rowSnip(d, r)}" data-zoom="${ri}" alt="تصویر ردیف؛ برای بزرگ‌نمایی بزنید" style="width:100%;border:1px solid var(--line);border-radius:6px;cursor:zoom-in">` : `<span class="small muted">${esc(r.label)}</span>`}
+      <select data-dc="${ri}" style="height:40px;border:1px solid var(--input-line);border-radius:9px;background:var(--surface);padding:0 8px">${catOptions(r.cat)}</select>${r.odd ? `<span class="small" style="color:var(--mid-ink)">${esc(r.odd)}</span>` : ""}
       <div style="display:flex;gap:8px;flex-wrap:wrap">${plans.map(p => { const v = r.vals[p], low = v && v.conf < 70; return `<label class="small" style="flex:1;min-width:120px;display:flex;flex-direction:column;gap:3px">${plans.length > 1 ? esc(p) : "سقف (میلیون تومان)"}<input data-dv="${ri}|${esc(p)}" value="${v ? (v.rial === Infinity ? "∞" : +(v.rial / 1e7).toFixed(2)) : ""}" inputmode="decimal" style="height:40px;border:1.5px solid ${low ? "var(--mid)" : "var(--input-line)"};border-radius:9px;background:${low ? "var(--mid-bg)" : "var(--surface)"};padding:0 10px"><span class="muted" data-rial="${ri}|${esc(p)}">${v ? (v.rial === Infinity ? "بدون سقف" : fmtInt(v.rial) + " ریال") : ""}</span>${low ? '<span style="color:var(--mid-ink)">با تصویر مقایسه کنید</span>' : ""}</label>`; }).join("")}</div></div>`).join("")}</div>
     <div class="tw desk-only"><table style="min-width:${640 + plans.length * 130}px"><thead><tr><th>تصویر ردیف در مدرک</th><th>پوشش</th>${plans.map(p => `<th>${esc(p)}</th>`).join("")}</tr></thead><tbody>
     ${u.rows.map((r, ri) => `<tr>
-      <td style="width:46%">${rowSnip(d, r) ? `<img src="${rowSnip(d, r)}" alt="" style="max-width:100%;border:1px solid var(--line);border-radius:6px;display:block">` : `<span class="small muted">${esc(r.label)}</span>`}</td>
-      <td><select data-dc="${ri}" style="max-width:190px;border:1px solid var(--input-line);border-radius:8px;background:var(--surface);padding:4px">${catOptions(r.cat)}</select></td>
+      <td style="width:46%">${rowSnip(d, r) ? `<img src="${rowSnip(d, r)}" data-zoom="${ri}" alt="تصویر ردیف؛ برای بزرگ‌نمایی بزنید" style="max-width:100%;border:1px solid var(--line);border-radius:6px;display:block;cursor:zoom-in">` : `<span class="small muted">${esc(r.label)}</span>`}</td>
+      <td><select data-dc="${ri}" style="max-width:190px;border:1px solid var(--input-line);border-radius:8px;background:var(--surface);padding:4px">${catOptions(r.cat)}</select>${r.odd ? `<div class="small" style="color:var(--mid-ink);margin-top:4px">${esc(r.odd)}</div>` : ""}</td>
       ${plans.map(p => { const v = r.vals[p]; const low = v && v.conf < 70; return `<td><input data-dv="${ri}|${esc(p)}" value="${v ? (v.rial === Infinity ? "∞" : +(v.rial / 1e7).toFixed(2)) : ""}" style="width:110px;height:34px;border:1.5px solid ${low ? "var(--mid)" : "var(--input-line)"};border-radius:8px;background:${low ? "var(--mid-bg)" : "var(--surface)"};padding:0 8px" inputmode="decimal"><div class="small muted" data-rial="${ri}|${esc(p)}">${v ? (v.rial === Infinity ? "بدون سقف" : fmtInt(v.rial) + " ریال") : ""}</div>${low ? '<div class="small" style="color:var(--mid-ink)">بررسی کنید</div>' : ""}</td>`; }).join("")}
     </tr>`).join("") || `<tr><td colspan="${2 + plans.length}" class="muted">جدول پوششی پیدا نشد. اگر مدرک جدول دارد، عکس واضح‌تر یا PDF اصلی را امتحان کنید.</td></tr>`}
     </tbody></table></div>
     <div class="panel-b"><button class="btn" type="button" id="docAddRow">＋ افزودن ردیف</button></div></section>
   ${u.issues.length ? `<section class="panel"><div class="panel-h"><h2>نیاز به توجه</h2></div><div class="panel-b"><ul class="dq">${u.issues.map(x => `<li><span class="sev tag t-mid">بررسی</span><span>${esc(x)}</span></li>`).join("")}</ul></div></section>` : ""}
-  <details class="panel"><summary class="panel-h" style="cursor:pointer"><h2>متن کامل خوانده‌شده</h2></summary><div class="panel-b"><pre style="white-space:pre-wrap;font:inherit;font-size:12.5px;max-height:420px;overflow:auto;margin:0">${esc(d.doc.text.trim())}</pre></div></details>`;
+  <details class="panel"><summary class="panel-h" style="cursor:pointer"><h2>متن کامل خوانده‌شده</h2></summary><div class="panel-b">${u.fixes ? `<p class="small muted" style="margin-bottom:8px">${fmtInt(u.fixes)} واژه با فرهنگ واژه‌های بیمه اصلاح شد؛ رنگی‌اند و با نگه‌داشتن رویشان، آنچه خوانده شده بود دیده می‌شود.</p>` : ""}<pre style="white-space:pre-wrap;font:inherit;font-size:12.5px;max-height:420px;overflow:auto;margin:0">${lexHtml(d.doc.text.trim())}</pre></div></details>`;
 
   const num = s => { s = drNorm(String(s)).trim(); if (/^(∞|بدون|بی)/.test(s)) return Infinity; const v = parseFloat(s.replace(/,/g, "")); return isNaN(v) ? null : v; };
   $("view").querySelectorAll("[data-df]").forEach(el => el.onchange = () => { const k = el.dataset.df; u[k] = el.type === "number" ? (el.value === "" ? null : +el.value) : el.value.trim(); });
@@ -2223,6 +2296,18 @@ function renderDoc(i){
     if (v == null) delete r.vals[p]; else r.vals[p] = { rial: v === Infinity ? Infinity : v * 1e7, conf: 100 }; el.style.borderColor = "var(--input-line)"; el.style.background = "var(--surface)";
     $("view").querySelectorAll(`[data-rial="${el.dataset.dv}"]`).forEach(x => { x.textContent = v == null ? "" : v === Infinity ? "بدون سقف" : fmtInt(v * 1e7) + " ریال"; });
     $("view").querySelectorAll(`[data-dv="${el.dataset.dv}"]`).forEach(x => { if (x !== el) x.value = el.value; }); });
+  // zoom: the whole row at full resolution, scrollable and pinch-zoomable
+  $("view").querySelectorAll("[data-zoom]").forEach(img => img.onclick = () => {
+    const r = u.rows[+img.dataset.zoom], pg = d.doc.pages[r.page]; if (!pg || !r.box) return;
+    const b = r.box, pad = 10, c = document.createElement("canvas"), w = b.x1 - b.x0 + pad * 2, h = b.y1 - b.y0 + pad * 2;
+    c.width = w; c.height = h; const g = c.getContext("2d"); g.fillStyle = "#fff"; g.fillRect(0, 0, w, h); g.drawImage(pg.canvas, b.x0 - pad, b.y0 - pad, w, h, 0, 0, w, h);
+    $("modal").innerHTML = `<div class="box" style="width:min(1100px,100%)" role="dialog" aria-modal="true" aria-label="بزرگ‌نمایی"><div class="panel-h"><h2>بزرگ‌نمایی ردیف</h2>
+      <div style="display:flex;gap:6px"><button class="iconbtn" type="button" id="zIn" aria-label="بزرگ‌تر">＋</button><button class="iconbtn" type="button" id="zOut" aria-label="کوچک‌تر">−</button><button class="iconbtn" type="button" data-close aria-label="بستن">✕</button></div></div>
+      <div style="overflow:auto;max-height:75vh;padding:10px;touch-action:pan-x pan-y pinch-zoom"><img id="zImg" src="${c.toDataURL("image/png")}" alt="" style="width:${Math.max(100, Math.round(1600 / Math.max(1, w) * 100))}%;max-width:none;image-rendering:auto;display:block"></div></div>`;
+    $("modal").hidden = false;
+    const z = k => { const el = $("zImg"); el.style.width = Math.max(50, parseFloat(el.style.width) * k) + "%"; };
+    $("zIn").onclick = () => z(1.4); $("zOut").onclick = () => z(1 / 1.4);
+  });
   $("docAddRow").onclick = () => { u.rows.push({ cat: null, label: "ردیف دستی", vals: {}, page: 0, box: null, img: "" }); render(); };
   $("docDel").onclick = () => { state.contracts = state.contracts.filter(c => c.src !== d.id); state.docs.splice(i, 1); go("docs"); };
   $("docSave").onclick = () => {
@@ -2263,6 +2348,11 @@ function renderDocs(){
   <input type="file" id="docFileIn" accept=".pdf,.jpg,.jpeg,.png,.webp,.docx,.txt" multiple hidden>
   ${state.docs.length ? `<section class="panel"><div class="panel-h"><h2>مدارک خوانده‌شده</h2></div><div class="panel-b ilist">${state.docs.map((d, i) => `<button class="ili" type="button" data-doc="${i}"><span>${esc(d.file)} · ${esc(d.u.org || "بیمه‌گذار نامعلوم")} · ${d.u.year ? fmtInt(d.u.year).replace(/٬/g, "") : "سال نامعلوم"}</span><em class="tag ${d.saved ? "t-good" : "t-mid"}">${d.saved ? "ذخیره شد" : "بررسی و ذخیره"}</em></button>`).join("")}</div></section>` : ""}
   ${keys.length ? `<div class="fchips" role="group" aria-label="سازمان" style="flex-wrap:wrap">${keys.map(k => `<button type="button" data-org="${esc(k)}" aria-pressed="${k === state.cmpOrg}">${esc(short(groups[k].name))} ${fmtInt(groups[k].list.length)}</button>`).join("")}</div>${compareView(G, all)}` : ""}`;
+  bindStepper("inflIn", v => { state.infl = Math.max(0, v) / 100; render(); setTimeout(() => { const el = $("proj"); if (el) el.scrollIntoView({ block: "start" }); }, 0); });
+  if ($("projXlsx")){ const list = G.list.slice().sort((a, b) => (a.plan || "").localeCompare(b.plan || "") || a.year - b.year), pairs = [];
+    list.forEach((c, i) => { const prev = list.slice(0, i).reverse().find(x => (x.plan || "") === (c.plan || "") && x.year < c.year); if (prev) pairs.push([prev, c]); });
+    const cats = CCAT.map(c => c[0]).filter(k => list.some(c => c.caps[k] != null));
+    $("projXlsx").onclick = () => { try { projectionXlsx(pairs[pairs.length - 1], cats); } catch (e){ alert("ساخت فایل ممکن نشد: " + e.message); } }; }
   $("docFileIn").onchange = e => { const f = [...e.target.files]; e.target.value = ""; if (f.length) handleDocs(f); };
   const dz = $("docDrop"); dz.ondragover = e => { e.preventDefault(); dz.classList.add("over"); }; dz.ondragleave = () => dz.classList.remove("over");
   dz.ondrop = e => { e.preventDefault(); dz.classList.remove("over"); const f = [...e.dataTransfer.files].filter(isDocFile); if (f.length) handleDocs(f); };
@@ -2317,7 +2407,69 @@ function compareView(G, all){
       ${cats.map(k => `<tr><td>${CCAT_NAME[k]}</td>${list.map(c => `<td class="nw">${c.caps[k] == null ? '<span class="faint">—</span>' : MT(c.caps[k])}</td>`).join("")}${pairs.map(([a, b]) => { const v = k === "combo" || k === "total" ? null : pctCh(a.caps[k], b.caps[k]); return `<td class="nw" style="${v == null ? "" : v === 0 ? "color:var(--mid-ink);font-weight:700" : v >= 1 ? "color:var(--good);font-weight:700" : ""}">${v == null ? "—" : v === 0 ? "بدون تغییر" : fmtSignedPct(v)}</td>`; }).join("")}${others.length ? `<td class="nw muted">${market(k) == null ? "—" : MT(market(k))}</td>` : ""}</tr>`).join("")}
     </tbody></table></div></section>
   <section class="panel"><div class="panel-h"><h2>پیشنهاد برای سال بعد</h2><span class="small muted">از مقایسهٔ قراردادها؛ بدون دادهٔ خسارت</span></div>
-    <div class="panel-b"><ul class="dq">${sugg.map(([k, t]) => `<li><span class="sev tag ${SG[k][0]}">${SG[k][1]}</span><span>${esc(t)}</span></li>`).join("")}</ul></div></section>`;
+    <div class="panel-b"><ul class="dq">${sugg.map(([k, t]) => `<li><span class="sev tag ${SG[k][0]}">${SG[k][1]}</span><span>${esc(t)}</span></li>`).join("")}</ul></div></section>
+  ${pairs.length ? projectionView(pairs[pairs.length - 1], cats) : ""}`;
+}
+
+/* ---------- next-year projection ----------
+   Without claims the premium is projected from cap changes: each coverage carries an assumed share of the
+   cost (editable; replaced by real shares once a claims file is given). Same caps → premium grows with
+   medical inflation; a cap raised more than inflation adds its share on top. */
+const COST_W = { hosp: .30, special: .20, delivery: .04, infert: .02, para: .07, diag: .04, lab: .04, fetal: .01, outsurg: .03, rehab: .02, visitdrug: .08, visit: .04, drug: .04,
+  emergency: .01, dental: .06, refractive: .02, glasses: .02, hearing: .005, ambIn: .005, ambOut: .005, amb: .005, organs: .005, prosthesis: .005, orthosis: .005, supplies: .002, specialDis: .03 };
+const nice = v => { if (!isFinite(v) || v <= 0) return v; const p = Math.pow(10, Math.floor(Math.log10(v)) - 1); return Math.ceil(v / p) * p; };
+function projection(pair, cats, infl){
+  const [a, b] = pair, ks = cats.filter(k => COST_W[k] && b.caps[k] != null && isFinite(b.caps[k]));
+  const wsum = ks.reduce((s, k) => s + COST_W[k], 0) || 1, w = k => COST_W[k] / wsum, g = 1 + infl;
+  const mainG = median(["hosp", "special"].map(k => pctCh(a.caps[k], b.caps[k])).filter(v => v != null));
+  const plans = {
+    keep: { name: "حفظ ارزش سقف‌ها", desc: "همهٔ سقف‌ها هم‌پای تورم", cap: k => nice(b.caps[k] * g) },
+    economy: { name: "اقتصادی", desc: "بستری و جراحی هم‌پای تورم، بقیه ثابت", cap: k => ["hosp", "special"].includes(k) ? nice(b.caps[k] * g) : b.caps[k] },
+    catchup: { name: "جبران عقب‌ماندگی", desc: "بندهایی که سال قبل کمتر از بستری رشد کردند، هم‌پا می‌شوند", cap: k => { const r = pctCh(a.caps[k], b.caps[k]); return nice(b.caps[k] * g * (mainG != null && r != null && r < mainG ? Math.min(2, (1 + mainG) / (1 + r)) : 1)); } },
+  };
+  Object.values(plans).forEach(p => {
+    p.caps = Object.fromEntries(ks.map(k => [k, p.cap(k)]));
+    // each coverage's cost grows with medical inflation, scaled by how much its cap grows beyond it
+    p.factor = ks.reduce((s, k) => s + w(k) * Math.min(g, p.caps[k] / b.caps[k]) + w(k) * Math.max(0, p.caps[k] / b.caps[k] - g) * 0.5, 0);
+    p.premium = b.premium ? b.premium * p.factor : null;
+  });
+  return { ks, w, plans, last: b, prev: a, year: b.year + 1, g };
+}
+function projectionView(pair, cats){
+  const infl = state.infl ?? 0.35, P = projection(pair, cats, infl), b = P.last, order = ["economy", "keep", "catchup"];
+  return `<section class="panel anchor" id="proj"><div class="panel-h"><h2>محاسبهٔ سال ${fmtInt(P.year).replace(/٬/g, "")}</h2>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span class="small nw">تورم هزینهٔ درمان (٪)</span>${stepper("inflIn", Math.round(infl * 100), 5)}<button class="btn" type="button" id="projXlsx">دانلود فایل محاسبه (اکسل)</button></div></div>
+    <div class="panel-b" style="display:flex;flex-direction:column;gap:10px">
+      <p class="small muted">بر پایهٔ قرارداد ${fmtInt(b.year).replace(/٬/g, "")}${b.plan ? " · " + esc(b.plan) : ""}. تا فایل خسارت نرسیده، سهم هر پوشش از هزینه فرضی است (در فایل اکسل قابل تغییر است). با فایل خسارت، همین محاسبه با مصرف واقعی هر پوشش انجام می‌شود.</p>
+      <div class="tw"><table style="min-width:640px"><thead><tr><th>پوشش</th><th>سقف ${fmtInt(b.year).replace(/٬/g, "")}</th>${order.map(k => `<th>${P.plans[k].name}<div class="small muted" style="font-weight:400;white-space:normal">${P.plans[k].desc}</div></th>`).join("")}</tr></thead><tbody>
+        <tr style="background:var(--hl)"><td><b>حق‌بیمهٔ سالانهٔ هر نفر</b></td><td class="nw"><b>${b.premium ? fmtNum(b.premium) : "—"}</b></td>${order.map(k => { const p = P.plans[k]; return `<td class="nw"><b>${p.premium ? fmtNum(p.premium) : "—"}</b> <span class="small muted">${fmtSignedPct(p.factor - 1)}</span></td>`; }).join("")}</tr>
+        ${b.insured ? `<tr><td>کل حق‌بیمه (${fmtInt(b.insured)} نفر)</td><td class="nw">${b.premium ? fmtNum(b.premium * b.insured) : "—"}</td>${order.map(k => `<td class="nw">${P.plans[k].premium ? fmtNum(P.plans[k].premium * b.insured) : "—"}</td>`).join("")}</tr>` : ""}
+        ${P.ks.map(k => `<tr><td>${CCAT_NAME[k]}</td><td class="nw">${MT(b.caps[k])}</td>${order.map(o => { const v = P.plans[o].caps[k]; return `<td class="nw"${v !== b.caps[k] ? ' style="font-weight:800;color:var(--brand)"' : ""}>${MT(v)}</td>`; }).join("")}</tr>`).join("")}
+      </tbody></table></div>
+      ${b.premium ? "" : '<p class="small" style="color:var(--mid-ink)">حق‌بیمهٔ این قرارداد وارد نشده؛ در صفحهٔ مدرک واردش کنید تا مبلغ‌ها حساب شوند.</p>'}
+    </div></section>`;
+}
+function projectionXlsx(pair, cats){
+  const infl = state.infl ?? 0.35, P = projection(pair, cats, infl), a = P.prev, b = P.last, y0 = a.year, y1 = b.year, y2 = P.year;
+  const rows = [["محاسبهٔ حق‌بیمهٔ سال " + y2 + " — " + b.org + (b.plan ? " · " + b.plan : "")], ["تورم هزینهٔ درمان", infl], ["حق‌بیمهٔ هر نفر " + y1 + " (میلیون تومان)", b.premium || 0], ["تعداد نفرات", b.insured || 0], [],
+    ["پوشش", "سقف " + y0, "سقف " + y1, "رشد " + y0 + "→" + y1, "سهم هزینه (فرض)", "سقف پیشنهادی " + y2, "ضریب هزینه"]];
+  const first = rows.length + 1;
+  P.ks.forEach((k, i) => {
+    const r = first + i, cap = P.plans.keep.caps[k];
+    rows.push([CCAT_NAME[k], a.caps[k] ?? "", b.caps[k], { f: `IF(B${r}="","",C${r}/B${r}-1)` }, +P.w(k).toFixed(4), cap,
+      { f: `E${r}*(MIN(1+$B$2,F${r}/C${r})+MAX(0,F${r}/C${r}-(1+$B$2))*0.5)` }]);
+  });
+  const last = first + P.ks.length - 1;
+  rows.push([], ["ضریب کل", "", "", "", { f: `SUM(E${first}:E${last})` }, "", { f: `SUM(G${first}:G${last})/SUM(E${first}:E${last})` }],
+    ["حق‌بیمهٔ برآوردی هر نفر " + y2, "", "", "", "", "", { f: `B3*G${last + 2}` }], ["کل حق‌بیمه", "", "", "", "", "", { f: `G${last + 3}*B4` }],
+    ["سرانهٔ خسارت مجاز (LR ۷۵٪)", "", "", "", "", "", { f: `G${last + 3}*0.75` }], [],
+    ["ستون «سقف پیشنهادی» و «سهم هزینه» را تغییر دهید؛ همه‌چیز دوباره حساب می‌شود. با فایل خسارت، سهم واقعی هر پوشش جایگزین فرض می‌شود."]);
+  const ws = XLSX.utils.aoa_to_sheet(rows.map(r => r.map(v => v && v.f ? { t: "n", f: v.f } : v)));
+  ws["!cols"] = [{ wch: 30 }, { wch: 12 }, { wch: 12 }, { wch: 14 }, { wch: 16 }, { wch: 18 }, { wch: 14 }];
+  ws["!views"] = [{ RTL: true }];
+  const wb = XLSX.utils.book_new(); wb.Workbook = { Views: [{ RTL: true }] };
+  XLSX.utils.book_append_sheet(wb, ws, "سال " + y2);
+  XLSX.writeFile(wb, `محاسبه-${(b.org || "قرارداد").replace(/\s+/g, "-")}-${y2}.xlsx`);
 }
 
 /* ================= UI (DESIGN_PROMPT_1) ================= */
