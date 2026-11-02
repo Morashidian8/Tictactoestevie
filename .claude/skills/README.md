@@ -69,6 +69,11 @@
 | `awesome-design-md` | سیستمِ طراحیِ آماده از ۸۴ برندِ شناخته‌شده (Apple، Stripe، Linear، Notion، Airbnb، Spotify و…) به‌شکلِ DESIGN.md: رنگ، تایپوگرافی، فاصله‌ها، کامپوننت‌ها و قواعد — برای وقتی که طرحی «به سبکِ» یک برند یا یک زبانِ بصریِ آماده می‌خواهی (فقط الهام، نه کپیِ لوگو). منبع: [VoltAgent/awesome-design-md](https://github.com/VoltAgent/awesome-design-md) |
 | `image-to-code` | تبدیلِ تصویرِ یک طرح (اسکرین‌شات، ماکاپ، عکسِ رابط) به کدِ فرانت: چیدمان، رنگ، تایپوگرافی، کامپوننت‌ها و جزئیاتِ شاخص را درمی‌آورد، اول نقشه می‌کشد بعد می‌سازد، و نتیجه را کنارِ تصویرِ مرجع مقایسه می‌کند. منبع: [djd933/claude-design-plugins](https://github.com/djd933/claude-design-plugins) |
 | `playwright-cli` | ابزارِ رسمیِ مایکروسافت برای کار با مرورگر: باز کردنِ سایت، کلیک و پر کردنِ فرم، اسکرین‌شات، ضبطِ ویدیو و نوشتنِ تستِ Playwright — تا Claude سایت را واقعاً ببیند و خرابی‌های ظاهری را بگیرد. ابزارِ `@playwright/cli` باید نصب باشد. منبع: [microsoft/playwright-cli](https://github.com/microsoft/playwright-cli) |
+| `impeccable` | طراحی و بهبودِ رابطِ کاربری مثلِ یک مدیرِ هنری: طراحیِ تازه، نقد و بازبینی (audit/critique)، پرداخت (polish)، رنگ، تایپوگرافی، چیدمان، انیمیشن، متنِ رابط و سیستمِ طراحی؛ با زیرفرمان‌هایی مثلِ `/impeccable audit`، `polish`، `bolder`، `quieter`. بدونِ hook و با telemetryِ خاموش نصب شده. منبع: [pbakaus/impeccable](https://github.com/pbakaus/impeccable) |
+| `emil-design-eng` | فلسفهٔ Emil Kowalski دربارهٔ ظرافتِ رابط، طراحیِ کامپوننت و جزئیاتِ نامرئی که نرم‌افزار را خوش‌حس می‌کنند. منبع: [emilkowalski/skill](https://github.com/emilkowalski/skill) |
+| `animate` · `review-animations` · `improve-animations` · `find-animation-opportunities` · `remove-animations` · `animation-performance` · `animation-vocabulary` | مجموعهٔ انیمیشنِ Emil Kowalski: ساختن، نقد، ممیزیِ کلِ پروژه، پیدا کردنِ جای انیمیشن، حذفِ انیمیشن‌های زائد، روانیِ ۶۰ فریم، و نامِ درستِ هر افکت |
+| `apple-design` · `mobile-native` · `break-ui` · `ask-sonner` · `emil-prototype` | طراحی به سبکِ اپل برای وب؛ حسِ «اپِ نصب‌شده» روی گوشی (PWA)؛ شکستنِ رابط با دادهٔ بدترین‌حالت؛ راهنمای Sonner؛ ساختِ چند نسخهٔ مختلف از یک بخش برای انتخاب (`/emil-prototype`) |
+| `animate-expo` · `write-swift` | انیمیشن در React Native/Expo و نوشتنِ Swiftِ مدرن (برای اپ‌های بومی) |
 
 ---
 

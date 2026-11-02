@@ -24,3 +24,8 @@ research/btc5m/out/
 
 # پوشهٔ کاریِ اسکیلِ design-taste-frontend (اسکرین‌شات‌ها و پیش‌نویس‌ها)
 .taste-skill/
+
+# فایل‌های زمانِ اجرای اسکیلِ impeccable (اسکرین‌شات، کش، نشست‌های Live)
+.impeccable/live/
+.impeccable/*.png
+.impeccable/cache/
