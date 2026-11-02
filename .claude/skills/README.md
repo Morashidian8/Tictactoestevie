@@ -60,6 +60,25 @@
 
 ---
 
+## 🎨 اسکیل‌های طراحی (Design)
+
+| اسکیل | کارش |
+|-------|------|
+| `design-taste-frontend` | «سلیقهٔ طراحی» برای صفحه‌های وب و صفحه‌های اپ (taste-skill): به‌جای طرحِ تکراریِ «ساختِ هوش مصنوعی»، از کتابخانه‌ای برگرفته از ۲۴۷ سایتِ برتر جهتِ هنری، تایپوگرافی، رنگ و چیدمان پیشنهاد می‌دهد، صفحه را در مرورگرِ واقعی بررسی می‌کند و با اسکرین‌شات اصلاح می‌کند. منبع: [Leonxlnx/taste-skill](https://github.com/Leonxlnx/taste-skill) |
+| `web-design-guidelines` | بازبینیِ کدِ رابطِ کاربری با «رهنمودهای رابطِ وب» ورسل: دسترس‌پذیری، فوکوسِ صفحه‌کلید، فرم‌ها، انیمیشن، تصویرها، کارایی، حالتِ تاریک و… — خروجی به‌شکلِ `فایل:خط`. قواعدِ مخصوصِ انگلیسی برای پروژه‌های فارسی تطبیق داده شده. منبع: [vercel-labs/agent-skills](https://github.com/vercel-labs/agent-skills) |
+| `awesome-design-md` | سیستمِ طراحیِ آماده از ۸۴ برندِ شناخته‌شده (Apple، Stripe، Linear، Notion، Airbnb، Spotify و…) به‌شکلِ DESIGN.md: رنگ، تایپوگرافی، فاصله‌ها، کامپوننت‌ها و قواعد — برای وقتی که طرحی «به سبکِ» یک برند یا یک زبانِ بصریِ آماده می‌خواهی (فقط الهام، نه کپیِ لوگو). منبع: [VoltAgent/awesome-design-md](https://github.com/VoltAgent/awesome-design-md) |
+| `image-to-code` | تبدیلِ تصویرِ یک طرح (اسکرین‌شات، ماکاپ، عکسِ رابط) به کدِ فرانت: چیدمان، رنگ، تایپوگرافی، کامپوننت‌ها و جزئیاتِ شاخص را درمی‌آورد، اول نقشه می‌کشد بعد می‌سازد، و نتیجه را کنارِ تصویرِ مرجع مقایسه می‌کند. منبع: [djd933/claude-design-plugins](https://github.com/djd933/claude-design-plugins) |
+| `playwright-cli` | ابزارِ رسمیِ مایکروسافت برای کار با مرورگر: باز کردنِ سایت، کلیک و پر کردنِ فرم، اسکرین‌شات، ضبطِ ویدیو و نوشتنِ تستِ Playwright — تا Claude سایت را واقعاً ببیند و خرابی‌های ظاهری را بگیرد. ابزارِ `@playwright/cli` باید نصب باشد. منبع: [microsoft/playwright-cli](https://github.com/microsoft/playwright-cli) |
+| `impeccable` | طراحی و بهبودِ رابطِ کاربری مثلِ یک مدیرِ هنری: طراحیِ تازه، نقد و بازبینی (audit/critique)، پرداخت (polish)، رنگ، تایپوگرافی، چیدمان، انیمیشن، متنِ رابط و سیستمِ طراحی؛ با زیرفرمان‌هایی مثلِ `/impeccable audit`، `polish`، `bolder`، `quieter`. بدونِ hook و با telemetryِ خاموش نصب شده. منبع: [pbakaus/impeccable](https://github.com/pbakaus/impeccable) |
+| `emil-design-eng` | فلسفهٔ Emil Kowalski دربارهٔ ظرافتِ رابط، طراحیِ کامپوننت و جزئیاتِ نامرئی که نرم‌افزار را خوش‌حس می‌کنند. منبع: [emilkowalski/skill](https://github.com/emilkowalski/skill) |
+| `animate` · `review-animations` · `improve-animations` · `find-animation-opportunities` · `remove-animations` · `animation-performance` · `animation-vocabulary` | مجموعهٔ انیمیشنِ Emil Kowalski: ساختن، نقد، ممیزیِ کلِ پروژه، پیدا کردنِ جای انیمیشن، حذفِ انیمیشن‌های زائد، روانیِ ۶۰ فریم، و نامِ درستِ هر افکت |
+| `apple-design` · `mobile-native` · `break-ui` · `ask-sonner` · `emil-prototype` | طراحی به سبکِ اپل برای وب؛ حسِ «اپِ نصب‌شده» روی گوشی (PWA)؛ شکستنِ رابط با دادهٔ بدترین‌حالت؛ راهنمای Sonner؛ ساختِ چند نسخهٔ مختلف از یک بخش برای انتخاب (`/emil-prototype`) |
+| `animate-expo` · `write-swift` | انیمیشن در React Native/Expo و نوشتنِ Swiftِ مدرن (برای اپ‌های بومی) |
+| `ui-ux-pro-max` | «هوشِ طراحی» برای وب و موبایل: جست‌وجو در دادهٔ محلیِ ۷۹ سبک، ۱۹۲ پالتِ رنگ، ۷۴ جفت‌فونت، ۱۱۹ قاعدهٔ UX، نمودارها و ۲۲ فناوری، و ساختِ سیستمِ طراحیِ کامل برای یک محصول (`--design-system`)؛ با فیلترِ `--rtl` برای پروژه‌های فارسی. منبع: [nextlevelbuilder/ui-ux-pro-max-skill](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill) |
+| `design` · `design-system` · `brand` · `slides` · `banner-design` · `ui-styling` | همراه‌های UI UX Pro Max: لوگو، آیکون و هویتِ بصری؛ توکن‌های طراحی؛ راهنمای برند؛ اسلاید؛ بنر؛ کامپوننت‌های shadcn/Tailwind. ساختِ تصویر در `design` و `banner-design` به کلیدِ APIِ بیرونی نیاز دارد (جزئیات در `ui-ux-pro-max/SOURCE.md`) |
+
+---
+
 ## 🧪 اسکیل‌های In-Progress (در حال توسعه)
 
 | اسکیل | کارش |
