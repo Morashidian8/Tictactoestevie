@@ -68,6 +68,7 @@
 | `web-design-guidelines` | بازبینیِ کدِ رابطِ کاربری با «رهنمودهای رابطِ وب» ورسل: دسترس‌پذیری، فوکوسِ صفحه‌کلید، فرم‌ها، انیمیشن، تصویرها، کارایی، حالتِ تاریک و… — خروجی به‌شکلِ `فایل:خط`. قواعدِ مخصوصِ انگلیسی برای پروژه‌های فارسی تطبیق داده شده. منبع: [vercel-labs/agent-skills](https://github.com/vercel-labs/agent-skills) |
 | `awesome-design-md` | سیستمِ طراحیِ آماده از ۸۴ برندِ شناخته‌شده (Apple، Stripe، Linear، Notion، Airbnb، Spotify و…) به‌شکلِ DESIGN.md: رنگ، تایپوگرافی، فاصله‌ها، کامپوننت‌ها و قواعد — برای وقتی که طرحی «به سبکِ» یک برند یا یک زبانِ بصریِ آماده می‌خواهی (فقط الهام، نه کپیِ لوگو). منبع: [VoltAgent/awesome-design-md](https://github.com/VoltAgent/awesome-design-md) |
 | `image-to-code` | تبدیلِ تصویرِ یک طرح (اسکرین‌شات، ماکاپ، عکسِ رابط) به کدِ فرانت: چیدمان، رنگ، تایپوگرافی، کامپوننت‌ها و جزئیاتِ شاخص را درمی‌آورد، اول نقشه می‌کشد بعد می‌سازد، و نتیجه را کنارِ تصویرِ مرجع مقایسه می‌کند. منبع: [djd933/claude-design-plugins](https://github.com/djd933/claude-design-plugins) |
+| `playwright-cli` | ابزارِ رسمیِ مایکروسافت برای کار با مرورگر: باز کردنِ سایت، کلیک و پر کردنِ فرم، اسکرین‌شات، ضبطِ ویدیو و نوشتنِ تستِ Playwright — تا Claude سایت را واقعاً ببیند و خرابی‌های ظاهری را بگیرد. ابزارِ `@playwright/cli` باید نصب باشد. منبع: [microsoft/playwright-cli](https://github.com/microsoft/playwright-cli) |
 
 ---
 
