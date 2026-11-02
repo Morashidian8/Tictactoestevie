@@ -74,6 +74,8 @@
 | `animate` · `review-animations` · `improve-animations` · `find-animation-opportunities` · `remove-animations` · `animation-performance` · `animation-vocabulary` | مجموعهٔ انیمیشنِ Emil Kowalski: ساختن، نقد، ممیزیِ کلِ پروژه، پیدا کردنِ جای انیمیشن، حذفِ انیمیشن‌های زائد، روانیِ ۶۰ فریم، و نامِ درستِ هر افکت |
 | `apple-design` · `mobile-native` · `break-ui` · `ask-sonner` · `emil-prototype` | طراحی به سبکِ اپل برای وب؛ حسِ «اپِ نصب‌شده» روی گوشی (PWA)؛ شکستنِ رابط با دادهٔ بدترین‌حالت؛ راهنمای Sonner؛ ساختِ چند نسخهٔ مختلف از یک بخش برای انتخاب (`/emil-prototype`) |
 | `animate-expo` · `write-swift` | انیمیشن در React Native/Expo و نوشتنِ Swiftِ مدرن (برای اپ‌های بومی) |
+| `ui-ux-pro-max` | «هوشِ طراحی» برای وب و موبایل: جست‌وجو در دادهٔ محلیِ ۷۹ سبک، ۱۹۲ پالتِ رنگ، ۷۴ جفت‌فونت، ۱۱۹ قاعدهٔ UX، نمودارها و ۲۲ فناوری، و ساختِ سیستمِ طراحیِ کامل برای یک محصول (`--design-system`)؛ با فیلترِ `--rtl` برای پروژه‌های فارسی. منبع: [nextlevelbuilder/ui-ux-pro-max-skill](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill) |
+| `design` · `design-system` · `brand` · `slides` · `banner-design` · `ui-styling` | همراه‌های UI UX Pro Max: لوگو، آیکون و هویتِ بصری؛ توکن‌های طراحی؛ راهنمای برند؛ اسلاید؛ بنر؛ کامپوننت‌های shadcn/Tailwind. ساختِ تصویر در `design` و `banner-design` به کلیدِ APIِ بیرونی نیاز دارد (جزئیات در `ui-ux-pro-max/SOURCE.md`) |
 
 ---
 
