@@ -1,0 +1,75 @@
+# GitHub Action: audit Solidity changes on every pull request.
+# Copy to .github/workflows/syndicate-pr.yml in the repository you want scanned.
+#
+#   * Every PR: free static pass (Slither + risk map + storage-layout diff), no API key used.
+#   * PRs labelled `deep-audit`: full syndicate run with Claude, capped by SYNDICATE_MAX_USD.
+#
+# Security notes:
+#   * Uses `pull_request`, never `pull_request_target`: PRs from forks get no secrets,
+#     so untrusted code can never reach your API key.
+#   * Read-only token; the report goes to the job summary and an artifact, not a PR comment.
+#   * PoC tests run in Docker with no network (GitHub-hosted Ubuntu runners have Docker).
+name: syndicate-pr
+
+on:
+  pull_request:
+    paths: ["**/*.sol"]
+    types: [opened, synchronize, reopened, labeled]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: syndicate-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+env:
+  # Where to install the auditor from. A private repo needs a token in the URL or a deploy key.
+  SYNDICATE_PIP_SPEC: "git+https://github.com/morashidian8/Tictactoestevie.git@claude/loving-hopper-g1b2fo#subdirectory=ai-security-syndicate"
+  SOLC_VERSION: "0.8.24"
+  CONTRACTS_DIR: "src"
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: foundry-rs/foundry-toolchain@v1
+
+      - name: Install auditor and toolchain
+        run: |
+          pip install "$SYNDICATE_PIP_SPEC" slither-analyzer solc-select
+          solc-select install "$SOLC_VERSION" && solc-select use "$SOLC_VERSION"
+
+      - name: Free static pass
+        run: |
+          syndicate audit "$CONTRACTS_DIR" --static-only \
+            --diff-base "origin/${{ github.base_ref }}" --out reports/static.md
+          cat reports/static.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Deep audit (label `deep-audit`)
+        if: contains(github.event.pull_request.labels.*.name, 'deep-audit')
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          if [ -z "$ANTHROPIC_API_KEY" ]; then echo "No ANTHROPIC_API_KEY secret (fork PR?); skipping."; exit 0; fi
+          status=0   # steps run under `bash -e`; capture the gate's exit code instead of aborting
+          syndicate audit "$CONTRACTS_DIR" --diff-base "origin/${{ github.base_ref }}" \
+            --sandbox docker --max-usd "${{ vars.SYNDICATE_MAX_USD || '3' }}" --verify-max 3 \
+            --patch-dir reports/patches --out reports/deep.md --fail-on verified || status=$?
+          cat reports/deep.md >> "$GITHUB_STEP_SUMMARY"
+          exit $status
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: syndicate-reports
+          path: reports/

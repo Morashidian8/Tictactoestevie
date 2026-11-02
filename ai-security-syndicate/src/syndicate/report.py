@@ -42,6 +42,20 @@ def render_report(state: AuditState) -> str:
         out += ["## Pipeline errors", ""] + [f"- {e}" for e in errors] + [""]
 
     out += render_static(state)
+    ranges = (state.get("options") or {}).get("diff_ranges")
+    if ranges is not None:
+        out += [f"## Diff scope (vs `{state['options'].get('diff_base')}`)", ""]
+        out += [f"- `{p}`: lines {', '.join(f'{a}-{b}' for a, b in rs) or '(deleted)'}" for p, rs in ranges.items()]
+        out += [] if ranges else ["- no Solidity changes"]
+        out.append("")
+    kb = state.get("knowledge") or []
+    if kb:
+        out += ["## Knowledge-base checklists applied", ""]
+        out += [f"- {p.id}: {p.title} (signals: {', '.join(p.matched)})" for p in kb]
+        n_lessons = sum(len(v) for v in (state.get("lessons") or {}).values())
+        out += [f"- lessons injected from earlier runs: {n_lessons}", ""]
+    if state.get("learned"):
+        out += ["New lessons recorded:", ""] + [f"- {t}" for t in state["learned"]] + [""]
 
     invs = state.get("invariants") or []
     if invs:

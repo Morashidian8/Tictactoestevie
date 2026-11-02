@@ -1,0 +1,124 @@
+# Known vulnerability classes, written as review checklists.
+# Retrieval is deterministic: a pattern is selected when enough of its `signals`
+# (identifiers / snippets, case-insensitive) appear in the audited code.
+# `roles` decides which hunters see it. Add patterns from real post-mortems here.
+
+- id: KB-VAULT-INFLATION
+  title: Share inflation / first-depositor rounding
+  roles: [agent3_defi, agent4_math]
+  signals: [totalsupply, totalshares, shares, deposit, "balanceof(address(this))", convertToShares, previewDeposit]
+  min_signals: 3
+  checks:
+    - Can the first depositor mint a tiny number of shares and then donate assets directly to inflate the share price?
+    - Is there a virtual share/asset offset, dead shares, or a minimum-shares check on mint?
+    - Does any mint path round a user's shares down to zero without reverting?
+
+- id: KB-ROUNDING-DIRECTION
+  title: Rounding direction favours the user
+  roles: [agent4_math]
+  signals: [mulDiv, shares, assets, withdraw, redeem, mint, "/"]
+  min_signals: 3
+  checks:
+    - Do deposit/mint round in the protocol's favour and withdraw/redeem round against the user?
+    - Can repeated small operations extract value via rounding?
+
+- id: KB-PRECISION-SCALING
+  title: Missing fixed-point scaling / division before multiplication
+  roles: [agent4_math, agent3_defi]
+  signals: [rewardpertoken, rewardrate, 1e18, precision, totalstaked, "/", rate]
+  min_signals: 3
+  checks:
+    - Is every per-unit accumulator scaled (e.g. by 1e18) before dividing by a large total?
+    - Is any division performed before a multiplication that should come first?
+    - Does the increment truncate to zero for realistic totals and time steps?
+
+- id: KB-REWARD-CHECKPOINT
+  title: Reward/parameter change without checkpointing accrued state
+  roles: [agent3_defi]
+  signals: [rewardrate, updatereward, lastupdate, rewardpertokenstored, setrewardrate, notifyrewardamount]
+  min_signals: 3
+  checks:
+    - Does every setter of a rate/emission parameter first checkpoint the accumulator?
+    - Can a parameter change apply retroactively to the period since the last update?
+
+- id: KB-FEE-ON-TRANSFER
+  title: Fee-on-transfer / deflationary tokens
+  roles: [agent5_edge]
+  signals: [transferfrom, safetransferfrom, amount, deposit, ierc20]
+  min_signals: 3
+  checks:
+    - Is accounting based on the requested amount instead of the balance delta actually received?
+    - Is the set of supported tokens restricted, and is that documented?
+
+- id: KB-REBASING
+  title: Rebasing / balance-changing tokens
+  roles: [agent5_edge]
+  signals: [balanceof, ierc20, totalassets, shares, stake]
+  min_signals: 3
+  checks:
+    - Do cached balances drift from real balances when the token rebases?
+
+- id: KB-ERC20-RETURN
+  title: Non-standard ERC20 return values (e.g. USDT)
+  roles: [agent5_edge]
+  signals: [".transfer(", ".transferfrom(", ".approve(", ierc20]
+  min_signals: 2
+  checks:
+    - Are transfer/transferFrom/approve wrapped in SafeERC20 or is the return value checked?
+    - Would a token that returns nothing make these calls revert or be silently ignored?
+
+- id: KB-REENTRANCY
+  title: Reentrancy via external calls or token hooks
+  roles: [agent5_edge, agent3_defi]
+  signals: [".call{", ".call(", safetransfer, onerc721received, onerc1155received, tokensreceived, transfer]
+  min_signals: 2
+  checks:
+    - Is state updated before every external call (checks-effects-interactions)?
+    - Can a callback re-enter another function that reads stale state (cross-function reentrancy)?
+    - Is nonReentrant applied consistently, including on view functions used for pricing?
+
+- id: KB-ORACLE
+  title: Oracle manipulation and stale prices
+  roles: [agent3_defi]
+  signals: [latestrounddata, getreserves, slot0, price, oracle, twap, observe]
+  min_signals: 2
+  checks:
+    - Is any price read from a spot pool (getReserves/slot0) that a flash loan can move?
+    - Are Chainlink answers checked for staleness, zero/negative values and sequencer uptime on L2?
+
+- id: KB-SIGNATURES
+  title: Signature replay and malleability
+  roles: [agent5_edge]
+  signals: [ecrecover, signature, nonce, permit, deadline, eip712, domain_separator, chainid]
+  min_signals: 2
+  checks:
+    - Does each signed message include a nonce, deadline, chainId and verifying contract?
+    - Is ecrecover's zero-address result rejected, and is malleability handled (use ECDSA)?
+
+- id: KB-PROXY-INIT
+  title: Upgradeable proxy initialisation and storage layout
+  roles: [agent5_edge]
+  signals: [initialize, initializer, upgradeto, uups, proxy, _disableinitializers, delegatecall]
+  min_signals: 2
+  checks:
+    - Is the implementation's constructor calling _disableInitializers()?
+    - Can initialize be front-run or called twice?
+    - Do upgrades preserve storage layout (no reordered or inserted variables, gaps kept)?
+
+- id: KB-UNBOUNDED-LOOP
+  title: Unbounded loops and griefing DoS
+  roles: [agent5_edge]
+  signals: ["for (", ".length", push, users, holders]
+  min_signals: 3
+  checks:
+    - Can an attacker grow an array that a critical function iterates, until it exceeds the gas limit?
+    - Can one failing recipient block a batch payout (push vs pull payments)?
+
+- id: KB-UNSAFE-CAST
+  title: Unsafe downcasts and unchecked arithmetic
+  roles: [agent4_math]
+  signals: [uint128(, uint96(, uint64(, uint32(, int256(, unchecked]
+  min_signals: 1
+  checks:
+    - Is every narrowing cast bounded first or done with SafeCast?
+    - Can any value inside an unchecked block overflow or underflow given attacker-controlled input?

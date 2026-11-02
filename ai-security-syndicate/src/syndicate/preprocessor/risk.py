@@ -79,7 +79,7 @@ def propagate(report: StaticReport, scored: dict) -> None:
                 scored[key] = [5, why + [f"=> 5: writes {', '.join(feeds)} read by high-risk functions"]]
 
 
-def build_context_map(report: StaticReport) -> ContextMapOutput:
+def build_context_map(report: StaticReport, diff_ranges: dict | None = None) -> ContextMapOutput:
     hits: dict[tuple[str, str], int] = {}
     for s in report.findings:
         if s.impact in ("High", "Medium") and s.function:
@@ -89,6 +89,13 @@ def build_context_map(report: StaticReport) -> ContextMapOutput:
     for f in report.functions:
         scored[(f.contract, f.function)] = list(score_function(f, hits.get((f.contract, f.function), 0)))
     propagate(report, scored)
+    if diff_ranges:
+        from .git_diff import overlaps
+
+        for f in report.functions:
+            if overlaps(f.file, f.lines, diff_ranges):
+                score, why = scored[(f.contract, f.function)]
+                scored[(f.contract, f.function)] = [min(10, score + 2), why + ["+2 changed in this diff"]]
 
     rows = []
     for f in report.functions:

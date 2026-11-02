@@ -22,7 +22,7 @@ from ..llm import LLMError, StructuredLLM
 from ..preprocessor.static_runner import find_solc
 from ..sandbox.foundry_runner import FoundryRunner, SandboxError, make_backend
 from ..state import SEVERITY_ORDER, AuditState, Finding, Severity
-from .base import shared_context
+from .base import render_memory, shared_context
 
 ROLE = "agent7_verifier"
 MAX_COMPILE_RETRIES = 3
@@ -101,7 +101,7 @@ def _finding_brief(f: Finding) -> str:
 
 def verify_finding(llm: StructuredLLM, state: AuditState, runner: FoundryRunner, f: Finding) -> Verification:
     files = "\n".join(f"- src/{p}" for p in runner.sources)
-    base_user = f"<files>\n{files}\n</files>\n\n<finding>\n{_finding_brief(f)}\n</finding>"
+    base_user = f"<files>\n{files}\n</files>\n\n<finding>\n{_finding_brief(f)}\n</finding>" + render_memory(state, ROLE)
     feedback = ""
     attempt: VerificationAttempt | None = None
     log: list[str] = []

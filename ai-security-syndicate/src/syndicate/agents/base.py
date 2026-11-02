@@ -74,3 +74,14 @@ def make_node(name: str, llm: StructuredLLM, fn: Callable[[StructuredLLM, AuditS
 
     node.__name__ = name
     return node
+
+
+def render_memory(state: AuditState, role: str) -> str:
+    """Checklist from the knowledge base plus lessons for this role, as a user-message block."""
+    from ..memory.episodic_memory import render_lessons
+    from ..memory.knowledge import render_checklist
+
+    parts = [render_checklist(state.get("knowledge") or [], role),
+             render_lessons((state.get("lessons") or {}).get(role, []))]
+    body = "\n\n".join(p for p in parts if p)
+    return f"\n\n<memory>\n{body}\n</memory>" if body else ""

@@ -124,7 +124,11 @@ class AuditState(TypedDict, total=False):
     options: dict             # static, solc, router, focus_min_risk
     # Phase 2 static layer (StaticReport; plain object, no LLM involved)
     static_report: object
-    router_mode: str          # "static" or "llm": which Agent 2 produced context_map
+    router_mode: str
+    # Phase 4 memory (deterministic retrieval, no LLM)
+    knowledge: list              # memory.knowledge.Pattern
+    lessons: dict                # role -> list[memory.episodic_memory.Lesson]
+    learned: list[str]          # "static" or "llm": which Agent 2 produced context_map
     triage_summary: Annotated[list[str], operator.add]
     # agent outputs
     invariants: list[Invariant]

@@ -5,7 +5,7 @@ from dataclasses import dataclass
 
 from ..llm import StructuredLLM
 from ..state import AuditState, FindingsOutput
-from .base import render_context, render_invariants, shared_context
+from .base import render_context, render_invariants, render_memory, shared_context
 
 
 @dataclass(frozen=True)
@@ -28,6 +28,7 @@ loss or broken core function; low/informational = everything else."""
         user = (
             f"<context_map>\n{render_context(state.get('context_map'), (state.get('options') or {}).get('focus_min_risk', 5))}\n</context_map>\n\n"
             f"<invariants>\n{render_invariants(state.get('invariants'))}\n</invariants>"
+            + render_memory(state, self.role)
         )
         out = llm.structured(role=self.role, system=self.system, user=user, schema=FindingsOutput,
                              shared_context=shared_context(state))
