@@ -29,3 +29,4 @@ research/btc5m/out/
 .impeccable/live/
 .impeccable/*.png
 .impeccable/cache/
+.playwright-cli/

@@ -496,8 +496,10 @@ See [references/pr-attachments.md](references/pr-attachments.md) for alt text, i
 
 - Chromium is preinstalled (`PLAYWRIGHT_BROWSERS_PATH=/opt/pw-browsers`); do **not** run
   `playwright install`. If a tool needs an explicit browser path, use `/opt/pw-browsers/chromium`.
-- The `@playwright/cli` package is not part of the container image. Check `playwright-cli --version`
-  first; if missing, ask before running `npm install -g @playwright/cli@latest` (cloud containers are
-  ephemeral, so it may need reinstalling in a new session).
+- `.claude/hooks/session-start.sh` installs the pinned `@playwright/cli` in every cloud session and sets
+  `PLAYWRIGHT_MCP_BROWSER=chromium` + `PLAYWRIGHT_MCP_EXECUTABLE_PATH=/opt/pw-browsers/chromium`
+  (without them it looks for Chrome at /opt/google/chrome and fails). If `playwright-cli --version` is
+  missing anyway, export those two variables and ask before running the hook's `npm install -g` line.
+- `file://` URLs are blocked; serve local files over HTTP (e.g. `python3 -I -m http.server`) instead.
 - For the Persian apps here, check pages at a phone width (≈ 390px) as well as desktop, and confirm the
   layout stays right-to-left.
