@@ -118,8 +118,14 @@ class SkepticOutput(_Strict):
 class AuditState(TypedDict, total=False):
     # inputs
     target: str
+    target_path: str          # filesystem path for static tools; optional
     source_code: str
     docs: str
+    options: dict             # static, solc, router, focus_min_risk
+    # Phase 2 static layer (StaticReport; plain object, no LLM involved)
+    static_report: object
+    router_mode: str          # "static" or "llm": which Agent 2 produced context_map
+    triage_summary: Annotated[list[str], operator.add]
     # agent outputs
     invariants: list[Invariant]
     context_map: ContextMapOutput

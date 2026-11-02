@@ -4,7 +4,7 @@ from __future__ import annotations
 import json
 from typing import Any, Callable
 
-from ..llm import LLMError, StructuredLLM
+from ..llm import LLMDisabled, LLMError, StructuredLLM
 from ..state import AuditState, ContextMapOutput, Finding, Invariant
 
 SCOPE_GUARD = (
@@ -24,17 +24,23 @@ def render_invariants(invs: list[Invariant] | None) -> str:
     return "\n".join(f"- {i.id} [{i.kind.value}] {i.statement}  ::  {i.formal}" for i in invs)
 
 
-def render_context(ctx: ContextMapOutput | None, min_risk: int = 1) -> str:
+def render_context(ctx: ContextMapOutput | None, focus_min_risk: int = 5) -> str:
+    """Every function is listed; the risk score sets priority, it never hides code."""
     if ctx is None:
         return "(no context map)"
     rows = sorted(ctx.functions, key=lambda f: -f.risk_score)
-    lines = [f"Summary: {ctx.summary}", "Trust boundaries: " + "; ".join(ctx.trust_boundaries), "Functions by risk:"]
+    lines = [
+        f"Summary: {ctx.summary}",
+        "Trust boundaries: " + "; ".join(ctx.trust_boundaries),
+        f"Spend most of your depth on functions scored >= {focus_min_risk}. Lower-scored functions are listed for "
+        "context; still report a bug there if you see one.",
+        "Functions by risk:",
+    ]
     for f in rows:
-        if f.risk_score >= min_risk:
-            lines.append(
-                f"- [{f.risk_score}/10] {f.contract}.{f.function} ({f.visibility}) — {f.rationale}"
-                f" | calls: {', '.join(f.external_calls) or '-'} | writes: {', '.join(f.state_written) or '-'}"
-            )
+        lines.append(
+            f"- [{f.risk_score}/10] {f.contract}.{f.function} ({f.visibility}) — {f.rationale}"
+            f" | calls: {', '.join(f.external_calls) or '-'} | writes: {', '.join(f.state_written) or '-'}"
+        )
     return "\n".join(lines)
 
 
@@ -46,12 +52,23 @@ def code_block(state: AuditState) -> str:
     return f"<source_code>\n{state['source_code']}\n</source_code>"
 
 
+def shared_context(state: AuditState) -> str:
+    """The prefix every agent shares: the team brief plus the code under audit.
+
+    Sent first and marked cacheable, so the large code block can be read from
+    the prompt cache by later agents instead of billed in full each time.
+    """
+    return SCOPE_GUARD + "\n\n" + code_block(state)
+
+
 def make_node(name: str, llm: StructuredLLM, fn: Callable[[StructuredLLM, AuditState], dict[str, Any]]):
     """Wrap an agent so an LLM failure is recorded in state instead of killing the graph."""
 
     def node(state: AuditState) -> dict[str, Any]:
         try:
             return fn(llm, state)
+        except LLMDisabled:
+            return {}
         except LLMError as e:
             return {"errors": [f"{name}: {e}"]}
 

@@ -3,13 +3,11 @@ from __future__ import annotations
 
 from ..llm import StructuredLLM
 from ..state import SEVERITY_ORDER, AuditState, Finding, SkepticOutput, Verdict
-from .base import SCOPE_GUARD, code_block, render_findings
+from .base import shared_context, render_findings
 
 ROLE = "agent6_skeptic"
 
-SYSTEM = SCOPE_GUARD + """
-
-Role: The Skeptic. You are the last line of defence against hallucinated findings.
+SYSTEM = """Role: The Skeptic. You are the last line of defence against hallucinated findings.
 For EACH candidate finding, trace the real execution path in the code:
 - Do modifiers (nonReentrant, onlyOwner, whenNotPaused, initializer) block it?
 - Do require/revert/custom-error guards or Solidity >=0.8 checked arithmetic block it?
@@ -25,8 +23,8 @@ def run(llm: StructuredLLM, state: AuditState) -> dict:
     findings = state.get("raw_findings") or []
     if not findings:
         return {"verdicts": [], "final_findings": []}
-    user = f"<candidate_findings>\n{render_findings(findings)}\n</candidate_findings>\n\n{code_block(state)}"
-    out = llm.structured(role=ROLE, system=SYSTEM, user=user, schema=SkepticOutput)
+    user = f"<candidate_findings>\n{render_findings(findings)}\n</candidate_findings>"
+    out = llm.structured(role=ROLE, system=SYSTEM, user=user, schema=SkepticOutput, shared_context=shared_context(state))
     return {"verdicts": out.verdicts, "final_findings": apply_verdicts(findings, out.verdicts)}
 
 

@@ -27,6 +27,10 @@ class BudgetExceeded(LLMError):
     pass
 
 
+class LLMDisabled(LLMError):
+    """Raised by ``NullLLM``; agent nodes treat it as a silent skip, not an error."""
+
+
 # USD per 1M tokens (input, output). Thinking tokens bill as output.
 # Cache reads bill at 0.1x input, cache writes at 1.25x input.
 PRICES: dict[str, tuple[float, float]] = {
@@ -66,7 +70,9 @@ class Usage:
 
 
 class StructuredLLM(Protocol):
-    def structured(self, *, role: str, system: str, user: str, schema: type[T]) -> T: ...
+    def structured(
+        self, *, role: str, system: str, user: str, schema: type[T], shared_context: str | None = None
+    ) -> T: ...
 
 
 @dataclass
@@ -104,10 +110,28 @@ class AnthropicLLM:
     def spent_usd(self) -> float:
         return sum(u.usd for u in self.usage.values())
 
+    @staticmethod
+    def _system_blocks(system: str, shared_context: str | None):
+        """Shared context first with a cache breakpoint, then the role's own instructions.
+
+        Cache hits need an identical prefix with the same model, and on some models
+        the same effort, so the saving is real only between agents that match.
+        Check ``usage[role].cache_read_tokens`` before relying on it. Prefixes
+        below the model's minimum cacheable size are silently not cached.
+        """
+        if not shared_context:
+            return system
+        return [
+            {"type": "text", "text": shared_context, "cache_control": {"type": "ephemeral"}},
+            {"type": "text", "text": system},
+        ]
+
     def _cfg(self, role: str) -> RoleConfig:
         return self.roles.get(role, self.roles["default"])
 
-    def structured(self, *, role: str, system: str, user: str, schema: type[T]) -> T:
+    def structured(
+        self, *, role: str, system: str, user: str, schema: type[T], shared_context: str | None = None
+    ) -> T:
         import anthropic
 
         cfg = self._cfg(role)
@@ -118,7 +142,7 @@ class AnthropicLLM:
             with self.client.beta.messages.stream(
                 model=cfg.model,
                 max_tokens=cfg.max_tokens,
-                system=system,
+                system=self._system_blocks(system, shared_context),
                 messages=[{"role": "user", "content": user}],
                 output_format=schema,
                 output_config={"effort": cfg.effort},
@@ -153,8 +177,22 @@ class FakeLLM:
 
     responders: dict[str, Callable[[str, str], BaseModel]]
     calls: list[tuple[str, str]] = field(default_factory=list)
+    contexts: list[str | None] = field(default_factory=list)
 
-    def structured(self, *, role: str, system: str, user: str, schema: type[T]) -> T:
+    def structured(
+        self, *, role: str, system: str, user: str, schema: type[T], shared_context: str | None = None
+    ) -> T:
         self.calls.append((role, user))
+        self.contexts.append(shared_context)
         result = self.responders[role](system, user)
         return schema.model_validate(result.model_dump())
+
+
+class NullLLM:
+    """Free mode (``--static-only``): every LLM stage is skipped, so no API calls are made."""
+
+    usage: dict = {}
+    spent_usd = 0.0
+
+    def structured(self, *, role: str, system: str, user: str, schema, shared_context: str | None = None):
+        raise LLMDisabled(role)

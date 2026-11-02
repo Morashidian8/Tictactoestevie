@@ -5,7 +5,7 @@ from dataclasses import dataclass
 
 from ..llm import StructuredLLM
 from ..state import AuditState, FindingsOutput
-from .base import SCOPE_GUARD, code_block, render_context, render_invariants
+from .base import render_context, render_invariants, shared_context
 
 
 @dataclass(frozen=True)
@@ -16,9 +16,7 @@ class Hunter:
 
     @property
     def system(self) -> str:
-        return SCOPE_GUARD + f"""
-
-Role: {self.focus}
+        return f"""Role: {self.focus}
 Prioritise functions with high risk scores in the context map. For each issue
 give a concrete exploit scenario (preconditions, transaction sequence, attacker
 profit or victim loss) and the invariant ids it violates.
@@ -28,10 +26,11 @@ loss or broken core function; low/informational = everything else."""
 
     def run(self, llm: StructuredLLM, state: AuditState) -> dict:
         user = (
-            f"<context_map>\n{render_context(state.get('context_map'))}\n</context_map>\n\n"
-            f"<invariants>\n{render_invariants(state.get('invariants'))}\n</invariants>\n\n{code_block(state)}"
+            f"<context_map>\n{render_context(state.get('context_map'), (state.get('options') or {}).get('focus_min_risk', 5))}\n</context_map>\n\n"
+            f"<invariants>\n{render_invariants(state.get('invariants'))}\n</invariants>"
         )
-        out = llm.structured(role=self.role, system=self.system, user=user, schema=FindingsOutput)
+        out = llm.structured(role=self.role, system=self.system, user=user, schema=FindingsOutput,
+                             shared_context=shared_context(state))
         for n, f in enumerate(out.findings, 1):
             f.id = f"{self.prefix}-{n:02d}"  # model-chosen ids may collide across hunters
             f.source_agent = self.role

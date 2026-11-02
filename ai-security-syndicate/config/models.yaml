@@ -6,6 +6,8 @@ default:
   max_tokens: 64000
 
 roles:
+  # Cheap tier: filters noisy static-analysis hits before they reach Opus.
+  agent0_triage:      {model: claude-haiku-5-5, effort: low, max_tokens: 16000}
   agent1_extractor:   {effort: high}
   agent2_router:      {effort: medium}
   agent3_defi:        {effort: xhigh}
