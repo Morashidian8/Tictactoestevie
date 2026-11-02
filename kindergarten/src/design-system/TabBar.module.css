@@ -1,0 +1,179 @@
+/*
+ * نوار ناوبری پایین — بازطراحی «آسمان».
+ *
+ * حالا کارتِ شناور است، نه نواری که به لبه قاب چسبیده: از سه طرف
+ * فاصله دارد و سایه‌اش دورتادور است. چسبیدن به لبه، نوار را جزئی از
+ * قاب گوشی نشان می‌داد نه جزئی از اپ.
+ *
+ * `sticky` می‌ماند، پس محتوا زیرش می‌لغزد و همچنان می‌گوید صفحه ادامه
+ * دارد.
+ */
+.bar {
+  position: sticky;
+  inset-block-end: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  gap: var(--space-1);
+  margin: 0 var(--space-3) calc(var(--space-3) + env(safe-area-inset-bottom));
+  padding: var(--space-2);
+  /*
+   * نوار، «زمین» است و در هر سه نقش یکی می‌ماند — روی چمنزار می‌نشیند.
+   *
+   * سفیدِ پیشین روی بومِ تقریباً سفید، لنگری برای پایین صفحه نمی‌ساخت.
+   * رنگِ آسمان همان چیزی است که می‌گوید در کدام حساب هستی؛ اگر نوار هم
+   * رنگِ نقش بگیرد، همان حرف دو بار زده می‌شود.
+   */
+  background: var(--nav-bg);
+  border-radius: 26px;
+  box-shadow: 0 16px 34px -10px rgb(6 95 70 / .45);
+}
+
+.tab {
+  flex: 1;
+  min-inline-size: 0;
+  /*
+   * بزرگ‌ترین هدف لمسی هر سه نقش — بخش ۱۲.۷.
+   *
+   * نوار یکی است و هر سه پنل از آن استفاده می‌کنند، پس کفِ سخت‌گیرانه‌تر
+   * (۵۶ پیکسلِ مربی) برای همه برداشته می‌شود. این پرضربه‌ترین کنترل اپ
+   * است؛ کوچک کردنش برای مدیر، چیزی جز چند پیکسل فضا نمی‌دهد.
+   */
+  min-block-size: var(--touch-teacher);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: var(--space-1) 2px;
+  border-radius: var(--r-input);
+  background: none;
+  border: none;
+  /* برچسبِ کرم روی --nav-bg نسبت ۷٫۴۲ می‌دهد. */
+  color: var(--nav-fg);
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+/*
+ * خانه فعال: قرصِ کرمِ گرد زیر گلیف، و گلیفِ سیر رویش.
+ *
+ * ارتفاع نمی‌گیرد. نسخه‌ای که خانه فعال را بیست پیکسل بالا می‌برد، دو
+ * چیز را از خطِ نوار بیرون می‌زد — کنشِ مرکزی و خانه فعال — و مالک
+ * محصول درست پرسید چرا نوار کج است. حالا فقط کنشِ مرکزی بالا می‌آید.
+ */
+.tabActive .icon {
+  background: var(--paper);
+  border-radius: var(--r-chip);
+  box-shadow: 0 2px 6px rgb(6 95 70 / .35);
+}
+
+.tabActive .label {
+  font-weight: var(--weight-bold);
+}
+
+.icon {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  /*
+   * جا برای نشان، داخل خودِ جعبه.
+   *
+   * نشان پیش از این بیرون از مرز جعبه می‌نشست و جعبه را سرریز می‌کرد.
+   * دیده نمی‌شد ولی تست «هیچ چیزی بریده نمی‌شود» را می‌شکست — همان
+   * تستی که یک بار جلوی نمایش «۰۹٬۱۸۰٬۰۰۰» به‌جای «۱۰۹٬۱۸۰٬۰۰۰» را
+   * گرفت. سرریزِ بی‌ضرر، آن محافظ را کور می‌کند.
+   */
+  padding: 3px;
+  /* قرصِ گردِ خانه فعال. مربع است تا دایره بشود، نه بیضی. */
+  inline-size: 38px;
+  block-size: 38px;
+  border-radius: var(--r-chip);
+}
+
+.label {
+  max-inline-size: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* نشان «چیز تازه‌ای هست». عدد نمی‌گیرد؛ در نوار پایین عدد خوانده نمی‌شود. */
+.dot {
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-end: 0;
+  inline-size: 7px;
+  block-size: 7px;
+  border-radius: var(--r-chip);
+  background: var(--coral);
+  box-shadow: 0 0 0 2px var(--nav-bg);
+}
+
+/*
+ * کنش مرکزی.
+ *
+ * بالاتر از نوار می‌نشیند تا از خانه‌های دیگر جدا دیده شود، ولی نه آنقدر
+ * که روی محتوای صفحه بیفتد — همان قاعده‌ای که دکمه شناور «ثبت رویداد»
+ * در پنل مربی از آن پیروی می‌کند.
+ */
+/*
+ * قابِ خانهٔ مرکزی: دکمهٔ برجسته، و برچسبش هم‌تراز برچسبِ بقیه.
+ */
+.centerWrap {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding-block: var(--space-1) 2px;
+}
+
+.centerLabel {
+  color: var(--nav-fg);
+  font-weight: var(--weight-bold);
+  white-space: nowrap;
+}
+
+.center {
+  flex: none;
+  inline-size: 56px;
+  block-size: 56px;
+  margin-block-start: -26px;
+  position: relative;
+  display: grid;
+  place-items: center;
+  border: 4px solid var(--paper);
+  /* مربعِ گرد، نه دایره — بازطراحی «آسمان». */
+  border-radius: 21px;
+  /*
+   * انبه‌ای، نه نعنایی — روی نوارِ سبزِ تیره، سبز روی سبز گم می‌شود.
+   * گلیف --ink روی این گرادیان نسبت ۹٫۹ می‌دهد؛ سفید ۲٫۱ و مجاز نیست.
+   */
+  background: linear-gradient(135deg, #FFD66B 0%, #F5B733 100%);
+  box-shadow: 0 10px 18px -4px rgb(245 183 51 / .55);
+  color: var(--ink);
+  transition:
+    transform var(--motion-feedback) var(--easing),
+    box-shadow var(--motion-feedback) var(--easing);
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+.center:active {
+  transform: scale(0.94);
+  box-shadow: none;
+}
+
+
+.centerDot {
+  position: absolute;
+  inset-block-start: 2px;
+  inset-inline-end: 2px;
+  inline-size: 10px;
+  block-size: 10px;
+  border-radius: var(--r-chip);
+  background: var(--coral);
+  box-shadow: 0 0 0 2px var(--paper);
+}

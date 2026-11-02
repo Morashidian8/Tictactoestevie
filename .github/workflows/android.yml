@@ -1,0 +1,101 @@
+name: Build Android APK
+
+# پوستهٔ اندرویدِ سامانهٔ مدیریت مهدکودک را می‌سازد و روی یک انتشارِ
+# ثابت می‌گذارد، تا نشانیِ دانلود هیچ‌وقت عوض نشود.
+#
+# چرا اینجا و نه روی ماشین توسعه: ساختِ APK به Android SDK نیاز دارد و
+# رانرهای گیت‌هاب آن را از پیش دارند.
+#
+# این گردش‌کار فقط وقتی لازم است که **خودِ پوسته** عوض شود. محتوای
+# برنامه از GitHub Pages می‌آید و با هر پوش خودش تازه می‌شود؛ برای آن
+# هیچ APK تازه‌ای لازم نیست.
+on:
+  push:
+    branches: [main, claude/kindergarten-management-system-gelsww]
+    paths:
+      - "kindergarten/android/**"
+      - ".github/workflows/android.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: android-apk
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: kindergarten/android
+    env:
+      # رازها در شرطِ `if` خوانده نمی‌شوند؛ اول به متغیر محیطی می‌آیند.
+      KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Use the repository signing key when one is configured
+        # اگر مخزن راز KEYSTORE_BASE64 داشته باشد، همان کلید خصوصی به کار
+        # می‌رود. اگر نه، کلید نمایشیِ داخل مخزن — که یعنی به‌روزرسانی روی
+        # گوشی کار می‌کند ولی هر کسی می‌تواند اپی به همین نام امضا کند.
+        if: env.KEYSTORE_BASE64 != ''
+        run: |
+          echo "$KEYSTORE_BASE64" | base64 -d > private.jks
+          echo "KEYSTORE_PATH=$PWD/private.jks" >> "$GITHUB_ENV"
+          echo "KEYSTORE_PASSWORD=${{ secrets.KEYSTORE_PASSWORD }}" >> "$GITHUB_ENV"
+          echo "KEY_ALIAS=${{ secrets.KEY_ALIAS }}" >> "$GITHUB_ENV"
+          echo "KEY_PASSWORD=${{ secrets.KEY_PASSWORD }}" >> "$GITHUB_ENV"
+
+      - name: Build release APK
+        run: ./gradlew --no-daemon :app:assembleRelease
+
+      - name: Read the version the APK was built with
+        id: version
+        run: |
+          name=$(grep -oP 'versionName\s*=\s*"\K[^"]+' app/build.gradle.kts)
+          echo "name=$name" >> "$GITHUB_OUTPUT"
+          echo "ساخته شد: $name"
+
+      - name: Name the file after the app, not after gradle
+        run: |
+          mkdir -p out
+          cp app/build/outputs/apk/release/app-release.apk "out/mahd-${{ steps.version.outputs.name }}.apk"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mahd-apk
+          path: kindergarten/android/out/*.apk
+          if-no-files-found: error
+
+      # انتشار، فقط از شاخه‌ای که واقعاً پوش شده.
+      #
+      # برچسب با نسخه عوض می‌شود ولی `latest` همیشه به تازه‌ترین اشاره
+      # می‌کند — و همان نشانی است که خودِ اپ برای بررسیِ نسخه می‌خواند.
+      - name: Publish the release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: android-v${{ steps.version.outputs.name }}
+          name: اپ اندروید مهد ${{ steps.version.outputs.name }}
+          body: |
+            پوستهٔ اندرویدِ سامانهٔ مدیریت مهدکودک.
+
+            فایل `mahd-${{ steps.version.outputs.name }}.apk` را روی گوشی بگیرید و نصب کنید.
+            اندروید ۷ (API 24) به بالا.
+
+            **محتوای برنامه خودش به‌روز می‌شود.** این اپ همان نسخهٔ زنده را باز
+            می‌کند که با هر پوش منتشر می‌شود؛ برای دیدن تغییرات تازه لازم نیست
+            دوباره چیزی نصب کنید. این APK فقط وقتی عوض می‌شود که خودِ پوسته
+            تغییر کند.
+          files: kindergarten/android/out/*.apk
+          fail_on_unmatched_files: true

@@ -1,0 +1,101 @@
+.page {
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  background: var(--surface);
+  border: 1px solid var(--card-border);
+  border-radius: var(--r-card);
+  box-shadow: var(--shadow-sm);
+}
+
+.label { color: var(--ink-muted); }
+.name { margin: 0; color: var(--ink); font-weight: var(--weight-black); }
+.muted { margin: 0; color: var(--ink-muted); }
+
+.row { margin: 0; color: var(--ink); }
+.row + .row { border-block-start: 1px solid var(--border); padding-block-start: var(--space-2); }
+
+.docRow {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin: 0;
+  color: var(--ink);
+}
+.docRow + .docRow { border-block-start: 1px solid var(--border); padding-block-start: var(--space-2); }
+
+.expired { color: var(--ink); font-weight: var(--weight-bold); }
+
+.warn {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  padding: var(--space-3);
+  background: var(--brick-tint);
+  border-radius: var(--r-input);
+  color: var(--ink);
+}
+.warn svg { flex: none; }
+
+.note { display: flex; flex-direction: column; gap: var(--space-1); padding-block: var(--space-2); }
+.note + .note { border-block-start: 1px solid var(--border); }
+.noteTop { display: flex; align-items: center; gap: var(--space-2); margin: 0; color: var(--ink); }
+
+.childRow {
+  inline-size: 100%;
+  min-block-size: var(--touch-teacher);
+  padding-inline: 0;
+  text-align: start;
+  background: none;
+  border: none;
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+}
+.childRow + .childRow { border-block-start: 1px solid var(--border); }
+.childRow:active { background: var(--coral-tint); }
+
+/* کنش، نه ردیف کودک — کلاسش عمداً جداست. */
+.actionRow {
+  inline-size: 100%;
+  min-block-size: var(--touch-teacher);
+  padding-inline: var(--space-3);
+  text-align: start;
+  background: var(--surface);
+  border: 1px solid var(--border-input);
+  border-radius: var(--r-input);
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+}
+.actionRow:active { background: var(--coral-tint); }
+
+/* میدان متنِ شیت مرخصی. */
+.leaveField {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  color: var(--ink-muted);
+}
+
+.leaveText {
+  font-family: inherit;
+  font-size: var(--text-body);
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  padding: var(--space-2);
+  resize: vertical;
+}
+
+.leaveText:focus { border-color: var(--mint); outline: none; }

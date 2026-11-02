@@ -1,0 +1,333 @@
+/* لحن دفتر کل — بخش ۱۲.۱: متراکم، جدولی، رنگ فقط برای وضعیت. */
+.page { min-block-size: 100dvh; display: flex; flex-direction: column; }
+
+.header {
+  position: sticky; inset-block-start: 0; z-index: 2;
+  display: flex; align-items: center; gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: var(--surface); border-block-end: 1px solid var(--border);
+}
+
+.back {
+  min-inline-size: var(--touch-manager); min-block-size: var(--touch-manager);
+  display: grid; place-items: center; border: none; background: none; color: var(--ink);
+}
+
+.title { font-family: var(--font); font-weight: var(--weight-black); }
+.period { color: var(--ink-muted); margin-inline-start: auto; font-variant-numeric: tabular-nums; }
+
+.body {
+  flex: 1; display: flex; flex-direction: column; gap: var(--space-3);
+  padding: var(--space-3) var(--space-4) var(--space-7);
+}
+
+/*
+ * سه عدد مالی در یک ردیف نمی‌نشینند.
+ *
+ * مبلغ شهریه یک مهد نُه رقم است و در یک‌سومِ عرض ۳۹۰ پیکسل جا نمی‌شود؛
+ * اول رقم سمت چپ بریده می‌شد و «۱۰۹٬۱۸۰٬۰۰۰» را «۰۹٬۱۸۰٬۰۰۰» نشان
+ * می‌داد، یعنی عددی که ده برابر کوچک‌تر بود و غلط به نظر نمی‌رسید.
+ * حالا هر عدد سطر خودش را دارد: برچسب راست، مبلغ چپ.
+ */
+.tiles {
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border: 1px solid var(--card-border);
+  box-shadow: var(--shadow-md);
+  border-radius: var(--r-card);
+  overflow: hidden;
+}
+
+.tile {
+  min-block-size: var(--touch-manager);
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+}
+
+.tile + .tile { border-block-start: 1px solid var(--border); }
+.tileWarn { background: var(--mango-tint);
+  color: var(--ink);
+}
+.tileLabel { color: var(--ink-muted); flex: none; }
+
+.tileValue {
+  font-family: var(--font);
+  font-weight: var(--weight-black);
+  font-size: var(--text-h1);
+  line-height: var(--text-h1-line);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+  text-align: end;
+}
+
+.ok {
+  padding-block: 1px;
+  padding-inline: var(--space-2);
+  border-radius: var(--r-chip);
+  border: 1px solid var(--mint);
+  background: var(--mint-tint);
+  color: var(--ink);
+  font-weight: var(--weight-bold);
+  white-space: nowrap;
+}
+
+.card {
+  background: var(--surface); border: 1px solid var(--card-border);
+  box-shadow: var(--shadow-md);
+  border-radius: var(--r-card); padding: var(--space-4);
+  display: flex; flex-direction: column; gap: var(--space-2);
+}
+
+.warnCard { background: var(--mango-tint); border-color: transparent; }
+.warnHead {
+  margin: 0; display: flex; align-items: center; gap: var(--space-2);
+  color: var(--ink); font-weight: var(--weight-bold);
+}
+.warnHead svg { color: var(--ink); flex: none; }
+
+.cardLabel { color: var(--ink-muted); }
+.muted { color: var(--ink-muted); margin: 0; }
+
+.row {
+  margin: 0; min-block-size: var(--touch-manager);
+  display: flex; align-items: center; gap: var(--space-3); color: var(--ink);
+}
+.row + .row { border-block-start: 1px solid var(--border); }
+
+.invoice {
+  min-block-size: var(--touch-manager);
+  display: flex; align-items: center; gap: var(--space-3);
+  padding-inline: var(--space-2);
+  border: none; border-radius: var(--r-input);
+  background: var(--surface); color: var(--ink);
+  font-family: inherit; font-size: var(--text-body-sm); text-align: start;
+}
+
+.invoice + .invoice { border-block-start: 1px solid var(--border); border-radius: 0; }
+.invoice:active { background: var(--coral-tint);
+  color: var(--ink);
+}
+.invoiceName { flex: 1; min-inline-size: 0; }
+
+.status { color: var(--ink-muted); }
+.statusOverdue {
+  padding-block: 1px;
+  padding-inline: var(--space-2);
+  border-radius: var(--r-chip);
+  border: 1px solid var(--brick);
+  background: var(--brick-tint);
+  color: var(--ink);
+  font-weight: var(--weight-bold);
+  white-space: nowrap;
+}
+
+.amount { font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+.action {
+  min-block-size: var(--touch-manager); margin-block-start: var(--space-2);
+  border: 1px solid var(--border-input); border-radius: var(--r-input);
+  background: var(--surface); color: var(--ink);
+  font-family: inherit; font-size: var(--text-body-sm); font-weight: var(--weight-bold);
+}
+.action:disabled { color: var(--disabled-fg); }
+
+.note {
+  margin: 0; display: flex; align-items: center; gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--r-card); background: var(--mint-tint); color: var(--ink);
+}
+.note svg { color: var(--ink); flex: none; }
+
+.error { margin: 0; color: var(--ink); }
+
+/* ── شیت ثبت پرداخت ─────────────────────────────────────────── */
+.sheetBackdrop {
+  position: fixed; inset: 0; z-index: 30;
+  background: rgba(19, 39, 47, .45);
+  display: flex; align-items: flex-end;
+}
+
+.sheet {
+  inline-size: 100%;
+  background: var(--surface);
+  border-start-start-radius: var(--r-card);
+  border-start-end-radius: var(--r-card);
+  box-shadow: var(--shadow-lg);
+  padding: var(--space-5) var(--space-4) var(--space-6);
+  display: flex; flex-direction: column; gap: var(--space-3);
+  max-block-size: 90dvh; overflow-y: auto;
+}
+
+.sheetTitle { margin: 0; font-family: var(--font); font-weight: var(--weight-black); }
+.field { display: flex; flex-direction: column; gap: var(--space-1); color: var(--ink-muted); }
+
+.input {
+  min-block-size: var(--touch-manager); padding-inline: var(--space-3);
+  border: 1px solid var(--border-input); border-radius: var(--r-input);
+  background: var(--surface); color: var(--ink);
+  font-family: inherit; font-size: var(--text-body-sm);
+  font-variant-numeric: tabular-nums;
+}
+.input:focus { border-color: var(--coral); outline: none; }
+
+.methods { display: flex; gap: var(--space-2); flex-wrap: wrap; }
+
+.choice {
+  flex: 1; min-inline-size: 10ch; min-block-size: var(--touch-manager);
+  border: 1px solid var(--border-input); border-radius: var(--r-input);
+  background: var(--surface); color: var(--ink);
+  font-family: inherit; font-size: var(--text-body-sm);
+}
+.choice[aria-pressed='true'] {
+  background: var(--coral-tint); border-color: var(--coral);
+  font-weight: var(--weight-medium);
+}
+
+.sheetActions { display: flex; gap: var(--space-2); margin-block-start: var(--space-2); }
+
+.primary {
+  flex: 2; min-block-size: var(--touch-manager);
+  border: none; border-radius: var(--r-input);
+  background: var(--coral); color: var(--ink);
+  font-family: inherit; font-weight: var(--weight-bold);
+}
+.primary:disabled { background: var(--disabled-bg); color: var(--disabled-fg); }
+
+.secondary {
+  flex: 1; min-block-size: var(--touch-manager);
+  border: 1px solid var(--border-input); border-radius: var(--r-input);
+  background: var(--surface); color: var(--ink); font-family: inherit;
+}
+
+/* ── اعلام‌های پرداخت خانواده — بخش ۸ ────────────────────────── */
+
+.claims { background: var(--mango-tint); border-color: transparent; }
+
+.claim {
+  background: var(--surface);
+  border-radius: var(--r-card);
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.claimTop { margin: 0; display: flex; align-items: center; gap: var(--space-3); color: var(--ink); }
+.claimTop .amount { margin-inline-start: auto; }
+
+.receiptThumb {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 0;
+  border: none;
+  background: none;
+  text-align: start;
+  font-family: inherit;
+}
+
+.receiptThumb img {
+  inline-size: 64px;
+  block-size: 64px;
+  object-fit: cover;
+  border-radius: var(--r-avatar);
+  background: var(--neutral-fill);
+  flex: none;
+  color: var(--ink);
+}
+
+.noReceipt {
+  margin: 0;
+  align-self: start;
+  padding-block: 1px;
+  padding-inline: var(--space-2);
+  border-radius: var(--r-chip);
+  border: 1px solid var(--brick);
+  background: var(--brick-tint);
+  color: var(--ink);
+  font-weight: var(--weight-bold);
+  white-space: nowrap;
+}
+
+.claimActions { display: flex; gap: var(--space-2); }
+
+/* رسید را باید بشود بزرگ دید؛ عکس موبایل ریز خوانده نمی‌شود. */
+.zoomBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  border: none;
+  background: rgba(19, 39, 47, .9);
+  display: grid;
+  place-items: center;
+  padding: var(--space-4);
+}
+
+.zoomImage { max-inline-size: 100%; max-block-size: 100%; border-radius: var(--r-avatar); }
+
+/*
+ * دکمه‌های تصمیم روی اعلام پرداخت.
+ *
+ * این‌ها اول به کلاس‌های DashboardPage اشاره می‌کردند و چون CSS Module
+ * جداست، هیچ استایلی نمی‌گرفتند و مثل متن ساده دیده می‌شدند.
+ */
+.decide {
+  flex: 1;
+  min-inline-size: 12ch;
+  min-block-size: var(--touch-manager);
+  padding-inline: var(--space-3);
+  border: 1px solid var(--border-input);
+  border-radius: var(--r-input);
+  background: var(--surface);
+  color: var(--ink);
+  font-family: inherit;
+}
+
+.decidePrimary {
+  flex: 2;
+  background: var(--coral);
+  border-color: transparent;
+  color: var(--ink);
+  font-weight: var(--weight-bold);
+}
+
+.decide:disabled {
+  background: var(--disabled-bg);
+  color: var(--disabled-fg);
+  border-color: transparent;
+}
+
+/* ── اقلام هزینه ────────────────────────────────────────────── */
+
+.feeItem { display: flex; flex-direction: column; gap: var(--space-1); }
+.feeItem + .feeItem {
+  border-block-start: 1px solid var(--border);
+  padding-block-start: var(--space-3);
+  margin-block-start: var(--space-2);
+}
+
+/*
+ * گروه گزینه‌ها: fieldset پیش‌فرض مرورگر مرز و فاصله خودش را دارد و
+ * کنار کارت‌های این صفحه غریبه است.
+ */
+.choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+.choices legend { padding: 0; margin-block-end: var(--space-1); }
+
+/*
+ * مانده منفی — ماهی که هزینه‌اش از وصولی گذشته.
+ *
+ * تنها عددِ این کارت که رنگ می‌گیرد. اگر همه ارقام رنگ داشتند، این
+ * یکی دیده نمی‌شد.
+ */
+.warnText { color: var(--brick); }

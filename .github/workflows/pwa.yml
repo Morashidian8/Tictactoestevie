@@ -4,13 +4,19 @@ name: Build & Deploy PWA
 # data.json, bundles the PWA shell) and publishes it to GitHub Pages.
 on:
   push:
-    branches: [main]
+    # شاخه مهدکودک هم اینجاست تا نسخه زنده با هر پوش به‌روز شود. کل سایت
+    # از همان شاخه‌ای ساخته می‌شود که پوش شده، پس شاخه نباید از main عقب
+    # بماند، وگرنه اپ‌های دیگر به نسخه قدیمی برمی‌گردند.
+    branches: [main, claude/kindergarten-management-system-gelsww]
     paths:
       - "hse_pwa/**"
       - "manhole_pwa/**"
       - "pwa/**"
       - "polybot_web/**"
       - "wallet_tracker/webui/**"
+      - "kindergarten_site/**"
+      - "frame_risk/**"
+      - "renewal_intel/**"
       - "build_pwa.py"
       - ".github/workflows/pwa.yml"
   schedule:
@@ -86,6 +92,23 @@ jobs:
           # این‌جا نیست — در مخزن خصوصی Morashidian8/mabhas17 است.
           mkdir -p site/mabhas17
           cp mabhas17/privacy.html site/mabhas17/index.html
+          # ارزیاب ریسک حریق FRAME (کاملاً مرورگری) را زیر /frame/ منتشر کن.
+          # index.html همان فایل Artifact است؛ head.html پوستهٔ PWA (manifest و sw) را به آن اضافه می‌کند.
+          mkdir -p site/frame
+          cat frame_risk/pwa/head.html frame_risk/index.html > site/frame/index.html
+          cp frame_risk/pwa/manifest.json frame_risk/pwa/sw.js site/frame/
+          cp -r frame_risk/pwa/icons site/frame/icons
+          cp frame_risk/export.js site/frame/ && cp -r frame_risk/vendor site/frame/vendor
+          # تحلیلگر تمدید درمان تکمیلی (کاملاً مرورگری) را زیر /renewal/ منتشر کن.
+          # index.html همان فایل Artifact است؛ head.html پوستهٔ PWA را اضافه می‌کند و
+          # کتابخانهٔ اکسل از CDN به نسخهٔ محلی vendor/ برمی‌گردد تا اپ آفلاین هم فایل بخواند.
+          mkdir -p site/renewal
+          cat renewal_intel/pwa/head.html renewal_intel/index.html \
+            | sed 's#https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js#vendor/xlsx.full.min.js#' \
+            > site/renewal/index.html
+          grep -q 'src="vendor/xlsx.full.min.js"' site/renewal/index.html || { echo "xlsx محلی جایگزین نشد"; exit 1; }
+          cp renewal_intel/pwa/manifest.json renewal_intel/pwa/sw.js site/renewal/
+          cp -r renewal_intel/pwa/icons renewal_intel/pwa/vendor renewal_intel/pwa/fonts site/renewal/
           # اگر داده‌ی بیت‌کوین در این اجرا ساخته نشد (مثلاً push اپ HSE)، پوسته‌ی
           # ثابت اپ بیت‌کوین را در ریشه قرار بده و آخرین data.json منتشرشده را از
           # سایت زنده بگیر تا اپ ریشه سالم بماند بدون نیاز به بیلد مجدد.
@@ -99,6 +122,36 @@ jobs:
             echo '<meta http-equiv="refresh" content="0; url=./hse/"></head>' >> site/index.html
             echo '<body>در حال انتقال به اپ بازدید ایمنی... <a href="./hse/">ورود</a></body></html>' >> site/index.html
           fi
+      # ── سامانه مدیریت مهدکودک: دو مهدِ نمایشی ──────────────────────
+      # نسخه نمایشی است: لایه داده محلی با یک کلاس نمونه، بدون سرور.
+      # میزبانی واقعی محصول طبق بند ۱۰.۲ سند باید داخل کشور باشد؛ این
+      # نشانی فقط برای بازبینی است.
+      #
+      # اینجا دیگر بیلد نمی‌شود. سورس به مخزن خصوصی Mahd_app- رفته و
+      # Pages روی مخزن خصوصی اشتراک پولی می‌خواهد، پس بیلد روی دستگاه
+      # گرفته می‌شود و خروجیِ آماده در kindergarten_site/ می‌آید. شرح
+      # کامل و فرمانِ ساختِ دوباره در kindergarten_site/README.md است.
+      #
+      # دو پوشه یعنی دو اپِ نصب‌شدنیِ جدا — دو مهد، با نام و نشان و
+      # حافظهٔ جدا — تا جداسازیِ چندمهدی روی گوشیِ واقعی آزموده شود.
+      - name: Publish kindergarten demo apps
+        run: |
+          for centre in kindergarten kindergarten1 kindergarten2; do
+            test -f "kindergarten_site/$centre/index.html" \
+              || { echo "خروجی $centre نیست"; exit 1; }
+            mkdir -p "site/$centre"
+            cp -r "kindergarten_site/$centre/." "site/$centre/"
+          done
+          # وقتی نشانی روی گوشی ۴۰۴ می‌دهد، اولین سؤال این است که اصلاً
+          # چه چیزی منتشر شده. بی این سطر، لاگ جوابی ندارد و تنها راه،
+          # باز کردن خودِ سایت است — همان چیزی که کار نمی‌کند.
+          echo "منتشر شد:"
+          for centre in kindergarten kindergarten1 kindergarten2; do
+            printf '  %s → %s فایل، عنوان: ' \
+              "$centre" "$(find "site/$centre" -type f | wc -l)"
+            sed -n 's/.*<title>\(.*\)<\/title>.*/\1/p' "site/$centre/index.html"
+          done
+
       - uses: actions/configure-pages@v5
         with:
           enablement: true

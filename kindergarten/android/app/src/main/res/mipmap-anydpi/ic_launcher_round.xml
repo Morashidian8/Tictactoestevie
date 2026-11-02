@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  نشانِ اندروید ۷ و ۸.۰ — پیش از آیکون تطبیقی.
+
+  همان شکل، ولی یک‌تکه: `adaptive-icon` را فقط API ۲۶ به بالا می‌خواند و
+  اگر نسخهٔ جایگزینی نباشد، بیلد روی `@mipmap/ic_launcher` می‌شکند.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#065F46"
+        android:pathData="M18,0h72a18,18 0 0,1 18,18v72a18,18 0 0,1 -18,18h-72a18,18 0 0,1 -18,-18v-72a18,18 0 0,1 18,-18z" />
+    <path
+        android:fillColor="#FCF9F4"
+        android:pathData="M54,26 L26,47 L26,84 L45,84 L45,63 L63,63 L63,84 L82,84 L82,47 Z" />
+</vector>

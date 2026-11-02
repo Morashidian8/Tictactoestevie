@@ -1,0 +1,82 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  padding: var(--space-4) var(--space-4) var(--space-6);
+}
+
+.section { display: flex; flex-direction: column; gap: var(--space-2); }
+
+.title {
+  margin: 0;
+  padding-inline-start: var(--space-1);
+  color: var(--ink-muted);
+  font-weight: var(--weight-bold);
+}
+
+.grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+}
+
+.tile {
+  inline-size: 100%;
+  block-size: 100%;
+  /*
+   * هدف لمسی سخت‌گیرانه‌ترین نقش برای هر سه — بخش ۱۲.۷.
+   * این فهرستِ ورودیِ کل پنل است؛ کوچک کردنش چیزی جز چند پیکسل نمی‌دهد.
+   */
+  min-block-size: var(--touch-teacher);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: var(--space-3);
+  background: var(--surface);
+  border: 1px solid var(--card-border);
+  border-radius: var(--r-card);
+  box-shadow: var(--shadow-md);
+  color: var(--ink);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.tile:active { background: var(--surface-warm); }
+
+/*
+ * لکهٔ ارگانیک پشت گلیف — زبانِ بصریِ بازطراحی «آسمان».
+ * گلیف روی همه این تینت‌ها --ink است؛ پرکننده رنگ دارد، گلیف نه.
+ */
+.blob {
+  display: grid;
+  place-items: center;
+  inline-size: 38px;
+  block-size: 38px;
+  margin-block-end: var(--space-2);
+  border-radius: 46% 54% 52% 48% / 50% 46% 54% 50%;
+  color: var(--ink);
+}
+
+.mint { background: var(--mint-tint); }
+.mango { background: var(--mango-tint); }
+.sky { background: var(--sky-tint); }
+.grape { background: var(--grape-tint); }
+.coral { background: var(--coral-tint); }
+.bubble { background: var(--bubble-tint); }
+
+.label { font-weight: var(--weight-bold); }
+.hint { color: var(--ink-muted); }
+
+.badge {
+  margin-block-start: var(--space-1);
+  padding: 2px var(--space-2);
+  border-radius: var(--r-chip);
+  background: var(--mango-tint);
+  color: var(--ink);
+  font-weight: var(--weight-bold);
+}

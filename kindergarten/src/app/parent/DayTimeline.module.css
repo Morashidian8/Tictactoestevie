@@ -1,0 +1,71 @@
+/*
+ * خط زمان روز — بازطراحی پنل والد.
+ *
+ * خط پیوسته پشت نقطه‌ها کشیده می‌شود، نه بین آن‌ها: بین‌کشی در
+ * راست‌به‌چپ با flex، سرِ خط را یک پیکسل جابه‌جا می‌کند و در چهار
+ * مرحله دیده می‌شود.
+ */
+.line {
+  position: relative;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+/* خط پس‌زمینه، از مرکز اولین نقطه تا مرکز آخرین. */
+.line::before {
+  content: '';
+  position: absolute;
+  inset-block-start: 7px;
+  inset-inline: 12%;
+  block-size: 2px;
+  background: var(--card-border);
+}
+
+.step {
+  position: relative;
+  flex: 1;
+  min-inline-size: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+  text-align: center;
+}
+
+/*
+ * نقطه توخالی یعنی «هنوز نه». پرکننده سطح دارد نه شفاف، وگرنه خط
+ * پس‌زمینه از وسطش رد می‌شود.
+ */
+.dot {
+  inline-size: 16px;
+  block-size: 16px;
+  border-radius: var(--r-chip);
+  background: var(--surface);
+  border: 2px solid var(--card-border);
+}
+
+.done .dot {
+  background: var(--mint);
+  border-color: var(--mint);
+}
+
+.label {
+  color: var(--ink-muted);
+  max-inline-size: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.done .label {
+  color: var(--ink);
+  font-weight: var(--weight-bold);
+}
+
+.time {
+  color: var(--ink-muted);
+}

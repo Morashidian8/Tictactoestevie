@@ -1,0 +1,211 @@
+<!doctype html>
+<!--
+  صفحهٔ نصبِ لیاپ — همان نشانی‌ای که به مهدها داده می‌شود: liapp.ir
+  (deploy/Caddyfile آن را به app.liapp.ir/download/ می‌برد).
+
+  ایستا و بی‌وابسته: پیش از ورود، پیش از سرویس‌ورکر، و روی هر گوشی باید
+  باز شود. اندروید APK می‌گیرد، آیفون «افزودن به صفحهٔ اصلی» از سافاری.
+  اپِ مدیریتِ اپراتور اینجا نیست؛ نشانی‌اش در کنسول خودش است.
+
+  قاعده‌های اپ اینجا هم هست: رقم فارسی، بی تاریخ میلادی، بی حالت تاریک،
+  و هیچ چیز فقط با رنگ گفته نمی‌شود.
+-->
+<html lang="fa" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#FFFFFF" />
+    <meta name="color-scheme" content="light" />
+    <link rel="icon" type="image/svg+xml" href="/icon.svg" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-title" content="لیاپ" />
+    <title>نصب لیاپ — دفترچهٔ مهد و خانه</title>
+    <style>
+      :root {
+        --paper: #fcf9f4;
+        --card: #ffffff;
+        --ink: #0f172a;
+        --soft: #475569;
+        --line: #e2e8f0;
+        --brand: #0f8c86;
+        --brand-ink: #065f46;
+        --wash: #ecf8f6;
+      }
+      * { box-sizing: border-box; }
+      html { -webkit-text-size-adjust: 100%; }
+      body {
+        margin: 0;
+        background: var(--paper);
+        color: var(--ink);
+        font-family: Vazirmatn, 'Noto Sans Arabic', Tahoma, system-ui, sans-serif;
+        font-size: 16px;
+        line-height: 1.9;
+      }
+      main {
+        max-width: 560px;
+        margin: 0 auto;
+        padding: max(24px, env(safe-area-inset-top)) 16px max(32px, env(safe-area-inset-bottom));
+      }
+      header { display: flex; gap: 14px; align-items: center; margin: 8px 0 20px; }
+      header img { width: 64px; height: 64px; border-radius: 16px; flex: none; }
+      h1 { font-size: 26px; line-height: 1.3; margin: 0; }
+      .tag { margin: 2px 0 0; color: var(--soft); }
+      .intro { margin: 0 0 20px; }
+      section {
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 20px;
+        padding: 18px 18px 14px;
+        margin: 0 0 16px;
+      }
+      h2 { font-size: 19px; margin: 0 0 8px; display: flex; align-items: center; gap: 8px; }
+      h2 .for-you {
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--brand-ink);
+        background: var(--wash);
+        border-radius: 999px;
+        padding: 0 10px;
+        display: none;
+      }
+      [data-os='android'] #android .for-you,
+      [data-os='ios'] #ios .for-you { display: inline; }
+      /* شمارهٔ فهرست هم فارسی: «۱.» نه «1.». */
+      ol { margin: 8px 0 4px; padding-inline-start: 22px; list-style-type: persian; }
+      li { margin: 4px 0; }
+      .button {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        min-height: 52px;
+        border-radius: 14px;
+        background: var(--brand);
+        color: #fff;
+        font-weight: 700;
+        font-size: 17px;
+        text-decoration: none;
+        margin: 10px 0 6px;
+      }
+      .button:focus-visible { outline: 3px solid var(--brand-ink); outline-offset: 3px; }
+      .quiet { color: var(--soft); font-size: 14px; margin: 6px 0; }
+      .share {
+        display: inline-block;
+        width: 20px;
+        height: 20px;
+        vertical-align: -4px;
+        color: #0a84ff;
+      }
+      .warn {
+        background: #fff7e6;
+        border: 1px solid #f5d38a;
+        border-radius: 12px;
+        padding: 8px 12px;
+        font-size: 15px;
+        display: none;
+      }
+      [data-inapp='yes'] .warn { display: block; }
+      .web { text-align: center; margin: 22px 0 8px; }
+      .web a { color: var(--brand-ink); font-weight: 700; }
+      footer { color: var(--soft); font-size: 14px; text-align: center; margin-top: 20px; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <img src="/icons/icon-192.png" alt="" width="64" height="64" />
+        <div>
+          <h1>لیاپ</h1>
+          <p class="tag">دفترچهٔ مهد و خانه</p>
+        </div>
+      </header>
+
+      <p class="intro">
+        گزارش روزانهٔ کودک، حضور و غیاب، پیام‌های مهد و خانواده — یک جا، روی گوشی خودتان.
+        برای ورود، شمارهٔ همراه و رمزی را که مدیر مهد به شما داده لازم دارید.
+      </p>
+
+      <p class="warn" role="note">
+        این صفحه داخل تلگرام، واتس‌اپ یا اینستاگرام باز شده. از منوی همان برنامه
+        «باز کردن در مرورگر» را بزنید و از آنجا ادامه دهید؛ نصب از داخل آن‌ها کار نمی‌کند.
+      </p>
+
+      <section id="android" aria-labelledby="android-title">
+        <h2 id="android-title">گوشی اندروید <span class="for-you">گوشی شما</span></h2>
+        <a class="button" id="apk" href="/dl/liapp.apk" download>دریافت اپ لیاپ</a>
+        <p class="quiet" id="apk-note">فایل نصبی، مستقیم از سرور خودِ لیاپ.</p>
+        <ol>
+          <li>دکمهٔ بالا را بزنید و وقتی دانلود تمام شد، فایل را باز کنید.</li>
+          <li>اگر گوشی پرسید «نصب از منبع ناشناس»، یک بار اجازه دهید.</li>
+          <li>اپ «لیاپ» را باز کنید و با شماره و رمز وارد شوید.</li>
+        </ol>
+        <p class="quiet">
+          اپ خودش به‌روز می‌شود؛ لازم نیست دوباره چیزی نصب کنید.
+        </p>
+      </section>
+
+      <section id="ios" aria-labelledby="ios-title">
+        <h2 id="ios-title">آیفون <span class="for-you">گوشی شما</span></h2>
+        <ol>
+          <li>همین صفحه را در <b>Safari</b> باز کنید (نه کروم).</li>
+          <li>
+            دکمهٔ اشتراک‌گذاری
+            <svg class="share" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7.5 7.5 12 3l4.5 4.5M5 11v8.5A1.5 1.5 0 0 0 6.5 21h11a1.5 1.5 0 0 0 1.5-1.5V11"/></svg>
+            را پایین صفحه بزنید.
+          </li>
+          <li>
+            «<b>Add to Home Screen</b>» یا «افزودن به صفحهٔ اصلی» را انتخاب کنید و بعد «Add».
+          </li>
+          <li>از این به بعد لیاپ را از آیکونش روی صفحهٔ اصلی باز کنید.</li>
+        </ol>
+        <a class="button" href="/">باز کردن لیاپ در Safari</a>
+      </section>
+
+      <p class="web">
+        روی رایانه یا هر مرورگر دیگر: <a href="/">ورود به لیاپ</a>
+      </p>
+
+      <footer>
+        پرسش یا پیشنهادی دارید؟ داخل اپ، از منوی حساب «دربارهٔ لیاپ و ارتباط با ما».
+      </footer>
+    </main>
+
+    <script>
+      ;(function () {
+        var ua = navigator.userAgent || ''
+        var root = document.documentElement
+        var ios = /iPhone|iPad|iPod/.test(ua) || (ua.indexOf('Macintosh') > -1 && 'ontouchend' in document)
+        root.setAttribute('data-os', ios ? 'ios' : /Android/i.test(ua) ? 'android' : 'other')
+        if (/Telegram|WhatsApp|Instagram|FBAN|FBAV|Line\//i.test(ua)) root.setAttribute('data-inapp', 'yes')
+
+        // گوشیِ خودِ کاربر اول بیاید.
+        if (ios) {
+          var main = document.querySelector('main')
+          main.insertBefore(document.getElementById('ios'), document.getElementById('android'))
+        }
+
+        var fa = function (s) {
+          return String(s).replace(/\d/g, function (d) { return '۰۱۲۳۴۵۶۷۸۹'[d] })
+        }
+
+        // اگر هنوز APK روی سرور نیست، راهِ مرورگر.
+        fetch('/dl/android.json', { cache: 'no-store' })
+          .then(function (r) { return r.ok ? r.json() : null })
+          .then(function (info) {
+            var note = document.getElementById('apk-note')
+            if (info && info.version) {
+              note.textContent = 'نسخهٔ ' + fa(info.version) + '، مستقیم از سرور خودِ لیاپ.'
+              return
+            }
+            var apk = document.getElementById('apk')
+            apk.setAttribute('href', '/')
+            apk.removeAttribute('download')
+            apk.textContent = 'باز کردن لیاپ در Chrome'
+            note.textContent =
+              'فایل نصبیِ اندروید به‌زودی. تا آن موقع: لیاپ را در Chrome باز کنید، از منوی سه‌نقطه «نصب برنامه» یا «افزودن به صفحهٔ اصلی» را بزنید.'
+          })
+          .catch(function () {})
+      })()
+    </script>
+  </body>
+</html>

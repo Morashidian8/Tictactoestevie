@@ -1,0 +1,40 @@
+/* یک نسبت، به شکل حلقه. عدد داخل، برچسب زیر. */
+.wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.chart {
+  position: relative;
+  inline-size: 84px;
+  block-size: 84px;
+}
+
+.svg {
+  inline-size: 100%;
+  block-size: 100%;
+}
+
+.center {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+}
+
+.percent {
+  color: var(--ink);
+  font-weight: var(--weight-black);
+}
+
+.label {
+  color: var(--ink-muted);
+  text-align: center;
+}
+
+.detail {
+  color: var(--ink-muted);
+}

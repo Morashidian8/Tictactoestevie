@@ -1,0 +1,47 @@
+/*
+ * کادر جابه‌جایی نقش در منوی حساب — فقط نسخه نمایشی.
+ *
+ * عمداً از بقیهٔ منو جدا دیده می‌شود (مرزِ بالا و رنگِ کم‌رنگ‌ترِ عنوان)
+ * تا کسی گمان نکند بخشی از محصول است.
+ */
+.box {
+  margin-block-end: var(--space-2);
+  padding-block-end: var(--space-2);
+  border-block-end: 1px solid var(--border);
+}
+
+.title {
+  margin: 0 0 var(--space-1);
+  padding-inline: var(--space-2);
+  color: var(--ink-muted);
+}
+
+.row {
+  display: flex;
+  gap: var(--space-1);
+}
+
+.chip {
+  flex: 1;
+  min-block-size: var(--touch-manager);
+  padding-inline: var(--space-2);
+  border: 1px solid var(--border-input);
+  border-radius: var(--r-input);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+}
+
+.chip:disabled {
+  color: var(--disabled-fg);
+  background: var(--disabled-bg);
+  cursor: default;
+}
+
+/* حسابی که همین حالا باز است. متن --ink روی --mint-tint نسبت ۱۴٫۶ می‌دهد. */
+.chipOn {
+  background: var(--mint-tint);
+  border-color: var(--mint);
+  font-weight: var(--weight-bold);
+}

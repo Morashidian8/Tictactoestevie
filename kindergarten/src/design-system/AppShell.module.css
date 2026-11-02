@@ -1,0 +1,329 @@
+/*
+ * پوسته مشترک هر سه پنل.
+ *
+ * تا اینجا هر نقش قالب خودش را داشت: والد سرصفحه سلام و نوار پایین،
+ * مربی نوار پایینِ دوخانه‌ای بی سرصفحه، و مدیر نه این و نه آن — یک
+ * داشبورد با دکمه‌هایی که به صفحه‌های تمام‌صفحه می‌رفتند و راه برگشتشان
+ * فقط فلشِ بالا بود.
+ *
+ * حالا یک قالب است و سه پیکربندی. آنچه عوض می‌شود فقط نام و نشان
+ * خانه‌هاست، نه ساختار — چون سه ساختار یعنی سه‌بار یاد گرفتن، و مربی و
+ * مدیر گاهی یک نفرند.
+ *
+ * تراکم هر نقش با --touch-* فرق می‌کند، نه با چیدمان: مربی ایستاده و
+ * عجله دارد، مدیر پشت میز است. همان جدول بخش ۱۲.۷.
+ */
+
+.shell {
+  position: relative;
+  /*
+   * بوم و چمنزار با `z-index: -1` پشت محتوا می‌نشینند. `isolation` آن
+   * منفی را به همین لایه محدود می‌کند، وگرنه از پوسته بیرون می‌زد و
+   * پشتِ زمینهٔ خودِ صفحه گم می‌شد.
+   *
+   * شیت پایین‌رونده (۴۰) و نوار (۱۰) هر دو داخل همین بافت‌اند، پس
+   * ترتیبشان نسبت به هم دست‌نخورده می‌ماند — همان چیزی که یک‌بار با
+   * بافتِ چینشِ اشتباه شکست و دکمه «ثبت ورود» را غیرقابل‌زدن کرد.
+   */
+  isolation: isolate;
+  overflow-x: clip;
+  min-block-size: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background: var(--paper);
+}
+
+/*
+ * بومِ لحن‌دار.
+ *
+ * از رنگِ آسمانِ نقش شروع می‌شود، به کرم می‌رسد و پایین به سبزِ چمنزار.
+ * حتی وقتی شبکه کارت‌ها تمام صفحه را پر کرده، همان نوارهای ۱۶ پیکسلیِ
+ * کنارِ کارت‌ها رنگ دارند — و همین بود که مالک محصول نداشتنش را
+ * «بی‌روح» خواند.
+ *
+ * `--wave-fill` را هم همین‌جا می‌گذاریم تا موجِ زیر سرصفحه دقیقاً سرِ
+ * همین بوم را بردارد.
+ */
+.washTeacher {
+  --wave-fill: var(--wash-teacher);
+  background:
+    linear-gradient(180deg, var(--wash-teacher) 0%, var(--paper) 30%, var(--paper) 66%, var(--wash-foot) 100%);
+}
+.washParent {
+  --wave-fill: var(--wash-parent);
+  background:
+    linear-gradient(180deg, var(--wash-parent) 0%, var(--paper) 30%, var(--paper) 66%, var(--wash-foot) 100%);
+}
+.washManager {
+  --wave-fill: var(--wash-manager);
+  background:
+    linear-gradient(180deg, var(--wash-manager) 0%, var(--paper) 30%, var(--paper) 66%, var(--wash-foot) 100%);
+}
+
+/* ── چمنزار و نقش‌های بوم ───────────────────────────────────── */
+
+/*
+ * `fixed` است، نه `absolute`.
+ *
+ * با `absolute` چمنزار به انتهای **سند** می‌چسبید، یعنی در فهرستی که
+ * بیست کارت دارد فقط بعد از اسکرول تا ته دیده می‌شد. زمین باید همیشه
+ * زیر پای صفحه باشد؛ کارت‌ها رویش می‌لغزند.
+ */
+.shell :global(.meadow) {
+  position: fixed;
+  inset-inline: 0;
+  inset-block-end: 0;
+  block-size: 330px;
+  z-index: -1;
+  pointer-events: none;
+}
+
+.shell :global(.meadow-hills),
+.shell :global(.meadow-life) {
+  position: absolute;
+  inset: 0;
+  inline-size: 100%;
+  block-size: 100%;
+  display: block;
+}
+
+/*
+ * نقش‌های مدادرنگی فقط تا جایی می‌آیند که چمنزار شروع نشده. بالای صفحه
+ * را کارت‌ها پر می‌کنند، پس بیش از این دیده نمی‌شود و بیش از این هم
+ * لازم نیست.
+ */
+.shell :global(.paper-marks) {
+  position: fixed;
+  inset-inline: 0;
+  inset-block-start: 0;
+  block-size: 100dvh;
+  z-index: -1;
+  pointer-events: none;
+}
+
+/*
+ * محتوا ۱۶ پیکسل روی آسمان سوار می‌شود.
+ *
+ * همین همپوشانی است که به صفحه عمق می‌دهد؛ بی آن، آسمان و بدنه دو
+ * نوارِ چسبیده‌اند و طرح دوباره مسطح می‌شود.
+ *
+ * **بدون `position` و `z-index`.** نسخه اول این قاعده هر دو را داشت و
+ * روی هر فرزندِ بدنه یک بافتِ چینش می‌ساخت؛ شیت پایین‌رونده که داخل
+ * همان فرزند رندر می‌شود، `z-index: 40`ش در آن بافت حبس می‌شد و نوار
+ * ناوبری رویش می‌نشست — یعنی دکمه «ثبت ورود» اصلاً قابل زدن نبود.
+ *
+ * آسمان `isolation: isolate` دارد، پس عنصرِ بعدی به‌خاطر ترتیب DOM
+ * رویش می‌نشیند و به z-index نیازی نیست.
+ */
+.body > :not(.sky) {
+  margin-block-start: -16px;
+}
+
+.body {
+  flex: 1;
+  min-block-size: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── آسمانِ سرصفحه ──────────────────────────────────────────── */
+
+/*
+ * سرصفحه دیگر یک نوار سفید نیست؛ یک آسمانِ رنگیِ تصویرسازی‌شده است که
+ * با موج به بوم می‌رسد.
+ *
+ * چرا: نسخه پیشین کارتِ سفید روی بومِ تقریباً سفید بود و مالک محصول
+ * درست گفت که «مبتدیانه» دیده می‌شود — هیچ‌چیز در صفحه نمی‌گفت این اپِ
+ * مهدکودک است، نه یک فرم اداری.
+ *
+ * موج ۳۸ پیکسل پایین‌تر از انتهای گرادیان می‌نشیند، پس فضای داخلیِ
+ * پایینِ آسمان همان‌قدر است تا متن زیر موج نرود.
+ */
+.sky {
+  position: relative;
+  flex: none;
+  padding-block-end: 48px;
+  color: #fff;
+  isolation: isolate;
+}
+
+.teacher { background: var(--sky-teacher); }
+.parent { background: var(--sky-parent); }
+.manager { background: var(--sky-manager); }
+
+/* صحنه و موج هر دو پشت محتوا، با z-index منفیِ محدود به همین لایه. */
+.sky :global(.sky-scene) {
+  position: absolute;
+  inset: 0;
+  inline-size: 100%;
+  block-size: 100%;
+  z-index: -1;
+  pointer-events: none;
+}
+
+/*
+ * سرصفحه‌ای که شخصیت و چیپ دارد، بلندتر از قبل است و صحنه باید همان‌قدر
+ * جا بگیرد. `preserveAspectRatio="none"` در خودِ SVG این را می‌سپارد به
+ * همین دو خط.
+ */
+
+.sky :global(.sky-wave) {
+  position: absolute;
+  inset-inline: 0;
+  inset-block-end: -1px;
+  inline-size: 100%;
+  display: block;
+  pointer-events: none;
+}
+
+.header {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-4) var(--space-2);
+}
+
+/*
+ * شخصیت مهد. پیش‌تر یک برگ در دایره تینت بود؛ حالا خورشید/قلب/ستاره
+ * که در یک نگاه می‌گوید کدام حساب باز است.
+ */
+.brand {
+  flex: none;
+  display: grid;
+  place-items: center;
+  inline-size: 44px;
+  block-size: 44px;
+}
+
+/*
+ * نشان مهد، در همان ۴۴ پیکسلِ شخصیت.
+ *
+ * `contain` و نه `cover`: لوگوی مهدها اغلب مربع نیستند و بریدنشان
+ * یعنی نصفِ نام یا نصفِ نشان. قابِ سفید همیشه هست، حتی وقتی خودِ
+ * تصویر زمینهٔ شفاف دارد.
+ */
+.logo {
+  inline-size: 44px;
+  block-size: 44px;
+  border-radius: var(--r-chip);
+  background: #fff;
+  object-fit: contain;
+  padding: 3px;
+}
+
+.greet { flex: 1; min-inline-size: 0; }
+
+/*
+ * نام مهد، بالای سلام — و چرا برچسبِ سفید است نه متنِ سفید.
+ *
+ * متنِ سفید روی آسمان، در اندازهٔ ریز، از ۴٫۵ رد نمی‌شود: تیره‌ترین
+ * پلهٔ سبزِ مربی (#0E9B72) با سفیدِ کامل ۳٫۵ می‌دهد. برای «سلام» که
+ * درشت و سیاه‌قلم است ۳ کافی است (بخش ۱۲.۲)، برای یک خط ۱۱ پیکسلی نه.
+ *
+ * پس رنگ‌ها جا عوض می‌کنند: زمینه سفید، متن جوهرِ تیره. همان قابِ
+ * سفیدی که نشان را نگه می‌دارد، اینجا نام را هم نگه می‌دارد — و
+ * کنارِ هم، نشانهٔ مهد را می‌سازند.
+ */
+.centre {
+  margin: 0 0 4px;
+  max-inline-size: 100%;
+  display: inline-block;
+  padding: 1px var(--space-2);
+  border-radius: var(--r-chip);
+  background: #fff;
+  color: var(--ink);
+  font-weight: var(--weight-bold);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: bottom;
+}
+
+/*
+ * متن سفید روی آسمان.
+ *
+ * تیره‌ترین پله هر سه گرادیان با سفید بالای ۴٫۵ است؛ روشن‌ترین پله
+ * فقط بالای قاب است و متنی رویش نمی‌نشیند. زیرعنوان opacity دارد نه
+ * رنگِ دیگر، تا همان نسبت را با شفافیت کمتر حفظ کند.
+ */
+.hello { margin: 0; color: #fff; font-weight: var(--weight-black); }
+.helloSub { margin: 2px 0 0; color: #fff; opacity: .92; }
+
+.headerEnd { position: relative; flex: none; }
+
+.account {
+  min-inline-size: var(--touch-parent);
+  min-block-size: var(--touch-parent);
+  display: grid;
+  place-items: center;
+  border-radius: var(--r-input);
+  background: rgb(255 255 255 / .2);
+  border: 1px solid rgb(255 255 255 / .28);
+  color: #fff;
+  cursor: pointer;
+}
+
+/* نشان روی حساب: شمار نیست، فقط «چیزی هست». عدد اینجا خوانده نمی‌شود. */
+.accountDot {
+  position: absolute;
+  inset-block-start: 10px;
+  inset-inline-end: 10px;
+  inline-size: 9px;
+  block-size: 9px;
+  border-radius: var(--r-chip);
+  background: #FFD166;
+  border: 2px solid rgb(255 255 255 / .5);
+}
+
+.menu {
+  position: absolute;
+  inset-block-start: calc(100% + var(--space-2));
+  inset-inline-end: 0;
+  z-index: 20;
+  min-inline-size: 160px;
+  padding: var(--space-2);
+  background: var(--surface);
+  border: 1px solid var(--card-border);
+  border-radius: var(--r-card);
+  box-shadow: var(--shadow-lg);
+}
+
+.menuRole {
+  margin: 0 0 var(--space-1);
+  padding-inline: var(--space-2);
+  color: var(--ink-muted);
+}
+
+.menuItem {
+  inline-size: 100%;
+  min-block-size: var(--touch-parent);
+  padding-inline: var(--space-2);
+  text-align: start;
+  background: none;
+  border: none;
+  border-radius: var(--r-input);
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+}
+.menuItem:active { background: var(--coral-tint); }
+
+/* ── ردیف کنترل‌های ویژه نقش ────────────────────────────────── */
+
+/*
+ * حالا داخل آسمان است، نه زیرش.
+ *
+ * چیزهایی که اینجا می‌نشینند (کلاسِ جاری، وضعیت همگام‌سازی) خبرِ همین
+ * لحظه‌اند و به سرصفحه تعلق دارند؛ پایین‌تر بردنشان یعنی اولین کارت
+ * محتوا را هل می‌دهند.
+ */
+.toolbar {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 0 var(--space-4) var(--space-2);
+  flex-wrap: wrap;
+  color: #fff;
+}

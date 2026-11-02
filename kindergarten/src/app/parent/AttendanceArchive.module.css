@@ -1,0 +1,59 @@
+.wrap { display: flex; flex-direction: column; gap: var(--space-3); }
+
+.monthBar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.step {
+  min-block-size: var(--touch-parent);
+  padding-inline: var(--space-3);
+  border: 1px solid var(--border-input);
+  border-radius: var(--r-input);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+}
+.step:active { background: var(--coral-tint); }
+
+.period { flex: 1; text-align: center; color: var(--ink); font-weight: var(--weight-bold); }
+
+.tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-2); }
+
+.tile {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-3);
+  background: var(--surface);
+  border: 1px solid var(--card-border);
+  border-radius: var(--r-input);
+  text-align: center;
+}
+.tileLabel { color: var(--ink-muted); }
+.tileValue { margin: 0; color: var(--ink); font-variant-numeric: tabular-nums; }
+
+.days { list-style: none; margin: 0; padding: 0; }
+
+.day {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding-block: var(--space-2);
+}
+.day + .day { border-block-start: 1px solid var(--border); }
+
+.date { flex: none; min-inline-size: 9ch; color: var(--ink); }
+.clock { flex: 1; color: var(--ink); font-variant-numeric: tabular-nums; }
+
+/* غیبت متن دارد، نه فقط رنگ — بخش ۱۲.۲. */
+.absent { flex: 1; color: var(--ink-muted); }
+
+.minutes {
+  flex: none;
+  color: var(--ink-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}

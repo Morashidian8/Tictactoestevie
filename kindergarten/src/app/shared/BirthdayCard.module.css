@@ -1,0 +1,110 @@
+/*
+ * کارت تولدهای پیشِ رو.
+ *
+ * کارتِ استیکری مثل بقیه، ولی تینتش گرم است — تنها کارتِ صفحه که خبرِ
+ * خوش می‌دهد و باید از کارت‌های «کاستی» و «بی‌خبر» جدا دیده شود.
+ */
+.card {
+  margin: 0 var(--space-4) var(--space-3);
+  padding: var(--space-3);
+  background: var(--bubble-tint);
+  border: 3px solid var(--surface);
+  outline: 1px solid var(--bubble-edge);
+  border-radius: var(--r-card);
+  box-shadow: 0 16px 28px -14px rgb(15 23 42 / .28);
+}
+
+.label {
+  display: block;
+  margin-block-end: var(--space-2);
+  /* متن ثانویه روی تینت یک پله تیره‌تر است — روی صورتی ۶ به بالا. */
+  color: var(--ink-muted-on-tint);
+}
+
+/*
+ * نوارِ «فردا» — همان چیزی که جای اعلانِ سیستمی را می‌گیرد.
+ *
+ * فقط وقتی هست که واقعاً فردا تولدی باشد. نواری که همیشه روشن است،
+ * خوانده نمی‌شود.
+ */
+.alert {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  background: var(--surface);
+  border: 1px solid var(--coral);
+  border-radius: var(--r-input);
+  color: var(--ink);
+}
+
+/* مرجانی فقط پرکننده و خط است؛ گلیف هم اینجا مرجانی است چون متن نیست. */
+.alertIcon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  color: var(--coral-dark);
+}
+
+.list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.face {
+  flex: none;
+  inline-size: 36px;
+  block-size: 36px;
+  border-radius: var(--r-chip);
+  overflow: hidden;
+  background: var(--surface);
+  box-shadow: 0 0 0 2px var(--surface);
+}
+
+.face > * {
+  inline-size: 100%;
+  block-size: 100%;
+  object-fit: cover;
+}
+
+.who {
+  flex: 1;
+  min-inline-size: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.name {
+  color: var(--ink);
+  font-weight: var(--weight-bold);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.meta {
+  color: var(--ink-muted-on-tint);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.when {
+  flex: none;
+  color: var(--ink-muted-on-tint);
+}
+
+/* «امروز» و «فردا» با کلمه گفته می‌شوند، نه فقط با رنگ — بخش ۱۲.۲. */
+.today { color: var(--ink); }
+.soon { color: var(--ink); }

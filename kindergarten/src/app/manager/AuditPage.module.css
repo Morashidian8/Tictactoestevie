@@ -1,0 +1,399 @@
+/*
+ * خروجی پرونده بازرسی — ارتقای ۲ سند بررسی طراحی.
+ *
+ * این صفحه دو مخاطب دارد: مدیر روی موبایل، و کاغذی که دست بازرس
+ * می‌رود. پس قواعد چاپ هم اینجاست، نه در یک فایل جدا.
+ */
+.page {
+  min-block-size: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background: var(--surface);
+  border-block-end: 1px solid var(--border);
+  position: sticky;
+  inset-block-start: 0;
+  z-index: 5;
+}
+
+.back {
+  inline-size: var(--touch-manager);
+  block-size: var(--touch-manager);
+  display: grid;
+  place-items: center;
+  border: none;
+  background: none;
+  color: var(--ink);
+  flex: none;
+}
+
+.title { color: var(--ink); }
+
+.body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding-block: var(--space-4) var(--space-7);
+}
+
+.card,
+.tableCard {
+  margin-inline: var(--space-4);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  box-shadow: var(--shadow-sm);
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.cardLabel { color: var(--ink-muted); }
+.allGood { margin: 0; color: var(--ink); }
+
+/* ── شکاف‌های آمادگی ────────────────────────────────────────── */
+.gaps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--space-2);
+}
+
+.gap {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  color: var(--ink);
+}
+
+/*
+ * عدد در تراشه انبه‌ای، نه متن رنگی — بخش ۱۲.۲.
+ * صفر اصلاً کشیده نمی‌شود، پس هر تراشه یعنی کاری هست.
+ */
+.gapCount {
+  flex: none;
+  min-inline-size: 2.2rem;
+  text-align: center;
+  padding: 1px var(--space-2);
+  border-radius: var(--r-chip);
+  border: 1px solid var(--mango);
+  background: var(--mango-tint);
+  color: var(--ink);
+  font-weight: var(--weight-bold);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── هشدار داده حساس ────────────────────────────────────────── */
+.warn {
+  margin-inline: var(--space-4);
+  display: flex;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--brick);
+  border-radius: var(--r-card);
+  background: var(--brick-tint);
+  color: var(--ink);
+}
+
+.warnIcon { color: var(--brick); flex: none; }
+.warnText { margin: 0; }
+
+.error { margin-inline: var(--space-4); color: var(--ink); font-weight: var(--weight-bold); }
+
+.build {
+  margin-inline: var(--space-4);
+  min-block-size: var(--touch-manager);
+  border: none;
+  border-radius: var(--r-input);
+  background: var(--coral);
+  color: var(--ink);
+  font-family: inherit;
+  font-weight: var(--weight-bold);
+}
+
+.built {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.builtHead { margin: 0 var(--space-4); color: var(--ink-muted); }
+
+/* ── جدول‌ها ─────────────────────────────────────────────────── */
+.tableTitle { margin: 0; font-weight: var(--weight-bold); color: var(--ink); }
+
+/* جدول از عرض صفحه پهن‌تر است و ستون خودش می‌لغزد، نه کل صفحه. */
+.tableScroll { overflow-x: auto; }
+
+.table {
+  inline-size: 100%;
+  min-inline-size: 520px;
+  border-collapse: collapse;
+}
+
+.table th,
+.table td {
+  text-align: start;
+  padding: var(--space-2) var(--space-3);
+  border-block-end: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+.table th { color: var(--ink-muted); font-weight: var(--weight-bold); }
+.table td { color: var(--ink); font-variant-numeric: tabular-nums; }
+.table tbody tr:last-child td { border-block-end: none; }
+
+/* ردیفی که کار دارد. تنها رنگ کل فایل. */
+.rowMarked td { background: var(--mango-tint); }
+
+/* ------------------------------------------------------------
+   چاپ
+
+   بازرس کاغذ می‌خواهد. هر چیزی که روی کاغذ کاری نمی‌کند برداشته
+   می‌شود: سرصفحه، دکمه‌ها، و نمای آمادگی که مالِ پیش از بازرسی است.
+   ------------------------------------------------------------ */
+@media print {
+  .header,
+  .build,
+  .warn,
+  .card {
+    display: none;
+  }
+
+  .page { background: #fff; }
+  .body { gap: var(--space-5); padding: 0; }
+
+  .tableCard {
+    margin: 0;
+    border: none;
+    box-shadow: none;
+    padding: 0;
+    break-inside: auto;
+  }
+
+  .table { min-inline-size: 0; }
+  .table th, .table td { white-space: normal; padding: 4px 6px; }
+  /* سرستون روی هر صفحه کاغذ تکرار شود. */
+  .table thead { display: table-header-group; }
+  .tableScroll { overflow: visible; }
+  .builtHead { margin: 0; }
+}
+
+/* ── چک‌لیست بازرسی ─────────────────────────────────────────── */
+
+.note {
+  margin: 0 0 var(--space-3);
+  padding: var(--space-3);
+  background: var(--mint-tint);
+  border-radius: var(--r-input);
+  color: var(--ink);
+}
+
+.muted { margin: 0; color: var(--ink-muted); }
+
+.checklist { list-style: none; margin: 0; padding: 0; }
+
+.requirement {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding-block: var(--space-2);
+}
+.requirement + .requirement { border-block-start: 1px solid var(--border); }
+
+/*
+ * نشان تأمین، با گلیف و نه فقط رنگ — بخش ۱۲.۲.
+ * خطِ تیره برای تأمین‌نشده، چون «خالی» هم یک حالت است.
+ */
+.mark {
+  flex: none;
+  display: grid;
+  place-items: center;
+  inline-size: 22px;
+  block-size: 22px;
+  border-radius: var(--r-chip);
+  font-size: var(--text-caption);
+}
+.markOk { background: var(--mint-tint); color: var(--mint-deep); }
+.markGap { background: var(--brick-tint); color: var(--ink); }
+
+.reqMain { flex: 1; min-inline-size: 0; display: flex; flex-direction: column; gap: 2px; }
+.reqTitle { color: var(--ink); }
+.reqState { color: var(--ink-muted); }
+
+.hide {
+  flex: none;
+  padding: 0;
+  background: none;
+  border: none;
+  color: var(--ink-muted);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.action {
+  min-block-size: var(--touch-manager);
+  margin-block-start: var(--space-2);
+  border: 1px solid var(--border-input);
+  border-radius: var(--r-input);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+}
+.action:active { background: var(--coral-tint); }
+
+.row { display: flex; align-items: center; gap: var(--space-2); margin: 0; color: var(--ink); }
+.row + .row { border-block-start: 1px solid var(--border); padding-block-start: var(--space-2); }
+.row b { margin-inline-start: auto; white-space: nowrap; }
+
+.expired { color: var(--ink); font-weight: var(--weight-bold); }
+
+/* ── دفتر بازدید ────────────────────────────────────────────── */
+
+.visit { display: flex; flex-direction: column; gap: var(--space-1); padding-block: var(--space-2); }
+.visit + .visit { border-block-start: 1px solid var(--border); }
+
+.visitTop { display: flex; align-items: center; gap: var(--space-2); margin: 0; color: var(--ink); }
+.visitBody { margin: 0; color: var(--ink); overflow-wrap: anywhere; }
+
+/* اقدام باز، زمینه زرد — یک کارِ مانده است، نه یک هشدار ایمنی. */
+.required {
+  margin: 0;
+  padding: var(--space-2);
+  background: var(--mango-tint);
+  border-radius: var(--r-input);
+  color: var(--ink);
+}
+
+.resolved { margin: 0; color: var(--mint-deep); }
+
+/* ── شیت‌ها ─────────────────────────────────────────────────── */
+
+.sheetBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: grid;
+  place-items: end center;
+  background: rgb(15 23 42 / .45);
+  overflow-y: auto;
+}
+
+.sheet {
+  inline-size: 100%;
+  max-inline-size: 560px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-5) var(--space-4);
+  padding-block-end: calc(var(--space-5) + env(safe-area-inset-bottom));
+  background: var(--surface);
+  border-start-start-radius: var(--r-card);
+  border-start-end-radius: var(--r-card);
+  /*
+   * شیتِ بلند، درونش می‌لغزد — نه بیرونِ قاب.
+   *
+   * وقتی فرمِ مدرک، تقویم و بارگذاری فایل گرفت، دکمه «بارگذاری» روی
+   * گوشیِ ۸۴۴ پیکسلی زیر لبه صفحه افتاد و اصلاً قابل زدن نبود. دو تا
+   * از شش شیتِ این اپ همین دو خط را داشتند و چهارتای دیگر نه — یعنی
+   * قاعده‌ای که کپی شده بود و جا افتاد.
+   */
+  max-block-size: 90dvh;
+  overflow-y: auto;
+}
+
+.sheetTitle { margin: 0; font-family: var(--font); font-weight: var(--weight-black); }
+
+.choices { display: flex; flex-wrap: wrap; gap: var(--space-2); margin: 0; padding: 0; border: none; }
+.choices legend { padding: 0; margin-block-end: var(--space-1); }
+
+.choice {
+  min-block-size: var(--touch-manager);
+  padding-inline: var(--space-3);
+  border: 1px solid var(--border-input);
+  border-radius: var(--r-input);
+  background: var(--surface);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: var(--text-body-sm);
+  cursor: pointer;
+}
+.choice[aria-pressed='true'] {
+  background: var(--coral-tint);
+  border-color: var(--coral);
+  font-weight: var(--weight-medium);
+}
+
+.field { display: flex; flex-direction: column; gap: var(--space-1); color: var(--ink-muted); }
+
+.input,
+.textarea {
+  min-block-size: var(--touch-manager);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border-input);
+  border-radius: var(--r-input);
+  background: var(--surface);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: var(--text-body-sm);
+}
+.textarea { resize: vertical; }
+.input:focus, .textarea:focus { border-color: var(--coral); outline: none; }
+
+.sheetActions { display: flex; gap: var(--space-2); margin-block-start: var(--space-2); }
+
+.secondary {
+  flex: 1;
+  min-block-size: var(--touch-manager);
+  border: 1px solid var(--border-input);
+  border-radius: var(--r-input);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+}
+
+.primary {
+  flex: 2;
+  min-block-size: var(--touch-manager);
+  border: none;
+  border-radius: var(--r-input);
+  background: var(--coral);
+  color: var(--ink);
+  font-family: inherit;
+  font-weight: var(--weight-bold);
+  cursor: pointer;
+}
+.primary:disabled { background: var(--disabled-bg); color: var(--disabled-fg); }
+
+/* بندانگشتی تصویر مدرک در فهرست مدارک مهد. */
+.thumb {
+  inline-size: 34px;
+  block-size: 34px;
+  border-radius: var(--radius-sm);
+  object-fit: cover;
+  border: 1px solid var(--line);
+  flex: none;
+}
+
+/*
+ * ردیف کنش، چسبیده به پایینِ شیتِ لغزان.
+ * وگرنه کاربر باید تا ته فرم بلغزد تا دکمه را ببیند.
+ */
+.sheetActions {
+  position: sticky;
+  inset-block-end: 0;
+  background: var(--surface);
+  padding-block-start: var(--space-2);
+}

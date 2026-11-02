@@ -1,0 +1,118 @@
+/*
+ * کارتِ «جا نماند».
+ *
+ * کارتِ استیکریِ همان خانواده — لبهٔ سفید و سایهٔ نرم — ولی بی تینت:
+ * درونش سطرهایی با شش رنگ مختلف می‌نشیند و تینتِ زمینه، همهٔ آن‌ها را
+ * کدر می‌کند.
+ */
+.card {
+  margin: 0 var(--space-4) var(--space-3);
+  padding: var(--space-3);
+  background: var(--surface);
+  border: 3px solid var(--surface);
+  outline: 1px solid var(--card-border);
+  border-radius: var(--r-card);
+  box-shadow: 0 16px 28px -14px rgb(15 23 42 / .28);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.label { color: var(--ink-muted); }
+
+.calm { margin: 0; color: var(--ink-muted); }
+
+.list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+}
+
+/*
+ * هدف لمسی کاملِ مدیر روی کل سطر.
+ *
+ * نقطهٔ رنگی و پیکان تزئین‌اند؛ چیزی که لمس می‌شود همین دکمه است، از
+ * لبه تا لبه.
+ */
+.row {
+  inline-size: 100%;
+  min-block-size: var(--touch-manager);
+  padding: var(--space-2) var(--space-1);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  background: none;
+  border: none;
+  color: var(--ink);
+  font-family: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+.row + .row,
+li + li .row { border-block-start: 1px solid var(--border); }
+
+.row:active { background: var(--surface-warm); }
+
+/* پیکان همیشه ته سطر می‌ماند، هرچه متن بلند باشد. */
+.row > svg:last-child {
+  flex: none;
+  color: var(--ink-muted);
+}
+
+.text {
+  flex: 1;
+  min-inline-size: 0;
+}
+
+/*
+ * شمار، با رقمِ فارسی و در یک خانهٔ ثابت.
+ *
+ * `aria-hidden` است چون خودِ متنِ سطر عدد را با حروف می‌گوید — «تولد
+ * دو کودک» — و صفحه‌خوان نباید دو بار بشمارد.
+ */
+.count {
+  flex: none;
+  min-inline-size: 22px;
+  padding-inline: var(--space-1);
+  text-align: center;
+  color: var(--ink-muted);
+  font-weight: var(--weight-bold);
+}
+
+/*
+ * نقطهٔ رنگی، فقط برای جدا دیده شدنِ سطرها.
+ *
+ * هیچ خبری با رنگ گفته نمی‌شود — بخش ۱۲.۲. متن سطر کامل است و بدون
+ * دیدن رنگ هم خوانده می‌شود.
+ */
+.dot {
+  flex: none;
+  inline-size: 26px;
+  block-size: 26px;
+  border-radius: var(--r-chip);
+  display: grid;
+  place-items: center;
+  color: var(--ink);
+}
+
+.mint { background: var(--mint-tint); }
+.sky { background: var(--sky-tint); }
+.bubble { background: var(--bubble-tint); }
+.mango { background: var(--mango-tint); }
+.grape { background: var(--grape-tint); }
+.coral { background: var(--coral-tint); }
+
+/*
+ * سطر فوری، با خط کناری — نه فقط رنگِ تندتر.
+ *
+ * تنها جایی که به کار می‌رود، ایمنی کودک است (بخش ۱۳.۳).
+ */
+.rowUrgent {
+  border-inline-start: 3px solid var(--brick);
+  padding-inline-start: var(--space-2);
+}
+
+.rowUrgent .text { font-weight: var(--weight-bold); }

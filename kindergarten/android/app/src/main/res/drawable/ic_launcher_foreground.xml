@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  همان خانهٔ نشانِ برنامه.
+
+  بوم آیکون تطبیقی ۱۰۸dp است ولی فقط ۷۲dp میانی‌اش همیشه دیده می‌شود —
+  لانچرها بقیه را برای ماسک دایره و گِرد می‌برند. پس شکل در همان مربعِ
+  میانی کشیده شده، نه لبه تا لبه.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#FCF9F4"
+        android:pathData="M54,34 L30,52 L30,80 L45,80 L45,64 L63,64 L63,80 L78,80 L78,52 Z" />
+</vector>

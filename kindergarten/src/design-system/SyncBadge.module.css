@@ -1,0 +1,39 @@
+/* بخش ۱۴.۲: نشانگر همگام‌سازی فقط وقتی صف پر است دیده می‌شود. */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--ink-muted);
+}
+
+.spin {
+  display: inline-grid;
+  place-items: center;
+  animation: spin 1.2s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spin {
+    animation: none;
+  }
+}
+
+/*
+ * ارتقای ۴: خط قطع‌شده پررنگ‌تر از صفِ پر است.
+ *
+ * رنگ از همان چهارده رنگ طراح می‌آید و پرکننده است، نه گلیف: متن روی
+ * آن همیشه --ink می‌ماند (بخش ۱۲.۲).
+ */
+.offline {
+  padding: 2px var(--space-2);
+  border: 1px solid var(--mango);
+  border-radius: var(--r-chip);
+  background: var(--mango-tint);
+  color: var(--ink);
+}

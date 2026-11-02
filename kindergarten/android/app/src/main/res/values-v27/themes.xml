@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- گلیف‌های تیره روی نوار ناوبریِ روشن، از API ۲۷ به بعد. -->
+    <style name="Theme.Mahd" parent="@android:style/Theme.Material.Light.NoActionBar">
+        <item name="android:statusBarColor">@color/paper</item>
+        <item name="android:navigationBarColor">@color/wash_foot</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowLightNavigationBar">true</item>
+        <item name="android:windowBackground">@color/paper</item>
+    </style>
+</resources>

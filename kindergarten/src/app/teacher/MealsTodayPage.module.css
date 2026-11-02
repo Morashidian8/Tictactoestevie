@@ -1,0 +1,74 @@
+.page { min-block-size: 100dvh; display: flex; flex-direction: column; }
+
+.header {
+  display: flex; align-items: center; gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+}
+.back {
+  min-inline-size: var(--touch-teacher); min-block-size: var(--touch-teacher);
+  display: grid; place-items: center; border: none; background: none;
+  color: var(--ink); font-size: var(--text-h2);
+}
+.title { font-family: var(--font); font-weight: var(--weight-black); }
+
+.body {
+  flex: 1; display: flex; flex-direction: column; gap: var(--space-3);
+  padding: 0 var(--space-4) var(--space-7);
+}
+
+.days { display: flex; align-items: center; gap: var(--space-2); }
+
+.dayTab {
+  min-block-size: var(--touch-teacher); padding-inline: var(--space-4);
+  border: 1px solid var(--border-input); border-radius: var(--r-chip);
+  background: var(--surface); color: var(--ink); font-family: inherit;
+}
+.dayTab[aria-pressed='true'] {
+  background: var(--mint-tint);
+  border-color: var(--mint);
+  font-weight: var(--weight-bold);
+}
+.dayName { color: var(--ink-muted); margin-inline-start: auto; }
+
+.card {
+  display: flex; flex-direction: column; gap: var(--space-2);
+  padding: var(--space-4);
+  background: var(--surface);
+  border: 1px solid var(--card-border);
+  border-radius: var(--r-card);
+  box-shadow: var(--shadow-md);
+}
+
+.cardTop { margin: 0; display: flex; align-items: baseline; gap: var(--space-2); flex-wrap: wrap; }
+.muted { color: var(--ink-muted); }
+
+.count {
+  margin-inline-start: auto;
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--r-chip);
+  background: var(--mint-tint);
+  color: var(--mint-deep);
+  font-weight: var(--weight-black);
+}
+
+.row {
+  margin: 0; display: flex; align-items: center; gap: var(--space-2);
+  padding-block: var(--space-2);
+}
+.row + .row { border-block-start: 1px solid var(--border); }
+
+/*
+ * آلرژی کنار نام کودک تکرار می‌شود، هرچند مهد خودش منو را نوشته:
+ * کسی که بشقاب را دستش می‌گیرد مربی است.
+ */
+.hit {
+  margin-inline-start: auto;
+  display: inline-flex; align-items: center; gap: var(--space-1);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--r-chip);
+  background: var(--brick-tint);
+  color: var(--ink);
+  font-size: var(--text-caption);
+  font-weight: var(--weight-bold);
+}
+.hit svg { color: var(--brick); flex: none; }

@@ -1,0 +1,69 @@
+.page { display: flex; flex-direction: column; gap: var(--space-3); padding-block-end: var(--space-6); }
+
+.card {
+  background: var(--surface); border: 1px solid var(--card-border);
+  box-shadow: var(--shadow-md);
+  border-radius: var(--r-card); padding: var(--space-4);
+  display: flex; flex-direction: column; gap: var(--space-2);
+}
+
+.cardLabel { color: var(--ink-muted); }
+.muted { color: var(--ink-muted); margin: 0; }
+.note { margin: 0; color: var(--ink); }
+.error { margin: 0; color: var(--brick); }
+
+.row {
+  display: flex; align-items: center; gap: var(--space-3);
+  padding-block: var(--space-2);
+}
+.row + .row { border-block-start: 1px solid var(--border); }
+
+.main { flex: 1; min-inline-size: 0; display: flex; flex-direction: column; gap: 2px; }
+.title { margin: 0; color: var(--ink); font-weight: var(--weight-bold); }
+.who { margin: 0; color: var(--ink-muted); }
+.when { margin: 0; color: var(--ink-muted); }
+
+/*
+ * قرارِ گذشته — تنها چیزی که در این صفحه رنگ می‌گیرد.
+ * کلمه هم کنارش هست: رنگ هرگز تنها حامل معنا نیست (بخش ۱۲.۲).
+ */
+.late {
+  margin: 0; display: flex; align-items: center; gap: var(--space-1);
+  color: var(--brick); font-weight: var(--weight-medium);
+}
+.late svg { flex: none; }
+
+.give {
+  flex: none; min-block-size: var(--touch-teacher); padding-inline: var(--space-3);
+  border: 1px solid var(--border-input); border-radius: var(--r-input);
+  background: var(--surface); color: var(--ink); font-family: inherit;
+}
+.give:active { background: var(--mint-tint); }
+.give:disabled { color: var(--disabled-fg); }
+
+.action {
+  min-block-size: var(--touch-teacher);
+  border: 1px solid var(--border-input); border-radius: var(--r-input);
+  background: var(--surface); color: var(--ink);
+  font-family: inherit; font-size: var(--text-body-sm);
+}
+.action:active { background: var(--mint-tint); }
+
+.field { display: flex; flex-direction: column; gap: var(--space-1); color: var(--ink-muted); }
+
+.input, .select {
+  min-block-size: var(--touch-teacher);
+  padding-inline: var(--space-3);
+  border: 1px solid var(--border-input); border-radius: var(--r-input);
+  background: var(--surface); color: var(--ink);
+  font-family: inherit; font-size: var(--text-body-sm);
+}
+.input:focus, .select:focus { border-color: var(--mint); outline: none; }
+
+.primary {
+  inline-size: 100%; min-block-size: var(--touch-teacher);
+  border: none; border-radius: var(--r-input);
+  background: var(--mint); color: var(--on-mint);
+  font-family: inherit; font-weight: var(--weight-bold);
+}
+.primary:disabled { background: var(--disabled-bg); color: var(--disabled-fg); }
