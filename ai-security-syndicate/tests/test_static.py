@@ -100,7 +100,7 @@ def audit(llm, case, **opts):
 @needs_slither
 def test_static_router_replaces_llm_router_and_triage_filters():
     llm = fake()
-    state = audit(llm, "vault-inflation")
+    state = audit(llm, "vault-inflation", verify=False)
     roles = [r for r, _ in llm.calls]
     assert "agent2_router" not in roles and state["router_mode"] == "static"
     assert roles.count("agent0_triage") == 1

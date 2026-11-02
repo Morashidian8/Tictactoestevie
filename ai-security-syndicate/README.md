@@ -6,14 +6,38 @@ Claude, with every agent output schema-enforced by Pydantic v2.
 > Use only on code you own or are authorised to audit (your own repos, bug-bounty
 > scopes, audit contests).
 
-## Status: Phase 1 (core) ✅ · Phase 2 (free static layer) ✅ · Gym groundwork (cases + judges) ✅
+## Status: Phase 1 (core) ✅ · Phase 2 (free static layer) ✅ · Phase 3 (Foundry verifier) ✅ · Gym groundwork ✅
 
 ```
 START → static (Slither/Aderyn, free) → A1 Invariants → A2 Router ─┬→ A3 DeFi ──────┐
                                                                     ├→ A4 Math ──────┤
                                                                     ├→ A5 Edge ──────┼→ A6 Skeptic → Report
                                                                     └→ A0 Triage ────┘
+A6 Skeptic → A7 Verifier (Foundry PoC + patch, sandboxed) → Report
 ```
+
+### Phase 3: proof, not opinion (Agent 7)
+
+For each surviving high/medium finding (capped by `--verify-max`, default 5), the model
+writes a Foundry PoC test and a minimal patch. The sandbox runs the test twice:
+
+| Original code | Patched code | Status |
+|---|---|---|
+| passes | fails | **✅ verified**: the bug is real, the fix works, the test is not a tautology |
+| passes | passes | ⚠️ `reproduced_fix_unproven`: weak test or ineffective fix |
+| passes | doesn't compile | ⚠️ `reproduced_patch_broken` |
+| fails | — | ❌ `not_reproduced` (never retried, so the model can't weaken the test until it passes) |
+| doesn't compile | — | up to **3 self-healing retries** with compiler output fed back, then `compile_failed` |
+
+Model-written Solidity is untrusted, so the sandbox has three layers:
+1. Tests using cheatcodes that reach outside the EVM (`ffi`, file/env access, forks/RPC, broadcast) are rejected before compiling.
+2. Foundry config: `ffi = false`, empty `fs_permissions`, `offline = true`, fresh temp workspace per run.
+3. Docker backend: `--network none`, read-only root, CPU/memory/pid limits. Without a Docker daemon it falls back to local `forge`, and the report says so in bold. Use Docker for real targets.
+
+Mainnet forking from the spec is deliberately **not** enabled: it needs network access,
+which defeats layer 3. It can be added as an explicit opt-in later.
+
+`--patch-dir patches/` writes each finding's patch as `<id>.diff`.
 
 ### Cost tiers (Phase 2)
 
@@ -61,6 +85,9 @@ pytest                                         # offline; Slither tests skip if 
 ```
 
 `Dockerfile` bundles Python, Slither and solc (not yet built or tested in CI).
+Agent 7 needs `forge` (Foundry) and, for isolation, a running Docker daemon
+(image `ghcr.io/foundry-rs/foundry:stable`, override with `SYNDICATE_FOUNDRY_IMAGE`).
+The Docker backend is written but untested; tests here ran the local backend.
 
 ## Roadmap
 
@@ -68,7 +95,7 @@ pytest                                         # offline; Slither tests skip if 
 |---|---|---|
 | 1 | state, graph, Agents 1–6, CLI | **done** |
 | 2 | Slither (+ optional Aderyn) feeding a deterministic Agent 2, Haiku triage, prompt caching, `--static-only` | **done** (Tree-sitter skipped: Slither already gives the AST facts) |
-| 3 | Agent 7 + `sandbox/foundry_runner.py`: PoC test per finding, 3 self-healing compile retries, mainnet fork, `git diff` patch | |
+| 3 | Agent 7 + `sandbox/foundry_runner.py`: PoC per finding verified against original + patched code, 3 self-healing compile retries, unified-diff patches | **done** (mainnet fork deliberately off; Docker backend untested) |
 | 5 → before 4 | Blind benchmark gym: micro-benchmarks, case loader and judges **done**; runner not written yet. Then real post-cutoff Code4rena/Sherlock contests, mutator | in progress |
 | 4 | Qdrant post-mortem RAG + episodic failure memory | |
 | 6 | GitHub Action PR scanner, web/Telegram UI | |

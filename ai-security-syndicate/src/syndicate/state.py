@@ -132,5 +132,7 @@ class AuditState(TypedDict, total=False):
     raw_findings: Annotated[list[Finding], operator.add]  # fan-in reducer for 3/4/5
     verdicts: list[SkepticVerdict]
     final_findings: list[Finding]
+    verifications: list          # agent7_verifier.Verification
+    verify_notes: list[str]
     report_markdown: str
     errors: Annotated[list[str], operator.add]

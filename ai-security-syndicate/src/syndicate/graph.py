@@ -2,8 +2,9 @@
 
     START → static (Slither/Aderyn, free) → A1 invariants → A2 router ─┬→ A3 DeFi ─────┐
                                                                       ├→ A4 Math ─────┤
-                                                                      ├→ A5 Edge ─────┼→ A6 Skeptic → report → END
+                                                                      ├→ A5 Edge ─────┼→ A6 Skeptic ┐
                                                                       └→ A0 triage ───┘  (cheap model, static hits)
+    A6 Skeptic → A7 Verifier (Foundry PoC on original + patched code, sandboxed) → report
 
 * A2 is deterministic (``preprocessor.risk``) whenever static analysis
   succeeded, and falls back to the LLM router otherwise. ``options.router="llm"``
@@ -15,7 +16,7 @@ from __future__ import annotations
 
 from langgraph.graph import END, START, StateGraph
 
-from .agents import agent0_triage, agent1_extractor, agent2_router, agent6_skeptic
+from .agents import agent0_triage, agent1_extractor, agent2_router, agent6_skeptic, agent7_verifier
 from .agents.base import make_node
 from .agents.hunters import HUNTERS
 from .llm import StructuredLLM
@@ -24,7 +25,10 @@ from .preprocessor.static_runner import analyse
 from .report import render_report
 from .state import AuditState
 
-DEFAULT_OPTIONS = {"static": True, "solc": None, "router": "auto", "focus_min_risk": 5}
+DEFAULT_OPTIONS = {
+    "static": True, "solc": None, "router": "auto", "focus_min_risk": 5,
+    "verify": True, "sandbox": "auto", "verify_max": 5, "verify_min_severity": "medium",
+}
 BRANCHES = [h.role for h in HUNTERS] + [agent0_triage.ROLE]
 
 
@@ -62,6 +66,7 @@ def build_graph(llm: StructuredLLM):
         g.add_node(h.role, make_node(h.role, llm, h.run))
     g.add_node(agent0_triage.ROLE, make_node(agent0_triage.ROLE, llm, agent0_triage.run))
     g.add_node("agent6", make_node("agent6", llm, agent6_skeptic.run))
+    g.add_node("agent7", make_node("agent7", llm, agent7_verifier.run))
     g.add_node("report", lambda s: {"report_markdown": render_report(s)})
 
     g.add_edge(START, "static")
@@ -70,7 +75,8 @@ def build_graph(llm: StructuredLLM):
     for b in BRANCHES:
         g.add_edge("agent2", b)
     g.add_edge(BRANCHES, "agent6")  # fan-in barrier
-    g.add_edge("agent6", "report")
+    g.add_edge("agent6", "agent7")
+    g.add_edge("agent7", "report")
     g.add_edge("report", END)
     return g.compile()
 

@@ -28,6 +28,11 @@ def main(argv: list[str] | None = None) -> int:
     a.add_argument("--router", choices=["auto", "llm"], default="auto",
                    help="auto: deterministic risk scoring when static analysis works (free); llm: always ask Claude")
     a.add_argument("--focus-min-risk", type=int, default=5, help="hunters spend most depth on functions scored >= this")
+    a.add_argument("--no-verify", action="store_true", help="skip Agent 7 (Foundry PoC + patch)")
+    a.add_argument("--sandbox", choices=["auto", "docker", "local"], default="auto",
+                   help="where PoC tests run: docker (isolated, recommended) or local forge; auto prefers docker")
+    a.add_argument("--verify-max", type=int, default=5, help="verify at most this many findings (cost cap)")
+    a.add_argument("--patch-dir", help="write each verified finding's patch as <id>.diff here")
     a.add_argument("--static-only", action="store_true", help="free mode: Slither + risk map only, no API calls")
     a.add_argument("--max-usd", type=float, default=None, help="stop making API calls once this much is spent")
     args = ap.parse_args(argv)
@@ -37,7 +42,8 @@ def main(argv: list[str] | None = None) -> int:
     if args.static_only and args.no_static:
         ap.error("--static-only needs the static tools; drop --no-static")
     llm = NullLLM() if args.static_only else AnthropicLLM(load_role_configs(args.config), budget_usd=args.max_usd)
-    options = {"llm": not args.static_only, "static": not args.no_static, "solc": args.solc, "router": args.router, "focus_min_risk": args.focus_min_risk}
+    options = {"llm": not args.static_only, "static": not args.no_static, "solc": args.solc, "router": args.router, "focus_min_risk": args.focus_min_risk,
+               "verify": not args.no_verify, "sandbox": args.sandbox, "verify_max": args.verify_max}
     state = run_audit(llm, target=Path(args.target).name, source_code=source, docs=docs,
                       target_path=args.target, options=options)
 
@@ -48,6 +54,12 @@ def main(argv: list[str] | None = None) -> int:
         Path(args.json_out).write_text(
             json.dumps([f.model_dump(mode="json") for f in state.get("final_findings") or []], indent=2)
         )
+    if args.patch_dir:
+        pdir = Path(args.patch_dir)
+        pdir.mkdir(parents=True, exist_ok=True)
+        for v in state.get("verifications") or []:
+            if v.patch_diff:
+                (pdir / f"{v.finding_id}.diff").write_text(v.patch_diff)
     n = len(state.get("final_findings") or [])
     print(f"{n} finding(s) → {out}")
     for e in state.get("errors") or []:

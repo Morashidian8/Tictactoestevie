@@ -20,8 +20,8 @@ def render_report(state: AuditState) -> str:
                 "> tools only and are untriaged. Run without `--static-only` for the full audit.", ""]
     static_only = (state.get("options") or {}).get("llm") is False
     out += [] if static_only else [
-        "> **Status: unverified hypotheses.** Findings passed the Skeptic filter (Agent 6) but have not yet",
-        "> been proven with an executable Foundry test (Agent 7, Phase 3). Verify before acting.",
+        "> Findings passed the Skeptic filter (Agent 6). Only those marked **✅ verified** were proven by Agent 7:",
+        "> a Foundry test that passes on the original code and fails on the patched code. Treat the rest as hypotheses.",
         "",
     ]
     out += [
@@ -58,6 +58,8 @@ def render_report(state: AuditState) -> str:
         out.append("")
 
     out += ["## Findings", ""]
+    vmap7 = {v.finding_id: v for v in state.get("verifications") or []}
+    out += render_verify_summary(state)
     if static_only:
         out += ["LLM stages disabled (`--static-only`). See the static analysis section above.", ""]
     elif not findings:
@@ -76,6 +78,7 @@ def render_report(state: AuditState) -> str:
         out += ["", f.description, "", "**Exploit scenario**", "", f.exploit_scenario, "", "**Recommendation**", "", f.recommendation, ""]
         if v:
             out += [f"<details><summary>Skeptic: {v.verdict.value}</summary>\n\n{v.reasoning}\n\n</details>", ""]
+        out += render_verification(vmap7.get(f.id))
 
     rejected = [v for v in verdicts if v.verdict in (Verdict.REJECTED, Verdict.DUPLICATE)]
     if rejected:
@@ -105,4 +108,45 @@ def render_static(state: AuditState) -> list[str]:
                 "| Check | Impact | Count |", "|---|---|---|"]
         out += [f"| {c} | {i} | {n} |" for (c, i), n in sorted(by_check.items(), key=lambda x: -x[1])]
     out.append("")
+    return out
+
+
+BADGE = {
+    "verified": "✅ verified: PoC passes on original, fails after patch",
+    "reproduced_fix_unproven": "⚠️ reproduced, but the PoC also passes after the patch (weak test or ineffective fix)",
+    "reproduced_patch_broken": "⚠️ reproduced; the proposed patch does not compile",
+    "not_reproduced": "❌ PoC did not reproduce on the original code",
+    "compile_failed": "❌ PoC never compiled (3 retries)",
+    "rejected": "⛔ PoC used blocked cheatcodes",
+    "skipped": "⏭️ not verified (cost cap or budget)",
+    "sandbox_error": "⚙️ sandbox error",
+}
+
+
+def render_verify_summary(state: AuditState) -> list[str]:
+    vs = state.get("verifications") or []
+    notes = state.get("verify_notes") or []
+    if not vs and not notes:
+        return []
+    counts = Counter(v.status.value for v in vs)
+    out = ["### Verification (Agent 7)", ""]
+    out += [f"- {line}" for line in notes]
+    if vs:
+        out.append("- " + " · ".join(f"{k}: {n}" for k, n in counts.most_common()))
+    out.append("")
+    return out
+
+
+def render_verification(v) -> list[str]:
+    if v is None:
+        return []
+    out = [f"**Verification:** {BADGE.get(v.status.value, v.status.value)} (attempts: {v.attempts})", ""]
+    if v.what_it_proves:
+        out += [f"_PoC proves:_ {v.what_it_proves}", ""]
+    if v.test_source:
+        out += ["<details><summary>PoC test (test/Verify.t.sol)</summary>", "", "```solidity", v.test_source.strip(), "```", "", "</details>", ""]
+    if v.patch_diff:
+        out += ["<details><summary>Patch</summary>", "", "```diff", v.patch_diff.strip(), "```", "", "</details>", ""]
+    if v.log and v.status.value != "verified":
+        out += ["<details><summary>Sandbox log</summary>", "", "```", v.log.strip()[-2000:], "```", "", "</details>", ""]
     return out
