@@ -1,0 +1,25 @@
+case: staking-rewards
+source: handwritten micro-benchmark
+findings:
+  - id: H-01
+    severity: high
+    title: rewardPerToken lacks fixed-point scaling, truncating rewards to zero
+    contract: StakingRewards
+    function: rewardPerToken
+    root_cause: >
+      rewardPerToken divides elapsed * rewardRate by totalStaked without scaling
+      by 1e18 (and earned() does not divide it back out). With 18-decimal stakes
+      totalStaked is far larger than elapsed * rewardRate, so the increment
+      truncates to 0 and stakers accrue no rewards; the rewards are lost.
+    keywords: [precision loss, precision, truncat, 1e18, scaling, scale, rounds to zero, rounding, division]
+  - id: M-01
+    severity: medium
+    title: setRewardRate does not checkpoint accrued rewards, changing them retroactively
+    contract: StakingRewards
+    function: setRewardRate
+    root_cause: >
+      setRewardRate updates rewardRate without first calling updateReward
+      (rewardPerTokenStored / lastUpdate are not checkpointed), so the new rate is
+      applied to the whole period since the last update. Rewards already accrued
+      are retroactively inflated or wiped, contradicting the spec.
+    keywords: [retroactive, checkpoint, updateReward, not updated before, accrued, lastUpdate]

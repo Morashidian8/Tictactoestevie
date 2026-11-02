@@ -1,0 +1,25 @@
+case: vault-inflation
+source: handwritten micro-benchmark
+findings:
+  - id: H-01
+    severity: high
+    title: First-depositor share inflation lets attacker steal later deposits
+    contract: SimpleVault
+    function: deposit
+    root_cause: >
+      Shares are minted as amount * totalShares / balanceOf(this) with no virtual
+      shares/offset or minimum-shares check. The first depositor mints 1 wei of
+      shares, then donates a large amount directly to the vault, so a victim's
+      deposit rounds down to 0 (or very few) shares and the attacker redeems it.
+    keywords: [inflation, first depositor, first deposit, donation, donate, rounds down to zero, zero shares, share price manipulation]
+  - id: M-01
+    severity: medium
+    title: Fee-on-transfer assets mint shares for tokens never received
+    contract: SimpleVault
+    function: deposit
+    root_cause: >
+      Shares are computed from the requested `amount` rather than the balance
+      delta actually received. With fee-on-transfer (or deflationary) tokens the
+      depositor is credited more than the vault received, diluting other holders
+      until the vault cannot honour all redemptions.
+    keywords: [fee-on-transfer, fee on transfer, deflationary, balance delta, actual received, transfer fee]

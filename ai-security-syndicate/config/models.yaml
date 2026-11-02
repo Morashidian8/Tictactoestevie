@@ -12,3 +12,7 @@ roles:
   agent4_math:        {effort: max}     # precision/rounding work benefits most from depth
   agent5_edge:        {effort: xhigh}
   agent6_skeptic:     {effort: xhigh}
+
+  # Gym judge: matching findings to a judged report is easy work, so it runs
+  # on the cheaper model at low effort. Never used inside the audit itself.
+  gym_judge:          {model: claude-sonnet-5-5, effort: low, max_tokens: 16000}

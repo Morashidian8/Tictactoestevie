@@ -32,7 +32,8 @@ loss or broken core function; low/informational = everything else."""
             f"<invariants>\n{render_invariants(state.get('invariants'))}\n</invariants>\n\n{code_block(state)}"
         )
         out = llm.structured(role=self.role, system=self.system, user=user, schema=FindingsOutput)
-        for f in out.findings:
+        for n, f in enumerate(out.findings, 1):
+            f.id = f"{self.prefix}-{n:02d}"  # model-chosen ids may collide across hunters
             f.source_agent = self.role
         return {"raw_findings": out.findings}
 

@@ -1,0 +1,3 @@
+case: clean-escrow
+source: "handwritten micro-benchmark; clean control with no high or medium issues"
+findings: []
