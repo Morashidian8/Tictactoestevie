@@ -212,7 +212,13 @@ mark.lexfix{background:var(--mid-bg);color:inherit;border-bottom:1.5px dotted va
 .tline .lb{position:absolute;transform:translateX(min(50%, 0px));font-size:11px;white-space:nowrap;font-weight:800}
 .tline .tk{position:absolute;top:0;font-size:10.5px;color:var(--ink3);transform:translateX(50%)}
 @media (max-width:1100px){.hh2{grid-template-columns:1fr 1fr}.hh2-g{grid-column:1/-1}}
-@media (max-width:700px){.hh2{grid-template-columns:1fr;padding:20px;border-radius:24px}.hh2 h1{font-size:22px}.dleg{grid-template-columns:1fr}}
+.hh2 > *{min-width:0}
+@media (max-width:700px){
+  .hh2{grid-template-columns:minmax(0,1fr);padding:18px 16px;border-radius:24px;gap:14px}.hh2 h1{font-size:22px}.dleg{grid-template-columns:1fr}
+  .todo button span:nth-child(2){white-space:normal;line-height:1.6}
+  .hh2-gauge svg{width:190px;height:auto}.hh2-gauge .gv{font-size:30px}
+  .hh2-st{gap:10px}.hh2-st div{padding:10px 12px;border-radius:16px}.hh2-st b{font-size:20px}
+}
 
 /* ---- document review v2 ---- */
 .rv-prog{display:flex;flex-direction:column;gap:6px;min-width:260px;margin-top:6px}
