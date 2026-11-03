@@ -1,0 +1,282 @@
+<!doctype html>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
+<title>تبدیل گفتار به متن</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" />
+<style>
+:root{
+  --navy:#0F3B5C; --navy2:#164e78; --red:#C8102E; --orange:#F26A21;
+  --bg:#F6F8FA; --ink:#1b2733; --line:#d7dee6; --green:#1f9d55;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0;height:100%}
+body{
+  font-family:'Vazirmatn',system-ui,sans-serif;direction:rtl;text-align:right;
+  background:var(--bg);color:var(--ink);
+  display:flex;flex-direction:column;min-height:100dvh;
+}
+button{font-family:inherit;cursor:pointer;border:none}
+header{
+  background:linear-gradient(135deg,var(--navy),var(--navy2));color:#fff;
+  padding:16px 18px calc(16px + env(safe-area-inset-top)) 18px;padding-top:max(16px,env(safe-area-inset-top));
+  text-align:center;box-shadow:0 2px 10px rgba(0,0,0,.12)
+}
+header h1{margin:0;font-size:19px;font-weight:800}
+header p{margin:4px 0 0;font-size:12.5px;opacity:.85}
+
+main{flex:1;display:flex;flex-direction:column;gap:14px;padding:16px;max-width:680px;width:100%;margin:0 auto}
+
+.mic-wrap{display:flex;flex-direction:column;align-items:center;gap:10px}
+.mic{
+  width:104px;height:104px;border-radius:50%;background:var(--red);color:#fff;
+  display:flex;align-items:center;justify-content:center;font-size:44px;
+  box-shadow:0 8px 22px rgba(200,16,46,.35);transition:transform .12s, background .2s;position:relative;
+}
+.mic:active{transform:scale(.95)}
+.mic.listening{background:var(--green);box-shadow:0 8px 22px rgba(31,157,85,.4)}
+.mic.listening::before,.mic.listening::after{
+  content:'';position:absolute;inset:0;border-radius:50%;border:3px solid var(--green);
+  animation:pulse 1.6s ease-out infinite;
+}
+.mic.listening::after{animation-delay:.8s}
+@keyframes pulse{0%{transform:scale(1);opacity:.7}100%{transform:scale(1.7);opacity:0}}
+.status{font-size:13px;font-weight:700;color:var(--navy);min-height:20px;text-align:center}
+.status.err{color:var(--red)}
+
+.controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:center}
+.chip{background:#fff;border:1px solid var(--line);border-radius:10px;padding:9px 13px;font-size:13px;font-weight:700;color:var(--ink);display:inline-flex;align-items:center;gap:6px}
+.chip:active{background:#eef2f6}
+select.chip{appearance:none;padding-left:28px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' fill='none'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%230F3B5C' stroke-width='1.6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:10px center}
+
+.ta-wrap{flex:1;display:flex;flex-direction:column;background:#fff;border:1px solid var(--line);border-radius:14px;overflow:hidden;box-shadow:0 1px 4px rgba(15,59,92,.05)}
+.ta-head{display:flex;justify-content:space-between;align-items:center;padding:9px 13px;border-bottom:1px solid var(--line);font-size:12px;color:#6b7b8a;font-weight:700}
+#txt{
+  flex:1;min-height:180px;width:100%;border:none;outline:none;resize:vertical;
+  padding:14px;font-size:17px;line-height:2;font-family:inherit;direction:rtl;color:var(--ink);background:#fff;
+}
+.interim{padding:0 14px 10px;color:#9aa7b4;font-size:16px;line-height:1.9;min-height:4px;font-style:italic}
+.interim b{color:var(--green);font-style:normal}
+
+.punct{display:flex;gap:6px;flex-wrap:wrap;padding:10px 13px;border-top:1px solid var(--line);background:#fafcfe}
+.punct button{min-width:40px;height:38px;border-radius:9px;background:#fff;border:1px solid var(--line);font-size:16px;font-weight:800;color:var(--navy)}
+.punct button:active{background:#eef2f6}
+
+.actions{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.btn{border-radius:12px;padding:15px;font-size:15px;font-weight:800;display:flex;align-items:center;justify-content:center;gap:7px}
+.btn.copy{background:var(--navy);color:#fff}
+.btn.copy:active{background:#0c3150}
+.btn.share{background:var(--green);color:#fff}
+.btn.clear{background:#fff;border:1px solid var(--line);color:var(--red)}
+.btn.full{grid-column:1/-1}
+
+.note{font-size:11.5px;color:#7a8794;line-height:1.8;background:#fff;border:1px dashed var(--line);border-radius:10px;padding:11px 13px}
+.note b{color:var(--navy)}
+
+#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--navy);color:#fff;padding:11px 20px;border-radius:12px;font-size:14px;font-weight:700;z-index:50;opacity:0;transition:.25s;pointer-events:none}
+#toast.show{opacity:1}
+
+.unsupported{display:none;background:#fff3ec;border:1px solid var(--orange);border-radius:12px;padding:14px;font-size:13.5px;line-height:1.9;color:#7a4a2a}
+.unsupported b{color:var(--orange)}
+</style>
+
+<header>
+  <h1>🎙️ تبدیل گفتار به متن</h1>
+  <p>دکمه را بزنید، فارسی حرف بزنید، سپس متن را کپی کنید</p>
+</header>
+
+<main>
+  <div class="unsupported" id="unsupported">
+    <b>مرورگر شما از تشخیص گفتار پشتیبانی نمی‌کند.</b><br>
+    لطفاً این صفحه را در <b>Google Chrome</b> روی اندروید باز کنید. (در Safari آیفون این قابلیت محدود است.)<br>
+    راه جایگزین: از <b>میکروفون کیبورد گوشی</b> (مثل Gboard) استفاده کنید؛ آن هم فارسی را تایپ می‌کند.
+  </div>
+
+  <div class="mic-wrap">
+    <button class="mic" id="mic" aria-label="شروع/توقف ضبط">🎤</button>
+    <div class="status" id="status">برای شروع، میکروفون را لمس کنید</div>
+  </div>
+
+  <div class="controls">
+    <select class="chip" id="lang" title="زبان">
+      <option value="fa-IR" selected>🇮🇷 فارسی</option>
+      <option value="en-US">🇬🇧 English</option>
+      <option value="ar-SA">🇸🇦 العربية</option>
+    </select>
+    <label class="chip"><input type="checkbox" id="autopunc" checked style="margin-left:4px"> نقطه‌گذاری خودکار</label>
+  </div>
+
+  <div class="ta-wrap">
+    <div class="ta-head">
+      <span>متن شما</span>
+      <span id="count">۰ نویسه</span>
+    </div>
+    <textarea id="txt" placeholder="متن تشخیص‌داده‌شده اینجا نوشته می‌شود… می‌توانید دستی هم ویرایش کنید."></textarea>
+    <div class="interim" id="interim"></div>
+    <div class="punct">
+      <button data-p="،">،</button>
+      <button data-p="؛">؛</button>
+      <button data-p=".">.</button>
+      <button data-p="؟">؟</button>
+      <button data-p="!">!</button>
+      <button data-p=":">:</button>
+      <button data-nl="1">↵ خط جدید</button>
+      <button data-sp="1">فاصله</button>
+      <button data-bs="1">⌫ حذف</button>
+    </div>
+  </div>
+
+  <div class="actions">
+    <button class="btn copy" id="copy">📋 کپی متن</button>
+    <button class="btn share" id="share">📤 اشتراک/ارسال</button>
+    <button class="btn clear full" id="clear">🗑 پاک کردن همه</button>
+  </div>
+
+  <div class="note">
+    <b>راهنما:</b> دکمهٔ سبز یعنی در حال شنیدن است. بعد از هر مکث، خودکار دوباره شروع می‌شود تا وقتی خودتان متوقف کنید.
+    برای تشخیص فارسی به <b>اینترنت</b> نیاز است. کلمات را واضح و با مکث کوتاه بین جمله‌ها بگویید.
+    نقطه‌گذاری فارسی کامل نیست؛ با دکمه‌های «، . ؟» می‌توانید دستی اضافه کنید.
+  </div>
+</main>
+
+<div id="toast"></div>
+
+<script>
+const $=s=>document.querySelector(s);
+const fa=s=>String(s).replace(/[0-9]/g,d=>'۰۱۲۳۴۵۶۷۸۹'[d]);
+let toastT;
+function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),1800);}
+
+const txt=$('#txt'), interimEl=$('#interim'), statusEl=$('#status'), micBtn=$('#mic');
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+/* restore draft */
+try{ const d=localStorage.getItem('v2t'); if(d) txt.value=d; }catch(e){}
+updateCount();
+
+function setStatus(msg,err){ statusEl.textContent=msg; statusEl.classList.toggle('err',!!err); }
+function updateCount(){ $('#count').textContent=fa(txt.value.length)+' نویسه'; try{localStorage.setItem('v2t',txt.value);}catch(e){} }
+txt.addEventListener('input',updateCount);
+
+if(!SR){
+  $('#unsupported').style.display='block';
+  micBtn.style.background='#9aa7b4';
+  setStatus('تشخیص گفتار در این مرورگر فعال نیست',true);
+}else{
+  initRecognition();
+}
+
+let rec=null, listening=false, wantListen=false, restartTimer=null;
+
+function initRecognition(){
+  micBtn.onclick=()=> listening ? stop() : start();
+}
+
+function makeRec(){
+  const r=new SR();
+  r.lang=$('#lang').value;
+  r.continuous=true;
+  r.interimResults=true;
+  r.maxAlternatives=1;
+  r.onstart=()=>{ listening=true; micBtn.classList.add('listening'); micBtn.textContent='⏹'; setStatus('در حال شنیدن… (برای توقف، دوباره بزنید)'); };
+  r.onerror=e=>{
+    if(e.error==='not-allowed'||e.error==='service-not-allowed'){
+      wantListen=false; setStatus('دسترسی به میکروفون داده نشد. از تنظیمات مرورگر اجازه دهید.',true);
+    }else if(e.error==='no-speech'){
+      setStatus('صدایی شنیده نشد؛ دوباره تلاش می‌کنم…');
+    }else if(e.error==='network'){
+      setStatus('خطای شبکه — برای تشخیص فارسی به اینترنت نیاز است.',true);
+    }else if(e.error==='aborted'){ /* normal on stop */ }
+    else setStatus('خطا: '+e.error,true);
+  };
+  r.onresult=ev=>{
+    let interim='';
+    for(let i=ev.resultIndex;i<ev.results.length;i++){
+      const res=ev.results[i];
+      if(res.isFinal){ appendFinal(res[0].transcript); }
+      else interim+=res[0].transcript;
+    }
+    interimEl.innerHTML = interim? ('<b>…</b> '+interim) : '';
+  };
+  r.onend=()=>{
+    listening=false;
+    interimEl.innerHTML='';
+    if(wantListen){
+      // Web Speech stops itself after silence — restart to keep a continuous session
+      clearTimeout(restartTimer);
+      restartTimer=setTimeout(()=>{ if(wantListen) try{ rec.start(); }catch(e){} },300);
+    }else{
+      micBtn.classList.remove('listening'); micBtn.textContent='🎤';
+      setStatus('متوقف شد. برای شروع دوباره، میکروفون را بزنید.');
+    }
+  };
+  return r;
+}
+
+function appendFinal(s){
+  s=(s||'').trim(); if(!s)return;
+  let cur=txt.value;
+  // smart spacing
+  if(cur && !/\s$/.test(cur)) cur+=' ';
+  cur+=s;
+  if($('#autopunc').checked){
+    // light touch: capitalize-like spacing for latin, nothing heavy for Persian
+    cur=cur.replace(/\s+([،.؟!:؛])/g,'$1');
+  }
+  txt.value=cur;
+  updateCount();
+  txt.scrollTop=txt.scrollHeight;
+}
+
+function start(){
+  if(!SR)return;
+  wantListen=true;
+  rec=makeRec();
+  try{ rec.start(); }catch(e){ /* already started */ }
+}
+function stop(){
+  wantListen=false; clearTimeout(restartTimer);
+  if(rec){ try{ rec.stop(); }catch(e){} }
+  micBtn.classList.remove('listening'); micBtn.textContent='🎤';
+  setStatus('متوقف شد. برای شروع دوباره، میکروفون را بزنید.');
+}
+
+/* language change restarts session if active */
+$('#lang').onchange=()=>{ if(listening){ stop(); setTimeout(start,250);} };
+
+/* punctuation / editing helpers (insert at cursor) */
+document.querySelectorAll('.punct button').forEach(b=>b.onclick=()=>{
+  const p=b.dataset.p, nl=b.dataset.nl, sp=b.dataset.sp, bs=b.dataset.bs;
+  const s=txt.selectionStart, e=txt.selectionEnd, v=txt.value;
+  if(bs){ // delete char before cursor (or selection)
+    if(s!==e){ txt.value=v.slice(0,s)+v.slice(e); txt.selectionStart=txt.selectionEnd=s; }
+    else if(s>0){ txt.value=v.slice(0,s-1)+v.slice(s); txt.selectionStart=txt.selectionEnd=s-1; }
+  }else{
+    const ins = p? p : nl? '\n' : sp? ' ' : '';
+    txt.value=v.slice(0,s)+ins+v.slice(e); txt.selectionStart=txt.selectionEnd=s+ins.length;
+  }
+  txt.focus(); updateCount();
+});
+
+/* copy */
+$('#copy').onclick=async()=>{
+  const v=txt.value.trim();
+  if(!v){ toast('متنی برای کپی نیست'); return; }
+  try{ await navigator.clipboard.writeText(v); toast('کپی شد ✅ — حالا در چت بچسبانید'); }
+  catch(e){ txt.select(); document.execCommand('copy'); toast('کپی شد ✅'); }
+};
+/* share (Web Share API → Telegram/Claude/anywhere) */
+$('#share').onclick=async()=>{
+  const v=txt.value.trim();
+  if(!v){ toast('متنی برای ارسال نیست'); return; }
+  if(navigator.share){ try{ await navigator.share({text:v}); }catch(e){} }
+  else{ try{ await navigator.clipboard.writeText(v); toast('کپی شد ✅ (اشتراک‌گذاری در این مرورگر نیست)'); }catch(e){ toast('اشتراک‌گذاری پشتیبانی نمی‌شود'); } }
+};
+/* clear */
+$('#clear').onclick=()=>{
+  if(!txt.value){ return; }
+  if(confirm('کل متن پاک شود؟')){ txt.value=''; interimEl.innerHTML=''; updateCount(); toast('پاک شد'); }
+};
+
+/* keep screen awake-ish: re-focus handling; stop on page hide */
+document.addEventListener('visibilitychange',()=>{ if(document.hidden && listening) stop(); });
+</script>
