@@ -99,7 +99,7 @@ a{color:var(--brand)}
 .mobile-only{display:none}
 
 .tb-brand{display:flex;align-items:center;gap:10px;border:0;background:none;cursor:pointer;padding:0;text-align:start;flex:none}
-.tb-brand .logo{background:linear-gradient(135deg,var(--brand),var(--brand2));color:#fff;border-radius:12px}
+.tb-brand .logo{background:conic-gradient(from 200deg,#4F46E5,#8B5CF6,#EC4899,#4F46E5);color:#fff;border-radius:13px;box-shadow:0 6px 16px -6px #7C3AED}
 .tb-brand .tx b{display:block;font-size:14.5px;font-weight:800;line-height:1.3;direction:ltr;text-align:right}
 .tb-brand .tx span{display:block;font-size:11.5px;color:var(--ink2)}
 .topbar .search{margin-inline-start:18px}
@@ -181,6 +181,104 @@ mark.lexfix{background:var(--mid-bg);color:inherit;border-bottom:1.5px dotted va
   .road{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
 }
 @media (max-width:520px){.bento .isl.w2,.bento .isl.lst{grid-column:1 / -1} .bento .isl:not(.w2):not(.lst) .isl-h,.road .isl-h{flex-direction:column;align-items:flex-start;gap:8px} .road .isl{padding-top:40px} .isl .foot2{font-size:12px}}
+
+/* ---- home v2 ---- */
+.hh2{border-radius:28px;padding:26px 30px;color:#fff;background:var(--hero-bg);display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,.9fr) minmax(0,1.1fr);gap:24px;align-items:center;position:relative;overflow:hidden}
+.hh2:after{content:"";position:absolute;left:-60px;bottom:-100px;width:280px;height:280px;border-radius:50%;background:radial-gradient(#ffffff22,transparent 70%);pointer-events:none}
+.hh2 h1{font-size:27px;font-weight:900;margin:2px 0}
+.todo{display:flex;flex-direction:column;gap:8px;margin-top:14px}
+.todo button{display:flex;align-items:center;gap:10px;background:#ffffff1f;border:1px solid #ffffff2e;border-radius:14px;padding:9px 12px;color:#fff;font:500 13px var(--f);text-align:start;cursor:pointer}
+.todo button:hover{background:#ffffff2e}
+.todo button span:nth-child(2){flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.todo b{font-size:11px;background:#fff;border-radius:99px;padding:1px 9px;flex:none}
+.todo b.urgent{color:#E11D48}.todo b.warn{color:#B45309}.todo b.opp{color:#16A34A}.todo b.note{color:#4F46E5}
+.dot{width:8px;height:8px;border-radius:50%;flex:none;display:inline-block}
+.hh2-gauge{display:flex;flex-direction:column;align-items:center;position:relative;z-index:1}
+.hh2-gauge .gv{font-size:36px;font-weight:900;line-height:1.1;margin-top:2px}
+.hh2-st{display:grid;grid-template-columns:1fr 1fr;gap:12px;position:relative;z-index:1}
+.hh2-st div{background:#ffffff1c;border:1px solid #ffffff2e;border-radius:18px;padding:12px 14px;min-width:0}
+.hh2-st span{display:block;font-size:12px;opacity:.85}.hh2-st b{display:block;font-size:24px;font-weight:900;line-height:1.3}.hh2-st small{font-size:11px;opacity:.82}
+.hh2 .lic{display:inline-block;margin-top:10px;font-size:12px;font-weight:700;background:#ffffff29;border-radius:99px;padding:2px 12px}
+.mis-h .blob{width:58px;height:58px;border-radius:18px;display:grid;place-items:center;flex:none;box-shadow:0 10px 22px -10px #4F46E5}
+.mis-h .blob svg{width:28px;height:28px}.blob.b1{background:linear-gradient(135deg,#6366F1,#A855F7)}.blob.b2{background:linear-gradient(135deg,#0D9488,#0EA5E9);box-shadow:0 10px 22px -10px #0D9488}
+.donut-row{display:flex;align-items:center;gap:16px;margin-top:auto}
+.donut{width:104px;height:104px;flex:none;color:var(--ink)}
+.dleg{display:grid;grid-template-columns:1fr 1fr;gap:6px;flex:1}
+.dleg button{display:flex;align-items:center;gap:6px;border:1px solid var(--line2);background:var(--surface2);border-radius:10px;padding:5px 8px;font:700 12.5px var(--f);color:var(--ink);cursor:pointer}
+.dleg i{width:9px;height:9px;border-radius:50%}.dleg b{margin-inline-start:auto}
+.tline{position:relative;height:100px;margin:10px 6px 0}
+.tline .ln{position:absolute;top:32px;inset-inline:0;height:4px;border-radius:2px;background:linear-gradient(to left,#E11D48,#F59E0B 35%,#C7C9F5 65%)}
+.tline .pt{position:absolute;top:24px;width:20px;height:20px;border-radius:50%;border:4px solid var(--surface);box-shadow:0 2px 6px rgba(0,0,0,.2);transform:translateX(50%);cursor:pointer;padding:0}
+.tline .lb{position:absolute;transform:translateX(min(50%, 0px));font-size:11px;white-space:nowrap;font-weight:800}
+.tline .tk{position:absolute;top:0;font-size:10.5px;color:var(--ink3);transform:translateX(50%)}
+@media (max-width:1100px){.hh2{grid-template-columns:1fr 1fr}.hh2-g{grid-column:1/-1}}
+@media (max-width:700px){.hh2{grid-template-columns:1fr;padding:20px;border-radius:24px}.hh2 h1{font-size:22px}.dleg{grid-template-columns:1fr}}
+
+/* ---- document review v2 ---- */
+.rv-prog{display:flex;flex-direction:column;gap:6px;min-width:260px;margin-top:6px}
+.rv-prog div:first-child{display:flex;justify-content:space-between;gap:10px;font-size:12.5px}
+.prog2{height:10px;border-radius:5px;background:var(--line2);overflow:hidden;display:flex}.prog2 i{display:block;height:100%;background:linear-gradient(to left,#16A34A,#4ADE80);transition:width .3s}.prog2 i.sure{background:#BBF7D0}
+.rv{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:20px;align-items:start}
+.rv-paper{position:sticky;top:76px}
+.rv-pbox{max-height:72vh;overflow:auto;padding:12px}
+.rv-pg{position:relative;border-radius:10px;overflow:hidden;border:1px solid var(--line)}
+.rv-pg img{display:block;width:100%}
+.rv-hl{position:absolute;border:3px solid var(--brand);border-radius:6px;box-shadow:0 0 0 9999px rgba(20,20,48,.25);background:#4F46E512}
+.rv-hl.doubt{border-color:var(--mid);background:#F59E0B22}
+.rv-side{display:flex;flex-direction:column;gap:16px;min-width:0}
+.rv-cur{padding:18px;display:flex;flex-direction:column;gap:12px;border-width:2px}
+.rv-cur.doubt{border-color:var(--mid)}.rv-cur.ok{border-color:var(--good)}
+.rv-h{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.rv-cat{height:42px;border:1px solid var(--input-line);border-radius:12px;background:var(--surface);padding:0 10px;font:700 14px var(--f);color:var(--ink)}
+.rv-lbl{width:100%;border-radius:10px;border:1px solid var(--line);background:#fff}
+.rv-cell{width:100%;border-radius:12px;border:1px solid var(--line);background:#fff;cursor:zoom-in}
+.rv-val{display:flex;flex-direction:column;gap:4px}
+.rv-in{display:flex;align-items:center;height:56px;border:2px solid var(--input-line);border-radius:14px;background:var(--surface);padding:0 14px;gap:8px}
+.rv-cur.doubt .rv-in{border-color:var(--mid);background:var(--mid-bg)}
+.rv-in input{flex:1;min-width:0;border:0;background:none;font:900 24px var(--f);color:var(--ink)}
+.rv-in input:focus{outline:none}.rv-in em{font-style:normal;font-size:12px;color:var(--ink2)}
+.rv-alt{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.rv-alt button{font:800 15px var(--f);border:1.5px solid var(--brand);color:var(--brand);background:var(--surface);border-radius:12px;padding:5px 14px;cursor:pointer}
+.rv-act{display:flex;gap:10px;flex-wrap:wrap}.rv-act .primary{flex:1;height:48px;justify-content:center}.rv-act .btn{height:48px}
+.rv-list{padding:6px 0}
+.rv-li{display:flex;align-items:center;gap:12px;padding:10px 18px;border:0;border-bottom:1px solid var(--line2);background:none;width:100%;text-align:start;font:inherit;color:var(--ink);cursor:pointer}
+.rv-li.now{background:var(--hl)}.rv-li .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rv-li .s{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:900;flex:none}
+.c-ok{background:var(--good);color:#fff}.c-sure{background:var(--good-bg);color:var(--good)}.c-doubt{background:var(--mid-bg);color:var(--mid-ink)}.c-todo{background:var(--line2);color:var(--ink3)}
+@media (max-width:980px){.rv{grid-template-columns:1fr}.rv-paper{position:static}.rv-pbox{max-height:46vh}}
+
+/* ---- comparison v2 ---- */
+.cmp-h h1{font-size:26px;font-weight:900}
+.kp2s{display:grid;grid-template-columns:1.25fr 1fr 1fr 1fr;gap:16px}
+.kp2{padding:16px 18px;display:flex;flex-direction:column;gap:2px}
+.kp2.lead{background:linear-gradient(135deg,var(--soft),var(--surface) 70%)}
+.kp2 .l{font-size:12.5px;color:var(--ink2)}.kp2 .big{font-size:30px;font-weight:900;line-height:1.2}
+.kp2 .row{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.brow{display:grid;grid-template-columns:200px minmax(0,1fr) 150px;gap:12px;align-items:center;padding:7px 0;border-bottom:1px dashed var(--line2);font-size:13px}
+.brow:last-child{border-bottom:0}
+.track{position:relative;height:22px}
+.track .bar{position:absolute;inset-inline-start:0;top:3px;height:16px;border-radius:8px 0 0 8px}
+.track .ref,.refkey{position:absolute;top:-6px;bottom:-6px;width:0;border-inline-start:2px dashed var(--brand)}
+.refkey{position:static;display:inline-block;width:14px;height:0;border:0;border-top:2px dashed var(--brand);vertical-align:middle}
+.ins{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}
+.in{padding:14px 16px;display:flex;gap:12px;align-items:flex-start}
+.in .ic{width:36px;height:36px;border-radius:12px;display:grid;place-items:center;flex:none;font-weight:900}
+.in b{display:block;margin-bottom:2px}.in span{font-size:12.5px;color:var(--ink2);line-height:1.8}
+.in-warn .ic{background:var(--mid-bg);color:var(--mid-ink)}.in-ok .ic{background:var(--good-bg);color:var(--good)}.in-note .ic{background:var(--soft);color:var(--brand)}.in-info .ic{background:var(--line2);color:var(--ink2)}
+.proj .panel-h{gap:14px}
+.slider{display:flex;align-items:center;gap:10px;min-width:280px}
+.slider input[type=range]{-webkit-appearance:none;appearance:none;flex:1;height:8px;border-radius:4px;background:linear-gradient(to left,var(--brand) var(--p),var(--line2) var(--p));direction:rtl}
+.slider input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:22px;height:22px;border-radius:50%;background:#fff;border:4px solid var(--brand);box-shadow:0 2px 6px rgba(0,0,0,.2);cursor:grab}
+.slider input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:#fff;border:4px solid var(--brand)}
+.scn{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.sc{border:1px solid var(--line);border-radius:20px;padding:18px;display:flex;flex-direction:column;gap:8px;position:relative;background:var(--surface)}
+.sc.rec{border:2px solid var(--brand);box-shadow:0 18px 40px -20px var(--brand)}
+.sc .badge{position:absolute;top:-12px;inset-inline-start:18px;background:linear-gradient(135deg,#4F46E5,#7C3AED);color:#fff;font-size:11.5px;font-weight:800;border-radius:99px;padding:3px 12px}
+.sc .pr b{font-size:32px;font-weight:900}
+.sc ul{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:5px;font-size:12.5px}
+.sc li{display:flex;justify-content:space-between;gap:8px}
+@media (max-width:980px){.kp2s{grid-template-columns:1fr 1fr}.scn{grid-template-columns:1fr}.brow{grid-template-columns:110px minmax(0,1fr) 92px;font-size:12px}}
+@media (max-width:520px){.kp2 .big{font-size:24px}.slider{min-width:0;width:100%}.brow{grid-template-columns:1fr auto;row-gap:4px}.brow .track{grid-column:1/-1;grid-row:2}}
 
 /* ---- two main jobs ---- */
 .missions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
@@ -491,11 +589,11 @@ tr.hl td{background:var(--hl)} tr.hl td:first-child{box-shadow:inset -3px 0 0 va
     <header class="topbar">
       <div class="mtop">
         <button class="iconbtn backbtn" type="button" data-back aria-label="بازگشت" hidden><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></button>
-        <button class="tb-brand" type="button" data-go="home" aria-label="خانه"><span class="logo">RI</span></button>
+        <button class="tb-brand" type="button" data-go="home" aria-label="خانه"><span class="logo"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6z"/><path d="M8.5 12.5l2.4 2.4 4.6-5"/></svg></span></button>
         <div class="hello"><b id="mTitle">Renewal Intelligence</b><span id="mSub">دستیار تمدید و مناقصه</span></div>
         <button class="iconbtn" type="button" data-theme-toggle aria-label="تغییر حالت روشن و تیره"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></button><button class="iconbtn" id="bellBtnM" type="button" aria-label="کارهای فوری"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9a6 6 0 1 1 12 0c0 6 2.5 7.5 2.5 7.5h-17S6 15 6 9"/><path d="M10 20a2 2 0 0 0 4 0"/></svg><span class="badge" id="bellDotM" hidden></span></button>
       </div>
-      <button class="tb-brand hide-m" type="button" data-go="home" aria-label="خانه"><span class="logo">RI</span><span class="tx"><b>Renewal Intelligence</b><span id="brandSub">دستیار کارگزاری بیمه</span></span></button>
+      <button class="tb-brand hide-m" type="button" data-go="home" aria-label="خانه"><span class="logo"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6z"/><path d="M8.5 12.5l2.4 2.4 4.6-5"/></svg></span><span class="tx"><b>Renewal Intelligence</b><span id="brandSub">دستیار کارگزاری بیمه</span></span></button>
       <button class="btn hide-m backbtn" type="button" data-back hidden><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>بازگشت</button>
       <label class="search" for="q"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><input id="q" type="search" placeholder="جست‌وجوی گروه یا مناقصه…" autocomplete="off"></label>
       <span class="tb-gap"></span>
@@ -2257,7 +2355,8 @@ function renderDoc(i){
   $("view").innerHTML = `
   ${crumb(["docs", "مدارک و قراردادها"], [null, esc(d.file)])}
   <div class="ph"><div style="display:flex;flex-direction:column;gap:6px"><div class="hchips"><h1>${esc(d.file)}</h1><span class="tag t-protect">${esc(u.kind)}</span>${d.saved ? '<span class="tag t-good">ذخیره شد</span>' : ""}</div>
-    <span class="sub">${fmtInt(d.doc.pages.length || 1)} صفحه · ${fmtInt(u.rows.length)} ردیف پوشش پیدا شد${lowRows ? ` · <b style="color:var(--mid-ink)">${fmtInt(lowRows)} ردیف نیاز به بررسی</b>` : ""}</span></div>
+    <span class="sub">${[u.org, u.insurer, u.year ? fmtInt(u.year).replace(/٬/g, "") : null, u.insured ? fmtInt(u.insured) + " نفر" : null].filter(Boolean).map(esc).join(" · ")} · ${fmtInt(d.doc.pages.length || 1)} صفحه</span>
+    ${progressHTML(u)}</div>
     <div class="actions"><button class="btn" type="button" id="docDel">حذف</button><button class="btn primary" type="button" id="docSave">${d.saved ? "به‌روزرسانی قرارداد" : "ذخیره به‌عنوان قرارداد"}</button></div></div>
   <section class="panel"><div class="panel-h"><h2>مشخصات</h2><span class="small muted">هر چیزی را که درست خوانده نشده اصلاح کنید</span></div>
     <div class="panel-b form">
@@ -2271,19 +2370,7 @@ function renderDoc(i){
         <select data-dper="${esc(p)}" style="border:1px solid var(--input-line);border-radius:9px;background:var(--surface);padding:0 8px"><option value="year"${pp.per === "year" ? " selected" : ""}>سالانه</option><option value="month"${pp.per === "month" ? " selected" : ""}>ماهانه</option></select></span>
         ${p === plans[0] && u.premiumNote ? `<span class="small muted">${esc(u.premiumNote)}</span>` : ""}</label>`; }).join("")}
     </div></section>
-  <section class="panel"><div class="panel-h"><h2>پوشش‌ها و سقف‌ها</h2><span class="small muted">میلیون تومان · «بدون سقف» را خالی بگذارید و بنویسید ∞</span></div>
-    <div class="mobile-only panel-b" style="display:flex;flex-direction:column;gap:12px">${u.rows.map((r, ri) => `<div class="card" style="padding:10px;display:flex;flex-direction:column;gap:8px">
-      ${rowSnip(d, r) ? `<img src="${rowSnip(d, r)}" data-zoom="${ri}" alt="تصویر ردیف؛ برای بزرگ‌نمایی بزنید" style="width:100%;border:1px solid var(--line);border-radius:6px;cursor:zoom-in">` : `<span class="small muted">${esc(r.label)}</span>`}
-      <select data-dc="${ri}" style="height:40px;border:1px solid var(--input-line);border-radius:9px;background:var(--surface);padding:0 8px">${catOptions(r.cat)}</select>${r.odd ? `<span class="small" style="color:var(--mid-ink)">${esc(r.odd)}</span>` : ""}
-      <div style="display:flex;gap:8px;flex-wrap:wrap">${plans.map(p => { const v = r.vals[p], low = v && v.conf < 70; return `<label class="small" style="flex:1;min-width:120px;display:flex;flex-direction:column;gap:3px">${plans.length > 1 ? esc(p) : "سقف (میلیون تومان)"}<input data-dv="${ri}|${esc(p)}" value="${v ? (v.rial === Infinity ? "∞" : +(v.rial / 1e7).toFixed(2)) : ""}" inputmode="decimal" style="height:40px;border:1.5px solid ${low ? "var(--mid)" : "var(--input-line)"};border-radius:9px;background:${low ? "var(--mid-bg)" : "var(--surface)"};padding:0 10px"><span class="muted" data-rial="${ri}|${esc(p)}">${v ? (v.rial === Infinity ? "بدون سقف" : fmtInt(v.rial) + " ریال") : ""}</span>${low ? '<span style="color:var(--mid-ink)">با تصویر مقایسه کنید</span>' : ""}</label>`; }).join("")}</div></div>`).join("")}</div>
-    <div class="tw desk-only"><table style="min-width:${640 + plans.length * 130}px"><thead><tr><th>تصویر ردیف در مدرک</th><th>پوشش</th>${plans.map(p => `<th>${esc(p)}</th>`).join("")}</tr></thead><tbody>
-    ${u.rows.map((r, ri) => `<tr>
-      <td style="width:46%">${rowSnip(d, r) ? `<img src="${rowSnip(d, r)}" data-zoom="${ri}" alt="تصویر ردیف؛ برای بزرگ‌نمایی بزنید" style="max-width:100%;border:1px solid var(--line);border-radius:6px;display:block;cursor:zoom-in">` : `<span class="small muted">${esc(r.label)}</span>`}</td>
-      <td><select data-dc="${ri}" style="max-width:190px;border:1px solid var(--input-line);border-radius:8px;background:var(--surface);padding:4px">${catOptions(r.cat)}</select>${r.odd ? `<div class="small" style="color:var(--mid-ink);margin-top:4px">${esc(r.odd)}</div>` : ""}</td>
-      ${plans.map(p => { const v = r.vals[p]; const low = v && v.conf < 70; return `<td><input data-dv="${ri}|${esc(p)}" value="${v ? (v.rial === Infinity ? "∞" : +(v.rial / 1e7).toFixed(2)) : ""}" style="width:110px;height:34px;border:1.5px solid ${low ? "var(--mid)" : "var(--input-line)"};border-radius:8px;background:${low ? "var(--mid-bg)" : "var(--surface)"};padding:0 8px" inputmode="decimal"><div class="small muted" data-rial="${ri}|${esc(p)}">${v ? (v.rial === Infinity ? "بدون سقف" : fmtInt(v.rial) + " ریال") : ""}</div>${low ? '<div class="small" style="color:var(--mid-ink)">بررسی کنید</div>' : ""}</td>`; }).join("")}
-    </tr>`).join("") || `<tr><td colspan="${2 + plans.length}" class="muted">جدول پوششی پیدا نشد. اگر مدرک جدول دارد، عکس واضح‌تر یا PDF اصلی را امتحان کنید.</td></tr>`}
-    </tbody></table></div>
-    <div class="panel-b"><button class="btn" type="button" id="docAddRow">＋ افزودن ردیف</button></div></section>
+  ${reviewHTML(d, u, plans, prev)}
   ${u.issues.length ? `<section class="panel"><div class="panel-h"><h2>نیاز به توجه</h2></div><div class="panel-b"><ul class="dq">${u.issues.map(x => `<li><span class="sev tag t-mid">بررسی</span><span>${esc(x)}</span></li>`).join("")}</ul></div></section>` : ""}
   <details class="panel"><summary class="panel-h" style="cursor:pointer"><h2>متن کامل خوانده‌شده</h2></summary><div class="panel-b">${u.fixes ? `<p class="small muted" style="margin-bottom:8px">${fmtInt(u.fixes)} واژه با فرهنگ واژه‌های بیمه اصلاح شد؛ رنگی‌اند و با نگه‌داشتن رویشان، آنچه خوانده شده بود دیده می‌شود.</p>` : ""}<pre style="white-space:pre-wrap;font:inherit;font-size:12.5px;max-height:420px;overflow:auto;margin:0">${lexHtml(d.doc.text.trim())}</pre></div></details>`;
 
@@ -2308,6 +2395,13 @@ function renderDoc(i){
     const z = k => { const el = $("zImg"); el.style.width = Math.max(50, parseFloat(el.style.width) * k) + "%"; };
     $("zIn").onclick = () => z(1.4); $("zOut").onclick = () => z(1 / 1.4);
   });
+  $("view").querySelectorAll("[data-cur]").forEach(el => el.onclick = () => { d.cur = +el.dataset.cur; render(); });
+  $("view").querySelectorAll("[data-alt]").forEach(el => el.onclick = () => { const [p, v] = el.dataset.alt.split("|"), r = u.rows[d.cur]; r.vals[p] = { rial: +v, conf: 100 }; r.odd = null; r.fixedByUser = true; render(); });
+  const nextRow = () => { const order = u.rows.map((r, k) => k), doubt = order.find(k => !u.rows[k].ok && rowStatus(u.rows[k]) === "doubt"); return doubt ?? order.find(k => !u.rows[k].ok) ?? null; };
+  if ($("rvOk")) $("rvOk").onclick = () => { u.rows[d.cur].ok = true; d.cur = nextRow(); render(); };
+  if ($("rvAllSure")) $("rvAllSure").onclick = () => { u.rows.forEach(r => { if (rowStatus(r) === "sure") r.ok = true; }); d.cur = nextRow(); render(); };
+  if ($("rvSkip")) $("rvSkip").onclick = () => { const r = u.rows[d.cur]; r.cat = null; r.ok = true; d.cur = nextRow(); render(); };
+  const box = $("paperBox"), hl = $("paperHl"); if (box && hl) setTimeout(() => { box.scrollTop = Math.max(0, hl.offsetTop - box.clientHeight / 2); }, 0);
   $("docAddRow").onclick = () => { u.rows.push({ cat: null, label: "ردیف دستی", vals: {}, page: 0, box: null, img: "" }); render(); };
   $("docDel").onclick = () => { state.contracts = state.contracts.filter(c => c.src !== d.id); state.docs.splice(i, 1); go("docs"); };
   $("docSave").onclick = () => {
@@ -2323,6 +2417,55 @@ function renderDoc(i){
   };
 }
 
+// ---------- review helpers ----------
+const rowStatus = r => r.ok ? "ok" : (r.odd || Object.values(r.vals).some(v => v.conf < 70)) ? "doubt" : Object.values(r.vals).every(v => v.conf >= 85) && r.cat ? "sure" : "todo";
+function progressHTML(u){
+  const n = u.rows.length, st = u.rows.map(rowStatus), ok = st.filter(x => x === "ok").length, sure = st.filter(x => x === "sure").length, doubt = st.filter(x => x === "doubt").length;
+  if (!n) return "";
+  return `<div class="rv-prog"><div><b>${fmtInt(ok)} از ${fmtInt(n)} را تأیید کرده‌اید</b><span class="muted">${[sure ? `${fmtInt(sure)} با اطمینان بالا` : "", doubt ? `${fmtInt(doubt)} مشکوک` : ""].filter(Boolean).join(" · ")}</span></div>
+    <div class="prog2"><i style="width:${(ok / n * 100).toFixed(0)}%"></i><i class="sure" style="width:${(sure / n * 100).toFixed(0)}%"></i></div>
+    ${sure ? `<button class="link" type="button" id="rvAllSure" style="align-self:flex-start;font-size:12.5px">${fmtInt(sure)} ردیف مطمئن را یکجا تأیید کن</button>` : ""}</div>`;
+}
+const crop = (d, page, b, maxW, pad) => {
+  const pg = d.doc.pages[page]; if (!pg || !pg.canvas || !b) return "";
+  pad = pad ?? 6; const w = b.x1 - b.x0 + pad * 2, h = b.y1 - b.y0 + pad * 2, k = Math.min(3, maxW / w), c = document.createElement("canvas");
+  c.width = Math.round(w * k); c.height = Math.round(h * k); const g = c.getContext("2d"); g.fillStyle = "#fff"; g.fillRect(0, 0, c.width, c.height); g.imageSmoothingQuality = "high";
+  g.drawImage(pg.canvas, b.x0 - pad, b.y0 - pad, w, h, 0, 0, c.width, c.height); return c.toDataURL("image/jpeg", 0.88);
+};
+function pageImg(d, page){ d.pimg = d.pimg || {}; if (d.pimg[page] != null) return d.pimg[page]; const pg = d.doc.pages[page]; if (!pg || !pg.canvas) return (d.pimg[page] = "");
+  const c = drFit(pg.canvas, Math.min(1100, pg.canvas.width)); return (d.pimg[page] = c.toDataURL("image/jpeg", 0.8)); }
+// Likely misreads of a cap: swap the digits OCR confuses most (۵/۸، ۲/۳، ۶/۹) and keep the ones that fit last year.
+function altValues(v, prevCap){
+  if (!isFinite(v)) return [];
+  const sig = String(Math.round(v)).replace(/0+$/, ""), zeros = String(Math.round(v)).length - sig.length, SW = { 8: "5", 5: "8", 2: "3", 3: "2", 6: "9", 9: "6" }, out = new Set();
+  for (let k = 0; k < sig.length; k++){ const s2 = SW[sig[k]]; if (s2){ out.add(+(sig.slice(0, k) + s2 + sig.slice(k + 1) + "0".repeat(zeros))); } }
+  return [...out].filter(x => !prevCap || (x / 1e7 / prevCap >= 0.6 && x / 1e7 / prevCap <= 3)).slice(0, 3);
+}
+function reviewHTML(d, u, plans, prev){
+  if (!u.rows.length) return `<section class="panel"><div class="panel-b"><p class="muted">جدول پوششی پیدا نشد. اگر مدرک جدول دارد، عکس واضح‌تر یا PDF اصلی را امتحان کنید، یا ردیف‌ها را دستی اضافه کنید.</p><button class="btn" type="button" id="docAddRow">＋ افزودن ردیف</button></div></section>`;
+  if (d.cur == null || d.cur >= u.rows.length){ const k = u.rows.findIndex(r => rowStatus(r) === "doubt"); d.cur = k >= 0 ? k : u.rows.findIndex(r => rowStatus(r) !== "ok" && rowStatus(r) !== "sure"); if (d.cur < 0) d.cur = 0; }
+  const r = u.rows[d.cur], st = rowStatus(r), pg = d.doc.pages[r.page], b = r.vbox || r.box;
+  const W = pg && pg.canvas ? pg.canvas.width : 1, H = pg && pg.canvas ? pg.canvas.height : 1;
+  const ICON = { ok: ["c-ok", "✓"], sure: ["c-sure", "✓"], doubt: ["c-doubt", "!"], todo: ["c-todo", "…"] };
+  return `<div class="rv">
+    <section class="panel rv-paper"><div class="panel-h"><h2>صفحهٔ ${fmtInt(r.page + 1)} از ${fmtInt(d.doc.pages.length || 1)}</h2><span class="small muted">جای عدد روی کاغذ روشن شده</span></div>
+      <div class="rv-pbox" id="paperBox">${pageImg(d, r.page) ? `<div class="rv-pg"><img src="${pageImg(d, r.page)}" alt="صفحهٔ مدرک">${b ? `<span class="rv-hl ${st}" id="paperHl" style="left:${((b.x0 - 8) / W * 100).toFixed(2)}%;top:${((b.y0 - 8) / H * 100).toFixed(2)}%;width:${((b.x1 - b.x0 + 16) / W * 100).toFixed(2)}%;height:${((b.y1 - b.y0 + 16) / H * 100).toFixed(2)}%"></span>` : ""}</div>` : '<p class="muted small panel-b">این مدرک تصویر صفحه ندارد (Word یا متن).</p>'}</div></section>
+    <div class="rv-side">
+      <section class="panel rv-cur ${st}"><div class="rv-h"><span class="tag ${st === "doubt" ? "t-mid" : st === "ok" ? "t-good" : "t-line"}">${st === "doubt" ? "⚠ نیاز به بررسی" : st === "ok" ? "✓ تأیید شد" : st === "sure" ? "با اطمینان بالا خوانده شد" : "بررسی کنید"}</span><span class="small muted">ردیف ${fmtInt(d.cur + 1)} از ${fmtInt(u.rows.length)}</span></div>
+        <select data-dc="${d.cur}" class="rv-cat">${catOptions(r.cat)}</select>
+        ${r.lbox ? `<img class="rv-lbl" src="${crop(d, r.page, Object.assign({}, r.lbox, { x0: Math.max(r.lbox.x0, r.lbox.x1 - (r.lbox.y1 - r.lbox.y0) * 7) }), 640, 4)}" alt="عنوان ردیف در مدرک">` : ""}
+        ${r.vbox ? `<img class="rv-cell" src="${crop(d, r.page, r.vbox, 640, 8)}" data-zoom="${d.cur}" alt="عدد در مدرک؛ برای بزرگ‌نمایی بزنید">` : ""}
+        ${plans.map(p => { const v = r.vals[p], pv = prev && r.cat ? prev.caps[r.cat] : null, alts = v && (st === "doubt") ? altValues(v.rial, pv) : [];
+          return `<label class="rv-val">${plans.length > 1 ? `<span class="small">${esc(p)}</span>` : ""}<span class="rv-in"><input data-dv="${d.cur}|${esc(p)}" value="${v ? (v.rial === Infinity ? "∞" : +(v.rial / 1e7).toFixed(2)) : ""}" inputmode="decimal" aria-label="سقف ${esc(p)} به میلیون تومان"><em>میلیون تومان</em></span>
+            <span class="small muted" data-rial="${d.cur}|${esc(p)}">${v ? (v.rial === Infinity ? "بدون سقف" : fmtInt(v.rial) + " ریال") : ""}</span></label>
+            ${alts.length ? `<div class="rv-alt"><span class="small muted">منظورتان این است؟</span>${alts.map(x => `<button type="button" data-alt="${esc(p)}|${x}">${fmtNum(x / 1e7)}</button>`).join("")}</div>` : ""}`; }).join("")}
+        ${r.odd ? `<p class="small" style="color:var(--mid-ink);margin:0">${esc(r.odd)}</p>` : ""}
+        <div class="rv-act"><button class="btn primary" type="button" id="rvOk">تأیید و بعدی ←</button><button class="btn" type="button" id="rvSkip">این ردیف را نادیده بگیر</button></div>
+      </section>
+      <section class="panel rv-list">${u.rows.map((x, k) => { const s2 = rowStatus(x), ic = ICON[s2]; return `<button type="button" class="rv-li ${k === d.cur ? "now" : ""}" data-cur="${k}"><span class="s ${ic[0]}">${ic[1]}</span><span class="nm">${x.cat ? CCAT_NAME[x.cat] : `<span class="muted">${esc(x.label.slice(0, 30)) || "نوع نامعلوم"}</span>`}</span><b class="num">${Object.values(x.vals).map(v => v.rial === Infinity ? "∞" : fmtNum(v.rial / 1e7)).join(" / ")}${s2 === "doubt" ? "؟" : ""}</b></button>`; }).join("")}
+        <div class="panel-b"><button class="btn" type="button" id="docAddRow">＋ افزودن ردیف</button></div></section>
+    </div></div>`;
+}
 function sampleContracts(){
   // Synthetic two-year sample so the comparison page shows what it does before real documents are read.
   const base = { hosp: 120, special: 240, delivery: 12, para: 20, diag: 20, lab: 20, outsurg: 20, rehab: 20, combo: 20, ambIn: 0.5, ambOut: 1, refractive: 10, glasses: 2, dental: 8, visitdrug: 7, hearing: 18, infert: 12 };
@@ -2348,7 +2491,9 @@ function renderDocs(){
   <input type="file" id="docFileIn" accept=".pdf,.jpg,.jpeg,.png,.webp,.docx,.txt" multiple hidden>
   ${state.docs.length ? `<section class="panel"><div class="panel-h"><h2>مدارک خوانده‌شده</h2></div><div class="panel-b ilist">${state.docs.map((d, i) => `<button class="ili" type="button" data-doc="${i}"><span>${esc(d.file)} · ${esc(d.u.org || "بیمه‌گذار نامعلوم")} · ${d.u.year ? fmtInt(d.u.year).replace(/٬/g, "") : "سال نامعلوم"}</span><em class="tag ${d.saved ? "t-good" : "t-mid"}">${d.saved ? "ذخیره شد" : "بررسی و ذخیره"}</em></button>`).join("")}</div></section>` : ""}
   ${keys.length ? `<div class="fchips" role="group" aria-label="سازمان" style="flex-wrap:wrap">${keys.map(k => `<button type="button" data-org="${esc(k)}" aria-pressed="${k === state.cmpOrg}">${esc(short(groups[k].name))} ${fmtInt(groups[k].list.length)}</button>`).join("")}</div>${compareView(G, all)}` : ""}`;
-  bindStepper("inflIn", v => { state.infl = Math.max(0, v) / 100; render(); setTimeout(() => { const el = $("proj"); if (el) el.scrollIntoView({ block: "start" }); }, 0); });
+  const ir = $("inflR");
+  if (ir){ ir.oninput = () => { $("inflV").textContent = fmtInt(+ir.value) + "٪"; ir.style.setProperty("--p", (+ir.value / 80 * 100) + "%"); };
+    ir.onchange = () => { state.infl = +ir.value / 100; render(); setTimeout(() => { const el = $("proj"); if (el) el.scrollIntoView({ block: "start" }); }, 0); }; }
   if ($("projXlsx")){ const list = G.list.slice().sort((a, b) => (a.plan || "").localeCompare(b.plan || "") || a.year - b.year), pairs = [];
     list.forEach((c, i) => { const prev = list.slice(0, i).reverse().find(x => (x.plan || "") === (c.plan || "") && x.year < c.year); if (prev) pairs.push([prev, c]); });
     const cats = CCAT.map(c => c[0]).filter(k => list.some(c => c.caps[k] != null));
@@ -2400,15 +2545,35 @@ function compareView(G, all){
   }
   sugg.push(["info", "پیشنهاد حذف یا کاهش هر پوشش فقط با فایل خسارت ممکن است؛ آن را در «تحلیل تمدید» بدهید تا به همین قرارداد وصل شود."]);
   const SG = { warn: ["t-mid", "هشدار"], ok: ["t-good", "خوب"], note: ["t-protect", "نکته"], info: ["t-line", "بعدی"] };
+  const pair = pairs[pairs.length - 1];
   return `
-  <section class="panel"><div class="panel-h"><h2>${esc(G.name)}</h2><span class="small muted">میلیون تومان برای هر نفر در سال · ${fmtInt(list.length)} قرارداد</span></div>
+  ${pair ? overviewHTML(pair, cats, G) : ""}
+  <details class="panel"${pair ? "" : " open"}><summary class="panel-h" style="cursor:pointer"><h2>${pair ? "جدول کامل همهٔ سقف‌ها" : esc(G.name)}</h2><span class="small muted">میلیون تومان برای هر نفر در سال · ${fmtInt(list.length)} قرارداد</span></summary>
     <div class="tw"><table style="min-width:${300 + list.length * 120 + pairs.length * 80}px"><thead><tr><th>پوشش</th>${list.map(c => `<th>${label(c)}${c.sample ? ' <span class="tag t-line">نمونه</span>' : ""}</th>`).join("")}${pairs.map(([a, b]) => `<th>تغییر ${b.plan ? b.plan + " " : ""}${fmtInt(a.year).replace(/٬/g, "")}←${fmtInt(b.year).replace(/٬/g, "")}</th>`).join("")}${others.length ? "<th>میانهٔ بازار</th>" : ""}</tr></thead><tbody>
       <tr style="background:var(--hl)"><td><b>حق‌بیمهٔ سالانهٔ هر نفر</b></td>${list.map(c => `<td class="nw"><b>${c.premium ? fmtNum(c.premium) : "—"}</b></td>`).join("")}${pairs.map(([a, b]) => { const v = pctCh(a.premium, b.premium); return `<td class="nw"><b>${v == null ? "—" : fmtSignedPct(v)}</b></td>`; }).join("")}${others.length ? `<td class="nw">${fmtNum(median(others.map(c => c.premium)))}</td>` : ""}</tr>
       ${cats.map(k => `<tr><td>${CCAT_NAME[k]}</td>${list.map(c => `<td class="nw">${c.caps[k] == null ? '<span class="faint">—</span>' : MT(c.caps[k])}</td>`).join("")}${pairs.map(([a, b]) => { const v = k === "combo" || k === "total" ? null : pctCh(a.caps[k], b.caps[k]); return `<td class="nw" style="${v == null ? "" : v === 0 ? "color:var(--mid-ink);font-weight:700" : v >= 1 ? "color:var(--good);font-weight:700" : ""}">${v == null ? "—" : v === 0 ? "بدون تغییر" : fmtSignedPct(v)}</td>`; }).join("")}${others.length ? `<td class="nw muted">${market(k) == null ? "—" : MT(market(k))}</td>` : ""}</tr>`).join("")}
-    </tbody></table></div></section>
-  <section class="panel"><div class="panel-h"><h2>پیشنهاد برای سال بعد</h2><span class="small muted">از مقایسهٔ قراردادها؛ بدون دادهٔ خسارت</span></div>
-    <div class="panel-b"><ul class="dq">${sugg.map(([k, t]) => `<li><span class="sev tag ${SG[k][0]}">${SG[k][1]}</span><span>${esc(t)}</span></li>`).join("")}</ul></div></section>
+    </tbody></table></div></details>
+  <div class="ins">${sugg.map(([k, t]) => `<div class="panel in in-${k}"><span class="ic">${{ warn: "!", ok: "✓", note: "i", info: "→" }[k]}</span><div><b>${SG[k][1]}</b><span>${esc(t)}</span></div></div>`).join("")}</div>
   ${pairs.length ? projectionView(pairs[pairs.length - 1], cats) : ""}`;
+}
+
+// KPI cards and the "each cap against the premium" chart for the latest two years of one plan.
+function overviewHTML(pair, cats, G){
+  const [a, b] = pair, y = c => fmtInt(c.year).replace(/٬/g, ""), pc = pctCh(a.premium, b.premium), ch = k => pctCh(a.caps[k], b.caps[k]);
+  const main = median(["hosp", "special"].map(ch).filter(v => v != null)), rest = median(cats.filter(k => !["hosp", "special", "combo", "total"].includes(k)).map(ch).filter(v => v != null));
+  const rows = cats.filter(k => k !== "combo" && k !== "total" && ch(k) != null).map(k => [k, ch(k)]).sort((x, z) => z[1] - x[1]);
+  const ref = pc ?? main ?? 0, M = Math.max(ref * 1.6, 1, ...rows.map(r => Math.min(r[1], ref * 2.6)));
+  const col = v => v <= 0 ? "#E11D48" : v >= ref - 0.1 ? "linear-gradient(to left,#16A34A,#4ADE80)" : "linear-gradient(to left,#F59E0B,#FCD34D)";
+  const kp = (l, v, sub, color) => `<div class="panel kp2"><span class="l">${l}</span><b class="big" style="${color ? `color:${color}` : ""}">${v}</b><span class="small muted">${sub}</span></div>`;
+  return `<div class="cmp-h"><div><h1>${esc(G.name)}</h1><span class="sub">${[b.insurer, b.insured ? fmtInt(b.insured) + " نفر" : null].filter(Boolean).map(esc).join(" · ")}${b.plan ? " · " + esc(b.plan) : ""} · مقایسهٔ ${y(a)} ← ${y(b)}</span></div></div>
+  <div class="kp2s">
+    <div class="panel kp2 lead"><span class="l">حق‌بیمهٔ سالانهٔ هر نفر</span><div class="row"><span class="muted num" style="font-size:19px;font-weight:800">${a.premium ? fmtNum(a.premium) : "—"}</span><span class="muted">←</span><b class="big num">${b.premium ? fmtNum(b.premium) : "—"}</b>${pc != null ? `<span class="tag ${pc > 0 ? "t-bad" : "t-good"}">${fmtSignedPct(pc)}</span>` : ""}</div><span class="small muted">میلیون تومان</span></div>
+    ${main != null ? kp("سقف بستری و جراحی", fmtSignedPct(main), pc != null ? (Math.abs(main - pc) <= 0.1 ? "هم‌پای نرخ" : main > pc ? "بیشتر از نرخ" : "کمتر از نرخ") : "", "var(--good)") : ""}
+    ${rest != null ? kp("بقیهٔ بندها (میانه)", fmtSignedPct(rest), pc != null && rest < pc - 0.1 ? "عقب‌تر از نرخ" : "", pc != null && rest < pc - 0.1 ? "var(--mid-ink)" : "var(--good)") : ""}
+    ${b.premium ? kp("حد تحمل خسارت هر نفر", fmtNum(b.premium * 0.75), "با Loss Ratio ۷۵٪") : ""}
+  </div>
+  ${rows.length ? `<section class="panel"><div class="panel-h"><h2>تغییر هر سقف در برابر تغییر نرخ</h2>${pc != null ? `<span class="small muted"><i class="refkey"></i> افزایش نرخ (${fmtSignedPct(pc)}) · نوار کوتاه‌تر از خط = عقب مانده</span>` : ""}</div>
+    <div class="panel-b">${rows.map(([k, v]) => `<div class="brow"><span>${CCAT_NAME[k]}</span><div class="track"><span class="bar" style="width:${v <= 0 ? 1.5 : Math.min(100, v / M * 100).toFixed(1)}%;background:${col(v)}"></span>${pc != null ? `<span class="ref" style="inset-inline-start:${(Math.min(1, ref / M) * 100).toFixed(1)}%"></span>` : ""}</div><b class="num" style="color:${v <= 0 ? "var(--bad)" : v >= ref - 0.1 ? "var(--good)" : "var(--mid-ink)"}">${v === 0 ? "بدون تغییر" : fmtSignedPct(v)} <span class="small muted">${MT(a.caps[k])}←${MT(b.caps[k])}</span></b></div>`).join("")}</div></section>` : ""}`;
 }
 
 /* ---------- next-year projection ----------
@@ -2436,17 +2601,28 @@ function projection(pair, cats, infl){
   return { ks, w, plans, last: b, prev: a, year: b.year + 1, g };
 }
 function projectionView(pair, cats){
-  const infl = state.infl ?? 0.35, P = projection(pair, cats, infl), b = P.last, order = ["economy", "keep", "catchup"];
-  return `<section class="panel anchor" id="proj"><div class="panel-h"><h2>محاسبهٔ سال ${fmtInt(P.year).replace(/٬/g, "")}</h2>
-      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span class="small nw">تورم هزینهٔ درمان (٪)</span>${stepper("inflIn", Math.round(infl * 100), 5)}<button class="btn" type="button" id="projXlsx">دانلود فایل محاسبه (اکسل)</button></div></div>
-    <div class="panel-b" style="display:flex;flex-direction:column;gap:10px">
-      <p class="small muted">بر پایهٔ قرارداد ${fmtInt(b.year).replace(/٬/g, "")}${b.plan ? " · " + esc(b.plan) : ""}. تا فایل خسارت نرسیده، سهم هر پوشش از هزینه فرضی است (در فایل اکسل قابل تغییر است). با فایل خسارت، همین محاسبه با مصرف واقعی هر پوشش انجام می‌شود.</p>
-      <div class="tw"><table style="min-width:640px"><thead><tr><th>پوشش</th><th>سقف ${fmtInt(b.year).replace(/٬/g, "")}</th>${order.map(k => `<th>${P.plans[k].name}<div class="small muted" style="font-weight:400;white-space:normal">${P.plans[k].desc}</div></th>`).join("")}</tr></thead><tbody>
-        <tr style="background:var(--hl)"><td><b>حق‌بیمهٔ سالانهٔ هر نفر</b></td><td class="nw"><b>${b.premium ? fmtNum(b.premium) : "—"}</b></td>${order.map(k => { const p = P.plans[k]; return `<td class="nw"><b>${p.premium ? fmtNum(p.premium) : "—"}</b> <span class="small muted">${fmtSignedPct(p.factor - 1)}</span></td>`; }).join("")}</tr>
-        ${b.insured ? `<tr><td>کل حق‌بیمه (${fmtInt(b.insured)} نفر)</td><td class="nw">${b.premium ? fmtNum(b.premium * b.insured) : "—"}</td>${order.map(k => `<td class="nw">${P.plans[k].premium ? fmtNum(P.plans[k].premium * b.insured) : "—"}</td>`).join("")}</tr>` : ""}
-        ${P.ks.map(k => `<tr><td>${CCAT_NAME[k]}</td><td class="nw">${MT(b.caps[k])}</td>${order.map(o => { const v = P.plans[o].caps[k]; return `<td class="nw"${v !== b.caps[k] ? ' style="font-weight:800;color:var(--brand)"' : ""}>${MT(v)}</td>`; }).join("")}</tr>`).join("")}
-      </tbody></table></div>
+  const infl = state.infl ?? 0.35, P = projection(pair, cats, infl), b = P.last, order = ["economy", "catchup", "keep"];
+  // recommendation: when outpatient items lagged behind last year, catching up is the fair offer; otherwise keep value
+  const [a] = pair, ch = k => pctCh(a.caps[k], b.caps[k]);
+  const main = median(["hosp", "special"].map(ch).filter(v => v != null)), rest = median(P.ks.filter(k => !["hosp", "special"].includes(k)).map(ch).filter(v => v != null));
+  const rec = main != null && rest != null && rest < main - 0.2 ? "catchup" : "keep";
+  const why = rec === "catchup" ? `بندهای سرپایی سال قبل ${fmtSignedPct(rest)} رشد کردند و بستری ${fmtSignedPct(main)}` : "سقف‌ها سال قبل متوازن رشد کرده‌اند";
+  const DESC = { economy: [["بستری و جراحی", "هم‌پای تورم"], ["بقیهٔ بندها", "ثابت"]], catchup: [["بندهای جامانده", "هم‌پای بستری"], ["رضایت کارکنان", "بیشترین"]], keep: [["همهٔ سقف‌ها", "هم‌پای تورم"], ["قدرت خرید پوشش", "ثابت"]] };
+  const y = fmtInt(P.year).replace(/٬/g, "");
+  return `<section class="panel anchor proj" id="proj"><div class="panel-h"><h2>سال ${y}: سه راه پیش رو</h2>
+      <div class="slider"><label for="inflR" class="small nw">تورم هزینهٔ درمان</label><input type="range" id="inflR" min="0" max="80" step="5" value="${Math.round(infl * 100)}" style="--p:${Math.round(infl * 100 / 80 * 100)}%"><b class="num" id="inflV">${fmtInt(Math.round(infl * 100))}٪</b></div></div>
+    <div class="panel-b" style="display:flex;flex-direction:column;gap:16px">
+      <div class="scn">${order.map(k => { const p = P.plans[k]; return `<div class="sc ${k === rec ? "rec" : ""}">${k === rec ? `<span class="badge">پیشنهاد اپ</span>` : ""}<span class="tag t-protect" style="align-self:flex-start">${p.name}</span>
+        <div class="pr"><b class="num">${p.premium ? fmtNum(p.premium) : "—"}</b> <span class="small muted">میلیون / نفر</span></div>
+        <div class="small" style="font-weight:800;color:${p.factor - 1 < infl ? "var(--good)" : "var(--mid-ink)"}">${fmtSignedPct(p.factor - 1)} نسبت به ${fmtInt(b.year).replace(/٬/g, "")}</div>
+        <ul>${DESC[k].map(([l, v]) => `<li><span class="muted">${l}</span><b>${v}</b></li>`).join("")}${b.insured && p.premium ? `<li><span class="muted">کل حق‌بیمه</span><b class="num">${fmtNum(p.premium * b.insured / 1000)} میلیارد</b></li>` : ""}</ul>
+        ${k === rec ? `<span class="small muted">${why}</span>` : ""}</div>`; }).join("")}</div>
       ${b.premium ? "" : '<p class="small" style="color:var(--mid-ink)">حق‌بیمهٔ این قرارداد وارد نشده؛ در صفحهٔ مدرک واردش کنید تا مبلغ‌ها حساب شوند.</p>'}
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center"><button class="btn primary" type="button" id="projXlsx">⇩ دانلود فایل محاسبه (اکسل)</button><span class="small muted">تا فایل خسارت نرسیده، سهم هر پوشش از هزینه فرضی است و در فایل اکسل قابل تغییر است.</span></div>
+      <details><summary class="small" style="cursor:pointer;font-weight:700;color:var(--brand)">سقف تک‌تک پوشش‌ها در هر راه</summary>
+      <div class="tw" style="margin-top:10px"><table style="min-width:600px"><thead><tr><th>پوشش</th><th>سقف ${fmtInt(b.year).replace(/٬/g, "")}</th>${order.map(k => `<th>${P.plans[k].name}</th>`).join("")}</tr></thead><tbody>
+        ${P.ks.map(k => `<tr><td>${CCAT_NAME[k]}</td><td class="nw">${MT(b.caps[k])}</td>${order.map(o => { const v = P.plans[o].caps[k]; return `<td class="nw"${v !== b.caps[k] ? ' style="font-weight:800;color:var(--brand)"' : ""}>${MT(v)}</td>`; }).join("")}</tr>`).join("")}
+      </tbody></table></div></details>
     </div></section>`;
 }
 function projectionXlsx(pair, cats){
@@ -2582,6 +2758,28 @@ const ic = k => `<span class="ic ic-${k}"><svg viewBox="0 0 24 24" fill="none" s
 const islHead = (k, title, sub, go) => `<div class="isl-h">${ic(k)}<div><h3>${title}</h3><p>${sub}</p></div>${go ? `<span class="go" aria-hidden="true">←</span>` : ""}</div>`;
 
 /* ---------- home: islands ---------- */
+const greet = () => { const h = new Date().getHours(); return h < 11 ? "سلام، صبح بخیر" : h < 16 ? "سلام، روز بخیر" : "سلام، عصر بخیر"; };
+// Loss Ratio gauge: half circle from 0 to 120%; green up to the target, amber to 85%, red beyond.
+function gaugeSVG(v, target){
+  const cx = 125, cy = 128, r = 100, M = 1.2, pt = x => { const a = Math.PI * (1 - Math.min(M, Math.max(0, x)) / M); return [cx + r * Math.cos(a), cy - r * Math.sin(a)]; };
+  const arc = (a, b, c, cap) => { const [x0, y0] = pt(a), [x1, y1] = pt(b); return `<path d="M${x0.toFixed(1)} ${y0.toFixed(1)} A${r} ${r} 0 0 1 ${x1.toFixed(1)} ${y1.toFixed(1)}" stroke="${c}" stroke-width="18" fill="none"${cap ? ' stroke-linecap="round"' : ""}/>`; };
+  const nv = v == null ? 0 : v, a = Math.PI * (1 - Math.min(M, nv) / M), nx = cx + 70 * Math.cos(a), ny = cy - 70 * Math.sin(a);
+  return `<svg width="250" height="140" viewBox="0 0 250 140" role="img" aria-label="Loss Ratio ${fmtPct(v)}">${arc(0, target - 0.01, "#4ADE80", true)}${arc(target + 0.01, 0.84, "#FBBF24")}${arc(0.86, M, "#FB7185", true)}
+    ${v == null ? "" : `<line x1="${cx}" y1="${cy}" x2="${nx.toFixed(1)}" y2="${ny.toFixed(1)}" stroke="#fff" stroke-width="5" stroke-linecap="round"/><circle cx="${cx}" cy="${cy}" r="9" fill="#fff"/>`}</svg>`;
+}
+const DONUT_C = { urgent: "#E11D48", opp: "#16A34A", warn: "#F59E0B", note: "#6366F1" };
+function donutSVG(parts, total){
+  const C = 2 * Math.PI * 15.9; let off = 25 / 100 * C;
+  const segs = parts.filter(([n]) => n > 0).map(([n, c]) => { const len = n / Math.max(1, total) * C, el = `<circle cx="21" cy="21" r="15.9" fill="none" stroke="${c}" stroke-width="6.5" stroke-dasharray="${(len - 0.6).toFixed(2)} ${(C - len + 0.6).toFixed(2)}" stroke-dashoffset="${off.toFixed(2)}"/>`; off -= len; return el; }).join("");
+  return `<svg class="donut" viewBox="0 0 42 42" role="img" aria-label="${fmtInt(total)} پیشنهاد"><circle cx="21" cy="21" r="15.9" fill="none" stroke="var(--line2)" stroke-width="6.5"/>${segs}<text x="21" y="24" text-anchor="middle" font-size="9" font-weight="900" fill="currentColor" font-family="Vazirmatn">${fmtInt(total)}</text></svg>`;
+}
+// Renewals on a 90-day line: position by days left, colour by urgency.
+function timelineHTML(list){
+  if (!list.length) return '<span class="small muted">تا ۹۰ روز آینده تمدیدی نیست.</span>';
+  const col = d => d <= 30 ? "#E11D48" : d <= 60 ? "#F59E0B" : "#A5B4FC";
+  return `<div class="tline"><span class="tk" style="right:0">امروز</span><span class="tk" style="right:50%">۴۵ روز</span><span class="tk" style="right:100%">۹۰</span><div class="ln"></div>
+    ${list.map((x, k) => { const d = x.A.renewal.days, p = Math.max(0, Math.min(100, d / 90 * 100)); return `<button type="button" class="pt" data-open="${x.i}" style="right:${p}%;background:${col(d)}" title="${esc(x.A.group.name)}: ${d < 0 ? fmtInt(-d) + " روز گذشته" : fmtInt(d) + " روز"}"></button>${k < 3 ? `<span class="lb" style="right:${p}%;top:${50 + k * 15}px;color:${col(d) === "#A5B4FC" ? "var(--ink2)" : col(d)}">${esc(short(x.A.group.name).split(" ").slice(-2).join(" "))} · ${d < 0 ? "گذشته" : fmtInt(d) + " روز"}</span>` : ""}`; }).join("")}</div>`;
+}
 function renderHome(){
   const all = state.groups.map((g, i) => Object.assign({ i, g }, compute(g)));
   const comp = all.filter(x => x.A.complete && x.A.premiumNow);
@@ -2596,28 +2794,33 @@ function renderHome(){
   const L = window.RI_LICENSE;
   const dayTag = d => d < 0 ? ["t-bad", `${fmtInt(-d)} روز گذشته`] : d <= 30 ? ["t-bad", `${fmtInt(d)} روز`] : d <= 60 ? ["t-mid", `${fmtInt(d)} روز`] : ["t-protect", `${fmtInt(d)} روز`];
   const aiPick = state.homeAi ?? "p";
+  const ORD = { urgent: 0, warn: 1, opp: 2, note: 3 }, top3 = todo.slice().sort((a, b) => ORD[catOf(a)] - ORD[catOf(b)] || b.w - a.w).slice(0, 3);
   const pChat = state.chat.p || [];
   setHead("Renewal Intelligence", todayFa());
   $("view").innerHTML = `
-  <section class="hh">
-    <div><p>${todayFa()}</p><h1>سلام، خوش آمدید</h1><p>${fmtInt(nCat("urgent"))} کار فوری و ${fmtInt(soon90)} تمدید در ۹۰ روز آینده دارید.</p>${L ? `<span class="lic">مجوز: ${esc(L.name)} · ${fmtInt(L.days)} روز مانده</span>` : ""}</div>
-    <div class="hh-k">
-      <div><span>گروه‌ها</span><b>${fmtInt(all.length)}</b><small>${fmtInt(tenders.length)} مناقصهٔ باز</small></div>
+  <section class="hh2">
+    <div class="hh2-g"><p class="small" style="opacity:.85">${todayFa()}</p><h1>${greet()}</h1>
+      <p style="opacity:.9">${top3.length ? `${fmtInt(nCat("urgent"))} کار فوری و ${fmtInt(soon90)} تمدید در ۹۰ روز آینده` : "کار فوری‌ای نیست"}</p>
+      <div class="todo">${top3.map(x => `<button type="button" data-open="${x.i}"><span class="dot" style="background:${{ urgent: "#FDA4AF", warn: "#FDE68A", opp: "#A7F3D0", note: "#C7D2FE" }[catOf(x)]}"></span><span>${esc(short(x.name))}: ${esc(x.text.split(/[؛.]/)[0])}</span><b class="${catOf(x)}">${{ urgent: "فوری", warn: "هشدار", opp: "فرصت", note: "نکته" }[catOf(x)]}</b></button>`).join("")}</div>
+      ${L ? `<span class="lic">مجوز: ${esc(L.name)} · ${fmtInt(L.days)} روز مانده</span>` : ""}</div>
+    <div class="hh2-gauge">${gaugeSVG(plr, t)}<div class="gv">${fmtPct(plr)}</div><div class="small" style="opacity:.9">Loss Ratio پرتفوی${st ? ` · <b>${st[1]}</b>` : ""}</div></div>
+    <div class="hh2-st">
+      <div><span>گروه‌ها</span><b>${fmtInt(all.length)}</b><small>${fmtInt(soon90)} تمدید در ۹۰ روز</small></div>
       <div><span>بیمه‌شدگان</span><b>${fmtInt(sum(all, x => x.A.insured || 0))}</b><small>جمع همهٔ گروه‌ها</small></div>
-      <div><span>حق‌بیمهٔ جاری</span><b>${fmtNum(sum(all, x => x.A.premiumNow || 0))}</b><small>میلیون تومان</small></div>
-      <div><span>Loss Ratio پرتفوی</span><b>${fmtPct(plr)}${st ? `<span class="pill">${st[1]}</span>` : ""}</b><small>هدف ${fmtPct(t)}</small></div>
+      <div><span>حق‌بیمهٔ جاری</span><b>${fmtNum(sum(all, x => x.A.premiumNow || 0) / 1000)}</b><small>میلیارد تومان</small></div>
+      <div><span>مناقصه‌های باز</span><b>${fmtInt(tenders.length)}</b><small>${fmtInt(tenders.filter(x => x.R.priorScaled && x.R.risk(x.R.priorScaled)[0] === "high").length)} با قیمت قبلی پرریسک</small></div>
     </div>
   </section>
   <div class="sec-t"><h2>دو کار اصلی</h2><span class="small muted">فایل بدهید یا نام سازمان را بزنید؛ بقیه را اپ انجام می‌دهد.</span></div>
   <div class="missions">
     <section class="mis">
-      <div class="mis-h"><span class="num">۱</span><div><h2>تحلیل تمدید قرارداد</h2><p>فایل اکسل قرارداد فعلی را بدهید؛ برای تک‌تک پوشش‌ها می‌گوییم چه کنید و حق‌بیمهٔ لازم چقدر است.</p></div></div>
+      <div class="mis-h"><span class="blob b1"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 4v5h-5"/></svg></span><div><h2>تحلیل تمدید قرارداد</h2><p>فایل اکسل قرارداد فعلی را بدهید؛ برای تک‌تک پوشش‌ها می‌گوییم چه کنید و حق‌بیمهٔ لازم چقدر است.</p></div></div>
       <label class="drop" id="dropR" for="file"><span class="di"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg></span><b>فایل را اینجا بکشید یا بزنید</b><span>اکسل خسارت برای تحلیل کامل · PDF، عکس یا Word بیمه‌نامه برای مقایسهٔ قرارداد</span></label>
       <div class="does"><span class="t-inc">پرمصرف و زیر فشار سقف ← افزایش</span><span class="t-reduce">کم‌مصرف ← کاهش</span><span class="t-remove">بدون مصرف ← حذف</span><span class="t-protect">حمایتی ← حفظ</span><span class="t-keep">مورد استثنایی ← چشم‌پوشی</span></div>
       <button class="link" type="button" data-go="renewal" style="align-self:flex-start">یا تحلیل ${fmtInt(all.length)} گروه نمونه را ببینید ←</button>
     </section>
     <section class="mis">
-      <div class="mis-h"><span class="num">۲</span><div><h2>برآورد قیمت مناقصه</h2><p>نام سازمان را بزنید؛ سابقهٔ خسارتش را می‌گیریم، تحلیل می‌کنیم و قیمتی می‌دهیم که Loss Ratio زیر ${fmtPct(t)} بماند.</p></div></div>
+      <div class="mis-h"><span class="blob b2"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 12.2V4.5a1 1 0 0 1 1-1h7.7l8.3 8.3-8.7 8.7z"/><circle cx="8.3" cy="8.3" r="1.5"/></svg></span><div><h2>برآورد قیمت مناقصه</h2><p>نام سازمان را بزنید؛ سابقهٔ خسارتش را می‌گیریم، تحلیل می‌کنیم و قیمتی می‌دهیم که Loss Ratio زیر ${fmtPct(t)} بماند.</p></div></div>
       <form class="qbox" id="tenderQ"><input id="tq" placeholder="نام سازمان یا شرکت، مثلاً شرکت گاز" autocomplete="off" aria-label="نام سازمان یا شرکت"><button class="btn primary" type="submit">دریافت سابقه و برآورد</button></form>
       <div class="qsug">امتحان کنید: ${tenders.map(x => `<button type="button" data-tq="${esc(short(x.R.group.name).replace(/^مناقصهٔ\s*/, ""))}">${esc(short(x.R.group.name).replace(/^مناقصهٔ\s*/, ""))}</button>`).join("")}</div>
       <div class="conn"><i></i><span>داده‌پردازان: اتصال مستقیم در فاز آخر پروژه. تا آن موقع سابقه از دادهٔ نمونه یا فایل اکسل خروجی داده‌پردازان خوانده می‌شود.</span></div>
@@ -2637,15 +2840,15 @@ function renderHome(){
     </div>
     <div class="isl w2">
       ${islHead("action", "مرکز اقدام", `${fmtInt(todo.length)} پیشنهاد از روی داده‌ها`, false)}
-      <div class="cchips">${CATS.map(([k, l]) => `<button class="cchip cc-${k}" type="button" data-cat="${k}">${l}<b>${fmtInt(nCat(k))}</b></button>`).join("")}</div>
+      <div class="donut-row">${donutSVG(CATS.map(([k]) => [nCat(k), DONUT_C[k]]), todo.length)}<div class="dleg">${CATS.map(([k, l]) => `<button type="button" data-cat="${k}"><i style="background:${DONUT_C[k]}"></i>${l}<b>${fmtInt(nCat(k))}</b></button>`).join("")}</div></div>
     </div>
     <div class="isl lst click" data-go="tender" role="link" tabindex="0">
       ${islHead("tender", "مناقصه", "قیمت قرارداد جدید", false)}
       <div class="ilist">${tenders.slice(0, 3).map(x => { const z = RISK[x.R.risk(x.R.priorScaled)[0]]; return `<button class="ili" type="button" data-tender="${x.i}"><span>${esc(short(x.R.group.name))}</span><em class="tag ${z[3]}" title="ریسک قیمت بیمه‌گر قبلی">قبلی: ${z[1]}</em></button>`; }).join("") || '<span class="small muted">مناقصه‌ای نیست.</span>'}</div>
     </div>
     <div class="isl lst click" data-go="reminders" role="link" tabindex="0">
-      ${islHead("cal", "یادآور تمدید", "نزدیک‌ترین‌ها", false)}
-      <div class="ilist">${soon.slice(0, 3).map(x => { const d = dayTag(x.A.renewal.days); return `<button class="ili" type="button" data-open="${x.i}"><span>${esc(short(x.A.group.name))}</span><em class="tag ${d[0]}">${d[1]}</em></button>`; }).join("") || '<span class="small muted">تمدیدی ثبت نشده.</span>'}</div>
+      ${islHead("cal", "تمدیدهای پیش رو", "۹۰ روز آینده", false)}
+      ${timelineHTML(soon.filter(x => x.A.renewal.days <= 90))}
     </div>
     <div class="isl w2 ai-i">
       ${islHead("ai", "دستیار هوشمند", "از دادهٔ هر گروه بپرسید؛ جواب با منبع", false)}
