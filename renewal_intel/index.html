@@ -99,7 +99,7 @@ a{color:var(--brand)}
 .mobile-only{display:none}
 
 .tb-brand{display:flex;align-items:center;gap:10px;border:0;background:none;cursor:pointer;padding:0;text-align:start;flex:none}
-.tb-brand .logo{background:linear-gradient(135deg,var(--brand),var(--brand2));color:#fff;border-radius:12px}
+.tb-brand .logo{background:conic-gradient(from 200deg,#4F46E5,#8B5CF6,#EC4899,#4F46E5);color:#fff;border-radius:13px;box-shadow:0 6px 16px -6px #7C3AED}
 .tb-brand .tx b{display:block;font-size:14.5px;font-weight:800;line-height:1.3;direction:ltr;text-align:right}
 .tb-brand .tx span{display:block;font-size:11.5px;color:var(--ink2)}
 .topbar .search{margin-inline-start:18px}
@@ -130,7 +130,7 @@ button.isl:hover,.isl.click:hover{transform:translateY(-2px)}
 :root[data-theme="dark"] .isl-h .ic,:root[data-theme="dark"] .mi .ic{color:color-mix(in srgb,var(--h) 65%,white);background:color-mix(in srgb,var(--h) 22%,var(--surface))}
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .isl-h .ic,:root:not([data-theme="light"]) .mi .ic{color:color-mix(in srgb,var(--h) 65%,white);background:color-mix(in srgb,var(--h) 22%,var(--surface))}}
 .ic{--h:#6366F1}.ic-renewal{--h:#6366F1}.ic-action{--h:#F59E0B}.ic-tender{--h:#0D9488}.ic-cal{--h:#EC4899}.ic-ai{--h:#8B5CF6}.ic-docs{--h:#0EA5E9}.ic-settings{--h:#64748B}
-.ic-users{--h:#F43F5E}.ic-map{--h:#0EA5E9}.ic-link{--h:#14B8A6}.ic-market{--h:#F59E0B}.ic-clock{--h:#8B5CF6}.ic-upload{--h:#6366F1}.ic-search{--h:#0D9488}.ic-moon{--h:#475569}.ic-portfolio{--h:#4F46E5}.ic-urgent{--h:#EF4444}
+.ic-claims{--h:#E11D48}.ic-users{--h:#F43F5E}.ic-map{--h:#0EA5E9}.ic-link{--h:#14B8A6}.ic-market{--h:#F59E0B}.ic-clock{--h:#8B5CF6}.ic-upload{--h:#6366F1}.ic-search{--h:#0D9488}.ic-moon{--h:#475569}.ic-portfolio{--h:#4F46E5}.ic-urgent{--h:#EF4444}
 .isl-h .ic svg{width:23px;height:23px}
 .isl-h h3{font-size:15.5px;margin:0}
 .isl-h p{font-size:12.5px;color:var(--ink2)}
@@ -162,6 +162,7 @@ button.isl:hover,.isl.click:hover{transform:translateY(-2px)}
 .ai-ul{margin:4px 0 0;padding-inline-start:18px;display:flex;flex-direction:column;gap:3px}
 .ai-next{display:flex;flex-wrap:wrap;gap:5px;margin-top:4px}
 .ai-next button{font-size:11.5px;border:1px solid var(--brand);color:var(--brand);background:var(--surface);border-radius:99px;padding:2px 10px;cursor:pointer;font-family:inherit}
+mark.lexfix{background:var(--mid-bg);color:inherit;border-bottom:1.5px dotted var(--mid);border-radius:3px;padding:0 1px}
 .ai-link{border:0;background:none;color:var(--brand);font-weight:800;cursor:pointer;padding:0;font-family:inherit;font-size:inherit}
 .ai-t{border-collapse:collapse;font-size:12px;width:100%}.ai-t td,.ai-t th{padding:4px 6px;border-bottom:1px solid var(--line2);position:static}
 .hask select{height:44px;border-radius:12px;border:1px solid var(--line);background:var(--surface);padding:0 8px;max-width:170px;font-family:inherit;color:inherit}
@@ -180,6 +181,117 @@ button.isl:hover,.isl.click:hover{transform:translateY(-2px)}
   .road{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
 }
 @media (max-width:520px){.bento .isl.w2,.bento .isl.lst{grid-column:1 / -1} .bento .isl:not(.w2):not(.lst) .isl-h,.road .isl-h{flex-direction:column;align-items:flex-start;gap:8px} .road .isl{padding-top:40px} .isl .foot2{font-size:12px}}
+
+/* ---- home v2 ---- */
+.hh2{border-radius:28px;padding:26px 30px;color:#fff;background:var(--hero-bg);display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,.9fr) minmax(0,1.1fr);gap:24px;align-items:center;position:relative;overflow:hidden}
+.hh2:after{content:"";position:absolute;left:-60px;bottom:-100px;width:280px;height:280px;border-radius:50%;background:radial-gradient(#ffffff22,transparent 70%);pointer-events:none}
+.hh2 h1{font-size:27px;font-weight:900;margin:2px 0}
+.todo{display:flex;flex-direction:column;gap:8px;margin-top:14px}
+.todo button{display:flex;align-items:center;gap:10px;background:#ffffff1f;border:1px solid #ffffff2e;border-radius:14px;padding:9px 12px;color:#fff;font:500 13px var(--f);text-align:start;cursor:pointer}
+.todo button:hover{background:#ffffff2e}
+.todo button span:nth-child(2){flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.todo b{font-size:11px;background:#fff;border-radius:99px;padding:1px 9px;flex:none}
+.todo b.urgent{color:#E11D48}.todo b.warn{color:#B45309}.todo b.opp{color:#16A34A}.todo b.note{color:#4F46E5}
+.dot{width:8px;height:8px;border-radius:50%;flex:none;display:inline-block}
+.hh2-gauge{display:flex;flex-direction:column;align-items:center;position:relative;z-index:1}
+.hh2-gauge .gv{font-size:36px;font-weight:900;line-height:1.1;margin-top:2px}
+.hh2-st{display:grid;grid-template-columns:1fr 1fr;gap:12px;position:relative;z-index:1}
+.hh2-st div{background:#ffffff1c;border:1px solid #ffffff2e;border-radius:18px;padding:12px 14px;min-width:0}
+.hh2-st span{display:block;font-size:12px;opacity:.85}.hh2-st b{display:block;font-size:24px;font-weight:900;line-height:1.3}.hh2-st small{font-size:11px;opacity:.82}
+.hh2 .lic{display:inline-block;margin-top:10px;font-size:12px;font-weight:700;background:#ffffff29;border-radius:99px;padding:2px 12px}
+.mis-h .blob{width:58px;height:58px;border-radius:18px;display:grid;place-items:center;flex:none;box-shadow:0 10px 22px -10px #4F46E5}
+.mis-h .blob svg{width:28px;height:28px}.blob.b1{background:linear-gradient(135deg,#6366F1,#A855F7)}.blob.b2{background:linear-gradient(135deg,#0D9488,#0EA5E9);box-shadow:0 10px 22px -10px #0D9488}
+.donut-row{display:flex;align-items:center;gap:16px;margin-top:auto}
+.donut{width:104px;height:104px;flex:none;color:var(--ink)}
+.dleg{display:grid;grid-template-columns:1fr 1fr;gap:6px;flex:1}
+.dleg button{display:flex;align-items:center;gap:6px;border:1px solid var(--line2);background:var(--surface2);border-radius:10px;padding:5px 8px;font:700 12.5px var(--f);color:var(--ink);cursor:pointer}
+.dleg i{width:9px;height:9px;border-radius:50%}.dleg b{margin-inline-start:auto}
+.tline{position:relative;height:100px;margin:10px 6px 0}
+.tline .ln{position:absolute;top:32px;inset-inline:0;height:4px;border-radius:2px;background:linear-gradient(to left,#E11D48,#F59E0B 35%,#C7C9F5 65%)}
+.tline .pt{position:absolute;top:24px;width:20px;height:20px;border-radius:50%;border:4px solid var(--surface);box-shadow:0 2px 6px rgba(0,0,0,.2);transform:translateX(50%);cursor:pointer;padding:0}
+.tline .lb{position:absolute;transform:translateX(min(50%, 0px));font-size:11px;white-space:nowrap;font-weight:800}
+.tline .tk{position:absolute;top:0;font-size:10.5px;color:var(--ink3);transform:translateX(50%)}
+@media (max-width:1100px){.hh2{grid-template-columns:1fr 1fr}.hh2-g{grid-column:1/-1}}
+.hh2 > *{min-width:0}
+@media (max-width:700px){
+  .hh2{grid-template-columns:minmax(0,1fr);padding:18px 16px;border-radius:24px;gap:14px}.hh2 h1{font-size:22px}.dleg{grid-template-columns:1fr}
+  .todo button span:nth-child(2){white-space:normal;line-height:1.6}
+  .hh2-gauge svg{width:190px;height:auto}.hh2-gauge .gv{font-size:30px}
+  .hh2-st{gap:10px}.hh2-st div{padding:10px 12px;border-radius:16px}.hh2-st b{font-size:20px}
+}
+
+/* ---- document review v2 ---- */
+.rv-prog{display:flex;flex-direction:column;gap:6px;min-width:260px;margin-top:6px}
+.rv-prog div:first-child{display:flex;justify-content:space-between;gap:10px;font-size:12.5px}
+.prog2{height:10px;border-radius:5px;background:var(--line2);overflow:hidden;display:flex}.prog2 i{display:block;height:100%;background:linear-gradient(to left,#16A34A,#4ADE80);transition:width .3s}.prog2 i.sure{background:#BBF7D0}
+.rv{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:20px;align-items:start}
+.rv-paper{position:sticky;top:76px}
+.rv-pbox{max-height:72vh;overflow:auto;padding:12px}
+.rv-pg{position:relative;border-radius:10px;overflow:hidden;border:1px solid var(--line)}
+.rv-pg img{display:block;width:100%}
+.rv-hl{position:absolute;border:3px solid var(--brand);border-radius:6px;box-shadow:0 0 0 9999px rgba(20,20,48,.25);background:#4F46E512}
+.rv-hl.doubt{border-color:var(--mid);background:#F59E0B22}
+.rv-side{display:flex;flex-direction:column;gap:16px;min-width:0}
+.rv-cur{padding:18px;display:flex;flex-direction:column;gap:12px;border-width:2px}
+.rv-cur.doubt{border-color:var(--mid)}.rv-cur.ok{border-color:var(--good)}
+.rv-h{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.rv-cat{height:42px;border:1px solid var(--input-line);border-radius:12px;background:var(--surface);padding:0 10px;font:700 14px var(--f);color:var(--ink)}
+.rv-lbl{width:100%;border-radius:10px;border:1px solid var(--line);background:#fff}
+.rv-cell{width:100%;border-radius:12px;border:1px solid var(--line);background:#fff;cursor:zoom-in}
+.rv-val{display:flex;flex-direction:column;gap:4px}
+.rv-in{display:flex;align-items:center;height:56px;border:2px solid var(--input-line);border-radius:14px;background:var(--surface);padding:0 14px;gap:8px}
+.rv-cur.doubt .rv-in{border-color:var(--mid);background:var(--mid-bg)}
+.rv-in input{flex:1;min-width:0;border:0;background:none;font:900 24px var(--f);color:var(--ink)}
+.rv-in input:focus{outline:none}.rv-in em{font-style:normal;font-size:12px;color:var(--ink2)}
+.rv-alt{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.rv-alt button{font:800 15px var(--f);border:1.5px solid var(--brand);color:var(--brand);background:var(--surface);border-radius:12px;padding:5px 14px;cursor:pointer}
+.rv-act{display:flex;gap:10px;flex-wrap:wrap}.rv-act .primary{flex:1;height:48px;justify-content:center}.rv-act .btn{height:48px}
+.rv-list{padding:6px 0}
+.rv-li{display:flex;align-items:center;gap:12px;padding:10px 18px;border:0;border-bottom:1px solid var(--line2);background:none;width:100%;text-align:start;font:inherit;color:var(--ink);cursor:pointer}
+.rv-li.now{background:var(--hl)}.rv-li .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rv-li .s{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:900;flex:none}
+.c-ok{background:var(--good);color:#fff}.c-sure{background:var(--good-bg);color:var(--good)}.c-doubt{background:var(--mid-bg);color:var(--mid-ink)}.c-todo{background:var(--line2);color:var(--ink3)}
+@media (max-width:980px){.rv{grid-template-columns:1fr}.rv-paper{position:static}.rv-pbox{max-height:46vh}}
+
+/* ---- comparison v2 ---- */
+.cmp-h h1{font-size:26px;font-weight:900}
+.kp2s{display:grid;grid-template-columns:1.25fr 1fr 1fr 1fr;gap:16px}
+.kp2{padding:16px 18px;display:flex;flex-direction:column;gap:2px}
+.kp2.lead{background:linear-gradient(135deg,var(--soft),var(--surface) 70%)}
+.kp2 .l{font-size:12.5px;color:var(--ink2)}.kp2 .big{font-size:30px;font-weight:900;line-height:1.2}
+.kp2 .row{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.brow{display:grid;grid-template-columns:200px minmax(0,1fr) 150px;gap:12px;align-items:center;padding:7px 0;border-bottom:1px dashed var(--line2);font-size:13px}
+.brow:last-child{border-bottom:0}
+.track{position:relative;height:22px}
+.track .bar{position:absolute;inset-inline-start:0;top:3px;height:16px;border-radius:8px 0 0 8px}
+.track .ref,.refkey{position:absolute;top:-6px;bottom:-6px;width:0;border-inline-start:2px dashed var(--brand)}
+.refkey{position:static;display:inline-block;width:14px;height:0;border:0;border-top:2px dashed var(--brand);vertical-align:middle}
+.ins{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}
+.in{padding:14px 16px;display:flex;gap:12px;align-items:flex-start}
+.in .ic{width:36px;height:36px;border-radius:12px;display:grid;place-items:center;flex:none;font-weight:900}
+.in b{display:block;margin-bottom:2px}.in span{font-size:12.5px;color:var(--ink2);line-height:1.8}
+.in-warn .ic{background:var(--mid-bg);color:var(--mid-ink)}.in-ok .ic{background:var(--good-bg);color:var(--good)}.in-note .ic{background:var(--soft);color:var(--brand)}.in-info .ic{background:var(--line2);color:var(--ink2)}
+.cins{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px 16px;align-items:end}
+.cin{display:flex;flex-direction:column;gap:5px;min-width:0;font-size:12.5px;color:var(--ink2)}
+.cin select,.cin input[type=number]{width:100%;min-width:0;font:inherit;font-size:14px;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:9px 11px}
+.cin .row{display:flex;align-items:center;gap:6px}.cin .row em{font-style:normal;font-size:12px;color:var(--ink2);white-space:nowrap}
+.cin.slider{flex-direction:row;align-items:center;min-width:0}
+.clmt td{vertical-align:top}.clmt td .small{display:block;margin-top:2px;max-width:280px;white-space:normal}
+@media (max-width:760px){.cins{grid-template-columns:repeat(2,minmax(0,1fr))}.cin.slider{grid-column:1/-1 !important}}
+.proj .panel-h{gap:14px}
+.slider{display:flex;align-items:center;gap:10px;min-width:280px}
+.slider input[type=range]{-webkit-appearance:none;appearance:none;flex:1;height:8px;border-radius:4px;background:linear-gradient(to left,var(--brand) var(--p),var(--line2) var(--p));direction:rtl}
+.slider input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:22px;height:22px;border-radius:50%;background:#fff;border:4px solid var(--brand);box-shadow:0 2px 6px rgba(0,0,0,.2);cursor:grab}
+.slider input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:#fff;border:4px solid var(--brand)}
+.scn{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.sc{border:1px solid var(--line);border-radius:20px;padding:18px;display:flex;flex-direction:column;gap:8px;position:relative;background:var(--surface)}
+.sc.rec{border:2px solid var(--brand);box-shadow:0 18px 40px -20px var(--brand)}
+.sc .badge{position:absolute;top:-12px;inset-inline-start:18px;background:linear-gradient(135deg,#4F46E5,#7C3AED);color:#fff;font-size:11.5px;font-weight:800;border-radius:99px;padding:3px 12px}
+.sc .pr b{font-size:32px;font-weight:900}
+.sc ul{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:5px;font-size:12.5px}
+.sc li{display:flex;justify-content:space-between;gap:8px}
+@media (max-width:980px){.kp2s{grid-template-columns:1fr 1fr}.scn{grid-template-columns:1fr}.brow{grid-template-columns:110px minmax(0,1fr) 92px;font-size:12px}}
+@media (max-width:520px){.kp2 .big{font-size:24px}.slider{min-width:0;width:100%}.brow{grid-template-columns:1fr auto;row-gap:4px}.brow .track{grid-column:1/-1;grid-row:2}}
 
 /* ---- two main jobs ---- */
 .missions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
@@ -490,11 +602,11 @@ tr.hl td{background:var(--hl)} tr.hl td:first-child{box-shadow:inset -3px 0 0 va
     <header class="topbar">
       <div class="mtop">
         <button class="iconbtn backbtn" type="button" data-back aria-label="بازگشت" hidden><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></button>
-        <button class="tb-brand" type="button" data-go="home" aria-label="خانه"><span class="logo">RI</span></button>
+        <button class="tb-brand" type="button" data-go="home" aria-label="خانه"><span class="logo"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6z"/><path d="M8.5 12.5l2.4 2.4 4.6-5"/></svg></span></button>
         <div class="hello"><b id="mTitle">Renewal Intelligence</b><span id="mSub">دستیار تمدید و مناقصه</span></div>
         <button class="iconbtn" type="button" data-theme-toggle aria-label="تغییر حالت روشن و تیره"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></button><button class="iconbtn" id="bellBtnM" type="button" aria-label="کارهای فوری"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9a6 6 0 1 1 12 0c0 6 2.5 7.5 2.5 7.5h-17S6 15 6 9"/><path d="M10 20a2 2 0 0 0 4 0"/></svg><span class="badge" id="bellDotM" hidden></span></button>
       </div>
-      <button class="tb-brand hide-m" type="button" data-go="home" aria-label="خانه"><span class="logo">RI</span><span class="tx"><b>Renewal Intelligence</b><span id="brandSub">دستیار کارگزاری بیمه</span></span></button>
+      <button class="tb-brand hide-m" type="button" data-go="home" aria-label="خانه"><span class="logo"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6z"/><path d="M8.5 12.5l2.4 2.4 4.6-5"/></svg></span><span class="tx"><b>Renewal Intelligence</b><span id="brandSub">دستیار کارگزاری بیمه</span></span></button>
       <button class="btn hide-m backbtn" type="button" data-back hidden><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>بازگشت</button>
       <label class="search" for="q"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><input id="q" type="search" placeholder="جست‌وجوی گروه یا مناقصه…" autocomplete="off"></label>
       <span class="tb-gap"></span>
@@ -504,7 +616,7 @@ tr.hl td{background:var(--hl)} tr.hl td:first-child{box-shadow:inset -3px 0 0 va
       <button class="iconbtn hide-m" type="button" data-theme-toggle aria-label="تغییر حالت روشن و تیره"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></button>
       <button class="iconbtn hide-m" id="bellBtn" type="button" aria-label="کارهای فوری"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9a6 6 0 1 1 12 0c0 6 2.5 7.5 2.5 7.5h-17S6 15 6 9"/><path d="M10 20a2 2 0 0 0 4 0"/></svg><span class="badge" id="bellDot" hidden></span></button>
       <label class="btn primary hide-m" for="file" tabindex="0" id="uploadBtn">＋ افزودن فایل‌های اکسل</label>
-      <input type="file" id="file" accept=".xlsx,.xls" multiple hidden>
+      <input type="file" id="file" accept=".xlsx,.xls,.csv,.pdf,.jpg,.jpeg,.png,.webp,.docx,.txt" multiple hidden>
     </header>
     <div class="content">
       <div id="error" class="err" hidden></div>
@@ -1188,6 +1300,592 @@ function makeTenders(today){
 }
 if (typeof module !== "undefined") module.exports.makeTenders = makeTenders;
 
+/* ================= Document reader =================
+   Reads PDF (text or scanned), photos, Word and text files on the device. Scanned pages go through
+   on-device OCR (Tesseract, Persian model): table lines are found first and every cell is read on its
+   own, so amounts are not mixed with the long coverage descriptions. Libraries load on first use. */
+
+// Libraries ship next to the page (vendor/); if that fails (some viewers block it) the same versions
+// load from jsDelivr. Nothing about the document itself ever leaves the device.
+const DR = { worker: null, eng: null, pdf: null, src: null,
+  bases: [
+    { pdf: "vendor/pdf/", tjs: "vendor/ocr/tesseract.min.js", worker: "vendor/ocr/worker.min.js", core: "vendor/ocr/", fas: "vendor/ocr/", eng: "vendor/ocr/", b64: true },
+    { pdf: "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/", tjs: "https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js",
+      worker: "https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/worker.min.js", core: "https://cdn.jsdelivr.net/npm/tesseract.js-core@5.1.1/",
+      fas: "https://cdn.jsdelivr.net/npm/@tesseract.js-data/fas@1.0.0/4.0.0_best_int/", eng: "https://cdn.jsdelivr.net/npm/@tesseract.js-data/eng@1.0.0/4.0.0_best_int/" },
+  ] };
+const drScript = src => new Promise((ok, bad) => { const s = document.createElement("script"); s.src = src; s.onload = ok; s.onerror = () => bad(new Error("بارگذاری " + src + " نشد")); document.head.appendChild(s); });
+const drAbs = p => new URL(p, location.href).href;
+async function drTry(fn){
+  if (location.protocol === "file:") throw new Error("خواندن PDF و عکس در نسخهٔ فلش فعال نیست؛ از نسخهٔ نصب‌شده روی گوشی یا لینک آنلاین استفاده کنید.");
+  let last;
+  for (const b of DR.src ? [DR.src] : DR.bases){ try { const r = await fn(b); DR.src = b; return r; } catch (e){ last = e; } }
+  throw new Error("ابزار خواندن مدرک بارگذاری نشد" + (last ? ` (${last.message})` : ""));
+}
+async function drPDF(){
+  if (DR.pdf) return DR.pdf;
+  return drTry(async b => {
+    if (!window.pdfjsLib) await drScript(b.pdf + "pdf.min.js");
+    pdfjsLib.GlobalWorkerOptions.workerSrc = drAbs(b.pdf + "pdf.worker.min.js");
+    return (DR.pdf = pdfjsLib);
+  });
+}
+// Language data: shipped as base64 text next to the page (every host serves .txt), gzip on the CDN.
+// tesseract.js fetches "<langPath>/<code>.traineddata.gz"; a blob URL ending in "#" makes that suffix a
+// fragment, so the decoded bytes are fetched from memory. (Passing the bytes directly hangs in 5.1.1.)
+async function drLangPath(b, code){
+  if (!b.b64) return drAbs(b[code]);
+  const r = await fetch(drAbs(b[code] + code + ".traineddata.b64.txt"));
+  if (!r.ok) throw new Error(`داده‌ی زبان ${code} دریافت نشد (${r.status})`);
+  const bin = atob((await r.text()).trim()), data = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) data[i] = bin.charCodeAt(i);
+  return URL.createObjectURL(new Blob([data], { type: "application/gzip" })) + "#";
+}
+async function drOCR(){
+  if (DR.worker) return DR.worker;
+  return drTry(async b => {
+    if (!window.Tesseract) await drScript(b.tjs);
+    DR.worker = await Tesseract.createWorker("fas", 1, { workerPath: drAbs(b.worker), corePath: drAbs(b.core), langPath: await drLangPath(b, "fas"), gzip: true, cacheMethod: "none" });
+    return DR.worker;
+  });
+}
+
+/* ---------- pages ---------- */
+function drCanvas(w, h){ const c = document.createElement("canvas"); c.width = Math.round(w); c.height = Math.round(h); return c; }
+function drFit(src, width){ // scale an image/canvas to a working width (OCR likes ~1800px wide A4)
+  const s = width / (src.width || src.naturalWidth), c = drCanvas((src.width || src.naturalWidth) * s, (src.height || src.naturalHeight) * s);
+  const g = c.getContext("2d"); g.fillStyle = "#fff"; g.fillRect(0, 0, c.width, c.height); g.imageSmoothingQuality = "high"; g.drawImage(src, 0, 0, c.width, c.height); return c;
+}
+function drRotate(c, deg){
+  if (!deg) return c;
+  const r = deg % 180 ? drCanvas(c.height, c.width) : drCanvas(c.width, c.height), g = r.getContext("2d");
+  g.translate(r.width / 2, r.height / 2); g.rotate(deg * Math.PI / 180); g.drawImage(c, -c.width / 2, -c.height / 2); return r;
+}
+async function drImagePages(file){
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await new Promise((ok, bad) => { const i = new Image(); i.onload = () => ok(i); i.onerror = () => bad(new Error("تصویر باز نشد")); i.src = url; });
+    return [{ canvas: drFit(img, 1800), scanned: true }];
+  } finally { URL.revokeObjectURL(url); }
+}
+async function drPdfPages(file, progress){
+  const lib = await drPDF();
+  const doc = await lib.getDocument({ data: new Uint8Array(await file.arrayBuffer()) }).promise;
+  const pages = [];
+  for (let n = 1; n <= doc.numPages; n++){
+    progress && progress(`صفحهٔ ${fmtInt(n)} از ${fmtInt(doc.numPages)}`);
+    const p = await doc.getPage(n), v1 = p.getViewport({ scale: 1 });
+    const scale = 1800 / Math.min(v1.width, v1.height), vp = p.getViewport({ scale });
+    const canvas = drCanvas(vp.width, vp.height), g = canvas.getContext("2d");
+    g.fillStyle = "#fff"; g.fillRect(0, 0, canvas.width, canvas.height);
+    await p.render({ canvasContext: g, viewport: vp }).promise;
+    const tc = await p.getTextContent();
+    const items = tc.items.filter(it => it.str && it.str.trim()).map(it => {
+      const [a, b, c, d, e, f] = lib.Util.transform(vp.transform, it.transform), h = Math.hypot(c, d);
+      return { text: it.str, x0: e - (it.width * scale) * (it.dir === "rtl" ? 0 : 0), y0: f - h, x1: e + it.width * scale, y1: f, conf: 99 };
+    });
+    const words = drJoin(items), textLen = words.reduce((s, it) => s + it.text.trim().length, 0);
+    pages.push({ canvas, scanned: textLen < 40, words: textLen >= 40 ? words : null });
+  }
+  return pages;
+}
+// PDF text often stores Persian as separate presentation-form glyphs (ﺟ ﺒ ﺮ). NFKC turns them into normal
+// letters; touching glyphs on one line are joined right to left into words.
+function drJoin(items){
+  const fa = t => /^[\u0600-\u06FF\u200c\s]+$/.test(t);
+  const list = items.map(it => Object.assign({}, it, { text: it.text.normalize("NFKC") })).filter(it => it.text.trim());
+  list.sort((a, b) => Math.abs(a.y1 - b.y1) > (a.y1 - a.y0) * 0.5 ? a.y1 - b.y1 : b.x1 - a.x1);
+  const out = [];
+  list.forEach(it => {
+    const p = out[out.length - 1], h = it.y1 - it.y0;
+    if (p && fa(p.text) && fa(it.text) && Math.abs(p.y1 - it.y1) < h * 0.5 && p.x0 - it.x1 < h * 0.25){ p.text = it.text.trim() ? p.text + it.text : p.text; p.x0 = Math.min(p.x0, it.x0); }
+    else out.push(Object.assign({}, it));
+  });
+  // a real gap between glyph runs is a space: split merged runs back on wide gaps is not needed (PDF keeps spaces as items)
+  return out.map(w => Object.assign(w, { text: w.text.replace(/\s+/g, " ").trim() })).filter(w => w.text);
+}
+async function drDocx(file){
+  const z = XLSX.CFB.read(new Uint8Array(await file.arrayBuffer()), { type: "array" });
+  const ent = XLSX.CFB.find(z, "word/document.xml") || XLSX.CFB.find(z, "/word/document.xml");
+  if (!ent) throw new Error("محتوای Word پیدا نشد");
+  const xml = new TextDecoder().decode(ent.content), dom = new DOMParser().parseFromString(xml, "application/xml");
+  const W = "http://schemas.openxmlformats.org/wordprocessingml/2006/main", txt = el => [...el.getElementsByTagNameNS(W, "t")].map(t => t.textContent).join("");
+  const tables = [...dom.getElementsByTagNameNS(W, "tbl")].map(t => [...t.getElementsByTagNameNS(W, "tr")].map(tr => [...tr.getElementsByTagNameNS(W, "tc")].map(tc => ({ text: txt(tc), conf: 99 }))));
+  const text = [...dom.getElementsByTagNameNS(W, "p")].map(txt).join("\n");
+  return { text, tables, pages: [] };
+}
+
+/* ---------- layout: table grid from ruling lines ---------- */
+function drInk(c, thr){
+  const g = c.getContext("2d"), { data } = g.getImageData(0, 0, c.width, c.height), W = c.width, H = c.height, ink = new Uint8Array(W * H);
+  for (let i = 0, p = 0; i < ink.length; i++, p += 4){ const r = data[p], gg = data[p + 1], b = data[p + 2];
+    // dark and not strongly coloured (blue stamps and signatures are mostly saturated)
+    ink[i] = (r * 0.3 + gg * 0.59 + b * 0.11) < (thr || 150) && Math.max(r, gg, b) - Math.min(r, gg, b) < 70 ? 1 : 0; }
+  return { ink, W, H };
+}
+function drRuns(get, len, other, gap){ // longest dark run along a line, tolerating small gaps
+  let best = 0, cur = 0, miss = 0;
+  for (let i = 0; i < len; i++){ if (get(i)){ cur += 1 + miss; miss = 0; if (cur > best) best = cur; } else if (cur && miss < gap) miss++; else { cur = 0; miss = 0; } }
+  return best;
+}
+function drMerge(list, d){ const out = []; list.forEach(v => { const l = out[out.length - 1]; if (l && v - l.e <= d){ l.e = v; } else out.push({ s: v, e: v }); }); return out.map(x => Math.round((x.s + x.e) / 2)); }
+function drGrid(c){
+  // ruling lines in scans are often faint and broken: a lighter threshold and larger gaps
+  const { ink, W, H } = drInk(c, 195);
+  const hs = [], vs = [];
+  for (let y = 0; y < H; y++) if (drRuns(x => ink[y * W + x], W, 0, 12) > W * 0.3) hs.push(y);
+  const hl = drMerge(hs, 6);
+  if (hl.length < 3) return null;
+  const top = hl[0], bot = hl[hl.length - 1];
+  for (let x = 0; x < W; x++){ let run = 0; for (let y = top; y <= bot; y++) if (ink[y * W + x]) run++; if (run > (bot - top) * 0.35) vs.push(x); }
+  const vl = drMerge(vs, 6);
+  if (vl.length < 2) return null;
+  // cells: for every band between two horizontal lines, split at the vertical lines that cross that band
+  const rows = [];
+  for (let i = 0; i < hl.length - 1; i++){
+    const y0 = hl[i], y1 = hl[i + 1]; if (y1 - y0 < 16) continue;
+    const cuts = vl.filter(x => { let d = 0; for (let y = y0 + 3; y < y1 - 3; y++){ for (let k = -2; k <= 2; k++) if (ink[y * W + x + k]){ d++; break; } } return d > (y1 - y0 - 6) * 0.7; });
+    if (cuts.length < 2) continue;
+    const cells = []; for (let k = cuts.length - 1; k > 0; k--) cells.push({ x0: cuts[k - 1], x1: cuts[k], y0, y1 }); // right-to-left
+    rows.push(cells);
+  }
+  return rows.length ? { rows, W, H } : null;
+}
+
+/* ---------- OCR ---------- */
+function drWords(data){
+  const out = [];
+  (data.blocks || []).forEach(b => b.paragraphs.forEach(p => p.lines.forEach(l => l.words.forEach(w => out.push({ text: w.text, conf: w.confidence, x0: w.bbox.x0, y0: w.bbox.y0, x1: w.bbox.x1, y1: w.bbox.y1 })))));
+  return out;
+}
+// Orientation: text lines make the ink profile across rows spiky; on a page turned 90° the spikes are
+// across columns. Only then OCR decides between 90° and 270° (and 0° vs 180° when confidence is very low).
+function drSpiky(c){
+  const { ink, W, H } = drInk(drFit(c, 700)), rows = new Float64Array(H), cols = new Float64Array(W);
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (ink[y * W + x]){ rows[y]++; cols[x]++; }
+  const cv = a => { const m = a.reduce((s, v) => s + v, 0) / a.length; return m ? Math.sqrt(a.reduce((s, v) => s + (v - m) ** 2, 0) / a.length) / m : 0; };
+  return { rows: cv(rows), cols: cv(cols) };
+}
+async function drOrient(c){
+  const w = await drOCR(), small = drFit(c, 900), sp = drSpiky(c);
+  await w.setParameters({ tessedit_pageseg_mode: "3", tessedit_char_whitelist: "" });
+  const conf = async deg => (await w.recognize(drRotate(small, deg))).data.confidence;
+  if (sp.cols > sp.rows * 1.15){ const a = await conf(90), b = await conf(270); return { deg: a >= b ? 90 : 270, margin: Math.abs(a - b), turned: true }; }
+  const c0 = await conf(0); if (c0 >= 45) return { deg: 0, margin: 99 };
+  const c1 = await conf(180); return c1 > c0 + 20 ? { deg: 180, margin: c1 - c0 } : { deg: 0, margin: 99 };
+}
+function drCrop(c, cell, k){
+  const pad = 4, cw = cell.x1 - cell.x0 - pad * 2, ch = cell.y1 - cell.y0 - pad * 2;
+  if (cw < 8 || ch < 8) return null;
+  const out = drCanvas(cw * k + 40, ch * k + 40), g = out.getContext("2d");
+  g.fillStyle = "#fff"; g.fillRect(0, 0, out.width, out.height); g.imageSmoothingQuality = "high";
+  g.drawImage(c, cell.x0 + pad, cell.y0 + pad, cw, ch, 20, 20, cw * k, ch * k); return out;
+}
+async function drEng(){
+  if (DR.eng) return DR.eng;
+  const b = DR.src || DR.bases[0];
+  DR.eng = await Tesseract.createWorker("eng", 1, { workerPath: drAbs(b.worker), corePath: drAbs(b.core), langPath: await drLangPath(b, "eng"), gzip: true, cacheMethod: "none" });
+  await DR.eng.setParameters({ tessedit_pageseg_mode: "7", tessedit_char_whitelist: "0123456789/,." });
+  return DR.eng;
+}
+const drNorm = s => String(s || "").replace(/[۰-۹]/g, d => "۰۱۲۳۴۵۶۷۸۹".indexOf(d)).replace(/[٠-٩]/g, d => "٠١٢٣٤٥٦٧٨٩".indexOf(d)).replace(/[٬،]/g, ",");
+function drParseAmount(t){
+  const m = drNorm(t).replace(/\s+/g, "").match(/\d{1,3}(?:[\/,.]\d{3})+|\d{4,}/);
+  return m ? +m[0].replace(/[\/,.]/g, "") : null;
+}
+// One table cell. Narrow cells try the amount readers first (the Persian model turns numbers into letters);
+// whatever is not an amount is read as text. Wide description cells: only their first lines are read.
+async function drCell(w, c, cell, wide){
+  if (wide){
+    const top = Object.assign({}, cell, { y1: Math.min(cell.y1, cell.y0 + 130) }), crop = drCrop(c, top, 2);
+    if (!crop) return {};
+    await w.setParameters({ tessedit_pageseg_mode: "6", tessedit_char_whitelist: "" });
+    const r = await w.recognize(crop); return { text: r.data.text.replace(/\s+/g, " ").trim(), conf: r.data.confidence };
+  }
+  const crop = drCrop(c, cell, (cell.y1 - cell.y0) < 260 ? 3 : 2);
+  if (!crop) return { text: "", conf: 0 };
+  const a = await drAmount(w, crop);
+  if (a && a.value >= 1000) return { text: a.text, conf: a.conf, value: a.value, vconf: a.conf };
+  await w.setParameters({ tessedit_pageseg_mode: "6", tessedit_char_whitelist: "" });
+  const r = await w.recognize(crop), text = r.data.text.replace(/\s+/g, " ").trim(), out = { text, conf: r.data.confidence };
+  if (text.length < 30 && /بدون\s*سق|بدونسق|نامحدود/.test(text)){ out.value = Infinity; out.vconf = r.data.confidence; return out; }
+  if (!/[0-9۰-۹]/.test(text) && (text.match(/[آ-ی]/g) || []).length > 6) return out;
+  const e = await (await drEng()).recognize(crop), v = drParseAmount(e.data.text);
+  if (v != null && e.data.confidence >= 60){ out.value = v; out.vconf = e.data.confidence; }
+  return out;
+}
+async function drReadPage(page, progress, ctx){
+  let c = page.canvas;
+  if (page.words){ // text PDF: no OCR, just place the words in the grid
+    const grid = drGrid(c);
+    return { canvas: c, text: page.words.map(w => w.text).join(" "), tables: grid ? [drValues(drFill(grid, page.words))] : [], conf: 99 };
+  }
+  const w = await drOCR();
+  progress && progress("تشخیص جهت صفحه");
+  const o = await drOrient(c);
+  // pages of one scan are turned the same way: an unsure page follows the surest earlier one
+  let deg = o.deg; if (o.turned){ if (ctx.turn && (o.margin < 12 || ctx.turn.margin > o.margin)) deg = ctx.turn.deg; else ctx.turn = o; }
+  if (deg) c = drRotate(c, deg);
+  progress && progress("خواندن متن صفحه");
+  await w.setParameters({ tessedit_pageseg_mode: "3", preserve_interword_spaces: "1" });
+  const full = await w.recognize(c, {}, { text: true, blocks: true });
+  const words = drWords(full.data), grid = drGrid(c), tables = [];
+  if (grid){
+    const t = drFill(grid, words);
+    // narrow cells (titles and amounts) are read again on their own: page-level OCR mixes table columns
+    await w.setParameters({ tessedit_pageseg_mode: "6" });
+    let n = 0; const all = t.rows.flat(), total = all.length;
+    for (const cell of all){
+      n++; if (n % 4 === 0) progress && progress(`خواندن خانه‌های جدول ${fmtInt(n)} از ${fmtInt(total)}`);
+      const wide = (cell.x1 - cell.x0) >= grid.W * 0.4, r = await drCell(w, c, cell, wide);
+      if (wide){ if (r.text && (r.conf || 0) >= (cell.conf || 0) - 5) Object.assign(cell, r); } else Object.assign(cell, r);
+    }
+    tables.push(t);
+  }
+  return { canvas: c, text: full.data.text, tables, conf: full.data.confidence };
+}
+function drFill(grid, words){
+  const rows = grid.rows.map(cells => cells.map(cell => {
+    const ws = words.filter(w => { const cx = (w.x0 + w.x1) / 2, cy = (w.y0 + w.y1) / 2; return cx > cell.x0 && cx < cell.x1 && cy > cell.y0 && cy < cell.y1; });
+    ws.sort((a, b) => Math.abs(a.y0 - b.y0) > 12 ? a.y0 - b.y0 : b.x1 - a.x1);
+    return Object.assign({}, cell, { text: ws.map(w => w.text).join(" "), conf: ws.length ? ws.reduce((s, w) => s + w.conf, 0) / ws.length : 0 });
+  }));
+  return { rows, W: grid.W, H: grid.H };
+}
+
+// Text sources (text PDF, Word): amounts come straight from the cell text.
+function drValues(t){
+  t.rows.forEach(cells => cells.forEach((c, i) => {
+    if (c.x0 == null){ c.x0 = (cells.length - 1 - i) * 100; c.x1 = c.x0 + 90; c.y0 = 0; c.y1 = 0; }
+    if (c.value != null) return;
+    const txt = c.text || "";
+    if (txt.length < 30 && /بدون\s*سق|بدونسق|نامحدود/.test(txt)){ c.value = Infinity; c.vconf = 99; return; }
+    const v = drParseAmount(txt); if (v != null && v >= 1000 && txt.replace(/[^آ-ی]/g, "").length < 25){ c.value = v; c.vconf = 99; }
+  }));
+  return t;
+}
+
+/* ---------- entry ---------- */
+async function readDocument(file, progress){
+  const name = file.name.toLowerCase();
+  if (/\.docx$/.test(name)){ const d = await drDocx(file); d.tables = d.tables.map(rows => drValues({ rows, page: 0 })); return Object.assign(d, { file: file.name }); }
+  if (/\.(txt|csv)$/.test(name)) return { file: file.name, text: await file.text(), tables: [], pages: [] };
+  const pages = /\.pdf$/.test(name) ? await drPdfPages(file, progress) : await drImagePages(file);
+  const out = { file: file.name, text: "", tables: [], pages: [] };
+  const ctx = {};
+  for (let i = 0; i < pages.length; i++){
+    const r = await drReadPage(pages[i], s => progress && progress(`صفحهٔ ${fmtInt(i + 1)} از ${fmtInt(pages.length)}: ${s}`), ctx);
+    out.pages.push(r); out.text += "\n" + r.text; r.tables.forEach(t => out.tables.push(Object.assign(t, { page: i })));
+  }
+  return out;
+}
+
+/* Amount reader for Persian-digit numbers (۲,۵۰۰,۰۰۰,۰۰۰): Tesseract misses the dot-shaped zeros,
+   so the line is split into connected shapes; dots become ۰, low marks are separators, and only the
+   remaining real digits are recognised one by one. */
+function drBinary(c){
+  const g = c.getContext("2d"), d = g.getImageData(0, 0, c.width, c.height), a = d.data, n = c.width * c.height;
+  const hist = new Array(256).fill(0), gray = new Uint8Array(n);
+  for (let i = 0, p = 0; i < n; i++, p += 4){ const v = (a[p] * 0.3 + a[p + 1] * 0.59 + a[p + 2] * 0.11) | 0; gray[i] = Math.max(a[p], a[p + 1], a[p + 2]) - Math.min(a[p], a[p + 1], a[p + 2]) > 80 ? 255 : v; hist[gray[i]]++; }
+  let sum = 0; for (let i = 0; i < 256; i++) sum += i * hist[i];
+  let sB = 0, wB = 0, max = 0, t = 128;
+  for (let i = 0; i < 256; i++){ wB += hist[i]; if (!wB) continue; const wF = n - wB; if (!wF) break; sB += i * hist[i]; const mB = sB / wB, mF = (sum - sB) / wF, v = wB * wF * (mB - mF) ** 2; if (v > max){ max = v; t = i; } }
+  const bin = new Uint8Array(n); for (let i = 0; i < n; i++) bin[i] = gray[i] < Math.min(t, 170) ? 1 : 0;
+  return { bin, W: c.width, H: c.height };
+}
+function drComponents({ bin, W, H }){
+  const lab = new Int32Array(W * H), comps = []; let id = 0;
+  for (let s = 0; s < W * H; s++){
+    if (!bin[s] || lab[s]) continue;
+    id++; const st = [s]; lab[s] = id; let x0 = W, x1 = 0, y0 = H, y1 = 0, area = 0;
+    while (st.length){ const p = st.pop(), x = p % W, y = (p / W) | 0; area++; if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y;
+      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++){ const nx = x + dx, ny = y + dy; if (nx < 0 || ny < 0 || nx >= W || ny >= H) continue; const q = ny * W + nx; if (bin[q] && !lab[q]){ lab[q] = id; st.push(q); } } }
+    comps.push({ id, x0, x1, y0, y1, w: x1 - x0 + 1, h: y1 - y0 + 1, area });
+  }
+  return comps;
+}
+// Split a cell into text lines by horizontal ink projection.
+function drLines(c){
+  const B = drBinary(c), { bin, W, H } = B, rows = [];
+  for (let y = 0; y < H; y++){ let n = 0; for (let x = 0; x < W; x++) n += bin[y * W + x]; rows.push(n); }
+  const out = []; let s = -1;
+  for (let y = 0; y <= H; y++){ const on = y < H && rows[y] > 0; if (on && s < 0) s = y; if (!on && s >= 0){ if (y - s > 4) out.push([s, y]); s = -1; } }
+  // merge lines closer than a few pixels (dots above/below letters)
+  const m = []; out.forEach(l => { const p = m[m.length - 1]; if (p && l[0] - p[1] < 6) p[1] = l[1]; else m.push(l.slice()); });
+  return m;
+}
+// ۸ is a Λ: its top row of ink is much narrower than its bottom; ۵ is round
+function drTopBottom({ bin, W }, k){
+  const span = (ya, yb) => { let lo = 1e9, hi = -1; for (let y = ya; y < yb; y++) for (let x = k.x0; x <= k.x1; x++) if (bin[y * W + x]){ if (x < lo) lo = x; if (x > hi) hi = x; } return hi < 0 ? 0 : hi - lo + 1; };
+  const b = Math.max(2, Math.round(k.h * 0.25)), top = span(k.y0, k.y0 + b), bot = span(k.y1 - b + 1, k.y1 + 1);
+  return bot ? top / bot : 1;
+}
+function drHole({ bin, W }, k){
+  // background pixels inside the shape's box that cannot reach the box edge
+  const w = k.w + 2, h = k.h + 2, seen = new Uint8Array(w * h), at = (x, y) => { const X = k.x0 - 1 + x, Y = k.y0 - 1 + y; return X >= k.x0 && X <= k.x1 && Y >= k.y0 && Y <= k.y1 && bin[Y * W + X]; };
+  const st = [0]; seen[0] = 1;
+  while (st.length){ const p = st.pop(), x = p % w, y = (p / w) | 0; [[1,0],[-1,0],[0,1],[0,-1]].forEach(([dx, dy]) => { const nx = x + dx, ny = y + dy; if (nx < 0 || ny < 0 || nx >= w || ny >= h) return; const q = ny * w + nx; if (!seen[q] && !at(nx, ny)){ seen[q] = 1; st.push(q); } }); }
+  let n = 0; for (let y = 1; y < h - 1; y++) for (let x = 1; x < w - 1; x++) if (!seen[y * w + x] && !at(x, y)) n++;
+  return n > k.w * k.h * 0.02;
+}
+function drSlant({ bin, W }, k){
+  const band = Math.max(2, Math.round(k.h * 0.3)), cx = (ya, yb) => { let s = 0, n = 0; for (let y = ya; y < yb; y++) for (let x = k.x0; x <= k.x1; x++) if (bin[y * W + x]){ s += x; n++; } return n ? s / n : 0; };
+  return cx(k.y0, k.y0 + band) - cx(k.y1 - band + 1, k.y1 + 1);
+}
+async function drAmountLine(w, c){
+  const B = drBinary(c), comps = drComponents(B).filter(k => k.area > 6 && !(k.w > B.W * 0.6) && !(k.h > B.H * 0.9 && k.w < 6));
+  if (comps.length < 3) return null;
+  const H = Math.max(...comps.map(k => k.h));
+  const big = comps.filter(k => k.h >= H * 0.5), small = comps.filter(k => k.h < H * 0.5);
+  if (!big.length || big.length > 8) return null;
+  const base = big.map(k => k.y1).sort((a, b) => a - b)[big.length >> 1];
+  // the number reads left to right
+  const seq = comps.slice().sort((a, b) => a.x0 - b.x0);
+  let out = "", conf = 100, digits = 0;
+  for (const k of seq){
+    if (k.h < H * 0.5){
+      const comma = k.y0 > base - H * 0.18 || k.y1 > base + H * 0.15; // separators hang at or below the baseline; zeros sit mid-height
+      if (comma) out += ","; else if (k.w < H * 0.6 && k.h < H * 0.45){ out += "0"; digits++; }
+      continue;
+    }
+    // a slanted stroke is the «/» thousands separator (۱/۶۰۰/۰۰۰): its top leans right of its bottom
+    if (window.DR_SLANT && k.w < H * 0.6 && drSlant(B, k) > k.h * 0.22){ out += ","; continue; }
+    // one real digit: recognise it alone
+    const pad = Math.round(H * 0.4), g = drCanvas(k.w + pad * 2, H + pad * 2), cx = g.getContext("2d");
+    cx.fillStyle = "#fff"; cx.fillRect(0, 0, g.width, g.height);
+    const src = c.getContext("2d").getImageData(k.x0, Math.max(0, base - H + 1), k.w, H), d = src.data;
+    for (let i = 0; i < d.length; i += 4){ const v = (d[i] * 0.3 + d[i + 1] * 0.59 + d[i + 2] * 0.11) < 150 ? 0 : 255; d[i] = d[i + 1] = d[i + 2] = v; }
+    cx.putImageData(src, pad, pad);
+    // read the digit; if the first read is not a digit, try a smaller rendering
+    const read = async img => { const r = await w.recognize(img); return { ch: (r.data.text || "").trim().replace(/[۰-۹]/g, x => "۰۱۲۳۴۵۶۷۸۹".indexOf(x)), conf: r.data.confidence }; };
+    let pick = await read(g);
+    if (!/^\d$/.test(pick.ch)) pick = await read(drFit(g, Math.round(g.width * 0.7)));
+    if (!/^\d$/.test(pick.ch)) return null;
+    out += pick.ch; digits++; conf = Math.min(conf, pick.conf);
+  }
+  const clean = out.replace(/^,+|,+$/g, "");
+  if (!/^\d{1,3}(,\d{3})+$/.test(clean) && !/^\d+$/.test(clean)) return { text: clean, value: null, conf: 20 };
+  return { text: clean, value: +clean.replace(/,/g, ""), conf };
+}
+async function drAmount(w, c){
+  await w.setParameters({ tessedit_pageseg_mode: "10", tessedit_char_whitelist: "۱۲۳۴۵۶۷۸۹" });
+  for (const [y0, y1] of drLines(c)){
+    const line = drCanvas(c.width, y1 - y0 + 8); const g = line.getContext("2d"); g.fillStyle = "#fff"; g.fillRect(0, 0, line.width, line.height); g.drawImage(c, 0, y0, c.width, y1 - y0, 0, 4, c.width, y1 - y0);
+    const r = await drAmountLine(w, line);
+    if (r && r.value != null) return r;
+  }
+  return null;
+}
+
+/* ================= Persian OCR correction =================
+   Most OCR mistakes in Persian are in the dots (ب/پ/ت/ث/ن/ی، ج/چ/ح/خ، د/ذ، ر/ز/ژ، س/ش، ص/ض، ط/ظ، ع/غ، ف/ق، ک/گ).
+   A word is reduced to its dotless skeleton; if the skeleton (or one letter off it) matches a word of the
+   insurance vocabulary, that word is used and the change is recorded so the screen can show it. */
+const LEX_WORDS = (`بیمه بیمه‌نامه بیمه‌گذار بیمه‌گر بیمه‌شده بیمه‌شدگان شدگان شده الحاقیه قرارداد مناقصه استعلام تکمیلی درمان درمانی تعهدات تعهد سقف سقف‌ها سالانه سالیانه
+حداکثر حداقل فرانشیز حق‌بیمه حق نفر نفرات خانواده اصلی فرعی تحت تکفل کارکنان کارمندان شرکت سازمان موسسه دانشگاه مجتمع اداره بانک صنایع فولاد گیلان
+جبران هزینه هزینه‌های های بستری جراحی جراحی‌های عمومی تخصصی فوق اعمال مجاز سرپایی زایمان طبیعی سزارین کورتاژ نازایی ناباروری
+پاراکلینیک پاراکلینیکی رادیوگرافی رادیولوژی سونوگرافی ماموگرافی اسکن آنژیوگرافی آندوسکوپی کولونوسکوپی تصویربرداری آزمایش آزمایش‌های آزمایشگاهی تشخیصی تشخیص پاتولوژی ژنتیک
+شیمی رادیوتراپی سرطان پیوند کلیه قلب مغز اعصاب نخاع ستون فقرات دیسک گامانایف آنژیوپلاستی عروق کرونر
+آمبولانس فوریت فوریت‌های پزشکی پزشک پزشکان مشروط داخل خارج شهر شهری مراکز مرکز بیمارستان بیمارستانی
+دندانپزشکی دندان عینک لنز طبی انکساری عیوب چشم لیزیک سمعک فیزیوتراپی گفتار کاردرمانی توانبخشی ویزیت دارو داروها دارویی اورژانس
+اعضای اعضا طبیعی بدن پروتز اروتز لوازم بیماران بیماری خاص صعب‌العلاج غربالگری جنین شکستگی گچ‌گیری ختنه بخیه
+مبلغ ریال تومان میلیون میلیارد ماهانه ماهیانه سالانه نقره‌ای طلایی برنزی طرح ردیف شرح عنوان کد شماره تاریخ صدور شروع خاتمه پایان مدت اعتبار روز
+نشانی تلفن اقتصادی ملی واحد معرف نمایندگی کارگزاری کارگزار رسمی مستقیم شعبه حساب پرداخت اقساط قسط سررسید مالیات ارزش افزوده عوارض
+آسیا ایران البرز دانا پارسیان ملت سامان معلم رازی کوثر سینا نوین تعاون آرمان حافظ میهن سرمد پاسارگاد کارآفرین
+مطابق مجموعا تعداد افزایش کاهش برگشتی اضافی ابطال سایر شرایط مقررات قانون عمومی خصوصی مندرج متن پیوست صادر گردیده است می‌باشد باشد
+گروه سنین کلیه کلیهٔ برای هر نوع انواع شامل همچنین بدون استثنا مربوط مربوطه تایید تأیید دستور معالج معتمد حدود نفرات`).split(/\s+/).filter(Boolean);
+
+// Common general words: never "corrected" into a vocabulary word that merely looks similar.
+const LEX_COMMON = `این آن که را با از به در بر تا یا اگر هم نیز چه چون پس بعد قبل بین زیر روی پیش همه هیچ برخی دیگر خود ما شما آنها ایشان او
+است هست بود شد شود کرد کند کنند دارد دارند داشت گردد گرفت گیرد داد دهد دهند باید نباید می‌شود می‌باشد نمی‌باشد گردیده
+تهیه تحقیقات اصلاح نهال بذر سهامی کشاورزی جهاد وزارت آموزش ترویج رئیس نامه موضوع پیوست احترام سلام خواهشمند دستور فرمایید اقدام لازم مبذول
+تجمیع آتش‌سوزی مسئولیت مدنی حرفه‌ای ثالث بدنه خودروهای اداری شخصی همکاران سن سال سالگی کمتر بیشتر بالای زیر حدود تقریبا کل جمع
+اول دوم سوم یک دو سه چهار پنج شش هفت هشت نه ده صد هزار نوبت مرحله برنده مبنای تصمیم معرفی قیمت مبلغ ارقام
+استان تهران خیابان بلوار پلاک طبقه کدپستی ایمیل تلفن نمابر فکس همراه واریز شناسه شبا کارت بانکی
+مدیریت محترم صورتحساب شرح ذیل بررسی نسبت پرداخت مطابق تاریخ‌های اعلامی فیش اسرع وقت`.split(/\s+/).filter(Boolean);
+const SKEL = { "ب": "ٮ", "پ": "ٮ", "ت": "ٮ", "ث": "ٮ", "ن": "ٮ", "ی": "ٮ", "ي": "ٮ", "ئ": "ٮ", "ج": "ح", "چ": "ح", "خ": "ح", "ذ": "د", "ز": "ر", "ژ": "ر", "ش": "س", "ض": "ص", "ظ": "ط", "غ": "ع", "ق": "ف", "گ": "ک", "ك": "ک", "ة": "ه", "ۀ": "ه", "أ": "ا", "إ": "ا", "آ": "ا" };
+const skel = w => [...w.replace(/[‌\s]/g, "")].map(c => SKEL[c] || c).join("");
+const LEX = (() => { const m = new Map(); LEX_WORDS.forEach(w => { const k = skel(w); if (!m.has(k)) m.set(k, w.replace(/‌/g, "")); }); return m; })();
+const LEX_SET = new Set(LEX_WORDS.map(w => w.replace(/‌/g, "")));
+function lexEdit1(a, b){ // true when b is a with at most one letter inserted, deleted or changed
+  if (Math.abs(a.length - b.length) > 1) return false;
+  let i = 0, j = 0, e = 0;
+  while (i < a.length && j < b.length){ if (a[i] === b[j]){ i++; j++; continue; } if (++e > 1) return false; if (a.length > b.length) i++; else if (a.length < b.length) j++; else { i++; j++; } }
+  return e + (a.length - i) + (b.length - j) <= 1;
+}
+// Correct one word; returns the word and whether it changed.
+function lexOne(plain){
+  if (LEX_SET.has(plain)) return plain;
+  const k = skel(plain); let hit = LEX.get(k);
+  if (!hit && plain.length >= 5) for (const [lk, lw] of LEX) if (lk.length >= 5 && lexEdit1(k, lk)){ hit = lw; break; }
+  return hit || null;
+}
+function lexFix(w){
+  const core = w.replace(/^[^آ-ی]+|[^آ-ی]+$/g, ""), plain = core.replace(/‌/g, "");
+  if (plain.length < 3 || LEX_SET.has(plain)) return { w, fixed: false };
+  let hit = lexOne(plain);
+  // «وبستری» → «و بستری»: the conjunction glued to the next word
+  if (plain[0] === "و" && plain.length > 3){ const r = lexOne(plain.slice(1)); if (r && (!hit || r === hit)) hit = "و " + r; }
+  // «طبیعیبدن» → «طبیعی بدن»: two words glued together
+  if (!hit && plain.length >= 6) for (let i = 3; i <= plain.length - 3 && !hit; i++){ const x = lexOne(plain.slice(0, i)), y = lexOne(plain.slice(i)); if (x && y) hit = x + " " + y; }
+  if (!hit || hit === plain) return { w, fixed: false };
+  return { w: w.replace(core, hit), fixed: true, from: core };
+}
+function lexText(text){
+  const fixes = [];
+  const out = String(text || "").replace(/[آ-ی‌]{3,}/g, m => { const r = lexFix(m); if (r.fixed) fixes.push([r.from, r.w]); return r.w; });
+  return { text: out, fixes };
+}
+
+// Text for the screen: corrected words are highlighted and keep what was read in a tooltip.
+function lexHtml(text){
+  return String(text || "").split(/([آ-ی‌]{3,})/).map((part, i) => {
+    if (i % 2 === 0) return esc(part);
+    const r = lexFix(part); return r.fixed ? `<mark class="lexfix" title="خوانده‌شده: ${esc(r.from)}">${esc(r.w)}</mark>` : esc(part);
+  }).join("");
+}
+
+/* ================= Contract understanding =================
+   Turns what the reader found (text + tables) into a contract: who, which insurer, which year,
+   premium, head count and the cap of every coverage per plan. Every value keeps the image of the
+   row it came from, so the broker can check it against the paper before it is used. */
+
+const CCAT = [ // order matters: the first rule that matches wins
+  ["combo", "سقف مشترک چند بند", /(?!.*(نازایی|ناباروری|سال(ی)?انه))(?:حداکثر\s*(?:\S+\s*)?تعه[دذ]ات?\s*(ردیف|بند)|جمع\s*تعهدات|حداکثر\s*سقف\s*تعهدات)/],
+  ["total", "حداکثر تعهد سالانه", /حداکثر\s*تعهدات\s*سال(ی)?انه|سقف\s*کل/],
+  ["visitdrug", "ویزیت، دارو و اورژانس", /ویزیت.*دارو|دارو.*ویزیت|ویزیت\s*و\s*دارو/],
+  ["dental", "دندانپزشکی", /دندا|دندن/],
+  ["special", "جراحی‌های خاص و تخصصی", /جراحی.{0,4}(های)?\s*تخصصی|سرطان|شیمی\s*در|رادیوترا|پیوند|گامانایف|تخصصی\s*و\s*فوق/],
+  ["delivery", "زایمان", /زایمان|سزارین/],
+  ["infert", "نازایی و ناباروری", /نازایی|ناباروری/],
+  ["lab", "آزمایش‌ها (پاراکلینیک ۳)", /پاراکلینیک\S*\s*[3۳]|آزمایشگاه|آزمایش\s*های\s*تشخیصی|پاتولوژی/],
+  ["diag", "تست‌های تشخیصی (پاراکلینیک ۲)", /پاراکلینیک\S*\s*[2۲]|تست\s*ورزش|آندوسکوپی|نوار\s*(قلب|مغز|عصب)|الکترو|مانیتورینگ|هولتر/],
+  ["fetal", "غربالگری جنین", /غربالگری|جنین/],
+  ["para", "تصویربرداری (پاراکلینیک ۱)", /پاراکلینیک|رادیولوژی|رادیوگرافی|سونوگرافی|تصویربرداری|اسکن|ام\s*آر\s*آی|ماموگرافی/],
+  ["outsurg", "اعمال جراحی مجاز سرپایی", /سرپایی|شکستگی|گچ\s*گیری|بخیه/],
+  ["ambOut", "آمبولانس خارج شهر", /آم.?ولانس.*(خارج|بین)\s*شهر|خارج\s*شهر|بین\s*شهری/],
+  ["ambIn", "آمبولانس داخل شهر", /آم.?ولانس.*(داخل\s*شهر|(?<!بین\s?)شهری)|داخل\s*شهر/],
+  ["amb", "آمبولانس", /آم.?ولانس|امبولانس/],
+  ["refractive", "رفع عیوب انکساری چشم", /ان[کگ]سار|لیزیک|عیوب\s*چشم/],
+  ["glasses", "عینک و لنز", /عین[کگ]|لنز/],
+  ["hearing", "سمعک", /سمع[کگ]/],
+  ["organs", "اعضای طبیعی بدن", /اعضا\S*\s*طبیعی/],
+  ["orthosis", "اروتز", /اروتز/],
+  ["prosthesis", "پروتز", /پروتز/],
+  ["supplies", "لوازم پزشکی", /لوازم\s*(طبی|پزشکی)|دستگاه\s*تست\s*قند/],
+  ["specialDis", "بیماران خاص و صعب‌العلاج", /بیماران\s*خاص|صعب\s*العلاج|داروها?ی?\s*خاص/],
+  ["rehab", "فیزیوتراپی و توانبخشی", /فیزیوتراپی|گفتار\s*درمانی|کار\s*درمانی|توان\s*\S?\s*بخش|توان,/],
+  ["emergency", "اورژانس", /اورژانس/],
+  ["visit", "ویزیت", /ویزیت/],
+  ["drug", "دارو", /دارو/],
+  ["hosp", "بستری و جراحی عمومی", /بستری|جراحی|day\s*care/i],
+];
+const CCAT_NAME = Object.fromEntries(CCAT.map(([k, n]) => [k, n]));
+const INSURERS = /بیمه\s*(آسیا|ایران|البرز|دانا|پارسیان|ملت|سامان|معلم|رازی|کوثر|ما|سینا|نوین|تعاون|دی|آرمان|حافظ|میهن|سرمد|تجارت\s*نو|کارآفرین|پاسارگاد|ایران\s*معین|امید|آسماری|زندگی\s*خاورمیانه|حکمت)(?![آ-ی])/;
+const enDigits = s => drNorm(s);
+const toMT = rial => rial == null ? null : rial === Infinity ? Infinity : rial / 1e7; // ریال → میلیون تومان
+
+// The keyword that appears first decides: «بستری، جراحی، آنژیوگرافی قلب، گامانایف…» is a hospital row
+// even though it also names a special surgery further on.
+// Short title cells: a distinctive word wins wherever it sits («پاراکلینیکی ۲ (خدمات آزمایشگاهی)» is lab).
+const STRONG = [["lab", /آزمایشگاه/], ["outsurg", /سرپایی/], ["specialDis", /بیماران\s*خاص|صعب|داروها?ی?\s*خاص/], ["dental", /دندا|دندن/], ["delivery", /زایمان/], ["infert", /نازایی|ناباروری/],
+  ["organs", /اعضا\S*\s*طبیعی/], ["prosthesis", /پروتز/], ["orthosis", /اروتز/], ["hearing", /سمع[کگ]/], ["glasses", /عین[کگ]/], ["refractive", /ان[کگ]سار/], ["rehab", /توان|فیزیو|گفتار/], ["fetal", /غربالگری/], ["supplies", /لوازم/]];
+function catOfRow(text, title){
+  const t = norm(text); let best = null;
+  if (title){ const s = STRONG.find(([, re]) => re.test(t)); if (s && !/حداکثر/.test(t)) return s[0]; }
+  CCAT.forEach(([k, , re], order) => { const m = t.match(re); if (m && (!best || m.index < best.i || (m.index === best.i && order < best.o))) best = { k, i: m.index, o: order }; });
+  return best ? best.k : null;
+}
+function planOfHeader(t){
+  t = norm(t);
+  if (/نقره/.test(t)) return "نقره‌ای"; if (/طلا/.test(t)) return "طلایی"; if (/برنز/.test(t)) return "برنزی";
+  const m = t.match(/طرح\s*(یک|دو|سه|الف|ب|ج|[1-3۱-۳])/); if (m) return "طرح " + ({ "یک": "۱", "دو": "۲", "سه": "۳", "1": "۱", "2": "۲", "3": "۳" }[m[1]] || m[1]);
+  if (/خانواده/.test(t)) return "#family"; if (/فرانشیز/.test(t)) return "#franchise";
+  if (/نفر|سقف|تعهد|ریال|مبلغ/.test(t)) return "اصلی";
+  return null;
+}
+
+// Pull the contract out of one document.
+function understand(doc){
+  const LX = lexText(doc.text), T = norm(enDigits(LX.text)).replace(/[ـ]/g, ""), issues = [];
+  const out = { fixes: LX.fixes.length, file: doc.file, kind: "سند", org: null, insurer: null, year: null, start: null, end: null, insured: null, premium: null, premiumPer: null, franchise: null, plans: {}, rows: [], issues };
+  // kind
+  if (/شماره\s*بیمه\s*نامه|شرح\s*تعهدات\s*بیمه\s*گر/.test(T)) out.kind = "بیمه‌نامه";
+  else if (/الحاقیه/.test(T)) out.kind = "الحاقیه";
+  else if (/استعلام/.test(T)) out.kind = "استعلام قیمت";
+  else if (/مناقصه/.test(T)) out.kind = "مناقصه";
+  else if (/قسط|اقساط|سررسید/.test(T)) out.kind = "اقساط";
+  // who
+  const org = T.match(/بیمه\s*گذار\s*:?\s*([^\n:]{3,40}?)\s*(?:کد|\n|نشانی|شماره)/) || T.match(/تکمیلی\s*(?:کار\s*کنان\s*)?((?:دانشگاه|شرکت|موسسه|سازمان|اداره|بانک|مجتمع|بیمارستان)[^\n(]{2,60}?)\s*(?:\(|سال|\d{4}|\n)/) || T.match(/((?:دانشگاه|شرکت|موسسه|سازمان|مجتمع|بانک)\s+[^\n]{2,40}?)\s*(?:\n|کد)/);
+  if (org) out.org = org[1].replace(/\s+/g, " ").replace(/^محترم\s+/, "").trim();
+  const ins = T.match(INSURERS); if (ins) out.insurer = ins[0].replace(/\s+/g, " ");
+  // when
+  const dates = [...T.matchAll(/(1[34]\d{2})\/(\d{1,2})\/(\d{1,2})/g)].map(m => m[0]);
+  const range = T.match(/(?:سال\s*)?(14\d{2})\s*[-–]\s*(14\d{2})/);
+  const start = T.match(/(?:از\s*روز|شروع)[^\d]{0,20}(1[34]\d{2}\/\d{1,2}\/\d{1,2})/), end = T.match(/(?:خاتمه|پایان)[^\d]{0,20}(1[34]\d{2}\/\d{1,2}\/\d{1,2})|(1[34]\d{2}\/\d{1,2}\/\d{1,2})\s*خاتمه/);
+  if (start) out.start = start[1]; if (end) out.end = end[1] || end[2];
+  if (out.start) out.year = +out.start.slice(0, 4);
+  else if (range) out.year = Math.min(+range[1], +range[2]);
+  else if (dates.length) out.year = Math.min(...dates.map(d => +d.slice(0, 4)));
+  // how many people
+  // the largest head count wins: a policy issued for 50 is often raised to thousands by an addendum
+  const heads = [...T.matchAll(/(?:تعداد\s*بیمه\s*شدگا\s*ن|مجموعا|تعداد\s*نفرات)[^\d\n]{0,14}([\d,]{2,7})\s*:?\s*نفر/g)].map(m => +m[1].replace(/,/g, "")).filter(v => v > 1);
+  if (heads.length) out.insured = Math.max(...heads);
+  // premium per person
+  const pr = T.match(/حق\s*بیمه\s*هر\s*بیمه\s*شده[^\d]{0,40}([\d,\/]{6,})/);
+  if (pr){ out.premium = drParseAmount(pr[1]); out.premiumPer = "year"; }
+  // premium from an addendum: extra premium ÷ people added
+  const add = T.match(/تعداد\s*([\d,]{2,7})\s*نفر\s*مطابق\s*الحاقیه/), extra = T.match(/حق\s*بیمه\s*اضافی[^\d]{0,30}([\d,]{9,})/);
+  if (!out.premium && add && extra){ const n = +add[1].replace(/,/g, ""), v = drParseAmount(extra[1]); if (n && v){ out.premium = v / n; out.premiumPer = "year"; out.premiumNote = `از الحاقیه: حق‌بیمهٔ اضافی ÷ ${fmtInt(n)} نفر`; } }
+  // premium from the instalment total when the per-person figure is unreadable
+  const tot = T.match(/جمع\s*(?:کل)?\s*:?\s*([\d,]{11,})/);
+  if (!out.premium && tot && out.insured){ out.premium = drParseAmount(tot[1]) / out.insured; out.premiumPer = "year"; out.premiumNote = "از جمع اقساط ÷ تعداد نفرات"; }
+  const fr = T.match(/فرانشیز[^\d\n]{0,40}(\d{1,2})\s*(?:درصد|٪|%)/); if (fr) out.franchise = +fr[1];
+
+  // tables → coverage rows
+  let cols = null; // [{x0,x1,plan}] — header columns carry over to the next pages of the same table
+  doc.tables.forEach(t => {
+    t.rows.forEach(cells => {
+      const plans = cells.map(c => planOfHeader(c.text || ""));
+      const numeric = cells.filter(c => c.value != null).length;
+      const headerLike = cells.every(c => (c.text || "").length < 40) && plans.filter(p => p && !p.startsWith("#")).length && (cols === null || plans.some(p => p && p !== "اصلی"));
+      if (!numeric && headerLike){ cols = cells.map((c, i) => ({ x0: c.x0, x1: c.x1, plan: plans[i] })).filter(c => c.plan); return; }
+      if (!numeric) return;
+      cells.forEach(c => { if (c.text && c.raw == null){ c.raw = c.text; c.text = lexText(c.text).text; } });
+      const textCells = cells.filter(c => c.value == null && (c.text || "").length > 1);
+      const label = textCells.map(c => c.text).join(" — ");
+      // the short title cell decides first; the long description only when the title says nothing
+      const byLen = textCells.slice().sort((a, b) => a.text.length - b.text.length);
+      const cat = byLen.map(c => catOfRow(c.text, c.text.length < 45)).find(Boolean) || null;
+      const vals = {};
+      cells.forEach(c => {
+        if (c.value == null) return;
+        let plan = "اصلی";
+        if (cols){ const mid = (c.x0 + c.x1) / 2, col = cols.find(k => mid > k.x0 - 5 && mid < k.x1 + 5); if (col) plan = col.plan; }
+        if (plan === "#franchise"){ if (c.value <= 100) out.franchise = out.franchise || c.value; return; }
+        if (plan === "#family" || c.value < 1e5) return; // family caps and stray small numbers
+        if (c.value !== Infinity && c.value > 1e13){ issues.push(`یک مبلغ ناخوانا (${c.text}) کنار گذاشته شد؛ اگر لازم است دستی وارد کنید.`); return; }
+        if (vals[plan] == null) vals[plan] = { rial: c.value, conf: Math.round(c.vconf || c.conf || 0) };
+      });
+      if (!Object.keys(vals).length) return;
+      Object.keys(vals).forEach(p => { out.plans[p] = true; });
+      const box = cells.reduce((b, c) => ({ x0: Math.min(b.x0, c.x0), x1: Math.max(b.x1, c.x1), y0: Math.min(b.y0, c.y0), y1: Math.max(b.y1, c.y1) }), { x0: 1e9, x1: 0, y0: 1e9, y1: 0 });
+      const uni = list => list.length ? list.reduce((b, c) => ({ x0: Math.min(b.x0, c.x0), x1: Math.max(b.x1, c.x1), y0: Math.min(b.y0, c.y0), y1: Math.max(b.y1, c.y1) }), { x0: 1e9, x1: 0, y0: 1e9, y1: 0 }) : null;
+      out.rows.push({ cat, label: label.slice(0, 140), vals, page: t.page, box, vbox: uni(cells.filter(c => c.value != null && c.value >= 1e5)), lbox: uni(textCells) });
+    });
+  });
+  out.plans = Object.keys(out.plans);
+  // checks
+  if (!out.org) issues.push("نام بیمه‌گذار پیدا نشد؛ وارد کنید.");
+  if (!out.year) issues.push("سال قرارداد پیدا نشد؛ وارد کنید.");
+  if (out.kind !== "استعلام قیمت" && !out.premium) issues.push("حق‌بیمه پیدا نشد (اگر دست‌نویس است، وارد کنید).");
+  if (!out.rows.length && doc.tables.length) issues.push("جدول پیدا شد ولی مبلغی در آن خوانده نشد.");
+  out.rows.forEach(r => { if (!r.cat) issues.push(`ردیف «${r.label.slice(0, 40)}…» به هیچ پوششی نخورد؛ نوعش را انتخاب کنید.`); });
+  const low = out.rows.filter(r => Object.values(r.vals).some(v => v.conf < 70)).length;
+  if (low) issues.push(`${fmtInt(low)} مبلغ با اطمینان کم خوانده شد؛ با تصویر کنارش مقایسه کنید.`);
+  return out;
+}
+
 </script>
 <script>
 /* ================= Offline assistant =================
@@ -1606,6 +2304,618 @@ function ask(q){
   if (state.page === "home"){ const f = $("homeAiQ"); if (f) f.focus(); }
 }
 
+/* ---------- documents & contracts ---------- */
+// PDF, photos, Word and text files are read on the device; each read value is shown next to the image of
+// its row so the broker confirms it before it becomes a contract. Saved contracts feed the year-to-year
+// comparison and the market benchmark.
+const DOC_RE = /\.(pdf|jpe?g|png|webp|docx|txt)$/i;
+const isDocFile = f => DOC_RE.test(f.name);
+const MT = v => v === Infinity ? "بدون سقف" : fmtNum(v);
+const pctCh = (a, b) => a == null || b == null || a === Infinity || b === Infinity || !a ? null : b / a - 1;
+const median = a => { const s = a.filter(v => v != null && isFinite(v)).sort((x, y) => x - y); return s.length ? (s.length % 2 ? s[s.length >> 1] : (s[s.length / 2 - 1] + s[s.length / 2]) / 2) : null; };
+const orgKey = s => norm(s || "").replace(/^(مجتمع|شرکت|موسسه|دانشگاه|سازمان)\s+/, "").replace(/\s+/g, "");
+
+async function handleDocs(files){
+  const box = n => `<div class="box" role="dialog" aria-modal="true" aria-label="خواندن مدارک"><div class="panel-h"><h2>خواندن مدارک</h2></div><div class="panel-b" style="display:flex;flex-direction:column;gap:10px">
+    <p class="small muted">همه‌چیز روی همین دستگاه خوانده می‌شود؛ فایلی به جایی فرستاده نمی‌شود. اسکن و عکس چند ثانیه برای هر صفحه طول می‌کشد.</p>
+    <div class="fs on"><span class="fi">${fmtInt(n)}</span><div><b id="docFile"></b><span id="docStep">آماده‌سازی…</span></div></div><div class="prog"><i id="docBar" style="width:3%"></i></div></div></div>`;
+  let last = null;
+  for (let i = 0; i < files.length; i++){
+    const f = files[i];
+    $("modal").innerHTML = box(i + 1); $("modal").hidden = false; $("docFile").textContent = `${f.name} (${fmtInt(i + 1)} از ${fmtInt(files.length)})`;
+    let ticks = 0;
+    try {
+      const doc = await readDocument(f, s => { ticks++; $("docStep").textContent = s; $("docBar").style.width = Math.min(95, 3 + ticks * 2.5) + "%"; });
+      const u = understand(doc);
+      u.planPremium = {}; (u.plans.length ? u.plans : ["اصلی"]).forEach((p, k) => { u.planPremium[p] = { v: k === 0 && u.premium ? u.premium / 1e7 : null, per: "year" }; });
+      state.docs.push({ id: "d" + Date.now() + i, file: f.name, doc, u, saved: false });
+      last = state.docs.length - 1;
+    } catch (err){ state.errors.push(`«${f.name}» خوانده نشد: ${err.message}`); }
+  }
+  $("modal").hidden = true;
+  if (last != null) go("doc", last); else render();
+}
+
+// The row as it looks on paper: the start of its title (Persian starts at the right) next to its amounts,
+// so the number is large enough to check even on a phone.
+function rowSnip(d, r){
+  if (r.img !== undefined) return r.img;
+  const pg = d.doc.pages[r.page]; if (!pg || !pg.canvas || !r.box) return (r.img = "");
+  const parts = [];
+  if (r.lbox){ const w = Math.min(r.lbox.x1 - r.lbox.x0, (r.box.y1 - r.box.y0) * 5); parts.push({ x0: r.lbox.x1 - w, x1: r.lbox.x1 }); }
+  if (r.vbox) parts.push({ x0: r.vbox.x0, x1: r.vbox.x1 });
+  if (!parts.length) parts.push({ x0: r.box.x0, x1: r.box.x1 });
+  const y0 = r.box.y0, h = r.box.y1 - r.box.y0, total = parts.reduce((s, p) => s + p.x1 - p.x0, 0) + (parts.length - 1) * 12;
+  const sc = Math.min(1.2, 640 / total), c = document.createElement("canvas");
+  c.width = Math.round(total * sc); c.height = Math.round(h * sc);
+  const g = c.getContext("2d"); g.fillStyle = "#fff"; g.fillRect(0, 0, c.width, c.height);
+  let x = c.width; // right to left, like the page
+  parts.forEach(p => { const w = (p.x1 - p.x0) * sc; x -= w; g.drawImage(pg.canvas, p.x0, y0, p.x1 - p.x0, h, x, 0, w, c.height); x -= 12 * sc; });
+  return (r.img = c.toDataURL("image/jpeg", 0.85));
+}
+const catOptions = sel => `<option value="">— نادیده گرفتن —</option>` + CCAT.map(([k, n]) => `<option value="${k}"${k === sel ? " selected" : ""}>${n}</option>`).join("");
+
+function renderDoc(i){
+  const d = state.docs[i]; if (!d){ state.page = "docs"; return render(); }
+  const u = d.u, plans = u.plans.length ? u.plans : ["اصلی"];
+  setHead(d.file, "خواندن مدرک");
+  // a cap that jumps more than ×3 or halves against the same organisation's earlier contract is flagged too
+  const prev = state.contracts.filter(c => c.src !== d.id && u.org && orgKey(c.org) === orgKey(u.org) && c.year < (u.year || 0)).sort((x, y) => y.year - x.year)[0];
+  u.rows.forEach(r => { r.odd = null; if (!prev || !r.cat) return; const pv = prev.caps[r.cat]; Object.entries(r.vals).forEach(([p, v]) => {
+    if (pv == null || !isFinite(pv) || v.rial === Infinity || r.cat === "combo" || r.cat === "total") return; const ratio = v.rial / 1e7 / pv;
+    if (ratio > 3 || ratio < 0.5){ v.conf = Math.min(v.conf, 60); r.odd = `در ${fmtInt(prev.year).replace(/٬/g, "")} ${MT(pv)} بود (×${fmtNum(ratio)})؛ با تصویر مقایسه کنید.`; } }); });
+  const lowRows = u.rows.filter(r => Object.values(r.vals).some(v => v.conf < 70)).length;
+  $("view").innerHTML = `
+  ${crumb(["docs", "مدارک و قراردادها"], [null, esc(d.file)])}
+  <div class="ph"><div style="display:flex;flex-direction:column;gap:6px"><div class="hchips"><h1>${esc(d.file)}</h1><span class="tag t-protect">${esc(u.kind)}</span>${d.saved ? '<span class="tag t-good">ذخیره شد</span>' : ""}</div>
+    <span class="sub">${[u.org, u.insurer, u.year ? fmtInt(u.year).replace(/٬/g, "") : null, u.insured ? fmtInt(u.insured) + " نفر" : null].filter(Boolean).map(esc).join(" · ")} · ${fmtInt(d.doc.pages.length || 1)} صفحه</span>
+    ${progressHTML(u)}</div>
+    <div class="actions"><button class="btn" type="button" id="docDel">حذف</button><button class="btn primary" type="button" id="docSave">${d.saved ? "به‌روزرسانی قرارداد" : "ذخیره به‌عنوان قرارداد"}</button></div></div>
+  <section class="panel"><div class="panel-h"><h2>مشخصات</h2><span class="small muted">هر چیزی را که درست خوانده نشده اصلاح کنید</span></div>
+    <div class="panel-b form">
+      <label class="field">بیمه‌گذار (سازمان)<input type="text" data-df="org" value="${esc(u.org || "")}" placeholder="مثلاً مجتمع فولاد گیلان"></label>
+      <label class="field">بیمه‌گر<input type="text" data-df="insurer" value="${esc(u.insurer || "")}" placeholder="مثلاً بیمه آسیا"></label>
+      <label class="field">سال قرارداد (شروع)<input type="number" data-df="year" value="${u.year || ""}" placeholder="۱۴۰۵"></label>
+      <label class="field">تعداد بیمه‌شدگان<input type="number" data-df="insured" value="${u.insured || ""}"></label>
+      <label class="field">فرانشیز (٪)<input type="number" data-df="franchise" value="${u.franchise ?? ""}"></label>
+      ${plans.map(p => { const pp = u.planPremium[p] || { v: null, per: "year" }; return `<label class="field">حق‌بیمهٔ هر نفر${plans.length > 1 ? ` — ${esc(p)}` : ""} (میلیون تومان)
+        <span style="display:flex;gap:6px"><input type="number" step="0.01" data-dp="${esc(p)}" value="${pp.v != null ? +pp.v.toFixed(3) : ""}" style="flex:1" placeholder="${u.kind === "استعلام قیمت" ? "هنوز قیمتی نیست" : "وارد کنید"}">
+        <select data-dper="${esc(p)}" style="border:1px solid var(--input-line);border-radius:9px;background:var(--surface);padding:0 8px"><option value="year"${pp.per === "year" ? " selected" : ""}>سالانه</option><option value="month"${pp.per === "month" ? " selected" : ""}>ماهانه</option></select></span>
+        ${p === plans[0] && u.premiumNote ? `<span class="small muted">${esc(u.premiumNote)}</span>` : ""}</label>`; }).join("")}
+    </div></section>
+  ${reviewHTML(d, u, plans, prev)}
+  ${u.issues.length ? `<section class="panel"><div class="panel-h"><h2>نیاز به توجه</h2></div><div class="panel-b"><ul class="dq">${u.issues.map(x => `<li><span class="sev tag t-mid">بررسی</span><span>${esc(x)}</span></li>`).join("")}</ul></div></section>` : ""}
+  <details class="panel"><summary class="panel-h" style="cursor:pointer"><h2>متن کامل خوانده‌شده</h2></summary><div class="panel-b">${u.fixes ? `<p class="small muted" style="margin-bottom:8px">${fmtInt(u.fixes)} واژه با فرهنگ واژه‌های بیمه اصلاح شد؛ رنگی‌اند و با نگه‌داشتن رویشان، آنچه خوانده شده بود دیده می‌شود.</p>` : ""}<pre style="white-space:pre-wrap;font:inherit;font-size:12.5px;max-height:420px;overflow:auto;margin:0">${lexHtml(d.doc.text.trim())}</pre></div></details>`;
+
+  const num = s => { s = drNorm(String(s)).trim(); if (/^(∞|بدون|بی)/.test(s)) return Infinity; const v = parseFloat(s.replace(/,/g, "")); return isNaN(v) ? null : v; };
+  $("view").querySelectorAll("[data-df]").forEach(el => el.onchange = () => { const k = el.dataset.df; u[k] = el.type === "number" ? (el.value === "" ? null : +el.value) : el.value.trim(); });
+  $("view").querySelectorAll("[data-dp]").forEach(el => el.onchange = () => { const p = el.dataset.dp; (u.planPremium[p] = u.planPremium[p] || { per: "year" }).v = num(el.value); });
+  $("view").querySelectorAll("[data-dper]").forEach(el => el.onchange = () => { const p = el.dataset.dper; (u.planPremium[p] = u.planPremium[p] || { v: null }).per = el.value; });
+  $("view").querySelectorAll("[data-dc]").forEach(el => el.onchange = () => { u.rows[+el.dataset.dc].cat = el.value || null; });
+  $("view").querySelectorAll("[data-dv]").forEach(el => el.onchange = () => { const [ri, p] = el.dataset.dv.split("|"), v = num(el.value), r = u.rows[+ri];
+    if (v == null) delete r.vals[p]; else r.vals[p] = { rial: v === Infinity ? Infinity : v * 1e7, conf: 100 }; el.style.borderColor = "var(--input-line)"; el.style.background = "var(--surface)";
+    $("view").querySelectorAll(`[data-rial="${el.dataset.dv}"]`).forEach(x => { x.textContent = v == null ? "" : v === Infinity ? "بدون سقف" : fmtInt(v * 1e7) + " ریال"; });
+    $("view").querySelectorAll(`[data-dv="${el.dataset.dv}"]`).forEach(x => { if (x !== el) x.value = el.value; }); });
+  // zoom: the whole row at full resolution, scrollable and pinch-zoomable
+  $("view").querySelectorAll("[data-zoom]").forEach(img => img.onclick = () => {
+    const r = u.rows[+img.dataset.zoom], pg = d.doc.pages[r.page]; if (!pg || !r.box) return;
+    const b = r.box, pad = 10, c = document.createElement("canvas"), w = b.x1 - b.x0 + pad * 2, h = b.y1 - b.y0 + pad * 2;
+    c.width = w; c.height = h; const g = c.getContext("2d"); g.fillStyle = "#fff"; g.fillRect(0, 0, w, h); g.drawImage(pg.canvas, b.x0 - pad, b.y0 - pad, w, h, 0, 0, w, h);
+    $("modal").innerHTML = `<div class="box" style="width:min(1100px,100%)" role="dialog" aria-modal="true" aria-label="بزرگ‌نمایی"><div class="panel-h"><h2>بزرگ‌نمایی ردیف</h2>
+      <div style="display:flex;gap:6px"><button class="iconbtn" type="button" id="zIn" aria-label="بزرگ‌تر">＋</button><button class="iconbtn" type="button" id="zOut" aria-label="کوچک‌تر">−</button><button class="iconbtn" type="button" data-close aria-label="بستن">✕</button></div></div>
+      <div style="overflow:auto;max-height:75vh;padding:10px;touch-action:pan-x pan-y pinch-zoom"><img id="zImg" src="${c.toDataURL("image/png")}" alt="" style="width:${Math.max(100, Math.round(1600 / Math.max(1, w) * 100))}%;max-width:none;image-rendering:auto;display:block"></div></div>`;
+    $("modal").hidden = false;
+    const z = k => { const el = $("zImg"); el.style.width = Math.max(50, parseFloat(el.style.width) * k) + "%"; };
+    $("zIn").onclick = () => z(1.4); $("zOut").onclick = () => z(1 / 1.4);
+  });
+  $("view").querySelectorAll("[data-cur]").forEach(el => el.onclick = () => { d.cur = +el.dataset.cur; render(); });
+  $("view").querySelectorAll("[data-alt]").forEach(el => el.onclick = () => { const [p, v] = el.dataset.alt.split("|"), r = u.rows[d.cur]; r.vals[p] = { rial: +v, conf: 100 }; r.odd = null; r.fixedByUser = true; render(); });
+  const nextRow = () => { const order = u.rows.map((r, k) => k), doubt = order.find(k => !u.rows[k].ok && rowStatus(u.rows[k]) === "doubt"); return doubt ?? order.find(k => !u.rows[k].ok) ?? null; };
+  if ($("rvOk")) $("rvOk").onclick = () => { u.rows[d.cur].ok = true; d.cur = nextRow(); render(); };
+  if ($("rvAllSure")) $("rvAllSure").onclick = () => { u.rows.forEach(r => { if (rowStatus(r) === "sure") r.ok = true; }); d.cur = nextRow(); render(); };
+  if ($("rvSkip")) $("rvSkip").onclick = () => { const r = u.rows[d.cur]; r.cat = null; r.ok = true; d.cur = nextRow(); render(); };
+  const box = $("paperBox"), hl = $("paperHl"); if (box && hl) setTimeout(() => { box.scrollTop = Math.max(0, hl.offsetTop - box.clientHeight / 2); }, 0);
+  $("docAddRow").onclick = () => { u.rows.push({ cat: null, label: "ردیف دستی", vals: {}, page: 0, box: null, img: "" }); render(); };
+  $("docDel").onclick = () => { state.contracts = state.contracts.filter(c => c.src !== d.id); state.docs.splice(i, 1); go("docs"); };
+  $("docSave").onclick = () => {
+    if (!u.org || !u.year){ alert("نام بیمه‌گذار و سال قرارداد را وارد کنید."); return; }
+    state.contracts = state.contracts.filter(c => c.src !== d.id);
+    plans.forEach(p => {
+      const caps = {}; u.rows.forEach(r => { if (r.cat && r.vals[p]) { const v = r.vals[p].rial === Infinity ? Infinity : r.vals[p].rial / 1e7; if (caps[r.cat] == null) caps[r.cat] = v; } });
+      if (!Object.keys(caps).length) return;
+      const pp = u.planPremium[p] || {}, prem = pp.v == null ? null : pp.per === "month" ? pp.v * 12 : pp.v;
+      state.contracts.push({ id: d.id + p, src: d.id, org: u.org, insurer: u.insurer, year: u.year, plan: plans.length > 1 ? p : "", premium: prem, insured: u.insured, franchise: u.franchise, caps, kind: u.kind });
+    });
+    d.saved = true; state.cmpOrg = orgKey(u.org); go("docs");
+  };
+}
+
+// ---------- review helpers ----------
+const rowStatus = r => r.ok ? "ok" : (r.odd || Object.values(r.vals).some(v => v.conf < 70)) ? "doubt" : Object.values(r.vals).every(v => v.conf >= 85) && r.cat ? "sure" : "todo";
+function progressHTML(u){
+  const n = u.rows.length, st = u.rows.map(rowStatus), ok = st.filter(x => x === "ok").length, sure = st.filter(x => x === "sure").length, doubt = st.filter(x => x === "doubt").length;
+  if (!n) return "";
+  return `<div class="rv-prog"><div><b>${fmtInt(ok)} از ${fmtInt(n)} را تأیید کرده‌اید</b><span class="muted">${[sure ? `${fmtInt(sure)} با اطمینان بالا` : "", doubt ? `${fmtInt(doubt)} مشکوک` : ""].filter(Boolean).join(" · ")}</span></div>
+    <div class="prog2"><i style="width:${(ok / n * 100).toFixed(0)}%"></i><i class="sure" style="width:${(sure / n * 100).toFixed(0)}%"></i></div>
+    ${sure ? `<button class="link" type="button" id="rvAllSure" style="align-self:flex-start;font-size:12.5px">${fmtInt(sure)} ردیف مطمئن را یکجا تأیید کن</button>` : ""}</div>`;
+}
+const crop = (d, page, b, maxW, pad) => {
+  const pg = d.doc.pages[page]; if (!pg || !pg.canvas || !b) return "";
+  pad = pad ?? 6; const w = b.x1 - b.x0 + pad * 2, h = b.y1 - b.y0 + pad * 2, k = Math.min(3, maxW / w), c = document.createElement("canvas");
+  c.width = Math.round(w * k); c.height = Math.round(h * k); const g = c.getContext("2d"); g.fillStyle = "#fff"; g.fillRect(0, 0, c.width, c.height); g.imageSmoothingQuality = "high";
+  g.drawImage(pg.canvas, b.x0 - pad, b.y0 - pad, w, h, 0, 0, c.width, c.height); return c.toDataURL("image/jpeg", 0.88);
+};
+function pageImg(d, page){ d.pimg = d.pimg || {}; if (d.pimg[page] != null) return d.pimg[page]; const pg = d.doc.pages[page]; if (!pg || !pg.canvas) return (d.pimg[page] = "");
+  const c = drFit(pg.canvas, Math.min(1100, pg.canvas.width)); return (d.pimg[page] = c.toDataURL("image/jpeg", 0.8)); }
+// Likely misreads of a cap: swap the digits OCR confuses most (۵/۸، ۲/۳، ۶/۹) and keep the ones that fit last year.
+function altValues(v, prevCap){
+  if (!isFinite(v)) return [];
+  const sig = String(Math.round(v)).replace(/0+$/, ""), zeros = String(Math.round(v)).length - sig.length, SW = { 8: "5", 5: "8", 2: "3", 3: "2", 6: "9", 9: "6" }, out = new Set();
+  for (let k = 0; k < sig.length; k++){ const s2 = SW[sig[k]]; if (s2){ out.add(+(sig.slice(0, k) + s2 + sig.slice(k + 1) + "0".repeat(zeros))); } }
+  return [...out].filter(x => !prevCap || (x / 1e7 / prevCap >= 0.6 && x / 1e7 / prevCap <= 3)).slice(0, 3);
+}
+function reviewHTML(d, u, plans, prev){
+  if (!u.rows.length) return `<section class="panel"><div class="panel-b"><p class="muted">جدول پوششی پیدا نشد. اگر مدرک جدول دارد، عکس واضح‌تر یا PDF اصلی را امتحان کنید، یا ردیف‌ها را دستی اضافه کنید.</p><button class="btn" type="button" id="docAddRow">＋ افزودن ردیف</button></div></section>`;
+  if (d.cur == null || d.cur >= u.rows.length){ const k = u.rows.findIndex(r => rowStatus(r) === "doubt"); d.cur = k >= 0 ? k : u.rows.findIndex(r => rowStatus(r) !== "ok" && rowStatus(r) !== "sure"); if (d.cur < 0) d.cur = 0; }
+  const r = u.rows[d.cur], st = rowStatus(r), pg = d.doc.pages[r.page], b = r.vbox || r.box;
+  const W = pg && pg.canvas ? pg.canvas.width : 1, H = pg && pg.canvas ? pg.canvas.height : 1;
+  const ICON = { ok: ["c-ok", "✓"], sure: ["c-sure", "✓"], doubt: ["c-doubt", "!"], todo: ["c-todo", "…"] };
+  return `<div class="rv">
+    <section class="panel rv-paper"><div class="panel-h"><h2>صفحهٔ ${fmtInt(r.page + 1)} از ${fmtInt(d.doc.pages.length || 1)}</h2><span class="small muted">جای عدد روی کاغذ روشن شده</span></div>
+      <div class="rv-pbox" id="paperBox">${pageImg(d, r.page) ? `<div class="rv-pg"><img src="${pageImg(d, r.page)}" alt="صفحهٔ مدرک">${b ? `<span class="rv-hl ${st}" id="paperHl" style="left:${((b.x0 - 8) / W * 100).toFixed(2)}%;top:${((b.y0 - 8) / H * 100).toFixed(2)}%;width:${((b.x1 - b.x0 + 16) / W * 100).toFixed(2)}%;height:${((b.y1 - b.y0 + 16) / H * 100).toFixed(2)}%"></span>` : ""}</div>` : '<p class="muted small panel-b">این مدرک تصویر صفحه ندارد (Word یا متن).</p>'}</div></section>
+    <div class="rv-side">
+      <section class="panel rv-cur ${st}"><div class="rv-h"><span class="tag ${st === "doubt" ? "t-mid" : st === "ok" ? "t-good" : "t-line"}">${st === "doubt" ? "⚠ نیاز به بررسی" : st === "ok" ? "✓ تأیید شد" : st === "sure" ? "با اطمینان بالا خوانده شد" : "بررسی کنید"}</span><span class="small muted">ردیف ${fmtInt(d.cur + 1)} از ${fmtInt(u.rows.length)}</span></div>
+        <select data-dc="${d.cur}" class="rv-cat">${catOptions(r.cat)}</select>
+        ${r.lbox ? `<img class="rv-lbl" src="${crop(d, r.page, Object.assign({}, r.lbox, { x0: Math.max(r.lbox.x0, r.lbox.x1 - (r.lbox.y1 - r.lbox.y0) * 7) }), 640, 4)}" alt="عنوان ردیف در مدرک">` : ""}
+        ${r.vbox ? `<img class="rv-cell" src="${crop(d, r.page, r.vbox, 640, 8)}" data-zoom="${d.cur}" alt="عدد در مدرک؛ برای بزرگ‌نمایی بزنید">` : ""}
+        ${plans.map(p => { const v = r.vals[p], pv = prev && r.cat ? prev.caps[r.cat] : null, alts = v && (st === "doubt") ? altValues(v.rial, pv) : [];
+          return `<label class="rv-val">${plans.length > 1 ? `<span class="small">${esc(p)}</span>` : ""}<span class="rv-in"><input data-dv="${d.cur}|${esc(p)}" value="${v ? (v.rial === Infinity ? "∞" : +(v.rial / 1e7).toFixed(2)) : ""}" inputmode="decimal" aria-label="سقف ${esc(p)} به میلیون تومان"><em>میلیون تومان</em></span>
+            <span class="small muted" data-rial="${d.cur}|${esc(p)}">${v ? (v.rial === Infinity ? "بدون سقف" : fmtInt(v.rial) + " ریال") : ""}</span></label>
+            ${alts.length ? `<div class="rv-alt"><span class="small muted">منظورتان این است؟</span>${alts.map(x => `<button type="button" data-alt="${esc(p)}|${x}">${fmtNum(x / 1e7)}</button>`).join("")}</div>` : ""}`; }).join("")}
+        ${r.odd ? `<p class="small" style="color:var(--mid-ink);margin:0">${esc(r.odd)}</p>` : ""}
+        <div class="rv-act"><button class="btn primary" type="button" id="rvOk">تأیید و بعدی ←</button><button class="btn" type="button" id="rvSkip">این ردیف را نادیده بگیر</button></div>
+      </section>
+      <section class="panel rv-list">${u.rows.map((x, k) => { const s2 = rowStatus(x), ic = ICON[s2]; return `<button type="button" class="rv-li ${k === d.cur ? "now" : ""}" data-cur="${k}"><span class="s ${ic[0]}">${ic[1]}</span><span class="nm">${x.cat ? CCAT_NAME[x.cat] : `<span class="muted">${esc(x.label.slice(0, 30)) || "نوع نامعلوم"}</span>`}</span><b class="num">${Object.values(x.vals).map(v => v.rial === Infinity ? "∞" : fmtNum(v.rial / 1e7)).join(" / ")}${s2 === "doubt" ? "؟" : ""}</b></button>`; }).join("")}
+        <div class="panel-b"><button class="btn" type="button" id="docAddRow">＋ افزودن ردیف</button></div></section>
+    </div></div>`;
+}
+function sampleContracts(){
+  // Synthetic two-year sample so the comparison page shows what it does before real documents are read.
+  const base = { hosp: 120, special: 240, delivery: 12, para: 20, diag: 20, lab: 20, outsurg: 20, rehab: 20, combo: 20, ambIn: 0.5, ambOut: 1, refractive: 10, glasses: 2, dental: 8, visitdrug: 7, hearing: 18, infert: 12 };
+  const next = { hosp: 250, special: 500, delivery: 20, para: 25, diag: 25, lab: 25, outsurg: 25, rehab: 25, combo: 75, ambIn: 2, ambOut: 4, refractive: 15, glasses: 2, dental: 8, visitdrug: 7, hearing: 18, infert: 12 };
+  return [
+    { id: "s1", src: "sample", sample: true, org: "نمونه: شرکت پتروشیمی بندر", insurer: "بیمهٔ نمونه", year: 1404, plan: "", premium: 11.28, insured: 2400, franchise: 10, caps: base },
+    { id: "s2", src: "sample", sample: true, org: "نمونه: شرکت پتروشیمی بندر", insurer: "بیمهٔ نمونه", year: 1405, plan: "", premium: 23.4, insured: 2400, franchise: 10, caps: next },
+    { id: "s3", src: "sample", sample: true, org: "نمونه: دانشگاه شهر", insurer: "", year: 1405, plan: "نقره‌ای", premium: 17.04, insured: 900, franchise: 10, caps: { hosp: 95, special: 110, delivery: 20, para: 38, diag: 30, lab: 15, outsurg: 9, ambIn: 3, ambOut: 6, dental: 18, glasses: 5, rehab: 4, visitdrug: 15, refractive: 12.5, hearing: 4 } },
+  ];
+}
+
+function renderDocs(){
+  setHead("مدارک و قراردادها", "خواندن و مقایسه");
+  const all = state.contracts, groups = {};
+  all.forEach(c => { const k = orgKey(c.org); (groups[k] = groups[k] || { name: c.org, list: [] }).list.push(c); });
+  const keys = Object.keys(groups);
+  if (!state.cmpOrg || !groups[state.cmpOrg]) state.cmpOrg = keys.find(k => groups[k].list.length > 1) || keys[0];
+  const G = groups[state.cmpOrg];
+  $("view").innerHTML = `
+  ${crumb([null, "مدارک و قراردادها"])}
+  <div class="ph"><div><h1>مدارک و قراردادها</h1><span class="sub">بیمه‌نامه، الحاقیه، شرایط مناقصه یا استعلام را بدهید (PDF، عکس، Word)؛ سقف‌ها و نرخ خوانده و سال‌به‌سال مقایسه می‌شود.</span></div></div>
+  <label class="drop" for="docFileIn" id="docDrop"><span class="di"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M12 18v-6M9 15l3-3 3 3"/></svg></span><b>مدرک را اینجا بکشید یا بزنید</b><span>PDF (متنی یا اسکن)، عکس با گوشی، Word یا متن · چند فایل با هم</span></label>
+  <input type="file" id="docFileIn" accept=".pdf,.jpg,.jpeg,.png,.webp,.docx,.txt" multiple hidden>
+  ${state.docs.length ? `<section class="panel"><div class="panel-h"><h2>مدارک خوانده‌شده</h2></div><div class="panel-b ilist">${state.docs.map((d, i) => `<button class="ili" type="button" data-doc="${i}"><span>${esc(d.file)} · ${esc(d.u.org || "بیمه‌گذار نامعلوم")} · ${d.u.year ? fmtInt(d.u.year).replace(/٬/g, "") : "سال نامعلوم"}</span><em class="tag ${d.saved ? "t-good" : "t-mid"}">${d.saved ? "ذخیره شد" : "بررسی و ذخیره"}</em></button>`).join("")}</div></section>` : ""}
+  ${keys.length ? `<div class="fchips" role="group" aria-label="سازمان" style="flex-wrap:wrap">${keys.map(k => `<button type="button" data-org="${esc(k)}" aria-pressed="${k === state.cmpOrg}">${esc(short(groups[k].name))} ${fmtInt(groups[k].list.length)}</button>`).join("")}</div>${compareView(G, all)}` : ""}`;
+  const ir = $("inflR");
+  if (ir){ ir.oninput = () => { $("inflV").textContent = fmtInt(+ir.value) + "٪"; ir.style.setProperty("--p", (+ir.value / 80 * 100) + "%"); };
+    ir.onchange = () => { state.infl = +ir.value / 100; render(); setTimeout(() => { const el = $("proj"); if (el) el.scrollIntoView({ block: "start" }); }, 0); }; }
+  if ($("projXlsx")){ const list = G.list.slice().sort((a, b) => (a.plan || "").localeCompare(b.plan || "") || a.year - b.year), pairs = [];
+    list.forEach((c, i) => { const prev = list.slice(0, i).reverse().find(x => (x.plan || "") === (c.plan || "") && x.year < c.year); if (prev) pairs.push([prev, c]); });
+    const cats = CCAT.map(c => c[0]).filter(k => list.some(c => c.caps[k] != null));
+    $("projXlsx").onclick = () => { try { projectionXlsx(pairs[pairs.length - 1], cats); } catch (e){ alert("ساخت فایل ممکن نشد: " + e.message); } }; }
+  $("docFileIn").onchange = e => { const f = [...e.target.files]; e.target.value = ""; if (f.length) handleDocs(f); };
+  const dz = $("docDrop"); dz.ondragover = e => { e.preventDefault(); dz.classList.add("over"); }; dz.ondragleave = () => dz.classList.remove("over");
+  dz.ondrop = e => { e.preventDefault(); dz.classList.remove("over"); const f = [...e.dataTransfer.files].filter(isDocFile); if (f.length) handleDocs(f); };
+}
+
+function compareView(G, all){
+  const list = G.list.slice().sort((a, b) => (a.plan || "").localeCompare(b.plan || "") || a.year - b.year);
+  const ORDER = ["hosp", "special", "delivery", "infert", "para", "diag", "lab", "fetal", "outsurg", "rehab", "visitdrug", "visit", "drug", "emergency", "dental", "refractive", "glasses", "hearing", "ambIn", "ambOut", "amb", "organs", "prosthesis", "orthosis", "supplies", "specialDis", "combo", "total"];
+  const cats = ORDER.filter(k => list.some(c => c.caps[k] != null));
+  const label = c => `${fmtInt(c.year).replace(/٬/g, "")}${c.plan ? " · " + c.plan : ""}`;
+  // consecutive years of the same plan
+  const pairs = []; list.forEach((c, i) => { const prev = list.slice(0, i).reverse().find(x => (x.plan || "") === (c.plan || "") && x.year < c.year); if (prev) pairs.push([prev, c]); });
+  // the market benchmark only uses real contracts (samples only benchmark other samples)
+  const isSample = list.every(c => c.sample);
+  const others = all.filter(c => orgKey(c.org) !== orgKey(G.name) && (isSample || !c.sample));
+  const market = k => median(others.map(c => c.caps[k]));
+  const sugg = [];
+  pairs.forEach(([a, b]) => {
+    // hospital and special surgery carry most of the cost, so they are judged apart from outpatient items;
+    // shared and total caps differ in what they cover and are never compared year to year
+    const pc = pctCh(a.premium, b.premium), ch = k => pctCh(a.caps[k], b.caps[k]);
+    const main = median(["hosp", "special"].map(ch).filter(v => v != null)), rest = median(cats.filter(k => !["hosp", "special", "combo", "total"].includes(k)).map(ch).filter(v => v != null));
+    const tag = b.plan ? `«${b.plan}» ` : "";
+    if (pc != null && (main != null || rest != null)){
+      const ref = main ?? rest;
+      if (pc > Math.max(main ?? -1, rest ?? -1) + 0.1) sugg.push(["warn", `نرخ ${tag}${fmtSignedPct(pc)} بالا رفته، بیشتر از سقف‌ها (${main != null ? `بستری و جراحی ${fmtSignedPct(main)}` : ""}${main != null && rest != null ? "، " : ""}${rest != null ? `بقیهٔ بندها میانه ${fmtSignedPct(rest)}` : ""}). قیمت به ازای پوشش حدود ${fmtPct((1 + pc) / (1 + ref) - 1)} گران‌تر شده؛ در مذاکرهٔ سال بعد افزایش نرخ را به افزایش تعهدات گره بزنید.`]);
+      else if (main != null && Math.abs(pc - main) <= 0.1) sugg.push(["note", `نرخ ${tag}(${fmtSignedPct(pc)}) هم‌پای سقف‌های اصلی بستری و جراحی (${fmtSignedPct(main)}) بالا رفته؛ قیمت به ازای پوشش اصلی ثابت مانده.${rest != null && rest < main - 0.2 ? ` ولی بندهای سرپایی کمتر افزایش گرفته‌اند (میانه ${fmtSignedPct(rest)})؛ سال بعد سهم آن‌ها را بخواهید.` : ""}`]);
+      else if (pc < ref - 0.1) sugg.push(["ok", `سقف‌ها تندتر از نرخ (${fmtSignedPct(pc)}) بالا رفته‌اند؛ قرارداد ${label(b)} نسبت به سال قبل خرید خوبی بوده است.`]);
+      else sugg.push(["note", `نرخ ${tag}${fmtSignedPct(pc)} تغییر کرده و سقف‌ها ${main != null ? `بستری و جراحی ${fmtSignedPct(main)}` : `میانه ${fmtSignedPct(rest)}`}.`]);
+    }
+    const flat = cats.filter(k => a.caps[k] != null && b.caps[k] != null && a.caps[k] === b.caps[k] && isFinite(a.caps[k]));
+    if (flat.length && (pc || 0) > 0.05) sugg.push(["warn", `این سقف‌ها در ${label(b)} افزایش نگرفته‌اند و با تورم ارزش واقعی‌شان کم شده: ${flat.map(k => CCAT_NAME[k]).join("، ")}. برای سال بعد دست‌کم هم‌پای تورم بالا بروند.`]);
+    const big = cats.filter(k => k !== "combo" && k !== "total").map(k => [k, pctCh(a.caps[k], b.caps[k])]).filter(([, v]) => v != null && v >= 1).sort((x, y) => y[1] - x[1]);
+    if (big.length) sugg.push(["note", `بیشترین بهبود: ${big.slice(0, 4).map(([k, v]) => `${CCAT_NAME[k]} ×${fmtNum(1 + v)}`).join("، ")}. با فایل خسارت معلوم می‌شود این افزایش‌ها لازم بوده یا نه.`]);
+  });
+  const latest = list.slice().sort((a, b) => b.year - a.year)[0];
+  if (latest){
+    if (latest.caps.combo != null && cats.some(k => !["combo", "total", "hosp", "special"].includes(k) && latest.caps[k] != null && latest.caps[k] >= latest.caps.combo))
+      sugg.push(["warn", `سقف مشترک (${MT(latest.caps.combo)}) از سقف بعضی بندها کمتر یا برابر است؛ یعنی یک بند می‌تواند کل سقف را مصرف کند. در سال بعد سقف مشترک دست‌کم جمع بندهای پرمصرف باشد.`]);
+    if (others.length){
+      const low = cats.filter(k => { const m = market(k); return m && isFinite(latest.caps[k]) && latest.caps[k] < m * 0.6; });
+      if (low.length) sugg.push(["warn", `پایین‌تر از بازار (کمتر از ۶۰٪ میانهٔ ${fmtInt(new Set(others.map(c => orgKey(c.org))).size)} سازمان دیگر): ${low.map(k => `${CCAT_NAME[k]} ${MT(latest.caps[k])} در برابر ${MT(market(k))}`).join("، ")}.`]);
+    }
+    if (latest.premium) sugg.push(["note", `با حق‌بیمهٔ ${fmtNum(latest.premium)} برای هر نفر، بیمه‌گر تا خسارت سرانهٔ ${fmtNum(latest.premium * 0.75)} (Loss Ratio ۷۵٪) سالم و تا ${fmtNum(latest.premium * 0.85)} مرزی است. فایل خسارت که برسد، اپ دقیقاً می‌گوید کجای این بازه‌اید.`]);
+  }
+  sugg.push(["info", "پیشنهاد حذف یا کاهش هر پوشش فقط با فایل خسارت ممکن است؛ آن را در «تحلیل تمدید» بدهید تا به همین قرارداد وصل شود."]);
+  const SG = { warn: ["t-mid", "هشدار"], ok: ["t-good", "خوب"], note: ["t-protect", "نکته"], info: ["t-line", "بعدی"] };
+  const pair = pairs[pairs.length - 1];
+  return `
+  ${pair ? overviewHTML(pair, cats, G) : ""}
+  <details class="panel"${pair ? "" : " open"}><summary class="panel-h" style="cursor:pointer"><h2>${pair ? "جدول کامل همهٔ سقف‌ها" : esc(G.name)}</h2><span class="small muted">میلیون تومان برای هر نفر در سال · ${fmtInt(list.length)} قرارداد</span></summary>
+    <div class="tw"><table style="min-width:${300 + list.length * 120 + pairs.length * 80}px"><thead><tr><th>پوشش</th>${list.map(c => `<th>${label(c)}${c.sample ? ' <span class="tag t-line">نمونه</span>' : ""}</th>`).join("")}${pairs.map(([a, b]) => `<th>تغییر ${b.plan ? b.plan + " " : ""}${fmtInt(a.year).replace(/٬/g, "")}←${fmtInt(b.year).replace(/٬/g, "")}</th>`).join("")}${others.length ? "<th>میانهٔ بازار</th>" : ""}</tr></thead><tbody>
+      <tr style="background:var(--hl)"><td><b>حق‌بیمهٔ سالانهٔ هر نفر</b></td>${list.map(c => `<td class="nw"><b>${c.premium ? fmtNum(c.premium) : "—"}</b></td>`).join("")}${pairs.map(([a, b]) => { const v = pctCh(a.premium, b.premium); return `<td class="nw"><b>${v == null ? "—" : fmtSignedPct(v)}</b></td>`; }).join("")}${others.length ? `<td class="nw">${fmtNum(median(others.map(c => c.premium)))}</td>` : ""}</tr>
+      ${cats.map(k => `<tr><td>${CCAT_NAME[k]}</td>${list.map(c => `<td class="nw">${c.caps[k] == null ? '<span class="faint">—</span>' : MT(c.caps[k])}</td>`).join("")}${pairs.map(([a, b]) => { const v = k === "combo" || k === "total" ? null : pctCh(a.caps[k], b.caps[k]); return `<td class="nw" style="${v == null ? "" : v === 0 ? "color:var(--mid-ink);font-weight:700" : v >= 1 ? "color:var(--good);font-weight:700" : ""}">${v == null ? "—" : v === 0 ? "بدون تغییر" : fmtSignedPct(v)}</td>`; }).join("")}${others.length ? `<td class="nw muted">${market(k) == null ? "—" : MT(market(k))}</td>` : ""}</tr>`).join("")}
+    </tbody></table></div></details>
+  <div class="ins">${sugg.map(([k, t]) => `<div class="panel in in-${k}"><span class="ic">${{ warn: "!", ok: "✓", note: "i", info: "→" }[k]}</span><div><b>${SG[k][1]}</b><span>${esc(t)}</span></div></div>`).join("")}</div>
+  ${pairs.length ? projectionView(pairs[pairs.length - 1], cats) : ""}`;
+}
+
+// KPI cards and the "each cap against the premium" chart for the latest two years of one plan.
+function overviewHTML(pair, cats, G){
+  const [a, b] = pair, y = c => fmtInt(c.year).replace(/٬/g, ""), pc = pctCh(a.premium, b.premium), ch = k => pctCh(a.caps[k], b.caps[k]);
+  const main = median(["hosp", "special"].map(ch).filter(v => v != null)), rest = median(cats.filter(k => !["hosp", "special", "combo", "total"].includes(k)).map(ch).filter(v => v != null));
+  const rows = cats.filter(k => k !== "combo" && k !== "total" && ch(k) != null).map(k => [k, ch(k)]).sort((x, z) => z[1] - x[1]);
+  const ref = pc ?? main ?? 0, M = Math.max(ref * 1.6, 1, ...rows.map(r => Math.min(r[1], ref * 2.6)));
+  const col = v => v <= 0 ? "#E11D48" : v >= ref - 0.1 ? "linear-gradient(to left,#16A34A,#4ADE80)" : "linear-gradient(to left,#F59E0B,#FCD34D)";
+  const kp = (l, v, sub, color) => `<div class="panel kp2"><span class="l">${l}</span><b class="big" style="${color ? `color:${color}` : ""}">${v}</b><span class="small muted">${sub}</span></div>`;
+  return `<div class="cmp-h"><div><h1>${esc(G.name)}</h1><span class="sub">${[b.insurer, b.insured ? fmtInt(b.insured) + " نفر" : null].filter(Boolean).map(esc).join(" · ")}${b.plan ? " · " + esc(b.plan) : ""} · مقایسهٔ ${y(a)} ← ${y(b)}</span></div></div>
+  <div class="kp2s">
+    <div class="panel kp2 lead"><span class="l">حق‌بیمهٔ سالانهٔ هر نفر</span><div class="row"><span class="muted num" style="font-size:19px;font-weight:800">${a.premium ? fmtNum(a.premium) : "—"}</span><span class="muted">←</span><b class="big num">${b.premium ? fmtNum(b.premium) : "—"}</b>${pc != null ? `<span class="tag ${pc > 0 ? "t-bad" : "t-good"}">${fmtSignedPct(pc)}</span>` : ""}</div><span class="small muted">میلیون تومان</span></div>
+    ${main != null ? kp("سقف بستری و جراحی", fmtSignedPct(main), pc != null ? (Math.abs(main - pc) <= 0.1 ? "هم‌پای نرخ" : main > pc ? "بیشتر از نرخ" : "کمتر از نرخ") : "", "var(--good)") : ""}
+    ${rest != null ? kp("بقیهٔ بندها (میانه)", fmtSignedPct(rest), pc != null && rest < pc - 0.1 ? "عقب‌تر از نرخ" : "", pc != null && rest < pc - 0.1 ? "var(--mid-ink)" : "var(--good)") : ""}
+    ${b.premium ? kp("حد تحمل خسارت هر نفر", fmtNum(b.premium * 0.75), "با Loss Ratio ۷۵٪") : ""}
+  </div>
+  ${rows.length ? `<section class="panel"><div class="panel-h"><h2>تغییر هر سقف در برابر تغییر نرخ</h2>${pc != null ? `<span class="small muted"><i class="refkey"></i> افزایش نرخ (${fmtSignedPct(pc)}) · نوار کوتاه‌تر از خط = عقب مانده</span>` : ""}</div>
+    <div class="panel-b">${rows.map(([k, v]) => `<div class="brow"><span>${CCAT_NAME[k]}</span><div class="track"><span class="bar" style="width:${v <= 0 ? 1.5 : Math.min(100, v / M * 100).toFixed(1)}%;background:${col(v)}"></span>${pc != null ? `<span class="ref" style="inset-inline-start:${(Math.min(1, ref / M) * 100).toFixed(1)}%"></span>` : ""}</div><b class="num" style="color:${v <= 0 ? "var(--bad)" : v >= ref - 0.1 ? "var(--good)" : "var(--mid-ink)"}">${v === 0 ? "بدون تغییر" : fmtSignedPct(v)} <span class="small muted">${MT(a.caps[k])}←${MT(b.caps[k])}</span></b></div>`).join("")}</div></section>` : ""}`;
+}
+
+/* ---------- next-year projection ----------
+   Without claims the premium is projected from cap changes: each coverage carries an assumed share of the
+   cost (editable; replaced by real shares once a claims file is given). Same caps → premium grows with
+   medical inflation; a cap raised more than inflation adds its share on top. */
+const COST_W = { hosp: .30, special: .20, delivery: .04, infert: .02, para: .07, diag: .04, lab: .04, fetal: .01, outsurg: .03, rehab: .02, visitdrug: .08, visit: .04, drug: .04,
+  emergency: .01, dental: .06, refractive: .02, glasses: .02, hearing: .005, ambIn: .005, ambOut: .005, amb: .005, organs: .005, prosthesis: .005, orthosis: .005, supplies: .002, specialDis: .03 };
+const nice = v => { if (!isFinite(v) || v <= 0) return v; const p = Math.pow(10, Math.floor(Math.log10(v)) - 1); return Math.ceil(v / p) * p; };
+function projection(pair, cats, infl){
+  const [a, b] = pair, ks = cats.filter(k => COST_W[k] && b.caps[k] != null && isFinite(b.caps[k]));
+  const wsum = ks.reduce((s, k) => s + COST_W[k], 0) || 1, w = k => COST_W[k] / wsum, g = 1 + infl;
+  const mainG = median(["hosp", "special"].map(k => pctCh(a.caps[k], b.caps[k])).filter(v => v != null));
+  const plans = {
+    keep: { name: "حفظ ارزش سقف‌ها", desc: "همهٔ سقف‌ها هم‌پای تورم", cap: k => nice(b.caps[k] * g) },
+    economy: { name: "اقتصادی", desc: "بستری و جراحی هم‌پای تورم، بقیه ثابت", cap: k => ["hosp", "special"].includes(k) ? nice(b.caps[k] * g) : b.caps[k] },
+    catchup: { name: "جبران عقب‌ماندگی", desc: "بندهایی که سال قبل کمتر از بستری رشد کردند، هم‌پا می‌شوند", cap: k => { const r = pctCh(a.caps[k], b.caps[k]); return nice(b.caps[k] * g * (mainG != null && r != null && r < mainG ? Math.min(2, (1 + mainG) / (1 + r)) : 1)); } },
+  };
+  Object.values(plans).forEach(p => {
+    p.caps = Object.fromEntries(ks.map(k => [k, p.cap(k)]));
+    // each coverage's cost grows with medical inflation, scaled by how much its cap grows beyond it
+    p.factor = ks.reduce((s, k) => s + w(k) * Math.min(g, p.caps[k] / b.caps[k]) + w(k) * Math.max(0, p.caps[k] / b.caps[k] - g) * 0.5, 0);
+    p.premium = b.premium ? b.premium * p.factor : null;
+  });
+  return { ks, w, plans, last: b, prev: a, year: b.year + 1, g };
+}
+function projectionView(pair, cats){
+  const infl = state.infl ?? 0.35, P = projection(pair, cats, infl), b = P.last, order = ["economy", "catchup", "keep"];
+  // recommendation: when outpatient items lagged behind last year, catching up is the fair offer; otherwise keep value
+  const [a] = pair, ch = k => pctCh(a.caps[k], b.caps[k]);
+  const main = median(["hosp", "special"].map(ch).filter(v => v != null)), rest = median(P.ks.filter(k => !["hosp", "special"].includes(k)).map(ch).filter(v => v != null));
+  const rec = main != null && rest != null && rest < main - 0.2 ? "catchup" : "keep";
+  const why = rec === "catchup" ? `بندهای سرپایی سال قبل ${fmtSignedPct(rest)} رشد کردند و بستری ${fmtSignedPct(main)}` : "سقف‌ها سال قبل متوازن رشد کرده‌اند";
+  const DESC = { economy: [["بستری و جراحی", "هم‌پای تورم"], ["بقیهٔ بندها", "ثابت"]], catchup: [["بندهای جامانده", "هم‌پای بستری"], ["رضایت کارکنان", "بیشترین"]], keep: [["همهٔ سقف‌ها", "هم‌پای تورم"], ["قدرت خرید پوشش", "ثابت"]] };
+  const y = fmtInt(P.year).replace(/٬/g, "");
+  return `<section class="panel anchor proj" id="proj"><div class="panel-h"><h2>سال ${y}: سه راه پیش رو</h2>
+      <div class="slider"><label for="inflR" class="small nw">تورم هزینهٔ درمان</label><input type="range" id="inflR" min="0" max="80" step="5" value="${Math.round(infl * 100)}" style="--p:${Math.round(infl * 100 / 80 * 100)}%"><b class="num" id="inflV">${fmtInt(Math.round(infl * 100))}٪</b></div></div>
+    <div class="panel-b" style="display:flex;flex-direction:column;gap:16px">
+      <div class="scn">${order.map(k => { const p = P.plans[k]; return `<div class="sc ${k === rec ? "rec" : ""}">${k === rec ? `<span class="badge">پیشنهاد اپ</span>` : ""}<span class="tag t-protect" style="align-self:flex-start">${p.name}</span>
+        <div class="pr"><b class="num">${p.premium ? fmtNum(p.premium) : "—"}</b> <span class="small muted">میلیون / نفر</span></div>
+        <div class="small" style="font-weight:800;color:${p.factor - 1 < infl ? "var(--good)" : "var(--mid-ink)"}">${fmtSignedPct(p.factor - 1)} نسبت به ${fmtInt(b.year).replace(/٬/g, "")}</div>
+        <ul>${DESC[k].map(([l, v]) => `<li><span class="muted">${l}</span><b>${v}</b></li>`).join("")}${b.insured && p.premium ? `<li><span class="muted">کل حق‌بیمه</span><b class="num">${fmtNum(p.premium * b.insured / 1000)} میلیارد</b></li>` : ""}</ul>
+        ${k === rec ? `<span class="small muted">${why}</span>` : ""}</div>`; }).join("")}</div>
+      ${b.premium ? "" : '<p class="small" style="color:var(--mid-ink)">حق‌بیمهٔ این قرارداد وارد نشده؛ در صفحهٔ مدرک واردش کنید تا مبلغ‌ها حساب شوند.</p>'}
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center"><button class="btn primary" type="button" id="projXlsx">⇩ دانلود فایل محاسبه (اکسل)</button><span class="small muted">تا فایل خسارت نرسیده، سهم هر پوشش از هزینه فرضی است و در فایل اکسل قابل تغییر است.</span></div>
+      <details><summary class="small" style="cursor:pointer;font-weight:700;color:var(--brand)">سقف تک‌تک پوشش‌ها در هر راه</summary>
+      <div class="tw" style="margin-top:10px"><table style="min-width:600px"><thead><tr><th>پوشش</th><th>سقف ${fmtInt(b.year).replace(/٬/g, "")}</th>${order.map(k => `<th>${P.plans[k].name}</th>`).join("")}</tr></thead><tbody>
+        ${P.ks.map(k => `<tr><td>${CCAT_NAME[k]}</td><td class="nw">${MT(b.caps[k])}</td>${order.map(o => { const v = P.plans[o].caps[k]; return `<td class="nw"${v !== b.caps[k] ? ' style="font-weight:800;color:var(--brand)"' : ""}>${MT(v)}</td>`; }).join("")}</tr>`).join("")}
+      </tbody></table></div></details>
+    </div></section>`;
+}
+function projectionXlsx(pair, cats){
+  const infl = state.infl ?? 0.35, P = projection(pair, cats, infl), a = P.prev, b = P.last, y0 = a.year, y1 = b.year, y2 = P.year;
+  const rows = [["محاسبهٔ حق‌بیمهٔ سال " + y2 + " — " + b.org + (b.plan ? " · " + b.plan : "")], ["تورم هزینهٔ درمان", infl], ["حق‌بیمهٔ هر نفر " + y1 + " (میلیون تومان)", b.premium || 0], ["تعداد نفرات", b.insured || 0], [],
+    ["پوشش", "سقف " + y0, "سقف " + y1, "رشد " + y0 + "→" + y1, "سهم هزینه (فرض)", "سقف پیشنهادی " + y2, "ضریب هزینه"]];
+  const first = rows.length + 1;
+  P.ks.forEach((k, i) => {
+    const r = first + i, cap = P.plans.keep.caps[k];
+    rows.push([CCAT_NAME[k], a.caps[k] ?? "", b.caps[k], { f: `IF(B${r}="","",C${r}/B${r}-1)` }, +P.w(k).toFixed(4), cap,
+      { f: `E${r}*(MIN(1+$B$2,F${r}/C${r})+MAX(0,F${r}/C${r}-(1+$B$2))*0.5)` }]);
+  });
+  const last = first + P.ks.length - 1;
+  rows.push([], ["ضریب کل", "", "", "", { f: `SUM(E${first}:E${last})` }, "", { f: `SUM(G${first}:G${last})/SUM(E${first}:E${last})` }],
+    ["حق‌بیمهٔ برآوردی هر نفر " + y2, "", "", "", "", "", { f: `B3*G${last + 2}` }], ["کل حق‌بیمه", "", "", "", "", "", { f: `G${last + 3}*B4` }],
+    ["سرانهٔ خسارت مجاز (LR ۷۵٪)", "", "", "", "", "", { f: `G${last + 3}*0.75` }], [],
+    ["ستون «سقف پیشنهادی» و «سهم هزینه» را تغییر دهید؛ همه‌چیز دوباره حساب می‌شود. با فایل خسارت، سهم واقعی هر پوشش جایگزین فرض می‌شود."]);
+  const ws = XLSX.utils.aoa_to_sheet(rows.map(r => r.map(v => v && v.f ? { t: "n", f: v.f } : v)));
+  ws["!cols"] = [{ wch: 30 }, { wch: 12 }, { wch: 12 }, { wch: 14 }, { wch: 16 }, { wch: 18 }, { wch: 14 }];
+  ws["!views"] = [{ RTL: true }];
+  const wb = XLSX.utils.book_new(); wb.Workbook = { Views: [{ RTL: true }] };
+  XLSX.utils.book_append_sheet(wb, ws, "سال " + y2);
+  XLSX.writeFile(wb, `محاسبه-${(b.org || "قرارداد").replace(/\s+/g, "-")}-${y2}.xlsx`);
+}
+
+/* ================= Claims (خسارت) =================
+   A claims report from the insurer's system (one row per service: disease group, service, files, people, amount)
+   gives the real cost of every coverage. Joined to the policy's caps it shows where the money went, which caps
+   were binding, and what next year should cost — from real numbers instead of assumed shares. */
+
+// Claims groups → coverage keys of the contract (first match wins; the claims wording differs from policy wording).
+const CLM_MAP = [
+  [/دندان/, "dental"], [/جراحی\s*(های)?\s*مهم|شیمی\s*درمانی|رادیوترا/, "special"], [/بستری/, "hosp"],
+  [/زایمان|سزارین/, "delivery"], [/نازایی|ناباروری/, "infert"], [/عیوب\s*انکسار|لیزیک|لازک/, "refractive"],
+  [/عینک|لنز/, "glasses"], [/فیزیوتراپی|گفتار\s*درمانی|کار\s*درمانی/, "rehab"], [/جنین|غربالگری/, "fetal"],
+  [/اورژانس/, "emergency"], [/ویزیت/, "visit"], [/دارو/, "drug"], [/آزمایش/, "lab"],
+  [/سرپایی|گروه\s*سوم/, "outsurg"], [/سایر\s*پاراکلینیک/, "otherpara"], [/گروه\s*دوم/, "diag"], [/پاراکلینیک|گروه\s*اول/, "para"],
+  [/سمعک/, "hearing"], [/آمبولانس/, "amb"], [/کارشناسی|نامشخص/, "admin"],
+];
+const CLM_NAME = Object.assign({}, CCAT_NAME, { otherpara: "سایر پاراکلینیکی (تزریقات، سرم…)", admin: "هزینهٔ کارشناسی و نامشخص", other: "سایر",
+  visit: "ویزیت", drug: "دارو", emergency: "اورژانس", para: "تصویربرداری (پاراکلینیک ۱)", diag: "تست‌های تشخیصی (پاراکلینیک ۲)" });
+const CLM_HOSP = new Set(["hosp", "special", "delivery", "infert", "refractive"]);
+const clmCat = name => { const t = norm(name).replace(/ئ/g, "ی"); const m = CLM_MAP.find(([re]) => re.test(t)); return m ? m[1] : "other"; };
+// Caps that may sit under a combined row in the policy
+const CAP_FALLBACK = { visit: ["visitdrug"], drug: ["visitdrug"], emergency: ["emergency"], amb: ["ambIn", "amb"] };
+const capOf = (c, k) => { if (!c || !c.caps) return null; for (const x of [k, ...(CAP_FALLBACK[k] || [])]) if (c.caps[x] != null) return c.caps[x]; return null; };
+
+function claimsHeader(rows){
+  for (let i = 0; i < Math.min(rows.length, 15); i++){
+    const h = (rows[i] || []).map(c => norm(c).replace(/[:：]/g, "").trim());
+    const f = re => h.findIndex(c => re.test(c));
+    const gi = f(/گروه\s*بیماری|گروه\s*خدمت/), ai = f(/مبلغ\s*(خسارت|پرداختی|پرداخت\s*شده)/);
+    if (gi >= 0 && ai >= 0) return { i, gi, ai, ni: f(/نام\s*بیماری|نام\s*خدمت|شرح\s*خدمت/), fi: f(/^تعداد\s*پرونده\s*(ها)?$/), ui: f(/مصرف\s*کننده|تعداد\s*افراد/),
+      ci: f(/مورد\s*خسارت/), oi: f(/بیمه\s*گذار/), toman: /تومان/.test(h[ai]) };
+  }
+  return null;
+}
+const isClaimsBook = sheets => Object.values(sheets).some(r => claimsHeader(r));
+function parseClaims(sheets, file){
+  const out = { file, org: null, rows: 0, cats: {} };
+  Object.values(sheets).forEach(rows => {
+    const H = claimsHeader(rows); if (!H) return;
+    rows.slice(H.i + 1).forEach(r => {
+      const amt = clmNum(r[H.ai]); if (!r[H.gi] || amt == null || !isFinite(amt)) return;
+      const g = norm(r[H.gi]).trim(); if (/^جمع|^کل$/.test(g)) return;
+      const k = clmCat(g), svc = norm(H.ni >= 0 ? r[H.ni] : g).trim() || g;
+      const C = out.cats[k] = out.cats[k] || { k, groups: new Set(), amt: 0, files: 0, cases: 0, svc: {} };
+      C.groups.add(g); C.amt += amt; C.files += clmNum(r[H.fi]) || 0; C.cases += clmNum(r[H.ci]) || 0;
+      // the same service appears once per entry channel with the same head count → keep the largest, not the sum
+      const S = C.svc[svc] = C.svc[svc] || { amt: 0, users: 0, files: 0 }; S.amt += amt; S.files += clmNum(r[H.fi]) || 0; S.users = Math.max(S.users, clmNum(r[H.ui]) || 0);
+      if (H.oi >= 0 && !out.org && r[H.oi] && !/نامعتبر/.test(r[H.oi])) out.org = norm(r[H.oi]).replace(/\s*کد\s*\d+\s*$/, "").trim();
+      out.rows++;
+    });
+    out.rial = !H.toman;
+  });
+  if (!out.rows) throw new Error("ردیف خسارتی پیدا نشد");
+  const div = out.rial ? 1e7 : 1e6; // → میلیون تومان
+  Object.values(out.cats).forEach(C => { C.amt /= div; Object.values(C.svc).forEach(s => { s.amt /= div; }); C.users = Math.max(0, ...Object.values(C.svc).map(s => s.users)); });
+  return out;
+}
+const clmNum = v => { if (v == null || v === "") return null; if (typeof v === "number") return v; const s = drNorm(String(v)).replace(/[,٬\s]/g, ""); const n = parseFloat(s); return isNaN(n) ? null : n; };
+
+function readClaimsFile(f){
+  return new Promise(resolve => {
+    if (!/\.(xlsx|xls|csv)$/i.test(f.name) || typeof XLSX === "undefined") return resolve(null);
+    const rd = new FileReader();
+    rd.onload = () => { try {
+      const wb = XLSX.read(new Uint8Array(rd.result), { type: "array" }), sheets = {};
+      wb.SheetNames.forEach(n => { sheets[n] = XLSX.utils.sheet_to_json(wb.Sheets[n], { header: 1, raw: true, defval: null }); });
+      if (!isClaimsBook(sheets)) return resolve(null);
+      resolve(parseClaims(sheets, f.name));
+    } catch (e){ resolve({ error: `«${f.name}» خوانده نشد: ${e.message}` }); } };
+    rd.onerror = () => resolve(null); rd.readAsArrayBuffer(f);
+  });
+}
+async function takeClaims(files){
+  const res = await Promise.all(files.map(readClaimsFile)), rest = files.filter((f, i) => !res[i]);
+  const got = res.filter(r => r && !r.error);
+  res.filter(r => r && r.error).forEach(r => state.errors.push(r.error));
+  got.forEach(c => { const i = state.claims.findIndex(x => x.file === c.file); if (i >= 0) state.claims[i] = c; else state.claims.push(c); });
+  return { got, rest };
+}
+
+/* ---------- model ---------- */
+function mergeClaims(list){
+  const cats = {};
+  list.forEach(c => Object.values(c.cats).forEach(C => {
+    const M = cats[C.k] = cats[C.k] || { k: C.k, amt: 0, files: 0, cases: 0, users: 0, svc: {} };
+    M.amt += C.amt; M.files += C.files; M.cases += C.cases; M.users = Math.max(M.users, C.users);
+    Object.entries(C.svc).forEach(([n, s]) => { const t = M.svc[n] = M.svc[n] || { amt: 0, users: 0, files: 0 }; t.amt += s.amt; t.files += s.files; t.users = Math.max(t.users, s.users); });
+  }));
+  return Object.values(cats).sort((a, b) => b.amt - a.amt);
+}
+// A cap is "binding" when the average user already spends near it; raising it lets that hidden demand through.
+function capUplift(avg, c0, c1){
+  if (!avg || c0 == null || c1 == null || !isFinite(c0) || !c0) return 0;
+  if (!isFinite(c1)) return 0.6 * Math.min(1, avg / c0);
+  if (c1 > c0) return Math.min(c1 / c0 - 1, 1) * 0.6 * Math.min(1, avg / c0);
+  if (c1 < c0 && avg > c1) return -0.6 * Math.min(1, (avg - c1) / avg);
+  return 0;
+}
+function claimsModel(list, o){
+  const N = o.insured || null, cats = mergeClaims(list), total = cats.reduce((s, c) => s + c.amt, 0), L = 1 + o.ibnr;
+  const G = cats.map(c => {
+    const c0 = capOf(o.old, c.k), c1 = capOf(o.nw, c.k), avg = c.users ? c.amt / c.users : null;
+    const up = o.upOverride && o.upOverride[c.k] != null ? o.upOverride[c.k] : capUplift(avg, c0, c1);
+    return Object.assign({}, c, { share: c.amt / total, avg, use: N && c.users ? c.users / N : null, c0, c1, press: avg && c0 && isFinite(c0) ? avg / c0 : null, up,
+      proj: c.amt * L * (1 + o.infl) * (1 + up), top: Object.entries(c.svc).sort((a, b) => b[1].amt - a[1].amt).slice(0, 3) });
+  });
+  const projTotal = G.reduce((s, g) => s + g.proj, 0), upW = total ? projTotal / (total * L * (1 + o.infl)) - 1 : 0;
+  const pc0 = N ? total * L / N : null, pc1 = N ? projTotal / N : null;
+  const hospShare = G.filter(g => CLM_HOSP.has(g.k)).reduce((s, g) => s + g.share, 0);
+  const sc = [["اقتصادی", Math.max(0, o.infl - 0.05), 0.85], ["متعادل", o.infl, o.tlr], ["محافظه‌کار", o.infl + 0.1, 0.70]]
+    .map(([n, i, lr]) => ({ n, i, lr, pc: pc0 != null ? pc0 * (1 + i) * (1 + upW) : null })).map(s => Object.assign(s, { prem: s.pc != null ? s.pc / s.lr : null }));
+  return { G, total, projTotal, upW, pc0, pc1, N, L, lr0: pc0 != null && o.p0 ? pc0 / o.p0 : null, lr1: pc1 != null && o.p1 ? pc1 / o.p1 : null,
+    fair: pc1 != null ? pc1 / o.tlr : null, hospShare, sc, o };
+}
+function claimsAdvice(M){
+  const o = M.o, A = [], y1 = o.nw ? fmtYear(o.nw.year) : "سال بعد";
+  if (M.lr0 != null){
+    if (M.lr0 >= 0.85) A.push(["warn", "سال خسارت زیان‌ده بوده", `Loss Ratio ${fmtPct(M.lr0)} (با خسارت دیررس). بیمه‌گر برای کم کردن نرخ انعطاف کمی دارد و افزایش نرخ منطقی است.`]);
+    else if (M.lr0 < 0.75) A.push(["ok", "سال خسارت سودده بوده", `Loss Ratio ${fmtPct(M.lr0)}. اهرم مذاکره برای نرخ پایین‌تر یا سقف بیشتر دارید.`]);
+    else A.push(["note", "سال خسارت در محدودهٔ تعادل", `Loss Ratio ${fmtPct(M.lr0)}.`]);
+  }
+  if (M.fair != null && o.p1){
+    const gap = o.p1 / M.fair - 1;
+    if (gap > 0.1) A.push(["warn", `نرخ ${y1} گران است`, `${fmtNum(o.p1)} در برابر نرخ منصفانهٔ ${fmtNum(M.fair)} (${fmtSignedPct(gap)}). تا حدود ${fmtNum(M.fair)} مذاکره کنید${M.N ? `؛ صرفه‌جویی کل حدود ${fmtNum((o.p1 - M.fair) * M.N / 1000)} میلیارد تومان` : ""}.`]);
+    else if (gap < -0.1) A.push(["ok", `نرخ ${y1} به نفع کارفرماست`, `${fmtNum(o.p1)} در برابر نرخ منصفانهٔ ${fmtNum(M.fair)} (${fmtSignedPct(gap)}). برای کم کردن نرخ فشار نیاورید؛ روی شرایط (پوشش والدین، دورهٔ انتظار، تعرفه) مذاکره کنید و برای افزایش سال بعد آماده باشید.`]);
+    else A.push(["note", `نرخ ${y1} منصفانه است`, `${fmtNum(o.p1)} در برابر ${fmtNum(M.fair)}. جای مذاکره روی نرخ کم است؛ روی شرایط و سقف‌های پرمصرف مذاکره کنید.`]);
+  } else if (M.fair != null) A.push(["note", "حق‌بیمهٔ منصفانهٔ سال بعد", `${fmtNum(M.fair)} میلیون تومان برای هر نفر با Loss Ratio هدف ${fmtPct(o.tlr)}.`]);
+  const bind = M.G.filter(g => g.press != null && g.press >= 0.8);
+  if (bind.length) A.push(["warn", "این سقف‌ها کم بوده‌اند", bind.map(g => `${CLM_NAME[g.k] || g.k}: میانگین هر نفر ${fmtNum(g.avg)} با سقف ${MT(g.c0)}`).join("؛ ") + (o.nw ? "؛ با سقف جدید هزینه‌شان بالا می‌رود." : "؛ کارکنان بخشی از هزینه را خودشان داده‌اند.")]);
+  const busy = M.G.filter(g => g.use != null && g.use >= 0.4).sort((a, b) => b.use - a.use);
+  if (busy.length) A.push(["info", "پرمصرف‌ترین پوشش‌ها", busy.slice(0, 4).map(g => `${CLM_NAME[g.k] || g.k} ${fmtPct(g.use)} افراد`).join("، ") + ". کم کردن این‌ها بیشترین نارضایتی را می‌سازد."]);
+  const big = M.G[0]; if (big) A.push(["info", "بیشترین هزینه", `${CLM_NAME[big.k] || big.k}: ${fmtPct(big.share)} کل خسارت (${fmtNum(big.amt)} میلیون تومان)` + (big.k === "dental" ? ". اگر نرخ باید پایین بیاید، محدود کردن روکش و ایمپلنت اهرم اصلی است." : ".")]);
+  const over = M.G.filter(g => ["hosp", "special"].includes(g.k) && g.avg && g.c1 && isFinite(g.c1) && g.avg * 3 < g.c1);
+  if (over.length) A.push(["note", "سقف جدید کافی است", over.map(g => `${CLM_NAME[g.k]} (میانگین ${fmtNum(g.avg)}، سقف ${MT(g.c1)})`).join("، ") + "؛ بالا بردن بیشتر فقط گران‌تر می‌کند."]);
+  if (M.hospShare < 0.25) A.push(["note", "سهم بیمارستانی کم است", `فقط ${fmtPct(M.hospShare)} خسارت. اگر خسارت‌های بستری هنوز کامل ثبت نشده، «خسارت دیررس» را بالاتر بگذارید.`]);
+  const maxU = Math.max(0, ...M.G.map(g => g.users || 0));
+  if (M.N && maxU > M.N) A.push(["warn", "تعداد نفرات را چک کنید", `${fmtInt(maxU)} نفر از یک پوشش استفاده کرده‌اند ولی بیمه‌شدگان ${fmtInt(M.N)} نفرند (شاید والدین یا تحت تکفل حساب نشده‌اند).`]);
+  return A;
+}
+const fmtYear = y => y ? fmtInt(y).replace(/٬/g, "") : "";
+
+/* ---------- page ---------- */
+function claimsDefaults(){
+  const real = state.contracts.filter(c => !c.sample).sort((a, b) => a.year - b.year), cl = state.cl;
+  const org = state.claims.map(c => c.org).find(Boolean);
+  const pool = org ? real.filter(c => orgKey(c.org) === orgKey(org)) : real;
+  const lastOrg = (pool.length ? pool : real).slice(-1)[0], same = lastOrg ? real.filter(c => orgKey(c.org) === orgKey(lastOrg.org)) : [];
+  if (cl.oldId === undefined) cl.oldId = same.length > 1 ? same[same.length - 2].id : same[0] ? same[0].id : "";
+  if (cl.newId === undefined) cl.newId = same.length > 1 ? same[same.length - 1].id : "";
+}
+function renderClaims(){
+  setHead("تحلیل خسارت", "خسارت واقعی ← قرارداد سال بعد");
+  const cl = state.cl; claimsDefaults();
+  const byId = id => state.contracts.find(c => c.id === id) || null, old = byId(cl.oldId), nw = byId(cl.newId);
+  const o = { old, nw, insured: cl.insured ?? (nw && nw.insured) ?? (old && old.insured) ?? null, p0: cl.p0 ?? (old && old.premium) ?? null,
+    p1: cl.p1 ?? (nw && nw.premium) ?? null, ibnr: cl.ibnr ?? 0.1, infl: state.infl ?? 0.4, tlr: cl.tlr ?? ((state.settings.targetLR || 75) / 100) };
+  const opt = sel => `<option value="">— ندارم —</option>` + state.contracts.map(c => `<option value="${esc(c.id)}"${c.id === sel ? " selected" : ""}>${esc(short(c.org) || "بی‌نام")} · ${fmtYear(c.year) || "سال؟"}${c.plan ? " · " + esc(c.plan) : ""}${c.sample ? " (نمونه)" : ""}</option>`).join("");
+  const drop = `<label class="drop" for="clmIn" id="clmDrop"><span class="di"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M12 18v-6M9 15l3-3 3 3"/></svg></span><b>فایل خسارت را اینجا بکشید یا بزنید</b><span>اکسل خروجی سامانهٔ بیمه‌گر (سرپایی و بیمارستانی را با هم بدهید) · ستون‌های «گروه بیماری» و «مبلغ خسارت» کافی است</span></label><input type="file" id="clmIn" accept=".xlsx,.xls,.csv" multiple hidden>`;
+  if (!state.claims.length){
+    $("view").innerHTML = `${crumb([null, "تحلیل خسارت"])}<div class="ph"><div><h1>تحلیل خسارت و پیشنهاد سال بعد</h1><span class="sub">فایل خسارت پرداختی را بدهید؛ با بیمه‌نامه‌های خوانده‌شده جفت می‌شود و Loss Ratio واقعی، سقف‌های کم و حق‌بیمهٔ منصفانهٔ سال بعد را می‌دهد.</span></div></div>${drop}
+      <section class="panel"><div class="panel-b small muted" style="line-height:2">۱. بیمه‌نامهٔ سال خسارت (و اگر دارید، سال بعد) را در «مدارک و قراردادها» بدهید تا سقف‌ها و نرخ خوانده شود.<br>۲. فایل‌های خسارت را اینجا بدهید.<br>۳. اپ هر گروه خسارت را به سقفش وصل می‌کند و سه سناریو با فایل اکسل می‌دهد. همه‌چیز روی همین دستگاه می‌ماند.</div></section>`;
+    return bindClaims();
+  }
+  const M = claimsModel(state.claims, o), adv = claimsAdvice(M), y0 = old ? fmtYear(old.year) : "سال خسارت", y1 = nw ? fmtYear(nw.year) : "سال بعد";
+  const lrCol = v => v == null ? "" : v < 0.75 ? "var(--good)" : v <= 0.85 ? "var(--mid-ink)" : "var(--bad)";
+  const kp = (l, v, sub, color, lead) => `<div class="panel kp2${lead ? " lead" : ""}"><span class="l">${l}</span><b class="big num" style="${color ? `color:${color}` : ""}">${v}</b><span class="small muted">${sub}</span></div>`;
+  const inp = (id, l, v, step, suf) => `<label class="cin"><span>${l}</span><span class="row"><input type="number" id="${id}" value="${v ?? ""}" step="${step}" inputmode="decimal" placeholder="وارد کنید"><em>${suf}</em></span></label>`;
+  const maxA = M.G[0] ? M.G[0].amt : 1;
+  $("view").innerHTML = `${crumb([null, "تحلیل خسارت"])}
+  <div class="ph"><div><h1>تحلیل خسارت ${y0}${M.o.old ? " · " + esc(short(old.org)) : ""}</h1><span class="sub">${state.claims.map(c => esc(c.file)).join(" · ")} · مبالغ به میلیون تومان</span></div>
+    <div class="actions"><button class="btn primary" type="button" id="clmX">⇩ فایل محاسبه (اکسل)</button><button class="btn" type="button" id="clmClear">پاک کردن خسارت‌ها</button></div></div>
+  <section class="panel"><div class="panel-h"><h2>ورودی‌ها</h2><span class="small muted">از بیمه‌نامه‌های خوانده‌شده پر می‌شود؛ قابل تغییر است</span></div>
+    <div class="panel-b cins">
+      <label class="cin"><span>بیمه‌نامهٔ سال خسارت (سقف‌ها)</span><select id="clmOld">${opt(cl.oldId)}</select></label>
+      <label class="cin"><span>بیمه‌نامهٔ سال بعد (اختیاری)</span><select id="clmNew">${opt(cl.newId)}</select></label>
+      ${inp("clmN", "تعداد بیمه‌شدگان", o.insured, 1, "نفر")}${inp("clmP0", `حق‌بیمهٔ هر نفر ${y0}`, o.p0, 0.01, "میلیون")}${inp("clmP1", `حق‌بیمهٔ پیشنهادی ${y1}`, o.p1, 0.01, "میلیون")}
+      ${inp("clmI", "خسارت دیررس (IBNR)", Math.round(o.ibnr * 100), 1, "٪")}${inp("clmT", "Loss Ratio هدف", Math.round(o.tlr * 100), 1, "٪")}
+      <div class="slider cin" style="grid-column:span 2"><label for="clmInfl" class="small nw">تورم درمان</label><input type="range" id="clmInfl" min="0" max="80" step="5" value="${Math.round(o.infl * 100)}" style="--p:${Math.round(o.infl * 100 / 80 * 100)}%"><b class="num" id="clmInflV">${fmtInt(Math.round(o.infl * 100))}٪</b></div>
+    </div>${old && old.sample ? '<p class="small" style="color:var(--mid-ink);padding:0 18px 14px">بیمه‌نامهٔ انتخاب‌شده نمونه است؛ برای نتیجهٔ واقعی بیمه‌نامهٔ خود را در «مدارک و قراردادها» بدهید.</p>' : ""}</section>
+  <div class="kp2s">
+    ${kp("کل خسارت پرداختی", fmtNum(M.total), `${fmtPct(1 - M.hospShare)} سرپایی · ${fmtPct(M.hospShare)} بیمارستانی`, "", true)}
+    ${kp(`Loss Ratio ${y0}`, M.lr0 != null ? fmtPct(M.lr0) : "—", M.lr0 != null ? `سرانه ${fmtNum(M.pc0)} در برابر ${fmtNum(o.p0)}` : "تعداد نفرات و حق‌بیمه را وارد کنید", lrCol(M.lr0))}
+    ${kp(`خسارت سرانهٔ ${y1}`, M.pc1 != null ? fmtNum(M.pc1) : "—", `تورم ${fmtPct(o.infl)} · اثر سقف‌ها ${fmtSignedPct(M.upW)}`)}
+    ${kp(`حق‌بیمهٔ منصفانهٔ ${y1}`, M.fair != null ? fmtNum(M.fair) : "—", M.lr1 != null ? `نرخ پیشنهادی ${fmtNum(o.p1)} ← LR ${fmtPct(M.lr1)}` : `با LR هدف ${fmtPct(o.tlr)}`, M.lr1 != null ? lrCol(M.lr1) : "var(--brand)")}
+  </div>
+  <div class="ins">${adv.map(([k, t, s]) => `<div class="panel in in-${k}"><span class="ic">${{ warn: "!", ok: "✓", note: "i", info: "→" }[k]}</span><div><b>${esc(t)}</b><span>${esc(s)}</span></div></div>`).join("")}</div>
+  <section class="panel"><div class="panel-h"><h2>هزینه به تفکیک پوشش</h2><span class="small muted">مصرف‌کننده = حداقل تعداد افراد</span></div>
+    <div class="tw"><table class="clmt" style="min-width:860px"><thead><tr><th>پوشش</th><th>خسارت</th><th style="width:160px">سهم</th><th>مصرف‌کننده</th><th>میانگین هر نفر</th><th>سقف ${y0}</th><th>سقف ${y1}</th><th>اثر سقف</th><th>پیش‌بینی ${y1}</th></tr></thead><tbody>
+    ${M.G.map(g => `<tr><td><b>${esc(CLM_NAME[g.k] || g.k)}</b><div class="small muted">${g.top.map(([n, s]) => `${esc(n)} ${fmtNum(s.amt)}`).join(" · ")}</div></td><td class="num nw">${fmtNum(g.amt)}</td>
+      <td><div class="track" style="height:12px"><span class="bar" style="height:8px;top:2px;width:${Math.max(1.5, g.amt / maxA * 100).toFixed(1)}%;background:linear-gradient(to left,#6366F1,#A78BFA)"></span></div><span class="small muted">${fmtPct(g.share)}</span></td>
+      <td class="nw">${g.users ? fmtInt(g.users) : "—"}${g.use != null ? ` <span class="small muted">${fmtPct(g.use)}</span>` : ""}</td><td class="num nw">${g.avg ? fmtNum(g.avg) : "—"}</td>
+      <td class="nw">${g.c0 != null ? MT(g.c0) : "—"}${g.press != null && g.press >= 0.8 ? ' <span class="tag t-bad">به سقف خورده</span>' : ""}</td><td class="nw">${g.c1 != null ? MT(g.c1) : "—"}</td>
+      <td class="nw">${g.up ? fmtSignedPct(g.up) : "—"}</td><td class="num nw"><b>${fmtNum(g.proj)}</b></td></tr>`).join("")}
+    <tr><td><b>جمع</b></td><td class="num nw"><b>${fmtNum(M.total)}</b></td><td></td><td></td><td></td><td></td><td></td><td class="nw">${fmtSignedPct(M.upW)}</td><td class="num nw"><b>${fmtNum(M.projTotal)}</b></td></tr></tbody></table></div></section>
+  <section class="panel proj"><div class="panel-h"><h2>حق‌بیمهٔ ${y1}: سه سناریو</h2><span class="small muted">بر پایهٔ خسارت واقعی، نه فرض</span></div>
+    <div class="panel-b"><div class="scn">${M.sc.map((s, i) => `<div class="sc ${i === 1 ? "rec" : ""}">${i === 1 ? '<span class="badge">پیشنهاد اپ</span>' : ""}<span class="tag t-protect" style="align-self:flex-start">${s.n}</span>
+      <div class="pr"><b class="num">${s.prem != null ? fmtNum(s.prem) : "—"}</b> <span class="small muted">میلیون / نفر</span></div>
+      ${o.p1 && s.prem != null ? `<div class="small" style="font-weight:800;color:${s.prem >= o.p1 ? "var(--good)" : "var(--mid-ink)"}">${fmtSignedPct(s.prem / o.p1 - 1)} نسبت به نرخ پیشنهادی</div>` : ""}
+      <ul><li><span class="muted">تورم درمان</span><b>${fmtPct(s.i)}</b></li><li><span class="muted">Loss Ratio هدف</span><b>${fmtPct(s.lr)}</b></li>${M.N && s.prem != null ? `<li><span class="muted">کل حق‌بیمه</span><b class="num">${fmtNum(s.prem * M.N / 1000)} میلیارد</b></li>` : ""}</ul></div>`).join("")}</div></div></section>
+  ${drop}`;
+  bindClaims(M);
+}
+function bindClaims(M){
+  const cl = state.cl, set = (k, v) => { cl[k] = v; render(); };
+  $("clmIn").onchange = async e => { const f = [...e.target.files]; e.target.value = ""; if (f.length) await claimsUpload(f); };
+  const dz = $("clmDrop"); dz.ondragover = e => { e.preventDefault(); dz.classList.add("over"); }; dz.ondragleave = () => dz.classList.remove("over");
+  dz.ondrop = e => { e.preventDefault(); dz.classList.remove("over"); claimsUpload([...e.dataTransfer.files]); };
+  if (!M) return;
+  $("clmOld").onchange = e => { cl.oldId = e.target.value; cl.p0 = null; delete cl.p0; render(); };
+  $("clmNew").onchange = e => { cl.newId = e.target.value; delete cl.p1; delete cl.insured; render(); };
+  const numIn = (id, k, f = v => v) => { $(id).onchange = e => { const v = parseFloat(drNorm(e.target.value)); if (e.target.value === "") { delete cl[k]; render(); } else if (!isNaN(v)) set(k, f(v)); }; };
+  numIn("clmN", "insured"); numIn("clmP0", "p0"); numIn("clmP1", "p1"); numIn("clmI", "ibnr", v => v / 100); numIn("clmT", "tlr", v => v / 100);
+  const ir = $("clmInfl"); ir.oninput = () => { $("clmInflV").textContent = fmtInt(+ir.value) + "٪"; ir.style.setProperty("--p", (+ir.value / 80 * 100) + "%"); };
+  ir.onchange = () => { state.infl = +ir.value / 100; render(); };
+  $("clmClear").onclick = () => { state.claims = []; render(); };
+  $("clmX").onclick = () => { try { claimsXlsx(M); } catch (e){ alert("ساخت فایل ممکن نشد: " + e.message); } };
+}
+async function claimsUpload(files){
+  state.errors = [];
+  const { got, rest } = await takeClaims(files);
+  if (rest.length) state.errors.push(`${rest.map(f => "«" + f.name + "»").join("، ")} فایل خسارت نیست (ستون «گروه بیماری» و «مبلغ خسارت» پیدا نشد).`);
+  if (got.length) state.cl = {}; // new claims → pair the contracts again
+  go("claims");
+}
+
+/* ---------- Excel with live formulas ---------- */
+function claimsXlsx(M){
+  const o = M.o, y0 = o.old ? o.old.year : "", y1 = o.nw ? o.nw.year : "سال بعد", S = "'خلاصه'!", n = M.G.length, tot = n + 2;
+  const f = x => ({ t: "n", f: x });
+  const sum = [["تحلیل خسارت " + y0 + " و پیشنهاد " + y1 + (o.old ? " — " + o.old.org : "") + " — میلیون تومان"], ["سلول‌های ستون B (ردیف ۴ تا ۱۰) ورودی‌اند؛ تغییرشان همه‌چیز را دوباره حساب می‌کند."], ["ورودی", "مقدار"],
+    ["تعداد بیمه‌شدگان", M.N || 0], ["حق‌بیمهٔ هر نفر " + y0, o.p0 || 0], ["حق‌بیمهٔ پیشنهادی هر نفر " + y1, o.p1 || 0], ["خسارت دیررس (IBNR)", o.ibnr], ["تورم درمان", o.infl], ["Loss Ratio هدف", o.tlr],
+    ["اثر سقف‌ها (میانگین وزنی)", f(`IFERROR('پوشش‌ها'!K${tot}/('پوشش‌ها'!B${tot}*(1+B7)*(1+B8))-1,0)`)], [], ["خروجی", "مقدار"],
+    ["کل خسارت پرداختی", f(`'پوشش‌ها'!B${tot}`)], ["خسارت سرانه (با خسارت دیررس)", f("B13*(1+B7)/B4")], ["کل حق‌بیمه " + y0, f("B5*B4")], ["Loss Ratio " + y0, f("IFERROR(B13*(1+B7)/B15,\"\")")],
+    ["خسارت سرانهٔ مورد انتظار " + y1, f("B14*(1+B8)*(1+B10)")], ["Loss Ratio " + y1 + " با نرخ پیشنهادی", f("IFERROR(B17/B6,\"\")")], ["حق‌بیمهٔ منصفانهٔ هر نفر " + y1, f("B17/B9")],
+    ["نرخ پیشنهادی نسبت به منصفانه", f("IFERROR(B6/B19-1,\"\")")], ["کل حق‌بیمه با نرخ منصفانه", f("B19*B4")]];
+  const ws1 = XLSX.utils.aoa_to_sheet(sum);
+  ["B7", "B8", "B9", "B10", "B16", "B18", "B20"].forEach(a => { if (ws1[a]) ws1[a].z = "0%"; });
+  ["B13", "B14", "B15", "B17", "B19", "B21"].forEach(a => { if (ws1[a]) ws1[a].z = "#,##0.00"; });
+  ws1["!cols"] = [{ wch: 38 }, { wch: 16 }];
+  const g = [["پوشش", "خسارت", "سهم", "پرونده", "مصرف‌کننده (حداقل)", "نرخ استفاده", "میانگین هر نفر", "سقف " + y0, "سقف " + y1, "اثر سقف (قابل تغییر)", "پیش‌بینی " + y1, "پرهزینه‌ترین خدمات"]];
+  M.G.forEach((x, i) => { const r = i + 2; g.push([CLM_NAME[x.k] || x.k, +x.amt.toFixed(2), f(`B${r}/B$${tot}`), x.files, x.users || "", f(`IF(E${r}="","",E${r}/${S}$B$4)`), f(`IF(E${r}="","",B${r}/E${r})`),
+    x.c0 != null && isFinite(x.c0) ? x.c0 : "", x.c1 != null && isFinite(x.c1) ? x.c1 : "", +x.up.toFixed(3), f(`B${r}*(1+${S}$B$7)*(1+${S}$B$8)*(1+J${r})`), x.top.map(([nm, s]) => nm + " " + s.amt.toFixed(0)).join("؛ ")]); });
+  g.push(["جمع", f(`SUM(B2:B${tot - 1})`), "", "", "", "", "", "", "", "", f(`SUM(K2:K${tot - 1})`)]);
+  const ws2 = XLSX.utils.aoa_to_sheet(g);
+  for (let r = 2; r <= tot; r++){ ["C", "F", "J"].forEach(c => { if (ws2[c + r]) ws2[c + r].z = "0%"; }); ["B", "G", "K"].forEach(c => { if (ws2[c + r]) ws2[c + r].z = "#,##0.0"; }); }
+  ws2["!cols"] = [{ wch: 30 }, { wch: 11 }, { wch: 8 }, { wch: 8 }, { wch: 12 }, { wch: 10 }, { wch: 12 }, { wch: 10 }, { wch: 10 }, { wch: 12 }, { wch: 13 }, { wch: 60 }];
+  const sc = [["سناریو", "تورم درمان", "Loss Ratio هدف", "خسارت سرانه " + y1, "حق‌بیمهٔ هر نفر", "در برابر نرخ پیشنهادی", "کل حق‌بیمه"]];
+  M.sc.forEach((s, i) => { const r = i + 2; sc.push([s.n, s.i, s.lr, f(`${S}B14*(1+B${r})*(1+${S}B10)`), f(`D${r}/C${r}`), f(`IFERROR(E${r}/${S}B6-1,"")`), f(`E${r}*${S}B4`)]); });
+  const ws3 = XLSX.utils.aoa_to_sheet(sc);
+  for (let r = 2; r <= 4; r++){ ["B", "C", "F"].forEach(c => { ws3[c + r].z = "0%"; }); ["D", "E"].forEach(c => { ws3[c + r].z = "#,##0.00"; }); ws3["G" + r].z = "#,##0"; }
+  ws3["!cols"] = [{ wch: 16 }, { wch: 11 }, { wch: 14 }, { wch: 16 }, { wch: 16 }, { wch: 20 }, { wch: 14 }];
+  const wb = XLSX.utils.book_new(); wb.Workbook = { Views: [{ RTL: true }] };
+  [ws1, ws2, ws3].forEach(w => { w["!views"] = [{ RTL: true }]; });
+  XLSX.utils.book_append_sheet(wb, ws1, "خلاصه"); XLSX.utils.book_append_sheet(wb, ws2, "پوشش‌ها"); XLSX.utils.book_append_sheet(wb, ws3, "سناریوها");
+  XLSX.writeFile(wb, `تحلیل-خسارت-${(o.old && o.old.org || "قرارداد").replace(/\s+/g, "-")}-${y1}.xlsx`);
+}
+
 /* ================= UI (DESIGN_PROMPT_1) ================= */
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -1627,7 +2937,7 @@ const SEVTAG = { crit: ["t-bad", "بحرانی"], warn: ["t-mid", "هشدار"],
 const inFrame = (() => { try { return window.self !== window.top; } catch (e) { return true; } })();
 const reduced = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-const state = { page: "home", idx: null, mode: "renewal", groups: [], tenders: [], settings: Object.assign({}, DEFAULTS), protectNames: new Set(),
+const state = { docs: [], contracts: [], claims: [], cl: {}, cmpOrg: null, page: "home", idx: null, mode: "renewal", groups: [], tenders: [], settings: Object.assign({}, DEFAULTS), protectNames: new Set(),
   sort: "renewal", q: "", errors: [], hist: [], pushed: 0, more: {}, mcat: "urgent", chat: {}, tab: null };
 
 /* ---------- data ---------- */
@@ -1699,6 +3009,7 @@ const ICON = {
   tender: '<path d="M4 21V8l8-5 8 5v13"/><path d="M9 21v-6h6v6"/>',
   cal: '<rect x="3" y="4" width="18" height="17" rx="3"/><path d="M8 2v4M16 2v4M3 10h18"/>',
   ai: '<path d="M12 3l1.8 4.7 4.7 1.8-4.7 1.8L12 16l-1.8-4.7-4.7-1.8 4.7-1.8z"/><path d="M19 15l.8 2.2 2.2.8-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/>',
+  claims: '<path d="M6 2h12v20l-3-2-3 2-3-2-3 2z"/><path d="M9 7h6M9 11h6M9 15h4"/>',
   docs: '<path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M8 13h8M8 17h5"/>',
   settings: '<path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/>',
   users: '<circle cx="9" cy="8" r="4"/><path d="M2 21a7 7 0 0 1 14 0M17 4a4 4 0 0 1 0 8M22 21a7 7 0 0 0-4-6.3"/>',
@@ -1716,6 +3027,28 @@ const ic = k => `<span class="ic ic-${k}"><svg viewBox="0 0 24 24" fill="none" s
 const islHead = (k, title, sub, go) => `<div class="isl-h">${ic(k)}<div><h3>${title}</h3><p>${sub}</p></div>${go ? `<span class="go" aria-hidden="true">←</span>` : ""}</div>`;
 
 /* ---------- home: islands ---------- */
+const greet = () => { const h = new Date().getHours(); return h < 11 ? "سلام، صبح بخیر" : h < 16 ? "سلام، روز بخیر" : "سلام، عصر بخیر"; };
+// Loss Ratio gauge: half circle from 0 to 120%; green up to the target, amber to 85%, red beyond.
+function gaugeSVG(v, target){
+  const cx = 125, cy = 128, r = 100, M = 1.2, pt = x => { const a = Math.PI * (1 - Math.min(M, Math.max(0, x)) / M); return [cx + r * Math.cos(a), cy - r * Math.sin(a)]; };
+  const arc = (a, b, c, cap) => { const [x0, y0] = pt(a), [x1, y1] = pt(b); return `<path d="M${x0.toFixed(1)} ${y0.toFixed(1)} A${r} ${r} 0 0 1 ${x1.toFixed(1)} ${y1.toFixed(1)}" stroke="${c}" stroke-width="18" fill="none"${cap ? ' stroke-linecap="round"' : ""}/>`; };
+  const nv = v == null ? 0 : v, a = Math.PI * (1 - Math.min(M, nv) / M), nx = cx + 70 * Math.cos(a), ny = cy - 70 * Math.sin(a);
+  return `<svg width="250" height="140" viewBox="0 0 250 140" role="img" aria-label="Loss Ratio ${fmtPct(v)}">${arc(0, target - 0.01, "#4ADE80", true)}${arc(target + 0.01, 0.84, "#FBBF24")}${arc(0.86, M, "#FB7185", true)}
+    ${v == null ? "" : `<line x1="${cx}" y1="${cy}" x2="${nx.toFixed(1)}" y2="${ny.toFixed(1)}" stroke="#fff" stroke-width="5" stroke-linecap="round"/><circle cx="${cx}" cy="${cy}" r="9" fill="#fff"/>`}</svg>`;
+}
+const DONUT_C = { urgent: "#E11D48", opp: "#16A34A", warn: "#F59E0B", note: "#6366F1" };
+function donutSVG(parts, total){
+  const C = 2 * Math.PI * 15.9; let off = 25 / 100 * C;
+  const segs = parts.filter(([n]) => n > 0).map(([n, c]) => { const len = n / Math.max(1, total) * C, el = `<circle cx="21" cy="21" r="15.9" fill="none" stroke="${c}" stroke-width="6.5" stroke-dasharray="${(len - 0.6).toFixed(2)} ${(C - len + 0.6).toFixed(2)}" stroke-dashoffset="${off.toFixed(2)}"/>`; off -= len; return el; }).join("");
+  return `<svg class="donut" viewBox="0 0 42 42" role="img" aria-label="${fmtInt(total)} پیشنهاد"><circle cx="21" cy="21" r="15.9" fill="none" stroke="var(--line2)" stroke-width="6.5"/>${segs}<text x="21" y="24" text-anchor="middle" font-size="9" font-weight="900" fill="currentColor" font-family="Vazirmatn">${fmtInt(total)}</text></svg>`;
+}
+// Renewals on a 90-day line: position by days left, colour by urgency.
+function timelineHTML(list){
+  if (!list.length) return '<span class="small muted">تا ۹۰ روز آینده تمدیدی نیست.</span>';
+  const col = d => d <= 30 ? "#E11D48" : d <= 60 ? "#F59E0B" : "#A5B4FC";
+  return `<div class="tline"><span class="tk" style="right:0">امروز</span><span class="tk" style="right:50%">۴۵ روز</span><span class="tk" style="right:100%">۹۰</span><div class="ln"></div>
+    ${list.map((x, k) => { const d = x.A.renewal.days, p = Math.max(0, Math.min(100, d / 90 * 100)); return `<button type="button" class="pt" data-open="${x.i}" style="right:${p}%;background:${col(d)}" title="${esc(x.A.group.name)}: ${d < 0 ? fmtInt(-d) + " روز گذشته" : fmtInt(d) + " روز"}"></button>${k < 3 ? `<span class="lb" style="right:${p}%;top:${50 + k * 15}px;color:${col(d) === "#A5B4FC" ? "var(--ink2)" : col(d)}">${esc(short(x.A.group.name).split(" ").slice(-2).join(" "))} · ${d < 0 ? "گذشته" : fmtInt(d) + " روز"}</span>` : ""}`; }).join("")}</div>`;
+}
 function renderHome(){
   const all = state.groups.map((g, i) => Object.assign({ i, g }, compute(g)));
   const comp = all.filter(x => x.A.complete && x.A.premiumNow);
@@ -1730,28 +3063,33 @@ function renderHome(){
   const L = window.RI_LICENSE;
   const dayTag = d => d < 0 ? ["t-bad", `${fmtInt(-d)} روز گذشته`] : d <= 30 ? ["t-bad", `${fmtInt(d)} روز`] : d <= 60 ? ["t-mid", `${fmtInt(d)} روز`] : ["t-protect", `${fmtInt(d)} روز`];
   const aiPick = state.homeAi ?? "p";
+  const ORD = { urgent: 0, warn: 1, opp: 2, note: 3 }, top3 = todo.slice().sort((a, b) => ORD[catOf(a)] - ORD[catOf(b)] || b.w - a.w).slice(0, 3);
   const pChat = state.chat.p || [];
   setHead("Renewal Intelligence", todayFa());
   $("view").innerHTML = `
-  <section class="hh">
-    <div><p>${todayFa()}</p><h1>سلام، خوش آمدید</h1><p>${fmtInt(nCat("urgent"))} کار فوری و ${fmtInt(soon90)} تمدید در ۹۰ روز آینده دارید.</p>${L ? `<span class="lic">مجوز: ${esc(L.name)} · ${fmtInt(L.days)} روز مانده</span>` : ""}</div>
-    <div class="hh-k">
-      <div><span>گروه‌ها</span><b>${fmtInt(all.length)}</b><small>${fmtInt(tenders.length)} مناقصهٔ باز</small></div>
+  <section class="hh2">
+    <div class="hh2-g"><p class="small" style="opacity:.85">${todayFa()}</p><h1>${greet()}</h1>
+      <p style="opacity:.9">${top3.length ? `${fmtInt(nCat("urgent"))} کار فوری و ${fmtInt(soon90)} تمدید در ۹۰ روز آینده` : "کار فوری‌ای نیست"}</p>
+      <div class="todo">${top3.map(x => `<button type="button" data-open="${x.i}"><span class="dot" style="background:${{ urgent: "#FDA4AF", warn: "#FDE68A", opp: "#A7F3D0", note: "#C7D2FE" }[catOf(x)]}"></span><span>${esc(short(x.name))}: ${esc(x.text.split(/[؛.]/)[0])}</span><b class="${catOf(x)}">${{ urgent: "فوری", warn: "هشدار", opp: "فرصت", note: "نکته" }[catOf(x)]}</b></button>`).join("")}</div>
+      ${L ? `<span class="lic">مجوز: ${esc(L.name)} · ${fmtInt(L.days)} روز مانده</span>` : ""}</div>
+    <div class="hh2-gauge">${gaugeSVG(plr, t)}<div class="gv">${fmtPct(plr)}</div><div class="small" style="opacity:.9">Loss Ratio پرتفوی${st ? ` · <b>${st[1]}</b>` : ""}</div></div>
+    <div class="hh2-st">
+      <div><span>گروه‌ها</span><b>${fmtInt(all.length)}</b><small>${fmtInt(soon90)} تمدید در ۹۰ روز</small></div>
       <div><span>بیمه‌شدگان</span><b>${fmtInt(sum(all, x => x.A.insured || 0))}</b><small>جمع همهٔ گروه‌ها</small></div>
-      <div><span>حق‌بیمهٔ جاری</span><b>${fmtNum(sum(all, x => x.A.premiumNow || 0))}</b><small>میلیون تومان</small></div>
-      <div><span>Loss Ratio پرتفوی</span><b>${fmtPct(plr)}${st ? `<span class="pill">${st[1]}</span>` : ""}</b><small>هدف ${fmtPct(t)}</small></div>
+      <div><span>حق‌بیمهٔ جاری</span><b>${fmtNum(sum(all, x => x.A.premiumNow || 0) / 1000)}</b><small>میلیارد تومان</small></div>
+      <div><span>مناقصه‌های باز</span><b>${fmtInt(tenders.length)}</b><small>${fmtInt(tenders.filter(x => x.R.priorScaled && x.R.risk(x.R.priorScaled)[0] === "high").length)} با قیمت قبلی پرریسک</small></div>
     </div>
   </section>
   <div class="sec-t"><h2>دو کار اصلی</h2><span class="small muted">فایل بدهید یا نام سازمان را بزنید؛ بقیه را اپ انجام می‌دهد.</span></div>
   <div class="missions">
     <section class="mis">
-      <div class="mis-h"><span class="num">۱</span><div><h2>تحلیل تمدید قرارداد</h2><p>فایل اکسل قرارداد فعلی را بدهید؛ برای تک‌تک پوشش‌ها می‌گوییم چه کنید و حق‌بیمهٔ لازم چقدر است.</p></div></div>
-      <label class="drop" id="dropR" for="file"><span class="di"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg></span><b>فایل اکسل را اینجا بکشید یا بزنید</b><span>خسارت‌ها، سقف پوشش‌ها و حق‌بیمه · چند فایل با هم هم می‌شود</span></label>
+      <div class="mis-h"><span class="blob b1"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 4v5h-5"/></svg></span><div><h2>تحلیل تمدید قرارداد</h2><p>فایل اکسل قرارداد فعلی را بدهید؛ برای تک‌تک پوشش‌ها می‌گوییم چه کنید و حق‌بیمهٔ لازم چقدر است.</p></div></div>
+      <label class="drop" id="dropR" for="file"><span class="di"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg></span><b>فایل را اینجا بکشید یا بزنید</b><span>اکسل خسارت برای تحلیل کامل · PDF، عکس یا Word بیمه‌نامه برای مقایسهٔ قرارداد</span></label>
       <div class="does"><span class="t-inc">پرمصرف و زیر فشار سقف ← افزایش</span><span class="t-reduce">کم‌مصرف ← کاهش</span><span class="t-remove">بدون مصرف ← حذف</span><span class="t-protect">حمایتی ← حفظ</span><span class="t-keep">مورد استثنایی ← چشم‌پوشی</span></div>
       <button class="link" type="button" data-go="renewal" style="align-self:flex-start">یا تحلیل ${fmtInt(all.length)} گروه نمونه را ببینید ←</button>
     </section>
     <section class="mis">
-      <div class="mis-h"><span class="num">۲</span><div><h2>برآورد قیمت مناقصه</h2><p>نام سازمان را بزنید؛ سابقهٔ خسارتش را می‌گیریم، تحلیل می‌کنیم و قیمتی می‌دهیم که Loss Ratio زیر ${fmtPct(t)} بماند.</p></div></div>
+      <div class="mis-h"><span class="blob b2"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 12.2V4.5a1 1 0 0 1 1-1h7.7l8.3 8.3-8.7 8.7z"/><circle cx="8.3" cy="8.3" r="1.5"/></svg></span><div><h2>برآورد قیمت مناقصه</h2><p>نام سازمان را بزنید؛ سابقهٔ خسارتش را می‌گیریم، تحلیل می‌کنیم و قیمتی می‌دهیم که Loss Ratio زیر ${fmtPct(t)} بماند.</p></div></div>
       <form class="qbox" id="tenderQ"><input id="tq" placeholder="نام سازمان یا شرکت، مثلاً شرکت گاز" autocomplete="off" aria-label="نام سازمان یا شرکت"><button class="btn primary" type="submit">دریافت سابقه و برآورد</button></form>
       <div class="qsug">امتحان کنید: ${tenders.map(x => `<button type="button" data-tq="${esc(short(x.R.group.name).replace(/^مناقصهٔ\s*/, ""))}">${esc(short(x.R.group.name).replace(/^مناقصهٔ\s*/, ""))}</button>`).join("")}</div>
       <div class="conn"><i></i><span>داده‌پردازان: اتصال مستقیم در فاز آخر پروژه. تا آن موقع سابقه از دادهٔ نمونه یا فایل اکسل خروجی داده‌پردازان خوانده می‌شود.</span></div>
@@ -1771,15 +3109,15 @@ function renderHome(){
     </div>
     <div class="isl w2">
       ${islHead("action", "مرکز اقدام", `${fmtInt(todo.length)} پیشنهاد از روی داده‌ها`, false)}
-      <div class="cchips">${CATS.map(([k, l]) => `<button class="cchip cc-${k}" type="button" data-cat="${k}">${l}<b>${fmtInt(nCat(k))}</b></button>`).join("")}</div>
+      <div class="donut-row">${donutSVG(CATS.map(([k]) => [nCat(k), DONUT_C[k]]), todo.length)}<div class="dleg">${CATS.map(([k, l]) => `<button type="button" data-cat="${k}"><i style="background:${DONUT_C[k]}"></i>${l}<b>${fmtInt(nCat(k))}</b></button>`).join("")}</div></div>
     </div>
     <div class="isl lst click" data-go="tender" role="link" tabindex="0">
       ${islHead("tender", "مناقصه", "قیمت قرارداد جدید", false)}
       <div class="ilist">${tenders.slice(0, 3).map(x => { const z = RISK[x.R.risk(x.R.priorScaled)[0]]; return `<button class="ili" type="button" data-tender="${x.i}"><span>${esc(short(x.R.group.name))}</span><em class="tag ${z[3]}" title="ریسک قیمت بیمه‌گر قبلی">قبلی: ${z[1]}</em></button>`; }).join("") || '<span class="small muted">مناقصه‌ای نیست.</span>'}</div>
     </div>
     <div class="isl lst click" data-go="reminders" role="link" tabindex="0">
-      ${islHead("cal", "یادآور تمدید", "نزدیک‌ترین‌ها", false)}
-      <div class="ilist">${soon.slice(0, 3).map(x => { const d = dayTag(x.A.renewal.days); return `<button class="ili" type="button" data-open="${x.i}"><span>${esc(short(x.A.group.name))}</span><em class="tag ${d[0]}">${d[1]}</em></button>`; }).join("") || '<span class="small muted">تمدیدی ثبت نشده.</span>'}</div>
+      ${islHead("cal", "تمدیدهای پیش رو", "۹۰ روز آینده", false)}
+      ${timelineHTML(soon.filter(x => x.A.renewal.days <= 90))}
     </div>
     <div class="isl w2 ai-i">
       ${islHead("ai", "دستیار هوشمند", "از دادهٔ هر گروه بپرسید؛ جواب با منبع", false)}
@@ -1787,7 +3125,8 @@ function renderHome(){
       <div class="sugs">${(aiPick === "p" ? portfolioSuggest() : all.find(x => x.i === aiPick) ? aiSuggest(all.find(x => x.i === aiPick).A, all.find(x => x.i === aiPick).S) : []).slice(0, 3).map(q => `<button type="button" data-hask="${esc(q)}">${esc(q)}</button>`).join("")}</div>
       <form class="hask" id="homeAsk"><select id="homeAiG" aria-label="دربارهٔ"><option value="p"${aiPick === "p" ? " selected" : ""}>همهٔ گروه‌ها</option>${all.map(x => `<option value="${x.i}"${x.i === aiPick ? " selected" : ""}>${esc(short(x.A.group.name))}</option>`).join("")}</select><input id="homeAiQ" placeholder="مثلاً: بودجه چقدر است؟" aria-label="سؤال"><button type="submit" aria-label="پرسیدن">↑</button></form>
     </div>
-    <button class="isl" type="button" data-go="docs">${islHead("docs", "اسناد و گزارش‌ها", "نامهٔ تمدید، گزارش PDF", false)}<span class="foot2">نامهٔ پیشنهاد از صفحهٔ هر گروه ←</span></button>
+    <button class="isl" type="button" data-go="docs">${islHead("docs", "مدارک و قراردادها", "خواندن PDF و عکس بیمه‌نامه", false)}<span class="foot2">${state.contracts.filter(c => !c.sample).length ? `${fmtInt(state.contracts.filter(c => !c.sample).length)} قرارداد خوانده‌شده ←` : "مقایسهٔ دو سال قرارداد ←"}</span></button>
+    <button class="isl" type="button" data-go="claims">${islHead("claims", "تحلیل خسارت", "خسارت واقعی ← نرخ و سقف سال بعد", false)}<span class="foot2">${state.claims.length ? `${fmtInt(state.claims.length)} فایل خسارت ←` : "فایل خسارت را بدهید ←"}</span></button>
     <button class="isl" type="button" data-go="settings">${islHead("settings", "قواعد و تنظیمات", "آستانه‌ها و پوشش‌های حمایتی", false)}<span class="foot2">Loss Ratio هدف: ${fmtPct(t)} ←</span></button>
   </div>
   <div class="sec-t"><h2>مدیریت و نقشهٔ راه</h2><span class="small muted">بخش‌هایی که با نسخهٔ آنلاین فعال می‌شوند</span></div>
@@ -1809,7 +3148,6 @@ function renderHome(){
 const SOON = {
   market: ["مقایسه با بازار", "سرانه و Loss Ratio هر گروه در برابر میانگین ناشناس گروه‌های مشابه همان صنعت. وقتی چند کارگزار به نسخهٔ آنلاین وصل شوند فعال می‌شود."],
   ai: ["دستیار هوشمند", "در این نسخه، دستیار داخل صفحهٔ هر گروه است و از قواعد اپ با ذکر منبع جواب می‌دهد. گفت‌وگوی آزاد با هوش مصنوعی در نسخهٔ آنلاین می‌آید."],
-  docs: ["اسناد و گزارش‌ها", "گزارش PDF/Word با لوگوی کارگزاری و بایگانی نامه‌ها. نامهٔ پیشنهاد تمدید همین حالا از صفحهٔ هر گروه ساخته می‌شود."],
   history: ["تاریخچهٔ قراردادها", "ذخیرهٔ قراردادها و مقایسهٔ سال‌به‌سال هر گروه؛ نیاز به ذخیره‌سازی نسخهٔ آنلاین دارد."],
   mapping: ["ورود داده و نگاشت", "جادوی تطبیق ستون‌های هر فایل اکسل با فیلدهای اپ، تا فایل هر بیمه‌گر بدون تغییر خوانده شود."],
   dadeh: ["اتصال داده‌پردازان", "دریافت مستقیم دادهٔ خسارت از نرم‌افزار داده‌پردازان، با وضعیت اتصال و آخرین همگام‌سازی. آخرین فاز پروژه است."],
@@ -2189,6 +3527,8 @@ function render(){
   else if (p === "renewal") renderRenewal(); else if (p === "group") renderGroup(state.idx);
   else if (p === "tender") renderTenderList(); else if (p === "tenderp") renderTender(state.idx);
   else if (p === "settings") renderSettings(); else if (p === "reminders") renderReminders();
+  else if (p === "claims") renderClaims();
+  else if (p === "docs") renderDocs(); else if (p === "doc") renderDoc(state.idx);
   else if (p === "admin") renderAdmin(); else if (p === "login") renderLogin();
   else if (p.startsWith("soon:")) renderSoon(p.slice(5));
   renderSidebar();
@@ -2253,6 +3593,8 @@ document.addEventListener("click", e => {
   const st = t.closest("[data-step]"); if (st){ const el = $(st.dataset.step); el.value = (parseFloat(el.value) || 0) + parseFloat(st.dataset.d); el.dispatchEvent(new Event("change")); return; }
   const a = t.closest("[data-ask]"); if (a){ ask(a.dataset.ask); return; }
   if (t.closest("[data-close]") || t.id === "modal"){ $("modal").hidden = true; return; }
+  const dc = t.closest("[data-doc]"); if (dc){ go("doc", +dc.dataset.doc); return; }
+  const og = t.closest("[data-org]"); if (og){ state.cmpOrg = og.dataset.org; render(); return; }
   const o = t.closest("[data-open]"); if (o && $("view").contains(o)){ go(state.mode === "tender" ? "tenderp" : "group", +o.dataset.open); return; }
 });
 document.addEventListener("keydown", e => {
@@ -2295,7 +3637,7 @@ function openMenu(){
     </div>
     <div class="sheet-sec">ابزار</div>
     <div class="mgrid">
-      ${mi("ai", "دستیار هوشمند", 'data-act="ai"')}${mi("docs", "اسناد و گزارش‌ها", 'data-go="docs"')}${mi("settings", "قواعد تحلیل", 'data-go="settings"')}${mi("moon", "حالت روشن / تیره", "data-theme-toggle")}
+      ${mi("claims", "تحلیل خسارت", 'data-go="claims"')}${mi("ai", "دستیار هوشمند", 'data-act="ai"')}${mi("docs", "مدارک و قراردادها", 'data-go="docs"')}${mi("settings", "قواعد تحلیل", 'data-go="settings"')}${mi("moon", "حالت روشن / تیره", "data-theme-toggle")}
     </div>
     <div class="sheet-sec">مدیریت و نقشهٔ راه</div>
     <div class="mgrid">
@@ -2374,6 +3716,12 @@ function readFile(f){
 }
 async function handleFiles(files){
   if (!files.length) return;
+  const docs = files.filter(isDocFile); files = files.filter(f => !isDocFile(f));
+  // Claims reports (گروه بیماری + مبلغ خسارت) go to the claims page, whatever page the upload came from.
+  if (files.length && typeof XLSX !== "undefined"){ state.errors = []; const c = await takeClaims(files); files = c.rest;
+    if (c.got.length){ state.cl = {}; if (docs.length) setTimeout(() => handleDocs(docs), 0); if (!files.length) return go("claims"); setTimeout(() => go("claims"), 0); } }
+  if (docs.length && !files.length) return handleDocs(docs);
+  if (docs.length) setTimeout(() => handleDocs(docs), 0);
   if (typeof XLSX === "undefined"){ state.errors = ["کتابخانهٔ خواندن اکسل بارگذاری نشد؛ اتصال اینترنت را بررسی کنید و صفحه را دوباره باز کنید."]; return render(); }
   const res = await Promise.all(files.map(readFile));
   const ok = res.filter(r => r.ok).map(r => r.g);
@@ -2399,6 +3747,7 @@ async function handleFiles(files){
 $("file").addEventListener("change", e => { const files = [...e.target.files]; e.target.value = ""; handleFiles(files); });
 
 setGroups(sampleGroups());
+state.contracts = sampleContracts();
 state.tenders = makeTenders(); addProtect(state.tenders);
 render();
 
