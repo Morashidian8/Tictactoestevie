@@ -276,7 +276,7 @@ mark.lexfix{background:var(--mid-bg);color:inherit;border-bottom:1.5px dotted va
 .cin select,.cin input[type=number]{width:100%;min-width:0;font:inherit;font-size:14px;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:9px 11px}
 .cin .row{display:flex;align-items:center;gap:6px}.cin .row em{font-style:normal;font-size:12px;color:var(--ink2);white-space:nowrap}
 .cin.slider{flex-direction:row;align-items:center;min-width:0}
-.clmt td{vertical-align:top}.clmt td .small{display:block;margin-top:2px;max-width:280px;white-space:normal}
+.cwarn{grid-column:1/-1;margin:0;color:var(--mid-ink);background:var(--mid-bg);border-radius:10px;padding:8px 12px;line-height:1.8}#clmN:placeholder-shown{border-color:var(--mid-ink);box-shadow:0 0 0 3px var(--mid-bg)}.clmt td{vertical-align:top}.clmt td .small{display:block;margin-top:2px;max-width:280px;white-space:normal}
 @media (max-width:760px){.cins{grid-template-columns:repeat(2,minmax(0,1fr))}.cin.slider{grid-column:1/-1 !important}}
 .proj .panel-h{gap:14px}
 .slider{display:flex;align-items:center;gap:10px;min-width:280px}
@@ -1385,9 +1385,21 @@ async function drPdfPages(file, progress){
       return { text: it.str, x0: e - (it.width * scale) * (it.dir === "rtl" ? 0 : 0), y0: f - h, x1: e + it.width * scale, y1: f, conf: 99 };
     });
     const words = drJoin(items), textLen = words.reduce((s, it) => s + it.text.trim().length, 0);
-    pages.push({ canvas, scanned: textLen < 40, words: textLen >= 40 ? words : null });
+    // Some PDFs carry a text layer with a broken font map (letters and digits come out wrong): read those by OCR.
+    const good = textLen >= 40 && drTextSane(words.map(w => w.text).join(" "));
+    pages.push({ canvas, scanned: !good, words: good ? words : null });
   }
   return pages;
+}
+// Share of the page's Persian words that are real words: a correct policy page is mostly vocabulary words,
+// a broken font map gives fragments that match almost nothing.
+function drTextSane(text){
+  const known = drTextSane.set || (drTextSane.set = new Set([...LEX_WORDS, ...LEX_COMMON].map(w => w.replace(/‌/g, ""))));
+  const toks = (norm(text).match(/[آ-ی]{3,}/g) || []);
+  if (toks.length < 15) return true;
+  const hit = toks.filter(t => known.has(t) || known.has(t.replace(/^(و|ب|در)/, "")) || known.has(t.replace(/(ها|های|ی|ه)$/, ""))).length;
+  drTextSane.last = hit / toks.length;
+  return hit / toks.length >= 0.15;
 }
 // PDF text often stores Persian as separate presentation-form glyphs (ﺟ ﺒ ﺮ). NFKC turns them into normal
 // letters; touching glyphs on one line are joined right to left into words.
@@ -1403,6 +1415,18 @@ function drJoin(items){
   });
   // a real gap between glyph runs is a space: split merged runs back on wide gaps is not needed (PDF keeps spaces as items)
   return out.map(w => Object.assign(w, { text: w.text.replace(/\s+/g, " ").trim() })).filter(w => w.text);
+}
+// Excel caps sheet: every sheet is one table; numbers keep their exact value.
+function drXlsx(bytes){
+  const wb = XLSX.read(bytes, { type: "array" }), tables = [], lines = [];
+  wb.SheetNames.forEach(n => {
+    const rows = XLSX.utils.sheet_to_json(wb.Sheets[n], { header: 1, raw: true, defval: null })
+      .map(r => r.map(v => v == null ? "" : typeof v === "number" ? String(Math.round(v)) : String(v))).filter(r => r.some(c => c.trim()));
+    if (!rows.length) return;
+    rows.forEach(r => lines.push(r.filter(c => c.trim()).join(" ")));
+    tables.push(rows.map(r => r.map(t => ({ text: t, conf: 99 }))));
+  });
+  return { text: lines.join("\n"), tables, pages: [] };
 }
 async function drDocx(file){
   const z = XLSX.CFB.read(new Uint8Array(await file.arrayBuffer()), { type: "array" });
@@ -1569,6 +1593,7 @@ function drValues(t){
 async function readDocument(file, progress){
   const name = file.name.toLowerCase();
   if (/\.docx$/.test(name)){ const d = await drDocx(file); d.tables = d.tables.map(rows => drValues({ rows, page: 0 })); return Object.assign(d, { file: file.name }); }
+  if (/\.(xlsx|xls)$/.test(name)){ const d = drXlsx(new Uint8Array(await file.arrayBuffer())); d.tables = d.tables.map(rows => drValues({ rows, page: 0 })); return Object.assign(d, { file: file.name }); }
   if (/\.(txt|csv)$/.test(name)) return { file: file.name, text: await file.text(), tables: [], pages: [] };
   const pages = /\.pdf$/.test(name) ? await drPdfPages(file, progress) : await drImagePages(file);
   const out = { file: file.name, text: "", tables: [], pages: [] };
@@ -2315,7 +2340,7 @@ const pctCh = (a, b) => a == null || b == null || a === Infinity || b === Infini
 const median = a => { const s = a.filter(v => v != null && isFinite(v)).sort((x, y) => x - y); return s.length ? (s.length % 2 ? s[s.length >> 1] : (s[s.length / 2 - 1] + s[s.length / 2]) / 2) : null; };
 const orgKey = s => norm(s || "").replace(/^(مجتمع|شرکت|موسسه|دانشگاه|سازمان)\s+/, "").replace(/\s+/g, "");
 
-async function handleDocs(files){
+async function handleDocs(files, opts){
   const box = n => `<div class="box" role="dialog" aria-modal="true" aria-label="خواندن مدارک"><div class="panel-h"><h2>خواندن مدارک</h2></div><div class="panel-b" style="display:flex;flex-direction:column;gap:10px">
     <p class="small muted">همه‌چیز روی همین دستگاه خوانده می‌شود؛ فایلی به جایی فرستاده نمی‌شود. اسکن و عکس چند ثانیه برای هر صفحه طول می‌کشد.</p>
     <div class="fs on"><span class="fi">${fmtInt(n)}</span><div><b id="docFile"></b><span id="docStep">آماده‌سازی…</span></div></div><div class="prog"><i id="docBar" style="width:3%"></i></div></div></div>`;
@@ -2333,7 +2358,9 @@ async function handleDocs(files){
     } catch (err){ state.errors.push(`«${f.name}» خوانده نشد: ${err.message}`); }
   }
   $("modal").hidden = true;
-  if (last != null) go("doc", last); else render();
+  if (opts && opts.claims) state.retClaims = state.docs.slice(state.docs.length - files.length).filter(d => !d.saved).map(d => d.id);
+  const first = opts && opts.claims ? state.docs.findIndex(d => state.retClaims && state.retClaims.includes(d.id)) : -1;
+  if (first >= 0) go("doc", first); else if (last != null) go("doc", last); else render();
 }
 
 // The row as it looks on paper: the start of its title (Persian starts at the right) next to its amounts,
@@ -2426,7 +2453,13 @@ function renderDoc(i){
       const pp = u.planPremium[p] || {}, prem = pp.v == null ? null : pp.per === "month" ? pp.v * 12 : pp.v;
       state.contracts.push({ id: d.id + p, src: d.id, org: u.org, insurer: u.insurer, year: u.year, plan: plans.length > 1 ? p : "", premium: prem, insured: u.insured, franchise: u.franchise, caps, kind: u.kind });
     });
-    d.saved = true; state.cmpOrg = orgKey(u.org); go("docs");
+    d.saved = true; state.cmpOrg = orgKey(u.org);
+    if (state.retClaims){ // started from the claims page: next unsaved document of that upload, then back to the analysis
+      const next = state.docs.findIndex(x => !x.saved && state.retClaims.includes(x.id));
+      if (next >= 0) return go("doc", next);
+      state.retClaims = null; state.cl.picked = false; return go("claims");
+    }
+    go("docs");
   };
 }
 
@@ -2500,8 +2533,8 @@ function renderDocs(){
   $("view").innerHTML = `
   ${crumb([null, "مدارک و قراردادها"])}
   <div class="ph"><div><h1>مدارک و قراردادها</h1><span class="sub">بیمه‌نامه، الحاقیه، شرایط مناقصه یا استعلام را بدهید (PDF، عکس، Word)؛ سقف‌ها و نرخ خوانده و سال‌به‌سال مقایسه می‌شود.</span></div></div>
-  <label class="drop" for="docFileIn" id="docDrop"><span class="di"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M12 18v-6M9 15l3-3 3 3"/></svg></span><b>مدرک را اینجا بکشید یا بزنید</b><span>PDF (متنی یا اسکن)، عکس با گوشی، Word یا متن · چند فایل با هم</span></label>
-  <input type="file" id="docFileIn" accept=".pdf,.jpg,.jpeg,.png,.webp,.docx,.txt" multiple hidden>
+  <label class="drop" for="docFileIn" id="docDrop"><span class="di"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M12 18v-6M9 15l3-3 3 3"/></svg></span><b>مدرک را اینجا بکشید یا بزنید</b><span>PDF (متنی یا اسکن)، عکس با گوشی، Word، اکسل سقف تعهدات یا متن · چند فایل با هم</span></label>
+  <input type="file" id="docFileIn" accept=".pdf,.jpg,.jpeg,.png,.webp,.docx,.txt,.xlsx,.xls" multiple hidden>
   ${state.docs.length ? `<section class="panel"><div class="panel-h"><h2>مدارک خوانده‌شده</h2></div><div class="panel-b ilist">${state.docs.map((d, i) => `<button class="ili" type="button" data-doc="${i}"><span>${esc(d.file)} · ${esc(d.u.org || "بیمه‌گذار نامعلوم")} · ${d.u.year ? fmtInt(d.u.year).replace(/٬/g, "") : "سال نامعلوم"}</span><em class="tag ${d.saved ? "t-good" : "t-mid"}">${d.saved ? "ذخیره شد" : "بررسی و ذخیره"}</em></button>`).join("")}</div></section>` : ""}
   ${keys.length ? `<div class="fchips" role="group" aria-label="سازمان" style="flex-wrap:wrap">${keys.map(k => `<button type="button" data-org="${esc(k)}" aria-pressed="${k === state.cmpOrg}">${esc(short(groups[k].name))} ${fmtInt(groups[k].list.length)}</button>`).join("")}</div>${compareView(G, all)}` : ""}`;
   const ir = $("inflR");
@@ -2513,7 +2546,7 @@ function renderDocs(){
     $("projXlsx").onclick = () => { try { projectionXlsx(pairs[pairs.length - 1], cats); } catch (e){ alert("ساخت فایل ممکن نشد: " + e.message); } }; }
   $("docFileIn").onchange = e => { const f = [...e.target.files]; e.target.value = ""; if (f.length) handleDocs(f); };
   const dz = $("docDrop"); dz.ondragover = e => { e.preventDefault(); dz.classList.add("over"); }; dz.ondragleave = () => dz.classList.remove("over");
-  dz.ondrop = e => { e.preventDefault(); dz.classList.remove("over"); const f = [...e.dataTransfer.files].filter(isDocFile); if (f.length) handleDocs(f); };
+  dz.ondrop = e => { e.preventDefault(); dz.classList.remove("over"); const f = [...e.dataTransfer.files].filter(f => isDocFile(f) || /\.xlsx?$/i.test(f.name)); if (f.length) handleDocs(f); };
 }
 
 function compareView(G, all){
@@ -2803,23 +2836,28 @@ const fmtYear = y => y ? fmtInt(y).replace(/٬/g, "") : "";
 /* ---------- page ---------- */
 function claimsDefaults(){
   const real = state.contracts.filter(c => !c.sample).sort((a, b) => a.year - b.year), cl = state.cl;
+  if (!cl.picked){ delete cl.oldId; delete cl.newId; }
   const org = state.claims.map(c => c.org).find(Boolean);
   const pool = org ? real.filter(c => orgKey(c.org) === orgKey(org)) : real;
   const lastOrg = (pool.length ? pool : real).slice(-1)[0], same = lastOrg ? real.filter(c => orgKey(c.org) === orgKey(lastOrg.org)) : [];
-  if (cl.oldId === undefined) cl.oldId = same.length > 1 ? same[same.length - 2].id : same[0] ? same[0].id : "";
-  if (cl.newId === undefined) cl.newId = same.length > 1 ? same[same.length - 1].id : "";
+  if (cl.oldId === undefined || !state.contracts.some(c => c.id === cl.oldId)) cl.oldId = same.length > 1 ? same[same.length - 2].id : same[0] ? same[0].id : "";
+  if (cl.newId === undefined || (cl.newId && !state.contracts.some(c => c.id === cl.newId))) cl.newId = same.length > 1 ? same[same.length - 1].id : "";
 }
 function renderClaims(){
   setHead("تحلیل خسارت", "خسارت واقعی ← قرارداد سال بعد");
   const cl = state.cl; claimsDefaults();
   const byId = id => state.contracts.find(c => c.id === id) || null, old = byId(cl.oldId), nw = byId(cl.newId);
-  const o = { old, nw, insured: cl.insured ?? (nw && nw.insured) ?? (old && old.insured) ?? null, p0: cl.p0 ?? (old && old.premium) ?? null,
+  // The head count on a policy is often only the first batch (the rest come by addenda): if more people used one
+  // coverage than the policy says are insured, that number is not the group size — ask for it instead.
+  const maxU = Math.max(0, ...mergeClaims(state.claims).map(g => g.users || 0));
+  const docN = [nw && nw.insured, old && old.insured].filter(Boolean).sort((a, b) => b - a)[0] || null, nBad = docN && maxU > docN * 1.05 ? docN : null;
+  const o = { old, nw, insured: cl.insured ?? (nBad ? null : docN), p0: cl.p0 ?? (old && old.premium) ?? null,
     p1: cl.p1 ?? (nw && nw.premium) ?? null, ibnr: cl.ibnr ?? 0.1, infl: state.infl ?? 0.4, tlr: cl.tlr ?? ((state.settings.targetLR || 75) / 100) };
   const opt = sel => `<option value="">— ندارم —</option>` + state.contracts.map(c => `<option value="${esc(c.id)}"${c.id === sel ? " selected" : ""}>${esc(short(c.org) || "بی‌نام")} · ${fmtYear(c.year) || "سال؟"}${c.plan ? " · " + esc(c.plan) : ""}${c.sample ? " (نمونه)" : ""}</option>`).join("");
-  const drop = `<label class="drop" for="clmIn" id="clmDrop"><span class="di"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M12 18v-6M9 15l3-3 3 3"/></svg></span><b>فایل خسارت را اینجا بکشید یا بزنید</b><span>اکسل خروجی سامانهٔ بیمه‌گر (سرپایی و بیمارستانی را با هم بدهید) · ستون‌های «گروه بیماری» و «مبلغ خسارت» کافی است</span></label><input type="file" id="clmIn" accept=".xlsx,.xls,.csv" multiple hidden>`;
+  const drop = `<label class="drop" for="clmIn" id="clmDrop"><span class="di"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M12 18v-6M9 15l3-3 3 3"/></svg></span><b>فایل سقف تعهدات و فایل خسارت را با هم بدهید</b><span>سقف تعهدات: بیمه‌نامه به‌صورت PDF، اسکن، عکس، Word یا اکسل · خسارت: اکسل سامانهٔ بیمه‌گر (سرپایی و بیمارستانی) · ترتیب مهم نیست؛ اپ خودش تشخیص می‌دهد</span></label><input type="file" id="clmIn" accept=".xlsx,.xls,.csv,.pdf,.jpg,.jpeg,.png,.webp,.docx" multiple hidden>`;
   if (!state.claims.length){
     $("view").innerHTML = `${crumb([null, "تحلیل خسارت"])}<div class="ph"><div><h1>تحلیل خسارت و پیشنهاد سال بعد</h1><span class="sub">فایل خسارت پرداختی را بدهید؛ با بیمه‌نامه‌های خوانده‌شده جفت می‌شود و Loss Ratio واقعی، سقف‌های کم و حق‌بیمهٔ منصفانهٔ سال بعد را می‌دهد.</span></div></div>${drop}
-      <section class="panel"><div class="panel-b small muted" style="line-height:2">۱. بیمه‌نامهٔ سال خسارت (و اگر دارید، سال بعد) را در «مدارک و قراردادها» بدهید تا سقف‌ها و نرخ خوانده شود.<br>۲. فایل‌های خسارت را اینجا بدهید.<br>۳. اپ هر گروه خسارت را به سقفش وصل می‌کند و سه سناریو با فایل اکسل می‌دهد. همه‌چیز روی همین دستگاه می‌ماند.</div></section>`;
+      <section class="panel"><div class="panel-b small muted" style="line-height:2">۱. فایل سقف تعهدات (بیمه‌نامهٔ سال خسارت) و فایل‌های خسارت را با هم بالا بدهید. بیمه‌نامهٔ سال بعد را هم اگر دارید، اضافه کنید.<br>۲. سقف‌ها و نرخ خوانده‌شده را یک بار تأیید کنید؛ اپ خودش به این صفحه برمی‌گردد.<br>۳. هر گروه خسارت به سقفش وصل می‌شود و تحلیل، سه سناریو و فایل اکسل سال بعد آماده است. همه‌چیز روی همین دستگاه می‌ماند.</div></section>`;
     return bindClaims();
   }
   const M = claimsModel(state.claims, o), adv = claimsAdvice(M), y0 = old ? fmtYear(old.year) : "سال خسارت", y1 = nw ? fmtYear(nw.year) : "سال بعد";
@@ -2834,7 +2872,7 @@ function renderClaims(){
     <div class="panel-b cins">
       <label class="cin"><span>بیمه‌نامهٔ سال خسارت (سقف‌ها)</span><select id="clmOld">${opt(cl.oldId)}</select></label>
       <label class="cin"><span>بیمه‌نامهٔ سال بعد (اختیاری)</span><select id="clmNew">${opt(cl.newId)}</select></label>
-      ${inp("clmN", "تعداد بیمه‌شدگان", o.insured, 1, "نفر")}${inp("clmP0", `حق‌بیمهٔ هر نفر ${y0}`, o.p0, 0.01, "میلیون")}${inp("clmP1", `حق‌بیمهٔ پیشنهادی ${y1}`, o.p1, 0.01, "میلیون")}
+      ${inp("clmN", "تعداد بیمه‌شدگان", o.insured, 1, "نفر")}${nBad && cl.insured == null ? `<p class="small cwarn">بیمه‌نامه ${fmtInt(nBad)} نفر نوشته، ولی ${fmtInt(maxU)} نفر فقط از یک پوشش استفاده کرده‌اند؛ احتمالاً بقیه با الحاقیه اضافه شده‌اند. تعداد کل را وارد کنید.</p>` : ""}${inp("clmP0", `حق‌بیمهٔ هر نفر ${y0}`, o.p0, 0.01, "میلیون")}${inp("clmP1", `حق‌بیمهٔ پیشنهادی ${y1}`, o.p1, 0.01, "میلیون")}
       ${inp("clmI", "خسارت دیررس (IBNR)", Math.round(o.ibnr * 100), 1, "٪")}${inp("clmT", "Loss Ratio هدف", Math.round(o.tlr * 100), 1, "٪")}
       <div class="slider cin" style="grid-column:span 2"><label for="clmInfl" class="small nw">تورم درمان</label><input type="range" id="clmInfl" min="0" max="80" step="5" value="${Math.round(o.infl * 100)}" style="--p:${Math.round(o.infl * 100 / 80 * 100)}%"><b class="num" id="clmInflV">${fmtInt(Math.round(o.infl * 100))}٪</b></div>
     </div>${old && old.sample ? '<p class="small" style="color:var(--mid-ink);padding:0 18px 14px">بیمه‌نامهٔ انتخاب‌شده نمونه است؛ برای نتیجهٔ واقعی بیمه‌نامهٔ خود را در «مدارک و قراردادها» بدهید.</p>' : ""}</section>
@@ -2867,8 +2905,8 @@ function bindClaims(M){
   const dz = $("clmDrop"); dz.ondragover = e => { e.preventDefault(); dz.classList.add("over"); }; dz.ondragleave = () => dz.classList.remove("over");
   dz.ondrop = e => { e.preventDefault(); dz.classList.remove("over"); claimsUpload([...e.dataTransfer.files]); };
   if (!M) return;
-  $("clmOld").onchange = e => { cl.oldId = e.target.value; cl.p0 = null; delete cl.p0; render(); };
-  $("clmNew").onchange = e => { cl.newId = e.target.value; delete cl.p1; delete cl.insured; render(); };
+  $("clmOld").onchange = e => { cl.oldId = e.target.value; cl.newId = $("clmNew").value; cl.picked = true; delete cl.p0; render(); };
+  $("clmNew").onchange = e => { cl.newId = e.target.value; cl.oldId = $("clmOld").value; cl.picked = true; delete cl.p1; delete cl.insured; render(); };
   const numIn = (id, k, f = v => v) => { $(id).onchange = e => { const v = parseFloat(drNorm(e.target.value)); if (e.target.value === "") { delete cl[k]; render(); } else if (!isNaN(v)) set(k, f(v)); }; };
   numIn("clmN", "insured"); numIn("clmP0", "p0"); numIn("clmP1", "p1"); numIn("clmI", "ibnr", v => v / 100); numIn("clmT", "tlr", v => v / 100);
   const ir = $("clmInfl"); ir.oninput = () => { $("clmInflV").textContent = fmtInt(+ir.value) + "٪"; ir.style.setProperty("--p", (+ir.value / 80 * 100) + "%"); };
@@ -2879,8 +2917,11 @@ function bindClaims(M){
 async function claimsUpload(files){
   state.errors = [];
   const { got, rest } = await takeClaims(files);
-  if (rest.length) state.errors.push(`${rest.map(f => "«" + f.name + "»").join("، ")} فایل خسارت نیست (ستون «گروه بیماری» و «مبلغ خسارت» پیدا نشد).`);
   if (got.length) state.cl = {}; // new claims → pair the contracts again
+  // whatever is not a claims report is the policy / caps file: read it, confirm it, come back here
+  const pol = rest.filter(f => isDocFile(f) || /\.xlsx?$/i.test(f.name)), bad = rest.filter(f => !pol.includes(f));
+  if (bad.length) state.errors.push(`${bad.map(f => "«" + f.name + "»").join("، ")} نه فایل خسارت است نه بیمه‌نامه.`);
+  if (pol.length){ state.cl.picked = false; return handleDocs(pol, { claims: true }); }
   go("claims");
 }
 
@@ -3719,13 +3760,19 @@ async function handleFiles(files){
   const docs = files.filter(isDocFile); files = files.filter(f => !isDocFile(f));
   // Claims reports (گروه بیماری + مبلغ خسارت) go to the claims page, whatever page the upload came from.
   if (files.length && typeof XLSX !== "undefined"){ state.errors = []; const c = await takeClaims(files); files = c.rest;
-    if (c.got.length){ state.cl = {}; if (docs.length) setTimeout(() => handleDocs(docs), 0); if (!files.length) return go("claims"); setTimeout(() => go("claims"), 0); } }
+    // claims + policy given together: read and confirm the policy, then land on the analysis
+    if (c.got.length){ state.cl = { picked: false }; const pol = docs.concat(files.filter(f => /\.xlsx?$/i.test(f.name)));
+      return pol.length ? handleDocs(pol, { claims: true }) : go("claims"); } }
   if (docs.length && !files.length) return handleDocs(docs);
   if (docs.length) setTimeout(() => handleDocs(docs), 0);
   if (typeof XLSX === "undefined"){ state.errors = ["کتابخانهٔ خواندن اکسل بارگذاری نشد؛ اتصال اینترنت را بررسی کنید و صفحه را دوباره باز کنید."]; return render(); }
   const res = await Promise.all(files.map(readFile));
   const ok = res.filter(r => r.ok).map(r => r.g);
   state.errors = res.filter(r => !r.ok).map(r => r.msg);
+  // a sheet of coverage caps (not a renewal workbook): read it as a policy
+  const capsF = files.filter((f, i) => !res[i].ok && /\.xlsx?$/i.test(f.name));
+  if (capsF.length){ state.errors = res.filter((r, i) => !r.ok && !capsF.includes(files[i])).map(r => r.msg);
+    if (!ok.length) return handleDocs(capsF, state.claims.length ? { claims: true } : undefined); setTimeout(() => handleDocs(capsF), 0); }
   if (!ok.length) return render();
   const tender = state.mode === "tender";
   if (tender && state.tq && ok.length === 1 && ok[0].data.group.name === ok[0].file.replace(/\.[^.]+$/, "")) ok[0].data.group.name = state.tq;
