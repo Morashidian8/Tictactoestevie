@@ -130,7 +130,7 @@ button.isl:hover,.isl.click:hover{transform:translateY(-2px)}
 :root[data-theme="dark"] .isl-h .ic,:root[data-theme="dark"] .mi .ic{color:color-mix(in srgb,var(--h) 65%,white);background:color-mix(in srgb,var(--h) 22%,var(--surface))}
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .isl-h .ic,:root:not([data-theme="light"]) .mi .ic{color:color-mix(in srgb,var(--h) 65%,white);background:color-mix(in srgb,var(--h) 22%,var(--surface))}}
 .ic{--h:#6366F1}.ic-renewal{--h:#6366F1}.ic-action{--h:#F59E0B}.ic-tender{--h:#0D9488}.ic-cal{--h:#EC4899}.ic-ai{--h:#8B5CF6}.ic-docs{--h:#0EA5E9}.ic-settings{--h:#64748B}
-.ic-users{--h:#F43F5E}.ic-map{--h:#0EA5E9}.ic-link{--h:#14B8A6}.ic-market{--h:#F59E0B}.ic-clock{--h:#8B5CF6}.ic-upload{--h:#6366F1}.ic-search{--h:#0D9488}.ic-moon{--h:#475569}.ic-portfolio{--h:#4F46E5}.ic-urgent{--h:#EF4444}
+.ic-claims{--h:#E11D48}.ic-users{--h:#F43F5E}.ic-map{--h:#0EA5E9}.ic-link{--h:#14B8A6}.ic-market{--h:#F59E0B}.ic-clock{--h:#8B5CF6}.ic-upload{--h:#6366F1}.ic-search{--h:#0D9488}.ic-moon{--h:#475569}.ic-portfolio{--h:#4F46E5}.ic-urgent{--h:#EF4444}
 .isl-h .ic svg{width:23px;height:23px}
 .isl-h h3{font-size:15.5px;margin:0}
 .isl-h p{font-size:12.5px;color:var(--ink2)}
@@ -271,6 +271,13 @@ mark.lexfix{background:var(--mid-bg);color:inherit;border-bottom:1.5px dotted va
 .in .ic{width:36px;height:36px;border-radius:12px;display:grid;place-items:center;flex:none;font-weight:900}
 .in b{display:block;margin-bottom:2px}.in span{font-size:12.5px;color:var(--ink2);line-height:1.8}
 .in-warn .ic{background:var(--mid-bg);color:var(--mid-ink)}.in-ok .ic{background:var(--good-bg);color:var(--good)}.in-note .ic{background:var(--soft);color:var(--brand)}.in-info .ic{background:var(--line2);color:var(--ink2)}
+.cins{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px 16px;align-items:end}
+.cin{display:flex;flex-direction:column;gap:5px;min-width:0;font-size:12.5px;color:var(--ink2)}
+.cin select,.cin input[type=number]{width:100%;min-width:0;font:inherit;font-size:14px;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:9px 11px}
+.cin .row{display:flex;align-items:center;gap:6px}.cin .row em{font-style:normal;font-size:12px;color:var(--ink2);white-space:nowrap}
+.cin.slider{flex-direction:row;align-items:center;min-width:0}
+.clmt td{vertical-align:top}.clmt td .small{display:block;margin-top:2px;max-width:280px;white-space:normal}
+@media (max-width:760px){.cins{grid-template-columns:repeat(2,minmax(0,1fr))}.cin.slider{grid-column:1/-1 !important}}
 .proj .panel-h{gap:14px}
 .slider{display:flex;align-items:center;gap:10px;min-width:280px}
 .slider input[type=range]{-webkit-appearance:none;appearance:none;flex:1;height:8px;border-radius:4px;background:linear-gradient(to left,var(--brand) var(--p),var(--line2) var(--p));direction:rtl}
@@ -2654,6 +2661,261 @@ function projectionXlsx(pair, cats){
   XLSX.writeFile(wb, `محاسبه-${(b.org || "قرارداد").replace(/\s+/g, "-")}-${y2}.xlsx`);
 }
 
+/* ================= Claims (خسارت) =================
+   A claims report from the insurer's system (one row per service: disease group, service, files, people, amount)
+   gives the real cost of every coverage. Joined to the policy's caps it shows where the money went, which caps
+   were binding, and what next year should cost — from real numbers instead of assumed shares. */
+
+// Claims groups → coverage keys of the contract (first match wins; the claims wording differs from policy wording).
+const CLM_MAP = [
+  [/دندان/, "dental"], [/جراحی\s*(های)?\s*مهم|شیمی\s*درمانی|رادیوترا/, "special"], [/بستری/, "hosp"],
+  [/زایمان|سزارین/, "delivery"], [/نازایی|ناباروری/, "infert"], [/عیوب\s*انکسار|لیزیک|لازک/, "refractive"],
+  [/عینک|لنز/, "glasses"], [/فیزیوتراپی|گفتار\s*درمانی|کار\s*درمانی/, "rehab"], [/جنین|غربالگری/, "fetal"],
+  [/اورژانس/, "emergency"], [/ویزیت/, "visit"], [/دارو/, "drug"], [/آزمایش/, "lab"],
+  [/سرپایی|گروه\s*سوم/, "outsurg"], [/سایر\s*پاراکلینیک/, "otherpara"], [/گروه\s*دوم/, "diag"], [/پاراکلینیک|گروه\s*اول/, "para"],
+  [/سمعک/, "hearing"], [/آمبولانس/, "amb"], [/کارشناسی|نامشخص/, "admin"],
+];
+const CLM_NAME = Object.assign({}, CCAT_NAME, { otherpara: "سایر پاراکلینیکی (تزریقات، سرم…)", admin: "هزینهٔ کارشناسی و نامشخص", other: "سایر",
+  visit: "ویزیت", drug: "دارو", emergency: "اورژانس", para: "تصویربرداری (پاراکلینیک ۱)", diag: "تست‌های تشخیصی (پاراکلینیک ۲)" });
+const CLM_HOSP = new Set(["hosp", "special", "delivery", "infert", "refractive"]);
+const clmCat = name => { const t = norm(name).replace(/ئ/g, "ی"); const m = CLM_MAP.find(([re]) => re.test(t)); return m ? m[1] : "other"; };
+// Caps that may sit under a combined row in the policy
+const CAP_FALLBACK = { visit: ["visitdrug"], drug: ["visitdrug"], emergency: ["emergency"], amb: ["ambIn", "amb"] };
+const capOf = (c, k) => { if (!c || !c.caps) return null; for (const x of [k, ...(CAP_FALLBACK[k] || [])]) if (c.caps[x] != null) return c.caps[x]; return null; };
+
+function claimsHeader(rows){
+  for (let i = 0; i < Math.min(rows.length, 15); i++){
+    const h = (rows[i] || []).map(c => norm(c).replace(/[:：]/g, "").trim());
+    const f = re => h.findIndex(c => re.test(c));
+    const gi = f(/گروه\s*بیماری|گروه\s*خدمت/), ai = f(/مبلغ\s*(خسارت|پرداختی|پرداخت\s*شده)/);
+    if (gi >= 0 && ai >= 0) return { i, gi, ai, ni: f(/نام\s*بیماری|نام\s*خدمت|شرح\s*خدمت/), fi: f(/^تعداد\s*پرونده\s*(ها)?$/), ui: f(/مصرف\s*کننده|تعداد\s*افراد/),
+      ci: f(/مورد\s*خسارت/), oi: f(/بیمه\s*گذار/), toman: /تومان/.test(h[ai]) };
+  }
+  return null;
+}
+const isClaimsBook = sheets => Object.values(sheets).some(r => claimsHeader(r));
+function parseClaims(sheets, file){
+  const out = { file, org: null, rows: 0, cats: {} };
+  Object.values(sheets).forEach(rows => {
+    const H = claimsHeader(rows); if (!H) return;
+    rows.slice(H.i + 1).forEach(r => {
+      const amt = clmNum(r[H.ai]); if (!r[H.gi] || amt == null || !isFinite(amt)) return;
+      const g = norm(r[H.gi]).trim(); if (/^جمع|^کل$/.test(g)) return;
+      const k = clmCat(g), svc = norm(H.ni >= 0 ? r[H.ni] : g).trim() || g;
+      const C = out.cats[k] = out.cats[k] || { k, groups: new Set(), amt: 0, files: 0, cases: 0, svc: {} };
+      C.groups.add(g); C.amt += amt; C.files += clmNum(r[H.fi]) || 0; C.cases += clmNum(r[H.ci]) || 0;
+      // the same service appears once per entry channel with the same head count → keep the largest, not the sum
+      const S = C.svc[svc] = C.svc[svc] || { amt: 0, users: 0, files: 0 }; S.amt += amt; S.files += clmNum(r[H.fi]) || 0; S.users = Math.max(S.users, clmNum(r[H.ui]) || 0);
+      if (H.oi >= 0 && !out.org && r[H.oi] && !/نامعتبر/.test(r[H.oi])) out.org = norm(r[H.oi]).replace(/\s*کد\s*\d+\s*$/, "").trim();
+      out.rows++;
+    });
+    out.rial = !H.toman;
+  });
+  if (!out.rows) throw new Error("ردیف خسارتی پیدا نشد");
+  const div = out.rial ? 1e7 : 1e6; // → میلیون تومان
+  Object.values(out.cats).forEach(C => { C.amt /= div; Object.values(C.svc).forEach(s => { s.amt /= div; }); C.users = Math.max(0, ...Object.values(C.svc).map(s => s.users)); });
+  return out;
+}
+const clmNum = v => { if (v == null || v === "") return null; if (typeof v === "number") return v; const s = drNorm(String(v)).replace(/[,٬\s]/g, ""); const n = parseFloat(s); return isNaN(n) ? null : n; };
+
+function readClaimsFile(f){
+  return new Promise(resolve => {
+    if (!/\.(xlsx|xls|csv)$/i.test(f.name) || typeof XLSX === "undefined") return resolve(null);
+    const rd = new FileReader();
+    rd.onload = () => { try {
+      const wb = XLSX.read(new Uint8Array(rd.result), { type: "array" }), sheets = {};
+      wb.SheetNames.forEach(n => { sheets[n] = XLSX.utils.sheet_to_json(wb.Sheets[n], { header: 1, raw: true, defval: null }); });
+      if (!isClaimsBook(sheets)) return resolve(null);
+      resolve(parseClaims(sheets, f.name));
+    } catch (e){ resolve({ error: `«${f.name}» خوانده نشد: ${e.message}` }); } };
+    rd.onerror = () => resolve(null); rd.readAsArrayBuffer(f);
+  });
+}
+async function takeClaims(files){
+  const res = await Promise.all(files.map(readClaimsFile)), rest = files.filter((f, i) => !res[i]);
+  const got = res.filter(r => r && !r.error);
+  res.filter(r => r && r.error).forEach(r => state.errors.push(r.error));
+  got.forEach(c => { const i = state.claims.findIndex(x => x.file === c.file); if (i >= 0) state.claims[i] = c; else state.claims.push(c); });
+  return { got, rest };
+}
+
+/* ---------- model ---------- */
+function mergeClaims(list){
+  const cats = {};
+  list.forEach(c => Object.values(c.cats).forEach(C => {
+    const M = cats[C.k] = cats[C.k] || { k: C.k, amt: 0, files: 0, cases: 0, users: 0, svc: {} };
+    M.amt += C.amt; M.files += C.files; M.cases += C.cases; M.users = Math.max(M.users, C.users);
+    Object.entries(C.svc).forEach(([n, s]) => { const t = M.svc[n] = M.svc[n] || { amt: 0, users: 0, files: 0 }; t.amt += s.amt; t.files += s.files; t.users = Math.max(t.users, s.users); });
+  }));
+  return Object.values(cats).sort((a, b) => b.amt - a.amt);
+}
+// A cap is "binding" when the average user already spends near it; raising it lets that hidden demand through.
+function capUplift(avg, c0, c1){
+  if (!avg || c0 == null || c1 == null || !isFinite(c0) || !c0) return 0;
+  if (!isFinite(c1)) return 0.6 * Math.min(1, avg / c0);
+  if (c1 > c0) return Math.min(c1 / c0 - 1, 1) * 0.6 * Math.min(1, avg / c0);
+  if (c1 < c0 && avg > c1) return -0.6 * Math.min(1, (avg - c1) / avg);
+  return 0;
+}
+function claimsModel(list, o){
+  const N = o.insured || null, cats = mergeClaims(list), total = cats.reduce((s, c) => s + c.amt, 0), L = 1 + o.ibnr;
+  const G = cats.map(c => {
+    const c0 = capOf(o.old, c.k), c1 = capOf(o.nw, c.k), avg = c.users ? c.amt / c.users : null;
+    const up = o.upOverride && o.upOverride[c.k] != null ? o.upOverride[c.k] : capUplift(avg, c0, c1);
+    return Object.assign({}, c, { share: c.amt / total, avg, use: N && c.users ? c.users / N : null, c0, c1, press: avg && c0 && isFinite(c0) ? avg / c0 : null, up,
+      proj: c.amt * L * (1 + o.infl) * (1 + up), top: Object.entries(c.svc).sort((a, b) => b[1].amt - a[1].amt).slice(0, 3) });
+  });
+  const projTotal = G.reduce((s, g) => s + g.proj, 0), upW = total ? projTotal / (total * L * (1 + o.infl)) - 1 : 0;
+  const pc0 = N ? total * L / N : null, pc1 = N ? projTotal / N : null;
+  const hospShare = G.filter(g => CLM_HOSP.has(g.k)).reduce((s, g) => s + g.share, 0);
+  const sc = [["اقتصادی", Math.max(0, o.infl - 0.05), 0.85], ["متعادل", o.infl, o.tlr], ["محافظه‌کار", o.infl + 0.1, 0.70]]
+    .map(([n, i, lr]) => ({ n, i, lr, pc: pc0 != null ? pc0 * (1 + i) * (1 + upW) : null })).map(s => Object.assign(s, { prem: s.pc != null ? s.pc / s.lr : null }));
+  return { G, total, projTotal, upW, pc0, pc1, N, L, lr0: pc0 != null && o.p0 ? pc0 / o.p0 : null, lr1: pc1 != null && o.p1 ? pc1 / o.p1 : null,
+    fair: pc1 != null ? pc1 / o.tlr : null, hospShare, sc, o };
+}
+function claimsAdvice(M){
+  const o = M.o, A = [], y1 = o.nw ? fmtYear(o.nw.year) : "سال بعد";
+  if (M.lr0 != null){
+    if (M.lr0 >= 0.85) A.push(["warn", "سال خسارت زیان‌ده بوده", `Loss Ratio ${fmtPct(M.lr0)} (با خسارت دیررس). بیمه‌گر برای کم کردن نرخ انعطاف کمی دارد و افزایش نرخ منطقی است.`]);
+    else if (M.lr0 < 0.75) A.push(["ok", "سال خسارت سودده بوده", `Loss Ratio ${fmtPct(M.lr0)}. اهرم مذاکره برای نرخ پایین‌تر یا سقف بیشتر دارید.`]);
+    else A.push(["note", "سال خسارت در محدودهٔ تعادل", `Loss Ratio ${fmtPct(M.lr0)}.`]);
+  }
+  if (M.fair != null && o.p1){
+    const gap = o.p1 / M.fair - 1;
+    if (gap > 0.1) A.push(["warn", `نرخ ${y1} گران است`, `${fmtNum(o.p1)} در برابر نرخ منصفانهٔ ${fmtNum(M.fair)} (${fmtSignedPct(gap)}). تا حدود ${fmtNum(M.fair)} مذاکره کنید${M.N ? `؛ صرفه‌جویی کل حدود ${fmtNum((o.p1 - M.fair) * M.N / 1000)} میلیارد تومان` : ""}.`]);
+    else if (gap < -0.1) A.push(["ok", `نرخ ${y1} به نفع کارفرماست`, `${fmtNum(o.p1)} در برابر نرخ منصفانهٔ ${fmtNum(M.fair)} (${fmtSignedPct(gap)}). برای کم کردن نرخ فشار نیاورید؛ روی شرایط (پوشش والدین، دورهٔ انتظار، تعرفه) مذاکره کنید و برای افزایش سال بعد آماده باشید.`]);
+    else A.push(["note", `نرخ ${y1} منصفانه است`, `${fmtNum(o.p1)} در برابر ${fmtNum(M.fair)}. جای مذاکره روی نرخ کم است؛ روی شرایط و سقف‌های پرمصرف مذاکره کنید.`]);
+  } else if (M.fair != null) A.push(["note", "حق‌بیمهٔ منصفانهٔ سال بعد", `${fmtNum(M.fair)} میلیون تومان برای هر نفر با Loss Ratio هدف ${fmtPct(o.tlr)}.`]);
+  const bind = M.G.filter(g => g.press != null && g.press >= 0.8);
+  if (bind.length) A.push(["warn", "این سقف‌ها کم بوده‌اند", bind.map(g => `${CLM_NAME[g.k] || g.k}: میانگین هر نفر ${fmtNum(g.avg)} با سقف ${MT(g.c0)}`).join("؛ ") + (o.nw ? "؛ با سقف جدید هزینه‌شان بالا می‌رود." : "؛ کارکنان بخشی از هزینه را خودشان داده‌اند.")]);
+  const busy = M.G.filter(g => g.use != null && g.use >= 0.4).sort((a, b) => b.use - a.use);
+  if (busy.length) A.push(["info", "پرمصرف‌ترین پوشش‌ها", busy.slice(0, 4).map(g => `${CLM_NAME[g.k] || g.k} ${fmtPct(g.use)} افراد`).join("، ") + ". کم کردن این‌ها بیشترین نارضایتی را می‌سازد."]);
+  const big = M.G[0]; if (big) A.push(["info", "بیشترین هزینه", `${CLM_NAME[big.k] || big.k}: ${fmtPct(big.share)} کل خسارت (${fmtNum(big.amt)} میلیون تومان)` + (big.k === "dental" ? ". اگر نرخ باید پایین بیاید، محدود کردن روکش و ایمپلنت اهرم اصلی است." : ".")]);
+  const over = M.G.filter(g => ["hosp", "special"].includes(g.k) && g.avg && g.c1 && isFinite(g.c1) && g.avg * 3 < g.c1);
+  if (over.length) A.push(["note", "سقف جدید کافی است", over.map(g => `${CLM_NAME[g.k]} (میانگین ${fmtNum(g.avg)}، سقف ${MT(g.c1)})`).join("، ") + "؛ بالا بردن بیشتر فقط گران‌تر می‌کند."]);
+  if (M.hospShare < 0.25) A.push(["note", "سهم بیمارستانی کم است", `فقط ${fmtPct(M.hospShare)} خسارت. اگر خسارت‌های بستری هنوز کامل ثبت نشده، «خسارت دیررس» را بالاتر بگذارید.`]);
+  const maxU = Math.max(0, ...M.G.map(g => g.users || 0));
+  if (M.N && maxU > M.N) A.push(["warn", "تعداد نفرات را چک کنید", `${fmtInt(maxU)} نفر از یک پوشش استفاده کرده‌اند ولی بیمه‌شدگان ${fmtInt(M.N)} نفرند (شاید والدین یا تحت تکفل حساب نشده‌اند).`]);
+  return A;
+}
+const fmtYear = y => y ? fmtInt(y).replace(/٬/g, "") : "";
+
+/* ---------- page ---------- */
+function claimsDefaults(){
+  const real = state.contracts.filter(c => !c.sample).sort((a, b) => a.year - b.year), cl = state.cl;
+  const org = state.claims.map(c => c.org).find(Boolean);
+  const pool = org ? real.filter(c => orgKey(c.org) === orgKey(org)) : real;
+  const lastOrg = (pool.length ? pool : real).slice(-1)[0], same = lastOrg ? real.filter(c => orgKey(c.org) === orgKey(lastOrg.org)) : [];
+  if (cl.oldId === undefined) cl.oldId = same.length > 1 ? same[same.length - 2].id : same[0] ? same[0].id : "";
+  if (cl.newId === undefined) cl.newId = same.length > 1 ? same[same.length - 1].id : "";
+}
+function renderClaims(){
+  setHead("تحلیل خسارت", "خسارت واقعی ← قرارداد سال بعد");
+  const cl = state.cl; claimsDefaults();
+  const byId = id => state.contracts.find(c => c.id === id) || null, old = byId(cl.oldId), nw = byId(cl.newId);
+  const o = { old, nw, insured: cl.insured ?? (nw && nw.insured) ?? (old && old.insured) ?? null, p0: cl.p0 ?? (old && old.premium) ?? null,
+    p1: cl.p1 ?? (nw && nw.premium) ?? null, ibnr: cl.ibnr ?? 0.1, infl: state.infl ?? 0.4, tlr: cl.tlr ?? ((state.settings.targetLR || 75) / 100) };
+  const opt = sel => `<option value="">— ندارم —</option>` + state.contracts.map(c => `<option value="${esc(c.id)}"${c.id === sel ? " selected" : ""}>${esc(short(c.org) || "بی‌نام")} · ${fmtYear(c.year) || "سال؟"}${c.plan ? " · " + esc(c.plan) : ""}${c.sample ? " (نمونه)" : ""}</option>`).join("");
+  const drop = `<label class="drop" for="clmIn" id="clmDrop"><span class="di"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M12 18v-6M9 15l3-3 3 3"/></svg></span><b>فایل خسارت را اینجا بکشید یا بزنید</b><span>اکسل خروجی سامانهٔ بیمه‌گر (سرپایی و بیمارستانی را با هم بدهید) · ستون‌های «گروه بیماری» و «مبلغ خسارت» کافی است</span></label><input type="file" id="clmIn" accept=".xlsx,.xls,.csv" multiple hidden>`;
+  if (!state.claims.length){
+    $("view").innerHTML = `${crumb([null, "تحلیل خسارت"])}<div class="ph"><div><h1>تحلیل خسارت و پیشنهاد سال بعد</h1><span class="sub">فایل خسارت پرداختی را بدهید؛ با بیمه‌نامه‌های خوانده‌شده جفت می‌شود و Loss Ratio واقعی، سقف‌های کم و حق‌بیمهٔ منصفانهٔ سال بعد را می‌دهد.</span></div></div>${drop}
+      <section class="panel"><div class="panel-b small muted" style="line-height:2">۱. بیمه‌نامهٔ سال خسارت (و اگر دارید، سال بعد) را در «مدارک و قراردادها» بدهید تا سقف‌ها و نرخ خوانده شود.<br>۲. فایل‌های خسارت را اینجا بدهید.<br>۳. اپ هر گروه خسارت را به سقفش وصل می‌کند و سه سناریو با فایل اکسل می‌دهد. همه‌چیز روی همین دستگاه می‌ماند.</div></section>`;
+    return bindClaims();
+  }
+  const M = claimsModel(state.claims, o), adv = claimsAdvice(M), y0 = old ? fmtYear(old.year) : "سال خسارت", y1 = nw ? fmtYear(nw.year) : "سال بعد";
+  const lrCol = v => v == null ? "" : v < 0.75 ? "var(--good)" : v <= 0.85 ? "var(--mid-ink)" : "var(--bad)";
+  const kp = (l, v, sub, color, lead) => `<div class="panel kp2${lead ? " lead" : ""}"><span class="l">${l}</span><b class="big num" style="${color ? `color:${color}` : ""}">${v}</b><span class="small muted">${sub}</span></div>`;
+  const inp = (id, l, v, step, suf) => `<label class="cin"><span>${l}</span><span class="row"><input type="number" id="${id}" value="${v ?? ""}" step="${step}" inputmode="decimal" placeholder="وارد کنید"><em>${suf}</em></span></label>`;
+  const maxA = M.G[0] ? M.G[0].amt : 1;
+  $("view").innerHTML = `${crumb([null, "تحلیل خسارت"])}
+  <div class="ph"><div><h1>تحلیل خسارت ${y0}${M.o.old ? " · " + esc(short(old.org)) : ""}</h1><span class="sub">${state.claims.map(c => esc(c.file)).join(" · ")} · مبالغ به میلیون تومان</span></div>
+    <div class="actions"><button class="btn primary" type="button" id="clmX">⇩ فایل محاسبه (اکسل)</button><button class="btn" type="button" id="clmClear">پاک کردن خسارت‌ها</button></div></div>
+  <section class="panel"><div class="panel-h"><h2>ورودی‌ها</h2><span class="small muted">از بیمه‌نامه‌های خوانده‌شده پر می‌شود؛ قابل تغییر است</span></div>
+    <div class="panel-b cins">
+      <label class="cin"><span>بیمه‌نامهٔ سال خسارت (سقف‌ها)</span><select id="clmOld">${opt(cl.oldId)}</select></label>
+      <label class="cin"><span>بیمه‌نامهٔ سال بعد (اختیاری)</span><select id="clmNew">${opt(cl.newId)}</select></label>
+      ${inp("clmN", "تعداد بیمه‌شدگان", o.insured, 1, "نفر")}${inp("clmP0", `حق‌بیمهٔ هر نفر ${y0}`, o.p0, 0.01, "میلیون")}${inp("clmP1", `حق‌بیمهٔ پیشنهادی ${y1}`, o.p1, 0.01, "میلیون")}
+      ${inp("clmI", "خسارت دیررس (IBNR)", Math.round(o.ibnr * 100), 1, "٪")}${inp("clmT", "Loss Ratio هدف", Math.round(o.tlr * 100), 1, "٪")}
+      <div class="slider cin" style="grid-column:span 2"><label for="clmInfl" class="small nw">تورم درمان</label><input type="range" id="clmInfl" min="0" max="80" step="5" value="${Math.round(o.infl * 100)}" style="--p:${Math.round(o.infl * 100 / 80 * 100)}%"><b class="num" id="clmInflV">${fmtInt(Math.round(o.infl * 100))}٪</b></div>
+    </div>${old && old.sample ? '<p class="small" style="color:var(--mid-ink);padding:0 18px 14px">بیمه‌نامهٔ انتخاب‌شده نمونه است؛ برای نتیجهٔ واقعی بیمه‌نامهٔ خود را در «مدارک و قراردادها» بدهید.</p>' : ""}</section>
+  <div class="kp2s">
+    ${kp("کل خسارت پرداختی", fmtNum(M.total), `${fmtPct(1 - M.hospShare)} سرپایی · ${fmtPct(M.hospShare)} بیمارستانی`, "", true)}
+    ${kp(`Loss Ratio ${y0}`, M.lr0 != null ? fmtPct(M.lr0) : "—", M.lr0 != null ? `سرانه ${fmtNum(M.pc0)} در برابر ${fmtNum(o.p0)}` : "تعداد نفرات و حق‌بیمه را وارد کنید", lrCol(M.lr0))}
+    ${kp(`خسارت سرانهٔ ${y1}`, M.pc1 != null ? fmtNum(M.pc1) : "—", `تورم ${fmtPct(o.infl)} · اثر سقف‌ها ${fmtSignedPct(M.upW)}`)}
+    ${kp(`حق‌بیمهٔ منصفانهٔ ${y1}`, M.fair != null ? fmtNum(M.fair) : "—", M.lr1 != null ? `نرخ پیشنهادی ${fmtNum(o.p1)} ← LR ${fmtPct(M.lr1)}` : `با LR هدف ${fmtPct(o.tlr)}`, M.lr1 != null ? lrCol(M.lr1) : "var(--brand)")}
+  </div>
+  <div class="ins">${adv.map(([k, t, s]) => `<div class="panel in in-${k}"><span class="ic">${{ warn: "!", ok: "✓", note: "i", info: "→" }[k]}</span><div><b>${esc(t)}</b><span>${esc(s)}</span></div></div>`).join("")}</div>
+  <section class="panel"><div class="panel-h"><h2>هزینه به تفکیک پوشش</h2><span class="small muted">مصرف‌کننده = حداقل تعداد افراد</span></div>
+    <div class="tw"><table class="clmt" style="min-width:860px"><thead><tr><th>پوشش</th><th>خسارت</th><th style="width:160px">سهم</th><th>مصرف‌کننده</th><th>میانگین هر نفر</th><th>سقف ${y0}</th><th>سقف ${y1}</th><th>اثر سقف</th><th>پیش‌بینی ${y1}</th></tr></thead><tbody>
+    ${M.G.map(g => `<tr><td><b>${esc(CLM_NAME[g.k] || g.k)}</b><div class="small muted">${g.top.map(([n, s]) => `${esc(n)} ${fmtNum(s.amt)}`).join(" · ")}</div></td><td class="num nw">${fmtNum(g.amt)}</td>
+      <td><div class="track" style="height:12px"><span class="bar" style="height:8px;top:2px;width:${Math.max(1.5, g.amt / maxA * 100).toFixed(1)}%;background:linear-gradient(to left,#6366F1,#A78BFA)"></span></div><span class="small muted">${fmtPct(g.share)}</span></td>
+      <td class="nw">${g.users ? fmtInt(g.users) : "—"}${g.use != null ? ` <span class="small muted">${fmtPct(g.use)}</span>` : ""}</td><td class="num nw">${g.avg ? fmtNum(g.avg) : "—"}</td>
+      <td class="nw">${g.c0 != null ? MT(g.c0) : "—"}${g.press != null && g.press >= 0.8 ? ' <span class="tag t-bad">به سقف خورده</span>' : ""}</td><td class="nw">${g.c1 != null ? MT(g.c1) : "—"}</td>
+      <td class="nw">${g.up ? fmtSignedPct(g.up) : "—"}</td><td class="num nw"><b>${fmtNum(g.proj)}</b></td></tr>`).join("")}
+    <tr><td><b>جمع</b></td><td class="num nw"><b>${fmtNum(M.total)}</b></td><td></td><td></td><td></td><td></td><td></td><td class="nw">${fmtSignedPct(M.upW)}</td><td class="num nw"><b>${fmtNum(M.projTotal)}</b></td></tr></tbody></table></div></section>
+  <section class="panel proj"><div class="panel-h"><h2>حق‌بیمهٔ ${y1}: سه سناریو</h2><span class="small muted">بر پایهٔ خسارت واقعی، نه فرض</span></div>
+    <div class="panel-b"><div class="scn">${M.sc.map((s, i) => `<div class="sc ${i === 1 ? "rec" : ""}">${i === 1 ? '<span class="badge">پیشنهاد اپ</span>' : ""}<span class="tag t-protect" style="align-self:flex-start">${s.n}</span>
+      <div class="pr"><b class="num">${s.prem != null ? fmtNum(s.prem) : "—"}</b> <span class="small muted">میلیون / نفر</span></div>
+      ${o.p1 && s.prem != null ? `<div class="small" style="font-weight:800;color:${s.prem >= o.p1 ? "var(--good)" : "var(--mid-ink)"}">${fmtSignedPct(s.prem / o.p1 - 1)} نسبت به نرخ پیشنهادی</div>` : ""}
+      <ul><li><span class="muted">تورم درمان</span><b>${fmtPct(s.i)}</b></li><li><span class="muted">Loss Ratio هدف</span><b>${fmtPct(s.lr)}</b></li>${M.N && s.prem != null ? `<li><span class="muted">کل حق‌بیمه</span><b class="num">${fmtNum(s.prem * M.N / 1000)} میلیارد</b></li>` : ""}</ul></div>`).join("")}</div></div></section>
+  ${drop}`;
+  bindClaims(M);
+}
+function bindClaims(M){
+  const cl = state.cl, set = (k, v) => { cl[k] = v; render(); };
+  $("clmIn").onchange = async e => { const f = [...e.target.files]; e.target.value = ""; if (f.length) await claimsUpload(f); };
+  const dz = $("clmDrop"); dz.ondragover = e => { e.preventDefault(); dz.classList.add("over"); }; dz.ondragleave = () => dz.classList.remove("over");
+  dz.ondrop = e => { e.preventDefault(); dz.classList.remove("over"); claimsUpload([...e.dataTransfer.files]); };
+  if (!M) return;
+  $("clmOld").onchange = e => { cl.oldId = e.target.value; cl.p0 = null; delete cl.p0; render(); };
+  $("clmNew").onchange = e => { cl.newId = e.target.value; delete cl.p1; delete cl.insured; render(); };
+  const numIn = (id, k, f = v => v) => { $(id).onchange = e => { const v = parseFloat(drNorm(e.target.value)); if (e.target.value === "") { delete cl[k]; render(); } else if (!isNaN(v)) set(k, f(v)); }; };
+  numIn("clmN", "insured"); numIn("clmP0", "p0"); numIn("clmP1", "p1"); numIn("clmI", "ibnr", v => v / 100); numIn("clmT", "tlr", v => v / 100);
+  const ir = $("clmInfl"); ir.oninput = () => { $("clmInflV").textContent = fmtInt(+ir.value) + "٪"; ir.style.setProperty("--p", (+ir.value / 80 * 100) + "%"); };
+  ir.onchange = () => { state.infl = +ir.value / 100; render(); };
+  $("clmClear").onclick = () => { state.claims = []; render(); };
+  $("clmX").onclick = () => { try { claimsXlsx(M); } catch (e){ alert("ساخت فایل ممکن نشد: " + e.message); } };
+}
+async function claimsUpload(files){
+  state.errors = [];
+  const { got, rest } = await takeClaims(files);
+  if (rest.length) state.errors.push(`${rest.map(f => "«" + f.name + "»").join("، ")} فایل خسارت نیست (ستون «گروه بیماری» و «مبلغ خسارت» پیدا نشد).`);
+  if (got.length) state.cl = {}; // new claims → pair the contracts again
+  go("claims");
+}
+
+/* ---------- Excel with live formulas ---------- */
+function claimsXlsx(M){
+  const o = M.o, y0 = o.old ? o.old.year : "", y1 = o.nw ? o.nw.year : "سال بعد", S = "'خلاصه'!", n = M.G.length, tot = n + 2;
+  const f = x => ({ t: "n", f: x });
+  const sum = [["تحلیل خسارت " + y0 + " و پیشنهاد " + y1 + (o.old ? " — " + o.old.org : "") + " — میلیون تومان"], ["سلول‌های ستون B (ردیف ۴ تا ۱۰) ورودی‌اند؛ تغییرشان همه‌چیز را دوباره حساب می‌کند."], ["ورودی", "مقدار"],
+    ["تعداد بیمه‌شدگان", M.N || 0], ["حق‌بیمهٔ هر نفر " + y0, o.p0 || 0], ["حق‌بیمهٔ پیشنهادی هر نفر " + y1, o.p1 || 0], ["خسارت دیررس (IBNR)", o.ibnr], ["تورم درمان", o.infl], ["Loss Ratio هدف", o.tlr],
+    ["اثر سقف‌ها (میانگین وزنی)", f(`IFERROR('پوشش‌ها'!K${tot}/('پوشش‌ها'!B${tot}*(1+B7)*(1+B8))-1,0)`)], [], ["خروجی", "مقدار"],
+    ["کل خسارت پرداختی", f(`'پوشش‌ها'!B${tot}`)], ["خسارت سرانه (با خسارت دیررس)", f("B13*(1+B7)/B4")], ["کل حق‌بیمه " + y0, f("B5*B4")], ["Loss Ratio " + y0, f("IFERROR(B13*(1+B7)/B15,\"\")")],
+    ["خسارت سرانهٔ مورد انتظار " + y1, f("B14*(1+B8)*(1+B10)")], ["Loss Ratio " + y1 + " با نرخ پیشنهادی", f("IFERROR(B17/B6,\"\")")], ["حق‌بیمهٔ منصفانهٔ هر نفر " + y1, f("B17/B9")],
+    ["نرخ پیشنهادی نسبت به منصفانه", f("IFERROR(B6/B19-1,\"\")")], ["کل حق‌بیمه با نرخ منصفانه", f("B19*B4")]];
+  const ws1 = XLSX.utils.aoa_to_sheet(sum);
+  ["B7", "B8", "B9", "B10", "B16", "B18", "B20"].forEach(a => { if (ws1[a]) ws1[a].z = "0%"; });
+  ["B13", "B14", "B15", "B17", "B19", "B21"].forEach(a => { if (ws1[a]) ws1[a].z = "#,##0.00"; });
+  ws1["!cols"] = [{ wch: 38 }, { wch: 16 }];
+  const g = [["پوشش", "خسارت", "سهم", "پرونده", "مصرف‌کننده (حداقل)", "نرخ استفاده", "میانگین هر نفر", "سقف " + y0, "سقف " + y1, "اثر سقف (قابل تغییر)", "پیش‌بینی " + y1, "پرهزینه‌ترین خدمات"]];
+  M.G.forEach((x, i) => { const r = i + 2; g.push([CLM_NAME[x.k] || x.k, +x.amt.toFixed(2), f(`B${r}/B$${tot}`), x.files, x.users || "", f(`IF(E${r}="","",E${r}/${S}$B$4)`), f(`IF(E${r}="","",B${r}/E${r})`),
+    x.c0 != null && isFinite(x.c0) ? x.c0 : "", x.c1 != null && isFinite(x.c1) ? x.c1 : "", +x.up.toFixed(3), f(`B${r}*(1+${S}$B$7)*(1+${S}$B$8)*(1+J${r})`), x.top.map(([nm, s]) => nm + " " + s.amt.toFixed(0)).join("؛ ")]); });
+  g.push(["جمع", f(`SUM(B2:B${tot - 1})`), "", "", "", "", "", "", "", "", f(`SUM(K2:K${tot - 1})`)]);
+  const ws2 = XLSX.utils.aoa_to_sheet(g);
+  for (let r = 2; r <= tot; r++){ ["C", "F", "J"].forEach(c => { if (ws2[c + r]) ws2[c + r].z = "0%"; }); ["B", "G", "K"].forEach(c => { if (ws2[c + r]) ws2[c + r].z = "#,##0.0"; }); }
+  ws2["!cols"] = [{ wch: 30 }, { wch: 11 }, { wch: 8 }, { wch: 8 }, { wch: 12 }, { wch: 10 }, { wch: 12 }, { wch: 10 }, { wch: 10 }, { wch: 12 }, { wch: 13 }, { wch: 60 }];
+  const sc = [["سناریو", "تورم درمان", "Loss Ratio هدف", "خسارت سرانه " + y1, "حق‌بیمهٔ هر نفر", "در برابر نرخ پیشنهادی", "کل حق‌بیمه"]];
+  M.sc.forEach((s, i) => { const r = i + 2; sc.push([s.n, s.i, s.lr, f(`${S}B14*(1+B${r})*(1+${S}B10)`), f(`D${r}/C${r}`), f(`IFERROR(E${r}/${S}B6-1,"")`), f(`E${r}*${S}B4`)]); });
+  const ws3 = XLSX.utils.aoa_to_sheet(sc);
+  for (let r = 2; r <= 4; r++){ ["B", "C", "F"].forEach(c => { ws3[c + r].z = "0%"; }); ["D", "E"].forEach(c => { ws3[c + r].z = "#,##0.00"; }); ws3["G" + r].z = "#,##0"; }
+  ws3["!cols"] = [{ wch: 16 }, { wch: 11 }, { wch: 14 }, { wch: 16 }, { wch: 16 }, { wch: 20 }, { wch: 14 }];
+  const wb = XLSX.utils.book_new(); wb.Workbook = { Views: [{ RTL: true }] };
+  [ws1, ws2, ws3].forEach(w => { w["!views"] = [{ RTL: true }]; });
+  XLSX.utils.book_append_sheet(wb, ws1, "خلاصه"); XLSX.utils.book_append_sheet(wb, ws2, "پوشش‌ها"); XLSX.utils.book_append_sheet(wb, ws3, "سناریوها");
+  XLSX.writeFile(wb, `تحلیل-خسارت-${(o.old && o.old.org || "قرارداد").replace(/\s+/g, "-")}-${y1}.xlsx`);
+}
+
 /* ================= UI (DESIGN_PROMPT_1) ================= */
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -2675,7 +2937,7 @@ const SEVTAG = { crit: ["t-bad", "بحرانی"], warn: ["t-mid", "هشدار"],
 const inFrame = (() => { try { return window.self !== window.top; } catch (e) { return true; } })();
 const reduced = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-const state = { docs: [], contracts: [], cmpOrg: null, page: "home", idx: null, mode: "renewal", groups: [], tenders: [], settings: Object.assign({}, DEFAULTS), protectNames: new Set(),
+const state = { docs: [], contracts: [], claims: [], cl: {}, cmpOrg: null, page: "home", idx: null, mode: "renewal", groups: [], tenders: [], settings: Object.assign({}, DEFAULTS), protectNames: new Set(),
   sort: "renewal", q: "", errors: [], hist: [], pushed: 0, more: {}, mcat: "urgent", chat: {}, tab: null };
 
 /* ---------- data ---------- */
@@ -2747,6 +3009,7 @@ const ICON = {
   tender: '<path d="M4 21V8l8-5 8 5v13"/><path d="M9 21v-6h6v6"/>',
   cal: '<rect x="3" y="4" width="18" height="17" rx="3"/><path d="M8 2v4M16 2v4M3 10h18"/>',
   ai: '<path d="M12 3l1.8 4.7 4.7 1.8-4.7 1.8L12 16l-1.8-4.7-4.7-1.8 4.7-1.8z"/><path d="M19 15l.8 2.2 2.2.8-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/>',
+  claims: '<path d="M6 2h12v20l-3-2-3 2-3-2-3 2z"/><path d="M9 7h6M9 11h6M9 15h4"/>',
   docs: '<path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M8 13h8M8 17h5"/>',
   settings: '<path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/>',
   users: '<circle cx="9" cy="8" r="4"/><path d="M2 21a7 7 0 0 1 14 0M17 4a4 4 0 0 1 0 8M22 21a7 7 0 0 0-4-6.3"/>',
@@ -2863,6 +3126,7 @@ function renderHome(){
       <form class="hask" id="homeAsk"><select id="homeAiG" aria-label="دربارهٔ"><option value="p"${aiPick === "p" ? " selected" : ""}>همهٔ گروه‌ها</option>${all.map(x => `<option value="${x.i}"${x.i === aiPick ? " selected" : ""}>${esc(short(x.A.group.name))}</option>`).join("")}</select><input id="homeAiQ" placeholder="مثلاً: بودجه چقدر است؟" aria-label="سؤال"><button type="submit" aria-label="پرسیدن">↑</button></form>
     </div>
     <button class="isl" type="button" data-go="docs">${islHead("docs", "مدارک و قراردادها", "خواندن PDF و عکس بیمه‌نامه", false)}<span class="foot2">${state.contracts.filter(c => !c.sample).length ? `${fmtInt(state.contracts.filter(c => !c.sample).length)} قرارداد خوانده‌شده ←` : "مقایسهٔ دو سال قرارداد ←"}</span></button>
+    <button class="isl" type="button" data-go="claims">${islHead("claims", "تحلیل خسارت", "خسارت واقعی ← نرخ و سقف سال بعد", false)}<span class="foot2">${state.claims.length ? `${fmtInt(state.claims.length)} فایل خسارت ←` : "فایل خسارت را بدهید ←"}</span></button>
     <button class="isl" type="button" data-go="settings">${islHead("settings", "قواعد و تنظیمات", "آستانه‌ها و پوشش‌های حمایتی", false)}<span class="foot2">Loss Ratio هدف: ${fmtPct(t)} ←</span></button>
   </div>
   <div class="sec-t"><h2>مدیریت و نقشهٔ راه</h2><span class="small muted">بخش‌هایی که با نسخهٔ آنلاین فعال می‌شوند</span></div>
@@ -3263,6 +3527,7 @@ function render(){
   else if (p === "renewal") renderRenewal(); else if (p === "group") renderGroup(state.idx);
   else if (p === "tender") renderTenderList(); else if (p === "tenderp") renderTender(state.idx);
   else if (p === "settings") renderSettings(); else if (p === "reminders") renderReminders();
+  else if (p === "claims") renderClaims();
   else if (p === "docs") renderDocs(); else if (p === "doc") renderDoc(state.idx);
   else if (p === "admin") renderAdmin(); else if (p === "login") renderLogin();
   else if (p.startsWith("soon:")) renderSoon(p.slice(5));
@@ -3372,7 +3637,7 @@ function openMenu(){
     </div>
     <div class="sheet-sec">ابزار</div>
     <div class="mgrid">
-      ${mi("ai", "دستیار هوشمند", 'data-act="ai"')}${mi("docs", "مدارک و قراردادها", 'data-go="docs"')}${mi("settings", "قواعد تحلیل", 'data-go="settings"')}${mi("moon", "حالت روشن / تیره", "data-theme-toggle")}
+      ${mi("claims", "تحلیل خسارت", 'data-go="claims"')}${mi("ai", "دستیار هوشمند", 'data-act="ai"')}${mi("docs", "مدارک و قراردادها", 'data-go="docs"')}${mi("settings", "قواعد تحلیل", 'data-go="settings"')}${mi("moon", "حالت روشن / تیره", "data-theme-toggle")}
     </div>
     <div class="sheet-sec">مدیریت و نقشهٔ راه</div>
     <div class="mgrid">
@@ -3452,6 +3717,9 @@ function readFile(f){
 async function handleFiles(files){
   if (!files.length) return;
   const docs = files.filter(isDocFile); files = files.filter(f => !isDocFile(f));
+  // Claims reports (گروه بیماری + مبلغ خسارت) go to the claims page, whatever page the upload came from.
+  if (files.length && typeof XLSX !== "undefined"){ state.errors = []; const c = await takeClaims(files); files = c.rest;
+    if (c.got.length){ state.cl = {}; if (docs.length) setTimeout(() => handleDocs(docs), 0); if (!files.length) return go("claims"); setTimeout(() => go("claims"), 0); } }
   if (docs.length && !files.length) return handleDocs(docs);
   if (docs.length) setTimeout(() => handleDocs(docs), 0);
   if (typeof XLSX === "undefined"){ state.errors = ["کتابخانهٔ خواندن اکسل بارگذاری نشد؛ اتصال اینترنت را بررسی کنید و صفحه را دوباره باز کنید."]; return render(); }
