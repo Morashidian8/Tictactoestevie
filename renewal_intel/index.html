@@ -278,7 +278,7 @@ mark.lexfix{background:var(--mid-bg);color:inherit;border-bottom:1.5px dotted va
 .cin.slider{flex-direction:row;align-items:center;min-width:0}
 .cwarn{grid-column:1/-1;margin:0;color:var(--mid-ink);background:var(--mid-bg);border-radius:10px;padding:8px 12px;line-height:1.8}#clmN:placeholder-shown{border-color:var(--mid-ink);box-shadow:0 0 0 3px var(--mid-bg)}.clmt td{vertical-align:top}.clmt td .small{display:block;margin-top:2px;max-width:280px;white-space:normal}
 @media (max-width:760px){.cins{grid-template-columns:repeat(2,minmax(0,1fr))}.cin.slider{grid-column:1/-1 !important}}
-.scn.scn4{grid-template-columns:repeat(4,minmax(0,1fr))}
+.scn.scn4{grid-template-columns:repeat(4,minmax(0,1fr))}.scn.scn5{grid-template-columns:repeat(auto-fit,minmax(210px,1fr))}
 .sc.pkg{cursor:pointer;transition:border-color .15s,box-shadow .15s}.sc.pkg.on{border-color:var(--brand);box-shadow:0 0 0 2px var(--brand)}.sc.pkg .btn{margin-top:auto}
 a.kp2{text-decoration:none;color:inherit}
 .pdoc-wrap{padding:0;overflow:hidden}.pdoc{padding:28px 32px;display:flex;flex-direction:column;gap:14px;font-size:13.5px;line-height:1.9;color:var(--ink)}
@@ -1605,8 +1605,13 @@ async function drReadPage(page, progress, ctx){
     const r = drRotate(c, 180), g2 = drGrid(r), keep = grid; grid = g2; const f2 = await w.recognize(pageImg(r, g2), {}, { text: true, blocks: true });
     if (f2.data.confidence > full.data.confidence + 20){ c = r; full = f2; } else grid = keep;
   }
-  const words = drWords(full.data), tables = [];
+  const words = drWords(full.data), tables = [], fields = {};
   let text = full.data.text;
+  // premium figures in the header boxes: read the digits with the amount reader
+  for (const [key, re] of [["premium", /حق\s*بیمه\s*هر\s*بیمه\s*شده/], ["annual", /حق\s*بیمه\s*علی\s*ال?\s*حساب/]]){
+    if (!re.test(norm(full.data.text))) continue;
+    try { const r = await drNumberAfter(w, c, words, re); if (r) fields[key] = { value: r.value, conf: r.conf }; } catch (e){}
+  }
   if (grid){
     const t = drFill(grid, words), all = t.rows.flat(), total = all.length;
     // Side columns (row number, family cap, franchise…) hold only small numbers: once the first rows show that, the rest of the column is skipped.
@@ -1635,7 +1640,7 @@ async function drReadPage(page, progress, ctx){
     tables.push(t);
     text += "\n" + t.rows.map(r => r.filter(k => !isWide(grid, k)).map(k => k.text || "").join(" ")).join("\n");
   }
-  return { canvas: c, text, tables, conf: full.data.confidence };
+  return { canvas: c, text, tables, conf: full.data.confidence, fields };
 }
 function drFill(grid, words){
   const rows = grid.rows.map(cells => cells.map(cell => {
@@ -1669,7 +1674,7 @@ async function readDocument(file, progress){
   const ctx = {};
   for (let i = 0; i < pages.length; i++){
     const r = await drReadPage(pages[i], (s, f) => progress && progress(`صفحهٔ ${fmtInt(i + 1)} از ${fmtInt(pages.length)}: ${s}`, (i + (f || 0)) / pages.length), ctx);
-    out.pages.push(r); out.text += "\n" + r.text; r.tables.forEach(t => out.tables.push(Object.assign(t, { page: i })));
+    out.pages.push(r); out.text += "\n" + r.text; out.fields = Object.assign({}, r.fields || {}, out.fields || {}); r.tables.forEach(t => out.tables.push(Object.assign(t, { page: i })));
   }
   return out;
 }
@@ -1767,6 +1772,40 @@ async function drAmount(w, c){
     const line = drCanvas(c.width, y1 - y0 + 8); const g = line.getContext("2d"); g.fillStyle = "#fff"; g.fillRect(0, 0, line.width, line.height); g.drawImage(c, 0, y0, c.width, y1 - y0, 0, 4, c.width, y1 - y0);
     const r = await drAmountLine(w, line);
     if (r && r.value != null) return r;
+  }
+  return null;
+}
+
+/* A number written after its label inside running text («حق بیمه هر بیمه شده … : ۱۱۲,۸۰۰,۰۰۰ ریال»): the Persian
+   model reads such digits badly, so the stretch of the line right after the label is cropped and split at word
+   gaps; each piece is tried with the amount reader, nearest to the label first. */
+async function drNumberAfter(w, c, words, labelRe){
+  if (!words || !words.length) return null;
+  const hs = words.map(k => k.y1 - k.y0).sort((a, b) => a - b), lh = hs[hs.length >> 1] || 30;
+  const lines = [];
+  words.slice().sort((a, b) => (a.y0 + a.y1) - (b.y0 + b.y1)).forEach(k => { const cy = (k.y0 + k.y1) / 2, l = lines.find(L => Math.abs(L.cy - cy) < lh * 0.6); if (l) l.ws.push(k); else lines.push({ cy, ws: [k] }); });
+  for (const L of lines){
+    const ws = L.ws.sort((a, b) => b.x1 - a.x1); // right to left
+    let acc = "", k = -1;
+    for (let i = 0; i < ws.length; i++){ acc += " " + norm(ws[i].text); if (labelRe.test(acc)){ k = i; break; } }
+    if (k < 0) continue;
+    // the label may run a few more words («در طول مدت بیمه نامه :»): take the next words until a number shows
+    let s = k + 1; while (s < ws.length && s <= k + 6 && !/[0-9۰-۹]/.test(ws[s].text) && /[آ-ی]{2,}/.test(ws[s].text) && !/ریال|نفر/.test(ws[s].text)) s++;
+    const run = ws.slice(s, s + 3); if (!run.length) continue;
+    const x0 = Math.min(...run.map(r => r.x0)), x1 = Math.max(...run.map(r => r.x1)), y0 = Math.min(...run.map(r => r.y0)), y1 = Math.max(...run.map(r => r.y1));
+    const pad = 6, crop = drCanvas((x1 - x0 + pad * 2) * 3, (y1 - y0 + pad * 2) * 3), g = crop.getContext("2d");
+    g.fillStyle = "#fff"; g.fillRect(0, 0, crop.width, crop.height); g.imageSmoothingQuality = "high";
+    g.drawImage(c, x0 - pad, y0 - pad, x1 - x0 + pad * 2, y1 - y0 + pad * 2, 0, 0, crop.width, crop.height);
+    // pieces between wide gaps (number | «ریال»), right-most first
+    const B = drBinary(crop), comps = drComponents(B).filter(q => q.area > 6); if (!comps.length) continue;
+    const H = Math.max(...comps.map(q => q.h)), byX = comps.slice().sort((a, b) => a.x0 - b.x0), groups = [];
+    byX.forEach(q => { const G = groups[groups.length - 1]; if (G && q.x0 - G.x1 < H * 0.55){ G.x1 = Math.max(G.x1, q.x1); G.y0 = Math.min(G.y0, q.y0); G.y1 = Math.max(G.y1, q.y1); } else groups.push({ x0: q.x0, x1: q.x1, y0: q.y0, y1: q.y1 }); });
+    for (const G of groups.reverse()){
+      const p2 = Math.round(H * 0.3), piece = drCanvas(G.x1 - G.x0 + p2 * 2, crop.height), pg = piece.getContext("2d");
+      pg.fillStyle = "#fff"; pg.fillRect(0, 0, piece.width, piece.height); pg.drawImage(crop, G.x0 - p2, 0, piece.width, crop.height, 0, 0, piece.width, piece.height);
+      const r = await drAmount(w, piece);
+      if (r && r.value != null && r.value >= 1000) return r;
+    }
   }
   return null;
 }
@@ -1936,6 +1975,24 @@ function understand(doc){
   const tot = T.match(/جمع\s*(?:کل)?\s*:?\s*([\d,]{11,})/);
   if (!out.premium && tot && out.insured){ out.premium = drParseAmount(tot[1]) / out.insured; out.premiumPer = "year"; out.premiumNote = "از جمع اقساط ÷ تعداد نفرات"; }
   const fr = T.match(/فرانشیز[^\d\n]{0,40}(\d{1,2})\s*(?:درصد|٪|%)/); if (fr) out.franchise = +fr[1];
+  // premium read from the header box by the amount reader; checked against the annual figure when both are there
+  const F = doc.fields || {}, n0 = out.insured;
+  if (F.premium && F.premium.value >= 1e6 && F.premium.value <= 5e10 && (!out.premium || (F.annual && n0 && Math.abs(F.premium.value * n0 - F.annual.value) < F.annual.value * 0.01))){
+    out.premium = F.premium.value; out.premiumPer = "year"; out.premiumNote = "از کادر حق بیمه";
+  } else if (!out.premium && F.annual && n0 && F.annual.value / n0 >= 1e6){ out.premium = F.annual.value / n0; out.premiumPer = "year"; out.premiumNote = "از حق بیمهٔ سالیانه ÷ تعداد نفرات"; }
+  // franchise: the «درصد فرانشیز» column of the commitments table — the value most rows carry
+  if (out.franchise == null){
+    const seen = {};
+    doc.tables.forEach(t => { let col = null; t.rows.forEach(cells => {
+      const h = cells.find(c => /درصد\s*فرانشیز|فرانشیز\s*\(?\s*درصد/.test(norm(c.text || ""))) || (!col && cells.find(c => /^\s*فرانشیز\s*$/.test(norm(c.text || ""))));
+      if (h){ col = { x0: h.x0, x1: h.x1 }; return; }
+      if (!col) return;
+      const c = cells.find(k => { const m = (k.x0 + k.x1) / 2; return m > col.x0 - 5 && m < col.x1 + 5; }); if (!c) return;
+      const v = c.value != null ? c.value : +(drNorm(c.text || "").match(/^\s*(\d{1,2})\s*[٪%]?\s*$/) || [])[1];
+      if (v > 0 && v <= 50) seen[v] = (seen[v] || 0) + 1;
+    }); });
+    const best = Object.entries(seen).sort((a, b) => b[1] - a[1])[0]; if (best) out.franchise = +best[0];
+  }
 
   // tables → coverage rows
   let cols = null; // [{x0,x1,plan}] — header columns carry over to the next pages of the same table
@@ -1963,6 +2020,7 @@ function understand(doc){
         if (vals[plan] == null) vals[plan] = { rial: c.value, conf: Math.round(c.vconf || c.conf || 0) };
       });
       if (!Object.keys(vals).length) return;
+      if (!cat && /قسط|اقساط|سررسید|سر\s*رسید/.test(label + " " + cells.map(c => c.text || "").join(" "))) return; // instalment schedule, not a commitment
       Object.keys(vals).forEach(p => { out.plans[p] = true; });
       const box = cells.reduce((b, c) => ({ x0: Math.min(b.x0, c.x0), x1: Math.max(b.x1, c.x1), y0: Math.min(b.y0, c.y0), y1: Math.max(b.y1, c.y1) }), { x0: 1e9, x1: 0, y0: 1e9, y1: 0 });
       const uni = list => list.length ? list.reduce((b, c) => ({ x0: Math.min(b.x0, c.x0), x1: Math.max(b.x1, c.x1), y0: Math.min(b.y0, c.y0), y1: Math.max(b.y1, c.y1) }), { x0: 1e9, x1: 0, y0: 1e9, y1: 0 }) : null;
@@ -2909,6 +2967,14 @@ const fmtYear = y => y ? fmtInt(y).replace(/٬/g, "") : "";
    grows with medical inflation, and with the cap's growth beyond inflation where users were limited by it. */
 const PKG_ORDER = ["hosp", "special", "delivery", "infert", "para", "diag", "lab", "fetal", "outsurg", "rehab", "visitdrug", "visit", "drug", "emergency", "dental", "refractive", "glasses", "hearing", "ambIn", "ambOut", "amb", "organs", "prosthesis", "orthosis", "supplies", "specialDis", "combo", "total"];
 const roundUp1 = v => Math.ceil(v * 10 - 1e-9) / 10;
+// Expected claims cost of a set of next-year caps: a removed coverage (cap 0) costs nothing; otherwise each coverage
+// grows with inflation, plus or minus what its cap (in real terms) lets through compared with this year.
+function costOf(M, caps){
+  const g = 1 + M.o.infl;
+  return M.G.reduce((s, x) => { const c1 = capOf({ caps }, x.k); if (c1 === 0) return s;
+    const up = x.c0 != null && c1 != null ? capUplift(x.avg, x.c0, isFinite(c1) ? c1 / g : c1) : 0; return s + x.amt * M.L * g * (1 + up); }, 0);
+}
+const priceOf = (M, caps) => roundUp1(costOf(M, caps) / M.N / M.o.tlr);
 function claimsPackages(M){
   const o = M.o, old = o.old; if (!old || !old.caps || !M.N) return null;
   const g = 1 + o.infl, by = Object.fromEntries(M.G.map(x => [x.k, x]));
@@ -2919,16 +2985,69 @@ function claimsPackages(M){
     { id: "bal", n: "متعادل", d: "همهٔ سقف‌ها هم‌پای تورم؛ سقف‌هایی که پر شده بودند ۵۰٪ بیشتر", cap: (k, v) => v * g * (binding(k) ? 1.5 : 1) },
     { id: "full", n: "رضایت بالا", d: "همه ۳۰٪ بیشتر از تورم؛ سقف‌هایی که پر شده بودند ۲ برابر", cap: (k, v) => v * g * (binding(k) ? 2 : 1.3) },
   ];
+  // the broker's own package: the recommended one with the changes ticked under «تغییر پوشش‌ها»
+  const tw = state.cl.tweaks || {};
+  if (Object.keys(tw).length){ const base = Object.fromEntries(Object.entries(old.caps).map(([k, v]) => [k, v != null && isFinite(v) ? nice(P[1].cap(k, v)) : v]));
+    P.push({ id: "custom", n: "سفارشی شما", d: `بستهٔ متعادل با ${fmtInt(Object.keys(tw).length)} تغییر شما`, caps: Object.assign(base, tw) }); }
   if (o.nw && o.nw.caps) P.push({ id: "ins", n: "پیشنهاد بیمه‌گر", d: `سقف‌های بیمه‌نامهٔ ${fmtYear(o.nw.year)}`, caps: o.nw.caps, prem: o.p1 || null });
   P.forEach(p => {
     if (!p.caps) p.caps = Object.fromEntries(Object.entries(old.caps).map(([k, v]) => [k, v != null && isFinite(v) ? nice(p.cap(k, v)) : v]));
     // in real terms next year's cap is c1 / (1 + inflation); compare that with this year's cap
-    p.cost = M.G.reduce((s, x) => { const c1 = capOf({ caps: p.caps }, x.k), up = x.c0 != null && c1 != null ? capUplift(x.avg, x.c0, isFinite(c1) ? c1 / g : c1) : 0; return s + x.amt * M.L * g * (1 + up); }, 0);
+    p.cost = costOf(M, p.caps);
     p.pc = p.cost / M.N; p.fair = roundUp1(p.pc / o.tlr);
     if (p.prem == null) p.prem = p.fair;
     p.total = p.prem * M.N; p.lr = p.pc / p.prem; p.ch = o.p0 ? p.prem / o.p0 - 1 : null;
   });
   return { P, rec: "bal", year: o.nw ? o.nw.year : old.year ? old.year + 1 : null };
+}
+
+/* ---------- which coverage to cut, cap, raise or keep ----------
+   Starting from the recommended package, every coverage is judged on last year's real use: rarely used and cheap
+   per person → can go; users stopped by the cap → raise; a large optional item → hold its growth; rare but
+   catastrophic (hospital, special surgery, delivery) → always keep. Each change shows its effect on the premium. */
+const CATA = new Set(["hosp", "special", "delivery", "specialDis", "organs", "combo", "total", "ambIn", "ambOut", "amb"]);
+const OPTIONAL = new Set(["dental", "glasses", "rehab", "refractive", "hearing", "visit", "drug", "visitdrug", "otherpara"]);
+function coverageAdvice(M, K){
+  if (!K) return [];
+  const bal = K.P.find(p => p.id === "bal"), per = caps => costOf(M, caps) / M.N / M.o.tlr, base = per(bal.caps), old = M.o.old, g = 1 + M.o.infl, out = [];
+  const by = Object.fromEntries(M.G.map(x => [x.k, x]));
+  const effect = (k, v) => Math.round((per(Object.assign({}, bal.caps, { [k]: v })) - base) * 100) / 100;
+  Object.keys(bal.caps).filter(k => !["combo", "total"].includes(k) && bal.caps[k] != null && isFinite(bal.caps[k])).forEach(k => {
+    if (k === "visitdrug" && (by.visit || by.drug)) return; // its claims are judged under ویزیت and دارو
+    const x = by[k], c0 = old.caps[k], c1 = bal.caps[k], name = CCAT_NAME[k] || k;
+    if (!x){ // in the policy, no claims at all last year
+      if (!CATA.has(k)) out.push({ k, act: "remove", name, to: 0, why: "سال قبل هیچ خسارتی نداشت", eff: effect(k, 0), use: 0 });
+      return;
+    }
+    const use = x.use || 0, avg = x.avg || 0;
+    if (x.press != null && x.press >= 0.8 && use >= 0.03){
+      const to = nice(Math.max(c1, avg * g * 1.6)); if (to > c1) out.push({ k, act: "raise", name, to, from: c1, why: `${fmtPct(use)} افراد استفاده کردند و میانگین ${fmtNum(avg)} به سقف ${MT(c0)} رسید`, eff: effect(k, to), use });
+      if (OPTIONAL.has(k) && x.share >= 0.08){ const hold = nice(c0 * g); if (hold < c1) out.push({ k, act: "hold", name, to: hold, from: c1, why: `${fmtPct(x.share)} کل خسارت؛ اگر نرخ مهم‌تر است، سقف فقط هم‌پای تورم بالا برود`, eff: effect(k, hold), use }); }
+      return;
+    }
+    if (!CATA.has(k) && use < 0.01 && avg * g < 15){
+      out.push({ k, act: "remove", name, to: 0, why: `فقط ${fmtInt(x.users)} نفر (${fmtPct(use)}) استفاده کردند`, eff: effect(k, 0), use }); return;
+    }
+    if (OPTIONAL.has(k) && x.share >= 0.08 && c1 > c0 * g * 1.01){ const hold = nice(c0 * g); out.push({ k, act: "hold", name, to: hold, from: c1, why: `${fmtPct(x.share)} کل خسارت`, eff: effect(k, hold), use }); return; }
+    if (!CATA.has(k) && avg && c1 > avg * g * 6 && x.share < 0.05){ const to = nice(avg * g * 3); if (to < c1) out.push({ k, act: "cut", name, to, from: c1, why: `میانگین مصرف ${fmtNum(avg)} است و سقف ${MT(c1)} خیلی بیشتر از نیاز`, eff: effect(k, to), use }); return; }
+    if (CATA.has(k)) out.push({ k, act: "keep", name, why: `${fmtInt(x.users)} نفر استفاده کردند ولی هر مورد پرهزینه است (میانگین ${fmtNum(avg)})؛ حذف یا کاهش، ریسک بزرگی روی کارکنان می‌گذارد`, eff: 0, use });
+  });
+  const order = { raise: 0, hold: 1, remove: 2, cut: 3, keep: 4 };
+  return out.sort((a, b) => order[a.act] - order[b.act] || Math.abs(b.eff) - Math.abs(a.eff));
+}
+function adviceHTML(M, K){
+  const A = coverageAdvice(M, K); if (!A.length) return "";
+  const tw = state.cl.tweaks || {}, L = { raise: ["افزایش سقف", "t-good"], hold: ["محدود کردن رشد", "t-mid"], remove: ["حذف", "t-bad"], cut: ["کاهش سقف", "t-mid"], keep: ["حفظ", "t-protect"] };
+  const save = A.filter(a => a.eff < 0).reduce((s, a) => s + a.eff, 0), y = fmtYear(K.year);
+  return `<section class="panel" id="tweaks"><div class="panel-h"><h2>تغییر پوشش‌ها: کدام را حذف، کم یا زیاد کنیم</h2><span class="small muted">از خسارت واقعی؛ اثر هر تغییر روی حق‌بیمهٔ هر نفر نسبت به بستهٔ متعادل</span></div>
+    <div class="panel-b" style="display:flex;flex-direction:column;gap:12px">
+    <div class="tw"><table class="clmt" style="min-width:720px"><thead><tr><th style="width:34px"></th><th>پوشش</th><th>پیشنهاد</th><th>چرا</th><th>اثر بر حق‌بیمهٔ هر نفر</th></tr></thead><tbody>
+    ${A.map(a => `<tr${a.act === "keep" ? ' class="muted"' : ""}><td>${a.act === "keep" ? "" : `<input type="checkbox" data-tw="${a.k}" data-to="${a.to}" ${tw[a.k] === a.to ? "checked" : ""} aria-label="اعمال">`}</td>
+      <td><b>${esc(a.name)}</b></td><td class="nw"><span class="tag ${L[a.act][1]}">${L[a.act][0]}</span>${a.act !== "remove" && a.act !== "keep" ? ` <span class="num small">${MT(a.from)} ← ${MT(a.to)}</span>` : ""}</td>
+      <td class="small">${esc(a.why)}</td><td class="num nw" style="font-weight:800;color:${a.eff < 0 ? "var(--good)" : a.eff > 0 ? "var(--mid-ink)" : "var(--ink2)"}">${Math.abs(a.eff) >= 0.05 ? fmtNum(Math.abs(a.eff)) + " میلیون " + (a.eff > 0 ? "بیشتر" : "کمتر") : a.act === "keep" ? "—" : "ناچیز (کمتر از ۰٫۱)"}</td></tr>`).join("")}
+    </tbody></table></div>
+    <p class="small muted" style="margin:0;line-height:1.9">${save < 0 ? `همهٔ حذف‌ها و محدودسازی‌ها با هم حدود <b class="num">${fmtNum(-save)}</b> میلیون تومان از حق‌بیمهٔ هر نفر ${y} کم می‌کند. ` : ""}پوشش‌های کم‌استفاده معمولاً سهم کمی از هزینه دارند؛ اهرم اصلی نرخ، پوشش‌های پرهزینه است. تیک بزنید تا «بستهٔ سفارشی شما» بالا ساخته شود و بتوانید پیش‌نویسش را صادر کنید.</p>
+    </div></section>`;
 }
 const pkgCaps = (p, old) => PKG_ORDER.filter(k => p.caps[k] != null || (old && old.caps[k] != null)).map(k => [k, old ? old.caps[k] : null, p.caps[k]]);
 function packagesHTML(M, K){
@@ -2936,7 +3055,7 @@ function packagesHTML(M, K){
   const y = fmtYear(K.year), sel = state.cl.pkg || K.rec, old = M.o.old;
   const key = ["hosp", "dental", "visit", "drug", "para", "glasses"].filter(k => old.caps[k] != null).slice(0, 4);
   return `<section class="panel proj" id="pkgs"><div class="panel-h"><h2>پیشنهاد سال ${y}</h2><span class="small muted">بر پایهٔ خسارت واقعی · Loss Ratio هدف ${fmtPct(M.o.tlr)} · تورم ${fmtPct(M.o.infl)}</span></div>
-    <div class="panel-b" style="display:flex;flex-direction:column;gap:16px"><div class="scn${K.P.length > 3 ? " scn4" : ""}">${K.P.map(p => `<div class="sc pkg ${p.id === K.rec ? "rec" : ""} ${p.id === sel ? "on" : ""}" data-pkg="${p.id}" role="button" tabindex="0" aria-pressed="${p.id === sel}">${p.id === K.rec ? '<span class="badge">پیشنهاد اپ</span>' : ""}<span class="tag ${p.id === "ins" ? "t-mid" : "t-protect"}" style="align-self:flex-start">${p.n}</span>
+    <div class="panel-b" style="display:flex;flex-direction:column;gap:16px"><div class="scn${K.P.length > 3 ? " scn4" : ""}${K.P.length > 4 ? " scn5" : ""}">${K.P.map(p => `<div class="sc pkg ${p.id === K.rec ? "rec" : ""} ${p.id === sel ? "on" : ""}" data-pkg="${p.id}" role="button" tabindex="0" aria-pressed="${p.id === sel}">${p.id === K.rec ? '<span class="badge">پیشنهاد اپ</span>' : ""}<span class="tag ${p.id === "ins" ? "t-mid" : "t-protect"}" style="align-self:flex-start">${p.n}</span>
       <div class="pr"><b class="num">${fmtNum(p.prem)}</b> <span class="small muted">میلیون تومان / نفر</span></div>
       <div class="small" style="font-weight:800">کل: <span class="num">${fmtNum(p.total / 1000)}</span> میلیارد تومان${p.ch != null ? ` · <span style="color:var(--mid-ink)">${fmtSignedPct(p.ch)}</span> نسبت به ${fmtYear(old.year)}` : ""}</div>
       <span class="small muted">${p.d}</span>
@@ -2982,7 +3101,7 @@ function draftRows(p, old){
   const base = src ? src.u.rows.filter(r => Object.values(r.vals).some(v => v && v.rial)).map(r => ({ cat: r.cat, v: Object.values(r.vals).find(v => v && v.rial).rial / 1e7 }))
     : DEFAULT_ORDER.filter(k => old.caps[k] != null).map(k => ({ cat: k, v: old.caps[k] }));
   const seen = {};
-  const res = base.map(r => {
+  const res = base.filter(r => r.cat && p.caps[r.cat] !== 0).map(r => {
     let label, k = r.cat;
     if (k === "combo"){ // which rows a combined cap covers: read from its value
       const L6 = "حداکثر تعهدات ردیف‌های ۱، ۳، ۴ و ۶", L4 = "حداکثر تعهدات ردیف‌های ۱، ۳ و ۴", L7 = "حداکثر تعهدات ردیف‌های ۷، ۸، ۹، ۱۰، ۱۱ و ۱۲", h = old.caps.hosp;
@@ -3131,6 +3250,7 @@ function renderClaims(){
     ${rp ? `<a class="panel kp2 accent" href="#pkgs"><span class="l">پیشنهاد ${y1} · ${esc(rp.n)}</span><b class="big num" style="color:var(--brand)">${fmtNum(rp.prem)}</b><span class="small muted">میلیون / نفر · کل ${fmtNum(rp.total / 1000)} میلیارد تومان</span></a>` : kp(`پیشنهاد ${y1}`, "—", !old ? "بیمه‌نامهٔ سال خسارت را بدهید" : "تعداد بیمه‌شدگان را وارد کنید", "var(--brand)")}
   </div>
   ${packagesHTML(M, K)}
+  ${adviceHTML(M, K)}
   <div class="ins">${adv.map(([k, t, s]) => `<div class="panel in in-${k}"><span class="ic">${{ warn: "!", ok: "✓", note: "i", info: "→" }[k]}</span><div><b>${esc(t)}</b><span>${esc(s)}</span></div></div>`).join("")}</div>
   <section class="panel"><div class="panel-h"><h2>هزینه به تفکیک پوشش</h2><span class="small muted">مصرف‌کننده = حداقل تعداد افراد</span></div>
     <div class="tw"><table class="clmt" style="min-width:860px"><thead><tr><th>پوشش</th><th>خسارت</th><th style="width:160px">سهم</th><th>مصرف‌کننده</th><th>میانگین هر نفر</th><th>سقف ${y0}</th><th>سقف ${y1}</th><th>اثر سقف</th><th>پیش‌بینی ${y1}</th></tr></thead><tbody>
@@ -3157,6 +3277,8 @@ function bindClaims(M){
   ir.onchange = () => { state.infl = +ir.value / 100; render(); };
   $("clmClear").onclick = () => { state.claims = []; render(); };
   document.querySelectorAll("[data-pkg]").forEach(el => el.onclick = e => { if (e.target.closest("[data-issue]")) return; state.cl.pkg = el.dataset.pkg; render(); setTimeout(() => { const x = $("pkgs"); if (x) x.scrollIntoView({ block: "start" }); }, 0); });
+  document.querySelectorAll("[data-tw]").forEach(cb => cb.onchange = () => { const t = state.cl.tweaks = state.cl.tweaks || {}; if (cb.checked) t[cb.dataset.tw] = +cb.dataset.to; else delete t[cb.dataset.tw];
+    if (Object.keys(t).length) state.cl.pkg = "custom"; else if (state.cl.pkg === "custom") delete state.cl.pkg; render(); setTimeout(() => { const x = $("tweaks"); if (x) x.scrollIntoView({ block: "start" }); }, 0); });
   document.querySelectorAll("[data-issue]").forEach(b => b.onclick = () => { state.cl.pkg = b.dataset.issue; go("proposal", b.dataset.issue); });
   $("clmX").onclick = () => { try { claimsXlsx(M); } catch (e){ alert("ساخت فایل ممکن نشد: " + e.message); } };
 }
