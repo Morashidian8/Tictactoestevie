@@ -289,7 +289,19 @@ a.kp2{text-decoration:none;color:inherit}
 .pd-l{margin:0;padding-inline-start:18px}.pd-note{font-size:12px;color:var(--ink2);background:var(--line2);border-radius:10px;padding:10px 12px;margin:0}
 .pd-sign{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:28px;text-align:center}.pd-sign div{border-top:1px solid var(--ink2);padding-top:6px;font-weight:700}
 @media (max-width:980px){.scn.scn4{grid-template-columns:1fr}}@media (max-width:760px){.pdoc{padding:18px 16px}.pd-grid{grid-template-columns:1fr}.pd-t{font-size:12px;min-width:520px}.pd-t td:nth-child(2){min-width:120px}}
-@media print{body *{visibility:hidden !important}.pdoc,.pdoc *{visibility:visible !important}.pdoc{position:absolute;inset:0 0 auto 0;color:#000;background:#fff;padding:0 6mm}.pd-t th{background:#eee}}
+@media print{.pd-t th{background:#eee}}
+.pdoc2{position:relative;gap:10px;font-size:12.5px;line-height:1.8}
+.pd-wm{position:absolute;top:38%;left:50%;transform:translate(-50%,-50%) rotate(-24deg);font-size:110px;font-weight:900;color:color-mix(in srgb,var(--bad) 9%,transparent);pointer-events:none;white-space:nowrap;z-index:0}
+.pd-top{margin:0;font-weight:800;font-size:12.5px}
+.pd-box{width:100%;border-collapse:collapse;position:relative;z-index:1;table-layout:fixed}.pd-box>tbody>tr>th,.pd-box>tbody>tr>td,.pd-box>tr>th,.pd-box>tr>td{border:1.5px solid var(--ink);vertical-align:top}
+.pd-side{width:30px;background:var(--soft);padding:0}.pd-side span{display:block;writing-mode:vertical-rl;transform:rotate(180deg);margin:auto;padding:8px 4px;font-weight:800;font-size:12px;white-space:nowrap}
+.pd-body{padding:8px 10px}.pd-2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:2px 20px}.pd-1{display:flex;flex-direction:column;gap:2px}
+.pd-f span{color:var(--ink2)}.pd-f b{font-weight:800}
+.pd-t2{width:100%;border-collapse:collapse;min-width:560px}.pd-t2 th,.pd-t2 td{border:1px solid var(--ink2);padding:5px 7px;text-align:center}.pd-t2 td:first-child{text-align:right;line-height:1.7}.pd-t2 th{background:var(--soft);font-size:12px}.pd-t2 tr.b td{font-weight:900}
+.pd-foot{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;text-align:center;margin-top:8px}.pd-foot div{display:flex;flex-direction:column}.pd-foot span{color:var(--ink2);font-size:12px}
+.pd-page{border-top:1.5px dashed var(--line);padding-top:12px;margin-top:6px}.pd-page p{margin:4px 0}.pd-page ol,.pd-page ul{margin:4px 0;padding-inline-start:22px}.pd-hint{font-size:11.5px;color:var(--mid-ink)}.pd-annex{font-size:12px;color:var(--ink2)}
+@media (max-width:760px){.pd-2{grid-template-columns:1fr}.pd-wm{font-size:64px}}
+@media print{.pd-page{break-before:page;border:0}.pd-wm{color:rgba(200,0,0,.08)}.pd-side{background:#eee}}
 .proj .panel-h{gap:14px}
 .slider{display:flex;align-items:center;gap:10px;min-width:280px}
 .slider input[type=range]{-webkit-appearance:none;appearance:none;flex:1;height:8px;border-radius:4px;background:linear-gradient(to left,var(--brand) var(--p),var(--line2) var(--p));direction:rtl}
@@ -1784,7 +1796,8 @@ const LEX_COMMON = `این آن که را با از به در بر تا یا ا�
 تجمیع آتش‌سوزی مسئولیت مدنی حرفه‌ای ثالث بدنه خودروهای اداری شخصی همکاران سن سال سالگی کمتر بیشتر بالای زیر حدود تقریبا کل جمع
 اول دوم سوم یک دو سه چهار پنج شش هفت هشت نه ده صد هزار نوبت مرحله برنده مبنای تصمیم معرفی قیمت مبلغ ارقام
 استان تهران خیابان بلوار پلاک طبقه کدپستی ایمیل تلفن نمابر فکس همراه واریز شناسه شبا کارت بانکی
-مدیریت محترم صورتحساب شرح ذیل بررسی نسبت پرداخت مطابق تاریخ‌های اعلامی فیش اسرع وقت`.split(/\s+/).filter(Boolean);
+اضافه دوره انتظار والدین مدیریت محترم صورتحساب شرح ذیل بررسی نسبت پرداخت مطابق تاریخ‌های اعلامی فیش اسرع وقت`.split(/\s+/).filter(Boolean);
+const LEX_KEEP = new Set(LEX_COMMON.map(w => w.replace(/‌/g, "")));
 const SKEL = { "ب": "ٮ", "پ": "ٮ", "ت": "ٮ", "ث": "ٮ", "ن": "ٮ", "ی": "ٮ", "ي": "ٮ", "ئ": "ٮ", "ج": "ح", "چ": "ح", "خ": "ح", "ذ": "د", "ز": "ر", "ژ": "ر", "ش": "س", "ض": "ص", "ظ": "ط", "غ": "ع", "ق": "ف", "گ": "ک", "ك": "ک", "ة": "ه", "ۀ": "ه", "أ": "ا", "إ": "ا", "آ": "ا" };
 const skel = w => [...w.replace(/[‌\s]/g, "")].map(c => SKEL[c] || c).join("");
 const LEX = (() => { const m = new Map(); LEX_WORDS.forEach(w => { const k = skel(w); if (!m.has(k)) m.set(k, w.replace(/‌/g, "")); }); return m; })();
@@ -1804,7 +1817,7 @@ function lexOne(plain){
 }
 function lexFix(w){
   const core = w.replace(/^[^آ-ی]+|[^آ-ی]+$/g, ""), plain = core.replace(/‌/g, "");
-  if (plain.length < 3 || LEX_SET.has(plain)) return { w, fixed: false };
+  if (plain.length < 3 || LEX_SET.has(plain) || LEX_KEEP.has(plain)) return { w, fixed: false };
   let hit = lexOne(plain);
   // «وبستری» → «و بستری»: the conjunction glued to the next word
   if (plain[0] === "و" && plain.length > 3){ const r = lexOne(plain.slice(1)); if (r && (!hit || r === hit)) hit = "و " + r; }
@@ -2934,32 +2947,114 @@ function packagesHTML(M, K){
     </div></section>`;
 }
 
-/* ---------- policy draft from the chosen package ---------- */
+/* ---------- policy draft from the chosen package ----------
+   Laid out like the policy it renews: the same boxes, the same commitments table and row order, the same
+   wording. No insurer logo, QR or stamp: it is the broker's draft, the insurer issues the real policy. */
+const STD_ROW = {
+  orthosis: "هزینه تهیه اروتز که بلافاصله بعد از عمل جراحی به تشخیص پزشک معالج و تأیید پزشک معتمد بیمه‌گر مورد نیاز باشد",
+  hosp: "۱- جبران هزینه‌های بستری، جراحی، آنژیوگرافی قلب، گامانایف و انواع سنگ‌شکن در بیمارستان و مراکز جراحی محدود و DAY CARE",
+  refractive: "۲- هزینه رفع عیوب انکساری دو چشم در مواردی که به تشخیص پزشک معتمد بیمه‌گر درجه نزدیک‌بینی، دوربینی، آستیگمات یا مجموع قدر مطلق نقص بینایی هر چشم ۳ دیوپتر یا بیشتر باشد",
+  ambIn: "۳- هزینه آمبولانس و سایر فوریت‌های پزشکی مشروط به بستری شدن بیمه‌شده در مراکز درمانی در داخل شهر",
+  ambOut: "۴- هزینه آمبولانس و سایر فوریت‌های پزشکی مشروط به بستری شدن بیمه‌شده در مراکز درمانی بین شهری",
+  delivery: "۵- هزینه‌های زایمان طبیعی و سزارین",
+  special: "۶- جبران هزینه‌های شیمی‌درمانی، رادیوتراپی، اعمال جراحی مربوط به سرطان، مغز و اعصاب مرکزی و نخاع، دیسک ستون فقرات، گامانایف، قلب، پیوند ریه، پیوند کبد، پیوند کلیه، پیوند مغز استخوان، آنژیوپلاستی عروق کرونر و عروق داخل مغز",
+  para: "۷- جبران هزینه انواع رادیوگرافی، آنژیوگرافی عروق محیطی، آنژیوگرافی چشم، سونوگرافی، ماموگرافی و انواع اسکن، ام آر آی، پزشکی هسته‌ای (شامل اسکن هسته‌ای و درمان رادیوایزوتوپ)، دانسیتومتری",
+  diag: "۸- جبران هزینه انواع آندوسکوپی، خدمات تشخیصی قلبی و عروقی شامل انواع الکتروکاردیوگرافی، انواع اکوکاردیوگرافی، انواع هولتر مانیتورینگ، تست ورزش، آنالیز پیس میکر، EECP، تیلت تست، خدمات تشخیصی تنفسی شامل (اسپیرومتری و PFT)، خدمات تشخیصی الکترومیوگرافی و هدایت عصبی (EMG NCV)، الکتروانسفالوگرافی (EEG)، خدمات تشخیصی یورودینامیک (نوار مثانه)، خدمات تشخیصی و پرتوپزشکی چشم مانند اپتومتری، پریمتری، بیومتری و پنتاکم، شنوایی‌سنجی (انواع ادیومتری)",
+  outsurg: "۹- جبران هزینه اعمال مجاز سرپایی مانند شکستگی و دررفتگی، گچ‌گیری، ختنه، بخیه، کرایوتراپی، اکسیزیون لیپوم، بیوپسی، تخلیه کیست و لیزر درمانی",
+  fetal: "۱۰- جبران هزینه تست‌های غربالگری جنین شامل مارکرهای جنینی و آزمایش‌های ژنتیک جنین",
+  lab: "۱۱- جبران هزینه انواع خدمات آزمایش‌های تشخیصی پزشکی شامل پاتولوژی و ژنتیک پزشکی، تست‌های آلرژیک",
+  rehab: "۱۲- جبران هزینه فیزیوتراپی (PT)، گفتار درمانی (ST)، کار درمانی (OT)",
+  glasses: "۱۳- جبران هزینه مربوط به خرید عینک طبی یا لنز تماسی طبی با تجویز چشم‌پزشک و یا اپتومتریست",
+  dental: "جبران هزینه‌های خدمات دندانپزشکی", visit: "جبران هزینه‌های ویزیت",
+  drug: "جبران هزینه‌های دارو (براساس فهرست داروهای مجاز کشور صرفاً مازاد بر سهم بیمه‌گر اول)", emergency: "جبران هزینه خدمات اورژانس",
+  infert: "حداکثر سقف تعهدات جبران هزینه‌های نازایی و ناباروری",
+  visitdrug: "جبران هزینه‌های ویزیت، دارو (براساس فهرست داروهای مجاز کشور صرفاً مازاد بر سهم بیمه‌گر اول)",
+  total: "حداکثر تعهدات سالیانه بیمه‌گر",
+};
+// second appearance of a coverage in a policy is its combined-group cap
+const STD_GROUP = { para: "سقف حداکثر تعهدات گروه ترکیبی پاراکلینیکی اول، پاراکلینیکی دوم، پاراکلینیکی سوم و فیزیوتراپی و خدمات اورژانس",
+  delivery: "گروه ترکیبی زایمان طبیعی/ سزارین و درمان نازایی و ناباروری", infert: "گروه ترکیبی زایمان طبیعی/ سزارین و درمان نازایی و ناباروری" };
+const DEFAULT_ORDER = ["orthosis", "hosp", "refractive", "ambIn", "ambOut", "delivery", "special", "para", "diag", "outsurg", "fetal", "lab", "rehab", "combo", "glasses", "dental", "visit", "drug", "emergency", "infert", "visitdrug", "hearing", "organs", "prosthesis", "supplies", "specialDis", "total"];
+const addYear = d => d ? d.replace(/^(1[34]\d{2})/, y => String(+y + 1)) : null;
+const faDate = d => d ? drNorm(d).replace(/\d/g, x => "۰۱۲۳۴۵۶۷۸۹"[x]) : "…………";
+function draftRows(p, old){
+  const src = state.docs.find(d => d.id === old.src), ratio = k => { const a = old.caps[k], b = p.caps[k]; return a && b && isFinite(a) && isFinite(b) ? b / a : 1; };
+  const base = src ? src.u.rows.filter(r => Object.values(r.vals).some(v => v && v.rial)).map(r => ({ cat: r.cat, v: Object.values(r.vals).find(v => v && v.rial).rial / 1e7 }))
+    : DEFAULT_ORDER.filter(k => old.caps[k] != null).map(k => ({ cat: k, v: old.caps[k] }));
+  const seen = {};
+  const res = base.map(r => {
+    let label, k = r.cat;
+    if (k === "combo"){ // which rows a combined cap covers: read from its value
+      const L6 = "حداکثر تعهدات ردیف‌های ۱، ۳، ۴ و ۶", L4 = "حداکثر تعهدات ردیف‌های ۱، ۳ و ۴", L7 = "حداکثر تعهدات ردیف‌های ۷، ۸، ۹، ۱۰، ۱۱ و ۱۲", h = old.caps.hosp;
+      const m = [["special", L6], ["hosp", L4], ["para", L7]].find(([c]) => old.caps[c] && Math.abs(old.caps[c] - r.v) < 1e-6)
+        || (h && r.v > h * 1.2 ? [old.caps.special ? "special" : "hosp", L6] : null); // the rows 1, 3, 4, 6 cap is the one above the hospital cap
+      label = m ? m[1] : "سقف مشترک چند بند"; k = m ? m[0] : null;
+    } else if (seen[k] && STD_GROUP[k]) label = STD_GROUP[k];
+    else label = STD_ROW[k] || CCAT_NAME[k] || "سایر تعهدات";
+    seen[r.cat] = true;
+    const v = !isFinite(r.v) ? r.v : k ? nice(r.v * ratio(k)) : r.v;
+    return { label, v, bold: r.cat === "total", cat: r.cat };
+  });
+  // row 6 not read from the scan: keep its place so the numbering and the «۱، ۳، ۴ و ۶» row make sense
+  const out = base === null ? [] : res;
+  if (!out.some(r => r.cat === "special")){ const i = out.findIndex(r => r.cat === "delivery"); out.splice(i >= 0 ? i + 1 : out.length, 0, { label: STD_ROW.special, v: null, cat: "special" }); }
+  return out;
+}
+function draftConditions(old){
+  const src = state.docs.find(d => d.id === old.src); if (!src) return [];
+  const t = drNorm(src.doc.text || "").replace(/\r/g, ""), i = t.search(/شرایط\s*خصوصی\s*قرارداد/); if (i < 0) return [];
+  const out = [];
+  for (const line of t.slice(i).split("\n").slice(1)){
+    if (/بیمه\s*گذار|واحد\s*صدور|کد\s*اقتصادی|شرکت\s*سهامی|صفحه\s*\d|نشانی|تلفن/.test(line)) break; // page footer
+    const s = lexText(line.replace(/^\s*[\d۰-۹]+\s*[-–.]\s*/, "").replace(/\s*»\s*/g, "، ")).text.trim(); if (s.length > 6) out.push(s); if (out.length >= 10) break;
+  }
+  return out;
+}
 function proposalDoc(M, K, p){
-  const o = M.o, old = o.old, y = fmtYear(K.year), rial = v => fmtInt(Math.round(v * 1e7)), fr = old.franchise ?? 10, inst = p.total / 12;
-  const rows = pkgCaps(p, old).filter(([, , c]) => c != null);
-  return `<article class="pdoc" dir="rtl">
-    <header class="pd-h"><div><h1>پیش‌نویس بیمه‌نامهٔ درمان تکمیلی گروهی</h1><span>سال ${y} · بستهٔ «${esc(p.n)}»</span></div><div class="pd-meta"><span>تاریخ تهیه: ${esc(new Date().toLocaleDateString("fa-IR"))}</span><span>تهیه‌شده با Renewal Intelligence</span></div></header>
-    <section class="pd-grid">
-      <div><span>بیمه‌گذار</span><b>${esc(old.org || "—")}</b></div><div><span>بیمه‌گر سال قبل</span><b>${esc(old.insurer || "—")}</b></div>
-      <div><span>مدت</span><b>یک سال، سال ${y}</b></div><div><span>تعداد بیمه‌شدگان</span><b>${fmtInt(M.N)} نفر</b></div>
-      <div><span>حق‌بیمهٔ هر بیمه‌شده در سال</span><b>${rial(p.prem)} ریال</b><em>${fmtNum(p.prem)} میلیون تومان</em></div>
-      <div><span>کل حق‌بیمهٔ سالانه</span><b>${rial(p.total)} ریال</b><em>${fmtNum(p.total / 1000)} میلیارد تومان</em></div>
-      <div><span>روش پرداخت</span><b>۱۲ قسط ماهانه، هر قسط ${rial(inst)} ریال</b></div><div><span>فرانشیز</span><b>${fmtInt(fr)}٪</b></div>
-    </section>
-    <h2>جدول تعهدات بیمه‌گر</h2>
-    <div class="tw"><table class="pd-t"><thead><tr><th>ردیف</th><th>شرح تعهد</th><th>حداکثر تعهد سالانهٔ هر نفر (ریال)</th><th>سقف ${fmtYear(old.year)}</th><th>تغییر</th></tr></thead><tbody>
-      ${rows.map(([k, a, c], i) => `<tr><td>${fmtInt(i + 1)}</td><td>${CCAT_NAME[k] || k}</td><td class="num">${c === Infinity ? "بدون سقف" : rial(c)}</td><td class="num">${a != null ? MT(a) + " م.ت" : "—"}</td><td class="num">${a && isFinite(a) && isFinite(c) && c !== a ? fmtSignedPct(c / a - 1) : "—"}</td></tr>`).join("")}
-    </tbody></table></div>
-    <h2>مبنای محاسبهٔ حق‌بیمه</h2>
-    <ul class="pd-l">
-      <li>خسارت پرداختی ${fmtYear(old.year)}: ${fmtNum(M.total)} میلیون تومان؛ با ${fmtPct(o.ibnr)} خسارت دیررس، سرانهٔ ${fmtNum(M.pc0)} میلیون تومان${M.lr0 != null ? ` (Loss Ratio ${fmtPct(M.lr0)} با حق‌بیمهٔ ${fmtNum(o.p0)})` : ""}.</li>
-      <li>خسارت سرانهٔ مورد انتظار ${y} با این سقف‌ها: ${fmtNum(p.pc)} میلیون تومان (تورم درمان ${fmtPct(o.infl)} و اثر سقف‌های جدید).</li>
-      <li>حق‌بیمه با Loss Ratio هدف ${fmtPct(o.tlr)} محاسبه شده است؛ Loss Ratio مورد انتظار: ${fmtPct(p.lr)}.</li>
-    </ul>
-    <p class="pd-note">این سند پیش‌نویس پیشنهادی کارگزار برای مذاکره و استعلام است. بیمه‌نامهٔ رسمی فقط با صدور و امضای بیمه‌گر معتبر است. سایر شرایط طبق شرایط عمومی و خصوصی بیمه‌نامهٔ سال قبل.</p>
-    <footer class="pd-sign"><div>بیمه‌گذار</div><div>کارگزار</div><div>بیمه‌گر</div></footer>
+  const o = M.o, old = o.old, src = state.docs.find(d => d.id === old.src), u = src ? src.u : {};
+  const rial = v => v == null ? "…………" : v === Infinity ? "بدون سقف" : fmtInt(Math.round(v * 1e7)), fr = old.franchise ?? 10;
+  const start = addYear(u.start), end = addYear(u.end), rows = draftRows(p, old), conds = draftConditions(old);
+  const box = (side, body) => `<tr><th class="pd-side"><span>${side}</span></th><td class="pd-body">${body}</td></tr>`;
+  const f = (l, v) => `<div class="pd-f"><span>${l}:</span> <b>${v}</b></div>`;
+  return `<article class="pdoc pdoc2" dir="rtl">
+    <div class="pd-wm">پیش‌نویس</div>
+    <p class="pd-top">این بیمه نامه بر اساس قانون و مقررات بیمه در ایران و شرایط عمومی و خصوصی مندرج در متن و پیوست آن صادر گردیده است.</p>
+    <table class="pd-box">
+      ${box("مشخصات بیمه‌نامه", `<div class="pd-2">${f("شماره بیمه‌نامه", "پس از صدور")}${f("واحد صدور", "…………")}${f("کد رایانه بیمه‌نامه", "…………")}${f("واحد معرف", "…………")}${f("شماره پیشنهاد", "…………")}${f("تاریخ صدور", "…………")}${f("تاریخ قرارداد", "…………")}</div>`)}
+      ${box("مشخصات بیمه‌گذار", `<div class="pd-2">${f("بیمه‌گذار", esc(old.org || "…………"))}${f("کد ملی / کد اقتصادی", "…………")}${f("نشانی", "…………")}${f("تلفن", "…………")}</div>`)}
+      ${box("مدت", `<div class="pd-1">${f("مدت اعتبار بیمه‌نامه", `۳۶۵ روز می‌باشد که از روز ${faDate(start)} شروع و در روز ${faDate(end)} خاتمه می‌یابد`)}</div>`)}
+      ${box("حق بیمه", `<div class="pd-1">${f("تعداد بیمه‌شدگان", fmtInt(M.N) + " نفر")}${f("حق بیمه هر بیمه شده در طول مدت بیمه‌نامه", rial(p.prem) + " ریال")}
+        <div class="pd-2">${f("حق بیمه علی الحساب سالیانه", rial(p.total) + " ریال")}${f("مالیات بر ارزش افزوده", "۰ ریال · عوارض: ۰ ریال")}</div>
+        ${f("روش پرداخت حق بیمه", `طبق مفاد قرارداد و اعلامیه بدهکار (۱۲ قسط ماهانه، هر قسط ${rial(p.total / 12)} ریال)`)}</div>`)}
+      ${box("تعهدات بیمه‌گر", `<div class="tw"><table class="pd-t2"><thead><tr><th rowspan="2">شرح تعهدات بیمه‌گر</th><th colspan="2">حداکثر تعهدات سالیانه</th><th rowspan="2">درصد فرانشیز</th><th rowspan="2">حداکثر فرانشیز</th></tr><tr><th>نفر</th><th>خانواده</th></tr></thead><tbody>
+        ${rows.map(r => `<tr${r.bold ? ' class="b"' : ""}><td>${esc(r.label)}</td><td class="num">${rial(r.v)}</td><td class="num">۰</td><td class="num">${r.bold ? "" : fmtInt(fr)}</td><td class="num">${r.bold ? "" : "۰"}</td></tr>`).join("")}
+      </tbody></table></div>`)}
+    </table>
+    <div class="pd-foot"><div><b>بیمه‌گذار</b><span>${esc(old.org || "")}</span></div><div><b>واحد صدور</b><span>…………</span></div><div><b>بیمه‌گر</b><span>${esc(old.insurer || "…………")}</span></div></div>
+    <div class="pd-page">
+      <p><b>توضیحات اضافی:</b> این بیمه‌نامه با مشخصات فوق‌الذکر و شرایط عمومی و شرایط خصوصی پیوست صادر می‌شود.</p>
+      <p><b>شرایط خصوصی قرارداد:</b></p>
+      <ol>${(conds.length ? conds : ["…………"]).map(c => `<li>${esc(c)}</li>`).join("")}</ol>
+      ${conds.length ? '<p class="pd-hint">شرایط خصوصی از بیمه‌نامهٔ سال قبل خوانده شده؛ پیش از ارسال بازبینی کنید.</p>' : ""}
+    </div>
+    <div class="pd-page pd-annex">
+      <p><b>پیوست کارگزار (جزو متن بیمه‌نامه نیست) — مبنای حق‌بیمه، بستهٔ «${esc(p.n)}»:</b></p>
+      <ul>
+        <li>خسارت پرداختی ${fmtYear(old.year)}: ${fmtNum(M.total)} میلیون تومان؛ با ${fmtPct(o.ibnr)} خسارت دیررس، سرانهٔ ${fmtNum(M.pc0)} میلیون تومان${M.lr0 != null ? ` (Loss Ratio ${fmtPct(M.lr0)} با حق‌بیمهٔ ${fmtNum(o.p0)})` : ""}.</li>
+        <li>خسارت سرانهٔ مورد انتظار ${fmtYear(K.year)} با این سقف‌ها: ${fmtNum(p.pc)} میلیون تومان (تورم درمان ${fmtPct(o.infl)} و اثر سقف‌های جدید)؛ Loss Ratio هدف ${fmtPct(o.tlr)}، مورد انتظار ${fmtPct(p.lr)}.</li>
+        <li>این سند پیش‌نویس کارگزار برای استعلام و مذاکره است؛ بیمه‌نامهٔ رسمی فقط با صدور و امضای بیمه‌گر معتبر است.</li>
+      </ul>
+    </div>
   </article>`;
+}
+// Print only the document: a frame with the app's styles and nothing else (works for several pages).
+function printDoc(html){
+  const page = `<!doctype html><html dir="rtl" lang="fa" data-theme="light"><head><meta charset="utf-8"><title>پیش‌نویس بیمه‌نامه</title>${[...document.querySelectorAll("style")].map(x => x.outerHTML).join("")}
+    <style>@page{size:A4;margin:12mm}html,body{background:#fff !important;margin:0}body *{visibility:visible !important}.pdoc{position:static !important;padding:0 !important;color:#000}</style></head><body>${html}</body></html>`;
+  window.__printHTML = page;
+  const f = document.createElement("iframe"); f.setAttribute("aria-hidden", "true"); f.style.cssText = "position:fixed;left:0;bottom:0;width:0;height:0;border:0";
+  document.body.appendChild(f); const d = f.contentDocument; d.open(); d.write(page); d.close();
+  setTimeout(() => { try { f.contentWindow.focus(); f.contentWindow.print(); } catch (e){ const w = window.open("", "_blank"); if (w){ w.document.write(page); w.document.close(); w.print(); } } setTimeout(() => f.remove(), 60000); }, 500);
 }
 function renderProposal(id){
   const ctx = state.lastClaims; if (!ctx) return go("claims");
@@ -2971,10 +3066,10 @@ function renderProposal(id){
     <div class="fchips noprint" role="group" aria-label="بسته">${K.P.map(x => `<button type="button" data-pdp="${x.id}" aria-pressed="${x.id === p.id}">${x.n} · ${fmtNum(x.prem)}</button>`).join("")}</div>
     <div class="panel pdoc-wrap">${proposalDoc(M, K, p)}</div>`;
   document.querySelectorAll("[data-pdp]").forEach(b => b.onclick = () => { state.cl.pkg = b.dataset.pdp; go("proposal", b.dataset.pdp, true); });
-  $("pdPrint").onclick = () => window.print();
+  $("pdPrint").onclick = () => printDoc(proposalDoc(M, K, p));
   $("pdWord").onclick = () => {
-    const css = "body{font-family:Tahoma,Arial;direction:rtl}table{border-collapse:collapse;width:100%}td,th{border:1px solid #999;padding:4px 6px;font-size:10pt}h1{font-size:15pt}h2{font-size:12pt;margin-top:14pt}.pd-grid div{margin:2pt 0}.pd-grid span{color:#555}.pd-grid em{color:#555;margin-right:6pt}.pd-sign{display:flex;justify-content:space-between;margin-top:40pt}";
-    const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word"><head><meta charset="utf-8"><style>${css}</style></head><body dir="rtl">${proposalDoc(M, K, p).replace(/<div class="pd-sign">|<footer class="pd-sign">/, '<table style="border:0;margin-top:40pt"><tr>').replace(/<div>(بیمه‌گذار|کارگزار|بیمه‌گر)<\/div>/g, '<td style="border:0;text-align:center">$1</td>').replace("</footer>", "</tr></table>")}</body></html>`;
+    const css = "body{font-family:Tahoma,Arial;direction:rtl;font-size:10pt}table{border-collapse:collapse;width:100%}td,th{border:1px solid #444;padding:3pt 5pt;font-size:9.5pt;vertical-align:top}.pd-side{width:22pt;background:#eee}.pd-f{margin:2pt 0}.pd-top{font-weight:bold}.pd-wm{display:none}.pd-t2 tr.b td{font-weight:bold}.pd-hint{color:#666;font-size:8.5pt}";
+    const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word"><head><meta charset="utf-8"><style>${css}</style></head><body dir="rtl">${proposalDoc(M, K, p).replace(/<div class="pd-foot">([\s\S]*?)<\/div>\s*<div class="pd-page">/, (m, x) => '<table style="margin-top:14pt"><tr>' + x.replace(/<div><b>(.*?)<\/b><span>(.*?)<\/span><\/div>/g, '<td style="border:0;text-align:center"><b>$1</b><br>$2</td>') + '</tr></table><div class="pd-page">')}</body></html>`;
     const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob(["﻿" + html], { type: "application/msword" }));
     a.download = `پیش‌نویس-بیمه‌نامه-${(M.o.old.org || "").replace(/\s+/g, "-")}-${K.year}.doc`; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
   };
