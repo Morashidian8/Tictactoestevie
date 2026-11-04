@@ -2988,6 +2988,33 @@ function claimsPackages(M){
     { id: "bal", n: "متعادل", d: "همهٔ سقف‌ها هم‌پای تورم؛ سقف‌هایی که پر شده بودند ۵۰٪ بیشتر", cap: (k, v) => v * g * (binding(k) ? 1.5 : 1) },
     { id: "full", n: "رضایت بالا", d: "همه ۳۰٪ بیشتر از تورم؛ سقف‌هایی که پر شده بودند ۲ برابر", cap: (k, v) => v * g * (binding(k) ? 2 : 1.3) },
   ];
+  // «بیشترین سقف با این بودجه»: the way insurers bid. Start from last year's caps unchanged in rials (frequent items lose
+  // value to inflation, which funds the rest), then raise caps step by step where a rial of premium buys the most cap —
+  // rare, large covers (hospital, special surgery, combined caps) first; frequent, expensive ones (dental, visit) last.
+  const budget = state.cl.budget || o.p1 || null;
+  if (budget){
+    // an insurer charges for a higher cap even when few reach it: 4% of the coverage's cost for every doubling
+    const amtOf = k => (k === "visitdrug" ? ["visit", "drug"] : [k]).reduce((t, q) => t + (by[q] ? by[q].amt : 0), 0) * M.L * g / M.N;
+    const load = c => Object.keys(c).reduce((t, k) => t + (old.caps[k] && isFinite(c[k]) && c[k] > old.caps[k] ? amtOf(k) * 0.04 * Math.log2(c[k] / old.caps[k]) : 0), 0);
+    const caps = Object.assign({}, old.caps), price = c => (costOf(M, c) / M.N + load(c)) / o.tlr;
+    // frequently used items (a fifth of the group or more) grow at most with inflation; rare ones up to ×3.2
+    const useOf = k => Math.max(0, ...(k === "visitdrug" ? ["visit", "drug"] : [k]).map(q => by[q] && by[q].use || 0));
+    const maxOf = k => useOf(k) >= 0.2 ? g : 3.2;
+    const keys = Object.keys(caps).filter(k => caps[k] != null && isFinite(caps[k]) && caps[k] > 0 && k !== "total");
+    let cur = price(caps); const short = cur > budget;
+    for (let it = 0; it < 400 && cur < budget; it++){
+      let best = null;
+      keys.forEach(k => { const to = nice(caps[k] * 1.25); if (to <= caps[k] || to > old.caps[k] * maxOf(k) * 1.001) return;
+        const t = Object.assign({}, caps, { [k]: to }), d = price(t) - cur, gain = Math.log(to / caps[k]) * (k === "combo" ? 0.5 : 1);
+        const score = gain / Math.max(d, 1e-4); if (cur + d <= budget && (!best || score > best.score)) best = { k, to, d, score }; });
+      if (!best) break; caps[best.k] = best.to; cur += best.d;
+    }
+    // combined caps never below the rows they combine; the annual total grows with the largest cap
+    if (caps.combo != null && caps.special) caps.combo = Math.max(caps.combo, caps.special);
+    if (old.caps.total) caps.total = nice(Math.max(caps.total, old.caps.total * Math.max(...keys.map(k => caps[k] / old.caps[k]))));
+    P.push({ id: "opt", n: "بیشترین سقف با این بودجه", caps, short,
+      d: short ? `بودجهٔ ${fmtNum(budget)} حتی برای سقف‌های سال قبل (بدون افزایش) کافی نیست؛ کمترین حق‌بیمهٔ لازم همین عدد است` : `حق‌بیمهٔ ${fmtNum(budget)}؛ بندهای پرتکرار حداکثر هم‌پای تورم، سقف‌های بزرگ و کم‌تکرار بالا (روش رایج بیمه‌گرها در مناقصه)` });
+  }
   // the broker's own package: the recommended one with the changes ticked under «تغییر پوشش‌ها»
   const tw = state.cl.tweaks || {};
   if (Object.keys(tw).length){ const base = Object.fromEntries(Object.entries(old.caps).map(([k, v]) => [k, v != null && isFinite(v) ? nice(P[1].cap(k, v)) : v]));
@@ -3061,7 +3088,7 @@ function packagesHTML(M, K){
     <div class="panel-b" style="display:flex;flex-direction:column;gap:16px"><div class="scn${K.P.length > 3 ? " scn4" : ""}${K.P.length > 4 ? " scn5" : ""}">${K.P.map(p => `<div class="sc pkg ${p.id === K.rec ? "rec" : ""} ${p.id === sel ? "on" : ""}" data-pkg="${p.id}" role="button" tabindex="0" aria-pressed="${p.id === sel}">${p.id === K.rec ? '<span class="badge">پیشنهاد اپ</span>' : ""}<span class="tag ${p.id === "ins" ? "t-mid" : "t-protect"}" style="align-self:flex-start">${p.n}</span>
       <div class="pr"><b class="num">${fmtNum(p.prem)}</b> <span class="small muted">میلیون تومان / نفر</span></div>
       <div class="small" style="font-weight:800">کل: <span class="num">${fmtNum(p.total / 1000)}</span> میلیارد تومان${p.ch != null ? ` · <span style="color:var(--mid-ink)">${fmtSignedPct(p.ch)}</span> نسبت به ${fmtYear(old.year)}` : ""}</div>
-      <span class="small muted">${p.d}</span>
+      <span class="small ${p.short ? "" : "muted"}"${p.short ? ' style="color:var(--bad);font-weight:700"' : ""}>${p.d}</span>
       <ul>${key.map(k => `<li><span class="muted">${CCAT_NAME[k]}</span><b class="num">${MT(old.caps[k])} ← ${MT(p.caps[k])}</b></li>`).join("")}<li><span class="muted">Loss Ratio مورد انتظار</span><b style="color:${p.lr < 0.75 ? "var(--good)" : p.lr <= 0.85 ? "var(--mid-ink)" : "var(--bad)"}">${fmtPct(p.lr)}</b></li>${p.id === "ins" && p.fair !== p.prem ? `<li><span class="muted">نرخ منصفانهٔ همین سقف‌ها</span><b class="num">${fmtNum(p.fair)}</b></li>` : ""}</ul>
       <button class="btn ${p.id === sel ? "primary" : ""}" type="button" data-issue="${p.id}">صدور پیش‌نویس بیمه‌نامه</button></div>`).join("")}</div>
       <details><summary class="small" style="cursor:pointer;font-weight:700;color:var(--brand)">سقف همهٔ پوشش‌ها در هر بسته</summary><div class="tw" style="margin-top:10px"><table style="min-width:620px"><thead><tr><th>پوشش</th><th>سقف ${fmtYear(old.year)}</th>${K.P.map(p => `<th>${p.n}</th>`).join("")}</tr></thead><tbody>
@@ -3257,7 +3284,7 @@ function renderClaims(){
     <div class="panel-b cins">
       <label class="cin"><span>بیمه‌نامهٔ سال خسارت (سقف‌ها)</span><select id="clmOld">${opt(cl.oldId)}</select></label>
       <label class="cin"><span>بیمه‌نامهٔ سال بعد (اختیاری)</span><select id="clmNew">${opt(cl.newId)}</select></label>
-      ${inp("clmN", "تعداد بیمه‌شدگان", o.insured, 1, "نفر")}${nBad && cl.insured == null ? `<p class="small cwarn">بیمه‌نامه ${fmtInt(nBad)} نفر نوشته، ولی ${fmtInt(maxU)} نفر فقط از یک پوشش استفاده کرده‌اند؛ احتمالاً بقیه با الحاقیه اضافه شده‌اند. تعداد کل را وارد کنید.</p>` : ""}${inp("clmP0", `حق‌بیمهٔ هر نفر ${y0}`, o.p0, 0.01, "میلیون")}${inp("clmP1", `نرخ اعلامی بیمه‌گر برای ${y1} (اگر دارید)`, o.p1, 0.01, "میلیون")}
+      ${inp("clmN", "تعداد بیمه‌شدگان", o.insured, 1, "نفر")}${nBad && cl.insured == null ? `<p class="small cwarn">بیمه‌نامه ${fmtInt(nBad)} نفر نوشته، ولی ${fmtInt(maxU)} نفر فقط از یک پوشش استفاده کرده‌اند؛ احتمالاً بقیه با الحاقیه اضافه شده‌اند. تعداد کل را وارد کنید.</p>` : ""}${inp("clmP0", `حق‌بیمهٔ هر نفر ${y0}`, o.p0, 0.01, "میلیون")}${inp("clmP1", `نرخ اعلامی بیمه‌گر برای ${y1} (اگر دارید)`, o.p1, 0.01, "میلیون")}${inp("clmB", "بودجهٔ هر نفر برای «بیشترین سقف» (اختیاری)", cl.budget, 0.1, "میلیون")}
       ${inp("clmI", "خسارت دیررس (IBNR)", Math.round(o.ibnr * 100), 1, "٪")}${inp("clmT", "Loss Ratio هدف", Math.round(o.tlr * 100), 1, "٪")}
       <div class="slider cin" style="grid-column:span 2"><label for="clmInfl" class="small nw">تورم درمان</label><input type="range" id="clmInfl" min="0" max="80" step="5" value="${Math.round(o.infl * 100)}" style="--p:${Math.round(o.infl * 100 / 80 * 100)}%"><b class="num" id="clmInflV">${fmtInt(Math.round(o.infl * 100))}٪</b></div>
     </div>${old && old.sample ? '<p class="small" style="color:var(--mid-ink);padding:0 18px 14px">بیمه‌نامهٔ انتخاب‌شده نمونه است؛ برای نتیجهٔ واقعی بیمه‌نامهٔ خود را در «مدارک و قراردادها» بدهید.</p>' : ""}</section>
@@ -3290,7 +3317,7 @@ function bindClaims(M){
   $("clmOld").onchange = e => { cl.oldId = e.target.value; cl.newId = $("clmNew").value; cl.picked = true; delete cl.p0; render(); };
   $("clmNew").onchange = e => { cl.newId = e.target.value; cl.oldId = $("clmOld").value; cl.picked = true; delete cl.p1; delete cl.insured; render(); };
   const numIn = (id, k, f = v => v) => { $(id).onchange = e => { const v = parseFloat(drNorm(e.target.value)); if (e.target.value === "") { delete cl[k]; render(); } else if (!isNaN(v)) set(k, f(v)); }; };
-  numIn("clmN", "insured"); numIn("clmP0", "p0"); numIn("clmP1", "p1"); numIn("clmI", "ibnr", v => v / 100); numIn("clmT", "tlr", v => v / 100);
+  numIn("clmN", "insured"); numIn("clmP0", "p0"); numIn("clmP1", "p1"); numIn("clmB", "budget"); numIn("clmI", "ibnr", v => v / 100); numIn("clmT", "tlr", v => v / 100);
   const ir = $("clmInfl"); ir.oninput = () => { $("clmInflV").textContent = fmtInt(+ir.value) + "٪"; ir.style.setProperty("--p", (+ir.value / 80 * 100) + "%"); };
   ir.onchange = () => { state.infl = +ir.value / 100; render(); };
   $("clmClear").onclick = () => { state.claims = []; render(); };
