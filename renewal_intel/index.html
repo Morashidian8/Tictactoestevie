@@ -1503,10 +1503,12 @@ function drSpiky(c){
   const cv = a => { const m = a.reduce((s, v) => s + v, 0) / a.length; return m ? Math.sqrt(a.reduce((s, v) => s + (v - m) ** 2, 0) / a.length) / m : 0; };
   return { rows: cv(rows), cols: cv(cols) };
 }
-async function drOrient(c){
+async function drOrient(c, ctx){
   const w = await drOCR(), small = drFit(c, 900), sp = drSpiky(c);
   await w.setParameters({ tessedit_pageseg_mode: "3", tessedit_char_whitelist: "" });
   const conf = async deg => (await w.recognize(drRotate(small, deg))).data.confidence;
+  // a turned page of a scan whose first turned page was decided clearly: same way, no OCR needed
+  if (sp.cols > sp.rows * 1.15 && ctx && ctx.turn && ctx.turn.margin >= 12) return { deg: ctx.turn.deg, margin: ctx.turn.margin, turned: true };
   if (sp.cols > sp.rows * 1.15){ const a = await conf(90), b = await conf(270); return { deg: a >= b ? 90 : 270, margin: Math.abs(a - b), turned: true }; }
   return { deg: 0, margin: 99, check180: true };
 }
@@ -1574,7 +1576,7 @@ async function drReadPage(page, progress, ctx){
   }
   const w = await drOCR();
   say("تشخیص جهت صفحه", 0.02);
-  const o = await drOrient(c);
+  const o = await drOrient(c, ctx);
   // pages of one scan are turned the same way: an unsure page follows the surest earlier one
   let deg = o.deg; if (o.turned){ if (ctx.turn && (o.margin < 12 || ctx.turn.margin > o.margin)) deg = ctx.turn.deg; else ctx.turn = o; }
   if (deg) c = drRotate(c, deg);
