@@ -302,6 +302,9 @@ a.kp2{text-decoration:none;color:inherit}
 .pd-page{border-top:1.5px dashed var(--line);padding-top:12px;margin-top:6px}.pd-page p{margin:4px 0}.pd-page ol,.pd-page ul{margin:4px 0;padding-inline-start:22px}.pd-hint{font-size:11.5px;color:var(--mid-ink)}.pd-annex{font-size:12px;color:var(--ink2)}
 @media (max-width:760px){.pd-2{grid-template-columns:1fr}.pd-wm{font-size:64px}}
 @media print{.pd-page{break-before:page;border:0}.pd-wm{color:rgba(200,0,0,.08)}.pd-side{background:#eee}}
+.pd-2c{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:2px 20px}.pd-col{display:flex;flex-direction:column;gap:2px}.pd-inst{min-width:0;max-width:560px;margin:8px auto}.pd-inst td{text-align:center !important}
+@media (max-width:480px){.pd-2c{grid-template-columns:1fr}}
+@media print{.noprint{display:none !important}.pd-2c{grid-template-columns:repeat(2,minmax(0,1fr)) !important}}
 .proj .panel-h{gap:14px}
 .slider{display:flex;align-items:center;gap:10px;min-width:280px}
 .slider input[type=range]{-webkit-appearance:none;appearance:none;flex:1;height:8px;border-radius:4px;background:linear-gradient(to left,var(--brand) var(--p),var(--line2) var(--p));direction:rtl}
@@ -3102,22 +3105,25 @@ function draftRows(p, old){
     : DEFAULT_ORDER.filter(k => old.caps[k] != null).map(k => ({ cat: k, v: old.caps[k] }));
   const seen = {};
   const res = base.filter(r => r.cat && p.caps[r.cat] !== 0).map(r => {
-    let label, k = r.cat;
+    let label, k = r.cat, key = null;
     if (k === "combo"){ // which rows a combined cap covers: read from its value
       const L6 = "حداکثر تعهدات ردیف‌های ۱، ۳، ۴ و ۶", L4 = "حداکثر تعهدات ردیف‌های ۱، ۳ و ۴", L7 = "حداکثر تعهدات ردیف‌های ۷، ۸، ۹، ۱۰، ۱۱ و ۱۲", h = old.caps.hosp;
       const m = [["special", L6], ["hosp", L4], ["para", L7]].find(([c]) => old.caps[c] && Math.abs(old.caps[c] - r.v) < 1e-6)
         || (h && r.v > h * 1.2 ? [old.caps.special ? "special" : "hosp", L6] : null); // the rows 1, 3, 4, 6 cap is the one above the hospital cap
-      label = m ? m[1] : "سقف مشترک چند بند"; k = m ? m[0] : null;
-    } else if (seen[k] && STD_GROUP[k]) label = STD_GROUP[k];
+      label = m ? m[1] : "سقف مشترک چند بند"; k = m ? m[0] : null; key = !m ? "cx" : m[1] === L6 ? "c6" : m[1] === L4 ? "c4" : "g7";
+    } else if (seen[k] && STD_GROUP[k]){ label = k === "para" ? "حداکثر تعهدات ردیف‌های ۷، ۸، ۹، ۱۰، ۱۱ و ۱۲" : STD_GROUP[k]; key = k === "para" ? "g7" : "gd"; }
     else label = STD_ROW[k] || CCAT_NAME[k] || "سایر تعهدات";
     seen[r.cat] = true;
     const v = !isFinite(r.v) ? r.v : k ? nice(r.v * ratio(k)) : r.v;
-    return { label, v, bold: r.cat === "total", cat: r.cat };
-  });
+    return { label, v, bold: r.cat === "total", cat: r.cat, key: key || r.cat };
+  }).filter((r, i, a) => a.findIndex(x => x.key === r.key) === i); // one row per commitment
   // row 6 not read from the scan: keep its place so the numbering and the «۱، ۳، ۴ و ۶» row make sense
   const out = base === null ? [] : res;
-  if (!out.some(r => r.cat === "special")){ const i = out.findIndex(r => r.cat === "delivery"); out.splice(i >= 0 ? i + 1 : out.length, 0, { label: STD_ROW.special, v: null, cat: "special" }); }
-  return out;
+  if (!out.some(r => r.cat === "special")) out.push({ label: STD_ROW.special, v: null, cat: "special", key: "special" });
+  // the order of the insurer's policy: rows 1–12, their combined caps, then the outpatient items, the annual total last
+  const ORD = ["hosp", "refractive", "ambIn", "ambOut", "delivery", "special", "para", "diag", "outsurg", "fetal", "lab", "rehab", "c6", "c4", "g7", "cx", "dental", "glasses", "visit", "drug", "emergency", "infert", "gd", "visitdrug", "orthosis", "prosthesis", "hearing", "organs", "supplies", "specialDis", "total"];
+  const ix = r => { const i = ORD.indexOf(r.key); return i < 0 ? ORD.length - 1.5 : i; };
+  return out.sort((a, b) => ix(a) - ix(b));
 }
 function draftConditions(old){
   const src = state.docs.find(d => d.id === old.src); if (!src) return [];
@@ -3135,35 +3141,46 @@ function proposalDoc(M, K, p){
   const start = addYear(u.start), end = addYear(u.end), rows = draftRows(p, old), conds = draftConditions(old);
   const box = (side, body) => `<tr><th class="pd-side"><span>${side}</span></th><td class="pd-body">${body}</td></tr>`;
   const f = (l, v) => `<div class="pd-f"><span>${l}:</span> <b>${v}</b></div>`;
+  const col = (...xs) => `<div class="pd-col">${xs.join("")}</div>`, two = (r, l) => `<div class="pd-2c">${col(...r)}${col(...l)}</div>`;
+  const dots = "…………", inst = Math.round(p.total * 1e7 / 12), months = [];
+  for (let i = 0; i < 12; i++){ const [y, m] = (start || `${K.year}/01/01`).split("/").map(Number), mm = (m - 1 + i) % 12 + 1, yy = y + Math.floor((m - 1 + i) / 12); months.push(`${yy}/${String(mm).padStart(2, "0")}/01`); }
   return `<article class="pdoc pdoc2" dir="rtl">
     <div class="pd-wm">پیش‌نویس</div>
-    <p class="pd-top">این بیمه نامه بر اساس قانون و مقررات بیمه در ایران و شرایط عمومی و خصوصی مندرج در متن و پیوست آن صادر گردیده است.</p>
+    <p class="pd-top">این بیمه نامه بر اساس قانون و مقررات بیمه در ایران و شرایط عمومی و خصوصی مندرج در متن و پیوست آن صادر گردیده است .</p>
     <table class="pd-box">
-      ${box("مشخصات بیمه‌نامه", `<div class="pd-2">${f("شماره بیمه‌نامه", "پس از صدور")}${f("واحد صدور", "…………")}${f("کد رایانه بیمه‌نامه", "…………")}${f("واحد معرف", "…………")}${f("شماره پیشنهاد", "…………")}${f("تاریخ صدور", "…………")}${f("تاریخ قرارداد", "…………")}</div>`)}
-      ${box("مشخصات بیمه‌گذار", `<div class="pd-2">${f("بیمه‌گذار", esc(old.org || "…………"))}${f("کد ملی / کد اقتصادی", "…………")}${f("نشانی", "…………")}${f("تلفن", "…………")}</div>`)}
-      ${box("مدت", `<div class="pd-1">${f("مدت اعتبار بیمه‌نامه", `۳۶۵ روز می‌باشد که از روز ${faDate(start)} شروع و در روز ${faDate(end)} خاتمه می‌یابد`)}</div>`)}
-      ${box("حق بیمه", `<div class="pd-1">${f("تعداد بیمه‌شدگان", fmtInt(M.N) + " نفر")}${f("حق بیمه هر بیمه شده در طول مدت بیمه‌نامه", rial(p.prem) + " ریال")}
-        <div class="pd-2">${f("حق بیمه علی الحساب سالیانه", rial(p.total) + " ریال")}${f("مالیات بر ارزش افزوده", "۰ ریال · عوارض: ۰ ریال")}</div>
-        ${f("روش پرداخت حق بیمه", `طبق مفاد قرارداد و اعلامیه بدهکار (۱۲ قسط ماهانه، هر قسط ${rial(p.total / 12)} ریال)`)}</div>`)}
-      ${box("تعهدات بیمه‌گر", `<div class="tw"><table class="pd-t2"><thead><tr><th rowspan="2">شرح تعهدات بیمه‌گر</th><th colspan="2">حداکثر تعهدات سالیانه</th><th rowspan="2">درصد فرانشیز</th><th rowspan="2">حداکثر فرانشیز</th></tr><tr><th>نفر</th><th>خانواده</th></tr></thead><tbody>
+      ${box("مشخصات بیمه نامه", two([f("شماره بیمه نامه", dots), f("کد رایانه بیمه نامه", dots), f("شماره پیشنهاد", dots), f("تاریخ قرارداد", dots)], [f("واحد صدور", dots), f("واحد معرف", dots), f("تاریخ صدور", dots)]))}
+      ${box("مشخصات بیمه گذار", two([f("بیمه گذار", esc(old.org || dots)), f("نشانی", dots), f("ایمیل سازمانی", dots)], [f("کد ملی/ کد اقتصادی", dots), f("شماره اقتصادی بیمه گذار", dots), f("تلفن", dots), f("کد پستی", dots)]))}
+      ${box("مدت", `<div class="pd-1"><div class="pd-f"><span>مدت اعتبار بیمه نامه</span> <b>۳۶۵</b> <span>روز می باشد که از روز</span> <b>${faDate(start)}</b> <span>شروع و در روز</span> <b>${faDate(end)}</b> <span>خاتمه می یابد .</span></div></div>`)}
+      ${box("حق بیمه", `<div class="pd-1">${f("تعداد بیمه شدگان", fmtInt(M.N) + " نفر")}${f("حق بیمه هر بیمه شده در طول مدت بیمه نامه", rial(p.prem) + " ریال")}
+        ${two([f("حق بیمه علی الحساب سالیانه", rial(p.total) + " ریال")], [f("مالیات بر ارزش افزوده", "۰ ریال عوارض : ۰ ریال .")])}
+        ${f("روش پرداخت حق بیمه", "طبق مفاد قرار داد و اعلامیه بدهکار")}
+        <div class="pd-f"><span>بیمه شدگان بین ۶۱ تا ۶۹ سال تحت تکفل با ۰ درصد حق بیمه اضافی _ بیمه شدگان بین ۷۰ تا ۱۲۰ سال تحت تکفل با ۰ درصد حق بیمه اضافی</span></div></div>`)}
+      ${box("تعهدات بیمه گر", `<div class="tw"><table class="pd-t2"><thead><tr><th rowspan="2">شرح تعهدات بیمه گر</th><th colspan="2">حداکثر تعهدات سالیانه</th><th rowspan="2">درصد فرانشیز</th><th rowspan="2">حداکثر فرانشیز</th></tr><tr><th>نفر</th><th>خانواده</th></tr></thead><tbody>
         ${rows.map(r => `<tr${r.bold ? ' class="b"' : ""}><td>${esc(r.label)}</td><td class="num">${rial(r.v)}</td><td class="num">۰</td><td class="num">${r.bold ? "" : fmtInt(fr)}</td><td class="num">${r.bold ? "" : "۰"}</td></tr>`).join("")}
       </tbody></table></div>`)}
     </table>
-    <div class="pd-foot"><div><b>بیمه‌گذار</b><span>${esc(old.org || "")}</span></div><div><b>واحد صدور</b><span>…………</span></div><div><b>بیمه‌گر</b><span>${esc(old.insurer || "…………")}</span></div></div>
+    <div class="pd-foot"><div><b>بیمه گذار</b><span>${esc(old.org || "")}</span></div><div><b>واحد صدور</b><span>${dots}</span></div><div><b>${esc(old.insurer ? "شرکت " + old.insurer : "بیمه گر")}</b><span></span></div></div>
     <div class="pd-page">
-      <p><b>توضیحات اضافی:</b> این بیمه‌نامه با مشخصات فوق‌الذکر و شرایط عمومی و شرایط خصوصی پیوست صادر می‌شود.</p>
+      <p><b>توضیحات اضافی :</b> این بیمه نامه با مشخصات فوق الذکر و شرایط عمومی و شرایط خصوصی پیوست در سه نسخه صادر و هریک از نسخ دارای ارزش یکسان می باشد.</p>
       <p><b>شرایط خصوصی قرارداد:</b></p>
-      <ol>${(conds.length ? conds : ["…………"]).map(c => `<li>${esc(c)}</li>`).join("")}</ol>
-      ${conds.length ? '<p class="pd-hint">شرایط خصوصی از بیمه‌نامهٔ سال قبل خوانده شده؛ پیش از ارسال بازبینی کنید.</p>' : ""}
+      <ol>${(conds.length ? conds : [dots]).map(c => `<li>${esc(c)}</li>`).join("")}</ol>
+      ${conds.length ? '<p class="pd-hint noprint">شرایط خصوصی از بیمه‌نامهٔ سال قبل خوانده شده؛ پیش از ارسال بازبینی کنید.</p>' : ""}
     </div>
-    <div class="pd-page pd-annex">
+    <div class="pd-page">
+      <p>مدیریت محترم ${esc(old.org || "")}</p><p>با سلام و احترام</p>
+      <p>بدین وسیله به استحضار می رساند با توجه به صدور بیمه نامه درمان تکمیلی، صورتحساب حق بیمه به شرح ذیل می باشد. خواهشمند است پس از بررسی نسبت به پرداخت مطابق با تاریخ های سر رسید اعلامی و پس از واریز نسبت به ارسال فیش در اسرع وقت اقدامات لازم مبذول فرمایید.</p>
+      <table class="pd-t2 pd-inst"><thead><tr><th>ردیف</th><th>مبلغ قسط (ریال)</th><th>تاریخ سر رسید</th></tr></thead><tbody>
+        ${months.map((d, i) => `<tr><td>${fmtInt(i + 1)}</td><td class="num">${fmtInt(i < 11 ? inst : Math.round(p.total * 1e7) - inst * 11)}</td><td class="num">${faDate(d)}</td></tr>`).join("")}
+        <tr class="b"><td>جمع کل:</td><td class="num">${rial(p.total)}</td><td></td></tr></tbody></table>
+    </div>
+    ${state.cl.annex ? `<div class="pd-page pd-annex">
       <p><b>پیوست کارگزار (جزو متن بیمه‌نامه نیست) — مبنای حق‌بیمه، بستهٔ «${esc(p.n)}»:</b></p>
       <ul>
         <li>خسارت پرداختی ${fmtYear(old.year)}: ${fmtNum(M.total)} میلیون تومان؛ با ${fmtPct(o.ibnr)} خسارت دیررس، سرانهٔ ${fmtNum(M.pc0)} میلیون تومان${M.lr0 != null ? ` (Loss Ratio ${fmtPct(M.lr0)} با حق‌بیمهٔ ${fmtNum(o.p0)})` : ""}.</li>
         <li>خسارت سرانهٔ مورد انتظار ${fmtYear(K.year)} با این سقف‌ها: ${fmtNum(p.pc)} میلیون تومان (تورم درمان ${fmtPct(o.infl)} و اثر سقف‌های جدید)؛ Loss Ratio هدف ${fmtPct(o.tlr)}، مورد انتظار ${fmtPct(p.lr)}.</li>
         <li>این سند پیش‌نویس کارگزار برای استعلام و مذاکره است؛ بیمه‌نامهٔ رسمی فقط با صدور و امضای بیمه‌گر معتبر است.</li>
       </ul>
-    </div>
+    </div>` : ""}
   </article>`;
 }
 // Print only the document: a frame with the app's styles and nothing else (works for several pages).
@@ -3181,10 +3198,11 @@ function renderProposal(id){
   setHead("پیش‌نویس بیمه‌نامه", `سال ${fmtYear(K.year)} · ${p.n}`);
   $("view").innerHTML = `${crumb(["claims", "تحلیل خسارت"], [null, "پیش‌نویس بیمه‌نامه"])}
     <div class="ph noprint"><div><h1>پیش‌نویس بیمه‌نامهٔ سال ${fmtYear(K.year)}</h1><span class="sub">از بستهٔ «${esc(p.n)}»؛ برای ارسال به بیمه‌گرها یا کارفرما</span></div>
-      <div class="actions"><button class="btn primary" type="button" id="pdPrint">چاپ / ذخیرهٔ PDF</button><button class="btn" type="button" id="pdWord">دانلود Word</button><button class="btn" type="button" id="pdSave">${state.contracts.some(c => c.id === "draft-" + p.id + "-" + K.year) ? "✓ ثبت شد در قراردادها" : "ثبت به‌عنوان قرارداد " + fmtYear(K.year)}</button></div></div>
+      <div class="actions"><button class="btn primary" type="button" id="pdPrint">چاپ / ذخیرهٔ PDF</button><button class="btn" type="button" id="pdWord">دانلود Word</button><label class="btn" style="display:inline-flex;gap:6px;align-items:center"><input type="checkbox" id="pdAnnex"${state.cl.annex ? " checked" : ""}> پیوست مبنای محاسبه</label><button class="btn" type="button" id="pdSave">${state.contracts.some(c => c.id === "draft-" + p.id + "-" + K.year) ? "✓ ثبت شد در قراردادها" : "ثبت به‌عنوان قرارداد " + fmtYear(K.year)}</button></div></div>
     <div class="fchips noprint" role="group" aria-label="بسته">${K.P.map(x => `<button type="button" data-pdp="${x.id}" aria-pressed="${x.id === p.id}">${x.n} · ${fmtNum(x.prem)}</button>`).join("")}</div>
     <div class="panel pdoc-wrap">${proposalDoc(M, K, p)}</div>`;
   document.querySelectorAll("[data-pdp]").forEach(b => b.onclick = () => { state.cl.pkg = b.dataset.pdp; go("proposal", b.dataset.pdp, true); });
+  $("pdAnnex").onchange = e => { state.cl.annex = e.target.checked; render(); };
   $("pdPrint").onclick = () => printDoc(proposalDoc(M, K, p));
   $("pdWord").onclick = () => {
     const css = "body{font-family:Tahoma,Arial;direction:rtl;font-size:10pt}table{border-collapse:collapse;width:100%}td,th{border:1px solid #444;padding:3pt 5pt;font-size:9.5pt;vertical-align:top}.pd-side{width:22pt;background:#eee}.pd-f{margin:2pt 0}.pd-top{font-weight:bold}.pd-wm{display:none}.pd-t2 tr.b td{font-weight:bold}.pd-hint{color:#666;font-size:8.5pt}";
