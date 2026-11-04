@@ -278,6 +278,18 @@ mark.lexfix{background:var(--mid-bg);color:inherit;border-bottom:1.5px dotted va
 .cin.slider{flex-direction:row;align-items:center;min-width:0}
 .cwarn{grid-column:1/-1;margin:0;color:var(--mid-ink);background:var(--mid-bg);border-radius:10px;padding:8px 12px;line-height:1.8}#clmN:placeholder-shown{border-color:var(--mid-ink);box-shadow:0 0 0 3px var(--mid-bg)}.clmt td{vertical-align:top}.clmt td .small{display:block;margin-top:2px;max-width:280px;white-space:normal}
 @media (max-width:760px){.cins{grid-template-columns:repeat(2,minmax(0,1fr))}.cin.slider{grid-column:1/-1 !important}}
+.scn.scn4{grid-template-columns:repeat(4,minmax(0,1fr))}
+.sc.pkg{cursor:pointer;transition:border-color .15s,box-shadow .15s}.sc.pkg.on{border-color:var(--brand);box-shadow:0 0 0 2px var(--brand)}.sc.pkg .btn{margin-top:auto}
+a.kp2{text-decoration:none;color:inherit}
+.pdoc-wrap{padding:0;overflow:hidden}.pdoc{padding:28px 32px;display:flex;flex-direction:column;gap:14px;font-size:13.5px;line-height:1.9;color:var(--ink)}
+.pd-h{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;border-bottom:2px solid var(--brand);padding-bottom:12px}.pd-h h1{font-size:20px;margin:0}.pd-h span{color:var(--ink2)}
+.pd-meta{display:flex;flex-direction:column;font-size:12px;color:var(--ink2);text-align:left}
+.pd-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 24px}.pd-grid div{display:flex;flex-direction:column;border-bottom:1px dashed var(--line2);padding:4px 0}.pd-grid span{font-size:12px;color:var(--ink2)}.pd-grid em{font-style:normal;font-size:12px;color:var(--ink2)}
+.pdoc h2{font-size:15px;margin:8px 0 0}.pd-t{width:100%;border-collapse:collapse}.pd-t th,.pd-t td{border:1px solid var(--line);padding:6px 8px;text-align:right}.pd-t th{background:var(--soft);font-size:12.5px}
+.pd-l{margin:0;padding-inline-start:18px}.pd-note{font-size:12px;color:var(--ink2);background:var(--line2);border-radius:10px;padding:10px 12px;margin:0}
+.pd-sign{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:28px;text-align:center}.pd-sign div{border-top:1px solid var(--ink2);padding-top:6px;font-weight:700}
+@media (max-width:980px){.scn.scn4{grid-template-columns:1fr}}@media (max-width:760px){.pdoc{padding:18px 16px}.pd-grid{grid-template-columns:1fr}.pd-t{font-size:12px;min-width:520px}.pd-t td:nth-child(2){min-width:120px}}
+@media print{body *{visibility:hidden !important}.pdoc,.pdoc *{visibility:visible !important}.pdoc{position:absolute;inset:0 0 auto 0;color:#000;background:#fff;padding:0 6mm}.pd-t th{background:#eee}}
 .proj .panel-h{gap:14px}
 .slider{display:flex;align-items:center;gap:10px;min-width:280px}
 .slider input[type=range]{-webkit-appearance:none;appearance:none;flex:1;height:8px;border-radius:4px;background:linear-gradient(to left,var(--brand) var(--p),var(--line2) var(--p));direction:rtl}
@@ -2806,8 +2818,9 @@ function claimsModel(list, o){
   return { G, total, projTotal, upW, pc0, pc1, N, L, lr0: pc0 != null && o.p0 ? pc0 / o.p0 : null, lr1: pc1 != null && o.p1 ? pc1 / o.p1 : null,
     fair: pc1 != null ? pc1 / o.tlr : null, hospShare, sc, o };
 }
-function claimsAdvice(M){
-  const o = M.o, A = [], y1 = o.nw ? fmtYear(o.nw.year) : "سال بعد";
+function claimsAdvice(M, K){
+  const o = M.o, A = [], y1 = K && K.year ? fmtYear(K.year) : o.nw ? fmtYear(o.nw.year) : "سال بعد";
+  if (K){ const ref = K.P.find(p => p.id === "ins") || K.P.find(p => p.id === K.rec); M = Object.assign({}, M, { fair: ref.fair }); }
   if (M.lr0 != null){
     if (M.lr0 >= 0.85) A.push(["warn", "سال خسارت زیان‌ده بوده", `Loss Ratio ${fmtPct(M.lr0)} (با خسارت دیررس). بیمه‌گر برای کم کردن نرخ انعطاف کمی دارد و افزایش نرخ منطقی است.`]);
     else if (M.lr0 < 0.75) A.push(["ok", "سال خسارت سودده بوده", `Loss Ratio ${fmtPct(M.lr0)}. اهرم مذاکره برای نرخ پایین‌تر یا سقف بیشتر دارید.`]);
@@ -2818,7 +2831,7 @@ function claimsAdvice(M){
     if (gap > 0.1) A.push(["warn", `نرخ ${y1} گران است`, `${fmtNum(o.p1)} در برابر نرخ منصفانهٔ ${fmtNum(M.fair)} (${fmtSignedPct(gap)}). تا حدود ${fmtNum(M.fair)} مذاکره کنید${M.N ? `؛ صرفه‌جویی کل حدود ${fmtNum((o.p1 - M.fair) * M.N / 1000)} میلیارد تومان` : ""}.`]);
     else if (gap < -0.1) A.push(["ok", `نرخ ${y1} به نفع کارفرماست`, `${fmtNum(o.p1)} در برابر نرخ منصفانهٔ ${fmtNum(M.fair)} (${fmtSignedPct(gap)}). برای کم کردن نرخ فشار نیاورید؛ روی شرایط (پوشش والدین، دورهٔ انتظار، تعرفه) مذاکره کنید و برای افزایش سال بعد آماده باشید.`]);
     else A.push(["note", `نرخ ${y1} منصفانه است`, `${fmtNum(o.p1)} در برابر ${fmtNum(M.fair)}. جای مذاکره روی نرخ کم است؛ روی شرایط و سقف‌های پرمصرف مذاکره کنید.`]);
-  } else if (M.fair != null) A.push(["note", "حق‌بیمهٔ منصفانهٔ سال بعد", `${fmtNum(M.fair)} میلیون تومان برای هر نفر با Loss Ratio هدف ${fmtPct(o.tlr)}.`]);
+  }
   const bind = M.G.filter(g => g.press != null && g.press >= 0.8);
   if (bind.length) A.push(["warn", "این سقف‌ها کم بوده‌اند", bind.map(g => `${CLM_NAME[g.k] || g.k}: میانگین هر نفر ${fmtNum(g.avg)} با سقف ${MT(g.c0)}`).join("؛ ") + (o.nw ? "؛ با سقف جدید هزینه‌شان بالا می‌رود." : "؛ کارکنان بخشی از هزینه را خودشان داده‌اند.")]);
   const busy = M.G.filter(g => g.use != null && g.use >= 0.4).sort((a, b) => b.use - a.use);
@@ -2833,9 +2846,103 @@ function claimsAdvice(M){
 }
 const fmtYear = y => y ? fmtInt(y).replace(/٬/g, "") : "";
 
+/* ---------- next-year packages ----------
+   Each package is a full set of next-year caps; its premium comes from the real claims: every coverage's cost
+   grows with medical inflation, and with the cap's growth beyond inflation where users were limited by it. */
+const PKG_ORDER = ["hosp", "special", "delivery", "infert", "para", "diag", "lab", "fetal", "outsurg", "rehab", "visitdrug", "visit", "drug", "emergency", "dental", "refractive", "glasses", "hearing", "ambIn", "ambOut", "amb", "organs", "prosthesis", "orthosis", "supplies", "specialDis", "combo", "total"];
+const roundUp1 = v => Math.ceil(v * 10 - 1e-9) / 10;
+function claimsPackages(M){
+  const o = M.o, old = o.old; if (!old || !old.caps || !M.N) return null;
+  const g = 1 + o.infl, by = Object.fromEntries(M.G.map(x => [x.k, x]));
+  const HOSP = new Set(["hosp", "special", "combo", "total", "delivery", "infert", "specialDis"]);
+  const binding = k => (k === "visitdrug" ? [by.visit, by.drug] : [by[k]]).some(x => x && x.press != null && x.press >= 0.8);
+  const P = [
+    { id: "keep", n: "حفظ وضع", d: "بستری و جراحی هم‌پای تورم؛ بقیهٔ سقف‌ها ثابت", cap: (k, v) => HOSP.has(k) ? v * g : v },
+    { id: "bal", n: "متعادل", d: "همهٔ سقف‌ها هم‌پای تورم؛ سقف‌هایی که پر شده بودند ۵۰٪ بیشتر", cap: (k, v) => v * g * (binding(k) ? 1.5 : 1) },
+    { id: "full", n: "رضایت بالا", d: "همه ۳۰٪ بیشتر از تورم؛ سقف‌هایی که پر شده بودند ۲ برابر", cap: (k, v) => v * g * (binding(k) ? 2 : 1.3) },
+  ];
+  if (o.nw && o.nw.caps) P.push({ id: "ins", n: "پیشنهاد بیمه‌گر", d: `سقف‌های بیمه‌نامهٔ ${fmtYear(o.nw.year)}`, caps: o.nw.caps, prem: o.p1 || null });
+  P.forEach(p => {
+    if (!p.caps) p.caps = Object.fromEntries(Object.entries(old.caps).map(([k, v]) => [k, v != null && isFinite(v) ? nice(p.cap(k, v)) : v]));
+    // in real terms next year's cap is c1 / (1 + inflation); compare that with this year's cap
+    p.cost = M.G.reduce((s, x) => { const c1 = capOf({ caps: p.caps }, x.k), up = x.c0 != null && c1 != null ? capUplift(x.avg, x.c0, isFinite(c1) ? c1 / g : c1) : 0; return s + x.amt * M.L * g * (1 + up); }, 0);
+    p.pc = p.cost / M.N; p.fair = roundUp1(p.pc / o.tlr);
+    if (p.prem == null) p.prem = p.fair;
+    p.total = p.prem * M.N; p.lr = p.pc / p.prem; p.ch = o.p0 ? p.prem / o.p0 - 1 : null;
+  });
+  return { P, rec: "bal", year: o.nw ? o.nw.year : old.year ? old.year + 1 : null };
+}
+const pkgCaps = (p, old) => PKG_ORDER.filter(k => p.caps[k] != null || (old && old.caps[k] != null)).map(k => [k, old ? old.caps[k] : null, p.caps[k]]);
+function packagesHTML(M, K){
+  if (!K) return `<section class="panel"><div class="panel-b small" style="color:var(--mid-ink);line-height:2">${!M.o.old ? "برای پیشنهاد سال بعد، بیمه‌نامهٔ سال خسارت (سقف تعهدات) را هم بدهید تا سقف‌ها معلوم شود." : "برای پیشنهاد سال بعد، تعداد بیمه‌شدگان را وارد کنید."}</div></section>`;
+  const y = fmtYear(K.year), sel = state.cl.pkg || K.rec, old = M.o.old;
+  const key = ["hosp", "dental", "visit", "drug", "para", "glasses"].filter(k => old.caps[k] != null).slice(0, 4);
+  return `<section class="panel proj" id="pkgs"><div class="panel-h"><h2>پیشنهاد سال ${y}</h2><span class="small muted">بر پایهٔ خسارت واقعی · Loss Ratio هدف ${fmtPct(M.o.tlr)} · تورم ${fmtPct(M.o.infl)}</span></div>
+    <div class="panel-b" style="display:flex;flex-direction:column;gap:16px"><div class="scn${K.P.length > 3 ? " scn4" : ""}">${K.P.map(p => `<div class="sc pkg ${p.id === K.rec ? "rec" : ""} ${p.id === sel ? "on" : ""}" data-pkg="${p.id}" role="button" tabindex="0" aria-pressed="${p.id === sel}">${p.id === K.rec ? '<span class="badge">پیشنهاد اپ</span>' : ""}<span class="tag ${p.id === "ins" ? "t-mid" : "t-protect"}" style="align-self:flex-start">${p.n}</span>
+      <div class="pr"><b class="num">${fmtNum(p.prem)}</b> <span class="small muted">میلیون تومان / نفر</span></div>
+      <div class="small" style="font-weight:800">کل: <span class="num">${fmtNum(p.total / 1000)}</span> میلیارد تومان${p.ch != null ? ` · <span style="color:var(--mid-ink)">${fmtSignedPct(p.ch)}</span> نسبت به ${fmtYear(old.year)}` : ""}</div>
+      <span class="small muted">${p.d}</span>
+      <ul>${key.map(k => `<li><span class="muted">${CCAT_NAME[k]}</span><b class="num">${MT(old.caps[k])} ← ${MT(p.caps[k])}</b></li>`).join("")}<li><span class="muted">Loss Ratio مورد انتظار</span><b style="color:${p.lr < 0.75 ? "var(--good)" : p.lr <= 0.85 ? "var(--mid-ink)" : "var(--bad)"}">${fmtPct(p.lr)}</b></li>${p.id === "ins" && p.fair !== p.prem ? `<li><span class="muted">نرخ منصفانهٔ همین سقف‌ها</span><b class="num">${fmtNum(p.fair)}</b></li>` : ""}</ul>
+      <button class="btn ${p.id === sel ? "primary" : ""}" type="button" data-issue="${p.id}">صدور پیش‌نویس بیمه‌نامه</button></div>`).join("")}</div>
+      <details><summary class="small" style="cursor:pointer;font-weight:700;color:var(--brand)">سقف همهٔ پوشش‌ها در هر بسته</summary><div class="tw" style="margin-top:10px"><table style="min-width:620px"><thead><tr><th>پوشش</th><th>سقف ${fmtYear(old.year)}</th>${K.P.map(p => `<th>${p.n}</th>`).join("")}</tr></thead><tbody>
+      ${pkgCaps(K.P[0], old).map(([k, a]) => `<tr><td>${CCAT_NAME[k] || k}</td><td class="nw">${a != null ? MT(a) : "—"}</td>${K.P.map(p => `<td class="nw"${p.caps[k] !== a ? ' style="font-weight:800;color:var(--brand)"' : ""}>${p.caps[k] != null ? MT(p.caps[k]) : "—"}</td>`).join("")}</tr>`).join("")}</tbody></table></div></details>
+    </div></section>`;
+}
+
+/* ---------- policy draft from the chosen package ---------- */
+function proposalDoc(M, K, p){
+  const o = M.o, old = o.old, y = fmtYear(K.year), rial = v => fmtInt(Math.round(v * 1e7)), fr = old.franchise ?? 10, inst = p.total / 12;
+  const rows = pkgCaps(p, old).filter(([, , c]) => c != null);
+  return `<article class="pdoc" dir="rtl">
+    <header class="pd-h"><div><h1>پیش‌نویس بیمه‌نامهٔ درمان تکمیلی گروهی</h1><span>سال ${y} · بستهٔ «${esc(p.n)}»</span></div><div class="pd-meta"><span>تاریخ تهیه: ${esc(new Date().toLocaleDateString("fa-IR"))}</span><span>تهیه‌شده با Renewal Intelligence</span></div></header>
+    <section class="pd-grid">
+      <div><span>بیمه‌گذار</span><b>${esc(old.org || "—")}</b></div><div><span>بیمه‌گر سال قبل</span><b>${esc(old.insurer || "—")}</b></div>
+      <div><span>مدت</span><b>یک سال، سال ${y}</b></div><div><span>تعداد بیمه‌شدگان</span><b>${fmtInt(M.N)} نفر</b></div>
+      <div><span>حق‌بیمهٔ هر بیمه‌شده در سال</span><b>${rial(p.prem)} ریال</b><em>${fmtNum(p.prem)} میلیون تومان</em></div>
+      <div><span>کل حق‌بیمهٔ سالانه</span><b>${rial(p.total)} ریال</b><em>${fmtNum(p.total / 1000)} میلیارد تومان</em></div>
+      <div><span>روش پرداخت</span><b>۱۲ قسط ماهانه، هر قسط ${rial(inst)} ریال</b></div><div><span>فرانشیز</span><b>${fmtInt(fr)}٪</b></div>
+    </section>
+    <h2>جدول تعهدات بیمه‌گر</h2>
+    <div class="tw"><table class="pd-t"><thead><tr><th>ردیف</th><th>شرح تعهد</th><th>حداکثر تعهد سالانهٔ هر نفر (ریال)</th><th>سقف ${fmtYear(old.year)}</th><th>تغییر</th></tr></thead><tbody>
+      ${rows.map(([k, a, c], i) => `<tr><td>${fmtInt(i + 1)}</td><td>${CCAT_NAME[k] || k}</td><td class="num">${c === Infinity ? "بدون سقف" : rial(c)}</td><td class="num">${a != null ? MT(a) + " م.ت" : "—"}</td><td class="num">${a && isFinite(a) && isFinite(c) && c !== a ? fmtSignedPct(c / a - 1) : "—"}</td></tr>`).join("")}
+    </tbody></table></div>
+    <h2>مبنای محاسبهٔ حق‌بیمه</h2>
+    <ul class="pd-l">
+      <li>خسارت پرداختی ${fmtYear(old.year)}: ${fmtNum(M.total)} میلیون تومان؛ با ${fmtPct(o.ibnr)} خسارت دیررس، سرانهٔ ${fmtNum(M.pc0)} میلیون تومان${M.lr0 != null ? ` (Loss Ratio ${fmtPct(M.lr0)} با حق‌بیمهٔ ${fmtNum(o.p0)})` : ""}.</li>
+      <li>خسارت سرانهٔ مورد انتظار ${y} با این سقف‌ها: ${fmtNum(p.pc)} میلیون تومان (تورم درمان ${fmtPct(o.infl)} و اثر سقف‌های جدید).</li>
+      <li>حق‌بیمه با Loss Ratio هدف ${fmtPct(o.tlr)} محاسبه شده است؛ Loss Ratio مورد انتظار: ${fmtPct(p.lr)}.</li>
+    </ul>
+    <p class="pd-note">این سند پیش‌نویس پیشنهادی کارگزار برای مذاکره و استعلام است. بیمه‌نامهٔ رسمی فقط با صدور و امضای بیمه‌گر معتبر است. سایر شرایط طبق شرایط عمومی و خصوصی بیمه‌نامهٔ سال قبل.</p>
+    <footer class="pd-sign"><div>بیمه‌گذار</div><div>کارگزار</div><div>بیمه‌گر</div></footer>
+  </article>`;
+}
+function renderProposal(id){
+  const ctx = state.lastClaims; if (!ctx) return go("claims");
+  const { M, K } = ctx, p = K.P.find(x => x.id === id) || K.P.find(x => x.id === K.rec);
+  setHead("پیش‌نویس بیمه‌نامه", `سال ${fmtYear(K.year)} · ${p.n}`);
+  $("view").innerHTML = `${crumb(["claims", "تحلیل خسارت"], [null, "پیش‌نویس بیمه‌نامه"])}
+    <div class="ph noprint"><div><h1>پیش‌نویس بیمه‌نامهٔ سال ${fmtYear(K.year)}</h1><span class="sub">از بستهٔ «${esc(p.n)}»؛ برای ارسال به بیمه‌گرها یا کارفرما</span></div>
+      <div class="actions"><button class="btn primary" type="button" id="pdPrint">چاپ / ذخیرهٔ PDF</button><button class="btn" type="button" id="pdWord">دانلود Word</button><button class="btn" type="button" id="pdSave">${state.contracts.some(c => c.id === "draft-" + p.id + "-" + K.year) ? "✓ ثبت شد در قراردادها" : "ثبت به‌عنوان قرارداد " + fmtYear(K.year)}</button></div></div>
+    <div class="fchips noprint" role="group" aria-label="بسته">${K.P.map(x => `<button type="button" data-pdp="${x.id}" aria-pressed="${x.id === p.id}">${x.n} · ${fmtNum(x.prem)}</button>`).join("")}</div>
+    <div class="panel pdoc-wrap">${proposalDoc(M, K, p)}</div>`;
+  document.querySelectorAll("[data-pdp]").forEach(b => b.onclick = () => { state.cl.pkg = b.dataset.pdp; go("proposal", b.dataset.pdp, true); });
+  $("pdPrint").onclick = () => window.print();
+  $("pdWord").onclick = () => {
+    const css = "body{font-family:Tahoma,Arial;direction:rtl}table{border-collapse:collapse;width:100%}td,th{border:1px solid #999;padding:4px 6px;font-size:10pt}h1{font-size:15pt}h2{font-size:12pt;margin-top:14pt}.pd-grid div{margin:2pt 0}.pd-grid span{color:#555}.pd-grid em{color:#555;margin-right:6pt}.pd-sign{display:flex;justify-content:space-between;margin-top:40pt}";
+    const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word"><head><meta charset="utf-8"><style>${css}</style></head><body dir="rtl">${proposalDoc(M, K, p).replace(/<div class="pd-sign">|<footer class="pd-sign">/, '<table style="border:0;margin-top:40pt"><tr>').replace(/<div>(بیمه‌گذار|کارگزار|بیمه‌گر)<\/div>/g, '<td style="border:0;text-align:center">$1</td>').replace("</footer>", "</tr></table>")}</body></html>`;
+    const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob(["﻿" + html], { type: "application/msword" }));
+    a.download = `پیش‌نویس-بیمه‌نامه-${(M.o.old.org || "").replace(/\s+/g, "-")}-${K.year}.doc`; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  };
+  $("pdSave").onclick = () => {
+    const id2 = "draft-" + p.id + "-" + K.year; state.contracts = state.contracts.filter(c => c.id !== id2);
+    state.contracts.push({ id: id2, src: "draft", org: M.o.old.org, insurer: M.o.old.insurer, year: K.year, plan: "", premium: p.prem, insured: M.N, franchise: M.o.old.franchise, caps: Object.assign({}, p.caps), draft: true });
+    render();
+  };
+}
+
 /* ---------- page ---------- */
 function claimsDefaults(){
-  const real = state.contracts.filter(c => !c.sample).sort((a, b) => a.year - b.year), cl = state.cl;
+  const real = state.contracts.filter(c => !c.sample && !c.draft).sort((a, b) => a.year - b.year), cl = state.cl;
   if (!cl.picked){ delete cl.oldId; delete cl.newId; }
   const org = state.claims.map(c => c.org).find(Boolean);
   const pool = org ? real.filter(c => orgKey(c.org) === orgKey(org)) : real;
@@ -2853,14 +2960,15 @@ function renderClaims(){
   const docN = [nw && nw.insured, old && old.insured].filter(Boolean).sort((a, b) => b - a)[0] || null, nBad = docN && maxU > docN * 1.05 ? docN : null;
   const o = { old, nw, insured: cl.insured ?? (nBad ? null : docN), p0: cl.p0 ?? (old && old.premium) ?? null,
     p1: cl.p1 ?? (nw && nw.premium) ?? null, ibnr: cl.ibnr ?? 0.1, infl: state.infl ?? 0.4, tlr: cl.tlr ?? ((state.settings.targetLR || 75) / 100) };
-  const opt = sel => `<option value="">— ندارم —</option>` + state.contracts.map(c => `<option value="${esc(c.id)}"${c.id === sel ? " selected" : ""}>${esc(short(c.org) || "بی‌نام")} · ${fmtYear(c.year) || "سال؟"}${c.plan ? " · " + esc(c.plan) : ""}${c.sample ? " (نمونه)" : ""}</option>`).join("");
+  const opt = sel => `<option value="">— ندارم —</option>` + state.contracts.map(c => `<option value="${esc(c.id)}"${c.id === sel ? " selected" : ""}>${esc(short(c.org) || "بی‌نام")} · ${fmtYear(c.year) || "سال؟"}${c.plan ? " · " + esc(c.plan) : ""}${c.sample ? " (نمونه)" : c.draft ? " (پیش‌نویس)" : ""}</option>`).join("");
   const drop = `<label class="drop" for="clmIn" id="clmDrop"><span class="di"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M12 18v-6M9 15l3-3 3 3"/></svg></span><b>فایل سقف تعهدات و فایل خسارت را با هم بدهید</b><span>سقف تعهدات: بیمه‌نامه به‌صورت PDF، اسکن، عکس، Word یا اکسل · خسارت: اکسل سامانهٔ بیمه‌گر (سرپایی و بیمارستانی) · ترتیب مهم نیست؛ اپ خودش تشخیص می‌دهد</span></label><input type="file" id="clmIn" accept=".xlsx,.xls,.csv,.pdf,.jpg,.jpeg,.png,.webp,.docx" multiple hidden>`;
   if (!state.claims.length){
     $("view").innerHTML = `${crumb([null, "تحلیل خسارت"])}<div class="ph"><div><h1>تحلیل خسارت و پیشنهاد سال بعد</h1><span class="sub">فایل خسارت پرداختی را بدهید؛ با بیمه‌نامه‌های خوانده‌شده جفت می‌شود و Loss Ratio واقعی، سقف‌های کم و حق‌بیمهٔ منصفانهٔ سال بعد را می‌دهد.</span></div></div>${drop}
-      <section class="panel"><div class="panel-b small muted" style="line-height:2">۱. فایل سقف تعهدات (بیمه‌نامهٔ سال خسارت) و فایل‌های خسارت را با هم بالا بدهید. بیمه‌نامهٔ سال بعد را هم اگر دارید، اضافه کنید.<br>۲. سقف‌ها و نرخ خوانده‌شده را یک بار تأیید کنید؛ اپ خودش به این صفحه برمی‌گردد.<br>۳. هر گروه خسارت به سقفش وصل می‌شود و تحلیل، سه سناریو و فایل اکسل سال بعد آماده است. همه‌چیز روی همین دستگاه می‌ماند.</div></section>`;
+      <section class="panel"><div class="panel-b small muted" style="line-height:2">۱. فایل سقف تعهدات (بیمه‌نامهٔ سال خسارت) و فایل‌های خسارت را با هم بالا بدهید. بیمه‌نامهٔ سال بعد را هم اگر دارید، اضافه کنید.<br>۲. سقف‌ها و نرخ خوانده‌شده را یک بار تأیید کنید؛ اپ خودش به این صفحه برمی‌گردد.<br>۳. هر گروه خسارت به سقفش وصل می‌شود و اپ سه بستهٔ سال بعد (سقف‌ها، حق‌بیمهٔ هر نفر و کل) پیشنهاد می‌دهد؛ هر کدام را بخواهید، پیش‌نویس بیمه‌نامه‌اش صادر می‌شود. همه‌چیز روی همین دستگاه می‌ماند.</div></section>`;
     return bindClaims();
   }
-  const M = claimsModel(state.claims, o), adv = claimsAdvice(M), y0 = old ? fmtYear(old.year) : "سال خسارت", y1 = nw ? fmtYear(nw.year) : "سال بعد";
+  const M = claimsModel(state.claims, o), K = claimsPackages(M), adv = claimsAdvice(M, K), y0 = old ? fmtYear(old.year) : "سال خسارت", y1 = K && K.year ? fmtYear(K.year) : nw ? fmtYear(nw.year) : "سال بعد";
+  state.lastClaims = { M, K }; const rp = K && K.P.find(p => p.id === (state.cl.pkg || K.rec));
   const lrCol = v => v == null ? "" : v < 0.75 ? "var(--good)" : v <= 0.85 ? "var(--mid-ink)" : "var(--bad)";
   const kp = (l, v, sub, color, lead) => `<div class="panel kp2${lead ? " lead" : ""}"><span class="l">${l}</span><b class="big num" style="${color ? `color:${color}` : ""}">${v}</b><span class="small muted">${sub}</span></div>`;
   const inp = (id, l, v, step, suf) => `<label class="cin"><span>${l}</span><span class="row"><input type="number" id="${id}" value="${v ?? ""}" step="${step}" inputmode="decimal" placeholder="وارد کنید"><em>${suf}</em></span></label>`;
@@ -2872,7 +2980,7 @@ function renderClaims(){
     <div class="panel-b cins">
       <label class="cin"><span>بیمه‌نامهٔ سال خسارت (سقف‌ها)</span><select id="clmOld">${opt(cl.oldId)}</select></label>
       <label class="cin"><span>بیمه‌نامهٔ سال بعد (اختیاری)</span><select id="clmNew">${opt(cl.newId)}</select></label>
-      ${inp("clmN", "تعداد بیمه‌شدگان", o.insured, 1, "نفر")}${nBad && cl.insured == null ? `<p class="small cwarn">بیمه‌نامه ${fmtInt(nBad)} نفر نوشته، ولی ${fmtInt(maxU)} نفر فقط از یک پوشش استفاده کرده‌اند؛ احتمالاً بقیه با الحاقیه اضافه شده‌اند. تعداد کل را وارد کنید.</p>` : ""}${inp("clmP0", `حق‌بیمهٔ هر نفر ${y0}`, o.p0, 0.01, "میلیون")}${inp("clmP1", `حق‌بیمهٔ پیشنهادی ${y1}`, o.p1, 0.01, "میلیون")}
+      ${inp("clmN", "تعداد بیمه‌شدگان", o.insured, 1, "نفر")}${nBad && cl.insured == null ? `<p class="small cwarn">بیمه‌نامه ${fmtInt(nBad)} نفر نوشته، ولی ${fmtInt(maxU)} نفر فقط از یک پوشش استفاده کرده‌اند؛ احتمالاً بقیه با الحاقیه اضافه شده‌اند. تعداد کل را وارد کنید.</p>` : ""}${inp("clmP0", `حق‌بیمهٔ هر نفر ${y0}`, o.p0, 0.01, "میلیون")}${inp("clmP1", `نرخ اعلامی بیمه‌گر برای ${y1} (اگر دارید)`, o.p1, 0.01, "میلیون")}
       ${inp("clmI", "خسارت دیررس (IBNR)", Math.round(o.ibnr * 100), 1, "٪")}${inp("clmT", "Loss Ratio هدف", Math.round(o.tlr * 100), 1, "٪")}
       <div class="slider cin" style="grid-column:span 2"><label for="clmInfl" class="small nw">تورم درمان</label><input type="range" id="clmInfl" min="0" max="80" step="5" value="${Math.round(o.infl * 100)}" style="--p:${Math.round(o.infl * 100 / 80 * 100)}%"><b class="num" id="clmInflV">${fmtInt(Math.round(o.infl * 100))}٪</b></div>
     </div>${old && old.sample ? '<p class="small" style="color:var(--mid-ink);padding:0 18px 14px">بیمه‌نامهٔ انتخاب‌شده نمونه است؛ برای نتیجهٔ واقعی بیمه‌نامهٔ خود را در «مدارک و قراردادها» بدهید.</p>' : ""}</section>
@@ -2880,8 +2988,9 @@ function renderClaims(){
     ${kp("کل خسارت پرداختی", fmtNum(M.total), `${fmtPct(1 - M.hospShare)} سرپایی · ${fmtPct(M.hospShare)} بیمارستانی`, "", true)}
     ${kp(`Loss Ratio ${y0}`, M.lr0 != null ? fmtPct(M.lr0) : "—", M.lr0 != null ? `سرانه ${fmtNum(M.pc0)} در برابر ${fmtNum(o.p0)}` : "تعداد نفرات و حق‌بیمه را وارد کنید", lrCol(M.lr0))}
     ${kp(`خسارت سرانهٔ ${y1}`, M.pc1 != null ? fmtNum(M.pc1) : "—", `تورم ${fmtPct(o.infl)} · اثر سقف‌ها ${fmtSignedPct(M.upW)}`)}
-    ${kp(`حق‌بیمهٔ منصفانهٔ ${y1}`, M.fair != null ? fmtNum(M.fair) : "—", M.lr1 != null ? `نرخ پیشنهادی ${fmtNum(o.p1)} ← LR ${fmtPct(M.lr1)}` : `با LR هدف ${fmtPct(o.tlr)}`, M.lr1 != null ? lrCol(M.lr1) : "var(--brand)")}
+    ${rp ? `<a class="panel kp2 accent" href="#pkgs"><span class="l">پیشنهاد ${y1} · ${esc(rp.n)}</span><b class="big num" style="color:var(--brand)">${fmtNum(rp.prem)}</b><span class="small muted">میلیون / نفر · کل ${fmtNum(rp.total / 1000)} میلیارد تومان</span></a>` : kp(`پیشنهاد ${y1}`, "—", !old ? "بیمه‌نامهٔ سال خسارت را بدهید" : "تعداد بیمه‌شدگان را وارد کنید", "var(--brand)")}
   </div>
+  ${packagesHTML(M, K)}
   <div class="ins">${adv.map(([k, t, s]) => `<div class="panel in in-${k}"><span class="ic">${{ warn: "!", ok: "✓", note: "i", info: "→" }[k]}</span><div><b>${esc(t)}</b><span>${esc(s)}</span></div></div>`).join("")}</div>
   <section class="panel"><div class="panel-h"><h2>هزینه به تفکیک پوشش</h2><span class="small muted">مصرف‌کننده = حداقل تعداد افراد</span></div>
     <div class="tw"><table class="clmt" style="min-width:860px"><thead><tr><th>پوشش</th><th>خسارت</th><th style="width:160px">سهم</th><th>مصرف‌کننده</th><th>میانگین هر نفر</th><th>سقف ${y0}</th><th>سقف ${y1}</th><th>اثر سقف</th><th>پیش‌بینی ${y1}</th></tr></thead><tbody>
@@ -2891,11 +3000,6 @@ function renderClaims(){
       <td class="nw">${g.c0 != null ? MT(g.c0) : "—"}${g.press != null && g.press >= 0.8 ? ' <span class="tag t-bad">به سقف خورده</span>' : ""}</td><td class="nw">${g.c1 != null ? MT(g.c1) : "—"}</td>
       <td class="nw">${g.up ? fmtSignedPct(g.up) : "—"}</td><td class="num nw"><b>${fmtNum(g.proj)}</b></td></tr>`).join("")}
     <tr><td><b>جمع</b></td><td class="num nw"><b>${fmtNum(M.total)}</b></td><td></td><td></td><td></td><td></td><td></td><td class="nw">${fmtSignedPct(M.upW)}</td><td class="num nw"><b>${fmtNum(M.projTotal)}</b></td></tr></tbody></table></div></section>
-  <section class="panel proj"><div class="panel-h"><h2>حق‌بیمهٔ ${y1}: سه سناریو</h2><span class="small muted">بر پایهٔ خسارت واقعی، نه فرض</span></div>
-    <div class="panel-b"><div class="scn">${M.sc.map((s, i) => `<div class="sc ${i === 1 ? "rec" : ""}">${i === 1 ? '<span class="badge">پیشنهاد اپ</span>' : ""}<span class="tag t-protect" style="align-self:flex-start">${s.n}</span>
-      <div class="pr"><b class="num">${s.prem != null ? fmtNum(s.prem) : "—"}</b> <span class="small muted">میلیون / نفر</span></div>
-      ${o.p1 && s.prem != null ? `<div class="small" style="font-weight:800;color:${s.prem >= o.p1 ? "var(--good)" : "var(--mid-ink)"}">${fmtSignedPct(s.prem / o.p1 - 1)} نسبت به نرخ پیشنهادی</div>` : ""}
-      <ul><li><span class="muted">تورم درمان</span><b>${fmtPct(s.i)}</b></li><li><span class="muted">Loss Ratio هدف</span><b>${fmtPct(s.lr)}</b></li>${M.N && s.prem != null ? `<li><span class="muted">کل حق‌بیمه</span><b class="num">${fmtNum(s.prem * M.N / 1000)} میلیارد</b></li>` : ""}</ul></div>`).join("")}</div></div></section>
   ${drop}`;
   bindClaims(M);
 }
@@ -2912,6 +3016,8 @@ function bindClaims(M){
   const ir = $("clmInfl"); ir.oninput = () => { $("clmInflV").textContent = fmtInt(+ir.value) + "٪"; ir.style.setProperty("--p", (+ir.value / 80 * 100) + "%"); };
   ir.onchange = () => { state.infl = +ir.value / 100; render(); };
   $("clmClear").onclick = () => { state.claims = []; render(); };
+  document.querySelectorAll("[data-pkg]").forEach(el => el.onclick = e => { if (e.target.closest("[data-issue]")) return; state.cl.pkg = el.dataset.pkg; render(); setTimeout(() => { const x = $("pkgs"); if (x) x.scrollIntoView({ block: "start" }); }, 0); });
+  document.querySelectorAll("[data-issue]").forEach(b => b.onclick = () => { state.cl.pkg = b.dataset.issue; go("proposal", b.dataset.issue); });
   $("clmX").onclick = () => { try { claimsXlsx(M); } catch (e){ alert("ساخت فایل ممکن نشد: " + e.message); } };
 }
 async function claimsUpload(files){
@@ -2946,14 +3052,15 @@ function claimsXlsx(M){
   const ws2 = XLSX.utils.aoa_to_sheet(g);
   for (let r = 2; r <= tot; r++){ ["C", "F", "J"].forEach(c => { if (ws2[c + r]) ws2[c + r].z = "0%"; }); ["B", "G", "K"].forEach(c => { if (ws2[c + r]) ws2[c + r].z = "#,##0.0"; }); }
   ws2["!cols"] = [{ wch: 30 }, { wch: 11 }, { wch: 8 }, { wch: 8 }, { wch: 12 }, { wch: 10 }, { wch: 12 }, { wch: 10 }, { wch: 10 }, { wch: 12 }, { wch: 13 }, { wch: 60 }];
-  const sc = [["سناریو", "تورم درمان", "Loss Ratio هدف", "خسارت سرانه " + y1, "حق‌بیمهٔ هر نفر", "در برابر نرخ پیشنهادی", "کل حق‌بیمه"]];
-  M.sc.forEach((s, i) => { const r = i + 2; sc.push([s.n, s.i, s.lr, f(`${S}B14*(1+B${r})*(1+${S}B10)`), f(`D${r}/C${r}`), f(`IFERROR(E${r}/${S}B6-1,"")`), f(`E${r}*${S}B4`)]); });
-  const ws3 = XLSX.utils.aoa_to_sheet(sc);
-  for (let r = 2; r <= 4; r++){ ["B", "C", "F"].forEach(c => { ws3[c + r].z = "0%"; }); ["D", "E"].forEach(c => { ws3[c + r].z = "#,##0.00"; }); ws3["G" + r].z = "#,##0"; }
-  ws3["!cols"] = [{ wch: 16 }, { wch: 11 }, { wch: 14 }, { wch: 16 }, { wch: 16 }, { wch: 20 }, { wch: 14 }];
+  const K = state.lastClaims && state.lastClaims.M === M ? state.lastClaims.K : claimsPackages(M);
+  const pk = K ? [["بسته", ...K.P.map(p => p.n)], ["حق‌بیمهٔ هر نفر (میلیون تومان)", ...K.P.map(p => +p.prem.toFixed(2))], ["کل حق‌بیمه (میلیون تومان)", ...K.P.map(p => Math.round(p.total))],
+    ["خسارت سرانهٔ مورد انتظار", ...K.P.map(p => +p.pc.toFixed(2))], ["Loss Ratio مورد انتظار", ...K.P.map(p => +p.lr.toFixed(3))], [], ["سقف هر نفر (میلیون تومان)", ...K.P.map(p => p.n), "سقف " + y0],
+    ...pkgCaps(K.P[0], o.old).map(([k, a]) => [CCAT_NAME[k] || k, ...K.P.map(p => p.caps[k] == null ? "" : isFinite(p.caps[k]) ? p.caps[k] : "بدون سقف"), a == null ? "" : isFinite(a) ? a : "بدون سقف"])] : [["برای بسته‌های سال بعد، بیمه‌نامهٔ سال خسارت و تعداد بیمه‌شدگان لازم است."]];
+  const ws3 = XLSX.utils.aoa_to_sheet(pk); if (K) K.P.forEach((p, i) => { const c = XLSX.utils.encode_col(i + 1); if (ws3[c + "5"]) ws3[c + "5"].z = "0%"; });
+  ws3["!cols"] = [{ wch: 30 }, ...(K ? K.P : []).map(() => ({ wch: 16 })), { wch: 12 }];
   const wb = XLSX.utils.book_new(); wb.Workbook = { Views: [{ RTL: true }] };
   [ws1, ws2, ws3].forEach(w => { w["!views"] = [{ RTL: true }]; });
-  XLSX.utils.book_append_sheet(wb, ws1, "خلاصه"); XLSX.utils.book_append_sheet(wb, ws2, "پوشش‌ها"); XLSX.utils.book_append_sheet(wb, ws3, "سناریوها");
+  XLSX.utils.book_append_sheet(wb, ws1, "خلاصه"); XLSX.utils.book_append_sheet(wb, ws2, "پوشش‌ها"); XLSX.utils.book_append_sheet(wb, ws3, "بسته‌های سال بعد");
   XLSX.writeFile(wb, `تحلیل-خسارت-${(o.old && o.old.org || "قرارداد").replace(/\s+/g, "-")}-${y1}.xlsx`);
 }
 
@@ -3569,6 +3676,7 @@ function render(){
   else if (p === "tender") renderTenderList(); else if (p === "tenderp") renderTender(state.idx);
   else if (p === "settings") renderSettings(); else if (p === "reminders") renderReminders();
   else if (p === "claims") renderClaims();
+  else if (p === "proposal") renderProposal(state.idx);
   else if (p === "docs") renderDocs(); else if (p === "doc") renderDoc(state.idx);
   else if (p === "admin") renderAdmin(); else if (p === "login") renderLogin();
   else if (p.startsWith("soon:")) renderSoon(p.slice(5));
@@ -3590,7 +3698,7 @@ function go(page, idx, back){
   }
   state.page = page; state.idx = idx ?? null; render(); window.scrollTo(0, 0);
 }
-const PARENT = { group: "renewal", tenderp: "tender", login: "admin" };
+const PARENT = { group: "renewal", tenderp: "tender", login: "admin", proposal: "claims" };
 function goBack(){
   const p = state.hist.pop();
   if (p) go(p[0], p[1], true); else go(PARENT[state.page] || "home", null, true);
