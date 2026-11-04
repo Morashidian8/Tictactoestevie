@@ -1319,7 +1319,7 @@ if (typeof module !== "undefined") module.exports.makeTenders = makeTenders;
 
 // Libraries ship next to the page (vendor/); if that fails (some viewers block it) the same versions
 // load from jsDelivr. Nothing about the document itself ever leaves the device.
-const DR = { worker: null, eng: null, pdf: null, src: null,
+const DR = { worker: null, eng: null, pdf: null, src: null, lanes: [], engs: [],
   bases: [
     { pdf: "vendor/pdf/", tjs: "vendor/ocr/tesseract.min.js", worker: "vendor/ocr/worker.min.js", core: "vendor/ocr/", fas: "vendor/ocr/", eng: "vendor/ocr/", b64: true },
     { pdf: "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/", tjs: "https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js",
@@ -1357,7 +1357,8 @@ async function drOCR(){
   if (DR.worker) return DR.worker;
   return drTry(async b => {
     if (!window.Tesseract) await drScript(b.tjs);
-    DR.worker = await Tesseract.createWorker("fas", 1, { workerPath: drAbs(b.worker), corePath: drAbs(b.core), langPath: await drLangPath(b, "fas"), gzip: true, cacheMethod: "none" });
+    DR.fasPath = await drLangPath(b, "fas");
+    DR.worker = await Tesseract.createWorker("fas", 1, { workerPath: drAbs(b.worker), corePath: drAbs(b.core), langPath: DR.fasPath, gzip: true, cacheMethod: "none" });
     return DR.worker;
   });
 }
@@ -1507,8 +1508,7 @@ async function drOrient(c){
   await w.setParameters({ tessedit_pageseg_mode: "3", tessedit_char_whitelist: "" });
   const conf = async deg => (await w.recognize(drRotate(small, deg))).data.confidence;
   if (sp.cols > sp.rows * 1.15){ const a = await conf(90), b = await conf(270); return { deg: a >= b ? 90 : 270, margin: Math.abs(a - b), turned: true }; }
-  const c0 = await conf(0); if (c0 >= 45) return { deg: 0, margin: 99 };
-  const c1 = await conf(180); return c1 > c0 + 20 ? { deg: 180, margin: c1 - c0 } : { deg: 0, margin: 99 };
+  return { deg: 0, margin: 99, check180: true };
 }
 function drCrop(c, cell, k){
   const pad = 4, cw = cell.x1 - cell.x0 - pad * 2, ch = cell.y1 - cell.y0 - pad * 2;
@@ -1517,12 +1517,20 @@ function drCrop(c, cell, k){
   g.fillStyle = "#fff"; g.fillRect(0, 0, out.width, out.height); g.imageSmoothingQuality = "high";
   g.drawImage(c, cell.x0 + pad, cell.y0 + pad, cw, ch, 20, 20, cw * k, ch * k); return out;
 }
-async function drEng(){
-  if (DR.eng) return DR.eng;
+async function drEng(lane){
+  lane = lane || 0; if (DR.engs[lane]) return DR.engs[lane];
   const b = DR.src || DR.bases[0];
-  DR.eng = await Tesseract.createWorker("eng", 1, { workerPath: drAbs(b.worker), corePath: drAbs(b.core), langPath: await drLangPath(b, "eng"), gzip: true, cacheMethod: "none" });
-  await DR.eng.setParameters({ tessedit_pageseg_mode: "7", tessedit_char_whitelist: "0123456789/,." });
-  return DR.eng;
+  const e = await Tesseract.createWorker("eng", 1, { workerPath: drAbs(b.worker), corePath: drAbs(b.core), langPath: DR.engPath || (DR.engPath = await drLangPath(b, "eng")), gzip: true, cacheMethod: "none" });
+  await e.setParameters({ tessedit_pageseg_mode: "7", tessedit_char_whitelist: "0123456789/,." });
+  if (!lane) DR.eng = e; return (DR.engs[lane] = e);
+}
+// Cells of a table are read by several workers at once when the device can afford it (each holds the model in memory).
+const drLaneCount = () => { if (window.DR_LANES) return window.DR_LANES; const cores = navigator.hardwareConcurrency || 2, mem = navigator.deviceMemory || 4; return cores >= 4 && mem >= 3 ? 2 : 1; };
+async function drLane(i){
+  if (!i) return drOCR();
+  if (DR.lanes[i]) return DR.lanes[i];
+  const b = DR.src || DR.bases[0];
+  return (DR.lanes[i] = await Tesseract.createWorker("fas", 1, { workerPath: drAbs(b.worker), corePath: drAbs(b.core), langPath: DR.fasPath, gzip: true, cacheMethod: "none" }));
 }
 const drNorm = s => String(s || "").replace(/[۰-۹]/g, d => "۰۱۲۳۴۵۶۷۸۹".indexOf(d)).replace(/[٠-٩]/g, d => "٠١٢٣٤٥٦٧٨٩".indexOf(d)).replace(/[٬،]/g, ",");
 function drParseAmount(t){
@@ -1531,7 +1539,7 @@ function drParseAmount(t){
 }
 // One table cell. Narrow cells try the amount readers first (the Persian model turns numbers into letters);
 // whatever is not an amount is read as text. Wide description cells: only their first lines are read.
-async function drCell(w, c, cell, wide){
+async function drCell(w, c, cell, wide, lane){
   if (wide){
     const top = Object.assign({}, cell, { y1: Math.min(cell.y1, cell.y0 + 130) }), crop = drCrop(c, top, 2);
     if (!crop) return {};
@@ -1546,39 +1554,74 @@ async function drCell(w, c, cell, wide){
   const r = await w.recognize(crop), text = r.data.text.replace(/\s+/g, " ").trim(), out = { text, conf: r.data.confidence };
   if (text.length < 30 && /بدون\s*سق|بدونسق|نامحدود/.test(text)){ out.value = Infinity; out.vconf = r.data.confidence; return out; }
   if (!/[0-9۰-۹]/.test(text) && (text.match(/[آ-ی]/g) || []).length > 6) return out;
-  const e = await (await drEng()).recognize(crop), v = drParseAmount(e.data.text);
+  const e = await (await drEng(lane)).recognize(crop), v = drParseAmount(e.data.text);
   if (v != null && e.data.confidence >= 60){ out.value = v; out.vconf = e.data.confidence; }
   return out;
 }
+// share of dark pixels in a cell (empty cells are skipped)
+function drInkShare(c, cell){
+  const pad = 5, w = Math.max(1, Math.round(cell.x1 - cell.x0 - pad * 2)), h = Math.max(1, Math.round(cell.y1 - cell.y0 - pad * 2));
+  const d = c.getContext("2d").getImageData(Math.round(cell.x0 + pad), Math.round(cell.y0 + pad), w, h).data; let n = 0;
+  for (let i = 0; i < d.length; i += 16) if (d[i] * 0.3 + d[i + 1] * 0.59 + d[i + 2] * 0.11 < 140) n++;
+  return n / (d.length / 16);
+}
 async function drReadPage(page, progress, ctx){
   let c = page.canvas;
+  const say = (s, f) => progress && progress(s, f);
   if (page.words){ // text PDF: no OCR, just place the words in the grid
     const grid = drGrid(c);
     return { canvas: c, text: page.words.map(w => w.text).join(" "), tables: grid ? [drValues(drFill(grid, page.words))] : [], conf: 99 };
   }
   const w = await drOCR();
-  progress && progress("تشخیص جهت صفحه");
+  say("تشخیص جهت صفحه", 0.02);
   const o = await drOrient(c);
   // pages of one scan are turned the same way: an unsure page follows the surest earlier one
   let deg = o.deg; if (o.turned){ if (ctx.turn && (o.margin < 12 || ctx.turn.margin > o.margin)) deg = ctx.turn.deg; else ctx.turn = o; }
   if (deg) c = drRotate(c, deg);
-  progress && progress("خواندن متن صفحه");
-  await w.setParameters({ tessedit_pageseg_mode: "3", preserve_interword_spaces: "1" });
-  const full = await w.recognize(c, {}, { text: true, blocks: true });
-  const words = drWords(full.data), grid = drGrid(c), tables = [];
-  if (grid){
-    const t = drFill(grid, words);
-    // narrow cells (titles and amounts) are read again on their own: page-level OCR mixes table columns
-    await w.setParameters({ tessedit_pageseg_mode: "6" });
-    let n = 0; const all = t.rows.flat(), total = all.length;
-    for (const cell of all){
-      n++; if (n % 4 === 0) progress && progress(`خواندن خانه‌های جدول ${fmtInt(n)} از ${fmtInt(total)}`);
-      const wide = (cell.x1 - cell.x0) >= grid.W * 0.4, r = await drCell(w, c, cell, wide);
-      if (wide){ if (r.text && (r.conf || 0) >= (cell.conf || 0) - 5) Object.assign(cell, r); } else Object.assign(cell, r);
-    }
-    tables.push(t);
+  let grid = drGrid(c);
+  // The page read skips the narrow table cells (amounts and short titles): those are read one by one below,
+  // and leaving them out keeps the page read fast and its lines from mixing columns.
+  const isWide = (gr, cell) => (cell.x1 - cell.x0) >= gr.W * 0.4;
+  const pageImg = (cv, gr) => { if (!gr) return cv; const m = drCanvas(cv.width, cv.height), g = m.getContext("2d"); g.drawImage(cv, 0, 0); g.fillStyle = "#fff";
+    gr.rows.flat().forEach(k => { if (!isWide(gr, k)) g.fillRect(k.x0 + 2, k.y0 + 2, k.x1 - k.x0 - 4, k.y1 - k.y0 - 4); }); return m; };
+  say("خواندن متن صفحه", 0.06);
+  await w.setParameters({ tessedit_pageseg_mode: "3", preserve_interword_spaces: "1", tessedit_char_whitelist: "" });
+  let full = await w.recognize(pageImg(c, grid), {}, { text: true, blocks: true });
+  if (o.check180 && full.data.confidence < 40 && (full.data.text || "").replace(/\s/g, "").length > 20){ // maybe upside down
+    const r = drRotate(c, 180), g2 = drGrid(r), keep = grid; grid = g2; const f2 = await w.recognize(pageImg(r, g2), {}, { text: true, blocks: true });
+    if (f2.data.confidence > full.data.confidence + 20){ c = r; full = f2; } else grid = keep;
   }
-  return { canvas: c, text: full.data.text, tables, conf: full.data.confidence };
+  const words = drWords(full.data), tables = [];
+  let text = full.data.text;
+  if (grid){
+    const t = drFill(grid, words), all = t.rows.flat(), total = all.length;
+    // Side columns (row number, family cap, franchise…) hold only small numbers: once the first rows show that, the rest of the column is skipped.
+    const col = {}, keyOf = cell => Math.round((cell.x0 + cell.x1) / 2 / 25);
+    const minor = cell => { const s = col[keyOf(cell)]; return s && s.n >= 4 && s.small === s.n; };
+    let done = 0, next = 0;
+    const lanes = Math.min(drLaneCount(), total);
+    const run = async lane => {
+      const lw = await drLane(lane);
+      while (next < all.length){
+        const cell = all[next++], wide = isWide(grid, cell);
+        // long text cells: the page read is kept unless it was weak there
+        if (wide && (cell.text || "").replace(/\s/g, "").length > 5 && (cell.conf || 0) >= 65){}
+        else if (!wide && (drInkShare(c, cell) < 0.004 || minor(cell))){ cell.text = cell.text || ""; cell.conf = cell.conf || 0; }
+        else {
+          const r = await drCell(lw, c, cell, wide, lane);
+          if (wide){ if (r.text && (r.conf || 0) >= (cell.conf || 0) - 5) Object.assign(cell, r); } else Object.assign(cell, r);
+          if (!wide){ const s = col[keyOf(cell)] = col[keyOf(cell)] || { n: 0, small: 0 }; s.n++;
+            const small = (cell.value != null && cell.value < 1000) || /^[\s0-9۰-۹.,٪%-]{0,4}$/.test(drNorm(cell.text || "")) && cell.value == null && !/بدون|نامحدود/.test(cell.text || "");
+            if (small) s.small++; }
+        }
+        done++; if (done % 3 === 0 || done === total) say(`خواندن جدول: خانهٔ ${fmtInt(done)} از ${fmtInt(total)}`, 0.3 + 0.7 * done / total);
+      }
+    };
+    await Promise.all(Array.from({ length: lanes }, (_, i) => run(i)));
+    tables.push(t);
+    text += "\n" + t.rows.map(r => r.filter(k => !isWide(grid, k)).map(k => k.text || "").join(" ")).join("\n");
+  }
+  return { canvas: c, text, tables, conf: full.data.confidence };
 }
 function drFill(grid, words){
   const rows = grid.rows.map(cells => cells.map(cell => {
@@ -1611,7 +1654,7 @@ async function readDocument(file, progress){
   const out = { file: file.name, text: "", tables: [], pages: [] };
   const ctx = {};
   for (let i = 0; i < pages.length; i++){
-    const r = await drReadPage(pages[i], s => progress && progress(`صفحهٔ ${fmtInt(i + 1)} از ${fmtInt(pages.length)}: ${s}`), ctx);
+    const r = await drReadPage(pages[i], (s, f) => progress && progress(`صفحهٔ ${fmtInt(i + 1)} از ${fmtInt(pages.length)}: ${s}`, (i + (f || 0)) / pages.length), ctx);
     out.pages.push(r); out.text += "\n" + r.text; r.tables.forEach(t => out.tables.push(Object.assign(t, { page: i })));
   }
   return out;
@@ -2362,7 +2405,7 @@ async function handleDocs(files, opts){
     $("modal").innerHTML = box(i + 1); $("modal").hidden = false; $("docFile").textContent = `${f.name} (${fmtInt(i + 1)} از ${fmtInt(files.length)})`;
     let ticks = 0;
     try {
-      const doc = await readDocument(f, s => { ticks++; $("docStep").textContent = s; $("docBar").style.width = Math.min(95, 3 + ticks * 2.5) + "%"; });
+      const doc = await readDocument(f, (s, frac) => { ticks++; $("docStep").textContent = s; $("docBar").style.width = (frac != null ? Math.max(3, Math.min(99, frac * 100)) : Math.min(60, 3 + ticks * 2)).toFixed(1) + "%"; });
       const u = understand(doc);
       u.planPremium = {}; (u.plans.length ? u.plans : ["اصلی"]).forEach((p, k) => { u.planPremium[p] = { v: k === 0 && u.premium ? u.premium / 1e7 : null, per: "year" }; });
       state.docs.push({ id: "d" + Date.now() + i, file: f.name, doc, u, saved: false });
