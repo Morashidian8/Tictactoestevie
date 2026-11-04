@@ -2991,7 +2991,8 @@ function claimsPackages(M){
   // «بیشترین سقف با این بودجه»: the way insurers bid. Start from last year's caps unchanged in rials (frequent items lose
   // value to inflation, which funds the rest), then raise caps step by step where a rial of premium buys the most cap —
   // rare, large covers (hospital, special surgery, combined caps) first; frequent, expensive ones (dental, visit) last.
-  const budget = state.cl.budget || o.p1 || null;
+  const balCaps = Object.fromEntries(Object.entries(old.caps).map(([k, v]) => [k, v != null && isFinite(v) ? nice(P[1].cap(k, v)) : v]));
+  const budget = state.cl.budget || o.p1 || priceOf(M, balCaps);
   if (budget){
     // an insurer charges for a higher cap even when few reach it: 4% of the coverage's cost for every doubling
     const amtOf = k => (k === "visitdrug" ? ["visit", "drug"] : [k]).reduce((t, q) => t + (by[q] ? by[q].amt : 0), 0) * M.L * g / M.N;
@@ -3012,8 +3013,29 @@ function claimsPackages(M){
     // combined caps never below the rows they combine; the annual total grows with the largest cap
     if (caps.combo != null && caps.special) caps.combo = Math.max(caps.combo, caps.special);
     if (old.caps.total) caps.total = nice(Math.max(caps.total, old.caps.total * Math.max(...keys.map(k => caps[k] / old.caps[k]))));
-    P.push({ id: "opt", n: "بیشترین سقف با این بودجه", caps, short,
-      d: short ? `بودجهٔ ${fmtNum(budget)} حتی برای سقف‌های سال قبل (بدون افزایش) کافی نیست؛ کمترین حق‌بیمهٔ لازم همین عدد است` : `حق‌بیمهٔ ${fmtNum(budget)}؛ بندهای پرتکرار حداکثر هم‌پای تورم، سقف‌های بزرگ و کم‌تکرار بالا (روش رایج بیمه‌گرها در مناقصه)` });
+    P.push({ id: "opt", n: "به نفع بیمه‌گر", caps, short, budget: short ? null : budget,
+      d: short ? `بودجهٔ ${fmtNum(budget)} حتی برای سقف‌های سال قبل (بدون افزایش) کافی نیست` : `با همین ${fmtNum(budget)}: بندهای پرمتقاضی (ویزیت، دارو، دندان…) ثابت، سقف‌های بزرگ و کم‌تکرار بالا؛ روی کاغذ بزرگ، پرداخت واقعی کمتر` });
+
+    // «به نفع کارکنان»: the same budget spent where people actually claim. Rare, non-critical items stay at last year's
+    // rials; hospital and special surgery keep their real value; then the most used and most constrained items rise first.
+    const KEEPV = new Set(["hosp", "special", "delivery", "specialDis", "organs", "ambIn", "ambOut", "amb", "combo", "total"]);
+    const avgOf = k => { const qs = (k === "visitdrug" ? ["visit", "drug"] : [k]).filter(q => by[q]); if (!qs.length) return 0; const u = Math.max(...qs.map(q => by[q].users || 0)); return u ? qs.reduce((t, q) => t + by[q].amt, 0) / u : 0; };
+    const ec = {}, eprice = c => costOf(M, c) / M.N / o.tlr;
+    Object.entries(old.caps).forEach(([k, v]) => { ec[k] = v == null || !isFinite(v) ? v : KEEPV.has(k) || useOf(k) >= 0.2 || (by[k] && by[k].press >= 0.8) ? nice(v * g) : v; });
+    let ecur = eprice(ec); const eshort = ecur > budget;
+    const want = Object.keys(ec).filter(k => ec[k] && isFinite(ec[k]) && !["combo", "total"].includes(k) && useOf(k) >= 0.03);
+    for (let it = 0; it < 300 && ecur < budget; it++){
+      let best = null;
+      want.forEach(k => { const to = nice(ec[k] * 1.2); if (to <= ec[k] || to > old.caps[k] * 3.5) return;
+        const pressure = Math.min(1.5, avgOf(k) * g / ec[k]); if (pressure < 0.35) return; // nobody is held back by this cap any more
+        const t = Object.assign({}, ec, { [k]: to }), d = eprice(t) - ecur; if (ecur + d > budget) return;
+        const score = useOf(k) * pressure; if (!best || score > best.score) best = { k, to, d, score }; });
+      if (!best) break; ec[best.k] = best.to; ecur += best.d;
+    }
+    if (ec.combo != null && ec.special) ec.combo = Math.max(ec.combo, nice(old.caps.combo * g), ec.special);
+    if (old.caps.total) ec.total = nice(old.caps.total * g);
+    P.push({ id: "emp", n: "به نفع کارکنان", caps: ec, short: eshort, budget: eshort ? null : budget,
+      d: eshort ? `بودجهٔ ${fmtNum(budget)} برای حفظ ارزش بندهای پرمتقاضی کافی نیست` : `با همین ${fmtNum(budget)}: بندهای کم‌متقاضی ثابت، پولش به بندهای پرمتقاضی و پرشده (دندان، ویزیت، دارو، عینک، آزمایش)` });
   }
   // the broker's own package: the recommended one with the changes ticked under «تغییر پوشش‌ها»
   const tw = state.cl.tweaks || {};
@@ -3025,7 +3047,7 @@ function claimsPackages(M){
     // in real terms next year's cap is c1 / (1 + inflation); compare that with this year's cap
     p.cost = costOf(M, p.caps);
     p.pc = p.cost / M.N; p.fair = roundUp1(p.pc / o.tlr);
-    if (p.prem == null) p.prem = p.fair;
+    if (p.prem == null) p.prem = p.budget || p.fair;
     p.total = p.prem * M.N; p.lr = p.pc / p.prem; p.ch = o.p0 ? p.prem / o.p0 - 1 : null;
   });
   return { P, rec: "bal", year: o.nw ? o.nw.year : old.year ? old.year + 1 : null };
@@ -3089,7 +3111,7 @@ function packagesHTML(M, K){
       <div class="pr"><b class="num">${fmtNum(p.prem)}</b> <span class="small muted">میلیون تومان / نفر</span></div>
       <div class="small" style="font-weight:800">کل: <span class="num">${fmtNum(p.total / 1000)}</span> میلیارد تومان${p.ch != null ? ` · <span style="color:var(--mid-ink)">${fmtSignedPct(p.ch)}</span> نسبت به ${fmtYear(old.year)}` : ""}</div>
       <span class="small ${p.short ? "" : "muted"}"${p.short ? ' style="color:var(--bad);font-weight:700"' : ""}>${p.d}</span>
-      <ul>${key.map(k => `<li><span class="muted">${CCAT_NAME[k]}</span><b class="num">${MT(old.caps[k])} ← ${MT(p.caps[k])}</b></li>`).join("")}<li><span class="muted">Loss Ratio مورد انتظار</span><b style="color:${p.lr < 0.75 ? "var(--good)" : p.lr <= 0.85 ? "var(--mid-ink)" : "var(--bad)"}">${fmtPct(p.lr)}</b></li>${p.id === "ins" && p.fair !== p.prem ? `<li><span class="muted">نرخ منصفانهٔ همین سقف‌ها</span><b class="num">${fmtNum(p.fair)}</b></li>` : ""}</ul>
+      <ul>${key.map(k => `<li><span class="muted">${CCAT_NAME[k]}</span><b class="num">${MT(old.caps[k])} ← ${MT(p.caps[k])}</b></li>`).join("")}${p.id === "opt" || p.id === "emp" ? `<li><span class="muted">پرداخت واقعی به هر نفر</span><b class="num">${fmtNum(p.pc)} میلیون</b></li><li><span class="muted">سهم بیمه‌گر (هزینه و سود)</span><b class="num">${fmtPct(1 - p.lr)}</b></li>` : ""}<li><span class="muted">Loss Ratio مورد انتظار</span><b style="color:${p.lr < 0.75 ? "var(--good)" : p.lr <= 0.85 ? "var(--mid-ink)" : "var(--bad)"}">${fmtPct(p.lr)}</b></li>${p.id === "ins" && p.fair !== p.prem ? `<li><span class="muted">نرخ منصفانهٔ همین سقف‌ها</span><b class="num">${fmtNum(p.fair)}</b></li>` : ""}</ul>
       <button class="btn ${p.id === sel ? "primary" : ""}" type="button" data-issue="${p.id}">صدور پیش‌نویس بیمه‌نامه</button></div>`).join("")}</div>
       <details><summary class="small" style="cursor:pointer;font-weight:700;color:var(--brand)">سقف همهٔ پوشش‌ها در هر بسته</summary><div class="tw" style="margin-top:10px"><table style="min-width:620px"><thead><tr><th>پوشش</th><th>سقف ${fmtYear(old.year)}</th>${K.P.map(p => `<th>${p.n}</th>`).join("")}</tr></thead><tbody>
       ${pkgCaps(K.P[0], old).map(([k, a]) => `<tr><td>${CCAT_NAME[k] || k}</td><td class="nw">${a != null ? MT(a) : "—"}</td>${K.P.map(p => `<td class="nw"${p.caps[k] !== a ? ' style="font-weight:800;color:var(--brand)"' : ""}>${p.caps[k] != null ? MT(p.caps[k]) : "—"}</td>`).join("")}</tr>`).join("")}</tbody></table></div></details>
