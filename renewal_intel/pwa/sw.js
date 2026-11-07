@@ -1,7 +1,7 @@
 // Service Worker — اپ «Renewal Intelligence»
 // شبکه مقدم: هر بار که اپ باز می‌شود آخرین نسخهٔ منتشرشده گرفته می‌شود؛
 // کش برای وقتی است که اینترنت نیست. کتابخانهٔ اکسل و فونت محلی‌اند تا اپ آفلاین کامل کار کند.
-const CACHE = "renewal-intel-v13";
+const CACHE = "renewal-intel-v14";
 const ASSETS = ["./", "./index.html", "./manifest.json", "./vendor/xlsx.full.min.js",
   "./fonts/Vazirmatn-Regular.woff2", "./fonts/Vazirmatn-Medium.woff2", "./fonts/Vazirmatn-Bold.woff2",
   "./icons/icon-192.png", "./icons/icon-512.png"];

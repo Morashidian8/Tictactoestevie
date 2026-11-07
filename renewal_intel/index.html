@@ -2539,16 +2539,23 @@ function renderDoc(i){
       ${plans.map(p => { const pp = u.planPremium[p] || { v: null, per: "year" }; return `<label class="field">حق‌بیمهٔ هر نفر${plans.length > 1 ? ` — ${esc(p)}` : ""} (میلیون تومان)
         <span style="display:flex;gap:6px"><input type="number" step="0.01" data-dp="${esc(p)}" value="${pp.v != null ? +pp.v.toFixed(3) : ""}" style="flex:1" placeholder="${u.kind === "استعلام قیمت" ? "هنوز قیمتی نیست" : "وارد کنید"}">
         <select data-dper="${esc(p)}" style="border:1px solid var(--input-line);border-radius:9px;background:var(--surface);padding:0 8px"><option value="year"${pp.per === "year" ? " selected" : ""}>سالانه</option><option value="month"${pp.per === "month" ? " selected" : ""}>ماهانه</option></select></span>
-        ${p === plans[0] && u.premiumNote ? `<span class="small muted">${esc(u.premiumNote)}</span>` : ""}</label>`; }).join("")}
+        ${p === plans[0] && u.premiumNote ? `<span class="small muted">${esc(u.premiumNote)}</span>` : ""}</label>
+        <label class="field">کل حق‌بیمهٔ سالانه${plans.length > 1 ? ` — ${esc(p)}` : ""} (میلیون تومان)<input type="number" step="1" data-dtot="${esc(p)}" value="${pp.v != null && u.insured ? Math.round((pp.per === "month" ? pp.v * 12 : pp.v) * u.insured) : ""}" placeholder="هر نفر × تعداد"><span class="small muted" data-dtotnote="${esc(p)}">${pp.v != null && u.insured ? `${fmtNum(pp.per === "month" ? pp.v * 12 : pp.v)} × ${fmtInt(u.insured)} نفر` : "با واردکردن کل، حق‌بیمهٔ هر نفر خودکار حساب می‌شود"}</span></label>`; }).join("")}
     </div></section>
   ${reviewHTML(d, u, plans, prev)}
   ${u.issues.length ? `<section class="panel"><div class="panel-h"><h2>نیاز به توجه</h2></div><div class="panel-b"><ul class="dq">${u.issues.map(x => `<li><span class="sev tag t-mid">بررسی</span><span>${esc(x)}</span></li>`).join("")}</ul></div></section>` : ""}
   <details class="panel"><summary class="panel-h" style="cursor:pointer"><h2>متن کامل خوانده‌شده</h2></summary><div class="panel-b">${u.fixes ? `<p class="small muted" style="margin-bottom:8px">${fmtInt(u.fixes)} واژه با فرهنگ واژه‌های بیمه اصلاح شد؛ رنگی‌اند و با نگه‌داشتن رویشان، آنچه خوانده شده بود دیده می‌شود.</p>` : ""}<pre style="white-space:pre-wrap;font:inherit;font-size:12.5px;max-height:420px;overflow:auto;margin:0">${lexHtml(d.doc.text.trim())}</pre></div></details>`;
 
   const num = s => { s = drNorm(String(s)).trim(); if (/^(∞|بدون|بی)/.test(s)) return Infinity; const v = parseFloat(s.replace(/,/g, "")); return isNaN(v) ? null : v; };
-  $("view").querySelectorAll("[data-df]").forEach(el => el.onchange = () => { const k = el.dataset.df; u[k] = el.type === "number" ? (el.value === "" ? null : +el.value) : el.value.trim(); });
-  $("view").querySelectorAll("[data-dp]").forEach(el => el.onchange = () => { const p = el.dataset.dp; (u.planPremium[p] = u.planPremium[p] || { per: "year" }).v = num(el.value); });
-  $("view").querySelectorAll("[data-dper]").forEach(el => el.onchange = () => { const p = el.dataset.dper; (u.planPremium[p] = u.planPremium[p] || { v: null }).per = el.value; });
+  $("view").querySelectorAll("[data-df]").forEach(el => el.onchange = () => { const k = el.dataset.df; u[k] = el.type === "number" ? (el.value === "" ? null : +el.value) : el.value.trim(); if (k === "insured") plans.forEach(syncTot); });
+  const syncTot = p => { const pp = u.planPremium[p] || {}, t = $("view").querySelector(`[data-dtot="${CSS.escape(p)}"]`), nt = $("view").querySelector(`[data-dtotnote="${CSS.escape(p)}"]`); if (!t) return;
+    const y = pp.v == null ? null : pp.per === "month" ? pp.v * 12 : pp.v;
+    t.value = y != null && u.insured ? Math.round(y * u.insured) : ""; nt.textContent = y != null && u.insured ? `${fmtNum(y)} × ${fmtInt(u.insured)} نفر` : "با واردکردن کل، حق‌بیمهٔ هر نفر خودکار حساب می‌شود"; };
+  $("view").querySelectorAll("[data-dp]").forEach(el => el.onchange = () => { const p = el.dataset.dp; (u.planPremium[p] = u.planPremium[p] || { per: "year" }).v = num(el.value); syncTot(p); });
+  $("view").querySelectorAll("[data-dtot]").forEach(el => el.onchange = () => { const p = el.dataset.dtot, t = num(el.value), pp = u.planPremium[p] = u.planPremium[p] || { per: "year" };
+    if (t == null || !u.insured) return; const y = t / u.insured; pp.v = pp.per === "month" ? y / 12 : y;
+    const inp = $("view").querySelector(`[data-dp="${CSS.escape(p)}"]`); if (inp) inp.value = +pp.v.toFixed(3); syncTot(p); });
+  $("view").querySelectorAll("[data-dper]").forEach(el => el.onchange = () => { const p = el.dataset.dper; (u.planPremium[p] = u.planPremium[p] || { v: null }).per = el.value; syncTot(p); });
   $("view").querySelectorAll("[data-dc]").forEach(el => el.onchange = () => { u.rows[+el.dataset.dc].cat = el.value || null; });
   $("view").querySelectorAll("[data-dv]").forEach(el => el.onchange = () => { const [ri, p] = el.dataset.dv.split("|"), v = num(el.value), r = u.rows[+ri];
     if (v == null) delete r.vals[p]; else r.vals[p] = { rial: v === Infinity ? Infinity : v * 1e7, conf: 100 }; el.style.borderColor = "var(--input-line)"; el.style.background = "var(--surface)";
@@ -2744,7 +2751,7 @@ function overviewHTML(pair, cats, G){
   const kp = (l, v, sub, color) => `<div class="panel kp2"><span class="l">${l}</span><b class="big" style="${color ? `color:${color}` : ""}">${v}</b><span class="small muted">${sub}</span></div>`;
   return `<div class="cmp-h"><div><h1>${esc(G.name)}</h1><span class="sub">${[b.insurer, b.insured ? fmtInt(b.insured) + " نفر" : null].filter(Boolean).map(esc).join(" · ")}${b.plan ? " · " + esc(b.plan) : ""} · مقایسهٔ ${y(a)} ← ${y(b)}</span></div></div>
   <div class="kp2s">
-    <div class="panel kp2 lead"><span class="l">حق‌بیمهٔ سالانهٔ هر نفر</span><div class="row"><span class="muted num" style="font-size:19px;font-weight:800">${a.premium ? fmtNum(a.premium) : "—"}</span><span class="muted">←</span><b class="big num">${b.premium ? fmtNum(b.premium) : "—"}</b>${pc != null ? `<span class="tag ${pc > 0 ? "t-bad" : "t-good"}">${fmtSignedPct(pc)}</span>` : ""}</div><span class="small muted">میلیون تومان</span></div>
+    <div class="panel kp2 lead"><span class="l">حق‌بیمهٔ سالانهٔ هر نفر</span><div class="row"><span class="muted num" style="font-size:19px;font-weight:800">${a.premium ? fmtNum(a.premium) : "—"}</span><span class="muted">←</span><b class="big num">${b.premium ? fmtNum(b.premium) : "—"}</b>${pc != null ? `<span class="tag ${pc > 0 ? "t-bad" : "t-good"}">${fmtSignedPct(pc)}</span>` : ""}</div><span class="small muted">میلیون تومان برای هر نفر${b.premium && b.insured ? ` · کل ${fmtNum(b.premium * b.insured / 1000)} میلیارد تومان (${fmtInt(b.insured)} نفر)` : ""}</span></div>
     ${main != null ? kp("سقف بستری و جراحی", fmtSignedPct(main), pc != null ? (Math.abs(main - pc) <= 0.1 ? "هم‌پای نرخ" : main > pc ? "بیشتر از نرخ" : "کمتر از نرخ") : "", "var(--good)") : ""}
     ${rest != null ? kp("بقیهٔ بندها (میانه)", fmtSignedPct(rest), pc != null && rest < pc - 0.1 ? "عقب‌تر از نرخ" : "", pc != null && rest < pc - 0.1 ? "var(--mid-ink)" : "var(--good)") : ""}
     ${b.premium ? kp("حد تحمل خسارت هر نفر", fmtNum(b.premium * 0.75), "با Loss Ratio ۷۵٪") : ""}
