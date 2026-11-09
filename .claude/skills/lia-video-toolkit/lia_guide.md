@@ -11,8 +11,10 @@ Using the attached image as the identity reference, create a new photo of the SA
 Subject: Iranian woman, late 20s, long voluminous dark-brown curly hair with lighter caramel tips, warm olive skin, dark brown eyes, defined eyebrows, natural makeup.
 ```
 
-لباس ثابت شب: `black top and a classic black denim jacket without any cutouts or holes`
-لباس ثابت صبح: `cream knit sweater`
+لباس ثابت (همه‌ی نماها، صبح و شب): `black top and a classic black denim jacket without any cutouts or holes`
+صبح یا شب بودن رو فقط با نور نشون بدید (`soft morning sunlight` یا `warm evening lamp light`)، نه با عوض کردن لباس. طبق تکنیک «ثابت نگه داشتن کاراکتر»، عوض شدن لباس یعنی یه کاراکتر جدید.
+
+دو نشونه‌ی ثابت و قابل‌دیدن (پیشنهادی؛ از کلیپ‌های بعدی): `caramel-tipped dark curly hair, small gold hoop earrings`
 
 ## ۲. طبیعی بودن (آخر هر پرامپت عکس)
 
