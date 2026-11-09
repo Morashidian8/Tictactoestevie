@@ -149,22 +149,6 @@ function renderHome(){
   const pChat = state.chat.p || [];
   setHead("Renewal Intelligence", todayFa());
   $("view").innerHTML = `
-  <div class="sec-t" style="margin-top:0"><h2>دو کار اصلی</h2><span class="small muted">فایل بدهید؛ بقیه را اپ انجام می‌دهد.</span></div>
-  <div class="missions">
-    <section class="mis mis-main">
-      <div class="mis-h"><span class="blob b3"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2h12v20l-3-2-3 2-3-2-3 2z"/><path d="M9 7h6M9 11h6M9 15h4"/></svg></span><div><h2>تحلیل خسارت و پیشنهاد سال بعد</h2><p>بیمه‌نامهٔ سال جاری (سقف تعهدات) و فایل خسارت را با هم بدهید؛ Loss Ratio واقعی، سقف‌های پرشده، حق‌بیمهٔ سال بعد و پیش‌نویس بیمه‌نامه آماده می‌شود.</p></div></div>
-      <label class="drop" id="dropC" for="homeClm"><span class="di"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg></span><b>بیمه‌نامه و فایل خسارت را اینجا بدهید</b><span>بیمه‌نامه: PDF، اسکن، عکس، Word یا اکسل · خسارت: اکسل سامانهٔ بیمه‌گر · ترتیب مهم نیست</span></label>
-      <input type="file" id="homeClm" accept=".xlsx,.xls,.csv,.pdf,.jpg,.jpeg,.png,.webp,.docx" multiple hidden>
-      <div class="does"><span class="t-protect">Loss Ratio واقعی</span><span class="t-inc">سقف‌های پرشده ← افزایش</span><span class="t-remove">بی‌استفاده ← حذف</span><span class="t-reduce">به نفع بیمه‌گر یا کارکنان</span><span class="t-keep">پیش‌نویس بیمه‌نامه</span></div>
-      ${state.claims.length ? `<button class="link" type="button" data-go="claims" style="align-self:flex-start">ادامهٔ تحلیل (${fmtInt(state.claims.length)} فایل خسارت) ←</button>` : ""}
-    </section>
-    <section class="mis">
-      <div class="mis-h"><span class="blob b1"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 4v5h-5"/></svg></span><div><h2>تحلیل تمدید قرارداد</h2><p>فایل اکسل قرارداد فعلی را بدهید؛ برای تک‌تک پوشش‌ها می‌گوییم چه کنید و حق‌بیمهٔ لازم چقدر است.</p></div></div>
-      <label class="drop" id="dropR" for="file"><span class="di"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg></span><b>فایل را اینجا بکشید یا بزنید</b><span>اکسل خسارت برای تحلیل کامل · PDF، عکس یا Word بیمه‌نامه برای مقایسهٔ قرارداد</span></label>
-      <div class="does"><span class="t-inc">پرمصرف و زیر فشار سقف ← افزایش</span><span class="t-reduce">کم‌مصرف ← کاهش</span><span class="t-remove">بدون مصرف ← حذف</span><span class="t-protect">حمایتی ← حفظ</span><span class="t-keep">مورد استثنایی ← چشم‌پوشی</span></div>
-      <button class="link" type="button" data-go="renewal" style="align-self:flex-start">یا تحلیل ${fmtInt(all.length)} گروه نمونه را ببینید ←</button>
-    </section>
-  </div>
   <section class="hh2">
     <div class="hh2-g"><p class="small" style="opacity:.85">${todayFa()}</p><h1>${greet()}</h1>
       <p style="opacity:.9">${top3.length ? `${fmtInt(nCat("urgent"))} کار فوری و ${fmtInt(soon90)} تمدید در ۹۰ روز آینده` : "کار فوری‌ای نیست"}</p>
@@ -175,9 +159,25 @@ function renderHome(){
       <div><span>گروه‌ها</span><b>${fmtInt(all.length)}</b><small>${fmtInt(soon90)} تمدید در ۹۰ روز</small></div>
       <div><span>بیمه‌شدگان</span><b>${fmtInt(sum(all, x => x.A.insured || 0))}</b><small>جمع همهٔ گروه‌ها</small></div>
       <div><span>حق‌بیمهٔ جاری</span><b>${fmtNum(sum(all, x => x.A.premiumNow || 0) / 1000)}</b><small>میلیارد تومان</small></div>
-      <div><span>قراردادهای خوانده‌شده</span><b>${fmtInt(state.contracts.filter(c => !c.sample).length)}</b><small>${fmtInt(state.claims.length)} فایل خسارت</small></div>
+      <div><span>مناقصه‌های باز</span><b>${fmtInt(tenders.length)}</b><small>${fmtInt(tenders.filter(x => x.R.priorScaled && x.R.risk(x.R.priorScaled)[0] === "high").length)} با قیمت قبلی پرریسک</small></div>
     </div>
   </section>
+  <div class="sec-t"><h2>دو کار اصلی</h2><span class="small muted">فایل بدهید یا نام سازمان را بزنید؛ بقیه را اپ انجام می‌دهد.</span></div>
+  <div class="missions">
+    <section class="mis mis-main">
+      <div class="mis-h"><span class="blob b3"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2h12v20l-3-2-3 2-3-2-3 2z"/><path d="M9 7h6M9 11h6M9 15h4"/></svg></span><div><h2>تحلیل خسارت و پیشنهاد سال بعد</h2><p>بیمه‌نامهٔ سال جاری (سقف تعهدات) و فایل خسارت را با هم بدهید؛ Loss Ratio واقعی، سقف‌های پرشده، حق‌بیمهٔ سال بعد و پیش‌نویس بیمه‌نامه آماده می‌شود.</p></div></div>
+      <label class="drop" id="dropC" for="homeClm"><span class="di"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg></span><b>بیمه‌نامه و فایل خسارت را اینجا بدهید</b><span>بیمه‌نامه: PDF، اسکن، عکس، Word یا اکسل · خسارت: اکسل سامانهٔ بیمه‌گر · ترتیب مهم نیست</span></label>
+      <input type="file" id="homeClm" accept=".xlsx,.xls,.csv,.pdf,.jpg,.jpeg,.png,.webp,.docx" multiple hidden>
+      <div class="does"><span class="t-protect">Loss Ratio واقعی</span><span class="t-inc">سقف‌های پرشده ← افزایش</span><span class="t-remove">بی‌استفاده ← حذف</span><span class="t-reduce">به نفع بیمه‌گر یا کارکنان</span><span class="t-keep">پیش‌نویس بیمه‌نامه</span></div>
+      ${state.claims.length ? `<button class="link" type="button" data-go="claims" style="align-self:flex-start">ادامهٔ تحلیل (${fmtInt(state.claims.length)} فایل خسارت) ←</button>` : ""}
+    </section>
+    <section class="mis">
+      <div class="mis-h"><span class="blob b2"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 12.2V4.5a1 1 0 0 1 1-1h7.7l8.3 8.3-8.7 8.7z"/><circle cx="8.3" cy="8.3" r="1.5"/></svg></span><div><h2>برآورد قیمت مناقصه</h2><p>نام سازمان را بزنید؛ سابقهٔ خسارتش را می‌گیریم، تحلیل می‌کنیم و قیمتی می‌دهیم که Loss Ratio زیر ${fmtPct(t)} بماند.</p></div></div>
+      <form class="qbox" id="tenderQ"><input id="tq" placeholder="نام سازمان یا شرکت، مثلاً شرکت گاز" autocomplete="off" aria-label="نام سازمان یا شرکت"><button class="btn primary" type="submit">دریافت سابقه و برآورد</button></form>
+      <div class="qsug">امتحان کنید: ${tenders.map(x => `<button type="button" data-tq="${esc(short(x.R.group.name).replace(/^مناقصهٔ\s*/, ""))}">${esc(short(x.R.group.name).replace(/^مناقصهٔ\s*/, ""))}</button>`).join("")}</div>
+      <div class="conn"><i></i><span>داده‌پردازان: اتصال مستقیم در فاز آخر پروژه. تا آن موقع سابقه از دادهٔ نمونه یا فایل اکسل خروجی داده‌پردازان خوانده می‌شود.</span></div>
+    </section>
+  </div>
   <div class="sec-t"><h2>میز کار</h2><span class="small muted">هر جزیره یک بخش از برنامه است؛ روی آن بزنید تا باز شود.</span></div>
   <div class="bento">
     <div class="isl w2 h2 click" data-go="renewal" role="link" tabindex="0">
@@ -200,10 +200,7 @@ function renderHome(){
   $("homeClm").onchange = e => { const f = [...e.target.files]; e.target.value = ""; if (f.length) claimsUpload(f); };
   const dc = $("dropC"); dc.ondragover = e => { e.preventDefault(); dc.classList.add("over"); }; dc.ondragleave = () => dc.classList.remove("over");
   dc.ondrop = e => { e.preventDefault(); dc.classList.remove("over"); claimsUpload([...e.dataTransfer.files]); };
-  const dz = $("dropR");
-  dz.ondragover = e => { e.preventDefault(); dz.classList.add("over"); };
-  dz.ondragleave = () => dz.classList.remove("over");
-  dz.ondrop = e => { e.preventDefault(); dz.classList.remove("over"); state.mode = "renewal"; handleFiles([...e.dataTransfer.files]); };
+
 }
 
 /* ---------- chrome ---------- */
@@ -597,7 +594,7 @@ function render(){
   renderSidebar();
   document.querySelectorAll("[data-back]").forEach(b => { b.hidden = p === "home"; });
   document.querySelector(".mtop .tb-brand").hidden = p !== "home";
-  const bn = { home: ["home"], renewal: ["renewal", "group"], claims: ["claims", "proposal"], reminders: ["reminders"] };
+  const bn = { home: ["home"], claims: ["claims", "proposal"], tender: ["tender", "tenderp"], reminders: ["reminders"] };
   const due = state.groups.filter(g => { const r = renewalInfo(g.data.group.period); return r && r.days <= 30; }).length;
   $("bnBadge").hidden = !due; $("bnBadge").textContent = fmtInt(due);
   document.querySelectorAll(".bottomnav button").forEach(b => b.setAttribute("aria-current", String((bn[b.dataset.bn] || []).includes(p))));
@@ -691,11 +688,11 @@ function openMenu(){
     <div class="sheet-sec">دو کار اصلی</div>
     <div class="mgrid two">
       <button class="mi main" type="button" data-go="claims" style="--h:#E11D48">${ic("claims")}<span>تحلیل خسارت<small>بیمه‌نامه و فایل خسارت را بدهید</small></span></button>
-      <button class="mi main" type="button" data-act="upload" style="--h:#6366F1">${ic("upload")}<span>تحلیل تمدید<small>فایل اکسل قرارداد را بدهید</small></span></button>
+      <button class="mi main" type="button" data-act="tsearch" style="--h:#0D9488">${ic("search")}<span>برآورد قیمت مناقصه<small>نام سازمان را بزنید</small></span></button>
     </div>
     <div class="sheet-sec">تحلیل</div>
     <div class="mgrid">
-      ${mi("portfolio", "پرتفوی تمدید", 'data-go="renewal"')}${mi("tender", "مناقصه‌ها", 'data-go="tender"')}
+      ${mi("portfolio", "پرتفوی تمدید", 'data-go="renewal"')}${mi("upload", "تحلیل تمدید (اکسل)", 'data-act="upload"')}${mi("tender", "مناقصه‌ها", 'data-go="tender"')}
       ${mi("urgent", "کارهای فوری", 'data-cat="urgent"', urgent ? `<span class="mn">${fmtInt(urgent)}</span>` : "")}${mi("cal", "یادآور تمدید", 'data-go="reminders"', due ? `<span class="mn">${fmtInt(due)}</span>` : "")}
     </div>
     <div class="sheet-sec">ابزار</div>
