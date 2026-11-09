@@ -153,7 +153,7 @@ function renderHome(){
     <div class="hh2-g"><p class="small" style="opacity:.85">${todayFa()}</p><h1>${greet()}</h1>
       <p style="opacity:.9">${top3.length ? `${fmtInt(nCat("urgent"))} کار فوری و ${fmtInt(soon90)} تمدید در ۹۰ روز آینده` : "کار فوری‌ای نیست"}</p>
       <div class="todo">${top3.map(x => `<button type="button" data-open="${x.i}"><span class="dot" style="background:${{ urgent: "#FDA4AF", warn: "#FDE68A", opp: "#A7F3D0", note: "#C7D2FE" }[catOf(x)]}"></span><span>${esc(short(x.name))}: ${esc(x.text.split(/[؛.]/)[0])}</span><b class="${catOf(x)}">${{ urgent: "فوری", warn: "هشدار", opp: "فرصت", note: "نکته" }[catOf(x)]}</b></button>`).join("")}</div>
-      ${L ? `<span class="lic">مجوز: ${esc(L.name)} · ${fmtInt(L.days)} روز مانده</span>` : ""}</div>
+      ${L ? `<span class="lic">مجوز: ${esc(L.name)}${L.days != null ? ` · ${fmtInt(L.days)} روز مانده` : ""}</span>` : ""}</div>
     <div class="hh2-gauge">${gaugeSVG(plr, t)}<div class="gv">${fmtPct(plr)}</div><div class="small" style="opacity:.9">Loss Ratio پرتفوی${st ? ` · <b>${st[1]}</b>` : ""}</div></div>
     <div class="hh2-st">
       <div><span>گروه‌ها</span><b>${fmtInt(all.length)}</b><small>${fmtInt(soon90)} تمدید در ۹۰ روز</small></div>
@@ -240,7 +240,7 @@ function renderSidebar(){
   if (L && L.broker) $("brandSub").textContent = L.broker;
   $("bellDot").hidden = $("bellDotM").hidden = !urgent;
   $("bellBtn").setAttribute("aria-label", `${fmtInt(urgent)} کار فوری`);
-  $("footLic").textContent = L ? `مجوز: ${L.name} · معتبر تا ${L.until} · ${fmtInt(L.days)} روز مانده` : "";
+  $("footLic").textContent = L ? `مجوز: ${L.name}${L.until ? ` · معتبر تا ${L.until} · ${fmtInt(L.days)} روز مانده` : ""}` : "";
 }
 
 /* ---------- renewal portfolio ---------- */

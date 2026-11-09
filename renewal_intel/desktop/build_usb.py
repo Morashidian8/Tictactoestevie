@@ -88,7 +88,13 @@ def font_faces():
     return "".join(out)
 
 
-def app_document(customer, expiry_ms, expiry_label, total_days):
+def b36(n):
+    d = "0123456789abcdefghijklmnopqrstuvwxyz"; o = ""
+    while n: n, r = divmod(n, 36); o = d[r] + o
+    return o or "0"
+
+
+def app_document(customer, expiry_ms, expiry_label, total_days, hide=False):
     page = APP.read_text(encoding="utf-8")
     if CDN_XLSX not in page:
         raise SystemExit("Excel library tag not found in index.html; update CDN_XLSX.")
@@ -98,15 +104,22 @@ def app_document(customer, expiry_ms, expiry_label, total_days):
     page = re.sub(r'<link rel="(?:preconnect|stylesheet)" href="https://fonts\.g[^"]*"[^>]*>\n?', "", page)
     who = json.dumps(customer, ensure_ascii=False)
     # License card in the sidebar; days left are counted on the customer's clock.
-    lic = f"""<script>window.RI_LICENSE = {{ name: {who}, until: {json.dumps(expiry_label, ensure_ascii=False)}, total: {total_days},
-  days: Math.min({total_days}, Math.max(0, Math.ceil(({expiry_ms} - Date.now()) / 86400000))) }};</script>
-<style>@media (max-width:860px){{#ri-mark{{left:auto!important;right:12px;bottom:calc(72px + env(safe-area-inset-bottom,0px))!important}}}}</style>
+    if hide:
+        lic = f"""<script>window.RI_LICENSE = {{ name: {who} }};</script>"""
+    else:
+        lic = f"""<script>window.RI_LICENSE = {{ name: {who}, until: {json.dumps(expiry_label, ensure_ascii=False)}, total: {total_days},
+  days: Math.min({total_days}, Math.max(0, Math.ceil(({expiry_ms} - Date.now()) / 86400000))) }};</script>"""
+    lic += """
+<style>@media (max-width:860px){#ri-mark{left:auto!important;right:12px;bottom:calc(72px + env(safe-area-inset-bottom,0px))!important}}</style>
 """
     guard = f"""
-<div id="ri-mark" style="position:fixed;left:12px;bottom:12px;z-index:50;font:500 12px Vazirmatn,Tahoma,sans-serif;background:rgba(14,106,91,.92);color:#fff;padding:4px 12px;border-radius:999px;pointer-events:none">مجوز: {customer} · معتبر تا {expiry_label}</div>
+<div id="ri-mark" style="position:fixed;left:12px;bottom:12px;z-index:50;font:500 12px Vazirmatn,Tahoma,sans-serif;background:rgba(14,106,91,.92);color:#fff;padding:4px 12px;border-radius:999px;pointer-events:none">مجوز: {customer}{"" if hide else " · معتبر تا " + expiry_label}</div>
 <script>
 // Lock again if the window stays open past the expiry.
-setInterval(() => {{ if (Date.now() > {expiry_ms}) location.reload(); }}, 60000);
+// The check lives inside the app too, so a copy taken out of the loader also stops working.
+(() => {{ const end = parseInt("{b36(expiry_ms)}", 36);
+  const stop = () => {{ document.documentElement.innerHTML = '<body style="font:16px Tahoma;direction:rtl;padding:40px">مهلت استفاده از این نسخه تمام شده است.</body>'; }};
+  if (Date.now() > end) stop(); setInterval(() => {{ if (Date.now() > end) stop(); }}, 60000); }})();
 console.info("Renewal Intelligence — licensed to " + {who});
 </script>"""
     return ("<!DOCTYPE html><html lang=\"fa\" dir=\"rtl\"><head><meta charset=\"utf-8\">"
@@ -165,7 +178,9 @@ const unb64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
 const say = t => { $("msg").textContent = t; $("msg").hidden = false; };
 const contact = L.contact ? " برای تمدید: " + L.contact : "";
 $("who").textContent = "مجوز برای: " + L.name;
-$("until").textContent = "معتبر تا: " + L.untilLabel;
+const mask = n => { const s = unb64(L.salt); let m = 0n; for (let i = 0; i < 8; i++) m = (m << 8n) | BigInt(s[i]); return Number(BigInt(n) ^ m); };
+if (L.m){ L.expiry = mask(L.expiry); L.issue = mask(L.issue); }
+if (L.untilLabel) $("until").textContent = "معتبر تا: " + L.untilLabel;
 
 // Clock check: the last time this copy ran on this computer is remembered, so moving the clock back is caught.
 function clockState(){
@@ -238,11 +253,11 @@ open -na "Google Chrome" --args --app="file://$F" 2>/dev/null || open "$F"
 """
 
 
-def readme(customer, until, contact):
+def readme(customer, until, contact, hide=False):
     return f"""Renewal Intelligence — نسخهٔ دسکتاپ
 
 مجوز برای: {customer}
-معتبر تا: {until}
+{"این نسخه مدت اعتبار محدودی دارد." if hide else "معتبر تا: " + until}
 
 اجرا:
   ویندوز: روی Run-Windows.bat دوبار کلیک کنید (در پنجرهٔ Edge باز می‌شود).
@@ -251,7 +266,7 @@ def readme(customer, until, contact):
 
 بار اول کد فعال‌سازی را وارد کنید. کد جداگانه برای شما ارسال شده است.
 برنامه بدون اینترنت کار می‌کند و فایل‌های اکسل فقط روی همین کامپیوتر خوانده می‌شوند.
-بعد از تاریخ اعتبار، برنامه باز نمی‌شود.{(" برای تمدید: " + contact) if contact else ""}
+بعد از پایان اعتبار، برنامه باز نمی‌شود.{(" برای تمدید: " + contact) if contact else ""}
 """
 
 
@@ -263,6 +278,7 @@ def main():
     ap.add_argument("--out", required=True, help="folder to create; copy it to the USB stick as is")
     ap.add_argument("--code-file", help="where to write the activation code (keep it off the stick)")
     ap.add_argument("--code", help="reuse an existing activation code instead of making a new one")
+    ap.add_argument("--hide-expiry", action="store_true", help="never show the expiry date to the customer (it still applies)")
     a = ap.parse_args()
 
     now = datetime.now(TEHRAN)
@@ -275,10 +291,13 @@ def main():
     salt, iv = secrets.token_bytes(16), secrets.token_bytes(12)
     key = HKDF(algorithm=hashes.SHA256(), length=32, salt=salt, info=b"renewal-intel-usb").derive(secret)
     aad = f"{a.customer}|{issue_ms}|{expiry_ms}".encode()
-    ct = AESGCM(key).encrypt(iv, app_document(a.customer, expiry_ms, until, a.days).encode(), aad)
+    ct = AESGCM(key).encrypt(iv, app_document(a.customer, expiry_ms, until, a.days, a.hide_expiry).encode(), aad)
 
     lock = {"id": secrets.token_hex(6), "name": a.customer, "issue": issue_ms, "expiry": expiry_ms,
             "untilLabel": until, "contact": a.contact, "salt": b64(salt), "iv": b64(iv), "ct": b64(ct)}
+    if a.hide_expiry:  # no readable date anywhere in the files: the times are masked with the salt
+        m = int.from_bytes(salt[:8], "big")
+        lock.update(untilLabel="", m=1, issue=str(issue_ms ^ m), expiry=str(expiry_ms ^ m))  # strings: beyond JS number precision
     regular = b64((PWA / "fonts" / "Vazirmatn-Regular.woff2").read_bytes())
     loader = (LOADER.replace("__FONT__", f'@font-face{{font-family:"Vazirmatn";src:url(data:font/woff2;base64,{regular}) format("woff2")}}')
               .replace("__LOCK__", json.dumps(lock, ensure_ascii=False).replace("</", "<\\/")))
@@ -292,11 +311,11 @@ def main():
     cmd = out / "Run-Mac.command"
     cmd.write_text(COMMAND, encoding="utf-8")
     os.chmod(cmd, 0o755)
-    (out / "راهنما.txt").write_text(readme(a.customer, until, a.contact).replace("\n", "\r\n"), encoding="utf-8-sig")
+    (out / "راهنما.txt").write_text(readme(a.customer, until, a.contact, a.hide_expiry).replace("\n", "\r\n"), encoding="utf-8-sig")
 
     code = b32(secret)
     if a.code_file:
-        Path(a.code_file).write_text(f"{a.customer}\nکد فعال‌سازی: {code}\nمعتبر تا: {until}\n", encoding="utf-8-sig")
+        Path(a.code_file).write_text(f"{a.customer}\nکد فعال‌سازی: {code}\n" + ("" if a.hide_expiry else f"معتبر تا: {until}\n"), encoding="utf-8-sig")
     print(f"customer: {a.customer}\nvalid until: {until} ({end.isoformat()})\nactivation code: {code}")
 
 
