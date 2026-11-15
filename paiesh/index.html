@@ -615,8 +615,13 @@ function attendanceRows(groupNo, cutoff) {
       const went = own.filter(t => t.status === 'went').length;
       const absent = own.filter(t => t.status === 'absent' || t.status === 'replaced').length;
       const reasons = own.filter(t => t.status === 'absent' && t.reason).map(t => t.reason);
-      return { p, due: own.length, went, absent, unrec: own.length - went - absent, subWent: ts.filter(t => t.sub && t.status === 'went').length, reasons };
+      return { p, due: own.length, went, absent, unrec: own.length - went - absent, subWent: ts.filter(t => t.sub && t.status === 'went').length, reasons, turns: ts };
     });
+}
+const TURN_ST = { went: 'رفت', absent: 'نرفت', replaced: 'نرفت (جایگزین رفت)', due: 'ثبت‌نشده', planned: 'ثبت‌نشده' };
+function turnLine(t) {
+  const cls = t.status === 'went' ? 'st-went' : (t.status === 'absent' || t.status === 'replaced') ? 'st-absent' : 'muted';
+  return `<span class="${cls}">${fd(t.sc.date)} ${esc(t.sc.wd)} · منطقه ${fd(t.region ?? '-')} · ${TURN_ST[t.status]}${t.sub ? ' <span class="subtag">جایگزین</span>' : ''}${t.reason ? ' · ' + esc(t.reason) : ''}</span>`;
 }
 function groupAttendanceHtml() {
   const t0 = todayJalali() || '';
@@ -630,8 +635,8 @@ function groupAttendanceHtml() {
     const tot = rows.reduce((a, r) => ({ due: a.due + r.due, went: a.went + r.went, absent: a.absent + r.absent, unrec: a.unrec + r.unrec }), { due: 0, went: 0, absent: 0, unrec: 0 });
     return `<h2>${g.name}${g.leader ? ` <span class="small muted">· ${esc(g.leader)}</span>` : ''}</h2>
       <div class="daymeta"><span class="pill">${fd(tot.due)} نوبت</span><span class="pill ok">${fd(tot.went)} رفته</span><span class="pill bad">${fd(tot.absent)} نرفته</span><span class="pill">${fd(tot.unrec)} ثبت‌نشده</span></div>
-      <div class="tbl"><table class="num"><thead><tr><th>نام</th><th>ستون</th><th>منطقه</th><th>نوبت</th><th>رفته</th><th>نرفته</th><th>ثبت‌نشده</th><th>حضور</th><th>جایگزین دیگران</th><th>دلایل</th></tr></thead><tbody>
-      ${rows.map(r => `<tr><td><button class="chip" data-act="show-turns" data-pid="${esc(r.p.id)}">${esc(r.p.name)}</button></td><td>${r.p.col === 1 ? 'اول' : 'دوم'}</td><td>${fd(r.p.region ?? '-')}</td><td>${fd(r.due)}</td><td class="st-went">${fd(r.went)}</td><td class="st-absent">${fd(r.absent)}</td><td>${fd(r.unrec)}</td><td>${fd(pct(r))}</td><td>${fd(r.subWent || '')}</td><td>${esc(r.reasons.join('، '))}</td></tr>`).join('')}</tbody></table></div>`;
+      <div class="tbl"><table class="num"><thead><tr><th>نام</th><th>ستون</th><th>منطقه</th><th>نوبت</th><th>رفته</th><th>نرفته</th><th>ثبت‌نشده</th><th>حضور</th><th>جایگزین دیگران</th><th>تاریخ‌ها (منطقه، وضعیت)</th></tr></thead><tbody>
+      ${rows.map(r => `<tr><td><button class="chip" data-act="show-turns" data-pid="${esc(r.p.id)}">${esc(r.p.name)}</button></td><td>${r.p.col === 1 ? 'اول' : 'دوم'}</td><td>${fd(r.p.region ?? '-')}</td><td>${fd(r.due)}</td><td class="st-went">${fd(r.went)}</td><td class="st-absent">${fd(r.absent)}</td><td>${fd(r.unrec)}</td><td>${fd(pct(r))}</td><td>${fd(r.subWent || '')}</td><td style="white-space:normal;min-width:230px">${r.turns.map(turnLine).join('<br>') || '—'}</td></tr>`).join('')}</tbody></table></div>`;
   }).join('');
 }
 function viewRep() {
@@ -949,9 +954,21 @@ async function exportXlsx() {
   XLSX.utils.book_append_sheet(wb, a, 'ریز پایش');
   XLSX.utils.book_append_sheet(wb, b, 'خلاصه نفرات');
   const cutoff = S.rep.to || todayJalali() || '';
-  const att = attendanceRows(+S.rep.grp || 0, cutoff).map(r => ({ 'گروه': GROUP_LABEL(r.p.group), 'ستون': COL_LABEL(r.p.col), 'نام': r.p.name, 'شماره': r.p.phone, 'منطقه مورد پایش': r.p.region, [`نوبت تا ${cutoff}`]: r.due, 'رفته': r.went, 'نرفته': r.absent, 'ثبت‌نشده': r.unrec, 'جایگزین دیگران': r.subWent, 'دلایل غیبت': r.reasons.join('، ') }));
+  const att = attendanceRows(+S.rep.grp || 0, cutoff).map(r => ({ 'گروه': GROUP_LABEL(r.p.group), 'ستون': COL_LABEL(r.p.col), 'نام': r.p.name, 'شماره': r.p.phone, 'منطقه مورد پایش': r.p.region, [`نوبت تا ${cutoff}`]: r.due, 'رفته': r.went, 'نرفته': r.absent, 'ثبت‌نشده': r.unrec, 'جایگزین دیگران': r.subWent,
+    'تاریخ‌های حضور': r.turns.filter(t => t.status === 'went').map(t => `${t.sc.date} (منطقه ${t.region ?? '-'}${t.sub ? '، جایگزین' : ''})`).join('، '),
+    'تاریخ‌های غیبت': r.turns.filter(t => t.status === 'absent' || t.status === 'replaced').map(t => `${t.sc.date} (منطقه ${t.region ?? '-'}${t.reason ? '، ' + t.reason : ''})`).join('، '),
+    'نوبت‌های ثبت‌نشده': r.turns.filter(t => t.status === 'due' || t.status === 'planned').map(t => t.sc.date).join('، '),
+    'دلایل غیبت': r.reasons.join('، ') }));
   const c = XLSX.utils.json_to_sheet(att.length ? att : [{ 'نام': '' }]); c['!cols'] = [{ wch: 11 }, { wch: 9 }, { wch: 22 }, { wch: 13 }];
+  c['!cols'] = [{ wch: 11 }, { wch: 9 }, { wch: 22 }, { wch: 13 }, { wch: 8 }, { wch: 8 }, { wch: 6 }, { wch: 6 }, { wch: 8 }, { wch: 8 }, { wch: 45 }, { wch: 45 }, { wch: 30 }, { wch: 25 }];
   XLSX.utils.book_append_sheet(wb, c, 'حضور گروه‌ها');
+  const det = [];
+  for (const r of attendanceRows(+S.rep.grp || 0, cutoff)) for (const t of r.turns) {
+    const d = (S.settings.drivers || []).find(x => x.id === t.driver);
+    det.push({ 'گروه': GROUP_LABEL(r.p.group), 'ستون': COL_LABEL(r.p.col), 'نام': r.p.name, 'شماره': r.p.phone, 'تاریخ': t.sc.date, 'روز': t.sc.wd, 'منطقه پایش': t.region ?? '', 'وضعیت': TURN_ST[t.status], 'به‌جای دیگری': t.sub ? 'بله' : '', 'دلیل': t.reason || '', 'راننده': d ? d.name : '' });
+  }
+  const dsh = XLSX.utils.json_to_sheet(det.length ? det : [{ 'نام': '' }]); dsh['!cols'] = [{ wch: 11 }, { wch: 9 }, { wch: 22 }, { wch: 13 }, { wch: 11 }, { wch: 9 }, { wch: 9 }, { wch: 16 }, { wch: 9 }, { wch: 18 }, { wch: 16 }];
+  XLSX.utils.book_append_sheet(wb, dsh, 'ریز نوبت‌های نفرات');
   const buf = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
   await saveFile(`paiesh-report-${(S.rep.from || 'all').replace(/\//g, '-')}${S.rep.to ? '_' + S.rep.to.replace(/\//g, '-') : ''}.xlsx`, new Blob([buf]));
 }
