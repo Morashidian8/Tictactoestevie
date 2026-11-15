@@ -1072,7 +1072,12 @@ document.addEventListener('input', e => {
   await Store.init();
   try {
     S.roster = await Store.getDoc('roster', 'main');
-    if (!S.roster && PRELOAD) { S.roster = PRELOAD; try { await Store.setDoc('roster', 'main', PRELOAD); } catch { } }
+    // a copy shipped with a built-in roster adopts it on first open, and again whenever a newer list is shipped
+    if (PRELOAD && (!S.roster || (S.roster.importedAt || 0) < PRELOAD.importedAt)) {
+      const next = JSON.parse(JSON.stringify(PRELOAD));
+      if (S.roster) for (const p of Object.values(S.roster.people)) if (!next.people[p.id]) next.people[p.id] = p.manual ? p : { ...p, archived: true };
+      S.roster = next; try { await Store.setDoc('roster', 'main', next); } catch { }
+    }
     const st = await Store.getDoc('settings', 'main'); if (st) S.settings = { ...S.settings, ...st };
     if ((S.settings.tplV || 1) < TPL_VERSION) { S.settings.template = DEFAULT_TEMPLATE; S.settings.tplV = TPL_VERSION; }
     S.requests = (await Store.getDoc('settings', 'requests'))?.list || [];
