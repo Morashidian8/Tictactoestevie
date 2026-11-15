@@ -127,6 +127,27 @@ td.st-absent{color:var(--bad);font-weight:700}
 .sheet{background:var(--surface);width:100%;max-width:760px;max-height:85%;border-radius:16px 16px 0 0;display:flex;flex-direction:column;padding-bottom:env(safe-area-inset-bottom,0px)}
 .sheet header{padding:14px 16px 8px;display:flex;gap:8px;align-items:center;border-bottom:1px solid var(--line)}
 .sheet .body{overflow-y:auto;padding:8px 16px 16px;display:flex;flex-direction:column;gap:8px}
+.datebtn{flex:1;min-width:0;display:flex;align-items:center;gap:8px;justify-content:center;padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--bg);font-weight:700}
+.datebtn svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.8;flex-shrink:0}
+.cal-head{display:flex;align-items:center;gap:8px}
+.cal-head h2{flex:1;text-align:center}
+.cal{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
+.cal .wd{text-align:center;font-size:12px;color:var(--muted);font-weight:700;padding-block:2px}
+.cal .wd.fri{color:var(--bad)}
+.cell{border:1px solid var(--line);border-radius:8px;background:var(--surface);min-height:60px;padding:3px 2px;display:flex;flex-direction:column;align-items:center;gap:1px;font:inherit;color:var(--fg);position:relative}
+.cell .n{font-weight:800;font-size:15px;line-height:1.3}
+.cell .g{font-size:10.5px;font-weight:700;border-radius:5px;padding:0 4px;line-height:1.6;white-space:nowrap;color:#fff}
+.cell .c{font-size:10px;color:var(--muted)}
+.cell.off{opacity:.45;border-style:dashed}
+.cell.hol .n,.cell.fri .n{color:var(--bad)}
+.cell.today{outline:2px solid var(--flame);outline-offset:-1px}
+.cell.sel{background:var(--accent);border-color:var(--accent)}
+.cell.sel .n,.cell.sel .c{color:var(--accent-ink)}
+.cell .done{position:absolute;top:1px;inset-inline-start:3px;font-size:10px;color:var(--ok);font-weight:800}
+.cell.sel .done{color:var(--accent-ink)}
+.legend{display:flex;flex-wrap:wrap;gap:6px}
+.legend span{display:inline-flex;align-items:center;gap:4px;font-size:12px}
+.legend i{width:12px;height:12px;border-radius:3px;display:inline-block}
 .pick{display:flex;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line)}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(84px + env(safe-area-inset-bottom,0px));z-index:30;max-width:min(92vw,520px);padding:10px 14px;border-radius:10px;font-weight:500;font-size:14px;box-shadow:0 6px 24px rgb(0 0 0 / .2)}
 .toast.err{background:var(--bad);color:#fff}
@@ -401,6 +422,62 @@ function backupNag() {
   if (Date.now() - last < 7 * 864e5) return '';
   return `<div class="pill warn" style="white-space:normal">اطلاعات فقط در همین گوشی است. ${last ? 'بیش از یک هفته از آخرین پشتیبان گذشته.' : 'هنوز پشتیبان نگرفته‌اید.'} <button data-tab="data">گرفتن پشتیبان</button></div>`;
 }
+/* ---------- Jalali month calendar for picking a monitoring day ---------- */
+const GROUP_COLORS = ['#0b7a8f', '#c2410c', '#6d28d9', '#15803d', '#b91c1c', '#1d4ed8', '#a16207', '#be185d', '#475569', '#0f766e'];
+const gColor = n => GROUP_COLORS[(n - 1) % GROUP_COLORS.length];
+const MONTHS = ['فروردین', 'اردیبهشت', 'خرداد', 'تیر', 'مرداد', 'شهریور', 'مهر', 'آبان', 'آذر', 'دی', 'بهمن', 'اسفند'];
+let JMAP = null;  // 'YYYY/MM/DD' -> weekday column (0 = Saturday)
+function jalaliMap() {
+  if (JMAP) return JMAP;
+  JMAP = {};
+  const f = new Intl.DateTimeFormat('en-u-ca-persian-nu-latn', { year: 'numeric', month: '2-digit', day: '2-digit' });
+  const sc = S.roster?.schedule || [];
+  const y0 = +(sc[0]?.date || todayJalali() || '1405').slice(0, 4);
+  const base = new Date((y0 + 621) - 1, 0, 1, 12);  // a little before Jalali year y0
+  for (let i = 0; i < 365 * 3 + 30; i++) {
+    const d = new Date(base); d.setDate(base.getDate() + i);
+    const parts = f.formatToParts(d); const g = t => parts.find(p => p.type === t)?.value;
+    JMAP[`${g('year')}/${g('month')}/${g('day')}`] = (d.getDay() + 1) % 7;
+  }
+  return JMAP;
+}
+function dateButton(date, act) {
+  const sc = schedFor(date);
+  return `<button class="datebtn" data-act="${act}" aria-label="انتخاب روز از تقویم"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg><span class="num">${sc ? esc(sc.wd) + ' ' : ''}${fd(date)}</span></button>`;
+}
+function openCalendar(current, onPick) {
+  let [y, m] = current.split('/').map(Number);
+  const sched = Object.fromEntries((S.roster?.schedule || []).map(s => [s.date, s]));
+  const t0 = todayJalali();
+  const scrim = document.createElement('div'); scrim.className = 'scrim';
+  document.body.appendChild(scrim);
+  const draw = () => {
+    const map = jalaliMap();
+    const pad = n => String(n).padStart(2, '0');
+    const days = []; for (let d = 1; d <= 31; d++) { const k = `${y}/${pad(m)}/${pad(d)}`; if (k in map) days.push(k); }
+    const lead = days.length ? map[days[0]] : 0;
+    const cells = Array.from({ length: lead }, () => '<div></div>').concat(days.map(k => {
+      const s = sched[k]; const col = S.colMap[k]; const fri = map[k] === 6;
+      const cls = ['cell', s ? '' : 'off', s && /تعطیل/.test(s.note) ? 'hol' : '', fri ? 'fri' : '', k === t0 ? 'today' : '', k === current ? 'sel' : ''].join(' ');
+      const done = S.days[k]?.assigns?.length && S.days[k].col === col ? '<span class="done">✓</span>' : '';
+      return `<button class="${cls}" ${s ? `data-pick="${k}"` : 'disabled'} aria-label="${fd(k)}${s ? ' ' + GROUP_LABEL(s.group) : ''}">${done}<span class="n">${fd(+k.slice(8))}</span>${s ? `<span class="g" style="background:${gColor(s.group)}">گروه ${fd(s.group)}</span><span class="c">ستون ${col === 1 ? '۱' : '۲'}</span>` : ''}</button>`;
+    })).join('');
+    const groups = S.roster?.groups || [];
+    scrim.innerHTML = `<div class="sheet" role="dialog" aria-label="تقویم پایش"><header><h2 class="grow">تقویم پایش</h2><button class="iconbtn" data-close aria-label="بستن">✕</button></header>
+      <div class="body"><div class="cal-head"><button class="iconbtn" data-mv="-1" aria-label="ماه قبل">›</button><h2>${MONTHS[m - 1]} ${fd(y)}</h2><button class="iconbtn" data-mv="1" aria-label="ماه بعد">‹</button></div>
+      <div class="cal">${['ش', 'ی', 'د', 'س', 'چ', 'پ', 'ج'].map((w, i) => `<div class="wd ${i === 6 ? 'fri' : ''}">${w}</div>`).join('')}${cells}</div>
+      <div class="legend">${groups.map(g => `<span><i style="background:${gColor(g.no)}"></i>${g.name}</span>`).join('')}</div>
+      <p class="small muted" style="margin:0">✓ = ثبت شده · قاب نارنجی = امروز · عدد قرمز = جمعه یا تعطیل</p></div></div>`;
+  };
+  draw();
+  scrim.addEventListener('click', e => {
+    if (e.target === scrim || e.target.closest('[data-close]')) return scrim.remove();
+    const mv = e.target.closest('[data-mv]');
+    if (mv) { m += +mv.dataset.mv; if (m < 1) { m = 12; y--; } if (m > 12) { m = 1; y++; } return draw(); }
+    const pk = e.target.closest('[data-pick]');
+    if (pk) { scrim.remove(); onPick(pk.dataset.pick); }
+  });
+}
 function dateOptions(sel) {
   return S.roster.schedule.map(s => `<option value="${s.date}" ${s.date === sel ? 'selected' : ''}>${fd(s.date)} · ${esc(s.wd)} · ${GROUP_LABEL(s.group)} · ${COL_LABEL(S.colMap[s.date])}${/تعطیل/.test(s.note) ? ' · تعطیل' : ''}${S.days[s.date] ? ' ✓' : ''}</option>`).join('');
 }
@@ -420,7 +497,7 @@ function viewDay() {
   const head = header(`
     <div class="datebar">
       <button class="iconbtn" data-act="day-prev" aria-label="روز قبل">›</button>
-      <select id="date-sel" aria-label="انتخاب روز">${dateOptions(S.date)}</select>
+      ${dateButton(S.date, 'cal-day')}
       <button class="iconbtn" data-act="day-next" aria-label="روز بعد">‹</button>
     </div>
     <div class="daymeta">
@@ -559,7 +636,7 @@ function viewMsg() {
   const list = dv.assigns.filter(a => a.status !== 'absent').map(a => ({ a, p: person(a.pid) })).filter(x => x.p);
   const nums = list.filter(x => x.p.phoneOk).map(x => x.p.phone);
   const generic = genericText(dv);
-  const head = header(`<div class="datebar"><button class="iconbtn" data-act="msg-prev" aria-label="روز قبل">›</button><select id="msg-sel" aria-label="روز پایش">${dateOptions(S.msgDate)}</select><button class="iconbtn" data-act="msg-next" aria-label="روز بعد">‹</button></div>
+  const head = header(`<div class="datebar"><button class="iconbtn" data-act="msg-prev" aria-label="روز قبل">›</button>${dateButton(S.msgDate, 'cal-msg')}<button class="iconbtn" data-act="msg-next" aria-label="روز بعد">‹</button></div>
     <div class="daymeta"><span class="pill acc">${grp?.name} · ${COL_LABEL(dv.col)}</span><span class="pill">${esc(dv.sc.wd)} ${fd(dv.sc.date)}</span><span class="pill">${fd(list.length)} نفر</span></div>`);
   const tplCard = `<details class="card"><summary><b>متن پیش‌فرض پیام</b> <span class="small muted">(برای ویرایش باز کنید)</span></summary>
       <textarea id="tpl" class="inp">${esc(tpl)}</textarea>
@@ -997,6 +1074,8 @@ document.addEventListener('click', async e => {
   if (t.dataset.tab) { S.tab = t.dataset.tab; window.scrollTo(0, 0); return render(); }
   const d = t.dataset;
   switch (d.act) {
+    case 'cal-day': return openCalendar(S.date, d => { S.date = d; render(); });
+    case 'cal-msg': return openCalendar(S.msgDate, d => { S.msgDate = d; render(); });
     case 'day-prev': S.date = nextDate(S.date, -1); return render();
     case 'day-next': S.date = nextDate(S.date, 1); return render();
     case 'msg-prev': S.msgDate = nextDate(S.msgDate, -1); return render();
