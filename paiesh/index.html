@@ -95,6 +95,8 @@ h3{font-size:15px;font-weight:700}
 .btn.ghost{background:transparent}
 .btn.danger{color:var(--bad)}
 .btn:disabled{opacity:.5;cursor:not-allowed}
+a.btn,a.chip{text-decoration:none;color:inherit;display:inline-flex;align-items:center}
+a.btn.pri{color:var(--accent-ink)}
 
 /* cards & forms */
 .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px;display:flex;flex-direction:column;gap:10px}
@@ -453,9 +455,29 @@ function personRow(a, i) {
         ${a.sub ? `<button data-act="remove" data-i="${i}" aria-label="حذف جایگزین">✕</button>` : ''}
       </div></div>
       <div class="row small">${p.phone ? `<button class="chip" data-act="copy-phone" data-p="${p.phone}">کپی شماره</button>` : ''}<button class="chip" data-act="show-turns" data-pid="${esc(a.pid)}">نوبت‌ها</button>
-        <label class="row grow" style="gap:4px;min-width:160px">راننده:<select class="inp drv-sel grow" data-i="${i}" style="padding:3px 6px">${driverOptions(a.driver)}</select></label></div>${reasons}</div>`;
+        <label class="row grow" style="gap:4px;min-width:160px">راننده:<select class="inp drv-sel grow" data-i="${i}" style="padding:3px 6px">${driverOptions(a.driver)}</select></label></div>${driverMsgRow(a, p, dayView(S.date))}${reasons}</div>`;
 }
 
+/* message to the monitor with the driver's details (and the reverse, to the driver) */
+function driverMsgs(a, p, dv) {
+  const d = (S.settings.drivers || []).find(x => x.id === a.driver);
+  if (!d) return null;
+  const toMonitor = [`جناب آقای ${p.name}`, 'با سلام و احترام',
+    `مشخصات راننده‌ی شما برای پایش زمستانی ${dv.sc.wd} ${fd(dv.sc.date)} (اداره گاز منطقه ${fd(a.region)}):`,
+    `نام راننده: ${d.name}`, d.phone ? `شماره تماس: ${d.phone}` : '', d.car ? `خودرو: ${d.car}` : '', d.plate ? `پلاک: ${d.plate}` : '',
+    'لطفاً جهت هماهنگی ساعت و محل حرکت با ایشان تماس بگیرید.', 'با تشکر'].filter(Boolean).join('\n');
+  const toDriver = [`جناب آقای ${d.name}`, 'با سلام و احترام',
+    `پایشگر همراه شما در ${dv.sc.wd} ${fd(dv.sc.date)} (اداره گاز منطقه ${fd(a.region)}):`,
+    `نام: ${p.name}`, p.phone ? `شماره تماس: ${p.phone}` : '', 'لطفاً جهت هماهنگی با ایشان تماس بگیرید.', 'با تشکر'].filter(Boolean).join('\n');
+  return { d, toMonitor, toDriver };
+}
+function driverMsgRow(a, p, dv) {
+  const m = a.driver && driverMsgs(a, p, dv);
+  if (!m) return '';
+  return `<div class="row small">${p.phoneOk ? `<a class="btn pri" href="sms:${p.phone}?body=${encodeURIComponent(m.toMonitor)}">پیامک مشخصات راننده به ${esc(p.name.split(' ')[0])}</a>` : ''}
+    <button class="chip" data-act="copy-one" data-t="${esc(m.toMonitor)}">کپی متن</button>
+    ${m.d.phone ? `<a class="chip" href="sms:${m.d.phone}?body=${encodeURIComponent(m.toDriver)}">پیامک به راننده</a>` : ''}</div>`;
+}
 function driverOptions(sel) {
   const ds = S.settings.drivers || [];
   return `<option value="">— بدون راننده —</option>${ds.map(d => `<option value="${esc(d.id)}" ${d.id === sel ? 'selected' : ''}>${esc(d.name)}${d.car ? ' · ' + esc(d.car) : ''}${d.plate ? ' · ' + esc(d.plate) : ''}</option>`).join('')}<option value="__new">+ راننده‌ی جدید…</option>`;
@@ -508,7 +530,7 @@ function viewFind() {
 function driverText(id) {
   const d = (S.settings.drivers || []).find(x => x.id === id);
   if (!d) return '';
-  return [d.name, d.phone ? fd(d.phone) : '', [d.car, d.plate ? 'پلاک ' + d.plate : ''].filter(Boolean).join(' ')].filter(Boolean).join(' - ');
+  return [d.name, d.phone || '', [d.car, d.plate ? 'پلاک ' + d.plate : ''].filter(Boolean).join(' ')].filter(Boolean).join(' - ');
 }
 function fillTemplate(tpl, p, sc, grp, col, region, driverId) {
   const drv = driverText(driverId);
@@ -543,7 +565,7 @@ function viewMsg() {
     const text = fillTemplate(tpl, p, dv.sc, grp, dv.col, a.region, a.driver);
     return `<div class="msg"><div class="row"><a class="pname grow" ${p.phone ? `href="tel:${p.phone}"` : ''}>${esc(p.name)}${a.sub ? '<span class="subtag">جایگزین</span>' : ''}<span class="tel num">${fd(p.phone)}</span></a><span class="pill">منطقه ${fd(a.region)}</span></div>
       <pre>${esc(text)}</pre>
-      <div class="row">${p.phoneOk ? `<a class="btn pri" href="sms:${p.phone}?body=${encodeURIComponent(text)}">ارسال پیامک</a>` : '<span class="pill bad">شماره نامعتبر</span>'}<button class="btn" data-act="copy-one" data-t="${esc(text)}">کپی متن</button></div></div>`;
+      <div class="row">${p.phoneOk ? `<a class="btn pri" href="sms:${p.phone}?body=${encodeURIComponent(text)}">ارسال پیامک</a>` : '<span class="pill bad">شماره نامعتبر</span>'}<button class="btn" data-act="copy-one" data-t="${esc(text)}">کپی متن</button></div>${driverMsgRow(a, p, dv)}</div>`;
   }).join('');
   return head + `<main class="wrap stack">${tplCard}${bulk}<div class="card">${per || '<div class="empty">کسی برای این روز نیست.</div>'}</div></main>`;
 }
