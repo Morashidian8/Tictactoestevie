@@ -480,14 +480,14 @@ function viewFind() {
     const LBL = { due: ['نوبت', ''], planned: ['ثبت‌شده', ''], went: ['رفت', 'ok'], absent: ['نرفت', 'bad'], replaced: ['جایگزین شد', 'warn'] };
     const line = t => `<tr><td>${fd(t.sc.date)}</td><td>${esc(t.sc.wd)}</td><td>${GROUP_LABEL(t.sc.group)}${t.sub ? ' <span class="subtag">جایگزین</span>' : ''}</td><td>${fd(t.region)}</td><td><span class="pill ${LBL[t.status][1]}">${LBL[t.status][0]}</span>${t.reason ? ' <span class="small muted">' + esc(t.reason) + '</span>' : ''}${/تعطیل/.test(t.sc.note) ? ' <span class="pill warn">تعطیل</span>' : ''}</td></tr>`;
     body = `<div class="card"><div class="row"><div class="grow"><a class="pname" ${sel.phone ? `href="tel:${sel.phone}"` : ''}>${esc(sel.name)}<span class="tel num">${fd(sel.phone)}</span></a>
-        <div class="pinfo">${sel.group ? `${GROUP_LABEL(sel.group)}، ${COL_LABEL(sel.col)}` : 'نفر اضافه‌شده'} · پایش منطقه ${fd(sel.region ?? '-')}${sel.home != null ? ' · سکونت منطقه ' + fd(sel.home) : ''}${sel.gas != null ? ' · گاز منطقه ' + fd(sel.gas) : ''}</div></div>
+        <div class="pinfo">${sel.archived ? 'خارج از فهرست فعلی' : sel.group ? `${GROUP_LABEL(sel.group)}، ${COL_LABEL(sel.col)}` : 'نفر اضافه‌شده'} · پایش منطقه ${fd(sel.region ?? '-')}${sel.home != null ? ' · سکونت منطقه ' + fd(sel.home) : ''}${sel.gas != null ? ' · گاز منطقه ' + fd(sel.gas) : ''}</div></div>
         <div class="row">${sel.phone ? `<button class="btn" data-act="copy-phone" data-p="${sel.phone}">کپی شماره</button>` : ''}<button class="btn ghost" data-act="find-clear">جستجوی دیگر</button></div></div>
         <div class="daymeta"><span class="pill acc">${fd(up.length)} نوبت مانده تا پایان برنامه</span>${up[0] ? `<span class="pill">نوبت بعدی: ${esc(up[0].sc.wd)} ${fd(up[0].sc.date)}</span>` : ''}</div></div>
       <h2>نوبت‌های پیش رو</h2>
       ${up.length ? `<div class="tbl"><table class="num"><thead><tr><th>تاریخ</th><th>روز</th><th>گروه</th><th>منطقه</th><th>وضعیت</th></tr></thead><tbody>${up.map(line).join('')}</tbody></table></div>` : '<div class="card empty">نوبتی تا پایان برنامه نمانده است.</div>'}
       ${past.length ? `<h2>سابقه</h2><div class="tbl"><table class="num"><thead><tr><th>تاریخ</th><th>روز</th><th>گروه</th><th>منطقه</th><th>وضعیت</th></tr></thead><tbody>${past.map(line).join('')}</tbody></table></div>` : ''}`;
   } else if (q) {
-    body = hits.length ? `<div class="card">${hits.map(p => `<button class="pick" style="border:0;border-bottom:1px solid var(--line);background:none;text-align:right;width:100%" data-act="find-pick" data-pid="${esc(p.id)}"><div class="grow"><b>${esc(p.name)}</b> <span class="small muted num">${fd(p.phone)}</span><div class="pinfo">${p.group ? `${GROUP_LABEL(p.group)}، ${COL_LABEL(p.col)}` : 'نفر اضافه‌شده'} · منطقه ${fd(p.region ?? '-')}</div></div><span class="pill">نوبت‌ها ‹</span></button>`).join('')}</div>` : '<div class="card empty"><b>کسی با این نام پیدا نشد</b>بخشی از نام یا نام خانوادگی را امتحان کنید.</div>';
+    body = hits.length ? `<div class="card">${hits.map(p => `<button class="pick" style="border:0;border-bottom:1px solid var(--line);background:none;text-align:right;width:100%" data-act="find-pick" data-pid="${esc(p.id)}"><div class="grow"><b>${esc(p.name)}</b> <span class="small muted num">${fd(p.phone)}</span><div class="pinfo">${p.archived ? 'خارج از فهرست فعلی' : p.group ? `${GROUP_LABEL(p.group)}، ${COL_LABEL(p.col)}` : 'نفر اضافه‌شده'} · منطقه ${fd(p.region ?? '-')}</div></div><span class="pill">نوبت‌ها ‹</span></button>`).join('')}</div>` : '<div class="card empty"><b>کسی با این نام پیدا نشد</b>بخشی از نام یا نام خانوادگی را امتحان کنید.</div>';
   } else body = '<div class="card empty"><b>نوبت‌های هر نفر</b>نام یا شماره را بنویسید تا روزهای نوبت او تا پایان برنامه نمایش داده شود.</div>';
   return head + `<main class="wrap stack">${body}</main>`;
 }
@@ -584,11 +584,34 @@ function viewData() {
   const imp = `<div class="card"><h2>${r ? 'جایگزینی با فایل جدید' : 'ورود فایل'}</h2>
      <input type="file" id="xlsx-file" accept=".xlsx,.xls" class="inp">
      ${pv ? `<div class="stack"><div class="daymeta"><span class="pill">${fd(pv.groups.length)} گروه</span><span class="pill">${fd(Object.keys(pv.people).length)} نفر</span><span class="pill">${fd(pv.schedule.length)} روز</span><span class="pill">${fd(pv.warnings.length)} هشدار</span></div>
+       ${pv.diff ? diffHtml(pv.diff) : ''}
        <p class="small muted" style="margin:0">سوابق ثبت‌شده‌ی روزها حفظ می‌شوند. نفراتی که شماره‌شان عوض نشده، همان نفر شناخته می‌شوند.</p>
        <div class="row"><button class="btn pri" data-act="import-ok">تأیید و ذخیره</button><button class="btn ghost" data-act="import-cancel">انصراف</button></div></div>` : ''}</div>`;
   const backup = r ? `<div class="card"><h2>پشتیبان</h2><p class="small muted" style="margin:0">یک فایل کامل از فهرست، سوابق و تنظیمات. برای انتقال به گوشی دیگر یا نگهداری.</p>
      <div class="row"><button class="btn" data-act="backup">دریافت پشتیبان</button><label class="btn">بازگردانی از پشتیبان<input type="file" id="backup-file" accept=".json" hidden></label></div></div>` : '';
   return header() + `<main class="wrap stack">${info}${imp}${backup}</main>`;
+}
+
+/* what changes when a new file replaces the current roster */
+function diffRoster(old, nw) {
+  const where = p => p.group ? `${GROUP_LABEL(p.group)}، ${COL_LABEL(p.col)}، منطقه ${p.region}` : `منطقه ${p.region}`;
+  const added = [], removed = [], moved = [];
+  for (const p of Object.values(nw.people)) {
+    const o = old.people[p.id];
+    if (!o || o.archived || o.manual) added.push(`${p.name} → ${where(p)}`);
+    else if (o.group !== p.group || o.col !== p.col || o.region !== p.region) moved.push(`${p.name}: از ${where(o)} به ${where(p)}`);
+  }
+  for (const o of Object.values(old.people)) if (!o.archived && !o.manual && !nw.people[o.id]) removed.push(`${o.name} (${where(o)})`);
+  const t0 = todayJalali() || '';
+  const kept = Object.values(S.days).filter(d => d.date >= t0 && d.assigns?.length).map(d => d.date);
+  return { added, removed, moved, kept };
+}
+function diffHtml(d) {
+  const blk = (title, arr, cls) => arr.length ? `<details ${arr.length <= 8 ? 'open' : ''}><summary><span class="pill ${cls}">${title}: ${fd(arr.length)} نفر</span></summary><ul class="warnlist">${arr.map(x => `<li>${esc(fd(x))}</li>`).join('')}</ul></details>` : '';
+  if (!d.added.length && !d.removed.length && !d.moved.length) return '<p class="small" style="margin:0">در نفرات تغییری نیست.</p>';
+  return `<h3>تغییرات نسبت به فهرست فعلی</h3>${blk('جابه‌جا شده', d.moved, 'warn')}${blk('اضافه شده', d.added, 'ok')}${blk('حذف شده', d.removed, 'bad')}
+    ${d.removed.length ? '<p class="small muted" style="margin:0">نفرات حذف‌شده در سوابق و جستجو با برچسب «خارج از فهرست فعلی» می‌مانند.</p>' : ''}
+    ${d.kept.length ? `<p class="small muted" style="margin:0">روزهای ${esc(d.kept.map(fd).join('، '))} از قبل ثبت شده‌اند و با همان نفرات ثبت‌شده می‌مانند؛ بقیه‌ی روزهای آینده از فهرست جدید ساخته می‌شوند.</p>` : ''}`;
 }
 
 /* substitute picker */
@@ -602,7 +625,7 @@ function openPicker(reg) {
   document.body.appendChild(scrim);
   const draw = () => {
     const q = fa($('#pick-q', scrim).value); const all = $('#pick-all', scrim).checked || !!q;
-    const cands = Object.values(S.roster.people).filter(p => !used.has(p.id) && (all || p.region === reg) && (!q || fa(p.name).includes(q) || p.phone.includes(toLatin(q))))
+    const cands = Object.values(S.roster.people).filter(p => !p.archived && !used.has(p.id) && (all || p.region === reg) && (!q || fa(p.name).includes(q) || p.phone.includes(toLatin(q))))
       .sort((a, b) => (a.region === reg ? 0 : 1) - (b.region === reg ? 0 : 1) || (a.group || 99) - (b.group || 99));
     $('#pick-list', scrim).innerHTML = cands.length ? cands.slice(0, 80).map(p => {
       return `<div class="pick"><div class="grow"><b>${esc(p.name)}</b> <span class="small muted num">${fd(p.phone)}</span><div class="pinfo">${p.group ? GROUP_LABEL(p.group) + '، ' + COL_LABEL(p.col) : 'نفر جدید'} · پایش منطقه ${fd(p.region ?? '-')}${p.home != null ? ' · سکونت ' + fd(p.home) : ''}</div></div><button class="btn pri" data-pid="${esc(p.id)}">انتخاب</button></div>`;
@@ -733,7 +756,8 @@ document.addEventListener('click', async e => {
     case 'import-ok': {
       const pv = S.importPreview;
       // keep manually added people
-      if (S.roster) for (const p of Object.values(S.roster.people)) if (p.manual && !pv.people[p.id]) pv.people[p.id] = p;
+      if (S.roster) for (const p of Object.values(S.roster.people)) if (!pv.people[p.id]) pv.people[p.id] = p.manual ? p : { ...p, archived: true };
+      delete pv.diff;
       try { await Store.setDoc('roster', 'main', pv); } catch (err) { return toast('ذخیره‌ی فهرست انجام نشد: ' + (err.message || err.code || ''), true); }
       S.roster = pv; S.importPreview = null; recalc();
       const t0 = todayJalali(); S.date = nearestDate(t0); S.msgDate = nextDate(S.date, 1);
@@ -754,7 +778,7 @@ document.addEventListener('change', async e => {
   if (t.classList.contains('reason-inp')) return setReason(+t.dataset.i, fa(t.value));
   if (t.id === 'day-note') { const dv = dayView(S.date); if (await saveDay(S.date, { ...dv, note: t.value })) toast('یادداشت ذخیره شد.'); return; }
   if (t.id === 'xlsx-file' && t.files[0]) {
-    try { S.importPreview = await readXlsx(t.files[0]); }
+    try { S.importPreview = await readXlsx(t.files[0]); if (S.roster) S.importPreview.diff = diffRoster(S.roster, S.importPreview); }
     catch (err) { toast('فایل خوانده نشد: ' + (err.message || err), true); S.importPreview = null; }
     return render();
   }
