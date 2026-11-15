@@ -17,6 +17,7 @@ on:
       - "kindergarten_site/**"
       - "frame_risk/**"
       - "renewal_intel/**"
+      - "paiesh/**"
       - "build_pwa.py"
       - ".github/workflows/pwa.yml"
   schedule:
@@ -109,6 +110,16 @@ jobs:
           grep -q 'src="vendor/xlsx.full.min.js"' site/renewal/index.html || { echo "xlsx محلی جایگزین نشد"; exit 1; }
           cp renewal_intel/pwa/manifest.json renewal_intel/pwa/sw.js site/renewal/
           cp -r renewal_intel/pwa/icons renewal_intel/pwa/vendor renewal_intel/pwa/fonts site/renewal/
+          # اپ «پایش زمستانی گاز» (کاملاً مرورگری) زیر /paiesh/. index.html همان فایل Artifact است؛
+          # head.html پوستهٔ PWA را اضافه می‌کند و اکسل از نسخهٔ محلی vendor/ خوانده می‌شود.
+          # فهرست نفرات در مخزن نیست؛ کاربر اکسل را روی گوشی وارد می‌کند و در حافظهٔ همان گوشی می‌ماند.
+          mkdir -p site/paiesh
+          cat paiesh/pwa/head.html paiesh/index.html \
+            | sed 's#https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js#vendor/xlsx.full.min.js#' \
+            > site/paiesh/index.html
+          grep -q 'src="vendor/xlsx.full.min.js"' site/paiesh/index.html || { echo "xlsx محلی پایش جایگزین نشد"; exit 1; }
+          cp paiesh/pwa/manifest.json paiesh/pwa/sw.js site/paiesh/
+          cp -r paiesh/pwa/icons paiesh/pwa/vendor paiesh/pwa/fonts site/paiesh/
           # اگر داده‌ی بیت‌کوین در این اجرا ساخته نشد (مثلاً push اپ HSE)، پوسته‌ی
           # ثابت اپ بیت‌کوین را در ریشه قرار بده و آخرین data.json منتشرشده را از
           # سایت زنده بگیر تا اپ ریشه سالم بماند بدون نیاز به بیلد مجدد.

@@ -391,7 +391,14 @@ function render() {
   window.scrollTo(0, keepScroll);
 }
 function header(inner) {
-  return `<header class="top"><div class="wrap"><div class="brand"><i></i>پایش زمستانی گاز<span class="mode">${Store.mode === 'db' ? 'ذخیره در حساب شما' : 'ذخیره در همین مرورگر'}</span></div>${inner || ''}</div></header>`;
+  return `<header class="top"><div class="wrap"><div class="brand"><i></i>پایش زمستانی گاز<span class="mode">${Store.mode === 'db' ? 'ذخیره در حساب شما' : 'ذخیره در همین گوشی'}</span></div>${backupNag()}${inner || ''}</div></header>`;
+}
+/* on-device storage: remind to export a backup once a week */
+function backupNag() {
+  if (Store.mode === 'db' || S.tab === 'data' || !Object.keys(S.days).length) return '';
+  const last = S.settings.lastBackup || 0;
+  if (Date.now() - last < 7 * 864e5) return '';
+  return `<div class="pill warn" style="white-space:normal">اطلاعات فقط در همین گوشی است. ${last ? 'بیش از یک هفته از آخرین پشتیبان گذشته.' : 'هنوز پشتیبان نگرفته‌اید.'} <button data-tab="data">گرفتن پشتیبان</button></div>`;
 }
 function dateOptions(sel) {
   return S.roster.schedule.map(s => `<option value="${s.date}" ${s.date === sel ? 'selected' : ''}>${fd(s.date)} · ${esc(s.wd)} · ${GROUP_LABEL(s.group)} · ${COL_LABEL(S.colMap[s.date])}${/تعطیل/.test(s.note) ? ' · تعطیل' : ''}${S.days[s.date] ? ' ✓' : ''}</option>`).join('');
@@ -662,7 +669,7 @@ function viewData() {
   const ds = S.settings.drivers || [];
   const drivers = r ? `<div class="card"><div class="row"><h2 class="grow">رانندگان</h2><button class="btn pri" data-act="drv-new">+ راننده‌ی جدید</button></div>
      ${ds.length ? ds.map(d => `<div class="pick"><div class="grow"><b>${esc(d.name)}</b> <span class="small muted num">${fd(d.phone)}</span><div class="pinfo">${esc([d.car, d.plate ? 'پلاک ' + d.plate : '', d.note].filter(Boolean).join(' · ') || '—')}</div></div>${d.phone ? `<a class="btn" href="tel:${esc(d.phone)}">تماس</a>` : ''}<button class="btn" data-act="drv-edit" data-id="${esc(d.id)}">ویرایش</button></div>`).join('') : '<p class="small muted" style="margin:0">هنوز راننده‌ای ثبت نشده. از این‌جا یا از فهرست «راننده» کنار هر نفر در روز پایش اضافه کنید.</p>'}</div>` : '';
-  const backup = r ? `<div class="card"><h2>پشتیبان</h2><p class="small muted" style="margin:0">یک فایل کامل از فهرست، سوابق و تنظیمات. برای انتقال به گوشی دیگر یا نگهداری.</p>
+  const backup = r ? `<div class="card"><h2>پشتیبان</h2><p class="small muted" style="margin:0">یک فایل کامل از فهرست، سوابق، رانندگان و تنظیمات. برای انتقال به گوشی دیگر یا نگهداری. ${S.settings.lastBackup ? 'آخرین پشتیبان: ' + fd(new Intl.DateTimeFormat('fa-IR', { dateStyle: 'medium' }).format(S.settings.lastBackup)) : 'هنوز پشتیبانی گرفته نشده.'}</p>
      <div class="row"><button class="btn" data-act="backup">دریافت پشتیبان</button><label class="btn">بازگردانی از پشتیبان<input type="file" id="backup-file" accept=".json" hidden></label></div></div>` : '';
   return header() + `<main class="wrap stack">${info}${drivers}${imp}${backup}</main>`;
 }
@@ -827,7 +834,7 @@ async function exportXlsx() {
   const c = XLSX.utils.json_to_sheet(att.length ? att : [{ 'نام': '' }]); c['!cols'] = [{ wch: 11 }, { wch: 9 }, { wch: 22 }, { wch: 13 }];
   XLSX.utils.book_append_sheet(wb, c, 'حضور گروه‌ها');
   const buf = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-  await saveFile(`گزارش-پایش-${(S.rep.from || 'همه').replace(/\//g, '-')}.xlsx`, new Blob([buf]));
+  await saveFile(`paiesh-report-${(S.rep.from || 'all').replace(/\//g, '-')}${S.rep.to ? '_' + S.rep.to.replace(/\//g, '-') : ''}.xlsx`, new Blob([buf]));
 }
 async function saveFile(filename, blob) {
   let dl = null;
@@ -892,7 +899,8 @@ document.addEventListener('click', async e => {
     }
     case 'backup': {
       const blob = new Blob([JSON.stringify({ app: 'paiesh', v: 1, roster: S.roster, days: S.days, settings: S.settings }, null, 1)], { type: 'application/json' });
-      return saveFile(`پشتیبان-پایش-${(todayJalali() || '').replace(/\//g, '-')}.json`, blob);
+      await saveFile(`paiesh-backup-${toLatin(todayJalali() || '').replace(/\//g, '-')}.json`, blob);
+      await saveSettings({ lastBackup: Date.now() }); return render();
     }
   }
 });
