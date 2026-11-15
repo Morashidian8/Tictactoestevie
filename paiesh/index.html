@@ -118,7 +118,7 @@ td.st-absent{color:var(--bad);font-weight:700}
 
 /* tabs */
 .tabs{position:fixed;inset:auto 0 0 0;background:var(--surface);border-top:1px solid var(--line);display:flex;z-index:6;padding-bottom:env(safe-area-inset-bottom,0px);padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inset-right,0px)}
-.tabs button{flex:1;border:0;background:none;padding:10px 4px 12px;font-size:13px;font-weight:700;color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:2px}
+.tabs button{flex:1;min-width:0;border:0;background:none;padding:10px 2px 12px;font-size:12px;font-weight:700;color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:2px}
 .tabs button svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8}
 .tabs button.on{color:var(--accent)}
 
@@ -305,7 +305,7 @@ const REASONS = ['بیماری', 'مأموریت / کار', 'مرخصی / سفر
 const S = {
   loading: true, roster: null, days: {}, settings: { template: DEFAULT_TEMPLATE, tplV: TPL_VERSION, startCol: {}, drivers: [] },
   tab: 'day', date: null, msgDate: null, colMap: {},
-  rep: { from: '', to: '', q: '', view: 'log' }, findQ: '', findPid: null, importPreview: null
+  rep: { from: '', to: '', q: '', view: 'log' }, findQ: '', findPid: null, importPreview: null, requests: [], reqFilter: ''
 };
 function recalc() { if (S.roster) S.colMap = columnMap(S.roster, S.days, S.settings.startCol || {}); }
 
@@ -376,6 +376,7 @@ async function copy(text, what) {
 const ICONS = {
   day: '<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4M8 15l2.5 2.5L16 13"/></svg>',
   msg: '<svg viewBox="0 0 24 24"><path d="M4 5h16v11H9l-5 4z"/></svg>',
+  req: '<svg viewBox="0 0 24 24"><path d="M7 3h7l5 5v13H7z"/><path d="M14 3v5h5M10 13h6M10 17h6"/></svg>',
   rep: '<svg viewBox="0 0 24 24"><path d="M5 20V10M12 20V4M19 20v-7"/></svg>',
   find: '<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg>',
   data: '<svg viewBox="0 0 24 24"><ellipse cx="12" cy="6" rx="7" ry="3"/><path d="M5 6v12c0 1.7 3.1 3 7 3s7-1.3 7-3V6M5 12c0 1.7 3.1 3 7 3s7-1.3 7-3"/></svg>'
@@ -383,9 +384,9 @@ const ICONS = {
 function render() {
   const app = $('#app');
   if (S.loading) { app.innerHTML = `<div class="wrap"><div class="empty"><b>در حال بارگذاری…</b>فهرست نفرات و سوابق پایش</div></div>`; return; }
-  const tabs = `<nav class="tabs">${[['day', 'روز پایش'], ['find', 'جستجو'], ['msg', 'پیامک'], ['rep', 'گزارش'], ['data', 'اطلاعات']].map(([k, l]) => `<button data-tab="${k}" class="${S.tab === k ? 'on' : ''}">${ICONS[k]}${l}</button>`).join('')}</nav>`;
+  const tabs = `<nav class="tabs">${[['day', 'روز پایش'], ['find', 'جستجو'], ['msg', 'پیامک'], ['req', 'درخواست'], ['rep', 'گزارش'], ['data', 'اطلاعات']].map(([k, l]) => `<button data-tab="${k}" class="${S.tab === k ? 'on' : ''}">${ICONS[k]}${l}</button>`).join('')}</nav>`;
   if (!S.roster && S.tab !== 'data') S.tab = 'data';
-  const body = { day: viewDay, find: viewFind, msg: viewMsg, rep: viewRep, data: viewData }[S.tab]();
+  const body = { day: viewDay, find: viewFind, msg: viewMsg, req: viewReq, rep: viewRep, data: viewData }[S.tab]();
   const keepScroll = window.scrollY;
   app.innerHTML = body + tabs;
   window.scrollTo(0, keepScroll);
@@ -522,7 +523,7 @@ function viewFind() {
     const line = t => `<tr><td>${fd(t.sc.date)}</td><td>${esc(t.sc.wd)}</td><td>${GROUP_LABEL(t.sc.group)}${t.sub ? ' <span class="subtag">جایگزین</span>' : ''}</td><td>${fd(t.region)}</td><td><span class="pill ${LBL[t.status][1]}">${LBL[t.status][0]}</span>${t.reason ? ' <span class="small muted">' + esc(t.reason) + '</span>' : ''}${/تعطیل/.test(t.sc.note) ? ' <span class="pill warn">تعطیل</span>' : ''}${t.driver && driverText(t.driver) ? '<div class="small muted">راننده: ' + esc(driverText(t.driver)) + '</div>' : ''}</td></tr>`;
     body = `<div class="card"><div class="row"><div class="grow"><a class="pname" ${sel.phone ? `href="tel:${sel.phone}"` : ''}>${esc(sel.name)}<span class="tel num">${fd(sel.phone)}</span></a>
         <div class="pinfo">${sel.archived ? 'خارج از فهرست فعلی' : sel.group ? `${GROUP_LABEL(sel.group)}، ${COL_LABEL(sel.col)}` : 'نفر اضافه‌شده'} · پایش منطقه ${fd(sel.region ?? '-')}${sel.home != null ? ' · سکونت منطقه ' + fd(sel.home) : ''}${sel.gas != null ? ' · گاز منطقه ' + fd(sel.gas) : ''}</div></div>
-        <div class="row">${sel.phone ? `<button class="btn" data-act="copy-phone" data-p="${sel.phone}">کپی شماره</button>` : ''}<button class="btn ghost" data-act="find-clear">جستجوی دیگر</button></div></div>
+        <div class="row">${sel.phone ? `<button class="btn" data-act="copy-phone" data-p="${sel.phone}">کپی شماره</button>` : ''}<button class="btn" data-act="req-new" data-pid="${esc(sel.id)}">ثبت درخواست</button><button class="btn ghost" data-act="find-clear">جستجوی دیگر</button></div></div>
         <div class="daymeta"><span class="pill acc">${fd(up.length)} نوبت مانده تا پایان برنامه</span>${up[0] ? `<span class="pill">نوبت بعدی: ${esc(up[0].sc.wd)} ${fd(up[0].sc.date)}</span>` : ''}</div></div>
       <h2>نوبت‌های پیش رو</h2>
       ${up.length ? `<div class="tbl"><table class="num"><thead><tr><th>تاریخ</th><th>روز</th><th>گروه</th><th>منطقه</th><th>وضعیت</th></tr></thead><tbody>${up.map(line).join('')}</tbody></table></div>` : '<div class="card empty">نوبتی تا پایان برنامه نمانده است.</div>'}
@@ -698,7 +699,7 @@ function diffHtml(d) {
 
 /* driver form (new or edit); onSaved receives the driver id */
 function openDriver(existing, onSaved) {
-  const d = existing || { id: 'drv' + Date.now().toString(36), name: '', phone: '', car: '', plate: '', note: '' };
+  const d = existing || { id: 'drv' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), name: '', phone: '', car: '', plate: '', note: '' };
   const scrim = document.createElement('div'); scrim.className = 'scrim';
   scrim.innerHTML = `<div class="sheet" role="dialog" aria-label="مشخصات راننده"><header><h2 class="grow">${existing ? 'ویرایش راننده' : 'راننده‌ی جدید'}</h2><button class="iconbtn" data-close aria-label="بستن">✕</button></header>
     <div class="body"><label class="f">نام و نام خانوادگی<input id="drv-name" class="inp" value="${esc(d.name)}"></label>
@@ -737,6 +738,123 @@ async function setDriver(i, id) {
   const dv = dayView(S.date);
   const assigns = dv.assigns.map((x, j) => j === i ? { ...x, driver: id || null } : x);
   if (await saveDay(S.date, { ...dv, assigns })) { render(); if (id) toast(`راننده‌ی ${person(dv.assigns[i].pid)?.name}: ${driverText(id)}`); }
+}
+
+/* ---------- requests from monitors (day swap, region change, ...) ---------- */
+const REQ_TYPES = { day: 'جابه‌جایی روز پایش', region: 'تغییر منطقه‌ی پایش', group: 'تغییر گروه / ستون', other: 'سایر' };
+const REQ_ST = { new: ['ثبت شده', ''], review: ['در حال بررسی', 'warn'], ok: ['موافقت شد', 'ok'], no: ['موافقت نشد', 'bad'] };
+function describeReq(r) {
+  const p = person(r.pid) || {};
+  if (r.type === 'day') return `جابه‌جایی نوبت ${r.fromDate ? fd(r.fromDate) : '—'} به ${r.toDate ? fd(r.toDate) : 'روز دیگر'}`;
+  if (r.type === 'region') return `تغییر منطقه‌ی پایش از منطقه ${fd(p.region ?? '—')} به منطقه ${r.toRegion ? fd(r.toRegion) : '—'}`;
+  if (r.type === 'group') return `انتقال از ${p.group ? GROUP_LABEL(p.group) + '، ' + COL_LABEL(p.col) : '—'} به ${r.toGroup ? GROUP_LABEL(+r.toGroup) : '—'}${r.toCol ? '، ' + COL_LABEL(+r.toCol) : ''}`;
+  return 'سایر';
+}
+async function saveRequests(list) {
+  const prev = S.requests; S.requests = list;
+  try { await Store.setDoc('settings', 'requests', { list }); return true; }
+  catch (e) { S.requests = prev; toast('درخواست ذخیره نشد: ' + (e.message || e.code || ''), true); return false; }
+}
+function filteredRequests() {
+  return S.requests.filter(r => !S.reqFilter || r.status === S.reqFilter).slice().sort((a, b) => b.createdAt - a.createdAt);
+}
+function viewReq() {
+  const list = filteredRequests();
+  const counts = Object.fromEntries(Object.keys(REQ_ST).map(k => [k, S.requests.filter(r => r.status === k).length]));
+  const head = header(`<div class="row"><button class="btn pri" data-act="req-new">+ درخواست جدید</button><span class="grow"></span><button class="btn" data-act="req-copy">کپی متن</button><button class="btn" data-act="req-export">خروجی اکسل</button></div>
+    <div class="daymeta"><button class="chip ${!S.reqFilter ? 'on' : ''}" data-act="req-filter" data-v="">همه ${fd(S.requests.length)}</button>${Object.entries(REQ_ST).map(([k, [l]]) => `<button class="chip ${S.reqFilter === k ? 'on' : ''}" data-act="req-filter" data-v="${k}">${l} ${fd(counts[k])}</button>`).join('')}</div>`);
+  const cards = list.map(r => {
+    const p = person(r.pid) || { name: '(ناشناس)', phone: '' };
+    const [sl, sc] = REQ_ST[r.status] || REQ_ST.new;
+    return `<div class="card"><div class="row"><div class="grow"><b>${esc(p.name)}</b> <span class="small muted num">${fd(p.phone)}</span>
+        <div class="pinfo">${p.group ? GROUP_LABEL(p.group) + '، ' + COL_LABEL(p.col) : ''} · منطقه ${fd(p.region ?? '-')} · ثبت ${fd(r.created)}</div></div><span class="pill ${sc}">${sl}</span></div>
+      <div><span class="pill acc">${REQ_TYPES[r.type]}</span> ${esc(describeReq(r))}</div>
+      ${r.text ? `<div class="small">${esc(r.text)}</div>` : ''}${r.answer ? `<div class="small muted">نتیجه: ${esc(r.answer)}</div>` : ''}
+      <div class="row"><button class="btn" data-act="req-edit" data-id="${r.id}">ویرایش / وضعیت</button>${p.phone ? `<a class="btn ghost" href="tel:${p.phone}">تماس</a>` : ''}</div></div>`;
+  }).join('');
+  return head + `<main class="wrap stack">${cards || `<div class="card empty"><b>${S.requests.length ? 'درخواستی با این وضعیت نیست' : 'هنوز درخواستی ثبت نشده'}</b>با «+ درخواست جدید» یا از کارت هر نفر در «جستجو» ثبت کنید.</div>`}</main>`;
+}
+function openRequest(existing, pid) {
+  const r = existing ? { ...existing } : { id: 'rq' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), pid: pid || null, type: 'day', fromDate: '', toDate: '', toRegion: '', toGroup: '', toCol: '', text: '', status: 'new', answer: '', created: todayJalali() || '', createdAt: Date.now() };
+  const scrim = document.createElement('div'); scrim.className = 'scrim';
+  document.body.appendChild(scrim);
+  let q = '';
+  const opt = (v, l, sel) => `<option value="${esc(v)}" ${String(sel) === String(v) ? 'selected' : ''}>${esc(l)}</option>`;
+  const draw = () => {
+    const p = r.pid && person(r.pid);
+    let who;
+    if (p) who = `<div class="row"><div class="grow"><b>${esc(p.name)}</b> <span class="small muted num">${fd(p.phone)}</span><div class="pinfo">${p.group ? GROUP_LABEL(p.group) + '، ' + COL_LABEL(p.col) : ''} · منطقه ${fd(p.region ?? '-')}</div></div>${existing ? '' : '<button class="btn ghost" data-rq="change-person">تغییر نفر</button>'}</div>`;
+    else {
+      const key = x => fa(x).replace(/[\s\u200c]/g, '');
+      const hits = q ? Object.values(S.roster.people).filter(x => !x.archived && key(x.name).includes(key(q))).slice(0, 12) : [];
+      who = `<label class="f">نام متقاضی<input id="rq-q" class="inp" value="${esc(q)}" placeholder="بخشی از نام را بنویسید…" autocomplete="off"></label>
+        ${hits.map(x => `<button class="pick" style="border:0;border-bottom:1px solid var(--line);background:none;text-align:right;width:100%" data-rq-pid="${esc(x.id)}"><div class="grow"><b>${esc(x.name)}</b><div class="pinfo">${x.group ? GROUP_LABEL(x.group) + '، ' + COL_LABEL(x.col) : ''} · منطقه ${fd(x.region ?? '-')}</div></div></button>`).join('')}`;
+    }
+    const t0 = todayJalali() || '';
+    const myTurns = p ? turnsOf(p.id).filter(t => !t.sub) : [];
+    let fields = '';
+    if (r.type === 'day') fields = `<div class="row"><label class="f grow">نوبت فعلی<select id="rq-from" class="inp"><option value="">— انتخاب —</option>${myTurns.map(t => opt(t.sc.date, `${fd(t.sc.date)} · ${t.sc.wd}${t.sc.date < t0 ? ' (گذشته)' : ''}`, r.fromDate)).join('')}</select></label>
+        <label class="f grow">روز درخواستی<select id="rq-to" class="inp"><option value="">— نامشخص —</option>${S.roster.schedule.map(sc => opt(sc.date, `${fd(sc.date)} · ${sc.wd} · ${GROUP_LABEL(sc.group)}`, r.toDate)).join('')}</select></label></div>`;
+    if (r.type === 'region') fields = `<label class="f">منطقه‌ی درخواستی<select id="rq-region" class="inp"><option value="">— انتخاب —</option>${regionList().map(g => opt(g, 'منطقه ' + fd(g), r.toRegion)).join('')}</select></label>`;
+    if (r.type === 'group') fields = `<div class="row"><label class="f grow">گروه درخواستی<select id="rq-group" class="inp"><option value="">— انتخاب —</option>${S.roster.groups.map(g => opt(g.no, g.name, r.toGroup)).join('')}</select></label>
+        <label class="f grow">ستون<select id="rq-col" class="inp"><option value="">— فرقی ندارد —</option>${opt(1, 'ستون اول', r.toCol)}${opt(2, 'ستون دوم', r.toCol)}</select></label></div>`;
+    scrim.innerHTML = `<div class="sheet" role="dialog" aria-label="درخواست"><header><h2 class="grow">${existing ? 'ویرایش درخواست' : 'درخواست جدید'}</h2><button class="iconbtn" data-close aria-label="بستن">✕</button></header>
+      <div class="body">${who}
+      <label class="f">نوع درخواست<select id="rq-type" class="inp">${Object.entries(REQ_TYPES).map(([k, l]) => opt(k, l, r.type)).join('')}</select></label>
+      ${fields}
+      <label class="f">شرح / دلیل درخواست<textarea id="rq-text" class="inp" style="min-height:70px" placeholder="مثلاً: به‌دلیل شیفت کاری، پنجشنبه‌ها امکان حضور ندارد">${esc(r.text)}</textarea></label>
+      <div class="row"><label class="f grow">وضعیت<select id="rq-status" class="inp">${Object.entries(REQ_ST).map(([k, [l]]) => opt(k, l, r.status)).join('')}</select></label></div>
+      <label class="f">نتیجه / پاسخ (اختیاری)<input id="rq-answer" class="inp" value="${esc(r.answer)}"></label>
+      <div class="row"><button class="btn pri" data-rq="save">ذخیره</button>${existing ? '<button class="btn danger" data-rq="del">حذف</button>' : ''}</div></div></div>`;
+    const qi = $('#rq-q', scrim); if (qi) { qi.focus(); qi.setSelectionRange(q.length, q.length); }
+  };
+  const readForm = () => {
+    const v = id => $('#' + id, scrim)?.value;
+    if (v('rq-from') !== undefined) r.fromDate = v('rq-from');
+    if (v('rq-to') !== undefined) r.toDate = v('rq-to');
+    if (v('rq-region') !== undefined) r.toRegion = v('rq-region');
+    if (v('rq-group') !== undefined) r.toGroup = v('rq-group');
+    if (v('rq-col') !== undefined) r.toCol = v('rq-col');
+    r.text = fa(v('rq-text') || ''); r.status = v('rq-status') || r.status; r.answer = fa(v('rq-answer') || '');
+  };
+  draw();
+  scrim.addEventListener('input', e => { if (e.target.id === 'rq-q') { if (e.target.value === q) return; q = e.target.value; readForm(); draw(); } });
+  scrim.addEventListener('change', e => { if (e.target.id === 'rq-type') { readForm(); r.type = e.target.value; draw(); } });
+  scrim.addEventListener('click', async e => {
+    if (e.target === scrim || e.target.closest('[data-close]')) return scrim.remove();
+    const pick = e.target.closest('[data-rq-pid]'); if (pick) { readForm(); r.pid = pick.dataset.rqPid; return draw(); }
+    const b = e.target.closest('[data-rq]'); if (!b) return;
+    if (b.dataset.rq === 'change-person') { readForm(); r.pid = null; q = ''; return draw(); }
+    if (b.dataset.rq === 'save') {
+      readForm();
+      if (!r.pid) return toast('نفر متقاضی را انتخاب کنید.', true);
+      if (r.type === 'region' && !r.toRegion) return toast('منطقه‌ی درخواستی را انتخاب کنید.', true);
+      if (r.type === 'group' && !r.toGroup) return toast('گروه درخواستی را انتخاب کنید.', true);
+      if (r.type === 'other' && !r.text) return toast('شرح درخواست را بنویسید.', true);
+      r.updatedAt = Date.now();
+      if (!(await saveRequests(S.requests.filter(x => x.id !== r.id).concat(r)))) return;
+      scrim.remove(); toast('درخواست ثبت شد.'); render();
+    }
+    if (b.dataset.rq === 'del') {
+      if (b.dataset.sure !== '1') { b.dataset.sure = '1'; b.textContent = 'برای حذف دوباره بزنید'; return; }
+      if (!(await saveRequests(S.requests.filter(x => x.id !== r.id)))) return;
+      scrim.remove(); toast('درخواست حذف شد.'); render();
+    }
+  });
+}
+function requestsText() {
+  return filteredRequests().map((r, k) => { const p = person(r.pid) || {};
+    return `${fd(k + 1)}) ${p.name} - ${p.group ? GROUP_LABEL(p.group) + '، ' + COL_LABEL(p.col) : ''} - منطقه ${fd(p.region ?? '-')}\n${REQ_TYPES[r.type]}: ${describeReq(r)}${r.text ? '\nشرح: ' + r.text : ''}\nوضعیت: ${REQ_ST[r.status][0]}${r.answer ? ' - ' + r.answer : ''}`; }).join('\n\n');
+}
+async function exportRequests() {
+  if (!window.XLSX) return toast('کتابخانه‌ی اکسل بارگذاری نشد.', true);
+  const rows = filteredRequests().slice().reverse().map((r, k) => { const p = person(r.pid) || {};
+    return { 'ردیف': k + 1, 'تاریخ ثبت': r.created, 'نام و نام خانوادگی': p.name || '', 'شماره تماس': p.phone || '', 'گروه': p.group ? GROUP_LABEL(p.group) : '', 'ستون': p.col ? COL_LABEL(p.col) : '', 'منطقه‌ی فعلی': p.region ?? '', 'نوع درخواست': REQ_TYPES[r.type], 'شرح درخواست': describeReq(r), 'دلیل / توضیحات': r.text, 'وضعیت': REQ_ST[r.status][0], 'نتیجه': r.answer }; });
+  const wb = XLSX.utils.book_new(); wb.Workbook = { Views: [{ RTL: true }] };
+  const ws = XLSX.utils.json_to_sheet(rows.length ? rows : [{ 'ردیف': '' }]);
+  ws['!cols'] = [{ wch: 5 }, { wch: 11 }, { wch: 22 }, { wch: 13 }, { wch: 11 }, { wch: 9 }, { wch: 9 }, { wch: 18 }, { wch: 40 }, { wch: 40 }, { wch: 12 }, { wch: 25 }];
+  XLSX.utils.book_append_sheet(wb, ws, 'درخواست‌ها');
+  await saveFile(`paiesh-requests-${toLatin(todayJalali() || '').replace(/\//g, '-')}.xlsx`, new Blob([XLSX.write(wb, { bookType: 'xlsx', type: 'array' })]));
 }
 
 /* substitute picker */
@@ -877,6 +995,11 @@ document.addEventListener('click', async e => {
     case 'copy-nums': { const dv = dayView(S.msgDate); return copy(dv.assigns.filter(a => a.status !== 'absent').map(a => person(a.pid)).filter(p => p?.phoneOk).map(p => p.phone).join('\n'), 'شماره‌ها'); }
     case 'copy-generic': return copy(genericText(dayView(S.msgDate)), 'متن عمومی');
     case 'find-pick': S.findPid = d.pid; return render();
+    case 'req-new': return openRequest(null, d.pid);
+    case 'req-edit': return openRequest(S.requests.find(x => x.id === d.id));
+    case 'req-filter': S.reqFilter = d.v; return render();
+    case 'req-copy': return copy(requestsText() || '—', 'متن درخواست‌ها');
+    case 'req-export': return exportRequests();
     case 'show-turns': S.findPid = d.pid; S.findQ = person(d.pid)?.name || ''; S.tab = 'find'; window.scrollTo(0, 0); return render();
     case 'drv-new': return openDriver(null);
     case 'drv-edit': return openDriver((S.settings.drivers || []).find(x => x.id === d.id));
@@ -898,7 +1021,7 @@ document.addEventListener('click', async e => {
       toast('فهرست ذخیره شد.'); S.tab = 'day'; return render();
     }
     case 'backup': {
-      const blob = new Blob([JSON.stringify({ app: 'paiesh', v: 1, roster: S.roster, days: S.days, settings: S.settings }, null, 1)], { type: 'application/json' });
+      const blob = new Blob([JSON.stringify({ app: 'paiesh', v: 1, roster: S.roster, days: S.days, settings: S.settings, requests: S.requests }, null, 1)], { type: 'application/json' });
       await saveFile(`paiesh-backup-${toLatin(todayJalali() || '').replace(/\//g, '-')}.json`, blob);
       await saveSettings({ lastBackup: Date.now() }); return render();
     }
@@ -929,6 +1052,7 @@ document.addEventListener('change', async e => {
       if (j.app !== 'paiesh' || !j.roster) throw new Error('این فایل پشتیبان پایش نیست.');
       await Store.setDoc('roster', 'main', j.roster); await Store.setDoc('settings', 'main', j.settings || S.settings);
       for (const [date, rec] of Object.entries(j.days || {})) await Store.setDoc('days', dayId(date), rec);
+      if (j.requests) { await Store.setDoc('settings', 'requests', { list: j.requests }); S.requests = j.requests; }
       S.roster = j.roster; S.days = j.days || {}; S.settings = { ...S.settings, ...(j.settings || {}) }; recalc();
       S.date = nearestDate(todayJalali()); S.msgDate = nextDate(S.date, 1);
       toast('پشتیبان بازگردانی شد.');
@@ -951,6 +1075,7 @@ document.addEventListener('input', e => {
     if (!S.roster && PRELOAD) { S.roster = PRELOAD; try { await Store.setDoc('roster', 'main', PRELOAD); } catch { } }
     const st = await Store.getDoc('settings', 'main'); if (st) S.settings = { ...S.settings, ...st };
     if ((S.settings.tplV || 1) < TPL_VERSION) { S.settings.template = DEFAULT_TEMPLATE; S.settings.tplV = TPL_VERSION; }
+    S.requests = (await Store.getDoc('settings', 'requests'))?.list || [];
     const list = await Store.listColl('days');
     S.days = {}; for (const rec of Object.values(list)) if (rec?.date) S.days[rec.date] = rec;
   } catch (e) { toast('خواندن اطلاعات ناموفق بود: ' + (e.message || e.code || ''), true); }
