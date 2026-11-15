@@ -169,7 +169,7 @@ const numOr = v => { const n = parseInt(toLatin(v), 10); return Number.isFinite(
 
 /* ---------- workbook parsing (positional: col1 = B..G, col2 = H..M) ---------- */
 function parseWorkbook(sheets) {
-  const groups = [], people = {}, warnings = [], schedule = [];
+  const groups = [], people = {}, warnings = [], schedule = [], drivers = [];
   const addPerson = (name, phoneRaw, home, gas, region, g, col) => {
     name = fa(name);
     if (!name) return null;
@@ -206,6 +206,7 @@ function parseWorkbook(sheets) {
       const a = addPerson(r[1], r[2], r[3], r[4], r[5], g, 1);
       const b = addPerson(r[7], r[8], r[9], r[10], r[11], g, 2);
       if (a || b) grp.rows.push({ c1: a, c2: b });
+      if (fa(r[13])) drivers.push({ name: fa(r[13]), phone: normPhone(r[14]).ok ? normPhone(r[14]).phone : '' });
     }
     groups.push(grp);
   }
@@ -234,7 +235,7 @@ function parseWorkbook(sheets) {
     }
   }
   if (!groups.length) throw new Error('هیچ برگه‌ی گروهی در فایل پیدا نشد.');
-  return { groups, people, schedule, quota, warnings, importedAt: Date.now() };
+  return { groups, people, schedule, quota, warnings, drivers, importedAt: Date.now() };
 }
 
 /* ---------- column rotation ---------- */
@@ -289,15 +290,18 @@ const Store = {
 const dayId = date => 'd' + date.replace(/\D/g, '');
 
 /* ---------- state ---------- */
-const DEFAULT_TEMPLATE = `سلام {نام} عزیز
-یادآوری: {روز} {تاریخ} نوبت پایش زمستانی {گروه} ({ستون}) است.
-منطقه‌ی مورد پایش شما: منطقه {منطقه}
+const DEFAULT_TEMPLATE = `جناب آقای {نام}
+با سلام و احترام
+به استحضار می‌رساند فردا {روز} {تاریخ} نوبت پایش زمستانی شما ({گروه}، {ستون}) است.
+خواهشمند است جهت انجام پایش به {اداره} مراجعه فرمایید.
+راننده: {راننده}
 سرگروه: {سرگروه}
-لطفاً حضور خود را با پاسخ به همین پیام تأیید کنید.
+لطفاً حضور خود را با پاسخ به همین پیام اعلام فرمایید.
 با تشکر`;
+const TPL_VERSION = 2;
 const REASONS = ['بیماری', 'مأموریت / کار', 'مرخصی / سفر', 'مشکل خانوادگی', 'پاسخ نداد', 'انصراف'];
 const S = {
-  loading: true, roster: null, days: {}, settings: { template: DEFAULT_TEMPLATE, startCol: {} },
+  loading: true, roster: null, days: {}, settings: { template: DEFAULT_TEMPLATE, tplV: TPL_VERSION, startCol: {}, drivers: [] },
   tab: 'day', date: null, msgDate: null, colMap: {},
   rep: { from: '', to: '', q: '', view: 'log' }, findQ: '', findPid: null, importPreview: null
 };
@@ -447,7 +451,14 @@ function personRow(a, i) {
         <button class="${a.status === 'went' ? 'on went' : ''}" data-act="status" data-i="${i}" data-s="went">رفت</button>
         <button class="${a.status === 'absent' ? 'on absent' : ''}" data-act="status" data-i="${i}" data-s="absent">نرفت</button>
         ${a.sub ? `<button data-act="remove" data-i="${i}" aria-label="حذف جایگزین">✕</button>` : ''}
-      </div></div>${p.phone ? `<div class="row small"><button class="chip" data-act="copy-phone" data-p="${p.phone}">کپی شماره</button></div>` : ''}${reasons}</div>`;
+      </div></div>
+      <div class="row small">${p.phone ? `<button class="chip" data-act="copy-phone" data-p="${p.phone}">کپی شماره</button>` : ''}<button class="chip" data-act="show-turns" data-pid="${esc(a.pid)}">نوبت‌ها</button>
+        <label class="row grow" style="gap:4px;min-width:160px">راننده:<select class="inp drv-sel grow" data-i="${i}" style="padding:3px 6px">${driverOptions(a.driver)}</select></label></div>${reasons}</div>`;
+}
+
+function driverOptions(sel) {
+  const ds = S.settings.drivers || [];
+  return `<option value="">— بدون راننده —</option>${ds.map(d => `<option value="${esc(d.id)}" ${d.id === sel ? 'selected' : ''}>${esc(d.name)}${d.car ? ' · ' + esc(d.car) : ''}${d.plate ? ' · ' + esc(d.plate) : ''}</option>`).join('')}<option value="__new">+ راننده‌ی جدید…</option>`;
 }
 
 /* person search: upcoming turns by the column rotation, plus history */
@@ -459,7 +470,7 @@ function turnsOf(pid) {
     const live = rec && rec.col === S.colMap[sc.date] && rec.group === sc.group && rec.assigns?.length;
     const a = live ? rec.assigns.find(x => x.pid === pid) : null;
     const rostered = sc.group === p.group && S.colMap[sc.date] === p.col;
-    if (a) out.push({ sc, status: a.status, reason: a.reason, region: a.region, sub: a.sub });
+    if (a) out.push({ sc, status: a.status, reason: a.reason, region: a.region, sub: a.sub, driver: a.driver });
     else if (rostered && !live) out.push({ sc, status: 'due', region: p.region });
     else if (rostered && live) out.push({ sc, status: 'replaced', region: p.region });
   }
@@ -468,7 +479,8 @@ function turnsOf(pid) {
 function viewFind() {
   const q = fa(S.findQ);
   const ppl = Object.values(S.roster.people);
-  const hits = q ? ppl.filter(p => fa(p.name).includes(q) || (toLatin(q).replace(/\D/g, '').length >= 3 && p.phone.includes(toLatin(q).replace(/\D/g, '')))).slice(0, 30) : [];
+  const key = x => fa(x).replace(/[\s\u200c]/g, '');
+  const hits = q ? ppl.filter(p => key(p.name).includes(key(q)) || (toLatin(q).replace(/\D/g, '').length >= 3 && p.phone.includes(toLatin(q).replace(/\D/g, '')))).slice(0, 30) : [];
   const head = header(`<input id="find-q" class="inp" placeholder="نام یا شماره را بنویسید…" value="${esc(S.findQ)}" autocomplete="off">`);
   let body = '';
   const sel = S.findPid && person(S.findPid);
@@ -478,7 +490,7 @@ function viewFind() {
     const up = turns.filter(t => t.sc.date >= t0 && (t.status === 'due' || t.status === 'planned'));
     const past = turns.filter(t => !(t.sc.date >= t0 && (t.status === 'due' || t.status === 'planned')));
     const LBL = { due: ['نوبت', ''], planned: ['ثبت‌شده', ''], went: ['رفت', 'ok'], absent: ['نرفت', 'bad'], replaced: ['جایگزین شد', 'warn'] };
-    const line = t => `<tr><td>${fd(t.sc.date)}</td><td>${esc(t.sc.wd)}</td><td>${GROUP_LABEL(t.sc.group)}${t.sub ? ' <span class="subtag">جایگزین</span>' : ''}</td><td>${fd(t.region)}</td><td><span class="pill ${LBL[t.status][1]}">${LBL[t.status][0]}</span>${t.reason ? ' <span class="small muted">' + esc(t.reason) + '</span>' : ''}${/تعطیل/.test(t.sc.note) ? ' <span class="pill warn">تعطیل</span>' : ''}</td></tr>`;
+    const line = t => `<tr><td>${fd(t.sc.date)}</td><td>${esc(t.sc.wd)}</td><td>${GROUP_LABEL(t.sc.group)}${t.sub ? ' <span class="subtag">جایگزین</span>' : ''}</td><td>${fd(t.region)}</td><td><span class="pill ${LBL[t.status][1]}">${LBL[t.status][0]}</span>${t.reason ? ' <span class="small muted">' + esc(t.reason) + '</span>' : ''}${/تعطیل/.test(t.sc.note) ? ' <span class="pill warn">تعطیل</span>' : ''}${t.driver && driverText(t.driver) ? '<div class="small muted">راننده: ' + esc(driverText(t.driver)) + '</div>' : ''}</td></tr>`;
     body = `<div class="card"><div class="row"><div class="grow"><a class="pname" ${sel.phone ? `href="tel:${sel.phone}"` : ''}>${esc(sel.name)}<span class="tel num">${fd(sel.phone)}</span></a>
         <div class="pinfo">${sel.archived ? 'خارج از فهرست فعلی' : sel.group ? `${GROUP_LABEL(sel.group)}، ${COL_LABEL(sel.col)}` : 'نفر اضافه‌شده'} · پایش منطقه ${fd(sel.region ?? '-')}${sel.home != null ? ' · سکونت منطقه ' + fd(sel.home) : ''}${sel.gas != null ? ' · گاز منطقه ' + fd(sel.gas) : ''}</div></div>
         <div class="row">${sel.phone ? `<button class="btn" data-act="copy-phone" data-p="${sel.phone}">کپی شماره</button>` : ''}<button class="btn ghost" data-act="find-clear">جستجوی دیگر</button></div></div>
@@ -493,12 +505,20 @@ function viewFind() {
 }
 
 /* reminder messages */
-function fillTemplate(tpl, p, sc, grp, col, region) {
-  return tpl.replace(/\{نام\}/g, p.name).replace(/\{تاریخ\}/g, fd(sc.date)).replace(/\{روز\}/g, sc.wd).replace(/\{گروه\}/g, grp?.name || '')
+function driverText(id) {
+  const d = (S.settings.drivers || []).find(x => x.id === id);
+  if (!d) return '';
+  return [d.name, d.phone ? fd(d.phone) : '', [d.car, d.plate ? 'پلاک ' + d.plate : ''].filter(Boolean).join(' ')].filter(Boolean).join(' - ');
+}
+function fillTemplate(tpl, p, sc, grp, col, region, driverId) {
+  const drv = driverText(driverId);
+  if (!drv) tpl = tpl.replace(/^.*\{راننده\}.*(\n|$)/gm, '');
+  if (region == null || region === '') tpl = tpl.replace(/\{اداره\}/g, 'اداره گاز منطقه مربوط');
+  return tpl.replace(/\{اداره\}/g, `اداره گاز منطقه ${fd(region)}`).replace(/\{راننده\}/g, drv).replace(/\{نام\}/g, p.name).replace(/\{تاریخ\}/g, fd(sc.date)).replace(/\{روز\}/g, sc.wd).replace(/\{گروه\}/g, grp?.name || '')
     .replace(/\{ستون\}/g, COL_LABEL(col)).replace(/\{منطقه\}/g, fd(region ?? '')).replace(/\{سرگروه\}/g, grp?.leader || '');
 }
 function genericText(dv) {
-  const tpl = (S.settings.template || DEFAULT_TEMPLATE).replace(/\{نام\}\s*عزیز/g, 'همکار گرامی').replace(/\{نام\}/g, 'همکار گرامی').replace(/.*\{منطقه\}.*\n?/g, '');
+  const tpl = (S.settings.template || DEFAULT_TEMPLATE).replace(/جناب\s*آقای\s*\{نام\}/g, 'همکار گرامی').replace(/\{نام\}\s*عزیز/g, 'همکار گرامی').replace(/\{نام\}/g, 'همکار گرامی').replace(/.*\{منطقه\}.*\n?/g, '');
   return fillTemplate(tpl, { name: '' }, dv.sc, groupOf(dv.sc.group), dv.col, '');
 }
 function viewMsg() {
@@ -513,14 +533,14 @@ function viewMsg() {
     <div class="daymeta"><span class="pill acc">${grp?.name} · ${COL_LABEL(dv.col)}</span><span class="pill">${esc(dv.sc.wd)} ${fd(dv.sc.date)}</span><span class="pill">${fd(list.length)} نفر</span></div>`);
   const tplCard = `<details class="card"><summary><b>متن پیش‌فرض پیام</b> <span class="small muted">(برای ویرایش باز کنید)</span></summary>
       <textarea id="tpl" class="inp">${esc(tpl)}</textarea>
-      <p class="small muted" style="margin:0">جای‌گذاری‌ها: {نام} {روز} {تاریخ} {گروه} {ستون} {منطقه} {سرگروه}</p>
+      <p class="small muted" style="margin:0">جای‌گذاری‌ها: {نام} {روز} {تاریخ} {گروه} {ستون} {اداره} {منطقه} {راننده} {سرگروه}. اگر راننده ثبت نشده باشد، خط راننده حذف می‌شود.</p>
       <div class="row"><button class="btn pri" data-act="save-tpl">ذخیره‌ی متن</button><button class="btn ghost" data-act="reset-tpl">متن اولیه</button></div></details>`;
   const bulk = `<div class="card"><h3>ارسال گروهی</h3>
       <p class="small muted" style="margin:0">در بیشتر گوشی‌ها پیامک گروهی با یک دکمه قابل اعتماد نیست. شماره‌ها و متن عمومی را کپی کنید یا برای هر نفر جدا بفرستید.</p>
       <div class="row"><button class="btn" data-act="copy-nums">کپی ${fd(nums.length)} شماره</button><button class="btn" data-act="copy-generic">کپی متن عمومی</button>
       <a class="btn" href="sms:${nums.join(',')}?body=${encodeURIComponent(generic)}">پیامک به همه</a></div></div>`;
   const per = list.map(({ a, p }) => {
-    const text = fillTemplate(tpl, p, dv.sc, grp, dv.col, a.region);
+    const text = fillTemplate(tpl, p, dv.sc, grp, dv.col, a.region, a.driver);
     return `<div class="msg"><div class="row"><a class="pname grow" ${p.phone ? `href="tel:${p.phone}"` : ''}>${esc(p.name)}${a.sub ? '<span class="subtag">جایگزین</span>' : ''}<span class="tel num">${fd(p.phone)}</span></a><span class="pill">منطقه ${fd(a.region)}</span></div>
       <pre>${esc(text)}</pre>
       <div class="row">${p.phoneOk ? `<a class="btn pri" href="sms:${p.phone}?body=${encodeURIComponent(text)}">ارسال پیامک</a>` : '<span class="pill bad">شماره نامعتبر</span>'}<button class="btn" data-act="copy-one" data-t="${esc(text)}">کپی متن</button></div></div>`;
@@ -536,7 +556,7 @@ function allRecords() {
     const sc = schedFor(d.date);
     for (const a of d.assigns) {
       const p = person(a.pid) || { name: '?', phone: '' };
-      out.push({ date: d.date, wd: sc?.wd || '', group: d.group, col: d.col, pid: a.pid, name: p.name, phone: p.phone, region: a.region, home: p.home, gas: p.gas, status: a.status, reason: a.reason || '', sub: a.sub });
+      out.push({ date: d.date, wd: sc?.wd || '', group: d.group, col: d.col, pid: a.pid, name: p.name, phone: p.phone, region: a.region, home: p.home, gas: p.gas, status: a.status, reason: a.reason || '', sub: a.sub, driver: (S.settings.drivers || []).find(x => x.id === a.driver) || null });
     }
   }
   return out.sort((x, y) => x.date.localeCompare(y.date) || (x.region - y.region));
@@ -555,6 +575,35 @@ function personSummary(recs) {
   }
   return Object.values(m).sort((a, b) => b.absent - a.absent || b.went - a.went);
 }
+/* attendance per person within each group: turns due up to the cutoff vs went / missed */
+function attendanceRows(groupNo, cutoff) {
+  return Object.values(S.roster.people).filter(p => !p.archived && p.group && (!groupNo || p.group === groupNo))
+    .sort((a, b) => a.group - b.group || a.col - b.col || (a.region ?? 99) - (b.region ?? 99))
+    .map(p => {
+      const ts = turnsOf(p.id).filter(t => t.sc.date <= cutoff);
+      const own = ts.filter(t => !t.sub);
+      const went = own.filter(t => t.status === 'went').length;
+      const absent = own.filter(t => t.status === 'absent' || t.status === 'replaced').length;
+      const reasons = own.filter(t => t.status === 'absent' && t.reason).map(t => t.reason);
+      return { p, due: own.length, went, absent, unrec: own.length - went - absent, subWent: ts.filter(t => t.sub && t.status === 'went').length, reasons };
+    });
+}
+function groupAttendanceHtml() {
+  const t0 = todayJalali() || '';
+  const cutoff = S.rep.to || t0;
+  const gsel = `<div class="card"><div class="row"><label class="f grow">گروه<select id="rep-grp" class="inp"><option value="">همه‌ی گروه‌ها</option>${S.roster.groups.map(g => `<option value="${g.no}" ${+S.rep.grp === g.no ? 'selected' : ''}>${g.name}</option>`).join('')}</select></label></div>
+    <p class="small muted" style="margin:0">نوبت‌ها تا تاریخ ${fd(cutoff)} ${S.rep.to ? '' : '(امروز)'} شمرده می‌شوند. برای تاریخ دیگر، «تا تاریخ» بالا را تغییر دهید. «ثبت‌نشده» یعنی نوبتش بوده ولی وضعیتی برایش زده نشده.</p></div>`;
+  const groups = S.roster.groups.filter(g => !S.rep.grp || g.no === +S.rep.grp);
+  const pct = r => r.went + r.absent ? Math.round(100 * r.went / (r.went + r.absent)) + '٪' : '-';
+  return gsel + groups.map(g => {
+    const rows = attendanceRows(g.no, cutoff);
+    const tot = rows.reduce((a, r) => ({ due: a.due + r.due, went: a.went + r.went, absent: a.absent + r.absent, unrec: a.unrec + r.unrec }), { due: 0, went: 0, absent: 0, unrec: 0 });
+    return `<h2>${g.name}${g.leader ? ` <span class="small muted">· ${esc(g.leader)}</span>` : ''}</h2>
+      <div class="daymeta"><span class="pill">${fd(tot.due)} نوبت</span><span class="pill ok">${fd(tot.went)} رفته</span><span class="pill bad">${fd(tot.absent)} نرفته</span><span class="pill">${fd(tot.unrec)} ثبت‌نشده</span></div>
+      <div class="tbl"><table class="num"><thead><tr><th>نام</th><th>ستون</th><th>منطقه</th><th>نوبت</th><th>رفته</th><th>نرفته</th><th>ثبت‌نشده</th><th>حضور</th><th>جایگزین دیگران</th><th>دلایل</th></tr></thead><tbody>
+      ${rows.map(r => `<tr><td><button class="chip" data-act="show-turns" data-pid="${esc(r.p.id)}">${esc(r.p.name)}</button></td><td>${r.p.col === 1 ? 'اول' : 'دوم'}</td><td>${fd(r.p.region ?? '-')}</td><td>${fd(r.due)}</td><td class="st-went">${fd(r.went)}</td><td class="st-absent">${fd(r.absent)}</td><td>${fd(r.unrec)}</td><td>${fd(pct(r))}</td><td>${fd(r.subWent || '')}</td><td>${esc(r.reasons.join('، '))}</td></tr>`).join('')}</tbody></table></div>`;
+  }).join('');
+}
 function viewRep() {
   const recs = filteredRecords();
   const went = recs.filter(r => r.status === 'went').length, absent = recs.filter(r => r.status === 'absent').length, planned = recs.filter(r => r.status === 'planned').length;
@@ -562,11 +611,12 @@ function viewRep() {
   const opts = sel => `<option value="">همه</option>` + S.roster.schedule.map(s => `<option value="${s.date}" ${s.date === sel ? 'selected' : ''}>${fd(s.date)}</option>`).join('');
   const filters = `<div class="card"><div class="row"><label class="f grow">از تاریخ<select id="rep-from" class="inp">${opts(S.rep.from)}</select></label><label class="f grow">تا تاریخ<select id="rep-to" class="inp">${opts(S.rep.to)}</select></label></div>
      <label class="f">جستجوی نام یا شماره<input id="rep-q" class="inp" value="${esc(S.rep.q)}" placeholder="مثلاً حاتمی"></label>
-     <div class="row"><button class="btn ${S.rep.view === 'log' ? 'pri' : ''}" data-act="rep-view" data-v="log">ریز ثبت‌ها</button><button class="btn ${S.rep.view === 'people' ? 'pri' : ''}" data-act="rep-view" data-v="people">به تفکیک نفر</button><span class="grow"></span><button class="btn" data-act="export">خروجی اکسل</button></div></div>`;
+     <div class="row"><button class="btn ${S.rep.view === 'log' ? 'pri' : ''}" data-act="rep-view" data-v="log">ریز ثبت‌ها</button><button class="btn ${S.rep.view === 'people' ? 'pri' : ''}" data-act="rep-view" data-v="people">به تفکیک نفر</button><button class="btn ${S.rep.view === 'groups' ? 'pri' : ''}" data-act="rep-view" data-v="groups">حضور گروه‌ها</button><span class="grow"></span><button class="btn" data-act="export">خروجی اکسل</button></div></div>`;
   const sum = `<div class="sum num"><div><b>${fd(days)}</b><span>روز ثبت‌شده</span></div><div><b style="color:var(--ok)">${fd(went)}</b><span>رفته</span></div><div><b style="color:var(--bad)">${fd(absent)}</b><span>نرفته</span></div><div><b>${fd(planned)}</b><span>بدون وضعیت</span></div></div>`;
   let table;
-  if (!recs.length) table = `<div class="card empty"><b>هنوز ثبتی نیست</b>در برگه‌ی «روز پایش» وضعیت نفرات را بزنید تا این‌جا نمایش داده شود.</div>`;
-  else if (S.rep.view === 'log') table = `<div class="tbl"><table class="num"><thead><tr><th>تاریخ</th><th>گروه</th><th>نام</th><th>منطقه</th><th>وضعیت</th><th>دلیل</th></tr></thead><tbody>${recs.map(r => `<tr><td>${fd(r.date)}</td><td>${fd(r.group)} / ${r.col === 1 ? 'اول' : 'دوم'}</td><td>${esc(r.name)}${r.sub ? ' <span class="subtag">جایگزین</span>' : ''}</td><td>${fd(r.region)}</td><td class="st-${r.status}">${ST[r.status]}</td><td>${esc(r.reason)}</td></tr>`).join('')}</tbody></table></div>`;
+  if (S.rep.view === 'groups') table = groupAttendanceHtml();
+  else if (!recs.length) table = `<div class="card empty"><b>هنوز ثبتی نیست</b>در برگه‌ی «روز پایش» وضعیت نفرات را بزنید تا این‌جا نمایش داده شود.</div>`;
+  else if (S.rep.view === 'log') table = `<div class="tbl"><table class="num"><thead><tr><th>تاریخ</th><th>گروه</th><th>نام</th><th>منطقه</th><th>وضعیت</th><th>دلیل</th><th>راننده</th></tr></thead><tbody>${recs.map(r => `<tr><td>${fd(r.date)}</td><td>${fd(r.group)} / ${r.col === 1 ? 'اول' : 'دوم'}</td><td>${esc(r.name)}${r.sub ? ' <span class="subtag">جایگزین</span>' : ''}</td><td>${fd(r.region)}</td><td class="st-${r.status}">${ST[r.status]}</td><td>${esc(r.reason)}</td><td>${esc(r.driver ? r.driver.name + (r.driver.plate ? ' · ' + r.driver.plate : '') : '')}</td></tr>`).join('')}</tbody></table></div>`;
   else table = `<div class="tbl"><table class="num"><thead><tr><th>نام</th><th>گروه</th><th>رفته</th><th>نرفته</th><th>آخرین حضور</th><th>دلایل</th></tr></thead><tbody>${personSummary(recs).map(s => `<tr><td>${esc(s.name)}</td><td>${fd(s.group || '-')}</td><td class="st-went">${fd(s.went)}</td><td class="st-absent">${fd(s.absent)}</td><td>${fd(s.last || '-')}</td><td>${esc(s.reasons.join('، '))}</td></tr>`).join('')}</tbody></table></div>`;
   return header() + `<main class="wrap stack">${filters}${sum}${table}</main>`;
 }
@@ -587,9 +637,12 @@ function viewData() {
        ${pv.diff ? diffHtml(pv.diff) : ''}
        <p class="small muted" style="margin:0">سوابق ثبت‌شده‌ی روزها حفظ می‌شوند. نفراتی که شماره‌شان عوض نشده، همان نفر شناخته می‌شوند.</p>
        <div class="row"><button class="btn pri" data-act="import-ok">تأیید و ذخیره</button><button class="btn ghost" data-act="import-cancel">انصراف</button></div></div>` : ''}</div>`;
+  const ds = S.settings.drivers || [];
+  const drivers = r ? `<div class="card"><div class="row"><h2 class="grow">رانندگان</h2><button class="btn pri" data-act="drv-new">+ راننده‌ی جدید</button></div>
+     ${ds.length ? ds.map(d => `<div class="pick"><div class="grow"><b>${esc(d.name)}</b> <span class="small muted num">${fd(d.phone)}</span><div class="pinfo">${esc([d.car, d.plate ? 'پلاک ' + d.plate : '', d.note].filter(Boolean).join(' · ') || '—')}</div></div>${d.phone ? `<a class="btn" href="tel:${esc(d.phone)}">تماس</a>` : ''}<button class="btn" data-act="drv-edit" data-id="${esc(d.id)}">ویرایش</button></div>`).join('') : '<p class="small muted" style="margin:0">هنوز راننده‌ای ثبت نشده. از این‌جا یا از فهرست «راننده» کنار هر نفر در روز پایش اضافه کنید.</p>'}</div>` : '';
   const backup = r ? `<div class="card"><h2>پشتیبان</h2><p class="small muted" style="margin:0">یک فایل کامل از فهرست، سوابق و تنظیمات. برای انتقال به گوشی دیگر یا نگهداری.</p>
      <div class="row"><button class="btn" data-act="backup">دریافت پشتیبان</button><label class="btn">بازگردانی از پشتیبان<input type="file" id="backup-file" accept=".json" hidden></label></div></div>` : '';
-  return header() + `<main class="wrap stack">${info}${imp}${backup}</main>`;
+  return header() + `<main class="wrap stack">${info}${drivers}${imp}${backup}</main>`;
 }
 
 /* what changes when a new file replaces the current roster */
@@ -612,6 +665,49 @@ function diffHtml(d) {
   return `<h3>تغییرات نسبت به فهرست فعلی</h3>${blk('جابه‌جا شده', d.moved, 'warn')}${blk('اضافه شده', d.added, 'ok')}${blk('حذف شده', d.removed, 'bad')}
     ${d.removed.length ? '<p class="small muted" style="margin:0">نفرات حذف‌شده در سوابق و جستجو با برچسب «خارج از فهرست فعلی» می‌مانند.</p>' : ''}
     ${d.kept.length ? `<p class="small muted" style="margin:0">روزهای ${esc(d.kept.map(fd).join('، '))} از قبل ثبت شده‌اند و با همان نفرات ثبت‌شده می‌مانند؛ بقیه‌ی روزهای آینده از فهرست جدید ساخته می‌شوند.</p>` : ''}`;
+}
+
+/* driver form (new or edit); onSaved receives the driver id */
+function openDriver(existing, onSaved) {
+  const d = existing || { id: 'drv' + Date.now().toString(36), name: '', phone: '', car: '', plate: '', note: '' };
+  const scrim = document.createElement('div'); scrim.className = 'scrim';
+  scrim.innerHTML = `<div class="sheet" role="dialog" aria-label="مشخصات راننده"><header><h2 class="grow">${existing ? 'ویرایش راننده' : 'راننده‌ی جدید'}</h2><button class="iconbtn" data-close aria-label="بستن">✕</button></header>
+    <div class="body"><label class="f">نام و نام خانوادگی<input id="drv-name" class="inp" value="${esc(d.name)}"></label>
+    <label class="f">شماره تماس<input id="drv-phone" class="inp" inputmode="tel" dir="ltr" value="${esc(d.phone)}"></label>
+    <label class="f">خودرو (نوع و رنگ)<input id="drv-car" class="inp" value="${esc(d.car)}" placeholder="مثلاً پژو ۴۰۵ سفید"></label>
+    <label class="f">پلاک<input id="drv-plate" class="inp" value="${esc(d.plate)}" placeholder="مثلاً ۱۲ ب ۳۴۵ ایران ۶۷"></label>
+    <label class="f">توضیحات<input id="drv-note" class="inp" value="${esc(d.note || '')}"></label>
+    <div class="row"><button class="btn pri" id="drv-save">ذخیره</button>${existing ? '<button class="btn danger" id="drv-del">حذف راننده</button>' : ''}</div></div></div>`;
+  document.body.appendChild(scrim);
+  const close = () => scrim.remove();
+  scrim.addEventListener('click', async e => {
+    if (e.target === scrim || e.target.closest('[data-close]')) return close();
+    if (e.target.id === 'drv-save') {
+      const name = fa($('#drv-name', scrim).value);
+      if (!name) return toast('نام راننده را وارد کنید.', true);
+      const ph = normPhone($('#drv-phone', scrim).value);
+      if ($('#drv-phone', scrim).value.trim() && !ph.ok) return toast('شماره باید ۱۱ رقم و با ۰۹ شروع شود.', true);
+      const nd = { ...d, name, phone: ph.ok ? ph.phone : '', car: fa($('#drv-car', scrim).value), plate: fa($('#drv-plate', scrim).value), note: fa($('#drv-note', scrim).value) };
+      const list = (S.settings.drivers || []).filter(x => x.id !== d.id).concat(nd);
+      if (!(await saveSettings({ drivers: list }))) return;
+      close(); toast('راننده ذخیره شد.'); onSaved && await onSaved(nd.id); render();
+    }
+    if (e.target.id === 'drv-del') {
+      if (e.target.dataset.sure !== '1') { e.target.dataset.sure = '1'; e.target.textContent = 'برای حذف دوباره بزنید'; return; }
+      if (!(await saveSettings({ drivers: (S.settings.drivers || []).filter(x => x.id !== d.id) }))) return;
+      close(); toast('راننده حذف شد. در سوابق قبلی نامش دیگر نمایش داده نمی‌شود.'); render();
+    }
+  });
+}
+async function saveSettings(patch) {
+  const prev = S.settings; S.settings = { ...S.settings, ...patch };
+  try { await Store.setDoc('settings', 'main', S.settings); return true; }
+  catch (e) { S.settings = prev; toast('ذخیره نشد: ' + (e.message || e.code || ''), true); return false; }
+}
+async function setDriver(i, id) {
+  const dv = dayView(S.date);
+  const assigns = dv.assigns.map((x, j) => j === i ? { ...x, driver: id || null } : x);
+  if (await saveDay(S.date, { ...dv, assigns })) { render(); if (id) toast(`راننده‌ی ${person(dv.assigns[i].pid)?.name}: ${driverText(id)}`); }
 }
 
 /* substitute picker */
@@ -696,7 +792,7 @@ async function flipCol() {
 async function exportXlsx() {
   if (!window.XLSX) return toast('کتابخانه‌ی اکسل بارگذاری نشد.', true);
   const recs = filteredRecords();
-  const log = recs.map(r => ({ 'تاریخ': r.date, 'روز': r.wd, 'گروه': GROUP_LABEL(r.group), 'ستون': COL_LABEL(r.col), 'نام': r.name, 'شماره تماس': r.phone, 'منطقه مورد پایش': r.region, 'منطقه زندگی': r.home ?? '', 'منطقه گاز': r.gas ?? '', 'وضعیت': ST[r.status], 'دلیل': r.reason, 'جایگزین': r.sub ? 'بله' : '' }));
+  const log = recs.map(r => ({ 'تاریخ': r.date, 'روز': r.wd, 'گروه': GROUP_LABEL(r.group), 'ستون': COL_LABEL(r.col), 'نام': r.name, 'شماره تماس': r.phone, 'منطقه مورد پایش': r.region, 'منطقه زندگی': r.home ?? '', 'منطقه گاز': r.gas ?? '', 'وضعیت': ST[r.status], 'دلیل': r.reason, 'جایگزین': r.sub ? 'بله' : '', 'نام راننده': r.driver?.name || '', 'تلفن راننده': r.driver?.phone || '', 'خودرو': r.driver?.car || '', 'پلاک': r.driver?.plate || '' }));
   const ppl = personSummary(recs).map(s => ({ 'نام': s.name, 'شماره': s.phone, 'گروه': s.group ? GROUP_LABEL(s.group) : '', 'تعداد حضور': s.went, 'تعداد غیبت': s.absent, 'آخرین حضور': s.last, 'دلایل غیبت': s.reasons.join('، ') }));
   const wb = XLSX.utils.book_new();
   const a = XLSX.utils.json_to_sheet(log.length ? log : [{ 'تاریخ': '' }]); a['!cols'] = [{ wch: 11 }, { wch: 9 }, { wch: 11 }, { wch: 9 }, { wch: 22 }, { wch: 13 }];
@@ -704,6 +800,10 @@ async function exportXlsx() {
   wb.Workbook = { Views: [{ RTL: true }] };
   XLSX.utils.book_append_sheet(wb, a, 'ریز پایش');
   XLSX.utils.book_append_sheet(wb, b, 'خلاصه نفرات');
+  const cutoff = S.rep.to || todayJalali() || '';
+  const att = attendanceRows(+S.rep.grp || 0, cutoff).map(r => ({ 'گروه': GROUP_LABEL(r.p.group), 'ستون': COL_LABEL(r.p.col), 'نام': r.p.name, 'شماره': r.p.phone, 'منطقه مورد پایش': r.p.region, [`نوبت تا ${cutoff}`]: r.due, 'رفته': r.went, 'نرفته': r.absent, 'ثبت‌نشده': r.unrec, 'جایگزین دیگران': r.subWent, 'دلایل غیبت': r.reasons.join('، ') }));
+  const c = XLSX.utils.json_to_sheet(att.length ? att : [{ 'نام': '' }]); c['!cols'] = [{ wch: 11 }, { wch: 9 }, { wch: 22 }, { wch: 13 }];
+  XLSX.utils.book_append_sheet(wb, c, 'حضور گروه‌ها');
   const buf = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
   await saveFile(`گزارش-پایش-${(S.rep.from || 'همه').replace(/\//g, '-')}.xlsx`, new Blob([buf]));
 }
@@ -748,6 +848,9 @@ document.addEventListener('click', async e => {
     case 'copy-nums': { const dv = dayView(S.msgDate); return copy(dv.assigns.filter(a => a.status !== 'absent').map(a => person(a.pid)).filter(p => p?.phoneOk).map(p => p.phone).join('\n'), 'شماره‌ها'); }
     case 'copy-generic': return copy(genericText(dayView(S.msgDate)), 'متن عمومی');
     case 'find-pick': S.findPid = d.pid; return render();
+    case 'show-turns': S.findPid = d.pid; S.findQ = person(d.pid)?.name || ''; S.tab = 'find'; window.scrollTo(0, 0); return render();
+    case 'drv-new': return openDriver(null);
+    case 'drv-edit': return openDriver((S.settings.drivers || []).find(x => x.id === d.id));
     case 'find-clear': S.findPid = null; S.findQ = ''; render(); $('#find-q')?.focus(); return;
     case 'rep-view': S.rep.view = d.v; return render();
     case 'export': return exportXlsx();
@@ -760,6 +863,8 @@ document.addEventListener('click', async e => {
       delete pv.diff;
       try { await Store.setDoc('roster', 'main', pv); } catch (err) { return toast('ذخیره‌ی فهرست انجام نشد: ' + (err.message || err.code || ''), true); }
       S.roster = pv; S.importPreview = null; recalc();
+      const have = S.settings.drivers || []; const fresh = (pv.drivers || []).filter(x => !have.some(h => h.name === x.name || (x.phone && h.phone === x.phone)));
+      if (fresh.length) await saveSettings({ drivers: have.concat(fresh.map((x, k) => ({ id: 'drv' + Date.now().toString(36) + k, car: '', plate: '', note: '', ...x }))) });
       const t0 = todayJalali(); S.date = nearestDate(t0); S.msgDate = nextDate(S.date, 1);
       toast('فهرست ذخیره شد.'); S.tab = 'day'; return render();
     }
@@ -775,7 +880,13 @@ document.addEventListener('change', async e => {
   if (t.id === 'msg-sel') { S.msgDate = t.value; return render(); }
   if (t.id === 'rep-from') { S.rep.from = t.value; return render(); }
   if (t.id === 'rep-to') { S.rep.to = t.value; return render(); }
+  if (t.id === 'rep-grp') { S.rep.grp = t.value; return render(); }
   if (t.classList.contains('reason-inp')) return setReason(+t.dataset.i, fa(t.value));
+  if (t.classList.contains('drv-sel')) {
+    const i = +t.dataset.i;
+    if (t.value === '__new') { t.value = dayView(S.date).assigns[i].driver || ''; return openDriver(null, id => setDriver(i, id)); }
+    return setDriver(i, t.value);
+  }
   if (t.id === 'day-note') { const dv = dayView(S.date); if (await saveDay(S.date, { ...dv, note: t.value })) toast('یادداشت ذخیره شد.'); return; }
   if (t.id === 'xlsx-file' && t.files[0]) {
     try { S.importPreview = await readXlsx(t.files[0]); if (S.roster) S.importPreview.diff = diffRoster(S.roster, S.importPreview); }
@@ -797,7 +908,7 @@ document.addEventListener('change', async e => {
 });
 let qT;
 document.addEventListener('input', e => {
-  if (e.target.id === 'find-q') { S.findQ = e.target.value; S.findPid = null; clearTimeout(qT); qT = setTimeout(() => { const pos = e.target.selectionStart; render(); const el = $('#find-q'); if (el) { el.focus(); el.setSelectionRange(pos, pos); } }, 250); }
+  if (e.target.id === 'find-q') { if (e.target.value === S.findQ) return; S.findQ = e.target.value; S.findPid = null; clearTimeout(qT); qT = setTimeout(() => { const pos = e.target.selectionStart; render(); const el = $('#find-q'); if (el) { el.focus(); el.setSelectionRange(pos, pos); } }, 250); }
   if (e.target.id === 'rep-q') { S.rep.q = e.target.value; clearTimeout(qT); qT = setTimeout(() => { const pos = e.target.selectionStart; render(); const el = $('#rep-q'); if (el) { el.focus(); el.setSelectionRange(pos, pos); } }, 300); }
 });
 
@@ -809,6 +920,7 @@ document.addEventListener('input', e => {
     S.roster = await Store.getDoc('roster', 'main');
     if (!S.roster && PRELOAD) { S.roster = PRELOAD; try { await Store.setDoc('roster', 'main', PRELOAD); } catch { } }
     const st = await Store.getDoc('settings', 'main'); if (st) S.settings = { ...S.settings, ...st };
+    if ((S.settings.tplV || 1) < TPL_VERSION) { S.settings.template = DEFAULT_TEMPLATE; S.settings.tplV = TPL_VERSION; }
     const list = await Store.listColl('days');
     S.days = {}; for (const rec of Object.values(list)) if (rec?.date) S.days[rec.date] = rec;
   } catch (e) { toast('خواندن اطلاعات ناموفق بود: ' + (e.message || e.code || ''), true); }
