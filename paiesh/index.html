@@ -1,4 +1,4 @@
-<title>پایش هوایی گاز</title>
+<title>پایش زمستانی گاز</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;700;800&display=swap">
@@ -135,7 +135,7 @@ td.st-absent{color:var(--bad);font-weight:700}
 <div id="app"></div>
 <div id="toast" class="toast" hidden></div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" onerror="var s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';document.head.appendChild(s)"></script>
 <script>
 /* ---------- roster preload (stays null in the published page; the roster lives in the store) ---------- */
 const PRELOAD = null;
@@ -290,7 +290,7 @@ const dayId = date => 'd' + date.replace(/\D/g, '');
 
 /* ---------- state ---------- */
 const DEFAULT_TEMPLATE = `سلام {نام} عزیز
-یادآوری: {روز} {تاریخ} نوبت پایش هوایی {گروه} ({ستون}) است.
+یادآوری: {روز} {تاریخ} نوبت پایش زمستانی {گروه} ({ستون}) است.
 منطقه‌ی مورد پایش شما: منطقه {منطقه}
 سرگروه: {سرگروه}
 لطفاً حضور خود را با پاسخ به همین پیام تأیید کنید.
@@ -385,7 +385,7 @@ function render() {
   window.scrollTo(0, keepScroll);
 }
 function header(inner) {
-  return `<header class="top"><div class="wrap"><div class="brand"><i></i>پایش هوایی گاز<span class="mode">${Store.mode === 'db' ? 'ذخیره در حساب شما' : 'ذخیره در همین مرورگر'}</span></div>${inner || ''}</div></header>`;
+  return `<header class="top"><div class="wrap"><div class="brand"><i></i>پایش زمستانی گاز<span class="mode">${Store.mode === 'db' ? 'ذخیره در حساب شما' : 'ذخیره در همین مرورگر'}</span></div>${inner || ''}</div></header>`;
 }
 function dateOptions(sel) {
   return S.roster.schedule.map(s => `<option value="${s.date}" ${s.date === sel ? 'selected' : ''}>${fd(s.date)} · ${esc(s.wd)} · ${GROUP_LABEL(s.group)} · ${COL_LABEL(S.colMap[s.date])}${/تعطیل/.test(s.note) ? ' · تعطیل' : ''}${S.days[s.date] ? ' ✓' : ''}</option>`).join('');
@@ -447,7 +447,7 @@ function personRow(a, i) {
         <button class="${a.status === 'went' ? 'on went' : ''}" data-act="status" data-i="${i}" data-s="went">رفت</button>
         <button class="${a.status === 'absent' ? 'on absent' : ''}" data-act="status" data-i="${i}" data-s="absent">نرفت</button>
         ${a.sub ? `<button data-act="remove" data-i="${i}" aria-label="حذف جایگزین">✕</button>` : ''}
-      </div></div>${reasons}</div>`;
+      </div></div>${p.phone ? `<div class="row small"><button class="chip" data-act="copy-phone" data-p="${p.phone}">کپی شماره</button></div>` : ''}${reasons}</div>`;
 }
 
 /* person search: upcoming turns by the column rotation, plus history */
@@ -481,7 +481,7 @@ function viewFind() {
     const line = t => `<tr><td>${fd(t.sc.date)}</td><td>${esc(t.sc.wd)}</td><td>${GROUP_LABEL(t.sc.group)}${t.sub ? ' <span class="subtag">جایگزین</span>' : ''}</td><td>${fd(t.region)}</td><td><span class="pill ${LBL[t.status][1]}">${LBL[t.status][0]}</span>${t.reason ? ' <span class="small muted">' + esc(t.reason) + '</span>' : ''}${/تعطیل/.test(t.sc.note) ? ' <span class="pill warn">تعطیل</span>' : ''}</td></tr>`;
     body = `<div class="card"><div class="row"><div class="grow"><a class="pname" ${sel.phone ? `href="tel:${sel.phone}"` : ''}>${esc(sel.name)}<span class="tel num">${fd(sel.phone)}</span></a>
         <div class="pinfo">${sel.group ? `${GROUP_LABEL(sel.group)}، ${COL_LABEL(sel.col)}` : 'نفر اضافه‌شده'} · پایش منطقه ${fd(sel.region ?? '-')}${sel.home != null ? ' · سکونت منطقه ' + fd(sel.home) : ''}${sel.gas != null ? ' · گاز منطقه ' + fd(sel.gas) : ''}</div></div>
-        <button class="btn ghost" data-act="find-clear">جستجوی دیگر</button></div>
+        <div class="row">${sel.phone ? `<button class="btn" data-act="copy-phone" data-p="${sel.phone}">کپی شماره</button>` : ''}<button class="btn ghost" data-act="find-clear">جستجوی دیگر</button></div></div>
         <div class="daymeta"><span class="pill acc">${fd(up.length)} نوبت مانده تا پایان برنامه</span>${up[0] ? `<span class="pill">نوبت بعدی: ${esc(up[0].sc.wd)} ${fd(up[0].sc.date)}</span>` : ''}</div></div>
       <h2>نوبت‌های پیش رو</h2>
       ${up.length ? `<div class="tbl"><table class="num"><thead><tr><th>تاریخ</th><th>روز</th><th>گروه</th><th>منطقه</th><th>وضعیت</th></tr></thead><tbody>${up.map(line).join('')}</tbody></table></div>` : '<div class="card empty">نوبتی تا پایان برنامه نمانده است.</div>'}
@@ -721,6 +721,7 @@ document.addEventListener('click', async e => {
     case 'save-tpl': S.settings.template = $('#tpl').value; try { await Store.setDoc('settings', 'main', S.settings); toast('متن ذخیره شد.'); } catch { toast('ذخیره نشد.', true); } return render();
     case 'reset-tpl': S.settings.template = DEFAULT_TEMPLATE; try { await Store.setDoc('settings', 'main', S.settings); } catch { } return render();
     case 'copy-one': return copy(d.t, 'متن');
+    case 'copy-phone': return copy(d.p, 'شماره');
     case 'copy-nums': { const dv = dayView(S.msgDate); return copy(dv.assigns.filter(a => a.status !== 'absent').map(a => person(a.pid)).filter(p => p?.phoneOk).map(p => p.phone).join('\n'), 'شماره‌ها'); }
     case 'copy-generic': return copy(genericText(dayView(S.msgDate)), 'متن عمومی');
     case 'find-pick': S.findPid = d.pid; return render();
