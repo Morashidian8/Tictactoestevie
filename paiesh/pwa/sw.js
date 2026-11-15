@@ -1,7 +1,7 @@
 // Service Worker — اپ «پایش زمستانی گاز»
 // شبکه مقدم: با هر بار باز شدن، آخرین نسخهٔ منتشرشده گرفته می‌شود؛ بدون اینترنت از کش اجرا می‌شود.
 // اطلاعات نفرات و سوابق در localStorage گوشی است و ربطی به این کش ندارد.
-const CACHE = "paiesh-v1";
+const CACHE = "paiesh-v2";
 const ASSETS = ["./", "./index.html", "./manifest.json", "./vendor/xlsx.full.min.js",
   "./fonts/Vazirmatn-Regular.woff2", "./fonts/Vazirmatn-Medium.woff2", "./fonts/Vazirmatn-Bold.woff2",
   "./icons/icon-192.png", "./icons/icon-512.png", "./icons/apple-touch-icon.png"];
@@ -19,7 +19,11 @@ self.addEventListener("fetch", (e) => {
   if (url.origin !== location.origin) return;   // Google Fonts etc.: let the browser handle it
   e.respondWith(
     fetch(e.request, { cache: "no-cache" })
-      .then((res) => { if (res.ok) { const copy = res.clone(); caches.open(CACHE).then((c) => c.put(e.request, copy)); } return res; })
+      .then((res) => {
+        if (res.ok) { const copy = res.clone(); caches.open(CACHE).then((c) => c.put(e.request, copy)); return res; }
+        // e.g. 404 while a deploy from another branch left /paiesh/ out: keep running from the cached copy
+        return caches.match(e.request, { ignoreSearch: true }).then((r) => r || res);
+      })
       .catch(() => caches.match(e.request, { ignoreSearch: true }).then((r) => r || caches.match("./index.html")))
   );
 });
