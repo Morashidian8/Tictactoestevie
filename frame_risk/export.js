@@ -109,12 +109,12 @@ const BLOCKS = [
 ];
 const RO_EN = ["Use manual fire protection","Add automatic fire detection","Install sprinklers","Sprinklers with improved water supplies","Too hazardous: reduce risk"];
 const roIdx = ro => [0,1,1.6,2.7,4.5].filter(v=>ro>=v).length - 1;
-const COST_EN = {1:"Low cost", 2:"Medium cost", 3:"High cost"};
-const LV = {fa:{ok:"قابل‌قبول", warn:"مرزی", bad:"غیرقابل‌قبول"}, en:{ok:"Acceptable", warn:"Borderline", bad:"Not acceptable"}};
-const FILL = {ok:"FFDFF3E6", warn:"FFFBF0CF", bad:"FFFBE1DF"}, INK = {ok:"FF1E7A44", warn:"FF8A6200", bad:"FFB3261E"};
+const COST_EN = {1:"No cost", 2:"Low cost", 3:"High cost"};
+const LV = {fa:{ok:"قابل‌قبول", imp:"فرصت بهبود", bad:"غیرقابل‌قبول"}, en:{ok:"Acceptable", imp:"Room for improvement", bad:"Not acceptable"}};
+const FILL = {ok:"FFDFF3E6", imp:"FFDDE9FB", bad:"FFFBE1DF"}, INK = {ok:"FF1E7A44", imp:"FF1155B5", bad:"FFB3261E"};
 
 /* ---------- helpers ---------- */
-const lvOf = v => !isFinite(v) || v > 1 ? "bad" : v > 0.8 ? "warn" : "ok";
+const lvOf = (v, k) => level(v, k);           // official FRAME 2015 bands per risk type (index.html: LIM)
 const num = (v, lang, d=2) => v==null || Number.isNaN(v) ? "—" : !isFinite(v) ? "∞" : lang==="fa" ? fa(v, d) : Number(v).toFixed(d);
 const T2 = (lang, f, e) => lang==="fa" ? f : e;
 function fLabel(f, lang){ return lang==="fa" ? f.l : (EN[f.id] ? EN[f.id][0] : f.l); }
@@ -149,7 +149,7 @@ function measureText(s, lang){
   })[s.key] || {t:s.key, o:""};
 }
 const costText = (c, lang) => lang==="fa" ? COST[c] : COST_EN[c];
-function stepCode(k, lang){ if (k===0) return T2(lang, "وضع موجود", "Current"); const c = k===1 ? "1" : `1-${k}`; return lang==="fa" ? c.replace(/\d/g, d=>"۰۱۲۳۴۵۶۷۸۹"[d]) : c; }
+function stepCode(k, lang){ if (k===0) return "NONE"; const c = k===1 ? "1" : `1-${k}`; return lang==="fa" ? c.replace(/\d/g, d=>"۰۱۲۳۴۵۶۷۸۹"[d]) : c; }
 
 /* ---------- the assessment as exported: floors, combined compartments, package states ---------- */
 function model(){
@@ -186,7 +186,11 @@ function charts(M, lang){
   const steps = M.steps.length ? valid.map(u=>{ const cats = [], ser = [];
       for (let k=0; k<=M.steps.length; k++){ const x = u.at(k); if (!x || x.invalid) continue; cats.push(stepCode(k, lang)); ser.push({R:x.R, R1:x.R1, R2:x.R2}); }
       return {u, c:chSteps(nm(u), cats, ser, lang)}; }) : [];
-  return {sch, bars, ro, steps, nm};
+  const RN = {R:T2(lang,"R (اموال و دارایی‌ها)","R (property)"), R1:T2(lang,"R1 (ساکنین)","R1 (occupants)"), R2:T2(lang,"R2 (فعالیت‌ها)","R2 (activities)")};
+  const lvSteps = M.steps.length ? valid.map(u=>({u, cs:["R","R1","R2"].map(k=>{ const cats = [], vals = [];
+      for (let j=0; j<=M.steps.length; j++){ const x = u.at(j); if (!x || x.invalid) continue; cats.push(stepCode(j, lang)); vals.push(x[k]); }
+      return chLvSteps(`${RN[k]} – ${nm(u)}`, cats, vals, k, lang); })})) : [];
+  return {sch, bars, ro, steps, nm, lvSteps};
 }
 
 
@@ -199,7 +203,7 @@ async function excel(lang){
   const fill = c => ({type:"pattern", pattern:"solid", fgColor:{argb:c}});
   const thin = {style:"thin", color:{argb:"FFC9D1DA"}}, box = {top:thin, left:thin, bottom:thin, right:thin};
   const put = (ws, addr, v, o={}) => { const c = ws.getCell(addr); c.value = v; c.font = F(o.font); c.alignment = AL(o.al); if (o.fill) c.fill = fill(o.fill); if (o.fmt) c.numFmt = o.fmt; if (o.border!==false) c.border = box; return c; };
-  const lvCell = (c, v) => { const lv = lvOf(v); c.fill = fill(FILL[lv]); c.font = F({bold:true, color:{argb:INK[lv]}}); };
+  const lvCell = (c, v, k) => { const lv = k==="x" ? v : lvOf(v, k); c.fill = fill(FILL[lv]); c.font = F({bold:true, color:{argb:INK[lv]}}); };
   const res = v => isFinite(v) ? v : "∞";
   const hasV = M.steps.length > 0;
   const used = {}, sheetName = code => { used[code] = (used[code]||0) + 1; return used[code] > 1 ? `${code} (${used[code]})` : code; };
@@ -257,13 +261,13 @@ async function excel(lang){
     const out = {};
     [["R","P","A","D"],["R1","P1","A1","D1"],["R2","P2","A2","D2"],["Ro","P","A","Fo"]].forEach(([k,p,a,dd])=>{
       put(ws, `A${r}`, FACT[k][rtl?0:1], {font:{bold:true}}); put(ws, `B${r}`, k, {font:{bold:true}, al:{horizontal:"center"}}); put(ws, `C${r}`, "");
-      const lvTxt = x => k==="Ro" ? (rtl ? FRAME.roAdvice(x.Ro) : RO_EN[roIdx(x.Ro)]) : LV[lang][lvOf(x[k])];
+      const lvTxt = x => k==="Ro" ? (rtl ? FRAME.roAdvice(x.Ro) : RO_EN[roIdx(x.Ro)]) : LV[lang][lvOf(x[k], k)];
       const f = (col, rows, x) => x.invalid ? "—" : {formula:`IF(${col}${rows[a]}>0,${col}${rows[p]}/(${col}${rows[a]}*${col}${rows[dd]}),"∞")`, result:res(x[k])};
-      put(ws, `D${r}`, u.x.invalid ? "—" : lvTxt(u.x)); const c = put(ws, `E${r}`, f("E", rowOf, u.x), {fmt:"0.00"}); if (k!=="Ro" && !u.x.invalid) lvCell(c, u.x[k]);
+      put(ws, `D${r}`, u.x.invalid ? "—" : lvTxt(u.x)); const c = put(ws, `E${r}`, f("E", rowOf, u.x), {fmt:"0.00"}); if (k!=="Ro" && !u.x.invalid) lvCell(c, u.x[k], k);
       out[k] = `E${r}`;
-      if (hasV && u.v){ put(ws, `F${r}`, u.v.x.invalid ? "—" : lvTxt(u.v.x)); const c2 = put(ws, `G${r}`, f("G", rowOfV, u.v.x), {fmt:"0.00"}); if (k!=="Ro" && !u.v.x.invalid) lvCell(c2, u.v.x[k]); out[k+"v"] = `G${r}`; }
+      if (hasV && u.v){ put(ws, `F${r}`, u.v.x.invalid ? "—" : lvTxt(u.v.x)); const c2 = put(ws, `G${r}`, f("G", rowOfV, u.v.x), {fmt:"0.00"}); if (k!=="Ro" && !u.v.x.invalid) lvCell(c2, u.v.x[k], k); out[k+"v"] = `G${r}`; }
       r++; });
-    put(ws, `A${r+1}`, T2(lang, "معیار FRAME: R ≤ ۱ یعنی حفاظت موجود برای ریسک بالقوه کافی است.", "FRAME criterion: R ≤ 1 means the protection is sufficient for the potential risk."), {border:false, font:{italic:true, color:{argb:"FF66727F"}}});
+    put(ws, `A${r+1}`, T2(lang, "معیار FRAME 2015: سبز = قابل‌قبول (تا ۱٫۰۳)؛ آبی = فرصت بهبود (R و R2 تا ۱٫۵، R1 تا ۱٫۳)؛ قرمز = غیرقابل‌قبول.", "FRAME 2015 criterion: green = acceptable (up to 1.03); blue = room for improvement (R and R2 up to 1.5, R1 up to 1.3); red = not acceptable."), {border:false, font:{italic:true, color:{argb:"FF66727F"}}});
     u.out = out;
   };
 
@@ -293,21 +297,21 @@ async function excel(lang){
     const vals = [spaceName(u.r, lang), u.sheet, u.kind==="comp" ? "—" : +u.d.E, Math.round(+u.d.area), Math.round(+u.d.X),
       ...["P","A","D"].map(k=>res(u.x[k])), u.x.invalid ? "—" : ref("R"), ...["P1","A1","D1"].map(k=>res(u.x[k])), u.x.invalid ? "—" : ref("R1"),
       ...["P2","A2","D2"].map(k=>res(u.x[k])), u.x.invalid ? "—" : ref("R2"), u.x.invalid ? "—" : ref("Ro"),
-      u.x.invalid ? "—" : rtl ? FRAME.roAdvice(u.x.Ro) : RO_EN[roIdx(u.x.Ro)], u.x.invalid ? "—" : LV[lang][lvOf(Math.max(...["R","R1","R2"].map(k=>u.x[k])))],
-      ...(hasV ? (u.v && !u.v.x.invalid ? [...["R","R1","R2"].map(k=>u.out[k+"v"] ? {formula:`'${u.sheet}'!${u.out[k+"v"]}`, result:res(u.v.x[k])} : res(u.v.x[k])), LV[lang][lvOf(Math.max(u.v.x.R, u.v.x.R1, u.v.x.R2))]] : ["—","—","—","—"]) : [])];
+      u.x.invalid ? "—" : rtl ? FRAME.roAdvice(u.x.Ro) : RO_EN[roIdx(u.x.Ro)], u.x.invalid ? "—" : LV[lang][xLevel(u.x)],
+      ...(hasV ? (u.v && !u.v.x.invalid ? [...["R","R1","R2"].map(k=>u.out[k+"v"] ? {formula:`'${u.sheet}'!${u.out[k+"v"]}`, result:res(u.v.x[k])} : res(u.v.x[k])), LV[lang][xLevel(u.v.x)]] : ["—","—","—","—"]) : [])];
     vals.forEach((v,i)=>{ const c = put(ws, `${L(i)}${r}`, v, {fmt: i>=5 && i<=17 ? (["R","R1","R2","Ro"].includes(cols[i]) ? "0.00" : "0.000") : i===3||i===4 ? "0" : undefined, ...(i===0 && u.kind==="comp" ? {font:{bold:true}} : {})});
-      if (!u.x.invalid && [8,12,16].includes(i)) lvCell(c, u.x[["R","R1","R2"][[8,12,16].indexOf(i)]]);
-      if (hasV && u.v && !u.v.x.invalid && i>=20 && i<=22) lvCell(c, u.v.x[["R","R1","R2"][i-20]]);
-      if (i===19 && !u.x.invalid) lvCell(c, Math.max(u.x.R, u.x.R1, u.x.R2));
-      if (hasV && i===23 && u.v && !u.v.x.invalid) lvCell(c, Math.max(u.v.x.R, u.v.x.R1, u.v.x.R2)); });
+      if (!u.x.invalid && [8,12,16].includes(i)){ const k = ["R","R1","R2"][[8,12,16].indexOf(i)]; lvCell(c, u.x[k], k); }
+      if (hasV && u.v && !u.v.x.invalid && i>=20 && i<=22){ const k = ["R","R1","R2"][i-20]; lvCell(c, u.v.x[k], k); }
+      if (i===19 && !u.x.invalid) lvCell(c, xLevel(u.x), "x");
+      if (hasV && i===23 && u.v && !u.v.x.invalid) lvCell(c, xLevel(u.v.x), "x"); });
   });
   r++; const lastRow = r - 1;
   put(ws, `A${r}`, T2(lang, "ریسک تعیین‌کننده (بدترین فضا)", "Governing risk (worst space)"), {font:{bold:true}, fill:"FFEAEFF4"});
   const valid = M.units.filter(u=>!u.x.invalid);
   [[8,"R"],[12,"R1"],[16,"R2"],[17,"Ro"]].forEach(([i,k])=>{ const w = Math.max(...valid.map(u=>u.x[k]));
-    const c = put(ws, `${L(i)}${r}`, isFinite(w) ? {formula:`MAX(${L(i)}${first}:${L(i)}${lastRow})`, result:w} : "∞", {fmt:"0.00", fill:"FFEAEFF4"}); if (k!=="Ro") lvCell(c, w); });
+    const c = put(ws, `${L(i)}${r}`, isFinite(w) ? {formula:`MAX(${L(i)}${first}:${L(i)}${lastRow})`, result:w} : "∞", {fmt:"0.00", fill:"FFEAEFF4"}); if (k!=="Ro") lvCell(c, w, k); });
   if (hasV) [[20,"R"],[21,"R1"],[22,"R2"]].forEach(([i,k])=>{ const vs = M.units.filter(u=>u.v && !u.v.x.invalid).map(u=>u.v.x[k]); if (!vs.length) return; const w = Math.max(...vs);
-    const c = put(ws, `${L(i)}${r}`, isFinite(w) ? {formula:`MAX(${L(i)}${first}:${L(i)}${lastRow})`, result:w} : "∞", {fmt:"0.00", fill:"FFEAEFF4"}); lvCell(c, w); });
+    const c = put(ws, `${L(i)}${r}`, isFinite(w) ? {formula:`MAX(${L(i)}${first}:${L(i)}${lastRow})`, result:w} : "∞", {fmt:"0.00", fill:"FFEAEFF4"}); lvCell(c, w, k); });
   r += 2;
   put(ws, `A${r}`, T2(lang, "راهنمای Ro (ریسک اولیه)", "Info on Ro (initial risk)"), {font:{bold:true}, border:false});
   [[0,"0"],[1,"1.0"],[1.6,"1.6"],[2.7,"2.7"],[4.5,"4.5"]].forEach(([v,t],i)=>{ put(ws, `A${r+1+i}`, `Ro ≥ ${rtl ? fa(v,1) : t}`); put(ws, `B${r+1+i}`, rtl ? FRAME.roAdvice(v) : RO_EN[i]); ws.mergeCells(`B${r+1+i}:H${r+1+i}`); });
@@ -329,13 +333,13 @@ async function excel(lang){
       put(wcmp, `A${q}`, `${f[rtl?0:1]} (${k})`, {font:{bold:true}});
       const a = put(wcmp, `B${q}`, res(SC.sep.w[k]), {fmt:"0.00", al:{horizontal:"center"}}); wcmp.mergeCells(`B${q}:D${q}`);
       const b = put(wcmp, `E${q}`, res(SC.link.w[k]), {fmt:"0.00", al:{horizontal:"center"}}); wcmp.mergeCells(`E${q}:G${q}`);
-      if (k!=="Ro"){ lvCell(a, SC.sep.w[k]); lvCell(b, SC.link.w[k]); } });
+      if (k!=="Ro"){ lvCell(a, SC.sep.w[k], k); lvCell(b, SC.link.w[k], k); } });
     q += 2;
     [T2(lang,"فضا","Space"), ...["R","R1","R2"].map(k=>`${k} – ${T2(lang,"جدا","separate")}`), ...["R","R1","R2"].map(k=>`${k} – ${T2(lang,"متصل","linked")}`), T2(lang,"واحد حریق در حالت متصل","Compartment in the linked case")]
       .forEach((t,i)=>put(wcmp, `${L(i)}${q}`, t, {font:{bold:true, color:{argb:"FFFFFFFF"}}, fill:"FF34495E", al:{horizontal:"center"}}));
     SC.sep.rows.slice().sort((a,b)=>(+a.d.E||0)-(+b.d.E||0)).forEach(r=>{ q++; const i = SC.sep.rows.indexOf(r), g = SC.link.exp[i], x2 = g ? g.x : SC.link.rows[i].x;
       put(wcmp, `A${q}`, spaceName(r, lang));
-      ["R","R1","R2"].forEach((k,j)=>{ lvCell(put(wcmp, `${L(1+j)}${q}`, res(r.x[k]), {fmt:"0.00", al:{horizontal:"center"}}), r.x[k]); lvCell(put(wcmp, `${L(4+j)}${q}`, res(x2[k]), {fmt:"0.00", al:{horizontal:"center"}}), x2[k]); });
+      ["R","R1","R2"].forEach((k,j)=>{ lvCell(put(wcmp, `${L(1+j)}${q}`, res(r.x[k]), {fmt:"0.00", al:{horizontal:"center"}}), r.x[k], k); lvCell(put(wcmp, `${L(4+j)}${q}`, res(x2[k]), {fmt:"0.00", al:{horizontal:"center"}}), x2[k], k); });
       put(wcmp, `H${q}`, g ? spaceName(g, lang) : T2(lang,"جدا","separate")); });
     q += 2; addImg(wcmp, chCompare(SC, lang, scLabels(SC, lang)), q, 0, 720);
   }
@@ -343,7 +347,7 @@ async function excel(lang){
   /* measures sheet: the package and the risk after each cumulative step (like tables 7–10 of a FRAME report) */
   wm.columns = [{width:40},{width:44},{width:40},{width:16},{width:26}, ...Array.from({length:Math.max(0, M.steps.length - 4)}, ()=>({width:10}))];
   put(wm, "A1", T2(lang, "اقدامات اصلاحی پیشنهادی (بستهٔ پیشنهادی)", "Recommended corrective measures (package)"), {font:{bold:true, size:14}, border:false});
-  put(wm, "A2", T2(lang, "هر قدم اقدامی است که بیشترین کاهش ریسکِ بالای ۱ را نسبت به هزینه‌اش دارد. برچسب‌های هزینه تقریبی‌اند.", "Each step is the measure with the largest reduction of risk above 1 per unit of cost. Cost classes are indicative."), {border:false, font:{italic:true}});
+  put(wm, "A2", T2(lang, "اقدام‌ها از بدون هزینه به پرهزینه مرتب شده‌اند و اولویت با رساندن ریسک‌های قرمز دست‌کم به آبی است. برچسب‌های هزینه تقریبی‌اند.", "Measures are ordered from no cost to high cost; red risks are brought at least to blue first. Cost classes are indicative."), {border:false, font:{italic:true}});
   let q = 4;
   if (!M.steps.length){ put(wm, `A${q}`, valid.every(u=>["R","R1","R2"].every(k=>u.x[k]<=1)) ? T2(lang,"همهٔ ریسک‌ها قابل‌قبول است؛ بستهٔ اصلاحی لازم نیست.","All risks are acceptable; no corrective package is needed.") : T2(lang,"با اقدام‌های چک‌لیست بهبودی پیدا نشد.","No improving measure was found in the checklist."), {border:false}); }
   else {
@@ -359,9 +363,9 @@ async function excel(lang){
       const hdr = [T2(lang,"فضا","Space"), ...Array.from({length:K+1}, (_,j)=>stepCode(j, lang))];
       hdr.forEach((t,i)=>put(wm, `${L(i)}${q}`, t, {font:{bold:true, color:{argb:"FFFFFFFF"}}, fill:"FF34495E", al:{horizontal:"center"}}));
       M.units.forEach(u=>{ q++; put(wm, `A${q}`, spaceName(u.r, lang));
-        for (let j=0; j<=K; j++){ const x = u.at(j), c = put(wm, `${L(j+1)}${q}`, !x ? T2(lang,"جدا شد","separated") : x.invalid ? "—" : res(x[k]), {fmt:"0.00", al:{horizontal:"center"}}); if (x && !x.invalid && k!=="Ro") lvCell(c, x[k]); } });
+        for (let j=0; j<=K; j++){ const x = u.at(j), c = put(wm, `${L(j+1)}${q}`, !x ? T2(lang,"جدا شد","separated") : x.invalid ? "—" : res(x[k]), {fmt:"0.00", al:{horizontal:"center"}}); if (x && !x.invalid && k!=="Ro") lvCell(c, x[k], k); } });
       q += 2; });
-    put(wm, `A${q}`, T2(lang, "ستون «۱-۳» یعنی اجرای اقدام‌های ۱ تا ۳ با هم. رنگ سبز: قابل‌قبول (≤ ۰٫۸)، زرد: مرزی، قرمز: غیرقابل‌قبول (> ۱).", "Column \"1-3\" means measures 1 to 3 together. Green: acceptable (≤ 0.8), yellow: borderline, red: not acceptable (> 1)."), {border:false, font:{italic:true}});
+    put(wm, `A${q}`, T2(lang, "در جدول‌ها فقط شمارهٔ اقدام اصلاحی آمده است: «۱-۳» یعنی اجرای اقدام‌های ۱، ۲ و ۳؛ NONE یعنی پیش از اقدام اصلاحی. سبز: ریسک قابل‌قبول (تا ۱٫۰۳)؛ آبی: ریسک با فرصت بهبود (R و R2 تا ۱٫۵، R1 تا ۱٫۳)؛ قرمز: ریسک غیرقابل‌قبول.", "Tables show only the measure numbers: \"1-3\" means measures 1, 2 and 3; NONE means before corrective measures. Green: acceptable (up to 1.03); blue: room for improvement (R and R2 up to 1.5, R1 up to 1.3); red: not acceptable."), {border:false, font:{italic:true}});
     q += 2;
     C.steps.forEach(s=>{ q += addImg(wm, s.c, q, 0, 640); });
   }
@@ -389,13 +393,13 @@ async function word(lang){
     shading:o.fill ? {fill:o.fill, type:D.ShadingType.CLEAR, color:"auto"} : undefined, verticalAlign:D.VerticalAlign.CENTER, columnSpan:o.span,
     margins:{top:40, bottom:40, left:60, right:60}});
   const hcell = txt => cell(txt, {b:true, fill:"34495E", color:"FFFFFF"});
-  const lvFill = {ok:"DFF3E6", warn:"FBF0CF", bad:"FBE1DF"}, lvInk = {ok:"1E7A44", warn:"8A6200", bad:"B3261E"};
-  const rcell = (v, o={}) => v==null ? cell(t("جدا شد","separated"), {size:15, color:"66727F"}) : Number.isNaN(v) ? cell("—") : cell(n2(v), {b:true, fill:lvFill[lvOf(v)], color:lvInk[lvOf(v)], ...o});
+  const lvFill = {ok:"DFF3E6", imp:"DDE9FB", bad:"FBE1DF"}, lvInk = {ok:"1E7A44", imp:"1155B5", bad:"B3261E"};
+  const rcell = (v, k, o={}) => v==null ? cell(t("جدا شد","separated"), {size:15, color:"66727F"}) : Number.isNaN(v) ? cell("—") : cell(n2(v), {b:true, fill:lvFill[lvOf(v,k)], color:lvInk[lvOf(v,k)], ...o});
   const table = (rows, o={}) => new D.Table({rows:rows.map((r,i)=>new D.TableRow({tableHeader:i===0 && !o.noHeader, cantSplit:true, children:r})),
     width:{size:100, type:D.WidthType.PERCENTAGE}, visuallyRightToLeft:rtl, layout:D.TableLayoutType.AUTOFIT});
   const gap = () => para("", {after:80});
   const valid = M.units.filter(u=>!u.x.invalid), worst = k => valid.reduce((w,u)=>!w || u.x[k] > w.x[k] ? u : w, null);
-  const bad = valid.filter(u=>["R","R1","R2"].some(k=>u.x[k] > 1));
+  const bad = valid.filter(u=>isRed(u.x)), imp = valid.filter(u=>xLevel(u.x)==="imp");
   const nm = u => spaceName(u.r, lang), project = M.b.project || t("ساختمان","the building");
   const pkOk = M.pk ? M.pk.ok : true, K = M.steps.length;
   const children = [];
@@ -414,15 +418,17 @@ async function word(lang){
   const wR = worst("R"), wR1 = worst("R1"), wR2 = worst("R2");
   add(H(t("۱. چکیده","1. Summary")) , gap());
   children[children.length-2] = para(t("۱. چکیده","1. Summary"), {h:D.HeadingLevel.HEADING_1, size:30, b:true, color:"B4461E", after:100, pb:true});
-  add(body(t(`در این گزارش ریسک حریق ${project} در ${n0(M.rows.length)} فضا به روش FRAME 2015 ارزیابی شده است. روش FRAME برای هر فضا سه ریسک را جداگانه می‌سنجد: ریسک ساختمان و دارایی (R)، ریسک افراد (R1) و ریسک فعالیت (R2). مقدار ۱ یا کمتر یعنی حفاظت موجود برای ریسک بالقوه کافی است.`,
-    `This report assesses the fire risk of ${project} in ${M.rows.length} spaces with the FRAME 2015 method. FRAME calculates three risks for every space: the risk for the property (R), for the occupants (R1) and for the activities (R2). A value of 1 or less means that the protection is sufficient for the potential risk.`)));
+  add(body(t(`در این گزارش ریسک حریق ${project} در ${n0(M.rows.length)} فضا به روش FRAME 2015 ارزیابی شده است. روش FRAME برای هر فضا سه ریسک را جداگانه می‌سنجد: ریسک ساختمان و دارایی (R)، ریسک افراد (R1) و ریسک فعالیت (R2). رنگ‌بندی نتایج مطابق صفحه‌گستردهٔ رسمی FRAME 2015 و راهنمای وزارت نفت است: سبز = قابل‌قبول (تا ۱٫۰۳)، آبی = ریسک با فرصت بهبود (R و R2 تا ۱٫۵، R1 تا ۱٫۳)، قرمز = غیرقابل‌قبول.`,
+    `This report assesses the fire risk of ${project} in ${M.rows.length} spaces with the FRAME 2015 method. FRAME calculates three risks for every space: the risk for the property (R), for the occupants (R1) and for the activities (R2). Results are coloured as in the official FRAME 2015 spreadsheet: green = acceptable (up to 1.03), blue = room for improvement (R and R2 up to 1.5, R1 up to 1.3), red = not acceptable.`)));
   if (wR) add(body(t(`بدترین مقدارها: ریسک ساختمان ${n2(wR.x.R)} در «${nm(wR)}»، ریسک افراد ${n2(wR1.x.R1)} در «${nm(wR1)}» و ریسک فعالیت ${n2(wR2.x.R2)} در «${nm(wR2)}».`,
     `Governing values: property risk ${n2(wR.x.R)} in "${nm(wR)}", occupant risk ${n2(wR1.x.R1)} in "${nm(wR1)}" and activity risk ${n2(wR2.x.R2)} in "${nm(wR2)}".`)));
-  add(body(bad.length ? t(`${n0(bad.length)} فضا یا واحد حریق دست‌کم در یک ریسک از حد مجاز بیشتر است: ${bad.map(nm).join("، ")}. ساختمان در وضعیت فعلی قابل‌قبول نیست.`,
-      `${bad.length} space(s) exceed the limit in at least one risk: ${bad.map(nm).join(", ")}. The building is not acceptable in its current state.`)
-    : t("همهٔ فضاها در هر سه ریسک قابل‌قبول‌اند.","All spaces are acceptable for the three risks.")));
-  if (K) add(body(t(`بستهٔ اصلاحی پیشنهادی ${n0(K)} اقدام دارد و ${pkOk ? "پس از اجرای آن همهٔ فضاها در هر سه ریسک قابل‌قبول می‌شوند" : "حتی پس از اجرای آن برخی فضاها بالای حد مجاز می‌مانند و تغییر بزرگ‌تری لازم است"} (فصل ۵).`,
-    `The recommended package contains ${K} measures; ${pkOk ? "after it all spaces are acceptable for the three risks" : "even after it some spaces remain above the limit and larger changes are needed"} (chapter 5).`)));
+  add(body(bad.length ? t(`${n0(bad.length)} فضا یا واحد حریق دست‌کم در یک ریسک غیرقابل‌قبول (قرمز) است: ${bad.map(nm).join("، ")}. ساختمان در وضعیت فعلی قابل‌قبول نیست.`,
+      `${bad.length} space(s) are not acceptable (red) in at least one risk: ${bad.map(nm).join(", ")}. The building is not acceptable in its current state.`)
+    : imp.length ? t(`هیچ ریسک غیرقابل‌قبولی (قرمز) نیست، ولی ${n0(imp.length)} فضا دست‌کم در یک ریسک «فرصت بهبود» (آبی) دارد: ${imp.map(nm).join("، ")}.`,
+      `No risk is red, but ${imp.length} space(s) have room for improvement (blue) in at least one risk: ${imp.map(nm).join(", ")}.`)
+    : t("همهٔ فضاها در هر سه ریسک قابل‌قبول (سبز) هستند.","All spaces are acceptable (green) for the three risks.")));
+  if (K) add(body(t(`بستهٔ اصلاحی پیشنهادی ${n0(K)} اقدام دارد و ${pkOk ? "پس از اجرای آن همهٔ فضاها در هر سه ریسک قابل‌قبول می‌شوند" : "حتی پس از اجرای آن همهٔ ریسک‌ها سبز نمی‌شوند"} (فصل ۶).`,
+    `The recommended package contains ${K} measures; ${pkOk ? "after it all spaces are acceptable for the three risks" : "even after it some spaces do not become green"} (chapter 6).`)));
   if (M.crows.length) add(body(t(`برخی طبقه‌ها از نظر آتش از هم جدا نیستند (رایزر، شافت یا پلهٔ باز). این طبقه‌ها یک بار جدا و یک بار به‌عنوان یک واحد حریق ترکیبی ارزیابی شده‌اند و بدترین نتیجه ملاک است.`,
     `Some floors are not fire-separated (open riser, shaft or stair). They were assessed separately and as one combined compartment; the worst result governs.`)));
 
@@ -435,8 +441,8 @@ async function word(lang){
 
   /* 3 method */
   add(H(t("۳. روش کار","3. Method")),
-    body(t("در روش FRAME ریسک حریق از نسبت ریسک بالقوه (P) به حاصل‌ضرب ریسک قابل‌قبول (A) و سطح حفاظت (D) به دست می‌آید. اگر R ≤ ۱ باشد حفاظت موجود کافی است و اگر R > ۱ باشد ریسک غیرقابل‌قبول است و به اقدام اصلاحی نیاز دارد. این محاسبه برای ساختمان و دارایی، افراد و فعالیت جداگانه انجام می‌شود.",
-      "In FRAME the fire risk is the ratio of the potential risk (P) to the product of the acceptable risk (A) and the protection level (D). R ≤ 1 means the protection is sufficient; R > 1 means the risk is not acceptable and corrective measures are needed. The calculation is made separately for the property, the occupants and the activities.")));
+    body(t("در روش FRAME ریسک حریق از نسبت ریسک بالقوه (P) به حاصل‌ضرب ریسک قابل‌قبول (A) و سطح حفاظت (D) به دست می‌آید. مطابق رنگ‌بندی صفحه‌گستردهٔ رسمی FRAME 2015 و راهنمای وزارت نفت، R تا ۱٫۰۳ قابل‌قبول (سبز)، بالاتر از آن تا ۱٫۵ برای R و R2 و تا ۱٫۳ برای R1 «ریسک با فرصت بهبود» (آبی) و بیشتر از آن غیرقابل‌قبول (قرمز) است. این محاسبه برای ساختمان و دارایی، افراد و فعالیت جداگانه انجام می‌شود.",
+      "In FRAME the fire risk is the ratio of the potential risk (P) to the product of the acceptable risk (A) and the protection level (D). R up to 1.03 is acceptable (green); above that the risk has room for improvement (blue) up to 1.5 for R and R2 and 1.3 for R1, and is not acceptable (red) beyond. The calculation is made separately for the property, the occupants and the activities.")));
   const eq = [["R = P / (A · D)", t("ریسک ساختمان و دارایی","Risk for the property")], ["R1 = P1 / (A1 · D1)", t("ریسک افراد","Risk for the occupants")], ["R2 = P2 / (A2 · D2)", t("ریسک فعالیت","Risk for the activities")],
     ["P = q · i · g · e · v · z", t("ریسک بالقوه: بار حریق، گسترش، مساحت، طبقه، تهویه، دسترسی","Potential risk: fire load, spread, area, level, venting, access")],
     ["P1 = q · i · e · v · z ;  P2 = i · g · e · v · z", t("ریسک بالقوه برای افراد و فعالیت","Potential risk for occupants and activities")],
@@ -456,19 +462,50 @@ async function word(lang){
     body(t("روش FRAME خطرهای بیرونی (مثل مخزن سوخت یا پست برق چسبیده به ساختمان) را مستقیم ندارد. در این ارزیابی برای فضاهای مجاور خطر بیرونیِ بدون جداسازی، محتاطانه ۰٫۲ به ضریب علت‌های آتش (a) افزوده و مقاومت نمای رو به خطر صفر در نظر گرفته شده است.",
       "FRAME has no direct factor for external hazards (e.g. a fuel tank or substation next to the building). For spaces facing an unseparated external hazard this assessment conservatively adds 0.2 to the activation factor (a) and takes no fire resistance for the facade towards it.")));
   add(H(t("۳-۳. اقدام‌های اصلاحی و رنگ‌بندی","3.3 Corrective measures and colour code"), 2),
-    body(t("اقدام‌های اصلاحی از گزینه‌های عملی چک‌لیست انتخاب می‌شوند. هر اقدام یک برچسب هزینهٔ تقریبی دارد (کم‌هزینه: کار مدیریتی یا تجهیز ساده؛ متوسط: نصب تجهیزات؛ پرهزینه: تغییر ساختمان یا تأسیسات بزرگ). بستهٔ پیشنهادی گام‌به‌گام اقدامی را برمی‌دارد که بیشترین کاهش ریسکِ بالای ۱ را نسبت به هزینه‌اش دارد، تا همهٔ ریسک‌ها به ۱ یا کمتر برسند.",
-      "Corrective measures are taken from the practical options of the checklist. Every measure has an indicative cost class (low: management or simple equipment; medium: installed equipment; high: building works or major installations). The recommended package adds, step by step, the measure with the largest reduction of risk above 1 per unit of cost until all risks are 1 or less.")),
-    table([[hcell(t("رنگ","Colour")), hcell(t("مفهوم","Meaning"))], [cell(t("سبز","Green"), {fill:lvFill.ok, color:lvInk.ok, b:true}), cell(t("قابل‌قبول (R ≤ ۰٫۸)","Acceptable (R ≤ 0.8)"))],
-      [cell(t("زرد","Yellow"), {fill:lvFill.warn, color:lvInk.warn, b:true}), cell(t("مرزی؛ فرصت بهبود (۰٫۸ < R ≤ ۱)","Borderline; room for improvement (0.8 < R ≤ 1)"))],
-      [cell(t("قرمز","Red"), {fill:lvFill.bad, color:lvInk.bad, b:true}), cell(t("غیرقابل‌قبول (R > ۱)","Not acceptable (R > 1)"))]]),
+    body(t("پس از بررسی هر طبقه و استخراج ریسک‌های R، R1 و R2 بر اساس وضع موجود، عدد ریسک‌ها در ستون NONE ثبت می‌شود. سپس اقدام‌های اصلاحی (متناسب با عناصر برنامهٔ فریم و از کم‌هزینه به پرهزینه) یکی‌یکی اعمال و عدد ریسک جدید در ستون مربوط به شمارهٔ اقدام ثبت می‌شود. اقدام‌ها باید بالاترین سطوح ریسک غیرقابل‌قبول را دست‌کم به «ریسک با فرصت بهبود» برسانند. هر اقدام یک برچسب هزینهٔ تقریبی دارد: بدون هزینه (کار مدیریتی، آموزش، نظم و ساماندهی)، کم‌هزینه (بازدید، تجهیز ساده یا نصب تجهیزات کوچک) و پرهزینه (سامانه‌ها، تأسیسات بزرگ یا تغییر ساختمان).",
+      "After assessing every floor, the current risks R, R1 and R2 are recorded in column NONE. Corrective measures (FRAME elements, from low to high cost) are then applied one by one and the new risk is recorded in the column of that measure number. Measures must bring the highest unacceptable risks at least to \"room for improvement\". Every measure has an indicative cost class: no cost (management, training, housekeeping), low cost (inspection, simple equipment) and high cost (systems, major installations or building works).")),
+    body(t("راهنمای جدول‌ها و نمودارها: در جدول‌ها و نمودارها فقط شمارهٔ اقدام اصلاحی آمده است؛ مثلاً «۱-۳» یعنی اجرای اقدام‌های اصلاحی شمارهٔ ۱، ۲ و ۳، و NONE یعنی پیش از اقدام اصلاحی.",
+      "Reading tables and charts: only measure numbers are shown; e.g. \"1-3\" means measures 1, 2 and 3 implemented, and NONE means before any corrective measure.")),
+    table([[hcell(t("رنگ","Colour")), hcell(t("مفهوم","Meaning"))], [cell(t("سبز","Green"), {fill:lvFill.ok, color:lvInk.ok, b:true}), cell(t("ریسک قابل‌قبول (تا ۱٫۰۳)","Acceptable risk (up to 1.03)"))],
+      [cell(t("آبی","Blue"), {fill:lvFill.imp, color:lvInk.imp, b:true}), cell(t("ریسک با فرصت بهبود (R و R2 تا ۱٫۵، R1 تا ۱٫۳)","Risk with room for improvement (R and R2 up to 1.5, R1 up to 1.3)"))],
+      [cell(t("قرمز","Red"), {fill:lvFill.bad, color:lvInk.bad, b:true}), cell(t("ریسک غیرقابل‌قبول (R و R2 بیش از ۱٫۵، R1 بیش از ۱٫۳)","Not acceptable (R and R2 above 1.5, R1 above 1.3)"))]]),
     caption("tab", t("رنگ‌بندی سطح ریسک","Colour code of the risk level")));
 
   /* 4 building data */
   add(H(t("۴. مشخصات ساختمان","4. Building data")),
     body(t(`ساختمان ${project} با ${n0(M.rows.length)} فضای ارزیابی‌شده و مساحت کل ${n0(M.rows.reduce((s,r)=>s+(+r.d.area||0),0))} متر مربع بررسی شده است. پاسخ‌های مشترک ساختمان:`,
       `${project} was assessed in ${M.rows.length} spaces with a total area of ${M.rows.reduce((s,r)=>s+(+r.d.area||0),0).toFixed(0)} m². Shared answers for the building:`)));
-  ["access","Z","Qi","fs","fo","fc","vsep","extH","w1","dia","bar","sAD","sTrans","s6","s5","n1a","n4","s8","uSt","uSign","pPlan","n5","yFin"].forEach(k=>{ const f = FIELD[k]; if (!f || !shown(f, M.b)) return;
-    add(bullet([run(`${fLabel(f, lang)}: `, {b:true}), run(optText(f, M.b[k], lang))])); });
+  const ans = k => optText(FIELD[k], M.b[k], lang), blank = v => (v==null || String(v).trim()==="") ? "—" : String(v).trim();
+  const perFloor = fn => { const vs = M.rows.map(r=>fn(r)); return vs.every(v=>v===vs[0]) ? vs[0] : M.rows.map((r,i)=>`${spaceName(r, lang)}: ${vs[i]}`).join(t("؛ ","; ")); };
+  const fvar = (r,k) => optText(FIELD[k], r.d[k], lang);
+  const facts = [
+    [t("نشانی دقیق محل استقرار ساختمان","Exact address"), blank(M.b.address)],
+    [t("سال ساخت ساختمان (تقریبی)","Year of construction (approx.)"), blank(M.b.built)],
+    [t("نوع سازه","Type of structure"), blank(M.b.structure)],
+    [t("تعداد طبقات و کاربری هر طبقه","Number of floors and use of each floor"), `${n0(M.rows.length)} — ${M.rows.map(r=>`${spaceName(r, lang)}: ${fvar(r,"use")}`).join(t("؛ ","; "))}`],
+    [t("تعداد ساکنین هر طبقه (به‌طور میانگین)","Occupants per floor (average)"), perFloor(r=>n0(+r.d.X))],
+    [t("مساحت هر طبقه (طول و عرض)","Area of each floor (length and width)"), perFloor(r=>`${n0(+r.d.area)} m² (${n0(+r.d.l)} × ${n0((+r.d.area)/(+r.d.l||1))} m)`)],
+    [t("ارتفاع هر طبقه (کف تا سقف)","Floor-to-ceiling height"), perFloor(r=>`${num(+r.d.h, lang, 1)} m`)],
+    [t("سیستم تهویهٔ دود مکانیکی","Mechanical smoke ventilation"), perFloor(r=>+r.d.flow>0 ? `${t("دارد","yes")} (${n0(+r.d.flow)} m³/h)` : t("ندارد","none"))],
+    [t("تعداد راه‌های ورود به ساختمان از طبقهٔ دسترسی","Access directions for the fire brigade"), `${ans("Z")} — ${ans("access")}`],
+    [t("نوع سیستم گرمایشی","Heating system"), `${ans("a2")}؛ ${ans("a3")}`],
+    [t("راه‌های خروج هر طبقه (شامل راه‌پله‌ها و پلکان اضطراری)","Exits per floor (incl. stairs and emergency stairs)"), perFloor(r=>`${n0(+r.d.O)} ${t("خروجی به فضای باز","exits to the open air")}، ${t("عرض کل","total width")} ${num(+r.d.Wex, lang, 1)} m`) + ` — ${ans("uSt")}`],
+    [t("شوت‌های نجات به تفکیک طبقات","Rescue chutes per floor"), blank(M.b.chutes)],
+    [t("تعداد و حجم منابع ذخیرهٔ آب","Water storage (number and volume)"), `${n0(+M.b.store)} m³ — ${ans("w1")}`],
+    [t("نوع پر شدن منابع ذخیرهٔ آب","Filling of the water storage"), ans("w1")],
+    [t("تعداد پمپ‌های تأمین‌کنندهٔ فشار","Number of pressure pumps"), `${blank(M.b.pumpsN)} — ${ans("s5")}`],
+    [t("فشار استاتیک پمپ‌ها","Static pressure"), `${num(+M.b.bar, lang, 1)} bar`],
+    [t("فایرباکس‌ها در هر طبقه و قطر اتصال هوز","Fire hose cabinets per floor and hose connection"), `${blank(M.b.fireboxes)} — ${t("اتصال‌های بیرونی","external connections")}: 2.5": ${n0(+M.b.c70)}، 3": ${n0(+M.b.c80)}، 4": ${n0(+M.b.c110)}`],
+    [t("هوزریل‌ها در هر طبقه","Hose reels per floor"), `${blank(M.b.hosereels)} — ${ans("n3")}`],
+    [t("قطر لولهٔ اصلی آب آتش‌نشانی","Main fire water pipe"), ans("dia")],
+    [t("وضعیت حضور حراست در ساختمان","Security presence"), ans("n1a")],
+    [t("نزدیک‌ترین ایستگاه آتش‌نشانی شهری","Nearest public fire station"), `${blank(M.b.station)} — ${ans("n4")}؛ ${ans("s8")}`],
+    [t("آتش‌نشان مقیم و تجهیزات اختصاص‌یافته","Resident fire fighters and their equipment"), `${blank(M.b.residentFF)} — ${ans("s9")}`],
+    [t("نوع سیستم اعلام حریق","Fire alarm system"), `${blank(M.b.alarmType)} — ${ans("sAD")}`],
+    [t("سیستم اسپرینکلر و اطفای خودکار (به تفکیک طبقات)","Sprinklers and automatic extinguishing per floor"), perFloor(r=>`${fvar(r,"s6")}؛ ${fvar(r,"s7")}`)],
+    [t("وضعیت سازه از نظر مواد ضد حریق","Fire protection of the structure"), `${ans("fs")} (${t("سقف","ceiling")}: ${ans("fc")})`],
+  ];
+  facts.forEach(([k,v])=>add(bullet([run(`${k}: `, {b:true}), run(v)])));
   const td = [["use",t("کاربری","Use")],["area",t("مساحت","Area")],["h",t("ارتفاع","Height")],["X",t("افراد","Occupants")],["Wex",t("عرض خروج","Exit width")],["O",t("خروج به بیرون","Exits out")],["Qm",t("بار حریق","Fire load")],["sAD",t("کشف خودکار","Detection")],["s6",t("اسپرینکلر","Sprinklers")]];
   add(gap(), table([[hcell(t("فضا","Space")), ...td.map(([,h])=>hcell(h))], ...M.rows.map(r=>[cell(spaceName(r, lang), {size:15}), ...td.map(([k])=>{ const f = FIELD[k]; return cell(f.t==="num" ? n0(+r.d[k]) + (k==="Wex" ? "" : "") : optText(f, r.d[k], lang), {size:15}); })])]),
     caption("tab", t("مشخصات فنی فضاها (مساحت m²، ارتفاع m، عرض خروج m، بار حریق MJ/m²)","Technical data of the spaces (area m², height m, exit width m, fire load MJ/m²)")));
@@ -500,25 +537,28 @@ async function word(lang){
 
   /* 6 corrective measures */
   add(H(t("۶. اقدام‌های اصلاحی پیشنهادی","6. Recommended corrective measures")));
-  if (!K) add(body(bad.length ? t("با اقدام‌های چک‌لیست بهبودی پیدا نشد؛ تغییر بزرگ‌تری (کم کردن افراد، تقسیم فضا، تغییر کاربری یا طراحی دوباره) لازم است.","No improving measure was found in the checklist; larger changes (fewer occupants, subdivision, change of use or redesign) are needed.")
+  if (!K) add(body(bad.length || imp.length ? t("با اقدام‌های چک‌لیست بهبودی پیدا نشد؛ تغییر بزرگ‌تری (کم کردن افراد، تقسیم فضا، تغییر کاربری یا طراحی دوباره) لازم است.","No improving measure was found in the checklist; larger changes (fewer occupants, subdivision, change of use or redesign) are needed.")
     : t("همهٔ ریسک‌ها قابل‌قبول است و بستهٔ اصلاحی لازم نیست. حفظ وضعیت و تکرار ارزیابی پس از هر تغییر توصیه می‌شود.","All risks are acceptable and no corrective package is needed. Keep the current state and repeat the assessment after any change.")));
   else {
     add(body(t(`بستهٔ پیشنهادی شامل ${n0(K)} اقدام به ترتیب اولویت است:`, `The recommended package contains ${K} measures in order of priority:`)));
     M.steps.forEach((s,i)=>{ const mt = measureText(s, lang), where = s.scope==="b" ? t("کل ساختمان","whole building") : spaceName(M.rows.find(r=>r.fl===s.fl), lang);
       add(para([run(`${t("اقدام اصلاحی شمارهٔ","Corrective measure")} ${n0(i+1)}: `, {b:true}), run(`${mt.t}: ${mt.o}`), run(`  (${costText(s.cost, lang)} – ${where})`, {color:"66727F"})], {after:80})); });
     [1,2,3].forEach(c=>{ const ids = M.steps.map((s,i)=>s.cost===c ? n0(i+1) : null).filter(Boolean); if (ids.length) add(bullet(t(`اقدام‌های شمارهٔ ${ids.join("، ")}: ${COST[c]}`, `Measures ${ids.join(", ")}: ${COST_EN[c].toLowerCase()}`))); });
-    add(body(pkOk ? t("پس از اجرای همهٔ این اقدام‌ها، همهٔ فضاها در هر سه ریسک به ۱ یا کمتر می‌رسند.","After all these measures every space is at 1 or less for the three risks.")
-      : t("حتی پس از اجرای این اقدام‌ها برخی فضاها بالای ۱ می‌مانند؛ تغییر بزرگ‌تری لازم است.","Even after these measures some spaces remain above 1; larger changes are needed.")));
+    const fin = M.units.map(u=>u.at(K)).filter(x=>x && !x.invalid), finRed = fin.filter(isRed).length;
+    add(body(pkOk ? t("پس از اجرای همهٔ این اقدام‌ها، همهٔ فضاها در هر سه ریسک قابل‌قبول (سبز) می‌شوند.","After all these measures every space is acceptable (green) for the three risks.")
+      : !finRed ? t("پس از اجرای این اقدام‌ها هیچ ریسک غیرقابل‌قبولی (قرمز) نمی‌ماند؛ برخی ریسک‌ها «فرصت بهبود» (آبی) دارند.","After these measures no risk remains red; some risks still have room for improvement (blue).")
+      : t("حتی پس از اجرای این اقدام‌ها برخی ریسک‌ها غیرقابل‌قبول (قرمز) می‌مانند؛ تغییر بزرگ‌تری لازم است.","Even after these measures some risks remain red; larger changes are needed.")));
     const stepTable = (k, title) => { add(table([[hcell(t("فضا","Space")), ...Array.from({length:K+1}, (_,j)=>hcell(stepCode(j, lang)))],
-      ...M.units.map(u=>[cell(nm(u), {size:15, b:u.kind==="comp"}), ...Array.from({length:K+1}, (_,j)=>{ const x = u.at(j); return !x ? rcell(null) : x.invalid ? cell("—") : k==="Ro" ? cell(n2(x.Ro), {size:16}) : rcell(x[k], {size:16}); })])]),
+      ...M.units.map(u=>[cell(nm(u), {size:15, b:u.kind==="comp"}), ...Array.from({length:K+1}, (_,j)=>{ const x = u.at(j); return !x ? rcell(null) : x.invalid ? cell("—") : k==="Ro" ? cell(n2(x.Ro), {size:16}) : rcell(x[k], k, {size:16}); })])]),
       caption("tab", title)); };
-    stepTable("R", t("ریسک ساختمان و دارایی (R) در فضاها، قبل و بعد از اقدام‌های اصلاحی","Property risk (R) per space before and after the corrective measures"));
-    stepTable("R1", t("ریسک افراد (R1) در فضاها، قبل و بعد از اقدام‌های اصلاحی","Occupant risk (R1) per space before and after the corrective measures"));
-    stepTable("R2", t("ریسک فعالیت (R2) در فضاها، قبل و بعد از اقدام‌های اصلاحی","Activity risk (R2) per space before and after the corrective measures"));
-    add(body(t("راهنمای جدول‌ها: ستون «۱-۳» یعنی اجرای اقدام‌های ۱ تا ۳ با هم. رنگ سبز: قابل‌قبول، زرد: فرصت بهبود، قرمز: غیرقابل‌قبول. «جدا شد» یعنی پس از آن اقدام طبقه‌ها از نظر آتش جدا شده‌اند و واحد ترکیبی دیگر وجود ندارد.",
-      "Reading the tables: column \"1-3\" means measures 1 to 3 together. Green: acceptable, yellow: room for improvement, red: not acceptable. \"separated\" means that after this step the floors are fire-separated and the combined compartment no longer exists.")));
-    add(body(t("نمودارهای زیر ریسک هر فضا را پس از هر قدم نشان می‌دهند.","The charts below show the risk of every space after each step.")));
-    C.steps.forEach(s=>add(image(s.c, 520), caption("fig", t(`نتایج ریسک ${C.nm(s.u)} پس از هر قدم`, `Risk results of ${C.nm(s.u)} after each step`))));
+    stepTable("R", t("فراوانی سطح ریسک R (اموال و دارایی‌ها) در طبقات، قبل و بعد از اقدام اصلاحی","Risk level R (property) per floor, before and after the corrective measures"));
+    stepTable("R1", t("فراوانی سطح ریسک R1 (ساکنین) در طبقات، قبل و بعد از اقدام اصلاحی","Risk level R1 (occupants) per floor, before and after the corrective measures"));
+    stepTable("R2", t("فراوانی سطح ریسک R2 (فعالیت‌ها) در طبقات، قبل و بعد از اقدام اصلاحی","Risk level R2 (activities) per floor, before and after the corrective measures"));
+    add(body(t("راهنمای جدول‌ها و نمودارها: «۱-۳» یعنی اجرای اقدام‌های اصلاحی شمارهٔ ۱، ۲ و ۳؛ NONE یعنی پیش از اقدام اصلاحی. رنگ سبز: ریسک قابل‌قبول؛ آبی: ریسک با فرصت بهبود؛ قرمز: ریسک غیرقابل‌قبول. «جدا شد» یعنی پس از آن اقدام طبقه‌ها از نظر آتش جدا شده‌اند و واحد ترکیبی دیگر وجود ندارد.",
+      "Reading tables and charts: \"1-3\" means measures 1, 2 and 3 implemented; NONE means before corrective measures. Green: acceptable; blue: room for improvement; red: not acceptable. \"separated\" means that after this step the floors are fire-separated and the combined compartment no longer exists.")));
+    add(body(t("در ادامه نتایج ارزیابی ریسک هر طبقه به شکل نمودار نشان داده شده است.","The charts below show the risk results of every floor.")));
+    C.lvSteps.forEach(s=>add(para(s.cs.map(c=>new D.ImageRun({data:pngBytes(c), transformation:{width:200, height:Math.round(200*c.height/c.width)}})), {align:D.AlignmentType.CENTER, after:40, keepNext:true, line:0}),
+      caption("fig", t(`نتایج ریسک مربوط به ${C.nm(s.u)} (R، R1 و R2)`, `Risk results of ${C.nm(s.u)} (R, R1 and R2)`))));
     add(H(t("۶-۱. ریسک اولیه Ro پس از اقدام‌ها","6.1 Initial risk Ro after the measures"), 2));
     stepTable("Ro", t("ریسک اولیه Ro در فضاها، قبل و بعد از اقدام‌های اصلاحی","Initial risk Ro per space before and after the corrective measures"));
   }

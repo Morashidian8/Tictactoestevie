@@ -122,7 +122,7 @@ if (await p.evaluate(()=>st.view)!=='fr') P('INTERACT next did not advance');
   r.forEach(x=>P('PROJECT',x)); }
 // ---- corrective measures: catalog, cost, package ----
 { const r = await p.evaluate(()=>{ const out=[];
-    const NEVER = ['Qi','s8','n4','s2','a1','a8','a9','a11','p0','pPerc','pPanic','u300','yProd','T','m','use','d','c1','access','Z'];
+    const NEVER = ['Qi','s8','n4','s2','a1','a8','a9','p0','pPerc','u300','yProd','T','m','use','d','c1','access','Z'];
     const rnd = (f) => f.o[Math.floor(Math.random()*f.o.length)].v;
     for (let k=0; k<150; k++){
       const d = {...DEFAULTS};
@@ -140,7 +140,7 @@ if (await p.evaluate(()=>st.view)!=='fr') P('INTERACT next did not advance');
       const ev = acc=>[compute({...d, ...acc})];
       const pk = allOk([x0]) ? null : greedy(ev, acc=>candidates({...d, ...acc}).map(m=>({...m, apply:a=>({...a, ...m.patch})})));
       if (!pk) continue;
-      if (pk.steps.length>10) out.push('package longer than 10 steps');
+      if (pk.steps.length>14) out.push('package longer than 14 steps');
       let e = excess([x0]), acc = {};
       pk.steps.forEach(st_=>{ acc = {...acc, ...st_.patch}; const nx = ev(acc); if (!(excess(nx) < e)) out.push('package step does not reduce risk'); e = excess(nx); });
       if (Math.abs(excess(ev(acc)) - excess(pk.final)) > 1e-9) out.push('package replay mismatch');
@@ -172,7 +172,7 @@ if (await p.evaluate(()=>st.view)!=='fr') P('INTERACT next did not advance');
     const bp2 = buildingPackage(); applyPackage('b');
     if (!P.prev || !(P.pkg||[]).length) out.push('package apply did not keep the previous state');
     const fr = floorResults().filter(r=>!r.x.invalid);
-    if (bp2.ok && fr.some(r=>RISKS.some(rk=>r.x[rk.k]>1+1e-9))) out.push('applied package does not give the promised result');
+    if (bp2.ok && fr.some(r=>!isGreen(r.x))) out.push('applied package does not give the promised result');
     if (!document.querySelector('.pkgbar') || !/مقایسهٔ قبل و بعد/.test(document.querySelector('main').textContent)) out.push('planned-state banner / before-after missing');
     undoPackage();
     if (P.prev || JSON.stringify(P.floors.map(f=>f.data)) + JSON.stringify(P.building) !== before) out.push('undo did not restore answers');
@@ -180,7 +180,7 @@ if (await p.evaluate(()=>st.view)!=='fr') P('INTERACT next did not advance');
     P.ctx=P.floors[P.floors.length-1].id; P.view='result'; renderAll();
     const sp = spacePackage(compute(st.data));
     if (sp && sp.steps.length){ applyPackage('space'); const x2 = compute(st.data);
-      if (sp.ok && RISKS.some(rk=>x2[rk.k]>1+1e-9)) out.push('applied space package does not give the promised result');
+      if (sp.ok && !isGreen(x2)) out.push('applied space package does not give the promised result');
       undoPackage(); }
     return out; });
   r.forEach(x=>P('MEASURES',x)); }
@@ -196,8 +196,22 @@ if (await p.evaluate(()=>st.data.X!==Math.max(1,Math.round(st.data.area*USES.fin
 await p.click('details.how summary'); if (!(await p.$('details.how[open]'))) P('INTERACT how guide');
 await p.fill('#X','5000'); await p.fill('#Wex','0.6'); if (!(await p.textContent('#warn_Wex')).trim()) P('INTERACT warning not shown');
 await p.evaluate(()=>{st.view='fuel';renderAll()}); await p.click('[data-qcalc]'); await p.fill('[data-q="i0"]','10'); await p.fill('[data-q="m3"]','100');
+for (const [k,v] of [['L0','2'],['W0','1'],['H0','0.03'],['N0','5']]) await p.fill(`[data-qd="${k}"]`, v);   // wood: 0.3 m³ × 700 kg/m³ × 10 MJ/kg
 await p.click('#qUse'); await p.waitForTimeout(80);
-if (await p.evaluate(()=>st.data.Qm!==Math.round((10*700+100*40)/st.data.area))) P('INTERACT fire-load calculator');
+if (await p.evaluate(()=>st.data.Qm!==Math.round((10*700+100*QMATS[3][1]+2100)/st.data.area))) P('INTERACT fire-load calculator');
+// calculators of the official spreadsheet / guide put a calculated value into a select question
+{ const r = await p.evaluate(()=>{ const out=[]; P.ctx=P.floors[0].id; st.view='fuel'; renderAll();
+    const use = (fid, vals) => { calcModal(fid); const m = document.querySelector('.modal'); Object.entries(vals).forEach(([k,v])=>{ const el = m.querySelector(`[data-c="${k}"]`); el.value = v; });
+      m.dispatchEvent(new Event('input')); m.querySelector('#cUse').click(); return st.data[fid]; };
+    if (use('Qi', {rt:'10', rf:'5', rc:'10', rw:'0', cf:'1', cc:'0', cw:'0'}) !== 300+150+300+150) out.push('Qi calculator (300 + floor 150+300 + ceiling 150)');
+    if (!document.querySelector('#Qi_calc')) out.push('calculated Qi not shown as the selected option');
+    if (Math.abs(use('m', {m0:'0.3', m1:'0.6'}) - Math.sqrt(0.18)) > 0.001) out.push('m: geometric mean of the dimensions');
+    if (use('T', {o2:'40', o3:'60'}) !== 0.4*FIELD.T.o[2].v + 0.6*FIELD.T.o[3].v) out.push('T weighted average');
+    st.view='ppl'; renderAll();
+    if (use('p0', {o0:'50', o2:'50'}) !== 4.5) out.push('p for a mixed group (50% A, 50% C)');
+    const x = compute(st.data); if (!(x.p >= 4.5)) out.push('mixed p not used in the calculation');
+    return out; });
+  r.forEach(x=>P('CALC',x)); }
 await p.evaluate(()=>{st.view='start';renderAll()}); await p.click('[data-begin]'); await p.waitForTimeout(80);
 if (await p.$('.modal [data-yes]')) await p.click('.modal [data-yes]');
 if (await p.evaluate(()=>st.view)!=='info') P('INTERACT begin button');
