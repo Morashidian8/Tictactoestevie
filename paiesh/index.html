@@ -1298,16 +1298,16 @@ function openPicker(reg) {
   const used = new Set(dv.assigns.map(a => a.pid));
   const scrim = document.createElement('div'); scrim.className = 'scrim';
   scrim.innerHTML = `<div class="sheet" role="dialog" aria-label="انتخاب جایگزین"><header><h2 class="grow">جایگزین برای منطقه ${fd(reg)}</h2><button class="iconbtn" data-close aria-label="بستن">✕</button></header>
-    <div class="body"><p class="small muted" style="margin:0">از ${GROUP_LABEL(dv.sc.group)} فقط نفر ${COL_LABEL(3 - dv.col)} که پایش منطقه ${fd(reg)} است می‌تواند جایگزین شود. نفر خارج از گروه را با نام و شماره در «نفر جدید» اضافه کنید.</p><input id="pick-q" class="inp" placeholder="جستجوی نام یا شماره…"><div id="pick-list"></div>
+    <div class="body"><p class="small muted" style="margin:0">از ${GROUP_LABEL(dv.sc.group)} فقط نفر ${COL_LABEL(3 - dv.col)} که پایش منطقه ${fd(reg)} است می‌تواند جایگزین شود. برای نفر خارج از گروه، نام یا شماره‌اش را جستجو کنید یا در «نفر جدید» اضافه کنید.</p><input id="pick-q" class="inp" placeholder="جستجوی نفر خارج از گروه…"><div id="pick-list"></div>
     <details class="card"><summary><b>نفر جدید (خارج از فهرست)</b></summary><label class="f">نام<input id="new-name" class="inp"></label><label class="f">شماره تلفن<input id="new-phone" class="inp" inputmode="tel" dir="ltr"></label><button class="btn pri" id="new-add">افزودن و انتخاب</button></details></div></div>`;
   document.body.appendChild(scrim);
   const draw = () => {
     const q = fa($('#pick-q', scrim).value);
-    const cands = Object.values(S.roster.people).filter(p => !used.has(p.id) && subAllowed(p, dv.sc, dv.col, reg) && (q ? (fa(p.name).includes(q) || p.phone.includes(toLatin(q))) : (p.group === dv.sc.group || p.region === reg)))
+    const cands = Object.values(S.roster.people).filter(p => !used.has(p.id) && subAllowed(p, dv.sc, dv.col, reg) && (q ? (fa(p.name).includes(q) || p.phone.includes(toLatin(q))) : p.group === dv.sc.group))
       .sort((a, b) => (a.group === dv.sc.group ? 0 : 1) - (b.group === dv.sc.group ? 0 : 1) || (a.region === reg ? 0 : 1) - (b.region === reg ? 0 : 1) || (a.group || 99) - (b.group || 99));
     $('#pick-list', scrim).innerHTML = cands.length ? cands.slice(0, 80).map(p => {
       return `<div class="pick"><div class="grow"><b>${esc(p.name)}</b> <span class="small muted num">${fd(p.phone)}</span><div class="pinfo">${p.group ? GROUP_LABEL(p.group) + '، ' + COL_LABEL(p.col) : 'نفر جدید'} · پایش منطقه ${fd(p.region ?? '-')}${p.home != null ? ' · سکونت ' + fd(p.home) : ''}</div></div><button class="btn pri" data-pid="${esc(p.id)}">انتخاب</button></div>`;
-    }).join('') : '<div class="empty">کسی پیدا نشد.</div>';
+    }).join('') : `<div class="empty">${q ? 'کسی پیدا نشد.' : 'نفر مجازی از این گروه برای این منطقه نمانده است.'}</div>`;
   };
   draw();
   const close = () => scrim.remove();
