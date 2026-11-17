@@ -1287,18 +1287,24 @@ async function exportRequests() {
 }
 
 /* substitute picker */
+// own-group substitute: only the other column's person for the same monitored region; outsiders are allowed
+function subAllowed(p, sc, col, reg) {
+  if (!p || p.archived) return false;
+  if (p.group === sc.group) return p.col !== col && p.region === reg;
+  return true;
+}
 function openPicker(reg) {
   const dv = dayView(S.date);
   const used = new Set(dv.assigns.map(a => a.pid));
   const scrim = document.createElement('div'); scrim.className = 'scrim';
   scrim.innerHTML = `<div class="sheet" role="dialog" aria-label="انتخاب جایگزین"><header><h2 class="grow">جایگزین برای منطقه ${fd(reg)}</h2><button class="iconbtn" data-close aria-label="بستن">✕</button></header>
-    <div class="body"><input id="pick-q" class="inp" placeholder="جستجو در همه‌ی نفرات…"><label class="row small"><input type="checkbox" id="pick-all"> نمایش نفرات مناطق دیگر هم</label><div id="pick-list"></div>
+    <div class="body"><p class="small muted" style="margin:0">از ${GROUP_LABEL(dv.sc.group)} فقط نفر ${COL_LABEL(3 - dv.col)} که پایش منطقه ${fd(reg)} است می‌تواند جایگزین شود. نفر خارج از گروه را با نام و شماره در «نفر جدید» اضافه کنید.</p><input id="pick-q" class="inp" placeholder="جستجوی نام یا شماره…"><div id="pick-list"></div>
     <details class="card"><summary><b>نفر جدید (خارج از فهرست)</b></summary><label class="f">نام<input id="new-name" class="inp"></label><label class="f">شماره تلفن<input id="new-phone" class="inp" inputmode="tel" dir="ltr"></label><button class="btn pri" id="new-add">افزودن و انتخاب</button></details></div></div>`;
   document.body.appendChild(scrim);
   const draw = () => {
-    const q = fa($('#pick-q', scrim).value); const all = $('#pick-all', scrim).checked || !!q;
-    const cands = Object.values(S.roster.people).filter(p => !p.archived && !used.has(p.id) && (all || p.region === reg) && (!q || fa(p.name).includes(q) || p.phone.includes(toLatin(q))))
-      .sort((a, b) => (a.region === reg ? 0 : 1) - (b.region === reg ? 0 : 1) || (a.group || 99) - (b.group || 99));
+    const q = fa($('#pick-q', scrim).value);
+    const cands = Object.values(S.roster.people).filter(p => !used.has(p.id) && subAllowed(p, dv.sc, dv.col, reg) && (q ? (fa(p.name).includes(q) || p.phone.includes(toLatin(q))) : (p.group === dv.sc.group || p.region === reg)))
+      .sort((a, b) => (a.group === dv.sc.group ? 0 : 1) - (b.group === dv.sc.group ? 0 : 1) || (a.region === reg ? 0 : 1) - (b.region === reg ? 0 : 1) || (a.group || 99) - (b.group || 99));
     $('#pick-list', scrim).innerHTML = cands.length ? cands.slice(0, 80).map(p => {
       return `<div class="pick"><div class="grow"><b>${esc(p.name)}</b> <span class="small muted num">${fd(p.phone)}</span><div class="pinfo">${p.group ? GROUP_LABEL(p.group) + '، ' + COL_LABEL(p.col) : 'نفر جدید'} · پایش منطقه ${fd(p.region ?? '-')}${p.home != null ? ' · سکونت ' + fd(p.home) : ''}</div></div><button class="btn pri" data-pid="${esc(p.id)}">انتخاب</button></div>`;
     }).join('') : '<div class="empty">کسی پیدا نشد.</div>';
@@ -1313,14 +1319,13 @@ function openPicker(reg) {
       const name = fa($('#new-name', scrim).value); const { phone, ok } = normPhone($('#new-phone', scrim).value);
       if (!name) return toast('نام را وارد کنید.', true);
       if (!ok) return toast('شماره باید ۱۱ رقم و با ۰۹ شروع شود.', true);
-      if (S.roster.people[phone]) return toast(`این شماره متعلق به ${S.roster.people[phone].name} است؛ از فهرست انتخابش کنید.`, true);
+      if (S.roster.people[phone]) { if (await addSub(reg, phone)) close(); return; }   // known person: same rules as picking from the list
       S.roster.people[phone] = { id: phone, name, phone, phoneOk: true, home: null, gas: null, region: reg, group: null, col: null, manual: true };
       try { await Store.setDoc('roster', 'main', S.roster); } catch (err) { delete S.roster.people[phone]; return toast('نفر جدید ذخیره نشد.', true); }
       if (await addSub(reg, phone)) close();
     }
   });
   $('#pick-q', scrim).addEventListener('input', draw);
-  $('#pick-all', scrim).addEventListener('change', draw);
 }
 
 /* ---------- actions (quota is enforced here, before anything is stored) ---------- */
@@ -1330,6 +1335,8 @@ function quotaMsg(reg) {
 async function addSub(reg, pid) {
   const dv = dayView(S.date);
   if (dv.assigns.some(a => a.pid === pid)) { toast('این نفر همین حالا در این روز ثبت شده است.', true); return false; }
+  const cand = person(pid);
+  if (!subAllowed(cand, dv.sc, dv.col, reg)) { toast(`از ${GROUP_LABEL(dv.sc.group)} فقط نفر ${COL_LABEL(3 - dv.col)} که پایش منطقه ${fd(reg)} است جایگزین می‌شود؛ ${cand?.name || 'این نفر'} ${cand?.col === dv.col ? 'در همین ستون است' : 'پایش منطقه‌ی دیگری است'}.`, true); return false; }
   if (activeCount(dv.assigns, reg) >= S.roster.quota[reg]) { toast(quotaMsg(reg), true); return false; }
   const assigns = [...dv.assigns, { pid, region: reg, status: 'planned', reason: '', sub: true }];
   if (await saveDay(S.date, { ...dv, assigns })) { toast(`${person(pid).name} برای منطقه ${fd(reg)} ثبت شد.`); render(); return true; }
