@@ -706,22 +706,32 @@ function personSummary(recs) {
   return Object.values(m).sort((a, b) => b.absent - a.absent || b.went - a.went);
 }
 /* attendance per person within each group: turns due up to the cutoff vs went / missed */
+// attendance goes to whoever actually went: own turns plus turns covered for someone else
 function attendanceRows(groupNo, cutoff) {
-  return Object.values(S.roster.people).filter(p => !p.archived && p.group && (!groupNo || p.group === groupNo))
-    .sort((a, b) => a.group - b.group || a.col - b.col || (a.region ?? 99) - (b.region ?? 99))
-    .map(p => {
-      const ts = turnsOf(p.id).filter(t => t.sc.date <= cutoff);
-      const own = ts.filter(t => !t.sub);
-      const went = own.filter(t => t.status === 'went').length;
-      const absent = own.filter(t => t.status === 'absent' || t.status === 'replaced').length;
-      const reasons = own.filter(t => t.status === 'absent' && t.reason).map(t => t.reason);
-      return { p, due: own.length, went, absent, unrec: own.length - went - absent, subWent: ts.filter(t => t.sub && t.status === 'went').length, reasons, turns: ts };
-    });
+  const row = (p, g, onlyGroup) => {
+    let ts = turnsOf(p.id).filter(t => t.sc.date <= cutoff);
+    if (onlyGroup) ts = ts.filter(t => t.sc.group === onlyGroup);
+    const own = ts.filter(t => !t.sub);
+    const wentOwn = own.filter(t => t.status === 'went').length;
+    const subWent = ts.filter(t => t.sub && t.status === 'went').length;
+    const absent = own.filter(t => t.status === 'absent' || t.status === 'replaced').length;
+    const reasons = own.filter(t => t.status === 'absent' && t.reason).map(t => t.reason);
+    return { p, g, outsider: !p.group || !!p.archived, due: own.length, went: wentOwn + subWent, wentOwn, subWent, absent, unrec: own.length - wentOwn - absent, reasons, turns: ts };
+  };
+  const members = Object.values(S.roster.people).filter(p => !p.archived && p.group && (!groupNo || p.group === groupNo))
+    .sort((a, b) => a.group - b.group || a.col - b.col || (a.region ?? 99) - (b.region ?? 99)).map(p => row(p, p.group));
+  // substitutes from outside the list (added by name and phone) who went for this group
+  const outsiders = Object.values(S.roster.people).filter(p => !p.group || p.archived).flatMap(p => {
+    const groups = [...new Set(turnsOf(p.id).filter(t => t.sc.date <= cutoff).map(t => t.sc.group))].filter(g => !groupNo || g === groupNo);
+    return groups.map(g => row(p, g, g)).filter(r => r.turns.length);
+  });
+  return members.concat(outsiders);
 }
 const TURN_ST = { went: 'رفت', absent: 'نرفت', replaced: 'نرفت (جایگزین رفت)', due: 'ثبت‌نشده', planned: 'ثبت‌نشده' };
-function turnLine(t) {
+function turnLine(t, p) {
+  const other = p && p.group && t.sc.group !== p.group ? ` · ${GROUP_LABEL(t.sc.group)}` : '';
   const cls = t.status === 'went' ? 'st-went' : (t.status === 'absent' || t.status === 'replaced') ? 'st-absent' : 'muted';
-  return `<span class="${cls}">${fd(t.sc.date)} ${esc(t.sc.wd)} · منطقه ${fd(t.region ?? '-')} · ${TURN_ST[t.status]}${t.sub ? ' <span class="subtag">جایگزین</span>' : ''}${t.reason ? ' · ' + esc(t.reason) : ''}</span>`;
+  return `<span class="${cls}">${fd(t.sc.date)} ${esc(t.sc.wd)} · منطقه ${fd(t.region ?? '-')} · ${TURN_ST[t.status]}${t.sub ? ' <span class="subtag">به‌جای دیگری</span>' : ''}${other}${t.reason ? ' · ' + esc(t.reason) : ''}</span>`;
 }
 function groupAttendanceHtml() {
   const t0 = todayJalali() || '';
@@ -734,8 +744,8 @@ function groupAttendanceHtml() {
     const tot = rows.reduce((a, r) => ({ due: a.due + r.due, went: a.went + r.went, absent: a.absent + r.absent, unrec: a.unrec + r.unrec }), { due: 0, went: 0, absent: 0, unrec: 0 });
     return `<h2>${g.name}${g.leader ? ` <span class="small muted">· ${esc(g.leader)}</span>` : ''}</h2>
       <div class="daymeta"><span class="pill">${fd(tot.due)} نوبت</span><span class="pill ok">${fd(tot.went)} رفته</span><span class="pill bad">${fd(tot.absent)} نرفته</span><span class="pill">${fd(tot.unrec)} ثبت‌نشده</span></div>
-      <div class="tbl"><table class="num"><thead><tr><th>نام</th><th>ستون</th><th>منطقه</th><th>نوبت</th><th>رفته</th><th>نرفته</th><th>ثبت‌نشده</th><th>حضور</th><th>جایگزین دیگران</th><th>تاریخ‌ها (منطقه، وضعیت)</th></tr></thead><tbody>
-      ${rows.map(r => `<tr><td><button class="chip" data-act="show-turns" data-pid="${esc(r.p.id)}">${esc(r.p.name)}</button></td><td>${r.p.col === 1 ? 'اول' : 'دوم'}</td><td>${fd(r.p.region ?? '-')}</td><td>${fd(r.due)}</td><td class="st-went">${fd(r.went)}</td><td class="st-absent">${fd(r.absent)}</td><td>${fd(r.unrec)}</td><td>${fd(pct(r))}</td><td>${fd(r.subWent || '')}</td><td style="white-space:normal;min-width:230px">${r.turns.map(turnLine).join('<br>') || '—'}</td></tr>`).join('')}</tbody></table></div>`;
+      <div class="tbl"><table class="num"><thead><tr><th>نام</th><th>ستون</th><th>منطقه</th><th>نوبت</th><th>رفته</th><th>نرفته</th><th>ثبت‌نشده</th><th>حضور</th><th>از رفته‌ها: به‌جای دیگری</th><th>تاریخ‌ها (منطقه، وضعیت)</th></tr></thead><tbody>
+      ${rows.map(r => `<tr><td><button class="chip" data-act="show-turns" data-pid="${esc(r.p.id)}">${esc(r.p.name)}</button>${r.outsider ? ' <span class="subtag">خارج از فهرست</span>' : ''}</td><td>${r.p.col ? (r.p.col === 1 ? 'اول' : 'دوم') : '—'}</td><td>${fd(r.p.region ?? '-')}</td><td>${fd(r.due)}</td><td class="st-went">${fd(r.went)}</td><td class="st-absent">${fd(r.absent)}</td><td>${fd(r.unrec)}</td><td>${fd(pct(r))}</td><td>${fd(r.subWent || '')}</td><td style="white-space:normal;min-width:230px">${r.turns.map(t => turnLine(t, r.p)).join('<br>') || '—'}</td></tr>`).join('')}</tbody></table></div>`;
   }).join('');
 }
 function viewRep() {
@@ -1313,7 +1323,7 @@ async function exportXlsx() {
   XLSX.utils.book_append_sheet(wb, a, 'ریز پایش');
   XLSX.utils.book_append_sheet(wb, b, 'خلاصه نفرات');
   const cutoff = S.rep.to || todayJalali() || '';
-  const att = attendanceRows(+S.rep.grp || 0, cutoff).map(r => ({ 'گروه': GROUP_LABEL(r.p.group), 'ستون': COL_LABEL(r.p.col), 'نام': r.p.name, 'شماره': r.p.phone, 'منطقه مورد پایش': r.p.region, [`نوبت تا ${cutoff}`]: r.due, 'رفته': r.went, 'نرفته': r.absent, 'ثبت‌نشده': r.unrec, 'جایگزین دیگران': r.subWent,
+  const att = attendanceRows(+S.rep.grp || 0, cutoff).map(r => ({ 'گروه': GROUP_LABEL(r.g), 'ستون': r.p.col ? COL_LABEL(r.p.col) : 'خارج از فهرست', 'نام': r.p.name, 'شماره': r.p.phone, 'منطقه مورد پایش': r.p.region, [`نوبت تا ${cutoff}`]: r.due, 'رفته': r.went, 'نرفته': r.absent, 'ثبت‌نشده': r.unrec, 'از رفته‌ها: به‌جای دیگری': r.subWent,
     'تاریخ‌های حضور': r.turns.filter(t => t.status === 'went').map(t => `${t.sc.date} (منطقه ${t.region ?? '-'}${t.sub ? '، جایگزین' : ''})`).join('، '),
     'تاریخ‌های غیبت': r.turns.filter(t => t.status === 'absent' || t.status === 'replaced').map(t => `${t.sc.date} (منطقه ${t.region ?? '-'}${t.reason ? '، ' + t.reason : ''})`).join('، '),
     'نوبت‌های ثبت‌نشده': r.turns.filter(t => t.status === 'due' || t.status === 'planned').map(t => t.sc.date).join('، '),
@@ -1324,7 +1334,7 @@ async function exportXlsx() {
   const det = [];
   for (const r of attendanceRows(+S.rep.grp || 0, cutoff)) for (const t of r.turns) {
     const d = t.drvObj;
-    det.push({ 'گروه': GROUP_LABEL(r.p.group), 'ستون': COL_LABEL(r.p.col), 'نام': r.p.name, 'شماره': r.p.phone, 'تاریخ': t.sc.date, 'روز': t.sc.wd, 'منطقه پایش': t.region ?? '', 'وضعیت': TURN_ST[t.status], 'به‌جای دیگری': t.sub ? 'بله' : '', 'دلیل': t.reason || '', 'راننده': d ? d.name : '' });
+    det.push({ 'گروه': GROUP_LABEL(r.g), 'ستون': r.p.col ? COL_LABEL(r.p.col) : 'خارج از فهرست', 'نام': r.p.name, 'شماره': r.p.phone, 'تاریخ': t.sc.date, 'روز': t.sc.wd, 'منطقه پایش': t.region ?? '', 'وضعیت': TURN_ST[t.status], 'به‌جای دیگری': t.sub ? 'بله' : '', 'دلیل': t.reason || '', 'راننده': d ? d.name : '' });
   }
   const dsh = XLSX.utils.json_to_sheet(det.length ? det : [{ 'نام': '' }]); dsh['!cols'] = [{ wch: 11 }, { wch: 9 }, { wch: 22 }, { wch: 13 }, { wch: 11 }, { wch: 9 }, { wch: 9 }, { wch: 16 }, { wch: 9 }, { wch: 18 }, { wch: 16 }];
   XLSX.utils.book_append_sheet(wb, dsh, 'ریز نوبت‌های نفرات');
