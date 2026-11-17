@@ -880,7 +880,7 @@ function exchangeHtml() {
 function rosterForGroup(g) {
   const R = S.roster, grp = R.groups.find(x => x.no === g);
   const people = {}; for (const p of Object.values(R.people)) if (p.group === g && !p.archived) people[p.id] = p;
-  return { groups: [grp], people, schedule: R.schedule.filter(s => s.group === g), quota: R.quota, warnings: R.warnings.filter(w => w.includes(GROUP_LABEL(g))), drivers: [], importedAt: Date.now(), lockedGroup: g };
+  return { groups: [grp], groupNos: R.groups.map(x => x.no), people, schedule: R.schedule.filter(s => s.group === g), quota: R.quota, warnings: R.warnings.filter(w => w.includes(GROUP_LABEL(g))), drivers: [], importedAt: Date.now(), lockedGroup: g };
 }
 async function makeLeaderPack(g) {
   if (!g) return;
@@ -1108,7 +1108,7 @@ function viewReq() {
     const p = person(r.pid) || { name: '(ناشناس)', phone: '' };
     const [sl, sc] = REQ_ST[r.status] || REQ_ST.new;
     return `<div class="card"><div class="row"><div class="grow"><b>${esc(p.name)}</b> <span class="small muted num">${fd(p.phone)}</span>
-        <div class="pinfo">${p.group ? GROUP_LABEL(p.group) + '، ' + COL_LABEL(p.col) : ''} · منطقه ${fd(p.region ?? '-')} · ثبت ${fd(r.created)}</div></div><span class="pill ${sc}">${sl}</span></div>
+        <div class="pinfo">${p.group ? GROUP_LABEL(p.group) + '، ' + COL_LABEL(p.col) : ''} · پایش منطقه ${fd(p.region ?? '-')}${p.home != null ? ' · سکونت منطقه ' + fd(p.home) : ''}${p.gas != null ? ' · گاز منطقه ' + fd(p.gas) : ''} · ثبت ${fd(r.created)}</div></div><span class="pill ${sc}">${sl}</span></div>
       <div><span class="pill acc">${REQ_TYPES[r.type]}</span> ${esc(describeReq(r))}</div>
       ${r.text ? `<div class="small">${esc(r.text)}</div>` : ''}${r.answer ? `<div class="small muted">نتیجه: ${esc(r.answer)}</div>` : ''}
       <div class="row"><button class="btn" data-act="req-edit" data-id="${r.id}">ویرایش / وضعیت</button>${p.phone ? `<a class="btn ghost" href="tel:${p.phone}">تماس</a>` : ''}</div></div>`;
@@ -1124,7 +1124,7 @@ function openRequest(existing, pid) {
   const draw = () => {
     const p = r.pid && person(r.pid);
     let who;
-    if (p) who = `<div class="row"><div class="grow"><b>${esc(p.name)}</b> <span class="small muted num">${fd(p.phone)}</span><div class="pinfo">${p.group ? GROUP_LABEL(p.group) + '، ' + COL_LABEL(p.col) : ''} · منطقه ${fd(p.region ?? '-')}</div></div>${existing ? '' : '<button class="btn ghost" data-rq="change-person">تغییر نفر</button>'}</div>`;
+    if (p) who = `<div class="row"><div class="grow"><b>${esc(p.name)}</b> <span class="small muted num">${fd(p.phone)}</span><div class="pinfo">${p.group ? GROUP_LABEL(p.group) + '، ' + COL_LABEL(p.col) : ''} · پایش منطقه ${fd(p.region ?? '-')}${p.home != null ? ' · سکونت منطقه ' + fd(p.home) : ''}${p.gas != null ? ' · گاز منطقه ' + fd(p.gas) : ''}</div></div>${existing ? '' : '<button class="btn ghost" data-rq="change-person">تغییر نفر</button>'}</div>`;
     else {
       const key = x => fa(x).replace(/[\s\u200c]/g, '');
       const hits = q ? Object.values(S.roster.people).filter(x => !x.archived && key(x.name).includes(key(q))).slice(0, 12) : [];
@@ -1137,7 +1137,7 @@ function openRequest(existing, pid) {
     if (r.type === 'day') fields = `<div class="row"><label class="f grow">نوبت فعلی<select id="rq-from" class="inp"><option value="">— انتخاب —</option>${myTurns.map(t => opt(t.sc.date, `${fd(t.sc.date)} · ${t.sc.wd}${t.sc.date < t0 ? ' (گذشته)' : ''}`, r.fromDate)).join('')}</select></label>
         <label class="f grow">روز درخواستی<select id="rq-to" class="inp"><option value="">— نامشخص —</option>${S.roster.schedule.map(sc => opt(sc.date, `${fd(sc.date)} · ${sc.wd} · ${GROUP_LABEL(sc.group)}`, r.toDate)).join('')}</select></label></div>`;
     if (r.type === 'region') fields = `<label class="f">منطقه‌ی درخواستی<select id="rq-region" class="inp"><option value="">— انتخاب —</option>${regionList().map(g => opt(g, 'منطقه ' + fd(g), r.toRegion)).join('')}</select></label>`;
-    if (r.type === 'group') fields = `<div class="row"><label class="f grow">گروه درخواستی<select id="rq-group" class="inp"><option value="">— انتخاب —</option>${S.roster.groups.map(g => opt(g.no, g.name, r.toGroup)).join('')}</select></label>
+    if (r.type === 'group') fields = `<div class="row"><label class="f grow">گروه درخواستی<select id="rq-group" class="inp"><option value="">— انتخاب —</option>${(S.roster.groupNos || S.roster.groups.map(g => g.no)).map(n => opt(n, GROUP_LABEL(n), r.toGroup)).join('')}</select></label>
         <label class="f grow">ستون<select id="rq-col" class="inp"><option value="">— فرقی ندارد —</option>${opt(1, 'ستون اول', r.toCol)}${opt(2, 'ستون دوم', r.toCol)}</select></label></div>`;
     scrim.innerHTML = `<div class="sheet" role="dialog" aria-label="درخواست"><header><h2 class="grow">${existing ? 'ویرایش درخواست' : 'درخواست جدید'}</h2><button class="iconbtn" data-close aria-label="بستن">✕</button></header>
       <div class="body">${who}
@@ -1189,12 +1189,36 @@ function requestsText() {
 }
 async function exportRequests() {
   if (!window.XLSX) return toast('کتابخانه‌ی اکسل بارگذاری نشد.', true);
+  const v = x => x ?? '';
   const rows = filteredRequests().slice().reverse().map((r, k) => { const p = person(r.pid) || {};
-    return { 'ردیف': k + 1, 'تاریخ ثبت': r.created, 'نام و نام خانوادگی': p.name || '', 'شماره تماس': p.phone || '', 'گروه': p.group ? GROUP_LABEL(p.group) : '', 'ستون': p.col ? COL_LABEL(p.col) : '', 'منطقه‌ی فعلی': p.region ?? '', 'نوع درخواست': REQ_TYPES[r.type], 'شرح درخواست': describeReq(r), 'دلیل / توضیحات': r.text, 'وضعیت': REQ_ST[r.status][0], 'نتیجه': r.answer }; });
+    return { 'ردیف': k + 1, 'تاریخ ثبت': r.created, 'نام و نام خانوادگی': p.name || '', 'شماره تماس': p.phone || '',
+      'گروه فعلی': p.group ? GROUP_LABEL(p.group) : '', 'ستون فعلی': p.col ? COL_LABEL(p.col) : '',
+      'منطقه‌ی پایش فعلی': v(p.region), 'محل سکونت (منطقه‌ی شهرداری)': v(p.home), 'منطقه‌ی گاز محل سکونت': v(p.gas),
+      'نوع درخواست': REQ_TYPES[r.type],
+      'روز فعلی': r.type === 'day' ? v(r.fromDate) : '', 'روز درخواستی': r.type === 'day' ? v(r.toDate) : '',
+      'منطقه‌ی پایش درخواستی': r.type === 'region' && r.toRegion ? +r.toRegion : '',
+      'گروه درخواستی': r.type === 'group' && r.toGroup ? GROUP_LABEL(+r.toGroup) : '', 'ستون درخواستی': r.type === 'group' && r.toCol ? COL_LABEL(+r.toCol) : '',
+      'شرح درخواست': describeReq(r), 'دلیل / توضیحات': r.text, 'وضعیت': REQ_ST[r.status][0], 'نتیجه': r.answer }; });
   const wb = XLSX.utils.book_new(); wb.Workbook = { Views: [{ RTL: true }] };
   const ws = XLSX.utils.json_to_sheet(rows.length ? rows : [{ 'ردیف': '' }]);
-  ws['!cols'] = [{ wch: 5 }, { wch: 11 }, { wch: 22 }, { wch: 13 }, { wch: 11 }, { wch: 9 }, { wch: 9 }, { wch: 18 }, { wch: 40 }, { wch: 40 }, { wch: 12 }, { wch: 25 }];
+  ws['!cols'] = [{ wch: 5 }, { wch: 11 }, { wch: 22 }, { wch: 13 }, { wch: 11 }, { wch: 9 }, { wch: 10 }, { wch: 12 }, { wch: 11 }, { wch: 18 }, { wch: 11 }, { wch: 11 }, { wch: 11 }, { wch: 11 }, { wch: 9 }, { wch: 40 }, { wch: 35 }, { wch: 12 }, { wch: 25 }];
   XLSX.utils.book_append_sheet(wb, ws, 'درخواست‌ها');
+  // current capacity: how many people each group/column has in each monitored region vs the daily need
+  const cap = [];
+  for (const g of S.roster.groups) for (const col of [1, 2]) {
+    const ppl = Object.values(S.roster.people).filter(p => !p.archived && p.group === g.no && p.col === col);
+    for (const reg of regionList()) {
+      const here = ppl.filter(p => p.region === reg);
+      cap.push({ 'گروه': g.name, 'ستون': COL_LABEL(col), 'منطقه‌ی پایش': reg, 'نیاز': S.roster.quota[reg], 'تعداد فعلی': here.length, 'کمبود / مازاد': here.length - S.roster.quota[reg], 'نفرات': here.map(p => p.name).join('، ') });
+    }
+  }
+  const cs = XLSX.utils.json_to_sheet(cap.length ? cap : [{ 'گروه': '' }]); cs['!cols'] = [{ wch: 11 }, { wch: 9 }, { wch: 11 }, { wch: 6 }, { wch: 10 }, { wch: 12 }, { wch: 60 }];
+  XLSX.utils.book_append_sheet(wb, cs, 'ظرفیت فعلی');
+  // full current roster with residence, for planning moves
+  const ros = Object.values(S.roster.people).filter(p => !p.archived && p.group).sort((a, b) => a.group - b.group || a.col - b.col || (a.region ?? 99) - (b.region ?? 99))
+    .map(p => ({ 'گروه': GROUP_LABEL(p.group), 'ستون': COL_LABEL(p.col), 'نام و نام خانوادگی': p.name, 'شماره تماس': p.phone, 'منطقه‌ی پایش فعلی': v(p.region), 'محل سکونت (منطقه‌ی شهرداری)': v(p.home), 'منطقه‌ی گاز محل سکونت': v(p.gas), 'درخواست دارد': S.requests.some(r => r.pid === p.id) ? 'بله' : '' }));
+  const rs = XLSX.utils.json_to_sheet(ros.length ? ros : [{ 'گروه': '' }]); rs['!cols'] = [{ wch: 11 }, { wch: 9 }, { wch: 22 }, { wch: 13 }, { wch: 12 }, { wch: 14 }, { wch: 12 }, { wch: 10 }];
+  XLSX.utils.book_append_sheet(wb, rs, 'فهرست فعلی نفرات');
   await saveFile(`paiesh-requests-${toLatin(todayJalali() || '').replace(/\//g, '-')}.xlsx`, new Blob([XLSX.write(wb, { bookType: 'xlsx', type: 'array' })]));
 }
 
