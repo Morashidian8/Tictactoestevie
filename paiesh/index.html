@@ -173,7 +173,7 @@ td.st-absent{color:var(--bad);font-weight:700}
 <script>
 /* ---------- roster preload (stays null in the published page; the roster lives in the store) ---------- */
 const PRELOAD = null;
-const APP_VERSION = '12';
+const APP_VERSION = '13';
 
 /* ---------- small helpers ---------- */
 const $ = (s, r = document) => r.querySelector(s);
@@ -325,15 +325,11 @@ const Store = {
 const dayId = date => 'd' + date.replace(/\D/g, '');
 
 /* ---------- state ---------- */
-const DEFAULT_TEMPLATE = `جناب آقای {نام}
-با سلام و احترام
-به استحضار می‌رساند فردا {روز} {تاریخ} نوبت پایش زمستانی شما ({گروه}، {ستون}) است.
-خواهشمند است جهت انجام پایش به {اداره} مراجعه فرمایید.
-راننده: {راننده}
-سرگروه: {سرگروه}
-لطفاً حضور خود را با پاسخ به همین پیام اعلام فرمایید.
-با تشکر`;
-const TPL_VERSION = 2;
+// fits one Persian SMS (70 characters) for typical names
+const DEFAULT_TEMPLATE = `{نام}، فردا پایش اداره گاز منطقه {منطقه}. لطفا تایید کنید`;
+const TPL_VERSION = 3;
+// Persian SMS: 70 characters in one message, 67 per part when longer
+function smsInfo(text) { const n = [...text].length; const k = n <= 70 ? 1 : Math.ceil(n / 67); return `<span class="pill ${k > 1 ? 'warn' : 'ok'}">${fd(n)} حرف · ${fd(k)} پیامک</span>`; }
 const REASONS = ['بیماری', 'مأموریت / کار', 'مرخصی / سفر', 'مشکل خانوادگی', 'پاسخ نداد', 'انصراف'];
 const S = {
   loading: true, roster: null, days: {}, settings: { template: DEFAULT_TEMPLATE, tplV: TPL_VERSION, startCol: {}, drivers: [] },
@@ -666,7 +662,8 @@ function viewMsg() {
   const head = header(`<div class="datebar"><button class="iconbtn" data-act="msg-prev" aria-label="روز قبل">›</button>${dateButton(S.msgDate, 'cal-msg')}<button class="iconbtn" data-act="msg-next" aria-label="روز بعد">‹</button></div>
     <div class="daymeta"><span class="pill acc">${grp?.name} · ${COL_LABEL(dv.col)}</span><span class="pill">${esc(dv.sc.wd)} ${fd(dv.sc.date)}</span><span class="pill">${fd(list.length)} نفر</span></div>`);
   const tplCard = `<details class="card"><summary><b>متن پیش‌فرض پیام</b> <span class="small muted">(برای ویرایش باز کنید)</span></summary>
-      <textarea id="tpl" class="inp">${esc(tpl)}</textarea>
+      <textarea id="tpl" class="inp" style="min-height:90px">${esc(tpl)}</textarea>
+      <p class="small muted" style="margin:0">یک پیامک فارسی حداکثر ۷۰ حرف است؛ بیشتر از آن چند پیامک حساب می‌شود. شمارش هر پیام پایین همان پیام آمده است.</p>
       <p class="small muted" style="margin:0">جای‌گذاری‌ها: {نام} {روز} {تاریخ} {گروه} {ستون} {اداره} {منطقه} {راننده} {سرگروه}. اگر راننده ثبت نشده باشد، خط راننده حذف می‌شود.</p>
       <div class="row"><button class="btn pri" data-act="save-tpl">ذخیره‌ی متن</button><button class="btn ghost" data-act="reset-tpl">متن اولیه</button></div></details>`;
   const bulk = `<div class="card"><h3>ارسال گروهی</h3>
@@ -676,7 +673,7 @@ function viewMsg() {
   const per = list.map(({ a, p }) => {
     const text = fillTemplate(tpl, p, dv.sc, grp, dv.col, a.region, a.driver);
     return `<div class="msg"><div class="row"><a class="pname grow" ${p.phone ? `href="tel:${p.phone}"` : ''}>${esc(p.name)}${a.sub ? '<span class="subtag">جایگزین</span>' : ''}<span class="tel num">${fd(p.phone)}</span></a><span class="pill">منطقه ${fd(a.region)}</span></div>
-      <pre>${esc(text)}</pre>
+      <pre>${esc(text)}</pre><div>${smsInfo(text)}</div>
       <div class="row">${p.phoneOk ? `<a class="btn pri" href="sms:${p.phone}?body=${encodeURIComponent(text)}">ارسال پیامک</a>` : '<span class="pill bad">شماره نامعتبر</span>'}<button class="btn" data-act="copy-one" data-t="${esc(text)}">کپی متن</button></div>${driverMsgRow(a, p, dv)}</div>`;
   }).join('');
   return head + `<main class="wrap stack">${tplCard}${bulk}<div class="card">${per || '<div class="empty">کسی برای این روز نیست.</div>'}</div></main>`;
