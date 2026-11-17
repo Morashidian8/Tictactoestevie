@@ -434,7 +434,7 @@ function render() {
   window.scrollTo(0, keepScroll);
 }
 function header(inner) {
-  return `<header class="top"><div class="wrap"><div class="brand"><i></i>پایش زمستانی گاز<span class="mode">${S.settings.lockedGroup ? GROUP_LABEL(S.settings.lockedGroup) + ' · ' : ''}${Store.mode === 'db' ? 'ذخیره در حساب شما' : 'ذخیره در همین گوشی'}</span></div>${backupNag()}${inner || ''}</div></header>`;
+  return `<header class="top"><div class="wrap"><div class="brand"><i></i>پایش زمستانی گاز<span class="mode">${S.settings.role === 'supervisor' ? 'ناظر' + (S.settings.supRevoked ? ' (غیرفعال)' : '') + ' · ' : ''}${S.settings.lockedGroup ? GROUP_LABEL(S.settings.lockedGroup) + ' · ' : ''}${Store.mode === 'db' ? 'ذخیره در حساب شما' : 'ذخیره در همین گوشی'}</span></div>${backupNag()}${inner || ''}</div></header>`;
 }
 /* on-device storage: remind to export a backup once a week */
 function backupNag() {
@@ -878,8 +878,8 @@ function exchangeHtml() {
   const last = S.lastImport;
   const recv = S.roster.groups.map(gr => { const lr = lastReceipt(gr.no); return `<tr><td>${gr.name}</td><td>${lr ? fd(fmtTime(lr.sentAt)) : '<span class="st-absent">نرسیده</span>'}</td><td>${lr ? fd(fmtTime(lr.importedAt)) : ''}</td><td>${lr ? fd(lr.n) : ''}</td></tr>`; }).join('');
   return `<details class="card" id="ex-card" ${S.exOpen ? 'open' : ''}><summary><b>ارسال و دریافت گزارش (سرگروه ↔ ادمین)</b></summary>
-    <h3>ارسال گزارش گروه من به ادمین</h3>
-    ${g ? `<p class="small muted" style="margin:0">همه‌ی ثبت‌های ${GROUP_LABEL(g)} تا امروز در یک فایل آماده می‌شود؛ آن را در بله، ایتا یا واتس‌اپ برای ادمین بفرستید. فرستادن دوباره اشکالی ندارد: نسخه‌ی جدیدتر جای قبلی را می‌گیرد.</p>
+ ${isSup() ? '' : `<h3>ارسال گزارش گروه من به ادمین</h3>`}
+    ${isSup() ? '' : g ? `<p class="small muted" style="margin:0">همه‌ی ثبت‌های ${GROUP_LABEL(g)} تا امروز در یک فایل آماده می‌شود؛ آن را در بله، ایتا یا واتس‌اپ برای ادمین بفرستید. فرستادن دوباره اشکالی ندارد: نسخه‌ی جدیدتر جای قبلی را می‌گیرد.</p>
       <div class="row"><button class="btn pri" data-act="send-report">ارسال گزارش ${GROUP_LABEL(g)}</button>${S.settings.lastSent ? `<span class="small muted">آخرین ارسال: ${fd(fmtTime(S.settings.lastSent))}</span>` : ''}</div>`
     : `<p class="small muted" style="margin:0">اول در برگه‌ی «اطلاعات» بخش «گروه من» را انتخاب کنید.</p><button class="btn" data-tab="data" style="align-self:flex-start">انتخاب گروه من</button>`}
     ${S.settings.lockedGroup ? '' : `<h3>دریافت گزارش سرگروه‌ها (برای ادمین)</h3>
@@ -889,6 +889,47 @@ function exchangeHtml() {
     ${inbox.length ? `<div class="tbl"><table class="num"><thead><tr><th>گروه</th><th>زمان ارسال آخرین گزارش</th><th>زمان دریافت</th><th>روزها</th></tr></thead><tbody>${recv}</tbody></table></div>` : ''}`}
   </details>`;
 }
+/* ---------- supervisor (ناظر): receives reports and summarises; access can be withdrawn by the system admin ---------- */
+const isSup = () => S.settings.role === 'supervisor';
+const SUP_BLOCKED = new Set(['status', 'reason', 'remove', 'add-sub', 'flip-col', 'startcol', 'import-ok', 'make-pack', 'make-sup', 'drv-new', 'drv-edit', 'send-report']);
+async function makeSupervisorPack(name) {
+  if (!name) return toast('نام ناظر را بنویسید.', true);
+  const id = 'sup-' + Math.random().toString(36).slice(2, 8);
+  const pack = { app: 'paiesh', kind: 'supervisor-pack', v: 1, id, name, createdAt: Date.now(), roster: S.roster, days: S.days, requests: S.requests,
+    settings: { template: S.settings.template, tplV: S.settings.tplV, startCol: S.settings.startCol || {}, drivers: S.settings.drivers || [], inbox: S.settings.inbox || [] } };
+  const t0 = todayJalali() || '';
+  const fname = `paiesh-supervisor-${toLatin(t0).replace(/\//g, '-')}.txt`;
+  const blob = new Blob([JSON.stringify(pack)], { type: 'text/plain' });
+  let shared = false;
+  try { const file = new File([blob], fname, { type: 'text/plain' }); if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], title: 'فایل ناظر پایش' }); shared = true; } }
+  catch (e) { if (e && e.name === 'AbortError') return; }
+  if (!shared) await saveFile(fname, blob);
+  await saveSettings({ supervisors: (S.settings.supervisors || []).concat({ id, name, created: Date.now() }) });
+  toast(`فایل ناظر برای ${name} ساخته شد. کد: ${id}`); render();
+}
+async function applySupervisorPack(j) {
+  if (S.settings.lockedGroup) throw new Error('این گوشی نسخه‌ی سرگروه است.');
+  if (S.roster && !isSup() && Object.keys(S.days).length) throw new Error('این گوشی سوابق خودش را دارد (احتمالاً گوشی مدیر سامانه است). فایل ناظر را روی گوشی ناظر باز کنید.');
+  if (isSup() && S.settings.supId && S.settings.supId !== j.id) throw new Error('این گوشی برای ناظر دیگری تنظیم شده است.');
+  await Store.setDoc('roster', 'main', j.roster);
+  for (const [date, rec] of Object.entries(j.days || {})) { if (!S.days[date] || (S.days[date].updatedAt || 0) < (rec.updatedAt || 0)) { S.days[date] = rec; await Store.setDoc('days', dayId(date), rec); } }
+  if (j.requests) await saveRequests(j.requests);
+  S.roster = j.roster;
+  await saveSettings({ ...(j.settings || {}), role: 'supervisor', supId: j.id, supName: j.name, myGroup: null, lockedGroup: null, supRevoked: false });
+  recalc(); myDefaultDates(); S.tab = 'rep'; S.rep.view = 'board';
+  toast(`نسخه‌ی ناظر برای ${j.name} آماده شد.`);
+  checkAccess();
+}
+// the system admin withdraws an observer by listing its code in access.json on the site
+async function checkAccess() {
+  if (!isSup() || !S.settings.supId || location.protocol === 'file:') return;
+  try {
+    const r = await fetch('access.json', { cache: 'no-store' }); if (!r.ok) return;
+    const a = await r.json(); const revoked = (a.revoked || []).includes(S.settings.supId);
+    if (revoked !== !!S.settings.supRevoked) { await saveSettings({ supRevoked: revoked }); render(); if (revoked) toast('دسترسی ناظر توسط مدیر سامانه غیرفعال شد.', true); }
+  } catch { }
+}
+
 /* ---------- per-group leader package: only that group's people and days ---------- */
 function rosterForGroup(g) {
   const R = S.roster, grp = R.groups.find(x => x.no === g);
@@ -954,6 +995,7 @@ async function sendGroupReport() {
   render();
 }
 async function importReports(files) {
+  if (isSup() && S.settings.supRevoked) return toast('دسترسی ناظر غیرفعال است؛ دریافت گزارش جدید ممکن نیست.', true);
   const st = { added: 0, updated: 0, same: 0, rejected: 0, bad: 0, reqN: 0 };
   const payloads = [];
   for (const f of files) {
@@ -1019,6 +1061,10 @@ function viewData() {
      <div class="row"><button class="btn" data-act="backup">دریافت پشتیبان</button><label class="btn">بازگردانی از پشتیبان<input type="file" id="backup-file" hidden></label></div></div>`;
   const mine = r ? `<div class="card"><h2>گروه من</h2><p class="small muted" style="margin:0">اگر سرگروه هستید، گروه خودتان را انتخاب کنید تا روز پایش، پیامک و ارسال گزارش فقط روی نوبت‌های گروه شما باشد. ادمین می‌تواند «همه‌ی گروه‌ها» را نگه دارد.</p>
      <select id="my-group" class="inp"><option value="">همه‌ی گروه‌ها (ادمین)</option>${r.groups.map(g => `<option value="${g.no}" ${+S.settings.myGroup === g.no ? 'selected' : ''}>${g.name}${g.leader ? ' · ' + esc(g.leader) : ''}</option>`).join('')}</select></div>` : '';
+  if (isSup()) {
+    const supCard = `<div class="card"><h2>نسخه‌ی ناظر${S.settings.supName ? ' · ' + esc(S.settings.supName) : ''}</h2><p class="small muted" style="margin:0">${S.settings.supRevoked ? '<b style="color:var(--bad)">دسترسی ناظر توسط مدیر سامانه غیرفعال شده است.</b> سوابق قبلی قابل مشاهده است، ولی دریافت گزارش جدید و خروجی اکسل بسته است.' : 'این نسخه گزارش سرگروه‌ها را دریافت می‌کند و وضعیت گروه‌ها، جمع‌بندی‌ها و خروجی اکسل را دارد. ساخت فایل سرگروه، تغییر نفرات و ثبت روزها با مدیر سامانه است.'}</p></div>`;
+    return header() + `<main class="wrap stack">${supCard}${backup}</main>`;
+  }
   const locked = +S.settings.lockedGroup || 0;
   if (locked) {
     const lockCard = `<div class="card"><h2>نسخه‌ی سرگروه ${GROUP_LABEL(locked)}</h2><p class="small muted" style="margin:0">این گوشی فقط به نفرات و روزهای ${GROUP_LABEL(locked)} دسترسی دارد و گزارش همین گروه را برای ادمین می‌فرستد. اگر ادمین فایل سرگروه جدیدی فرستاد، از بخش پشتیبان پایین همین صفحه آن را انتخاب کنید.</p></div>`;
@@ -1026,7 +1072,11 @@ function viewData() {
   }
   const packs = r && r.groups.length > 1 ? `<div class="card"><h2>فایل سرگروه‌ها</h2><p class="small muted" style="margin:0">برای هر سرگروه یک فایل بسازید و برایش بفرستید. در این فایل فقط نفرات و روزهای همان گروه هست؛ سرگروه آن را در وب‌اپ (بخش «انتخاب فایل پشتیبان یا فایل سرگروه») باز می‌کند و اپش روی گروه خودش قفل می‌شود.</p>
      <div class="row"><select id="pack-group" class="inp grow" style="width:auto">${r.groups.map(g => `<option value="${g.no}">${g.name}${g.leader ? ' · ' + esc(g.leader) : ''}</option>`).join('')}</select><button class="btn pri" data-act="make-pack">ساخت و ارسال فایل</button></div></div>` : '';
-  return header() + `<main class="wrap stack">${mine}${info}${packs}${drivers}${imp}${backup}</main>`;
+  const sups = S.settings.supervisors || [];
+  const supAdmin = r && r.groups.length > 1 ? `<div class="card"><h2>ناظر</h2><p class="small muted" style="margin:0">فایل ناظر را بسازید و برای او بفرستید؛ در وب‌اپ با «انتخاب فایل پشتیبان یا فایل سرگروه» باز می‌شود. ناظر گزارش‌ها را دریافت و جمع‌بندی می‌کند، ولی فایل سرگروه نمی‌سازد و نفرات را تغییر نمی‌دهد. برای قطع دسترسی، کد ناظر را به پشتیبان سامانه بدهید.</p>
+     <div class="row"><input id="sup-name" class="inp grow" style="width:auto" placeholder="نام ناظر"><button class="btn pri" data-act="make-sup">ساخت و ارسال فایل ناظر</button></div>
+     ${sups.length ? `<div class="tbl"><table class="num"><thead><tr><th>ناظر</th><th>کد</th><th>تاریخ ساخت</th></tr></thead><tbody>${sups.map(x => `<tr><td>${esc(x.name)}</td><td dir="ltr">${esc(x.id)}</td><td>${fd(fmtTime(x.created))}</td></tr>`).join('')}</tbody></table></div>` : ''}</div>` : '';
+  return header() + `<main class="wrap stack">${mine}${info}${packs}${supAdmin}${drivers}${imp}${backup}</main>`;
 }
 
 /* what changes when a new file replaces the current roster */
@@ -1201,6 +1251,7 @@ function requestsText() {
     return `${fd(k + 1)}) ${p.name} - ${p.group ? GROUP_LABEL(p.group) + '، ' + COL_LABEL(p.col) : ''} - منطقه ${fd(p.region ?? '-')}\n${REQ_TYPES[r.type]}: ${describeReq(r)}${r.text ? '\nشرح: ' + r.text : ''}\nوضعیت: ${REQ_ST[r.status][0]}${r.answer ? ' - ' + r.answer : ''}`; }).join('\n\n');
 }
 async function exportRequests() {
+  if (isSup() && S.settings.supRevoked) return toast('دسترسی ناظر غیرفعال است؛ خروجی اکسل ممکن نیست.', true);
   if (!window.XLSX) return toast('کتابخانه‌ی اکسل بارگذاری نشد.', true);
   const v = x => x ?? '';
   const rows = filteredRequests().slice().reverse().map((r, k) => { const p = person(r.pid) || {};
@@ -1315,6 +1366,7 @@ async function flipCol() {
 }
 
 async function exportXlsx() {
+  if (isSup() && S.settings.supRevoked) return toast('دسترسی ناظر غیرفعال است؛ خروجی اکسل ممکن نیست.', true);
   if (!window.XLSX) return toast('کتابخانه‌ی اکسل بارگذاری نشد.', true);
   const recs = filteredRecords();
   const log = recs.map(r => ({ 'تاریخ': r.date, 'روز': r.wd, 'گروه': GROUP_LABEL(r.group), 'ستون': COL_LABEL(r.col), 'نام': r.name, 'شماره تماس': r.phone, 'منطقه مورد پایش': r.region, 'منطقه زندگی': r.home ?? '', 'منطقه گاز': r.gas ?? '', 'وضعیت': ST[r.status], 'دلیل': r.reason, 'جایگزین': r.sub ? 'بله' : '', 'نام راننده': r.driver?.name || '', 'تلفن راننده': r.driver?.phone || '', 'خودرو': r.driver?.car || '', 'پلاک': r.driver?.plate || '' }));
@@ -1376,6 +1428,7 @@ document.addEventListener('click', async e => {
   const t = e.target.closest('[data-tab],[data-act]'); if (!t || t.closest('.scrim')) return;
   if (t.dataset.tab) { S.tab = t.dataset.tab; window.scrollTo(0, 0); return render(); }
   const d = t.dataset;
+  if (isSup() && SUP_BLOCKED.has(d.act)) return toast('این کار با مدیر سامانه است؛ نسخه‌ی ناظر فقط مشاهده و جمع‌بندی می‌کند.', true);
   switch (d.act) {
     case 'cal-day': return openCalendar(S.date, d => { S.date = d; render(); });
     case 'cal-msg': return openCalendar(S.msgDate, d => { S.msgDate = d; render(); });
@@ -1409,6 +1462,7 @@ document.addEventListener('click', async e => {
     case 'board-open': S.rep.grp = d.g; S.rep.view = d.v; window.scrollTo(0, 0); return render();
     case 'send-report': return sendGroupReport();
     case 'make-pack': return makeLeaderPack(+$('#pack-group').value);
+    case 'make-sup': return makeSupervisorPack(fa($('#sup-name').value));
     case 'export': return exportXlsx();
     case 'startcol': S.settings.startCol = { ...S.settings.startCol, [d.g]: +d.c }; recalc(); try { await Store.setDoc('settings', 'main', S.settings); toast(`${GROUP_LABEL(+d.g)} از ${COL_LABEL(+d.c)} شروع می‌شود.`); } catch { toast('ذخیره نشد.', true); } return render();
     case 'import-cancel': S.importPreview = null; return render();
@@ -1433,6 +1487,7 @@ document.addEventListener('click', async e => {
 });
 document.addEventListener('change', async e => {
   const t = e.target;
+  if (isSup() && (t.classList.contains('drv-sel') || t.classList.contains('reason-inp') || t.id === 'day-note')) { toast('نسخه‌ی ناظر فقط مشاهده می‌کند.', true); return render(); }
   if (t.id === 'date-sel') { S.date = t.value; return render(); }
   if (t.id === 'msg-sel') { S.msgDate = t.value; return render(); }
   if (t.id === 'rep-from') { S.rep.from = t.value; S.rep.period = ''; return render(); }
@@ -1455,7 +1510,9 @@ document.addEventListener('change', async e => {
   if (t.id === 'backup-file' && t.files[0]) {
     try {
       const j = JSON.parse(await t.files[0].text());
-      if (j.app === 'paiesh' && j.kind === 'leader-pack') { await applyLeaderPack(j); t.value = ''; return render(); }
+      if (j.app === 'paiesh' && j.kind === 'leader-pack') { if (isSup()) throw new Error('این گوشی نسخه‌ی ناظر است.'); await applyLeaderPack(j); t.value = ''; return render(); }
+      if (j.app === 'paiesh' && j.kind === 'supervisor-pack') { await applySupervisorPack(j); t.value = ''; return render(); }
+      if (isSup() && j.kind !== 'supervisor-pack') throw new Error('روی نسخه‌ی ناظر فقط فایل ناظر قابل بازگردانی است.');
       if (j.app === 'paiesh' && j.kind === 'group-report') throw new Error('این فایل گزارش سرگروه است؛ آن را در برگه‌ی «گزارش»، بخش «دریافت گزارش سرگروه‌ها» وارد کنید.');
       if (j.app !== 'paiesh' || !j.roster) throw new Error('این فایل پشتیبان پایش نیست.');
       const lg = +S.settings.lockedGroup || 0;
@@ -1502,5 +1559,6 @@ document.addEventListener('input', e => {
   }
   S.rep.view = S.settings.lockedGroup ? 'summary' : 'board';
   render();
+  checkAccess();
 })();
 </script>
