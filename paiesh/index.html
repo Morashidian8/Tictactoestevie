@@ -561,7 +561,7 @@ function personRow(a, i) {
         ${a.sub ? `<button data-act="remove" data-i="${i}" aria-label="حذف جایگزین">✕</button>` : ''}
       </div></div>
       <div class="row small">${p.phone ? `<button class="chip" data-act="copy-phone" data-p="${p.phone}">کپی شماره</button>` : ''}<button class="chip" data-act="show-turns" data-pid="${esc(a.pid)}">نوبت‌ها</button>
-        <label class="row grow" style="gap:4px;min-width:160px">راننده:<select class="inp drv-sel grow" data-i="${i}" style="padding:3px 6px">${driverOptions(a.driver)}</select></label></div>${driverMsgRow(a, p, dayView(S.date))}${reasons}</div>`;
+        <label class="row grow" style="gap:4px;min-width:160px">راننده:<select class="inp drv-sel grow" data-i="${i}" style="padding:3px 6px">${driverOptions(a.driver)}</select></label></div>${driverMsgRow(a, p, dayView(S.date), true)}${reasons}</div>`;
 }
 
 /* message to the monitor with the driver's details (and the reverse, to the driver) */
@@ -577,12 +577,15 @@ function driverMsgs(a, p, dv) {
     `نام: ${p.name}`, p.phone ? `شماره تماس: ${p.phone}` : '', 'لطفاً جهت هماهنگی با ایشان تماس بگیرید.', 'با تشکر'].filter(Boolean).join('\n');
   return { d, toMonitor, toDriver };
 }
-function driverMsgRow(a, p, dv) {
+function driverMsgRow(a, p, dv, withReminder) {
   const m = a.driver && driverMsgs(a, p, dv);
-  if (!m) return '';
+  // reminder SMS for the monitor, built from the saved template (with region, gas office and driver)
+  const rem = withReminder && p.phoneOk && a.status !== 'absent'
+    ? `<a class="chip" href="sms:${p.phone}?body=${encodeURIComponent(fillTemplate(S.settings.template || DEFAULT_TEMPLATE, p, dv.sc, groupOf(dv.sc.group), dv.col, a.region, a.driver))}">پیامک یادآوری به پایشگر</a>` : '';
+  if (!m) return rem ? `<div class="row small">${rem}</div>` : '';
   return `<div class="row small">${p.phoneOk ? `<a class="btn pri" href="sms:${p.phone}?body=${encodeURIComponent(m.toMonitor)}">پیامک مشخصات راننده به ${esc(p.name.split(' ')[0])}</a>` : ''}
     <button class="chip" data-act="copy-one" data-t="${esc(m.toMonitor)}">کپی متن</button>
-    ${m.d.phone ? `<a class="chip" href="sms:${m.d.phone}?body=${encodeURIComponent(m.toDriver)}">پیامک به راننده</a>` : ''}</div>`;
+    ${m.d.phone ? `<a class="chip" href="sms:${m.d.phone}?body=${encodeURIComponent(m.toDriver)}">پیامک به راننده</a>` : ''}${rem}</div>`;
 }
 function drvOf(a) { return (S.settings.drivers || []).find(x => x.id === a.driver) || a.drv || null; }
 function drvLabel(d) { return d ? [d.name, d.phone || '', [d.car, d.plate ? 'پلاک ' + d.plate : ''].filter(Boolean).join(' ')].filter(Boolean).join(' - ') : ''; }
