@@ -9,7 +9,7 @@
   --bg:#f1f3f6; --surface:#ffffff; --surface-2:#f6f7f9; --ink:#14202c; --muted:#5a6878; --line:#dde2e8; --line-2:#c9d0d9;
   --band:#13243a; --band-ink:#eef3f8; --band-muted:#a9b8c9; --band-line:rgb(255 255 255 / .09);
   --accent:#d9480f; --accent-ink:#ffffff; --accent-soft:#fdebe2; --info:#1d4e89; --info-soft:#e4edf8;
-  --ok:#17803d; --ok-soft:#ddf3e5; --warn:#b26100; --warn-soft:#fdf0d8; --bad:#c0261a; --bad-soft:#fde3e0;
+  --ok:#17803d; --ok-soft:#ddf3e5; --warn:#b26100; --warn-soft:#fdf0d8; --imp:#1565c0; --imp-soft:#e1edfb; --bad:#c0261a; --bad-soft:#fde3e0;
   --shadow:0 1px 2px rgb(20 32 44 / .06),0 6px 20px rgb(20 32 44 / .06);
   --f-body:"Vazirmatn",Tahoma,"Segoe UI",sans-serif;
   --f-mono:ui-monospace,"SFMono-Regular",Consolas,monospace;
@@ -19,7 +19,7 @@
   --bg:#0c141c; --surface:#131e29; --surface-2:#182532; --ink:#e3eaf1; --muted:#97a6b6; --line:#24323f; --line-2:#33475a;
   --band:#0a1622; --band-ink:#eef3f8; --band-muted:#91a3b6; --band-line:rgb(255 255 255 / .07);
   --accent:#ff7a3d; --accent-ink:#1b0b02; --accent-soft:#3b2116; --info:#7fb0ec; --info-soft:#17283b;
-  --ok:#5bd38a; --ok-soft:#15301f; --warn:#f2b545; --warn-soft:#382a10; --bad:#ff8577; --bad-soft:#3e1c19;
+  --ok:#5bd38a; --ok-soft:#15301f; --warn:#f2b545; --warn-soft:#382a10; --imp:#7ab3f5; --imp-soft:#16273d; --bad:#ff8577; --bad-soft:#3e1c19;
   --shadow:0 1px 2px rgb(0 0 0 / .3),0 8px 24px rgb(0 0 0 / .25);
   color-scheme:dark;
 }}
@@ -27,7 +27,7 @@
   --bg:#0c141c; --surface:#131e29; --surface-2:#182532; --ink:#e3eaf1; --muted:#97a6b6; --line:#24323f; --line-2:#33475a;
   --band:#0a1622; --band-ink:#eef3f8; --band-muted:#91a3b6; --band-line:rgb(255 255 255 / .07);
   --accent:#ff7a3d; --accent-ink:#1b0b02; --accent-soft:#3b2116; --info:#7fb0ec; --info-soft:#17283b;
-  --ok:#5bd38a; --ok-soft:#15301f; --warn:#f2b545; --warn-soft:#382a10; --bad:#ff8577; --bad-soft:#3e1c19;
+  --ok:#5bd38a; --ok-soft:#15301f; --warn:#f2b545; --warn-soft:#382a10; --imp:#7ab3f5; --imp-soft:#16273d; --bad:#ff8577; --bad-soft:#3e1c19;
   --shadow:0 1px 2px rgb(0 0 0 / .3),0 8px 24px rgb(0 0 0 / .25);
   color-scheme:dark;
 }
@@ -144,7 +144,7 @@ details.calc span.v b{color:var(--info)}
 .scale3 div{border-radius:10px;padding:10px 12px;display:grid;gap:2px}
 .scale3 span{font-size:12.5px;color:var(--ink)}
 .scale3 .ok{background:var(--ok-soft)} .scale3 .ok b{color:var(--ok)}
-.scale3 .warn{background:var(--warn-soft)} .scale3 .warn b{color:var(--warn)}
+.scale3 .warn{background:var(--warn-soft)} .scale3 .warn b{color:var(--warn)} .scale3 .imp{background:var(--imp-soft)} .scale3 .imp b{color:var(--imp)}
 .scale3 .bad{background:var(--bad-soft)} .scale3 .bad b{color:var(--bad)}
 .linkbtn{border:0;background:none;padding:0;color:var(--info);font-weight:600;cursor:pointer;text-decoration:underline;text-underline-offset:3px;text-align:right}
 .muted{color:var(--muted);font-size:13px}
@@ -186,10 +186,10 @@ aside.res{position:sticky;top:14px;display:grid;gap:14px}
 .g-name{font-weight:700;font-size:14.5px;line-height:1.4}
 .g-sym{font-family:var(--f-mono);font-size:11.5px;color:var(--muted);direction:ltr;display:inline-block;margin:0 6px;font-weight:500}
 .pill{display:inline-block;font-size:11.5px;border-radius:999px;padding:0 9px;font-weight:700;margin-top:4px}
-.pill.ok{background:var(--ok-soft);color:var(--ok)} .pill.warn{background:var(--warn-soft);color:var(--warn)} .pill.bad{background:var(--bad-soft);color:var(--bad)}
+.pill.ok{background:var(--ok-soft);color:var(--ok)} .pill.warn{background:var(--warn-soft);color:var(--warn)} .pill.imp{background:var(--imp-soft);color:var(--imp)} .pill.bad{background:var(--bad-soft);color:var(--bad)}
 .gtxt{font-weight:800;font-size:19px;font-variant-numeric:tabular-nums}
-.gz-ok{stroke:var(--ok)} .gz-warn{stroke:var(--warn)} .gz-bad{stroke:var(--bad)}
-.c-ok{color:var(--ok);fill:var(--ok)} .c-warn{color:var(--warn);fill:var(--warn)} .c-bad{color:var(--bad);fill:var(--bad)}
+.gz-ok{stroke:var(--ok)} .gz-warn{stroke:var(--warn)} .gz-imp{stroke:var(--imp)} .gz-bad{stroke:var(--bad)}
+.c-ok{color:var(--ok);fill:var(--ok)} .c-warn{color:var(--warn);fill:var(--warn)} .c-imp{color:var(--imp);fill:var(--imp)} .c-bad{color:var(--bad);fill:var(--bad)}
 .legend{display:flex;gap:12px;flex-wrap:wrap;font-size:11.5px;color:var(--muted);margin-top:6px}
 .legend i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-inline-end:4px}
 .kv{display:grid;grid-template-columns:auto 1fr repeat(3,auto);gap:4px 10px;font-size:12.5px;font-variant-numeric:tabular-nums;align-items:center}
@@ -201,7 +201,7 @@ aside.res{position:sticky;top:14px;display:grid;gap:14px}
 .verdict{display:flex;gap:12px;align-items:flex-start;border-radius:12px;padding:14px 16px;margin:18px 0 0;font-weight:500}
 .verdict svg{flex:none;width:22px;height:22px;margin-top:2px}
 .verdict.ok{background:var(--ok-soft)} .verdict.ok svg{color:var(--ok)}
-.verdict.warn{background:var(--warn-soft)} .verdict.warn svg{color:var(--warn)}
+.verdict.warn{background:var(--warn-soft)} .verdict.warn svg{color:var(--warn)} .verdict.imp{background:var(--imp-soft)} .verdict.imp svg{color:var(--imp)}
 .verdict.bad{background:var(--bad-soft)} .verdict.bad svg{color:var(--bad)}
 .big3{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px;margin-top:18px}
 .rcard{border:1px solid var(--line);border-radius:14px;padding:14px;display:grid;gap:4px;justify-items:center;text-align:center;background:var(--surface)}
@@ -248,6 +248,8 @@ h3.sec{font-size:17px;font-weight:800;margin:28px 0 4px}
 .cmpr{display:flex;justify-content:space-between;align-items:baseline;padding:4px 0;border-bottom:1px dashed var(--line);font-size:14px}.cmpr b{font-size:18px;font-variant-numeric:tabular-nums}
 .cmpt tr.gov td{font-weight:700;background:var(--surface-2)}.cmpt th{text-align:center}
 @media (max-width:560px){.cmp2{grid-template-columns:1fr}}
+.calcbtn{margin-top:8px}.help.gd{color:var(--info)}.qdim{display:flex;flex-wrap:wrap;gap:6px}.qdim .inp.sm{width:auto;flex:1 1 70px}
+select.in.sm{padding:6px 8px;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font:inherit}
 .verdict.slim{margin-top:10px;padding:10px 14px;font-size:14px}
 .chips{display:flex;flex-wrap:wrap;gap:6px}
 .chip{font-size:12px;border-radius:7px;padding:1px 8px;background:var(--surface-2);border:1px solid var(--line);font-variant-numeric:tabular-nums}
@@ -321,7 +323,7 @@ textarea.in{width:100%;min-height:150px;font-family:var(--f-mono);font-size:12px
 .sbt{display:block;height:5px;border-radius:3px;background:var(--surface-2);position:relative;overflow:hidden;direction:ltr}
 .sbt::after{content:"";position:absolute;left:50%;top:0;bottom:0;width:1px;background:var(--muted);opacity:.6}
 .sbt i{position:absolute;left:0;top:0;bottom:0;border-radius:3px}
-.sbt i.ok{background:var(--ok)} .sbt i.warn{background:var(--warn)} .sbt i.bad{background:var(--bad)}
+.sbt i.ok{background:var(--ok)} .sbt i.warn{background:var(--warn)} .sbt i.imp{background:var(--imp)} .sbt i.bad{background:var(--bad)}
 table.sumt tr.badrow td{background:color-mix(in srgb, var(--bad-soft) 55%, transparent)}
 .fm{border:1px solid var(--line);border-radius:12px;padding:10px 14px;margin-bottom:8px}
 .fm ul{margin:6px 0 0;padding-inline-start:18px;display:grid;gap:4px;font-size:14px}
@@ -549,7 +551,10 @@ const USES = [
 ];
 const QITEMS = [["میز کار چوبی یا MDF",700],["صندلی اداری یا صندلی پلاستیکی",300],["کمد یا فایل پر از پرونده و کاغذ",2500],["قفسهٔ کتاب پر",2000],
   ["مبل سه‌نفره",1000],["مبل یک‌نفره",400],["تخت با تشک",800],["کامپیوتر با مانیتور",250],["پالت کالای کارتنی (حدود ۱ متر مکعب)",4000],["خودروی سواری",7000]];
-const QMATS = [["چوب، MDF، نئوپان",17],["کاغذ و مقوا",16],["پارچه، لباس، پتو",18],["پلاستیک",40],["فوم و اسفنج",28],["لاستیک",37],["بنزین، گازوئیل، روغن",43],["الکل و تینر",27]];
+// MJ/kg as in the Ministry of Petroleum FRAME guide (table 1, after NFPA 557): wood 10, cables 15, cellulose 17, other 40
+const QMATS = [["چوب، MDF، نئوپان",10],["کاغذ و مقوا",17],["پارچه، کتان، لباس، پتو",17],["کابل و سیم برق",15],["پلاستیک",40],["فوم و اسفنج",40],["لاستیک",40],["سوخت، روغن، الکل، تینر",40]];
+// densities (kg/m³) suggested by the guide (table 2) and the heat value of each material (MJ/kg)
+const QDENS = [["چوب",700,10],["کاغذ",930,17],["کتان و پارچه",80,17],["فوم",70,40],["پلاستیک",920,40],["نئوپان",550,10]];
 const ICONS = {
   start:'<path d="M5 21V4"/><path d="M5 4h11l-2 4 2 4H5"/>',
   vent:'<path d="M4 8h10a3 3 0 1 0-3-3"/><path d="M4 12h15a3 3 0 1 1-3 3"/><path d="M4 16h7"/>',
@@ -593,6 +598,26 @@ const SECTIONS = [
     {row:[
       {id:"assessor", t:"text", l:"نام ارزیاب"},
       {id:"date", t:"text", l:"تاریخ ارزیابی", h:"خودکار پر می‌شود؛ در صورت نیاز تغییر دهید."},
+    ]},
+    {row:[
+      {id:"address", t:"text", l:"نشانی دقیق محل ساختمان", h:"برای بخش «مشخصات ساختمان» گزارش؛ در محاسبه اثری ندارد."},
+      {id:"built", t:"text", l:"سال ساخت (تقریبی)"},
+    ]},
+    {row:[
+      {id:"structure", t:"text", l:"نوع سازه (اسکلت بتنی، فلزی و …)"},
+      {id:"alarmType", t:"text", l:"نوع سیستم اعلام حریق (آدرس‌پذیر یا متعارف)"},
+    ]},
+    {row:[
+      {id:"fireboxes", t:"text", l:"فایرباکس‌ها: تعداد در هر طبقه و قطر اتصال هوز (اینچ)"},
+      {id:"hosereels", t:"text", l:"تعداد هوزریل در هر طبقه"},
+    ]},
+    {row:[
+      {id:"pumpsN", t:"text", l:"تعداد پمپ‌های تأمین فشار متصل به منبع آب"},
+      {id:"chutes", t:"text", l:"شوت‌های نجات به تفکیک طبقات (اگر نصب است)"},
+    ]},
+    {row:[
+      {id:"station", t:"text", l:"نزدیک‌ترین ایستگاه آتش‌نشانی شهری (نام و فاصله)"},
+      {id:"residentFF", t:"text", l:"آتش‌نشان مقیم و تجهیزات اختصاص‌یافته (اگر هست)"},
     ]},
     {id:"use", t:"sel", l:"این فضا بیشتر برای چه کاری استفاده می‌شود؟", h:"نزدیک‌ترین گزینه را انتخاب کنید. برنامه بر اساس آن چند مقدار استاندارد را خودش پر می‌کند.",
       o: USES.map(u=>({v:u.v,l:u.l})), applyPreset:true, cols:true},
@@ -666,14 +691,14 @@ const SECTIONS = [
            "اگر بایگانی پرونده، انبار کاغذ یا کالای زیاد دارید، دکمهٔ «محاسبه‌گر» را بزنید و تعداد وسایل را وارد کنید.",
            "اگر فقط یک اتاق از فضا بایگانی است، باز هم محاسبه‌گر دقیق‌تر است."],
       warn:v=>v>15000?"عدد بیش از ۱۵٬۰۰۰ فقط برای انبارهای خیلی بلند و متراکم درست است.":null},
-    {id:"Qi", t:"sel", l:"خود ساختمان (سازه و دیوار و سقف) چقدر سوختنی است؟", unk:1000,
+    {id:"Qi", t:"sel", l:"خود ساختمان (سازه و دیوار و سقف) چقدر سوختنی است؟", unk:1000, calc:"qi",
       h:"به اسکلت، سقف و روکش‌ها نگاه کنید، نه به اثاثیه.",
       o:[{v:0,l:"کاملاً نسوز",hint:"فقط بتن، آجر و فولاد؛ حتی پنجره‌ها فلزی‌اند و کفپوش سنگ یا سرامیک است."},
          {v:100,l:"نسوز با کمی اجزای سوختنی",hint:"وضع بیشتر ساختمان‌های اداری: اسکلت بتنی یا فلزی، ولی پنجرهٔ UPVC، کفپوش وینیل یا کمی روکش چوبی هست."},
          {v:300,l:"اسکلت چوبی با روکش نسوز، یا ساختمان آجری با سقف تیر چوبی",hint:"ساختمان‌های قدیمی با تیرهای چوبی در سقف."},
          {v:1000,l:"اسکلت نسوز ولی روکش‌های زیادِ سوختنی",hint:"سقف کاذب یونولیتی یا پلاستیکی در همه‌جا، دیوارپوش چوبی یا پلاستیکی زیاد، عایق اسفنجی."},
          {v:1500,l:"ساختمان کاملاً سوختنی",hint:"ساختمان چوبی، یا سوله با ساندویچ‌پنل که لایهٔ وسطش اسفنج (یونولیت یا پلی‌یورتان) است."}]},
-    {id:"M", t:"sel", l:"دیوارها و سقف این فضا با چه چیزی پوشیده شده‌اند؟", unk:3,
+    {id:"M", t:"sel", l:"دیوارها و سقف این فضا با چه چیزی پوشیده شده‌اند؟", unk:3, calc:"wM",
       h:"روکشی را انتخاب کنید که بیشترین سطح دیوار و سقف را پوشانده است. اگر چند نوع است، نوعی را بزنید که سطح بیشتری دارد.",
       o:[{v:0,l:"کاملاً نسوز",hint:"سنگ، کاشی، سرامیک، بتن، فلز، گچ‌کاری ساده بدون رنگ."},
          {v:0.5,l:"تقریباً نسوز",hint:"گچ‌کاری با رنگ معمولی، یا پنل گچی (کناف) رنگ‌شده. وضع بیشتر دیوارهای اداری."},
@@ -682,7 +707,7 @@ const SECTIONS = [
          {v:3,l:"سوختنی معمولی",hint:"دیوارکوب چوبی معمولی، دیوارپوش یا سقف کاذب پلاستیکی (PVC)."},
          {v:4,l:"زودسوز",hint:"یونولیت، فوم، موکت یا پارچه روی دیوار."},
          {v:5,l:"خیلی زودسوز",hint:"پلاستیک نازک، پارچه یا کاغذ آویزان روی دیوار و سقف."}]},
-    {id:"T", t:"sel", l:"وسایل باارزش این فضا با چه مقدار گرما آسیب می‌بینند؟", unk:100,
+    {id:"T", t:"sel", l:"وسایل باارزش این فضا با چه مقدار گرما آسیب می‌بینند؟", unk:100, calc:"wT",
       h:"به وسیله‌ای فکر کنید که بیشتر ارزش فضا به آن است. برای فضای اداری با کامپیوتر زیاد، «خیلی حساس» درست است؛ اگر بیشتر وسایل میز و کمد و کاغذ است، «حساس».",
       o:[{v:20,l:"مایعات خیلی زودسوز",hint:"انبار بنزین، تینر، الکل."},
          {v:100,l:"خیلی حساس",hint:"کامپیوتر، سرور، دستگاه الکترونیکی، وسایل پلاستیکی؛ یا جایی که حفظ جان افراد اصل است."},
@@ -691,7 +716,7 @@ const SECTIONS = [
          {v:300,l:"ماشین‌آلات",hint:"دستگاه‌های صنعتی، لوازم خانگی بزرگ."},
          {v:400,l:"اشیای فلزی",hint:"قفسه و قطعات فلزی."},
          {v:500,l:"مصالح نسوز",hint:"سنگ، آجر، شیشه."}]},
-    {id:"m", t:"sel", l:"وسایل سوختنی بیشتر چه اندازه‌ای دارند؟", unk:0.05,
+    {id:"m", t:"sel", l:"وسایل سوختنی بیشتر چه اندازه‌ای دارند؟", unk:0.05, calc:"mdim",
       h:"تکه‌های ریز و کاغذ زودتر آتش می‌گیرند تا وسایل بزرگ و حجیم.",
       o:[{v:0.005,l:"خیلی ریز",hint:"پودر، الیاف، خاک‌اره، پشم، پنبه."},
          {v:0.05,l:"ریز",hint:"کاغذ باز و پراکنده، پارچه، بسته‌های کوچک؛ مثلاً اتاق بایگانی با پرونده‌های باز."},
@@ -729,12 +754,12 @@ const SECTIONS = [
     {id:"a9", t:"sel", l:"نجاری یا برش پلاستیک انجام می‌شود؟", o:YN("بله","نه")},
     {id:"a10", t:"sel", l:"رنگ‌کاری، اسپری یا کار با چسب",
       o:[{v:0,l:"انجام نمی‌شود"},{v:0.05,l:"در اتاق جدا با تهویهٔ خوب"},{v:0.1,l:"در اتاق جدا بدون تهویهٔ مخصوص"},{v:0.2,l:"در همین فضا بدون جداسازی"}]},
-    {id:"a11", t:"sel", l:"خطر خاص دیگری هست؟", o:YN("بله","نه","مثلاً سیگار کشیدن کنترل‌نشده، یا وسیلهٔ برقی پرخطر که دائم روشن است.")},
+    {id:"a11", gd:"گزینهٔ «نه» یعنی خطر دیگری نیست؛ مثلاً کسی جز در مکان‌های تعیین‌شده برای دخانیات سیگار نمی‌کشد.", t:"sel", l:"خطر خاص دیگری هست؟", o:YN("بله","نه","مثلاً سیگار کشیدن کنترل‌نشده، یا وسیلهٔ برقی پرخطر که دائم روشن است.")},
    ]},
  { id:"ppl", title:"افراد و فرار", k:"",
    intro:"این بخش حساب می‌کند بیرون رفتن افراد در آتش‌سوزی چقدر طول می‌کشد. به شمردن افراد و اندازه‌گیری عرض درها نیاز دارید.",
    fields:[
-    {id:"X", t:"num", l:"در شلوغ‌ترین ساعت، چند نفر در این فضا هستند؟", u:"نفر", min:1, est:"X", ex:"۵۰",
+    {id:"X", gd:"بهتر است تعداد واقعی افراد حاضر در طبقه را وارد کنید (گزینهٔ «تعریف کاربر» در صفحه‌گستردهٔ FRAME).", t:"num", l:"در شلوغ‌ترین ساعت، چند نفر در این فضا هستند؟", u:"نفر", min:1, est:"X", ex:"۵۰",
       how:["در شلوغ‌ترین ساعت روز، همهٔ افراد را بشمارید: کارکنان، مراجعه‌کننده‌ها، بیماران.",
            "یا تعداد صندلی‌ها، میزهای کار یا تخت‌ها را بشمارید و مراجعه‌کننده‌ها را اضافه کنید.",
            "اگر ممکن نیست، دکمهٔ «تخمین» را بزنید. برنامه از روی مساحت و تراکم استاندارد FRAME حساب می‌کند (اداری: ۱ نفر در هر ۱۰ متر مربع)."]},
@@ -750,17 +775,19 @@ const SECTIONS = [
            "برای طبقات: راه‌پله‌هایی که پایینشان به بیرون ساختمان می‌رسد (نه به لابی بسته). هر راه‌پله یک راه حساب می‌شود.",
            "دو در که به یک راه‌پله می‌رسند، یک راه‌اند.",
            "اگر هیچ راهی به بیرون نمی‌رسد، دوباره بررسی کنید؛ معمولاً دست‌کم یک راه‌پله به بیرون راه دارد."]},
-    {id:"p0", t:"sel", l:"بیشتر افرادِ این فضا چه کسانی هستند؟", h:"گروهی را انتخاب کنید که بیرون بردنش از همه سخت‌تر است و تعدادش کم نیست.",
+    {id:"p0", t:"sel", calc:"pmix", l:"بیشتر افرادِ این فضا چه کسانی هستند؟", h:"گروهی را انتخاب کنید که بیرون بردنش از همه سخت‌تر است و تعدادش کم نیست.",
       o:[{v:1,l:"بزرگسالان سالم و آشنا با ساختمان",hint:"کارکنان و کارگرانی که هر روز اینجا هستند. اگر مراجعه‌کننده کم است، اداره هم همین گروه است."},
          {v:2,l:"افرادی که راهنما لازم دارند",hint:"دانش‌آموزان، یا ادارهٔ پرمراجعه که بیشتر حاضران مراجعه‌کنندهٔ ناآشنا با ساختمان‌اند."},
          {v:8,l:"افراد کم‌تحرک",hint:"بیماران سرپایی، سالمندان، زندانیان."},
          {v:20,l:"افرادی که هر کدام کمک جداگانه لازم دارند",hint:"بیماران بستری، افراد ویلچری."}]},
-    {id:"pPerc", t:"sel", l:"همهٔ افراد می‌توانند خطر را بفهمند؟",
+    {id:"pPerc", gd:"«بله» یعنی افرادی با درک محدود از خطر (بیماران، سالخوردگان، معلولان، افراد خواب مثل میهمانان هتل) حضور ندارند.", t:"sel", l:"همهٔ افراد می‌توانند خطر را بفهمند؟",
       o:YN("بله","نه","بزرگسالان عادی.","کودکان خردسال، افراد با اختلال ذهنی، یا کسانی که زبان و علائم را نمی‌فهمند.")},
-    {id:"pPlan", t:"sel", l:"برنامهٔ نوشته‌شدهٔ تخلیه دارید که افراد آن را می‌دانند؟",
+    {id:"pPlan", gd:"«بله» یعنی نقشهٔ تخلیهٔ اضطراری مشخص و نصب‌شده در محل دید افراد وجود دارد.", t:"sel", l:"برنامهٔ نوشته‌شدهٔ تخلیه دارید که افراد آن را می‌دانند؟",
       o:YN("بله","نه","سند مکتوب هست، نقشهٔ مسیر فرار نصب شده و دست‌کم یک بار تمرین شده.","برنامه نیست، یا فقط روی کاغذ است و کسی آن را نمی‌داند.")},
-    {id:"pPanic", t:"sel", l:"در آتش‌سوزی خطر وحشت و هجوم جمعیت کم است؟",
+    {id:"pPanic", gd:"«بله» یعنی در هنگام تخلیه، افراد دچار ترس و وحشت نمی‌شوند (مثلاً به‌خاطر حضور افراد آموزش‌دیده برای راهنمایی).", t:"sel", l:"در آتش‌سوزی خطر وحشت و هجوم جمعیت کم است؟",
       o:YN("بله، خطر وحشت کم است","نه، ممکن است وحشت پیش بیاید","فضای کاری با تعداد افراد معقول و آشنا با مسیرها.","فضای شلوغ با افراد ناآشنا: سالن اجتماعات، فروشگاه بزرگ، سالن انتظار.")},
+    {id:"rset", t:"num", l:"زمان تخلیه از نرم‌افزار شبیه‌سازی تخلیه (اختیاری)", u:"ثانیه", min:0, ex:"۰",
+      h:"اگر تخلیهٔ این فضا با نرم‌افزار شبیه‌سازی (RSET) محاسبه شده، عدد آن را وارد کنید؛ در غیر این صورت صفر بگذارید تا FRAME زمان تخلیه را خودش حساب کند."},
    ]},
  { id:"val", title:"ارزش و اهمیت", k:"",
    intro:"این بخش می‌پرسد آسیب به این فضا چقدر گران تمام می‌شود. هرچه ارزش و اهمیت بیشتر باشد، ریسک کمتری قابل قبول است.",
@@ -771,6 +798,11 @@ const SECTIONS = [
       h:"فقط برای فضاهای خیلی گران (بیش از حدود ۱۸ میلیون یورو) اثر دارد. اگر نمی‌دانید، صفر بگذارید."},
     {id:"d", t:"sel", l:"این فضا چه نوع فعالیتی دارد؟", h:"با انتخاب کاربری خودکار پیشنهاد شده است. این عدد نشان می‌دهد توقف فعالیت چقدر گران تمام می‌شود.",
       o:[{v:0.8,l:"اداری، یا صنعت پیشرفته",hint:"FRAME برای خدمات اداری عدد ۰٫۸ را در نظر می‌گیرد."},{v:0.6,l:"صنعت دقیق",hint:"مثل الکترونیک."},{v:0.35,l:"صنعت تولیدی معمولی"},{v:0.3,l:"بیشتر کسب‌وکارها",hint:"حالت میانگین؛ مسکونی، درمانی، آموزشی."},{v:0.1,l:"تجاری و انبار"}]},
+    {row:[
+      {id:"deflNow", t:"num", l:"شاخص تعدیل‌کنندهٔ GDP – سال جاری", u:"", min:1, when:d=>d.value>0,
+        gd:"شاخص تعدیل‌کنندهٔ GDP ایران در سال جاری و در سال ۲۰۰۰ وارد شود (ارزش بر حسب یورو است و نسبت ارز یک). پیش‌فرض‌ها عددهای فایل‌های مرجع FRAME است."},
+      {id:"defl2000", t:"num", l:"شاخص تعدیل‌کنندهٔ GDP – سال ۲۰۰۰", u:"", min:1, when:d=>d.value>0},
+    ]},
    ]},
  { id:"water", title:"آب آتش‌نشانی", k:"",
    intro:"آتش‌نشان‌ها برای خاموش کردن آتش به آب کافی نیاز دارند. جواب این سؤال‌ها را معمولاً مسئول تأسیسات می‌داند؛ از او بپرسید یا به موتورخانه بروید.",
@@ -805,11 +837,11 @@ const SECTIONS = [
  { id:"np", title:"تجهیزات پایهٔ اطفاء", k:"",
    intro:"این‌ها حداقل امکاناتی هستند که هر ساختمانی باید داشته باشد. هر سؤال را با دیدن خود وسیله جواب دهید، نه از روی حدس.",
    fields:[
-    {id:"n1a", t:"sel", l:"همیشه (شب و روز) کسی در ساختمان حاضر است؟", o:YN("بله","نه","نگهبان شبانه‌روزی یا کارکنان شیفت.","ساختمان شب‌ها یا تعطیلات خالی است.")},
-    {id:"n1b", t:"sel", l:"شستی و آژیر دستی اعلام حریق دارید؟", o:YN("بله","نه","جعبهٔ کوچک قرمز روی دیوار با نوشتهٔ «در صورت آتش‌سوزی فشار دهید».")},
-    {id:"n1c", t:"sel", l:"خبر آتش‌سوزی مطمئناً و فوراً به آتش‌نشانی می‌رسد؟",
+    {id:"n1a", gd:"حضور مستمر (۲۴ ساعته) نگهبان یا آتش‌نشان مقیم.", t:"sel", l:"همیشه (شب و روز) کسی در ساختمان حاضر است؟", o:YN("بله","نه","نگهبان شبانه‌روزی یا کارکنان شیفت.","ساختمان شب‌ها یا تعطیلات خالی است.")},
+    {id:"n1b", gd:"اعلام وقوع آتش‌سوزی به سازمان آتش‌نشانی به‌صورت دستی (تلفن یا روش دیگر) وجود دارد.", t:"sel", l:"شستی و آژیر دستی اعلام حریق دارید؟", o:YN("بله","نه","جعبهٔ کوچک قرمز روی دیوار با نوشتهٔ «در صورت آتش‌سوزی فشار دهید».")},
+    {id:"n1c", gd:"ارتباط تضمین‌شده با آتش‌نشانی «توسط نگهبانی»؛ یعنی نگهبان یا آتش‌نشان مقیم برای واکنش در لحظهٔ آتش‌سوزی آموزش کافی دیده است.", t:"sel", l:"خبر آتش‌سوزی مطمئناً و فوراً به آتش‌نشانی می‌رسد؟",
       o:YN("بله","نه، یا معلوم نیست","سیستم خودکار به آتش‌نشانی یا مرکز کنترل خبر می‌دهد، یا نگهبانی دستور کتبی تماس فوری با ۱۲۵ دارد.","فقط به این امید است که کسی زنگ بزند.")},
-    {id:"n1d", t:"sel", l:"افراد داخل ساختمان با آژیر یا زنگ خبردار می‌شوند؟", o:YN("بله","نه","آژیری که در همهٔ قسمت‌ها شنیده می‌شود.")},
+    {id:"n1d", gd:"هشدار به ساکنین با سامانه‌های شنیداری و دیداری مانند بلندگو یا چراغ هشدار.", t:"sel", l:"افراد داخل ساختمان با آژیر یا زنگ خبردار می‌شوند؟", o:YN("بله","نه","آژیری که در همهٔ قسمت‌ها شنیده می‌شود.")},
     {id:"n2", t:"sel", l:"کپسول آتش‌نشانی",
       how:["کپسول‌ها را پیدا کنید. باید به دیوار نصب و جلویشان باز باشد.",
            "عقربهٔ کپسول باید در قسمت سبز باشد و تاریخ شارژ نگذشته باشد.",
@@ -842,9 +874,9 @@ const SECTIONS = [
            "از نگهبان بپرسید: اگر شب تابلو آلارم بدهد، چه کسی و چطور خبردار می‌شود؟",
            "اگر تابلو در اتاقی است که شب‌ها خالی است و به جایی وصل نیست، جواب «نه» است."],
       o:YN("بله","نه","تابلو در نگهبانی شبانه‌روزی است یا خودکار به آتش‌نشانی یا مرکز کنترل خبر می‌دهد.","تابلو فقط آژیر محلی دارد و کسی شبانه‌روز کنارش نیست.")},
-    {id:"sFault", t:"sel", l:"تابلوی اعلام حریق خرابی‌ها را هم نشان می‌دهد؟", when:d=>d.sAD>=3,
+    {id:"sFault", gd:"«بله» اگر سیستم نظارت الکترونیکی/پایش خطا دارد و بازدید دوره‌ای طبق برنامهٔ زمان‌بندی‌شده از آن انجام می‌شود.", t:"sel", l:"تابلوی اعلام حریق خرابی‌ها را هم نشان می‌دهد؟", when:d=>d.sAD>=3,
       o:YN("بله","نه","چراغ یا پیام «Fault» یا «خطا» روی تابلو هست.")},
-    {id:"sZone", t:"sel", l:"تابلو نشان می‌دهد آتش دقیقاً در کدام اتاق یا ناحیه است؟", when:d=>d.sAD>0,
+    {id:"sZone", gd:"اگر سیستم اعلام حریق از نوع «آدرس‌پذیر» است «بله»، و اگر «متعارف (کانونشنال)» است «نه».", t:"sel", l:"تابلو نشان می‌دهد آتش دقیقاً در کدام اتاق یا ناحیه است؟", when:d=>d.sAD>0,
       o:YN("بله","نه","تابلو شمارهٔ زون یا نام اتاق را نشان می‌دهد (سیستم زون‌دار یا آدرس‌پذیر).","تابلو فقط می‌گوید «آتش» و جایش را نمی‌گوید.")},
     {id:"s6", t:"sel", l:"اسپرینکلر (آب‌پاش خودکار سقفی)",
       how:["به سقف نگاه کنید: اسپرینکلر یک سر کوچک فلزی است با یک حباب شیشه‌ای رنگی (معمولاً قرمز) وسطش.",
@@ -856,7 +888,7 @@ const SECTIONS = [
       o:[{v:0,l:"نداریم، یا فقط برای یک اتاق کوچک",hint:"اگر فقط اتاق سرور دارد، در بخش «ادامهٔ کار» جواب دهید."},{v:11,l:"کل همین فضا با یکی از این سیستم‌ها محافظت می‌شود"}]},
     {id:"s3", t:"sel", l:"آب مخزن فقط برای آتش‌نشانی است؟",
       o:YN("بله","نه","مخزن مخصوص آتش‌نشانی یا ذخیرهٔ جدا که برای مصرف دیگر برداشت نمی‌شود.","از همان مخزن برای آب مصرفی هم استفاده می‌شود.")},
-    {id:"s4", t:"sel", l:"منبع آب آتش‌نشانی در اختیار خود ساختمان است؟",
+    {id:"s4", gd:"«بله» اگر مخزن یا مخازن ذخیره زیر کنترل اپراتور ساختمان است و بازدید منظم از آن‌ها انجام می‌شود.", t:"sel", l:"منبع آب آتش‌نشانی در اختیار خود ساختمان است؟",
       o:YN("بله","نه","مخزن و پمپ مال ساختمان است و وابسته به فشار شبکهٔ شهری نیست.")},
     {id:"s2", t:"sel", l:"آب آتش‌نشانی خیلی بیشتر از نیاز است؟ (دست‌کم ۴ برابر)",
       o:YN("بله","نه","مثلاً دسترسی به رودخانه، دریاچه یا مخزن خیلی بزرگ.","وضع بیشتر ساختمان‌ها.")},
@@ -932,7 +964,7 @@ const SECTIONS = [
       o:YN("بله","نه","سیستم پیجینگ یا اعلام صوتی که پیام ضبط‌شده یا زنده پخش می‌کند.","فقط آژیر یا زنگ.")},
     {id:"u300", t:"sel", l:"در هر هشدار، کمتر از ۳۰۰ نفر هم‌زمان باید تخلیه شوند؟",
       o:YN("بله، کمتر از ۳۰۰ نفر","نه، بیشتر از ۳۰۰ نفر","آژیر فقط در همین طبقه یا بخش به صدا درمی‌آید، یا کل ساختمان کمتر از ۳۰۰ نفر است.")},
-    {id:"uPartial", t:"sel", l:"دست‌کم در جاهای حساس برای جان افراد (اتاق خواب‌ها، راهروها) دتکتور هست؟", when:d=>!(d.sAD>0 && d.sTrans),
+    {id:"uPartial", gd:"«بله» اگر طبقه پوشش سراسری آشکارساز ندارد و فقط در قسمت‌های حساس برای جان افراد آشکارساز نصب است.", t:"sel", l:"دست‌کم در جاهای حساس برای جان افراد (اتاق خواب‌ها، راهروها) دتکتور هست؟", when:d=>!(d.sAD>0 && d.sTrans),
       h:"فقط وقتی پرسیده می‌شود که سیستم دتکتور کامل با ارسال خودکار ندارید.", o:YN("بله","نه")},
     {id:"u4", t:"sel", l:"اسپرینکلرها مسیرهای فرار را هم پوشش می‌دهند؟", when:d=>d.s6>0,
       o:[{v:0,l:"نه"},{v:5,l:"فقط در جاهای پرخطر"},{v:10,l:"در کل این فضا، از جمله راهروها"}]},
@@ -947,7 +979,7 @@ const SECTIONS = [
     {id:"yRep", t:"sel", l:"تعمیرات بعد از آتش را می‌شود سریع و با کمک کم انجام داد؟", o:YN("بله","نه")},
     {id:"yReloc", t:"sel", l:"می‌شود کار را فوراً به ساختمان دیگری منتقل کرد؟", o:YN("بله","نه","مثلاً ساختمان یا طبقهٔ خالی دیگری از همان سازمان آماده است.")},
     {id:"yCoop", t:"sel", l:"برای انتقال کار، توافق یا دستور کتبی دارید؟", o:YN("بله","نه")},
-    {id:"yProd", t:"sel", l:"همین کار در بیش از یک محل انجام می‌شود؟", o:YN("بله","نه","مثلاً ادارات مناطق دیگر همین خدمات را می‌دهند.")},
+    {id:"yProd", gd:"برای ساختمان‌های اداری می‌تواند همانند «امکان انتقال فوری فعالیت به ساختمان دیگر» پاسخ داده شود.", t:"sel", l:"همین کار در بیش از یک محل انجام می‌شود؟", o:YN("بله","نه","مثلاً ادارات مناطق دیگر همین خدمات را می‌دهند.")},
     {id:"yDet", t:"sel", l:"در جاهای حساس برای ادامهٔ کار (اتاق سرور، بایگانی) دتکتور هست؟", when:d=>!(d.sAD>0 && d.sTrans), o:YN("بله","نه")},
     {id:"ySpr", t:"sel", l:"دستگاه‌های حساس اسپرینکلر موضعی دارند؟", when:d=>!d.s6, o:YN("بله","نه")},
     {id:"yOth", t:"sel", l:"دستگاه‌های حساس (مثل اتاق سرور) سیستم اطفای گازی یا فوم موضعی دارند؟", when:d=>!d.s7, o:YN("بله","نه")},
@@ -964,6 +996,7 @@ SECTIONS.forEach(s => s.fields.forEach(f => (f.row||[f]).forEach(x => { x.sec=s.
 const FIELD = Object.fromEntries(ALLFIELDS.map(f=>[f.id,f]));
 
 const DEFAULTS = {project:"",comp:"",assessor:"",date:"",use:"office",
+  address:"",built:"",structure:"",alarmType:"",fireboxes:"",hosereels:"",pumpsN:"",chutes:"",station:"",residentFF:"",rset:0,deflNow:309,defl2000:121,
   area:600,l:30,access:"long",Z:2,E:0,H:0,h:3,win:4,vents:0,flow:0,
   Qm:400,Qi:100,M:2,T:200,m:0.3,
   a1:0,a2:0,a3:0,a4:0,a5:0.1,a6:0,a7:0,a8:false,a9:false,a10:0,a11:false,
@@ -990,7 +1023,7 @@ function today(){ try{ return new Date().toLocaleDateString("fa-IR-u-ca-persian"
    Questions in BFIELDS are answered once for the building; each floor answers the rest.
    A floor can override any building answer (ovr) — e.g. the floor with the server room. */
 const KEY = "frame-risk-v3";
-const META = new Set(["project","assessor","date"]);
+const META = new Set(["project","assessor","date","address","built","structure","alarmType","fireboxes","hosereels","pumpsN","chutes","station","residentFF"]);
 const BFIELDS = new Set([...META, "access","Z","Qi","fs","fo","fc","a2","a3","a4","a5","pPlan",
   "w1","store","dia","looped","c70","c80","c110","bar","n1a","n1b","n1c","n1d","n2","n3","n4","n5",
   "sAD","sTrans","sFault","sZone","s6","s2","s3","s4","s5","s8","s9","vsep","extH","uSt","uVoice","u300","uSign",
@@ -1088,17 +1121,17 @@ function goCtx(ctx){
 
 /* ---------- charts (canvas): summary page, Excel and Word exports ----------
    lang "fa" or "en"; every chart is drawn on a white canvas at 2× for print. */
-const CHC = {ok:"#2e9e5b", warn:"#d99a00", bad:"#d64545", okS:"#dff3e6", warnS:"#fbf0cf", badS:"#fbe1df", grid:"#dde2e8", ink:"#1f2933", mute:"#66727f", base:"#f4f6f8",
+const CHC = {ok:"#2e9e5b", imp:"#1f6fd1", bad:"#d64545", okS:"#dff3e6", impS:"#dde9fb", badS:"#fbe1df", grid:"#dde2e8", ink:"#1f2933", mute:"#66727f", base:"#f4f6f8",
   R:"#3b6fd4", R1:"#d64a3c", R2:"#e0952a"};
 const CHT = {
-  fa:{R:"ساختمان و دارایی", R1:"افراد", R2:"فعالیت", lim:"حد مجاز ۱", ground:"تراز زمین", now:"وضع موجود", schem:"شماتیک ساختمان – ریسک هر فضا", bars:"ریسک هر فضا", r0:"ریسک اولیه Ro و سامانهٔ حفاظت پیشنهادی", steps:"ریسک پس از هر قدم اصلاحی",
-    ro:["حفاظت دستی","اعلام خودکار","اسپرینکلر","اسپرینکلر + آب بیشتر","کاهش ریسک"], leg:["قابل‌قبول (۰٫۸ ≥)","مرزی (۰٫۸ تا ۱)","غیرقابل‌قبول (۱ <)"]},
-  en:{R:"Property", R1:"Occupants", R2:"Activities", lim:"limit 1", ground:"Ground level", now:"Current", schem:"Building schematic – risk per space", bars:"Risk per space", r0:"Initial risk Ro and suggested protection", steps:"Risk after each corrective step",
-    ro:["Manual protection","Automatic detection","Sprinklers","Sprinklers + water","Reduce risk"], leg:["Acceptable (≤ 0.8)","Borderline (0.8–1)","Not acceptable (> 1)"]},
+  fa:{R:"ساختمان و دارایی", R1:"افراد", R2:"فعالیت", lim:"مرز قابل‌قبول ۱٫۰۳", ground:"تراز زمین", now:"وضع موجود", schem:"شماتیک ساختمان – ریسک هر فضا", bars:"ریسک هر فضا", r0:"ریسک اولیه Ro و سامانهٔ حفاظت پیشنهادی", steps:"ریسک پس از هر قدم اصلاحی",
+    ro:["حفاظت دستی","اعلام خودکار","اسپرینکلر","اسپرینکلر + آب بیشتر","کاهش ریسک"], leg:["قابل‌قبول (سبز)","فرصت بهبود (آبی)","غیرقابل‌قبول (قرمز)"]},
+  en:{R:"Property", R1:"Occupants", R2:"Activities", lim:"acceptable ≤ 1.03", ground:"Ground level", now:"Current", schem:"Building schematic – risk per space", bars:"Risk per space", r0:"Initial risk Ro and suggested protection", steps:"Risk after each corrective step",
+    ro:["Manual protection","Automatic detection","Sprinklers","Sprinklers + water","Reduce risk"], leg:["Acceptable (green)","Room for improvement (blue)","Not acceptable (red)"]},
 };
 const chNum = (v, lang, d=2) => !isFinite(v) ? "∞" : lang==="fa" ? Number(v).toLocaleString("fa-IR",{minimumFractionDigits:d,maximumFractionDigits:d,useGrouping:false}) : Number(v).toFixed(d);
 const chFont = (w, s) => `${w} ${s}px Vazirmatn, Tahoma, "Segoe UI", sans-serif`;
-const chLv = v => !isFinite(v) || v > 1 ? "bad" : v > 0.8 ? "warn" : "ok";
+const chLv = (v, k) => level(v, k);
 function chCanvas(w, h, lang, draw){
   const s = 2, c = document.createElement("canvas"); c.width = w*s; c.height = h*s; c.dataset.w = w; c.dataset.h = h;
   const g = c.getContext("2d"); g.scale(s, s); g.fillStyle = "#fff"; g.fillRect(0, 0, w, h);
@@ -1130,14 +1163,14 @@ function chSchematic(rows, lang){
       g.strokeStyle = "#9aa5b1"; g.lineWidth = 1; g.strokeRect(bx + .5, y + .5, bw - 1, rh - 1);
       g.fillStyle = CHC.ink; g.font = chFont(600, 13); g.textAlign = fa_ ? "right" : "left";
       g.fillText(r.name, fa_ ? bx + bw - 12 : bx + 12, y + rh/2, nameW - 16);
-      cells.forEach((k,i)=>{ const v = r.x.invalid ? NaN : r.x[k], lv = isNaN(v) ? null : chLv(v);
+      cells.forEach((k,i)=>{ const v = r.x.invalid ? NaN : r.x[k], lv = isNaN(v) ? null : chLv(v, k);
         g.fillStyle = lv ? CHC[lv+"S"] : "#eee"; g.fillRect(cx(i) + 3, y + 4, cw - 6, rh - 8);
         g.fillStyle = lv ? CHC[lv] : CHC.mute; g.font = chFont(800, 14); g.textAlign = "center"; g.fillText(isNaN(v) ? "—" : chNum(v, lang), cx(i) + cw/2, y + rh/2 + 1); });
     });
     const gi = list.findIndex(r=>(+r.E||0) < 0);
     if (gi > 0){ const y = top + gi*rh; g.strokeStyle = "#5b4636"; g.lineWidth = 3; g.beginPath(); g.moveTo(10, y); g.lineTo(W - 10, y); g.stroke();
       g.fillStyle = "#5b4636"; g.font = chFont(600, 11); g.textAlign = fa_ ? "left" : "right"; g.fillText(T.ground, fa_ ? 12 : W - 12, y - 8); }
-    chLegend(g, W, H - 24, [[CHC.ok, T.leg[0]], [CHC.warn, T.leg[1]], [CHC.bad, T.leg[2]]]);
+    chLegend(g, W, H - 24, [[CHC.ok, T.leg[0]], [CHC.imp, T.leg[1]], [CHC.bad, T.leg[2]]]);
   });
 }
 // groups: [{label, vals:{R,R1,R2}}] — grouped bars with the limit line at 1
@@ -1158,8 +1191,8 @@ function chBars(groups, lang, title){
         g.fillStyle = CHC.ink; g.font = chFont(600, 10); g.textAlign = "center"; g.save(); g.translate(x + bw/2, y(isFinite(v) ? v : ymax) - 4); g.rotate(-Math.PI/2); g.textAlign = "left"; g.fillText(chNum(v, lang), 0, 0); g.restore(); });
       g.fillStyle = CHC.ink; g.font = chFont(600, 11); g.textAlign = "center";
       wrapText(g, gr.label, L + j*gw + gw/2, bot + 16, gw - 6, 14); });
-    g.strokeStyle = CHC.bad; g.lineWidth = 2; g.setLineDash([6,4]); g.beginPath(); g.moveTo(L, y(1)); g.lineTo(W - R, y(1)); g.stroke(); g.setLineDash([]);
-    g.fillStyle = CHC.bad; g.font = chFont(700, 11); g.textAlign = "left"; g.fillText(T.lim, W - R + 6, y(1));
+    g.strokeStyle = CHC.bad; g.lineWidth = 2; g.setLineDash([6,4]); g.beginPath(); g.moveTo(L, y(1.03)); g.lineTo(W - R, y(1.03)); g.stroke(); g.setLineDash([]);
+    g.fillStyle = CHC.bad; g.font = chFont(700, 11); g.textAlign = "left"; g.fillText(T.lim, W - R + 6, y(1.03));
     chLegend(g, W, H - 16, ["R","R1","R2"].map(k=>[CHC[k], `${T[k]} (${k})`]));
   });
 }
@@ -1187,6 +1220,25 @@ function chRo(rows, lang){
       g.font = chFont(600, 11); wrapText(g, r.name, x + bw/2, bot + 16, gw - 6, 14); });
   });
 }
+// one risk of one space after each cumulative step, every bar coloured by its level (as in the FRAME report template)
+function chLvSteps(title, cats, vals, k, lang){
+  const n = cats.length, W = Math.max(420, 70 + n*46), H = 300, L = 46, R = 16, top = 40, bot = 250, fa_ = lang==="fa", Lm = LIM[k] || LIM.R;
+  const fin = vals.filter(isFinite), ymax = Math.min(12, Math.max(2, Math.ceil(Math.max(0, ...fin)*1.15*2)/2));
+  const y = v => bot - Math.min(isFinite(v) ? v : ymax, ymax)/ymax*(bot - top);
+  return chCanvas(W, H, lang, g=>{
+    g.fillStyle = CHC.ink; g.font = chFont(700, 13); g.textAlign = "center"; g.fillText(title, W/2, 18, W - 20);
+    g.font = chFont(500, 10); g.textAlign = "right"; g.fillStyle = CHC.mute;
+    const step = ymax > 6 ? 2 : ymax > 3 ? 1 : 0.5;
+    for (let v = 0; v <= ymax + 1e-9; v += step){ g.strokeStyle = CHC.grid; g.lineWidth = 1; g.beginPath(); g.moveTo(L, y(v)); g.lineTo(W - R, y(v)); g.stroke(); g.fillText(chNum(v, lang, 1), L - 5, y(v)); }
+    [[Lm.g, CHC.ok],[Lm.r, CHC.bad]].forEach(([v,c])=>{ if (v > ymax) return; g.strokeStyle = c; g.lineWidth = 1.2; g.setLineDash([5,4]); g.beginPath(); g.moveTo(L, y(v)); g.lineTo(W - R, y(v)); g.stroke(); g.setLineDash([]); });
+    const gw = (W - L - R)/n, bw = Math.min(30, gw*0.62);
+    vals.forEach((v,i)=>{ const j = fa_ ? n-1-i : i, x = L + j*gw + gw/2 - bw/2; if (v==null || Number.isNaN(v)) return;
+      const lv = level(v, k); g.fillStyle = CHC[lv]; g.fillRect(x, y(v), bw, bot - y(v));
+      g.fillStyle = CHC.ink; g.font = chFont(700, 10); g.textAlign = "center"; g.fillText(chNum(v, lang), x + bw/2, y(v) - 7);
+      g.font = chFont(600, 10); g.fillText(cats[i], x + bw/2, bot + 14); });
+    chLegend(g, W, H - 14, [[CHC.ok, CHT[lang].leg[0]], [CHC.imp, CHT[lang].leg[1]], [CHC.bad, CHT[lang].leg[2]]]);
+  });
+}
 // steps chart for one space: categories = current + cumulative steps
 function chSteps(name, cats, series, lang){
   return chBars(cats.map((c,i)=>({label:c, vals:{R:series[i].R, R1:series[i].R1, R2:series[i].R2}})), lang, `${CHT[lang].steps} – ${name}`);
@@ -1209,8 +1261,8 @@ function chCompare(sc, lang, labels){
         g.fillStyle = cols[q]; g.fillRect(x + 3, y(v), bw - 6, bot - y(v));
         g.fillStyle = isFinite(v) ? CHC.ink : CHC.bad; g.font = chFont(800, isFinite(v) ? 13 : 18); g.textAlign = "center"; g.fillText(chNum(v, lang), x + bw/2, y(v) - 11); });
       g.fillStyle = CHC.ink; g.font = chFont(700, 13); g.textAlign = "center"; g.fillText(`${T[k]} (${k})`, cx, bot + 18); });
-    g.strokeStyle = CHC.bad; g.lineWidth = 2; g.setLineDash([6,4]); g.beginPath(); g.moveTo(L, y(1)); g.lineTo(W - R, y(1)); g.stroke(); g.setLineDash([]);
-    g.fillStyle = CHC.bad; g.font = chFont(700, 11); g.textAlign = "left"; g.fillText(T.lim, W - R + 6, y(1));
+    g.strokeStyle = CHC.bad; g.lineWidth = 2; g.setLineDash([6,4]); g.beginPath(); g.moveTo(L, y(1.03)); g.lineTo(W - R, y(1.03)); g.stroke(); g.setLineDash([]);
+    g.fillStyle = CHC.bad; g.font = chFont(700, 11); g.textAlign = "left"; g.fillText(T.lim, W - R + 6, y(1.03));
     chLegend(g, W, H - 22, [[cols[0], labels[0]], [cols[1], labels[1]]]);
   });
 }
@@ -1254,7 +1306,7 @@ function linkGroups(ds){                      // ds: floor data → groups (inde
   return out;
 }
 const MG_SUM = ["area","win","vents","flow","X","Wex","value"];
-const MG_HIGHBAD = new Set(["Qi","M","a1","a2","a3","a4","a5","a6","a7","a10","p0","c1","d","w1","n2","n3","n4","n5","extH"]);
+const MG_HIGHBAD = new Set(["rset","Qi","M","a1","a2","a3","a4","a5","a6","a7","a10","p0","c1","d","w1","n2","n3","n4","n5","extH"]);
 const MG_TRUEBAD = new Set(["a8","a9","a11","extNear","vopen"]);
 const MG_KEEP = new Set(["project","comp","assessor","date","use","E","H","l","h","Qm","fc","u300","vsep","vopen", ...MG_SUM]);
 function mergeData(ds){                        // ds bottom-up; the worst answer of the member floors is taken
@@ -1281,21 +1333,21 @@ function compResults(rows = floorResults()){
 }
 const allResults = () => { const r = floorResults(); return [...r, ...compResults(r)]; };
 function worstOf(rows, k){ return rows.reduce((w,r)=> (w===null || capR(r.x[k]) > capR(w.x[k])) ? r : w, null); }
-function sumBar(v){
-  const lv = level(v), w = Math.min(capR(v)/2,1)*100;
+function sumBar(v, k){
+  const lv = level(v, k), w = Math.min(capR(v)/2,1)*100;
   return `<span class="sb"><b class="c-${lv}">${fa(v)}</b><span class="sbt"><i class="${lv}" style="width:${w.toFixed(1)}%"></i></span></span>`;
 }
 function summaryHTML(){
   const rows = floorResults(), crows = compResults(rows), valid = [...rows, ...crows].filter(r=>!r.x.invalid);
   const worst = Object.fromEntries(RISKS.map(rk=>[rk.k, worstOf(valid, rk.k)]));
-  const badAll = valid.filter(r=>RISKS.some(rk=>r.x[rk.k]>1)), badRows = badAll.filter(r=>!r.merged);
-  const anyWarn = valid.some(r=>RISKS.some(rk=>r.x[rk.k]>0.8));
-  const vlv = badAll.length ? "bad" : anyWarn ? "warn" : "ok";
-  const nBad = k => valid.filter(r=>r.x[k]>1).length;
+  const badAll = valid.filter(r=>isRed(r.x)), badRows = badAll.filter(r=>!r.merged);
+  const impAll = valid.filter(r=>xLevel(r.x)==="imp");
+  const vlv = badAll.length ? "bad" : impAll.length ? "imp" : "ok";
+  const nBad = k => valid.filter(r=>level(r.x[k], k)==="bad").length;
   const msg = vlv==="ok" ? `هر سه ریسک در همهٔ ${fa(rows.length,0)} فضای ارزیابی‌شده قابل‌قبول است.`
-    : vlv==="warn" ? "هیچ فضایی از حد مجاز بیشتر نیست، ولی دست‌کم یک فضا در محدودهٔ مرزی (۰٫۸ تا ۱) است."
-    : badRows.length ? `${fa(badRows.length,0)} فضا از ${fa(rows.length,0)} دست‌کم در یک ریسک از حد مجاز (۱٫۰) بیشترند: ${badAll.map(r=>r.name).join("، ")}. ساختمان در وضعیت فعلی قابل‌قبول نیست.`
-    : `هر طبقه به‌تنهایی قابل‌قبول است، ولی چون طبقه‌ها از نظر آتش از هم جدا نیستند، واحد حریق ترکیبی از حد مجاز بیشتر است: ${badAll.map(r=>r.name).join("، ")}. ساختمان در وضعیت فعلی قابل‌قبول نیست.`;
+    : vlv==="imp" ? `هیچ ریسک غیرقابل‌قبولی (قرمز) نیست، ولی ${fa(impAll.length,0)} فضا دست‌کم در یک ریسک «فرصت بهبود» (آبی) دارد: ${impAll.map(r=>r.name).join("، ")}.`
+    : badRows.length ? `${fa(badRows.length,0)} فضا از ${fa(rows.length,0)} دست‌کم در یک ریسک غیرقابل‌قبول (قرمز) است: ${badAll.map(r=>r.name).join("، ")}. ساختمان در وضعیت فعلی قابل‌قبول نیست.`
+    : `هیچ طبقه‌ای به‌تنهایی قرمز نیست، ولی چون طبقه‌ها از نظر آتش از هم جدا نیستند، واحد حریق ترکیبی غیرقابل‌قبول (قرمز) است: ${badAll.map(r=>r.name).join("، ")}. ساختمان در وضعیت فعلی قابل‌قبول نیست.`;
   const bm = buildingMeasures();
   const inFrame = (()=>{ try{ return window.self !== window.top; }catch(e){ return true; } })();
   const ovrRows = rows.flatMap(r=>Object.keys(r.fl.ovr).filter(k=>r.fl.ovr[k] && FIELD[k] && !META.has(k)).map(k=>({r, f:FIELD[k]})));
@@ -1315,30 +1367,30 @@ function summaryHTML(){
       <h3 class="sec">ریسک تعیین‌کنندهٔ ساختمان</h3>
       <p class="sec-note">در روش FRAME ریسک‌ها جمع یا میانگین گرفته نمی‌شوند. برای هر نوع ریسک، بدترین فضا وضعیت ساختمان را تعیین می‌کند.</p>
       <div class="big3">${RISKS.map(rk=>{ const w = worst[rk.k]; if (!w) return ""; const R = w.x[rk.k];
-        return `<div class="rcard">${gauge(R,true)}<div class="g-name"><span class="lgn">${rk.n}</span><span class="smn">${rk.sn||rk.n}</span><span class="g-sym">${rk.k}</span></div><span class="pill ${level(R)}">${levelTxt(R)}</span>
-          <div class="need">بدترین فضا: <b>${esc(w.name)}</b><br>${nBad(rk.k) ? `${fa(nBad(rk.k),0)} فضا بالای ۱` : "همهٔ فضاها زیر ۱"}</div></div>`; }).join("")}</div>
+        return `<div class="rcard">${gauge(R,true,rk.k)}<div class="g-name"><span class="lgn">${rk.n}</span><span class="smn">${rk.sn||rk.n}</span><span class="g-sym">${rk.k}</span></div><span class="pill ${level(R,rk.k)}">${levelTxt(R,rk.k)}</span>
+          <div class="need">بدترین فضا: <b>${esc(w.name)}</b><br>${nBad(rk.k) ? `${fa(nBad(rk.k),0)} فضا غیرقابل‌قبول (قرمز)` : "هیچ فضایی قرمز نیست"}</div></div>`; }).join("")}</div>
       <h3 class="sec">نتیجهٔ هر فضا</h3>
       <div class="scroll"><table class="t sumt"><thead><tr><th>فضا</th><th>کاربری</th><th class="hsm">مساحت</th><th class="hsm">افراد</th>${RISKS.map(rk=>`<th>${rk.n} <span class="g-sym">${rk.k}</span></th>`).join("")}<th class="hsm">R<sub>o</sub></th><th>وضعیت</th></tr></thead><tbody>
-        ${rows.map(r=>{ const w = Math.max(...RISKS.map(rk=>capR(r.x[rk.k])));
-          return `<tr${w>1?' class="badrow"':""}><td><button class="linkbtn" type="button" data-floor="${r.fl.id}">${esc(r.name)}</button></td><td>${esc((USES.find(u=>u.v===r.d.use)||{}).l||"—")}</td>
+        ${rows.map(r=>{ const lvr = xLevel(r.x);
+          return `<tr${lvr==="bad"?' class="badrow"':""}><td><button class="linkbtn" type="button" data-floor="${r.fl.id}">${esc(r.name)}</button></td><td>${esc((USES.find(u=>u.v===r.d.use)||{}).l||"—")}</td>
           <td class="num hsm">${fa(r.d.area,0)}</td><td class="num hsm">${fa(r.d.X,0)}</td>
-          ${r.x.invalid ? `<td colspan="3">ورودی‌ها قابل محاسبه نیست</td>` : RISKS.map(rk=>`<td class="num">${sumBar(r.x[rk.k])}</td>`).join("")}
-          <td class="num hsm">${fa(r.x.Ro)}</td><td>${r.x.invalid?"—":`<span class="pill ${level(w)}" style="margin:0">${levelTxt(w)}</span>`}</td></tr>`; }).join("")}
-        ${crows.length ? `<tr><td colspan="9" class="grp">واحدهای حریق ترکیبی (طبقه‌هایی که از هم جدا نیستند)</td></tr>` + crows.map(r=>{ const w = Math.max(...RISKS.map(rk=>capR(r.x[rk.k])));
-          return `<tr class="mrow${w>1?" badrow":""}"><td>${esc(r.name)}</td><td>${esc((USES.find(u=>u.v===r.d.use)||{}).l||"—")}</td>
+          ${r.x.invalid ? `<td colspan="3">ورودی‌ها قابل محاسبه نیست</td>` : RISKS.map(rk=>`<td class="num">${sumBar(r.x[rk.k], rk.k)}</td>`).join("")}
+          <td class="num hsm">${fa(r.x.Ro)}</td><td>${r.x.invalid?"—":`<span class="pill ${lvr}" style="margin:0">${LVTXT[lvr]}</span>`}</td></tr>`; }).join("")}
+        ${crows.length ? `<tr><td colspan="9" class="grp">واحدهای حریق ترکیبی (طبقه‌هایی که از هم جدا نیستند)</td></tr>` + crows.map(r=>{ const lvr = xLevel(r.x);
+          return `<tr class="mrow${lvr==="bad"?" badrow":""}"><td>${esc(r.name)}</td><td>${esc((USES.find(u=>u.v===r.d.use)||{}).l||"—")}</td>
           <td class="num hsm">${fa(r.d.area,0)}</td><td class="num hsm">${fa(r.d.X,0)}</td>
-          ${r.x.invalid ? `<td colspan="3">ورودی‌ها قابل محاسبه نیست</td>` : RISKS.map(rk=>`<td class="num">${sumBar(r.x[rk.k])}</td>`).join("")}
-          <td class="num hsm">${fa(r.x.Ro)}</td><td>${r.x.invalid?"—":`<span class="pill ${level(w)}" style="margin:0">${levelTxt(w)}</span>`}</td></tr>`; }).join("") : ""}
+          ${r.x.invalid ? `<td colspan="3">ورودی‌ها قابل محاسبه نیست</td>` : RISKS.map(rk=>`<td class="num">${sumBar(r.x[rk.k], rk.k)}</td>`).join("")}
+          <td class="num hsm">${fa(r.x.Ro)}</td><td>${r.x.invalid?"—":`<span class="pill ${lvr}" style="margin:0">${LVTXT[lvr]}</span>`}</td></tr>`; }).join("") : ""}
       </tbody></table></div>
       ${crows.length ? `<p class="sec-note">هر طبقه یک بار جدا و یک بار همراه طبقه‌هایی که با آن‌ها راه باز برای آتش دارد (رایزر، شافت یا پلهٔ باز) به‌عنوان یک واحد حریق حساب شده است. در واحد ترکیبی مساحت، افراد، عرض خروج و ارزش جمع شده‌اند و برای بقیهٔ موارد بدترین پاسخ طبقه‌ها ملاک است. بدترین نتیجهٔ هر دو حالت، ریسک ساختمان را تعیین می‌کند. آتش‌بند کردن عبورها این طبقه‌ها را دوباره از هم جدا می‌کند.</p>` : ""}
       <h3 class="sec">شماتیک و نمودارها</h3>
       <div class="charts" id="sumCharts"></div>
       <h3 class="sec">اقدام‌های مشترک (اثر روی همهٔ فضاها)</h3>
       <p class="sec-note">این اقدام‌ها یک‌بار در کل ساختمان انجام می‌شوند. ستون‌ها بدترین مقدار هر ریسک در ساختمان را قبل و بعد از اقدام نشان می‌دهند.</p>
-      ${bm.length ? `<ol class="sugg">${bm.map(m=>{ const nb = RISKS.reduce((s,rk)=>s+m.nx.filter(x=>x[rk.k]>1).length,0), ob = RISKS.reduce((s,rk)=>s+valid.filter(r=>r.x[rk.k]>1).length,0);
+      ${bm.length ? `<ol class="sugg">${bm.map(m=>{ const nb = RISKS.reduce((s,rk)=>s+m.nx.filter(x=>level(x[rk.k],rk.k)==="bad").length,0), ob = RISKS.reduce((s,rk)=>s+valid.filter(r=>level(r.x[rk.k],rk.k)==="bad").length,0);
         return measureLi(m, `${RISKS.map(rk=>{ const before = Math.max(...valid.map(r=>r.x[rk.k])), after = Math.max(...m.nx.map(x=>x[rk.k])); return `<span class="chip">${rk.n} ${fa(before)} ← <b>${fa(after)}</b></span>`; }).join("")}
-        ${ob ? `<span class="chip">موارد بالای ۱: ${fa(ob,0)} ← <b>${fa(nb,0)}</b></span>` : ""}`); }).join("")}</ol>` : `<p class="sec-note">اقدام مشترکی که ریسک را کمتر کند پیدا نشد.</p>`}
-      ${badRows.length ? `<h3 class="sec">اقدام‌های خاص هر فضا</h3><p class="sec-note">برای فضاهایی که دست‌کم یک ریسک بالای ۱ دارند؛ فقط اقدام‌هایی که مخصوص همان فضاست.</p>
+        ${ob ? `<span class="chip">موارد قرمز: ${fa(ob,0)} ← <b>${fa(nb,0)}</b></span>` : ""}`); }).join("")}</ol>` : `<p class="sec-note">اقدام مشترکی که ریسک را کمتر کند پیدا نشد.</p>`}
+      ${badRows.length ? `<h3 class="sec">اقدام‌های خاص هر فضا</h3><p class="sec-note">برای فضاهایی که دست‌کم یک ریسک غیرقابل‌قبول (قرمز) دارند؛ فقط اقدام‌هایی که مخصوص همان فضاست.</p>
         ${badRows.map(r=>{ const ms = floorMeasures(r); return `<div class="fm"><b>${esc(r.name)}</b>${ms.length?`<ul>${ms.map(s=>`<li>${esc(s.t)}: <em>${esc(s.o)}</em> ${costTag(s.cost)} <span class="muted">(${RISKS.map(rk=>`${rk.sn||rk.n} ${fa(r.x[rk.k])}←${fa(s.nx[rk.k])}`).join(" · ")})</span></li>`).join("")}</ul>`:`<p class="muted">بهبود خاص این فضا در چک‌لیست باقی نمانده؛ اقدام‌های مشترک را ببینید.</p>`}</div>`; }).join("")}` : ""}
       ${bldPkgHTML()}
       ${bm.length || badRows.length ? `<p class="sec-note">${COST_NOTE}</p>` : ""}
@@ -1360,14 +1412,15 @@ function summaryHTML(){
 function bldPkgHTML(){
   const pk = buildingPackage(); if (!pk) return "";
   const nm = fl => floorName(fl, P.floors.indexOf(fl));
-  const chips = xs => RISKS.map(rk=>{ const w = Math.max(...xs.map(x=>x[rk.k])); return `<span class="chip">${rk.sn||rk.n} <b class="c-${level(w)}">${fa(w)}</b></span>`; }).join("")
-    + `<span class="chip">فضاهای بالای ۱: <b>${fa(xs.filter(x=>RISKS.some(rk=>x[rk.k]>1)).length,0)}</b></span>`;
-  const bad = pk.final.map((x,i)=>RISKS.some(rk=>!(x[rk.k] <= 1)) ? pk.final.names[i] : null).filter(Boolean);
+  const chips = xs => RISKS.map(rk=>{ const w = Math.max(...xs.map(x=>x[rk.k])); return `<span class="chip">${rk.sn||rk.n} <b class="c-${level(w,rk.k)}">${fa(w)}</b></span>`; }).join("")
+    + `<span class="chip">فضاهای قرمز: <b>${fa(xs.filter(isRed).length,0)}</b></span>`;
+  const bad = pk.final.map((x,i)=>isGreen(x) ? null : pk.final.names[i]).filter(Boolean), red = pk.final.map((x,i)=>isRed(x) ? pk.final.names[i] : null).filter(Boolean);
   return `<h3 class="sec">بستهٔ پیشنهادی ساختمان</h3>
-    <p class="sec-note">کم‌هزینه‌ترین ترکیب اقدام‌های مشترک و اقدام‌های خاص هر فضا تا همهٔ فضاها در هر سه ریسک به ۱ یا کمتر برسند. هر قدم بیشترین کاهشِ ریسکِ بالای ۱ را نسبت به هزینه‌اش دارد. اعداد هر ردیف، بدترین مقدار هر ریسک در ساختمان بعد از همین قدم و قدم‌های قبلی است.</p>
+    <p class="sec-note">${PKG_NOTE} اعداد هر ردیف، بدترین مقدار هر ریسک در ساختمان بعد از همین قدم و قدم‌های قبلی است.</p>
     ${pk.steps.length ? `<ol class="sugg pkg">${pk.steps.map(s=>measureLi(s, chips(s.nx), ` <span class="ctag sc">${s.scope==="b" ? "کل ساختمان" : esc(nm(s.fl))}</span>`)).join("")}</ol>` : ""}
-    <div class="verdict ${pk.ok?"ok":"bad"} slim">${VERDICT_ICON[pk.ok?"ok":"bad"]}<span>${pk.ok ? `با این ${fa(pk.steps.length,0)} اقدام همهٔ فضاها در هر سه ریسک قابل‌قبول می‌شوند.`
-      : `${pk.steps.length ? "حتی با این اقدام‌ها" : "با اقدام‌های چک‌لیست"} این فضاها به ۱ نمی‌رسند: ${bad.map(esc).join("، ")}. تغییر بزرگ‌تری لازم است (کم کردن افراد، تقسیم فضا، تغییر کاربری یا طراحی دوباره با متخصص).`}</span></div>
+    <div class="verdict ${pk.ok?"ok":red.length?"bad":"imp"} slim">${VERDICT_ICON[pk.ok?"ok":red.length?"bad":"imp"]}<span>${pk.ok ? `با این ${fa(pk.steps.length,0)} اقدام همهٔ فضاها در هر سه ریسک قابل‌قبول (سبز) می‌شوند.`
+      : !red.length && pk.steps.length ? `با این اقدام‌ها هیچ ریسک غیرقابل‌قبولی (قرمز) نمی‌ماند، ولی این فضاها هنوز «فرصت بهبود» (آبی) دارند: ${bad.map(esc).join("، ")}.`
+      : `${pk.steps.length ? "حتی با این اقدام‌ها" : "با اقدام‌های چک‌لیست"} این فضاها غیرقابل‌قبول (قرمز) می‌مانند: ${red.map(esc).join("، ")}. تغییر بزرگ‌تری لازم است (کم کردن افراد، تقسیم فضا، تغییر کاربری یا طراحی دوباره با متخصص).`}</span></div>
     ${pk.steps.length ? applyBtn("b") : ""}`;
 }
 /* ---------- apply the recommended package (planned state) ----------
@@ -1406,11 +1459,11 @@ function pkgBanner(){
 function beforeAfterHTML(){
   if (!P.prev) return "";
   const worst = rows => Object.fromEntries(RISKS.map(rk=>[rk.k, Math.max(...rows.filter(r=>!r.x.invalid).map(r=>r.x[rk.k]))]));
-  const nBad = rows => rows.filter(r=>!r.x.invalid && RISKS.some(rk=>r.x[rk.k]>1)).length;
+  const nBad = rows => rows.filter(r=>!r.x.invalid && isRed(r.x)).length;
   const before = withPrev(()=>{ const r = allResults(); return {w:worst(r), n:nBad(r), all:r.length}; }), r = allResults(), after = {w:worst(r), n:nBad(r)};
   return `<h3 class="sec">مقایسهٔ قبل و بعد از بستهٔ پیشنهادی</h3><div class="scroll"><table class="t"><thead><tr><th></th><th>وضع موجود</th><th>بعد از بسته</th></tr></thead><tbody>
-    ${RISKS.map(rk=>`<tr><td>بدترین ریسک ${rk.n}</td><td class="num">${sumBar(before.w[rk.k])}</td><td class="num">${sumBar(after.w[rk.k])}</td></tr>`).join("")}
-    <tr><td>فضاها و واحدهای بالای ۱</td><td class="num">${fa(before.n,0)} از ${fa(before.all,0)}</td><td class="num">${fa(after.n,0)} از ${fa(r.length,0)}</td></tr></tbody></table></div>`;
+    ${RISKS.map(rk=>`<tr><td>بدترین ریسک ${rk.n}</td><td class="num">${sumBar(before.w[rk.k], rk.k)}</td><td class="num">${sumBar(after.w[rk.k], rk.k)}</td></tr>`).join("")}
+    <tr><td>فضاها و واحدهای غیرقابل‌قبول (قرمز)</td><td class="num">${fa(before.n,0)} از ${fa(before.all,0)}</td><td class="num">${fa(after.n,0)} از ${fa(r.length,0)}</td></tr></tbody></table></div>`;
 }
 /* ---------- the two cases: every floor its own compartment, or the linked floors as one ----------
    If the answer says all floors are separated, the linked case is the what-if "whole building as one compartment". */
@@ -1431,12 +1484,12 @@ function compareHTML(){
   const sc = scenarios(); if (!sc) return "";
   const [l1, l2] = scLabels(sc), real = sc.cur==="all" ? 0 : 1;
   const oneUnit = sc.link.comp.length===1 && sc.link.comp[0].members.length===sc.sep.rows.length;
-  const card = (c, lab, i) => { const w = Math.max(...RISKS.map(rk=>capR(c.w[rk.k]))), lv = level(w);
+  const card = (c, lab, i) => { const lv = xLevel(c.w);
     return `<div class="cmpc ${i===real?"real":""}"><div class="cmph"><b>${esc(lab)}</b>${i===real ? `<span class="pill ok" style="margin:0">مطابق پاسخ شما</span>` : `<span class="pill" style="margin:0">حالت فرضی</span>`}</div>
-      ${RISKS.map(rk=>`<div class="cmpr"><span>${rk.n} <span class="g-sym">${rk.k}</span></span><b class="c-${level(c.w[rk.k])}">${fa(c.w[rk.k])}</b></div>`).join("")}
+      ${RISKS.map(rk=>`<div class="cmpr"><span>${rk.n} <span class="g-sym">${rk.k}</span></span><b class="c-${level(c.w[rk.k],rk.k)}">${fa(c.w[rk.k])}</b></div>`).join("")}
       <div class="cmpr"><span>ریسک اولیه R<sub>o</sub></span><b>${fa(c.w.Ro)}</b></div>
-      <span class="pill ${lv}" style="margin:6px 0 0">${levelTxt(w)}</span></div>`; };
-  const cell = v => `<td class="num"><b class="c-${level(v)}">${fa(v)}</b></td>`;
+      <span class="pill ${lv}" style="margin:6px 0 0">${LVTXT[lv]}</span></div>`; };
+  const cell = (v, k) => `<td class="num"><b class="c-${level(v,k)}">${fa(v)}</b></td>`;
   return `<h3 class="sec">مقایسهٔ دو حالت: طبقه‌های جدا یا متصل</h3>
     <p class="sec-note">روش FRAME هر «واحد حریق» را جدا حساب می‌کند. اگر رایزر، شافت یا پله‌ای که آتش‌بند و محصور نیست طبقه‌ها را به هم وصل کند، آن طبقه‌ها یک واحد حریق‌اند. این بخش هر دو حالت را کنار هم نشان می‌دهد؛ حالتی معتبر است که با وضع واقعی ساختمان بخواند (پاسخ شما در بخش «مقاومت در برابر آتش»: <b>${esc(optLabel(FIELD.vsep))}</b>).</p>
     <div class="cmp2">${card(sc.sep, l1, 0)}${card(sc.link, l2, 1)}</div>
@@ -1444,8 +1497,8 @@ function compareHTML(){
     <div class="scroll"><table class="t cmpt"><thead><tr><th rowspan="2">فضا</th><th colspan="3">${esc(l1)}</th><th colspan="3">${esc(l2)}${oneUnit ? ` <span class="tagx">همهٔ ${fa(sc.sep.rows.length,0)} طبقه با هم</span>` : ""}</th></tr>
       <tr>${RISKS.map(rk=>`<th>${rk.k}</th>`).join("")}${RISKS.map(rk=>`<th>${rk.k}</th>`).join("")}</tr></thead><tbody>
       ${sc.sep.rows.map((r,i)=>{ const g = sc.link.exp[i], x = g ? g.x : sc.link.rows[i].x;
-        return `<tr><td>${esc(r.name)}${g && !oneUnit ? ` <span class="tagx">در ${esc(g.name.replace(/^واحد ترکیبی: /,"واحد "))}</span>` : ""}</td>${RISKS.map(rk=>cell(r.x[rk.k])).join("")}${RISKS.map(rk=>cell(x[rk.k])).join("")}</tr>`; }).join("")}
-      <tr class="gov"><td>بدترین (ریسک ساختمان)</td>${RISKS.map(rk=>cell(sc.sep.w[rk.k])).join("")}${RISKS.map(rk=>cell(sc.link.w[rk.k])).join("")}</tr>
+        return `<tr><td>${esc(r.name)}${g && !oneUnit ? ` <span class="tagx">در ${esc(g.name.replace(/^واحد ترکیبی: /,"واحد "))}</span>` : ""}</td>${RISKS.map(rk=>cell(r.x[rk.k],rk.k)).join("")}${RISKS.map(rk=>cell(x[rk.k],rk.k)).join("")}</tr>`; }).join("")}
+      <tr class="gov"><td>بدترین (ریسک ساختمان)</td>${RISKS.map(rk=>cell(sc.sep.w[rk.k],rk.k)).join("")}${RISKS.map(rk=>cell(sc.link.w[rk.k],rk.k)).join("")}</tr>
     </tbody></table></div>
     <p class="sec-note">در ستون‌های حالت متصل، هر طبقه ریسکِ واحد حریقی را نشان می‌دهد که جزو آن است. «∞» یعنی ریسک قابل‌قبول (A) تمام شده است (معمولاً زمان تخلیهٔ طولانیِ یک واحد خیلی بزرگ) و با هیچ تجهیزاتی قابل جبران نیست؛ باید طبقه‌ها را از هم جدا کرد (آتش‌بند کردن رایزرها و عبورها، محصور کردن پله‌ها و شافت‌ها).</p>`;
 }
@@ -1489,7 +1542,7 @@ function summaryText(){
   if (P.prev) L.push(`وضعیت: بعد از اجرای بستهٔ پیشنهادی (${fa((P.pkg||[]).length,0)} اقدام) — نه وضع موجود`);
   L.push(`ساختمان: ${b.project||"—"} | ارزیاب: ${b.assessor||"—"} | تاریخ: ${b.date||"—"}`); L.push("");
   const all = [...rows, ...compResults(rows)];
-  all.forEach(r=>L.push(`${r.name}: ${RISKS.map(rk=>`${rk.k}=${fa(r.x[rk.k])}`).join("  ")}  (${levelTxt(Math.max(...RISKS.map(rk=>capR(r.x[rk.k]))))})`));
+  all.forEach(r=>L.push(`${r.name}: ${RISKS.map(rk=>`${rk.k}=${fa(r.x[rk.k])}`).join("  ")}  (${LVTXT[xLevel(r.x)]})`));
   L.push(""); RISKS.forEach(rk=>{ const w = worstOf(all.filter(r=>!r.x.invalid), rk.k); if (w) L.push(`ریسک تعیین‌کنندهٔ ${rk.n}: ${fa(w.x[rk.k])} — ${w.name}`); });
   const pk = buildingPackage();
   if (pk && pk.steps.length){
@@ -1544,7 +1597,7 @@ function compute(d){
   const x = FRAME.compute({...d,
     a:[d.a1,d.a2,d.a3,d.a4,d.a5,d.a6,d.a7,d.a8?0.1:0,d.a9?0.1:0,d.a10,(d.a11?0.1:0) + extA(d)], fo:extExposed(d) ? 0 : d.fo,
     x:Math.max(1, Math.floor(d.Wex/0.6 + 1e-9)), n1:[d.n1a,d.n1b,d.n1c,d.n1d], flowcap:d.dia,
-    deflNow:309, defl2000:121, xr:1, kEst:0, rset:0});
+    deflNow:+d.deflNow||309, defl2000:+d.defl2000||121, xr:1, kEst:0, rset:+d.rset||0});
   x.area = d.area; x.xUnits = Math.max(1, Math.floor(d.Wex/0.6 + 1e-9)); x.tuMin = x.tu/60;
   [["R","A"],["R1","A1"],["R2","A2"],["Ro","A"]].forEach(([r,a])=>{ if (!(x[a] > 0) || !isFinite(x[r])) x[r] = Infinity; });
   // inputs outside the range of the FRAME formulas (the spreadsheet gives meaningless numbers too)
@@ -1554,26 +1607,33 @@ function compute(d){
   return x;
 }
 
-const level = R => R <= 0.8 ? "ok" : R <= 1 ? "warn" : "bad";
-const levelTxt = R => R <= 0.8 ? "قابل‌قبول" : R <= 1 ? "مرزی" : "غیرقابل‌قبول";
+/* Risk levels as coloured on the summary sheet of the official FRAME 2015 spreadsheet (FRAME2015!D28:F30) and in the
+   Ministry of Petroleum FRAME guide: green = acceptable, blue = risk with room for improvement, red = not acceptable. */
+const LIM = {R:{g:1.03, r:1.5}, R1:{g:1.03, r:1.3}, R2:{g:1.03, r:1.5}};
+const level = (v, k="R") => { const L = LIM[k] || LIM.R; return (k==="R" ? v < L.g : v <= L.g) ? "ok" : v <= L.r ? "imp" : "bad"; };
+const LVTXT = {ok:"قابل‌قبول", imp:"فرصت بهبود", bad:"غیرقابل‌قبول"};
+const levelTxt = (v, k) => LVTXT[level(v, k)];
+const LVRANK = {ok:0, imp:1, bad:2};
+const xLevel = x => x.invalid ? "bad" : RISKS.map(rk=>level(x[rk.k], rk.k)).reduce((a,b)=>LVRANK[b] > LVRANK[a] ? b : a, "ok");
+const isRed = x => xLevel(x)==="bad", isGreen = x => xLevel(x)==="ok";
 const RISKS = [
   {k:"R", n:"ساختمان و دارایی", sn:"ساختمان", P:"P", A:"A", D:"D", R0:"R0x"},
   {k:"R1",n:"افراد",             P:"P1",A:"A1",D:"D1",R0:"R10"},
   {k:"R2",n:"فعالیت",            P:"P2",A:"A2",D:"D2",R0:"R20"},
 ];
 
-/* ---------- gauge (0 … 2, threshold at 1) ---------- */
-function gauge(R, big){
+/* ---------- gauge (0 … 2, bands of the risk type) ---------- */
+function gauge(R, big, k="R"){
   const W = 120, H = 70, cx = 60, cy = 62, r = 48, sw = big ? 9 : 8;
   const ang = v => Math.PI - Math.min(Math.max(v,0),2)/2*Math.PI;
   const pt = v => [cx + r*Math.cos(ang(v)), cy - r*Math.sin(ang(v))];
   const arc = (v0,v1) => { const [x0,y0]=pt(v0),[x1,y1]=pt(v1); return `M${x0.toFixed(2)} ${y0.toFixed(2)} A${r} ${r} 0 0 1 ${x1.toFixed(2)} ${y1.toFixed(2)}`; };
-  const lv = level(R), len = Math.PI*r, frac = Math.min(Math.max(R,0),2)/2;
-  const [tx,ty] = pt(1), [ix,iy] = [cx + (r-sw)*Math.cos(Math.PI/2), cy - (r-sw)*Math.sin(Math.PI/2)];
-  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${fa(R)} — ${levelTxt(R)}">
-    <path d="${arc(0,0.8)}" class="gz-ok" stroke-width="${sw}" fill="none" opacity=".18"/>
-    <path d="${arc(0.8,1)}" class="gz-warn" stroke-width="${sw}" fill="none" opacity=".22"/>
-    <path d="${arc(1,2)}" class="gz-bad" stroke-width="${sw}" fill="none" opacity=".16"/>
+  const lv = level(R, k), len = Math.PI*r, frac = Math.min(Math.max(R,0),2)/2, L = LIM[k] || LIM.R;
+  const [tx,ty] = pt(L.g), [ix,iy] = [cx + (r-sw)*Math.cos(Math.PI/2), cy - (r-sw)*Math.sin(Math.PI/2)];
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${fa(R)} — ${levelTxt(R, k)}">
+    <path d="${arc(0,L.g)}" class="gz-ok" stroke-width="${sw}" fill="none" opacity=".18"/>
+    <path d="${arc(L.g,L.r)}" class="gz-imp" stroke-width="${sw}" fill="none" opacity=".22"/>
+    <path d="${arc(L.r,2)}" class="gz-bad" stroke-width="${sw}" fill="none" opacity=".16"/>
     <path d="${arc(0,2)}" class="gz-${lv} gauge-val" stroke-width="${sw}" fill="none" stroke-linecap="round" stroke-dasharray="${len.toFixed(2)}" stroke-dashoffset="${(len*(1-frac)).toFixed(2)}"/>
     <line x1="${tx.toFixed(2)}" y1="${(ty-sw/2-3).toFixed(2)}" x2="${ix.toFixed(2)}" y2="${(iy+2).toFixed(2)}" stroke="currentColor" stroke-width="1.5" opacity=".45"/>
     <text x="${cx}" y="${cy-4}" text-anchor="middle" class="gtxt c-${lv}" style="font-size:${big?21:19}px">${fa(R)}</text>
@@ -1589,11 +1649,11 @@ function renderTop(){
     <button class="cal ok" type="button" data-go="formula" title="محاسبات مطابق صفحه‌گسترده FRAME 2015">✓ روش رسمی FRAME 2015</button>`;
 }
 function renderCtx(){
-  const rows = P.floors.map((fl,i)=>{ const x = compute(floorData(fl)); const w = x.invalid ? null : Math.max(...RISKS.map(rk=>capR(x[rk.k]))); return {fl,i,w}; });
+  const rows = P.floors.map((fl,i)=>{ const x = compute(floorData(fl)); const w = x.invalid ? null : xLevel(x); return {fl,i,w}; });
   const fl = curFloor();
   $("#ctxbar").innerHTML = `<button type="button" class="cx ${P.ctx==="b"&&P.view!=="summary"?"on":""}" data-ctx="b">${svgI("geo")}پروفایل مشترک ساختمان</button>
     <span class="cxsep" aria-hidden="true"></span>
-    ${rows.map(r=>`<button type="button" class="cx ${P.ctx===r.fl.id?"on":""}" data-ctx="${r.fl.id}"><span class="dot" style="background:var(--${r.w===null?"muted":level(r.w)})"></span>${esc(floorName(r.fl,r.i))}</button>`).join("")}
+    ${rows.map(r=>`<button type="button" class="cx ${P.ctx===r.fl.id?"on":""}" data-ctx="${r.fl.id}"><span class="dot" style="background:var(--${r.w===null?"muted":r.w})"></span>${esc(floorName(r.fl,r.i))}</button>`).join("")}
     <button type="button" class="cx add" data-addfloor title="فضای جدید با کپی پاسخ‌های آخرین فضا">+ فضای جدید</button>
     <span class="cxsep" aria-hidden="true"></span>
     <button type="button" class="cx sum ${P.view==="summary"?"on":""}" data-go="summary">${svgI("report")}جمع‌بندی ساختمان</button>
@@ -1625,6 +1685,7 @@ function renderSteps(){
 function optHTML(f){
   const cur = st.data[f.id], unk = st.unk[f.id];
   const opts = f.o.map((o,ix)=>({o,ix,sel:!unk && String(o.v)===String(cur)}));
+  if (f.calc && !unk && !opts.some(o=>o.sel) && typeof cur==="number") opts.push({o:{l:`مقدار محاسبه‌شده: ${faN(cur)}`, hint:"با «" + CALC_TITLE[f.calc] + "» محاسبه شده است؛ برای تغییر، دوباره محاسبه کنید یا یکی از گزینه‌ها را بزنید."}, ix:"calc", sel:true});
   if (f.unk!==undefined) opts.push({o:{l:UNK_LABEL, hint:"برنامه حالت محتاطانه را در نظر می‌گیرد"}, ix:"unk", sel:!!unk});
   return `<div class="opts${f.cols?" cols":""}" role="radiogroup" aria-labelledby="lb_${f.id}">` + opts.map(({o,ix,sel})=>
     `<label class="opt ${sel?"sel":""} ${ix==="unk"?"unk":""}"><input type="radio" name="${f.id}" id="${f.id}_${ix}" value="${ix}" ${sel?"checked":""}>
@@ -1644,7 +1705,9 @@ function fieldHTML(f, n){
   const lab = f.t==="sel" ? `<span class="lb" id="lb_${f.id}">${num}<span>${esc(f.l)}</span></span>` : `<label class="lb" for="${f.id}">${num}<span>${esc(f.l)}</span></label>`;
   const how = f.how ? `<details class="how"><summary>${svgI("info",2)}${f.t==="sel"?"چطور تشخیص بدهم؟":"چطور اندازه بگیرم؟"} <span class="cnt">${fa(f.how.length,0)} قدم</span></summary><ol>${f.how.map(x=>`<li>${esc(x)}</li>`).join("")}</ol></details>` : "";
   const fl = curFloor(), ov = fl && BFIELDS.has(f.id) && fl.ovr[f.id] ? `<div class="ovnote">فقط برای این فضا (پاسخ مشترک ساختمان: ${esc((()=>{ const c = P.ctx; P.ctx = "b"; const v = fieldVal(f); P.ctx = c; return v; })())}) <button class="linkbtn" type="button" data-unovr="${f.id}">برگرداندن به پاسخ مشترک</button></div>` : "";
-  return `<div class="field${ov?" ovr":""}" id="fld_${f.id}">${lab}${ov}${f.h?`<p class="help">${esc(f.h)}</p>`:""}${how}${ctl}<p class="fwarn" id="warn_${f.id}" role="status">${esc(warnFor(f)||"")}</p></div>`;
+  const gd = f.gd ? `<p class="help gd"><b>راهنمای وزارت نفت:</b> ${esc(f.gd)}</p>` : "";
+  const calc = f.calc ? `<button class="btn mini calcbtn" type="button" data-calc="${f.id}">${svgI("fuel")}${CALC_TITLE[f.calc]}</button>` : "";
+  return `<div class="field${ov?" ovr":""}" id="fld_${f.id}">${lab}${ov}${f.h?`<p class="help">${esc(f.h)}</p>`:""}${gd}${how}${ctl}${calc}<p class="fwarn" id="warn_${f.id}" role="status">${esc(warnFor(f)||"")}</p></div>`;
 }
 function warnFor(f){
   const v = st.data[f.id], d = st.data;
@@ -1731,25 +1794,25 @@ function renderMain(){
 function renderRes(){
   if (!curFloor()){
     const rows = floorResults();
-    $("#res").innerHTML = `<div class="panel"><h3><span>نتیجهٔ فضاها</span><span>حد مجاز ۱٫۰</span></h3>
-      <div class="ftab">${rows.map(r=>`<button type="button" data-ctx="${r.fl.id}"><span>${esc(r.name)}</span>${RISKS.map(rk=>`<b class="c-${level(r.x[rk.k])}">${fa(r.x[rk.k])}</b>`).join("")}</button>`).join("")}
+    $("#res").innerHTML = `<div class="panel"><h3><span>نتیجهٔ فضاها</span><span>سبز ≤ ۱٫۰۳</span></h3>
+      <div class="ftab">${rows.map(r=>`<button type="button" data-ctx="${r.fl.id}"><span>${esc(r.name)}</span>${RISKS.map(rk=>`<b class="c-${level(r.x[rk.k],rk.k)}">${fa(r.x[rk.k])}</b>`).join("")}</button>`).join("")}
       <div class="fth"><span></span>${RISKS.map(rk=>`<span>${rk.sn||rk.n}</span>`).join("")}</div></div>
       <button class="btn primary" type="button" data-go="summary" style="width:100%;justify-content:center;margin-top:10px">جمع‌بندی ساختمان</button></div>`;
     const v = [...rows, ...compResults(rows)].filter(r=>!r.x.invalid);
-    $("#mbar").innerHTML = RISKS.map(rk=>{ const w = worstOf(v, rk.k); const R = w ? w.x[rk.k] : NaN; return `<button type="button" data-go="summary"><span><span class="dot" style="background:var(--${level(R)})"></span>بدترین ${rk.sn||rk.n}</span><b class="c-${level(R)}">${fa(R)}</b></button>`; }).join("");
+    $("#mbar").innerHTML = RISKS.map(rk=>{ const w = worstOf(v, rk.k); const R = w ? w.x[rk.k] : NaN; return `<button type="button" data-go="summary"><span><span class="dot" style="background:var(--${level(R,rk.k)})"></span>بدترین ${rk.sn||rk.n}</span><b class="c-${level(R,rk.k)}">${fa(R)}</b></button>`; }).join("");
     return;
   }
   const x = compute(st.data);
-  $("#res").innerHTML = `<div class="panel"><h3><span>ریسک لحظه‌ای</span><span>حد مجاز ۱٫۰</span></h3><div class="gauges">
-      ${RISKS.map(rk=>`<div class="g-row">${gauge(x[rk.k])}<div><div class="g-name">${rk.n}<span class="g-sym">${rk.k}</span></div><span class="pill ${level(x[rk.k])}">${levelTxt(x[rk.k])}</span></div></div>`).join("")}
-    </div><div class="legend"><span><i style="background:var(--ok)"></i>تا ۰٫۸</span><span><i style="background:var(--warn)"></i>۰٫۸ تا ۱</span><span><i style="background:var(--bad)"></i>بیش از ۱</span></div></div>
+  $("#res").innerHTML = `<div class="panel"><h3><span>ریسک لحظه‌ای</span><span>سبز ≤ ۱٫۰۳</span></h3><div class="gauges">
+      ${RISKS.map(rk=>`<div class="g-row">${gauge(x[rk.k],false,rk.k)}<div><div class="g-name">${rk.n}<span class="g-sym">${rk.k}</span></div><span class="pill ${level(x[rk.k],rk.k)}">${levelTxt(x[rk.k],rk.k)}</span></div></div>`).join("")}
+    </div><div class="legend"><span><i style="background:var(--ok)"></i>قابل‌قبول ≤ ۱٫۰۳</span><span><i style="background:var(--imp)"></i>فرصت بهبود</span><span><i style="background:var(--bad)"></i>غیرقابل‌قبول: R و R2 > ۱٫۵، R1 > ۱٫۳</span></div></div>
     <div class="panel"><h3><span>اجزای محاسبه</span><span>R = P / (A·D)</span></h3><div class="kv">
       <span class="h"></span><span class="h"></span><span class="h">ساختمان</span><span class="h">افراد</span><span class="h">فعالیت</span>
       <span class="s">P</span><span>ریسک بالقوه</span><span class="n">${en(x.P)}</span><span class="n">${en(x.P1)}</span><span class="n">${en(x.P2)}</span>
       <span class="s">A</span><span>ریسک قابل‌قبول</span><span class="n">${en(x.A)}</span><span class="n">${en(x.A1)}</span><span class="n">${en(x.A2)}</span>
       <span class="s">D</span><span>سطح حفاظت</span><span class="n">${en(x.D)}</span><span class="n">${en(x.D1)}</span><span class="n">${en(x.D2)}</span>
     </div></div>`;
-  $("#mbar").innerHTML = RISKS.map(rk=>`<button type="button" data-go="result"><span><span class="dot" style="background:var(--${level(x[rk.k])})"></span>${rk.n}</span><b class="c-${level(x[rk.k])}">${fa(x[rk.k])}</b></button>`).join("");
+  $("#mbar").innerHTML = RISKS.map(rk=>`<button type="button" data-go="result"><span><span class="dot" style="background:var(--${level(x[rk.k],rk.k)})"></span>${rk.n}</span><b class="c-${level(x[rk.k],rk.k)}">${fa(x[rk.k])}</b></button>`).join("");
 }
 
 function startHTML(){
@@ -1771,7 +1834,7 @@ function startHTML(){
       <h3 class="sec">کار چطور پیش می‌رود</h3>
       <ol class="flow">${steps.map(([t,d])=>`<li><b>${esc(t)}</b><span>${esc(d)}</span></li>`).join("")}</ol>
       <h3 class="sec">نتیجه را چطور بخوانید</h3>
-      <div class="scale3"><div class="ok"><b>تا ۰٫۸</b><span>قابل‌قبول؛ وضعیت را حفظ کنید</span></div><div class="warn"><b>۰٫۸ تا ۱</b><span>مرزی؛ بهتر است بهبود دهید</span></div><div class="bad"><b>بیشتر از ۱</b><span>غیرقابل‌قبول؛ اقدام لازم است</span></div></div>
+      <div class="scale3"><div class="ok"><b>سبز: تا ۱٫۰۳</b><span>قابل‌قبول؛ وضعیت را حفظ کنید</span></div><div class="imp"><b>آبی: ریسک با فرصت بهبود</b><span>R و R2 تا ۱٫۵، R1 تا ۱٫۳؛ بهتر است بهبود دهید</span></div><div class="bad"><b>قرمز: غیرقابل‌قبول</b><span>R و R2 بیش از ۱٫۵، R1 بیش از ۱٫۳؛ اقدام اصلاحی لازم است</span></div></div>
       <p class="sec-note" style="margin-top:12px">برنامه سه عدد جدا حساب می‌کند: ریسک برای <b>ساختمان و دارایی</b>، برای <b>جان افراد</b> و برای <b>ادامهٔ کار</b>. پاسخ‌ها خودکار در همین گوشی ذخیره می‌شوند و اگر برنامه را ببندید، از دست نمی‌روند.</p>
     </div>
     <div class="pager"><button class="btn" type="button" data-sample>دیدن یک نمونهٔ پرشده</button><button class="btn primary" type="button" data-begin>شروع ارزیابی ←</button></div>`;
@@ -1805,16 +1868,28 @@ function driverHTML(x){
    (construction type Qi, the public fire station s8 and its travel time n4, the activity itself,
    the kind of occupants) and options that are not a step on their own (detection only through the
    sprinkler flow switch, a 24 h private brigade, "4× more water than needed"). */
-const COST = {1:"کم‌هزینه", 2:"هزینهٔ متوسط", 3:"پرهزینه"}, CW = {1:1, 2:2.5, 3:6};
+const LEVEL_NOTE = "معیار FRAME 2015 (مطابق رنگ‌بندی صفحه‌گستردهٔ رسمی و راهنمای وزارت نفت): سبز = قابل‌قبول (تا ۱٫۰۳)؛ آبی = ریسک با فرصت بهبود (R و R2 تا ۱٫۵، R1 تا ۱٫۳)؛ قرمز = غیرقابل‌قبول (بیشتر از آن).";
+const PKG_NOTE = "اقدام‌ها از کم‌هزینه به پرهزینه مرتب شده‌اند. در هر قدم اقدامی انتخاب شده که بیشترین کاهش ریسک را نسبت به هزینه‌اش دارد؛ اولویت با رساندن ریسک‌های قرمز دست‌کم به آبی است و بعد رساندن همه به سبز.";
+// cost classes as in the FRAME report template: no cost (organisational), low cost, high cost
+const COST = {1:"بدون هزینه", 2:"کم‌هزینه", 3:"پرهزینه"}, CW = {1:1, 2:2.5, 3:6};
 const MSEL = {   // field → cost class of moving to another option (number, or (new value, current value) → number)
-  a2:3, a3:2, a4:2, a5:(v,c)=>c>=0.2?2:1, a6:2, a7:2, a10:2,
-  pPlan:1, M:2,
-  w1:(v,c)=>c===4?1:3, dia:3, looped:3, s3:2, s4:3, s5:3,
-  n1a:2, n1b:1, n1c:1, n1d:1, n2:1, n3:2, n5:1,
-  sAD:v=>v===2?1:2, sTrans:1, sFault:1, sZone:2, s6:3, s7:3, s9:3,
-  fs:3, fo:3, fc:3, fi:2, vsep:(v,c)=>c==="none"?3:1, vopen:1, extH:v=>v===1?2:3,
-  uSt:3, uHe:2, u2:2, uSign:1, uVoice:2, uPartial:1, u4:2, uVent:2,
-  yFin:1, ySpare:2, yRep:2, yReloc:2, yCoop:1, yDet:1, ySpr:2, yOth:3,
+  a2:3, a3:2, a4:2, a5:2, a6:2, a7:3, a10:2, a11:1,
+  pPlan:1, pPanic:1, M:3,
+  w1:(v,c)=>c===4?2:3, dia:3, looped:3, s3:2, s4:2, s5:3,
+  n1a:2, n1b:2, n1c:2, n1d:2, n2:2, n3:2, n5:1,
+  sAD:v=>v===2?2:3, sTrans:2, sFault:2, sZone:3, s6:3, s7:3, s9:3,
+  fs:3, fo:3, fc:3, fi:3, vsep:(v,c)=>c==="none"?3:2, vopen:2, extH:3,
+  uSt:v=>v<=2?2:3, uHe:3, u2:3, uSign:2, uVoice:2, uPartial:2, u4:3, uVent:2,
+  yFin:2, ySpare:2, yRep:2, yReloc:2, yCoop:1, yDet:2, ySpr:3, yOth:3,
+};
+// wording of measures whose question text does not read as an action (examples of the report template)
+const MLABEL = {
+  a11:["رفع خطرهای خاص", "اطمینان از نبودن خطرهایی مثل سیگار کشیدن در دفاتر کار و هیترهای غیرمجاز"],
+  pPanic:["راهنمای تخلیه در هر طبقه", "حضور افراد آموزش‌دیده در هر طبقه برای راهنمایی ساکنین هنگام تخلیهٔ اضطراری"],
+  pPlan:["برنامهٔ تخلیهٔ اضطراری", "تهیهٔ برنامه و نقشهٔ تخلیه و نصب آن در محل دید افراد"],
+  n5:["آموزش ساکنین", "آموزش نحوهٔ استفاده از خاموش‌کننده‌های دستی و هوزریل‌ها به همهٔ ساکنین"],
+  a5:["بازدید تأسیسات برق", "بازدید سیم‌کشی و تطبیق با استانداردهای ملی، و بازدید دوره‌ای کلیدها و پریزها"],
+  n3:["هوزریل", "نصب هوزریل روی قرقرهٔ فایرباکس‌ها و تهیهٔ نازل جت/مه‌پاش"],
 };
 const MSKIP = {sAD:[4], s9:[14], vsep:["some"]};
 const NO_S7 = ["office","home","school","hotel","hosp"];
@@ -1822,14 +1897,14 @@ const MREQ = {sTrans:d=>d.sAD>2, sFault:d=>d.sAD>2, sZone:d=>d.sAD>2};   // a pa
 const waterReq = d => Math.ceil((d.Qi + d.Qm)/4);
 const MEXTRA = {w1:(v,d)=>v!==10 ? {store:Math.max(+d.store||0, waterReq(d))} : {}};   // a new tank comes with the required volume
 const MNUM = [
-  d => ({id:"exitW", t:"یک خروجی دیگر به عرض ۹۰ سانتی‌متر", o:"یا عریض کردن خروجی‌های موجود به همین اندازه", cost:2, patch:{Wex:Math.round((d.Wex+0.9)*100)/100}}),
+  d => ({id:"exitW", t:"یک خروجی دیگر به عرض ۹۰ سانتی‌متر", o:"یا عریض کردن خروجی‌های موجود به همین اندازه", cost:3, patch:{Wex:Math.round((d.Wex+0.9)*100)/100}}),
   d => d.O < 4 && {id:"exitO", t:"یک راه فرار جداگانهٔ دیگر تا فضای باز", o:`از ${fa(d.O,0)} به ${fa(d.O+1,0)} راه`, cost:3, patch:{O:d.O+1}},
-  d => { const t = Math.ceil(d.area*0.02); return d.vents < t && {id:"vents", t:"دریچهٔ تخلیهٔ دود", o:`حدود ${fa(t,0)} متر مربع (۲٪ مساحت کف)`, cost:2, patch:{vents:t}}; },
-  d => d.Qm > 50 && {id:"Qm", t:"کم کردن ۳۰٪ مواد سوختنی", o:"انبار نکردن کاغذ و کارتن، نظم و پاک‌سازی منظم", cost:1, patch:{Qm:Math.round(d.Qm*0.7)}},
-  d => d.w1 !== 10 && d.store < waterReq(d) && {id:"store", t:"بزرگ کردن ذخیرهٔ آب آتش‌نشانی", o:`به ${fa(waterReq(d),0)} متر مکعب`, ol:p=>`به ${fa(p.store,0)} متر مکعب`, cost:2, patch:{store:waterReq(d)}},
+  d => { const t = Math.ceil(d.area*0.02); return d.vents < t && {id:"vents", t:"دریچهٔ تخلیهٔ دود", o:`حدود ${fa(t,0)} متر مربع (۲٪ مساحت کف)`, cost:3, patch:{vents:t}}; },
+  d => d.Qm > 50 && {id:"Qm", t:"کم کردن ۳۰٪ مواد سوختنی", o:"خارج کردن اقلام اضافه (مثل صندلی‌های اضافه)، ساماندهی اسناد کاغذی و بایگانی‌های جاری و راکد؛ اقلام خارج‌شده را با بار حریقشان (مگاژول) فهرست کنید", cost:1, patch:{Qm:Math.round(d.Qm*0.7)}},
+  d => d.w1 !== 10 && d.store < waterReq(d) && {id:"store", t:"بزرگ کردن ذخیرهٔ آب آتش‌نشانی", o:`به ${fa(waterReq(d),0)} متر مکعب`, ol:p=>`به ${fa(p.store,0)} متر مکعب`, cost:3, patch:{store:waterReq(d)}},
   d => { const b = d.area/d.l, need = Math.ceil(2*(d.l+b)/50), conn = d.c70 + 2*d.c80 + 3*d.c110;
-    return conn < need && {id:"hyd", t:"اتصال آتش‌نشانی بیشتر دور ساختمان", o:`${fa(need-conn,0)} اتصال ۲٫۵ اینچی دیگر (فاصله حداکثر ۵۰ متر)`, ol:p=>`${fa(p.c70-d.c70,0)} اتصال ۲٫۵ اینچی دیگر (فاصله حداکثر ۵۰ متر)`, cost:2, patch:{c70:d.c70+need-conn}}; },
-  d => { const need = Math.ceil((d.H + d.h + 35)); return d.bar*10 < need && {id:"bar", t:"فشار کافی آب شبکهٔ آتش‌نشانی", o:`دست‌کم ${fa(need/10,1)} بار (پمپ تقویت فشار)`, ol:p=>`دست‌کم ${fa(p.bar,1)} بار (پمپ تقویت فشار)`, cost:2, patch:{bar:need/10}}; },
+    return conn < need && {id:"hyd", t:"اتصال آتش‌نشانی بیشتر دور ساختمان", o:`${fa(need-conn,0)} اتصال ۲٫۵ اینچی دیگر (فاصله حداکثر ۵۰ متر)`, ol:p=>`${fa(p.c70-d.c70,0)} اتصال ۲٫۵ اینچی دیگر (فاصله حداکثر ۵۰ متر)`, cost:3, patch:{c70:d.c70+need-conn}}; },
+  d => { const need = Math.ceil((d.H + d.h + 35)); return d.bar*10 < need && {id:"bar", t:"فشار کافی آب شبکهٔ آتش‌نشانی", o:`دست‌کم ${fa(need/10,1)} بار (پمپ تقویت فشار)`, ol:p=>`دست‌کم ${fa(p.bar,1)} بار (پمپ تقویت فشار)`, cost:3, patch:{bar:need/10}}; },
 ];
 function candidates(d){
   const out = [];
@@ -1839,7 +1914,8 @@ function candidates(d){
     f.o.forEach(o=>{
       if (String(o.v)===String(d[f.id]) || (MSKIP[f.id]||[]).includes(o.v)) return;
       const patch = {[f.id]:o.v, ...(MEXTRA[f.id] ? MEXTRA[f.id](o.v, d) : {})};
-      out.push({key:f.id, id:f.id+"="+o.v, t:f.l, o:o.l, cost:typeof cost==="function" ? cost(o.v, d[f.id]) : cost, patch});
+      const ml = MLABEL[f.id] && (f.id!=="n3" || o.v===0) && (f.id!=="n5" || o.v===0) && (f.id!=="a5" || o.v===0);
+      out.push({key:f.id, id:f.id+"="+o.v, t:ml ? MLABEL[f.id][0] : f.l, o:ml ? MLABEL[f.id][1] : o.l, cost:typeof cost==="function" ? cost(o.v, d[f.id]) : cost, patch});
     });
   });
   MNUM.forEach(m=>{ const c = m(d); if (c) out.push({...c, key:c.id}); });
@@ -1847,8 +1923,9 @@ function candidates(d){
 }
 const isShared = c => Object.keys(c.patch).every(k=>BFIELDS.has(k));
 const riskSum = xs => xs.reduce((s,x)=>s + RISKS.reduce((t,rk)=>t + capR(x[rk.k]), 0), 0);
-const excess = xs => xs.reduce((s,x)=>s + RISKS.reduce((t,rk)=>t + Math.max(0, capR(x[rk.k]) - 1), 0), 0) + riskSum(xs)*1e-3;
-const allOk = xs => xs.every(x=>!x.invalid && RISKS.every(rk=>x[rk.k] <= 1));
+// red (not acceptable) is removed first, then everything is brought to green
+const excess = xs => xs.reduce((s,x)=>s + RISKS.reduce((t,rk)=>{ const v = capR(x[rk.k]), L = LIM[rk.k]; return t + 10*Math.max(0, v - L.r) + Math.max(0, v - L.g); }, 0), 0) + riskSum(xs)*1e-3;
+const allOk = xs => xs.every(x=>!x.invalid && isGreen(x));
 // best option per field/measure, ranked by effect per cost (the two biggest effects are always kept)
 function rankBest(list, n){
   const best = {};
@@ -1859,7 +1936,7 @@ function rankBest(list, n){
 }
 /* greedy: step by step take the candidate with the most excess-risk removed per unit of cost,
    until every risk is ≤ 1 (or nothing helps any more). eval(acc) → results, cands(acc) → candidates. */
-function greedy(evalFn, candFn, max=10){
+function greedy(evalFn, candFn, max=14){
   let acc = {}, cur = evalFn(acc); const steps = [], used = new Set();
   for (let k=0; k<max && !allOk(cur); k++){
     const e0 = excess(cur); let best = null;
@@ -1874,7 +1951,17 @@ function greedy(evalFn, candFn, max=10){
     if (!best) break;
     used.add(best.c.key); acc = best.nacc; cur = best.nx; steps.push({...best.c, nx:best.nx});
   }
-  return {steps, final:cur, ok:allOk(cur)};
+  // the report lists measures from no cost to high cost: each time take the cheapest remaining measure that still
+  // lowers the risk at that point (a measure that needs another one first, e.g. signal transmission after detectors, waits)
+  const rest = steps.slice(), ord = []; let oacc = {}, ocur = evalFn(oacc);
+  while (rest.length){
+    const e0 = excess(ocur); let pick = -1, pnx = null;
+    rest.map((s,i)=>[s,i]).sort((a,b)=>a[0].cost-b[0].cost || a[1]-b[1]).some(([s,i])=>{ const nx = evalFn(s.apply(oacc)); if (e0 - excess(nx) > 1e-9){ pick = i; pnx = nx; return true; } return false; });
+    if (pick < 0){ pick = 0; pnx = evalFn(rest[0].apply(oacc)); }
+    const s = rest.splice(pick, 1)[0]; oacc = s.apply(oacc); ocur = pnx; ord.push({...s, nx:pnx});
+  }
+  if (ord.length) cur = ocur;
+  return {steps:ord, final:cur, ok:allOk(cur)};
 }
 // current space (st.data)
 function suggestions(x){
@@ -1921,53 +2008,55 @@ function floorMeasures(r){
 function buildingPackage(){
   const fls = validFloors(), ev = floorsEval(fls);
   if (!fls.length || allOk(ev({}))) return null;
-  return {...greedy(ev, acc=>[...sharedCands(acc, fls), ...floorCands(acc, fls)], 14), fls};
+  return {...greedy(ev, acc=>[...sharedCands(acc, fls), ...floorCands(acc, fls)], 18), fls};
 }
 const costTag = c => `<span class="ctag c${c}">${COST[c]}</span>`;
-const COST_NOTE = "برچسب‌های هزینه تقریبی‌اند (کم‌هزینه: کار مدیریتی یا تجهیز ساده؛ متوسط: نصب تجهیزات؛ پرهزینه: تغییر ساختمان یا تأسیسات بزرگ) و به شرایط هر ساختمان بستگی دارند. پیش از اجرا، اقدام‌ها را با متخصص ایمنی و مقررات ملی ساختمان (مبحث ۳) بررسی کنید.";
+const COST_NOTE = "برچسب‌های هزینه تقریبی‌اند (بدون هزینه: کار مدیریتی، آموزش یا نظم و ساماندهی؛ کم‌هزینه: بازدید، تجهیز ساده یا نصب تجهیزات کوچک؛ پرهزینه: سامانه‌ها، تأسیسات بزرگ یا تغییر ساختمان) و به شرایط هر ساختمان بستگی دارند. پیش از اجرا، اقدام‌ها را با متخصص ایمنی و مقررات ملی ساختمان (مبحث ۳) بررسی کنید.";
 function measureLi(c, chips, extra=""){
   return `<li><div class="st">${esc(c.t)}: <em>${esc(c.o)}</em> ${costTag(c.cost)}${extra}</div><div class="chips">${chips}</div></li>`;
 }
 const sharedTag = c => { const fl = curFloor(); return P.floors.length>1 && fl && Object.keys(c.patch).every(k=>BFIELDS.has(k) && !fl.ovr[k]) ? ` <span class="ctag sc">برای کل ساختمان</span>` : ""; };
 function spacePkgHTML(x){
   const pk = spacePackage(x); if (!pk) return "";
-  const fx = pk.final[0], left = RISKS.filter(rk=>!(fx[rk.k] <= 1)).map(rk=>rk.n);
+  const fx = pk.final[0], left = RISKS.filter(rk=>level(fx[rk.k],rk.k)!=="ok").map(rk=>rk.n), redLeft = RISKS.filter(rk=>level(fx[rk.k],rk.k)==="bad").map(rk=>rk.n);
   return `<h3 class="sec">بستهٔ پیشنهادی</h3>
-    <p class="sec-note">کم‌هزینه‌ترین مسیری که ابزار پیدا کرد تا هر سه ریسک به ۱ یا کمتر برسد. در هر قدم اقدامی انتخاب شده که بیشترین کاهشِ ریسکِ بالای ۱ را نسبت به هزینه‌اش دارد. اعداد هر ردیف، ریسک‌ها بعد از اجرای همین قدم و قدم‌های قبلی است.</p>
-    ${pk.steps.length ? `<ol class="sugg pkg">${pk.steps.map(s=>measureLi(s, RISKS.map(rk=>`<span class="chip">${rk.n} <b class="c-${level(s.nx[0][rk.k])}">${fa(s.nx[0][rk.k])}</b></span>`).join(""), sharedTag(s))).join("")}</ol>` : ""}
-    <div class="verdict ${pk.ok?"ok":"bad"} slim">${VERDICT_ICON[pk.ok?"ok":"bad"]}<span>${pk.ok ? `با این ${fa(pk.steps.length,0)} اقدام هر سه ریسک قابل‌قبول (۱ یا کمتر) می‌شود.`
-      : `${pk.steps.length ? "حتی با این اقدام‌ها" : "با اقدام‌های چک‌لیست"} ریسک ${left.join(" و ")} به ۱ نمی‌رسد. تغییر بزرگ‌تری لازم است: کم کردن تعداد افراد، تقسیم فضا با دیوار ضدحریق، تغییر کاربری یا طراحی دوباره با کمک متخصص.`}</span></div>
+    <p class="sec-note">${PKG_NOTE} اعداد هر ردیف، ریسک‌ها بعد از اجرای همین قدم و قدم‌های قبلی است.</p>
+    ${pk.steps.length ? `<ol class="sugg pkg">${pk.steps.map(s=>measureLi(s, RISKS.map(rk=>`<span class="chip">${rk.n} <b class="c-${level(s.nx[0][rk.k],rk.k)}">${fa(s.nx[0][rk.k])}</b></span>`).join(""), sharedTag(s))).join("")}</ol>` : ""}
+    <div class="verdict ${pk.ok?"ok":redLeft.length?"bad":"imp"} slim">${VERDICT_ICON[pk.ok?"ok":redLeft.length?"bad":"imp"]}<span>${pk.ok ? `با این ${fa(pk.steps.length,0)} اقدام هر سه ریسک قابل‌قبول (سبز) می‌شود.`
+      : !redLeft.length && pk.steps.length ? `با این اقدام‌ها هیچ ریسکی قرمز نمی‌ماند؛ ریسک ${left.join(" و ")} هنوز «فرصت بهبود» (آبی) است.`
+      : `${pk.steps.length ? "حتی با این اقدام‌ها" : "با اقدام‌های چک‌لیست"} ریسک ${redLeft.join(" و ")} غیرقابل‌قبول (قرمز) می‌ماند. تغییر بزرگ‌تری لازم است: کم کردن تعداد افراد، تقسیم فضا با دیوار ضدحریق، تغییر کاربری یا طراحی دوباره با کمک متخصص.`}</span></div>
     ${pk.steps.length ? applyBtn("space") : ""}`;
 }
 
 const VERDICT_ICON = {
   ok:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m8 12.5 2.6 2.6L16 9.5"/></svg>',
   warn:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5 2.8 19.5h18.4z"/><path d="M12 10v4.5M12 17.2v.3"/></svg>',
+  imp:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 16.5V11M12 7.8v.3"/></svg>',
   bad:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7.5v5.5M12 16.2v.3"/></svg>',
 };
 function grpNote(){
   const fl = curFloor(), g = fl && compResults().find(c=>c.members.some(m=>m.fl===fl));
   if (!g) return "";
-  const w = Math.max(...RISKS.map(rk=>capR(g.x[rk.k]))), lv = g.x.invalid ? "bad" : level(w);
+  const lv = xLevel(g.x);
   return `<div class="verdict ${lv} slim">${VERDICT_ICON[lv]}<span>این فضا با ${esc(g.members.filter(m=>m.fl!==fl).map(m=>m.name).join("، "))} راه باز برای آتش دارد (رایزر، شافت یا پلهٔ باز)، پس همه با هم یک واحد حریق‌اند. ریسک واحد ترکیبی: ${RISKS.map(rk=>`${rk.sn||rk.n} <b>${fa(g.x[rk.k])}</b>`).join("، ")}. ریسک ساختمان با بدترین این دو حالت سنجیده می‌شود. <button class="linkbtn" type="button" data-go="summary">جمع‌بندی ساختمان</button></span></div>`;
 }
 function resultHTML(x){
   if (x.invalid) return `<div class="sheet-head"><span class="eyebrow">نتیجهٔ ارزیابی</span><h2>ورودی‌ها قابل محاسبه نیستند</h2></div><div class="sheet-body"><div class="verdict bad">${VERDICT_ICON.bad}<span>${x.invalid==="q" ? "بار حریق این فضا (سازه + وسایل) کمتر از حدود ۷ مگاژول بر متر مربع است و در فرمول FRAME ضریب بار حریق منفی می‌شود. مقدار مواد سوختنی را در بخش «بار حریق» دوباره بررسی کنید؛ تقریباً هیچ فضای واقعی این‌قدر کم ندارد." : x.invalid==="vent" ? "با این ورودی‌ها فاکتور تهویه منفی می‌شود. مساحت پنجره‌ها و دریچه‌ها در بخش «سقف و تهویهٔ دود» را با مساحت کف مقایسه و اصلاح کنید." : "امتیاز سیستم‌های حفاظت ویژه آن‌قدر زیاد است که از محدودهٔ فرمول FRAME بیرون می‌رود. پاسخ‌های بخش «سیستم‌های خودکار» را دوباره بررسی کنید؛ معمولاً یک ساختمان همهٔ این سیستم‌ها را با هم ندارد."}</span></div></div><div class="pager"><button class="btn primary" type="button" data-go="${x.invalid==="vent"?"vent":x.invalid==="q"?"fuel":"sp"}">رفتن به همان بخش</button></div>`;
-  const worst = Math.max(x.R,x.R1,x.R2), vlv = level(worst);
-  const bads = RISKS.filter(rk=>x[rk.k]>1).map(rk=>rk.n);
+  const vlv = xLevel(x);
+  const bads = RISKS.filter(rk=>level(x[rk.k],rk.k)==="bad").map(rk=>rk.n), imps = RISKS.filter(rk=>level(x[rk.k],rk.k)==="imp").map(rk=>rk.n);
   const msg = vlv==="ok" ? "هر سه ریسک در محدودهٔ قابل‌قبول است. وضعیت فعلی را حفظ کنید و ارزیابی را دوره‌ای یا پس از هر تغییر در کاربری و چیدمان تکرار کنید."
-    : vlv==="warn" ? "هیچ ریسکی از حد مجاز بیشتر نیست، ولی دست‌کم یکی نزدیک به آن است. اقدامات پیشنهادی زیر حاشیهٔ اطمینان را بیشتر می‌کنند."
-    : `ریسک ${bads.join(" و ")} از حد مجاز (۱٫۰) بیشتر است و به اقدام اصلاحی نیاز دارد. اقدامات زیر به ترتیب اثر مرتب شده‌اند.`;
+    : vlv==="imp" ? `هیچ ریسکی غیرقابل‌قبول (قرمز) نیست، ولی ریسک ${imps.join(" و ")} «فرصت بهبود» (آبی) دارد. اقدامات پیشنهادی زیر آن را به محدودهٔ قابل‌قبول (سبز) می‌برند.`
+    : `ریسک ${bads.join(" و ")} غیرقابل‌قبول (قرمز) است و به اقدام اصلاحی نیاز دارد؛ اقدام‌ها باید دست‌کم آن را به «فرصت بهبود» (آبی) برسانند.`;
   const card = rk => { const R = x[rk.k], R0 = x[rk.R0];
-    return `<div class="rcard">${gauge(R,true)}<div class="g-name"><span class="lgn">${rk.n}</span><span class="smn">${rk.sn||rk.n}</span><span class="g-sym">${rk.k}</span></div><span class="pill ${level(R)}">${levelTxt(R)}</span>
+    return `<div class="rcard">${gauge(R,true,rk.k)}<div class="g-name"><span class="lgn">${rk.n}</span><span class="smn">${rk.sn||rk.n}</span><span class="g-sym">${rk.k}</span></div><span class="pill ${level(R,rk.k)}">${levelTxt(R,rk.k)}</span>
       <div class="need">حفاظت لازم <b>${fa(R0)}</b><br>حفاظت موجود <b>${fa(x[rk.D])}</b></div></div>`; };
   const sg = suggestions(x);
   const tips = [];
   if (st.data.sAD>0 && !st.data.sTrans) tips.push("دتکتور دارید ولی سیگنالش خودکار به آتش‌نشانی یا اتاق کنترل ۲۴ ساعته نمی‌رسد؛ در روش FRAME امتیاز دتکتورها در این حالت صفر است. وصل کردن سیگنال معمولاً ارزان‌ترین و مؤثرترین بهبود است.");
-  if (x.R1>1) tips.push("ریسک جانی بالاست. اولویت با واحدهای خروج بیشتر (درهای عریض‌تر یا بیشتر)، راه‌پلهٔ محصور، برنامهٔ تخلیه و اعلام حریق خودکار با سیگنال به آتش‌نشانی است.");
+  if (level(x.R1,"R1")!=="ok") tips.push("ریسک جانی بالاست. اولویت با واحدهای خروج بیشتر (درهای عریض‌تر یا بیشتر)، راه‌پلهٔ محصور، برنامهٔ تخلیه و اعلام حریق خودکار با سیگنال به آتش‌نشانی است.");
   if (!isFinite(x.tuMin)) tips.push("تعداد واحدهای خروج برای این تعداد نفر کافی نیست (هر ۶۰ سانتی‌متر عرض خروج حداکثر ۱۲۰ نفر). عرض خروجی‌ها را دوباره بررسی کنید.");
-  if (x.R>1 && !st.data.s6) tips.push("برای کاهش ریسک ساختمان، اسپرینکلر معمولاً مؤثرترین اقدام است.");
-  if (x.R2>1) tips.push("ریسک فعالیت بالاست. پشتیبان اطلاعات، قطعات یدکی، امکان انتقال فعالیت و توافق‌نامهٔ جایگزین را در نظر بگیرید.");
+  if (level(x.R,"R")!=="ok" && !st.data.s6) tips.push("برای کاهش ریسک ساختمان، اسپرینکلر معمولاً مؤثرترین اقدام است.");
+  if (level(x.R2,"R2")!=="ok") tips.push("ریسک فعالیت بالاست. پشتیبان اطلاعات، قطعات یدکی، امکان انتقال فعالیت و توافق‌نامهٔ جایگزین را در نظر بگیرید.");
   if (x.wSum>=8) tips.push("امتیاز آب آتش‌نشانی پایین است (مخزن کم، لولهٔ باریک یا شیر اتصال کم).");
   return `<div class="sheet-head"><div class="sh-row"><span class="eyebrow">نتیجهٔ ارزیابی</span><span class="ftag">R = P / (A·D)</span></div>
       <h2>${esc(st.data.project||"ارزیابی بدون نام")}</h2>${st.data.comp?`<p class="intro">${esc(st.data.comp)}</p>`:""}</div>
@@ -1975,7 +2064,7 @@ function resultHTML(x){
       <div class="verdict ${vlv}">${VERDICT_ICON[vlv]}<span>${msg}</span></div>
       <div class="big3">${RISKS.map(card).join("")}</div>
       ${grpNote()}
-      <p class="sec-note" style="margin-top:12px">معیار FRAME: اگر R کمتر یا مساوی ۱ باشد، حفاظت موجود برای ریسک بالقوه کافی است. این ابزار بازهٔ ۰٫۸ تا ۱ را «مرزی» نشان می‌دهد تا حاشیهٔ اطمینان دیده شود.</p>
+      <p class="sec-note" style="margin-top:12px">${LEVEL_NOTE}</p>
       <div class="ro"><div><span>ریسک اولیه R<sub>o</sub></span><b>${fa(x.Ro)}</b></div><p>بر اساس ریسک اولیه (فقط با استحکام سازه، بدون تجهیزات)، روش FRAME این سطح حفاظت را توصیه می‌کند: <b>${esc(FRAME.roAdvice(x.Ro))}</b></p></div>
       <h3 class="sec">چه چیزی ریسک را بالا یا پایین می‌برد؟</h3>
       <p class="sec-note">سهم هر فاکتور در ریسک انتخاب‌شده. نوار قرمز ریسک را بالا می‌برد و نوار سبز آن را پایین می‌آورد؛ طول نوار اندازهٔ اثر است.</p>
@@ -1998,7 +2087,7 @@ function unkHTML(){
   return `<h3 class="sec">مواردی که «نمی‌دانم» زدید</h3><p class="sec-note">برای این موارد حالت محتاطانه فرض شده است، پس ریسک واقعی ممکن است کمتر باشد. اگر بعداً بررسی کنید و جواب را وارد کنید، نتیجه دقیق‌تر می‌شود.</p>
     <ul class="tips unk">${list.map(f=>`<li><button class="linkbtn" type="button" data-go="${f.sec}">${esc(f.l)}</button> <span class="muted">— ${esc(SECTIONS.find(s=>s.id===f.sec).title)}</span></li>`).join("")}</ul>`;
 }
-function optLabel(f){ if (st.unk[f.id]) return UNK_LABEL+" (فرض محتاطانه)"; const o = f.o.find(o=>String(o.v)===String(st.data[f.id])); return o?o.l:"—"; }
+function optLabel(f){ if (st.unk[f.id]) return UNK_LABEL+" (فرض محتاطانه)"; const o = f.o.find(o=>String(o.v)===String(st.data[f.id])); return o ? o.l : f.calc && typeof st.data[f.id]==="number" ? `محاسبه‌شده: ${faN(st.data[f.id])}` : "—"; }
 function fieldVal(f){
   if (!shown(f)) return "مربوط نیست";
   if (f.t==="sel") return optLabel(f);
@@ -2026,7 +2115,7 @@ function reportHTML(x){
     <div class="sheet-body">
       <h3 class="sec" style="margin-top:20px">خلاصهٔ نتایج</h3>
       <div class="scroll"><table class="t"><thead><tr><th>ریسک</th><th>مقدار</th><th>وضعیت</th><th class="hsm">P</th><th class="hsm">A</th><th class="hsm">D</th></tr></thead><tbody>
-        ${RISKS.map(rk=>`<tr><td>${rk.n} <span class="g-sym">${rk.k}</span></td><td class="num"><b class="c-${level(x[rk.k])}">${fa(x[rk.k])}</b></td><td><span class="pill ${level(x[rk.k])}" style="margin:0">${levelTxt(x[rk.k])}</span></td>
+        ${RISKS.map(rk=>`<tr><td>${rk.n} <span class="g-sym">${rk.k}</span></td><td class="num"><b class="c-${level(x[rk.k],rk.k)}">${fa(x[rk.k])}</b></td><td><span class="pill ${level(x[rk.k],rk.k)}" style="margin:0">${levelTxt(x[rk.k],rk.k)}</span></td>
           <td class="num hsm">${fa(x[rk.P])}</td><td class="num hsm">${fa(x[rk.A])}</td><td class="num hsm">${fa(x[rk.D])}</td></tr>`).join("")}
       </tbody></table></div>
       <h3 class="sec">فاکتورها</h3>
@@ -2050,7 +2139,7 @@ function reportText(){
   if (P.prev) L.push(`وضعیت: بعد از اجرای بستهٔ پیشنهادی (${fa((P.pkg||[]).length,0)} اقدام) — نه وضع موجود`);
   L.push(`پروژه: ${st.data.project||"—"} | فضا: ${st.data.comp||"—"} | ارزیاب: ${st.data.assessor||"—"} | تاریخ: ${st.data.date||"—"}`);
   L.push("");
-  RISKS.forEach(rk=>L.push(`ریسک ${rk.n} ${rk.k} = ${fa(x[rk.k])} (${levelTxt(x[rk.k])})`));
+  RISKS.forEach(rk=>L.push(`ریسک ${rk.n} ${rk.k} = ${fa(x[rk.k])} (${levelTxt(x[rk.k],rk.k)})`));
   L.push(""); L.push("فاکتورها:"); factorRows(x).forEach(r=>L.push(`  ${r[0]} – ${r[1]}: ${en(r[2],3)}`));
   L.push(""); L.push("پاسخ‌های چک‌لیست:");
   SECTIONS.forEach(s=>{ L.push(`[${s.title}]`); s.fields.flatMap(f=>f.row||[f]).forEach(f=>L.push(`  ${f.l}: ${fieldVal(f)}`)); });
@@ -2142,11 +2231,14 @@ document.addEventListener("click", ev=>{
     st.sample = false; $("#"+k).value = d[k]; refreshLive(); updateWarn(FIELD[k]); if (k==="X") updateWarn(FIELD.Wex);
     toast(k==="H" ? `تخمین: ${fa(d.H,1)} متر (طبقهٔ ${fa(d.E,0)} × ۳٫۲ متر)` : `تخمین: ${fa(d.X,0)} نفر (${fa(d.area,0)} متر مربع × ${faN((USES.find(u=>u.v===d.use)||USES[0]).dens)} نفر در هر متر مربع)`); }
   if (ev.target.closest("[data-qcalc]")) qCalc();
+  const cb = ev.target.closest("[data-calc]");
+  if (cb) calcModal(cb.dataset.calc);
 });
 document.addEventListener("change", ev=>{
   const el = ev.target;
   if (el.type!=="radio") return;
   const f = FIELD[el.name];
+  if (el.value==="calc") return;
   if (el.value==="unk"){ st.unk[f.id] = true; st.data[f.id] = f.unk; }
   else { delete st.unk[f.id]; st.data[f.id] = f.o[+el.value].v; }
   const o = el.value==="unk" ? {v:f.unk} : f.o[+el.value];
@@ -2187,6 +2279,53 @@ function newAssessment(){
   if (st.sample) return go();
   ask("ارزیابی فعلی پاک شود و فرم خالی برای ارزیابی جدید باز شود؟ اگر لازم است، اول از «ذخیره / بازیابی» یک نسخه بردارید.", go);
 }
+/* ---------- calculators of the official spreadsheet (Info P / Info A) and of the guide ---------- */
+const CALC_TITLE = {qi:"محاسبه از کفپوش، سقف کاذب و دیوارکوب", wT:"میانگین وزنی دمای آسیب", wM:"میانگین وزنی پوشش‌ها", mdim:"محاسبه از ابعاد اجسام", pmix:"گروه مختلط افراد"};
+function calcModal(fid){
+  const f = FIELD[fid], kind = f.calc, d = st.data;
+  const inp = (id, ph, unit) => `<span class="inp sm"><input data-c="${id}" inputmode="decimal" dir="ltr" placeholder="${ph||"۰"}"><span class="u">${unit||""}</span></span>`;
+  const yn = id => `<select class="in sm" data-c="${id}"><option value="0">ندارد</option><option value="1">دارد</option></select>`;
+  let body = "", fn;
+  if (kind==="qi"){
+    body = `<p class="help">روش برگهٔ محاسبات بار حریق ثابت: برای ساختمان‌هایی با سازهٔ غیرقابل احتراق که کفپوش، سقف کاذب یا دیوارکوب دارند، بار حریق ثابت بین ۳۰۰ و ۱۴۰۰ مگاژول بر متر مربع است: پایهٔ ۳۰۰، کفپوش تا ۶۰۰ (راهرو ۳۰۰ + اتاق‌ها ۳۰۰)، سقف کاذب تا ۳۰۰ (۱۵۰ + ۱۵۰) و دیوارکوب تا ۲۰۰ (۱۰۰ + ۱۰۰). سهم اتاق‌ها به نسبت تعداد اتاق‌های دارای آن پوشش است.</p>
+      <div class="qlist"><label class="qrow"><span>تعداد کل اتاق‌های طبقه</span>${inp("rt","۱۰","اتاق")}</label>
+      <label class="qrow"><span>اتاق‌های دارای کفپوش سوختنی (موکت، پارکت، کفپوش PVC)</span>${inp("rf","","اتاق")}</label>
+      <label class="qrow"><span>اتاق‌های دارای سقف کاذب سوختنی</span>${inp("rc","","اتاق")}</label>
+      <label class="qrow"><span>اتاق‌های دارای دیوارکوب سوختنی</span>${inp("rw","","اتاق")}</label>
+      <label class="qrow"><span>راهرو کفپوش دارد؟</span>${yn("cf")}</label><label class="qrow"><span>راهرو سقف کاذب دارد؟</span>${yn("cc")}</label><label class="qrow"><span>راهرو دیوارکوب دارد؟</span>${yn("cw")}</label></div>`;
+    fn = g => { const rt = Math.max(g("rt"),1), sh = k => Math.min(g(k)/rt, 1);
+      const v = 300 + 300*sh("rf") + 300*g("cf") + 150*sh("rc") + 150*g("cc") + 100*sh("rw") + 100*g("cw");
+      return {v:Math.round(v), txt:`بار حریق ثابت = <b>${fa(Math.round(v),0)} MJ/m²</b>`}; };
+  } else if (kind==="wT" || kind==="wM"){
+    body = `<p class="help">مانند گزینهٔ «WEIGHED AVERAGE» در برگهٔ Info P: سهم هر دسته را به درصد بنویسید (جمع ۱۰۰).</p>
+      <div class="qlist">${f.o.map((o,i)=>`<label class="qrow"><span>${esc(o.l)} <small dir="ltr">(${faN(o.v)})</small></span>${inp("o"+i,"","٪")}</label>`).join("")}</div>`;
+    fn = g => { let t = 0, v = 0; f.o.forEach((o,i)=>{ t += g("o"+i); v += o.v*g("o"+i); });
+      return t ? {v:Math.round(v/t*1000)/1000, txt:`میانگین وزنی = <b>${faN(Math.round(v/t*1000)/1000)}</b>${Math.abs(t-100)>0.5?` <small>جمع درصدها ${fa(t,0)} است؛ عدد بر اساس همین جمع نرمال شد.</small>`:""}`} : null; };
+  } else if (kind==="mdim"){
+    body = `<p class="help">مانند برگهٔ Info P: اندازه‌های معمول (طول، عرض، ارتفاع یا ضخامت به متر) تا ۱۰ جسمی را که بیشترین فراوانی را در طبقه دارند بنویسید؛ میانگین هندسی آن‌ها m است.</p>
+      <div class="qlist">${Array.from({length:10},(_,i)=>`<label class="qrow"><span>بُعد ${fa(i+1,0)}</span>${inp("m"+i,"","m")}</label>`).join("")}</div>`;
+    fn = g => { const xs = Array.from({length:10},(_,i)=>g("m"+i)).filter(v=>v>0); if (!xs.length) return null;
+      const v = Math.exp(xs.reduce((a,x)=>a+Math.log(x),0)/xs.length); const r = Math.round(v*1000)/1000;
+      return {v:Math.max(r,0.001), txt:`میانگین هندسی ${fa(xs.length,0)} بُعد = <b>${faN(r)} m</b>`}; };
+  } else if (kind==="pmix"){
+    body = `<p class="help">مانند گزینهٔ E (گروه مختلط) در برگهٔ Info A: درصد هر گروه از افراد حاضر را بنویسید.</p>
+      <div class="qlist">${f.o.map((o,i)=>`<label class="qrow"><span>${esc(o.l)} <small dir="ltr">(p = ${o.v})</small></span>${inp("o"+i,"","٪")}</label>`).join("")}</div>`;
+    fn = g => { let t = 0, v = 0; f.o.forEach((o,i)=>{ t += g("o"+i); v += o.v*g("o"+i); });
+      return t ? {v:Math.round(v/t*100)/100, txt:`p = <b>${faN(Math.round(v/t*100)/100)}</b>${Math.abs(t-100)>0.5?` <small>جمع درصدها ${fa(t,0)} است؛ عدد بر اساس همین جمع نرمال شد.</small>`:""}`} : null; };
+  }
+  const m = document.createElement("div"); m.className = "modal";
+  m.innerHTML = `<div class="box qbox" role="dialog" aria-modal="true" aria-labelledby="cT"><h3 id="cT" style="font-size:17px">${esc(CALC_TITLE[kind])}</h3>${body}
+    <div class="qres" id="cRes"></div><div class="acts"><button class="btn" type="button" id="cClose">بستن</button><button class="btn primary" type="button" id="cUse">قرار دادن در فرم</button></div></div>`;
+  document.body.appendChild(m);
+  const g = id => { const el = m.querySelector(`[data-c="${id}"]`); return el ? (toNum(el.value)||0) : 0; };
+  const run = () => { const r = fn(g); m.querySelector("#cRes").innerHTML = r ? r.txt : "هنوز چیزی وارد نشده است."; return r; };
+  m.addEventListener("input", run); m.addEventListener("change", run); run();
+  m.querySelector("#cClose").onclick = ()=> m.remove();
+  m.querySelector("#cUse").onclick = ()=> { const r = run(); if (!r){ m.querySelector("#cRes").textContent = "اول عددها را وارد کنید."; return; }
+    delete st.unk[fid]; st.data[fid] = r.v; st.sample = false; m.remove(); const y = window.scrollY; renderMain(); window.scrollTo(0, y); refreshLive();
+    toast(`${f.l.slice(0,30)}…: ${faN(r.v)}`); };
+  m.onclick = e => { if (e.target===m) m.remove(); };
+}
 function qCalc(){
   const area = st.data.area;
   const m = document.createElement("div"); m.className="modal";
@@ -2194,19 +2333,25 @@ function qCalc(){
   m.innerHTML = `<div class="box qbox" role="dialog" aria-modal="true" aria-labelledby="qT"><h3 id="qT" style="font-size:17px">محاسبه‌گر مواد سوختنی</h3>
     <p class="help">تعداد وسایل اصلی فضا را بنویسید. برای چیزهایی که در فهرست نیست، وزن تقریبی را در بخش دوم وارد کنید. لازم نیست دقیق باشد؛ تقریب کافی است. مساحت فضا: <b>${fa(area,0)} متر مربع</b> (از بخش ۲).</p>
     <div class="qlist"><b class="qh">وسایل (تعداد)</b>${QITEMS.map((q,i)=>row(q[0],"عدد",i,"i")).join("")}
-    <b class="qh">مواد دیگر (وزن تقریبی)</b>${QMATS.map((q,i)=>row(q[0],"کیلو",i,"m")).join("")}</div>
+    <b class="qh">مواد دیگر (وزن تقریبی)</b>${QMATS.map((q,i)=>row(q[0],"کیلو",i,"m")).join("")}
+    <b class="qh">بر اساس ابعاد (روش راهنمای وزارت نفت: حجم × چگالی × ارزش حرارتی)</b>
+    ${Array.from({length:6},(_,i)=>`<div class="qrow qdim"><select class="in sm" data-qd="mat${i}">${QDENS.map((q,j)=>`<option value="${j}">${esc(q[0])}</option>`).join("")}</select>
+      <span class="inp sm"><input data-qd="L${i}" inputmode="decimal" dir="ltr" placeholder="طول"><span class="u">m</span></span><span class="inp sm"><input data-qd="W${i}" inputmode="decimal" dir="ltr" placeholder="عرض"><span class="u">m</span></span>
+      <span class="inp sm"><input data-qd="H${i}" inputmode="decimal" dir="ltr" placeholder="ضخامت"><span class="u">m</span></span><span class="inp sm"><input data-qd="N${i}" inputmode="decimal" dir="ltr" placeholder="تعداد"><span class="u">عدد</span></span></div>`).join("")}</div>
     <div class="qres" id="qRes"></div>
     <div class="acts"><button class="btn" type="button" id="qClose">بستن</button><button class="btn primary" type="button" id="qUse">قرار دادن در فرم</button></div></div>`;
   document.body.appendChild(m);
   const calc = () => { let E = 0;
     m.querySelectorAll("[data-q]").forEach(inp=>{ const n = toNum(inp.value)||0, k = inp.dataset.q, i = +k.slice(1);
       E += k[0]==="i" ? n*QITEMS[i][1] : n*QMATS[i][1]; });
+    for (let i=0;i<6;i++){ const v = k => toNum(m.querySelector(`[data-qd="${k}${i}"]`).value)||0, mt = QDENS[+m.querySelector(`[data-qd="mat${i}"]`).value];
+      E += v("L")*v("W")*v("H")*(v("N")||(v("L")*v("W")*v("H") ? 1 : 0))*mt[1]*mt[2]; }
     const q = Math.round(E/Math.max(area,1));
     const u = USES.find(u=>u.v===st.data.use);
     const cmp = u && E && q < u.Qm*0.5 ? `<small>این عدد خیلی کمتر از مقدار معمول برای «${u.l}» (${fa(u.Qm,0)}) است. ببینید چیزی جا نیفتاده باشد: کالای انبارشده، کاغذ، پرده، موکت و وسایل کوچک.</small>` : "";
     m.querySelector("#qRes").innerHTML = E ? `انرژی کل حدود <b>${fa(E,0)}</b> مگاژول ÷ ${fa(area,0)} متر مربع = <b>${fa(q,0)} MJ/m²</b>${cmp}` : "هنوز چیزی وارد نشده است.";
     return q; };
-  m.addEventListener("input", calc); calc();
+  m.addEventListener("input", calc); m.addEventListener("change", calc); calc();
   m.querySelector("#qClose").onclick = ()=> m.remove();
   m.querySelector("#qUse").onclick = ()=> { const q = calc(); if (!q){ m.querySelector("#qRes").textContent = "اول دست‌کم یک مورد را وارد کنید."; return; }
     st.data.Qm = q; st.sample = false; m.remove(); const el = $("#Qm"); if (el) el.value = q; refreshLive(); updateWarn(FIELD.Qm); toast(`بار حریق ${fa(q,0)} MJ/m² در فرم قرار گرفت`); };
