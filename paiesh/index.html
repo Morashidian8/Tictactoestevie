@@ -174,7 +174,7 @@ td.st-absent{color:var(--bad);font-weight:700}
 <script>
 /* ---------- roster preload (stays null in the published page; the roster lives in the store) ---------- */
 const PRELOAD = null;
-const APP_VERSION = '15';
+const APP_VERSION = '16';
 
 /* ---------- small helpers ---------- */
 const $ = (s, r = document) => r.querySelector(s);
@@ -914,7 +914,9 @@ const SUP_BLOCKED = new Set(['status', 'reason', 'remove', 'add-sub', 'flip-col'
 async function makeSupervisorPack(name) {
   if (!name) return toast('نام ناظر را بنویسید.', true);
   const id = 'sup-' + Math.random().toString(36).slice(2, 8);
-  const pack = { app: 'paiesh', kind: 'supervisor-pack', v: 1, id, name, createdAt: Date.now(), roster: S.roster, days: S.days, requests: S.requests,
+  const supKey = window.crypto?.subtle ? newKey() : null;
+  if (supKey) await saveSettings({ supKeys: { ...(S.settings.supKeys || {}), [id]: supKey } });
+  const pack = { app: 'paiesh', kind: 'supervisor-pack', v: 1, id, name, key: supKey, rosterV: Date.now(), createdAt: Date.now(), roster: S.roster, days: S.days, requests: S.requests,
     settings: { template: S.settings.template, tplV: S.settings.tplV, startCol: S.settings.startCol || {}, drivers: S.settings.drivers || [], inbox: S.settings.inbox || [] } };
   const t0 = todayJalali() || '';
   const fname = `paiesh-supervisor-${toLatin(t0).replace(/\//g, '-')}.txt`;
@@ -934,7 +936,7 @@ async function applySupervisorPack(j) {
   for (const [date, rec] of Object.entries(j.days || {})) { if (!S.days[date] || (S.days[date].updatedAt || 0) < (rec.updatedAt || 0)) { S.days[date] = rec; await Store.setDoc('days', dayId(date), rec); } }
   if (j.requests) await saveRequests(j.requests);
   S.roster = j.roster;
-  await saveSettings({ ...(j.settings || {}), role: 'supervisor', supId: j.id, supName: j.name, myGroup: null, lockedGroup: null, supRevoked: false });
+  await saveSettings({ ...(j.settings || {}), role: 'supervisor', supId: j.id, supName: j.name, supKey: j.key || null, rosterV: j.rosterV || 0, myGroup: null, lockedGroup: null, supRevoked: false });
   recalc(); myDefaultDates(); S.tab = 'rep'; S.rep.view = 'board';
   toast(`نسخه‌ی ناظر برای ${j.name} آماده شد.`);
   checkAccess();
@@ -949,6 +951,96 @@ async function checkAccess() {
   } catch { }
 }
 
+/* ---------- automatic roster updates: admin publishes encrypted bundles to the org's `data` site; phones pick them up ---------- */
+const DATA_REPO = 'Payesh-gas-1405/data';
+const DATA_BASE = '/data/';
+const b64e = buf => { const u = new Uint8Array(buf); let s = ''; for (let i = 0; i < u.length; i += 0x8000) s += String.fromCharCode.apply(null, u.subarray(i, i + 0x8000)); return btoa(s); };
+const b64d = str => Uint8Array.from(atob(str), c => c.charCodeAt(0));
+const newKey = () => b64e(crypto.getRandomValues(new Uint8Array(32)));
+const aesKey = k => crypto.subtle.importKey('raw', b64d(k), 'AES-GCM', false, ['encrypt', 'decrypt']);
+async function seal(obj, k) { const iv = crypto.getRandomValues(new Uint8Array(12)); const ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, await aesKey(k), new TextEncoder().encode(JSON.stringify(obj))); return { iv: b64e(iv), ct: b64e(ct) }; }
+async function unseal(box, k) { const pt = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: b64d(box.iv) }, await aesKey(k), b64d(box.ct)); return JSON.parse(new TextDecoder().decode(pt)); }
+const isAdmin = () => !S.settings.lockedGroup && !isSup() && S.roster && S.roster.groups.length > 1;
+// replace roster + roster settings only; keep records, drivers, requests, lock and role. Removed people stay (archived) for history.
+async function applyRosterUpdate(next, settings) {
+  if (S.roster) for (const p of Object.values(S.roster.people)) if (!next.people[p.id]) next.people[p.id] = (p.manual || p.fromReport || p.archived) ? p : { ...p, archived: true };
+  await Store.setDoc('roster', 'main', next);
+  S.roster = next;
+  const keep = {};
+  if (settings?.template) { keep.template = settings.template; keep.tplV = settings.tplV; }
+  if (settings?.startCol) keep.startCol = { ...(S.settings.startCol || {}), ...settings.startCol };
+  await saveSettings(keep); recalc();
+}
+async function checkUpdates() {
+  if (location.protocol === 'file:' || !window.crypto?.subtle) return;
+  let url, key;
+  if (S.settings.lockedGroup && S.settings.groupKey) { url = `${DATA_BASE}g${S.settings.lockedGroup}.json`; key = S.settings.groupKey; }
+  else if (isSup() && S.settings.supKey) { url = `${DATA_BASE}${S.settings.supId}.json`; key = S.settings.supKey; }
+  else return;
+  try {
+    const r = await fetch(url + '?t=' + Date.now(), { cache: 'no-store' }); if (!r.ok) return;
+    const box = await r.json();
+    if (!box.v || box.v <= (S.settings.rosterV || 0)) return;
+    const inner = await unseal(box, key);
+    if (inner.kind !== 'roster-update' || (S.settings.lockedGroup && inner.group !== S.settings.lockedGroup) || (isSup() && inner.group !== 'all')) return;
+    await applyRosterUpdate(inner.roster, inner.settings);
+    await saveSettings({ rosterV: box.v });
+    toast('فهرست نفرات از طرف مدیر سامانه به‌روز شد.'); render();
+  } catch { /* offline, not published yet, or wrong key: keep what we have */ }
+}
+// admin side
+S.pub = { status: '', at: 0, msg: '' };
+let pubT;
+function schedulePublish() {
+  if (!isAdmin() || !S.settings.ghToken) return;
+  S.pub = { status: 'queued', at: Date.now(), msg: '' }; saveSettings({ pubPending: true });
+  clearTimeout(pubT); pubT = setTimeout(publishBundles, 5000);
+  if (S.tab === 'data') render();
+}
+async function gh(path, opts = {}) {
+  const r = await fetch('https://api.github.com' + path, { ...opts, headers: { Authorization: 'Bearer ' + S.settings.ghToken, Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28', ...(opts.body ? { 'Content-Type': 'application/json' } : {}) } });
+  if (!r.ok) { const t = await r.text().catch(() => ''); const e = new Error(`GitHub ${r.status}`); e.status = r.status; e.body = t; throw e; }
+  return r.status === 204 ? null : r.json();
+}
+async function publishBundles() {
+  if (!isAdmin() || !S.settings.ghToken) return;
+  if (S.pub.status === 'running') { clearTimeout(pubT); pubT = setTimeout(publishBundles, 3000); return; }
+  S.pub = { status: 'running', at: Date.now(), msg: '' }; if (S.tab === 'data') render();
+  try {
+    const v = Date.now(); const files = [];
+    const settings = { template: S.settings.template, tplV: S.settings.tplV };
+    for (const [g, k] of Object.entries(S.settings.groupKeys || {})) {
+      const gn = +g; if (!S.roster.groups.some(x => x.no === gn)) continue;
+      files.push({ path: `g${gn}.json`, content: JSON.stringify({ v, ...(await seal({ kind: 'roster-update', group: gn, roster: rosterForGroup(gn), settings: { ...settings, startCol: { [gn]: S.settings.startCol?.[gn] || 1 } } }, k)) }) });
+    }
+    for (const [id, k] of Object.entries(S.settings.supKeys || {})) {
+      files.push({ path: `${id}.json`, content: JSON.stringify({ v, ...(await seal({ kind: 'roster-update', group: 'all', roster: S.roster, settings: { ...settings, startCol: S.settings.startCol || {} } }, k)) }) });
+    }
+    if (!files.length) throw new Error('هنوز فایل سرگروهی با کلید ساخته نشده است.');
+    const who = { name: 'payesh', email: 'payesh@users.noreply.github.com' };
+    const ref = await gh(`/repos/${DATA_REPO}/git/ref/heads/main`);
+    const base = await gh(`/repos/${DATA_REPO}/git/commits/${ref.object.sha}`);
+    const tree = await gh(`/repos/${DATA_REPO}/git/trees`, { method: 'POST', body: JSON.stringify({ base_tree: base.tree.sha, tree: files.map(f => ({ path: f.path, mode: '100644', type: 'blob', content: f.content })) }) });
+    const commit = await gh(`/repos/${DATA_REPO}/git/commits`, { method: 'POST', body: JSON.stringify({ message: 'update', tree: tree.sha, parents: [ref.object.sha], author: who, committer: who }) });
+    await gh(`/repos/${DATA_REPO}/git/refs/heads/main`, { method: 'PATCH', body: JSON.stringify({ sha: commit.sha }) });
+    S.pub = { status: 'ok', at: Date.now(), msg: `${fd(files.length)} فایل` };
+    await saveSettings({ pubPending: false, lastPub: Date.now() });
+  } catch (e) {
+    const why = e.status === 401 ? 'توکن نامعتبر یا منقضی است' : e.status === 403 ? 'توکن اجازه‌ی نوشتن ندارد (یا منتظر تأیید سازمان است)' : e.status === 404 ? 'مخزن data پیدا نشد یا توکن به آن دسترسی ندارد' : e.status === 409 ? 'مخزن data خالی است؛ یک README در آن بسازید' : (e.message || 'اینترنت در دسترس نیست');
+    S.pub = { status: 'err', at: Date.now(), msg: why };
+  }
+  if (S.tab === 'data') render();
+}
+function pubLine() {
+  const p = S.pub, t = p.at ? fd(fmtTime(p.at)) : '';
+  if (p.status === 'queued') return '<span class="pill warn">در صف انتشار…</span>';
+  if (p.status === 'running') return '<span class="pill warn">در حال انتشار…</span>';
+  if (p.status === 'ok') return `<span class="pill ok">منتشر شد · ${t}</span> <span class="small muted">گوشی‌ها چند دقیقه بعد به‌روز می‌شوند.</span>`;
+  if (p.status === 'err') return `<span class="pill bad">خطا: ${esc(p.msg)}</span>`;
+  if (S.settings.pubPending) return '<span class="pill warn">تغییر منتشرنشده دارید</span>';
+  return S.settings.lastPub ? `<span class="pill">آخرین انتشار: ${fd(fmtTime(S.settings.lastPub))}</span>` : '';
+}
+
 /* ---------- per-group leader package: only that group's people and days ---------- */
 function rosterForGroup(g) {
   const R = S.roster, grp = R.groups.find(x => x.no === g);
@@ -958,7 +1050,9 @@ function rosterForGroup(g) {
 async function makeLeaderPack(g) {
   if (!g) return;
   const t0 = todayJalali() || '';
-  const pack = { app: 'paiesh', kind: 'leader-pack', v: 1, group: g, createdAt: Date.now(), roster: rosterForGroup(g), settings: { template: S.settings.template, tplV: S.settings.tplV, startCol: { [g]: S.settings.startCol?.[g] || 1 } } };
+  const keys = { ...(S.settings.groupKeys || {}) };
+  if (!keys[g] && window.crypto?.subtle) { keys[g] = newKey(); await saveSettings({ groupKeys: keys }); }
+  const pack = { app: 'paiesh', kind: 'leader-pack', v: 1, group: g, key: keys[g] || null, rosterV: Date.now(), createdAt: Date.now(), roster: rosterForGroup(g), settings: { template: S.settings.template, tplV: S.settings.tplV, startCol: { [g]: S.settings.startCol?.[g] || 1 } } };
   const name = `paiesh-leader-g${g}-${toLatin(t0).replace(/\//g, '-')}.txt`;
   const blob = new Blob([JSON.stringify(pack)], { type: 'text/plain' });
   let shared = false;
@@ -975,11 +1069,8 @@ async function applyLeaderPack(j) {
   const lg = +S.settings.lockedGroup || 0;
   if (lg && lg !== g) throw new Error(`این گوشی قبلاً برای ${GROUP_LABEL(lg)} تنظیم شده است.`);
   if (S.roster && !lg && Object.keys(S.days).some(d => S.days[d]?.group !== g)) throw new Error('این گوشی سوابق گروه‌های دیگر را دارد (احتمالاً گوشی ادمین است). فایل سرگروه را روی گوشی خود سرگروه باز کنید.');
-  const next = j.roster;
-  if (S.roster) for (const p of Object.values(S.roster.people)) if (!next.people[p.id] && (p.manual || p.fromReport)) next.people[p.id] = p;
-  await Store.setDoc('roster', 'main', next);
-  S.roster = next;
-  await saveSettings({ ...(j.settings || {}), startCol: { ...(S.settings.startCol || {}), ...(j.settings?.startCol || {}) }, myGroup: g, lockedGroup: g });
+  await applyRosterUpdate(j.roster, j.settings);
+  await saveSettings({ myGroup: g, lockedGroup: g, groupKey: j.key || S.settings.groupKey || null, rosterV: j.rosterV || 0 });
   recalc(); myDefaultDates(); S.tab = 'day';
   toast(`اپ برای ${GROUP_LABEL(g)} آماده شد.`);
 }
@@ -1091,12 +1182,21 @@ function viewData() {
     return header() + `<main class="wrap stack">${lockCard}${drivers}${backup}${verLine()}</main>`;
   }
   const packs = r && r.groups.length > 1 ? `<div class="card"><h2>فایل سرگروه‌ها</h2><p class="small muted" style="margin:0">برای هر سرگروه یک فایل بسازید و برایش بفرستید. در این فایل فقط نفرات و روزهای همان گروه هست؛ سرگروه آن را در وب‌اپ (بخش «انتخاب فایل پشتیبان یا فایل سرگروه») باز می‌کند و اپش روی گروه خودش قفل می‌شود.</p>
-     <div class="row"><select id="pack-group" class="inp grow" style="width:auto">${r.groups.map(g => `<option value="${g.no}">${g.name}${g.leader ? ' · ' + esc(g.leader) : ''}</option>`).join('')}</select><button class="btn pri" data-act="make-pack">ساخت و ارسال فایل</button></div></div>` : '';
+     <div class="row"><select id="pack-group" class="inp grow" style="width:auto">${r.groups.map(g => `<option value="${g.no}">${g.name}${g.leader ? ' · ' + esc(g.leader) : ''}</option>`).join('')}</select><button class="btn pri" data-act="make-pack">ساخت و ارسال فایل</button></div>
+     <p class="small muted" style="margin:0">اگر سرگروه گروهی عوض شد، اول «کلید جدید» بزنید تا سرگروه قبلی دیگر به‌روزرسانی‌ها را نگیرد، بعد فایل را برای سرگروه جدید بفرستید.</p>
+     <button class="btn ghost" data-act="pack-rekey" style="align-self:flex-start">کلید جدید برای گروه انتخاب‌شده</button></div>` : '';
+  const gk = S.settings.groupKeys || {};
+  const sync = r && r.groups.length > 1 ? `<div class="card"><h2>به‌روزرسانی خودکار گوشی‌ها</h2>
+     <p class="small muted" style="margin:0">با ثبت توکن، هر تغییری در نفرات، شماره‌ها، ستون شروع یا متن پیامک خودکار و رمزشده منتشر می‌شود و گوشی سرگروه‌ها و ناظر چند دقیقه بعد، با باز کردن یا رفرش اپ، به‌روز می‌شوند. سوابق ثبت‌شده‌ی آن‌ها دست نمی‌خورد.</p>
+     <div>${pubLine()}</div>
+     ${S.settings.ghToken ? `<div class="row"><span class="pill ok">توکن ثبت شده</span><button class="btn pri" data-act="publish-now">انتشار الان</button><button class="btn ghost danger" data-act="token-clear">حذف توکن</button></div>`
+       : `<div class="row"><input id="gh-token" class="inp grow" style="width:auto" type="password" autocomplete="off" dir="ltr" placeholder="توکن گیت‌هاب (فقط مخزن data)"><button class="btn pri" data-act="token-save">ذخیره</button></div>`}
+     <div class="daymeta">${r.groups.map(g => `<span class="pill ${gk[g.no] ? 'ok' : 'warn'}">${g.name}: ${gk[g.no] ? 'کلید دارد' : 'یک بار فایل سرگروه جدید لازم است'}</span>`).join('')}</div></div>` : '';
   const sups = S.settings.supervisors || [];
   const supAdmin = r && r.groups.length > 1 ? `<div class="card"><h2>ناظر</h2><p class="small muted" style="margin:0">فایل ناظر را بسازید و برای او بفرستید؛ در وب‌اپ با «انتخاب فایل پشتیبان یا فایل سرگروه» باز می‌شود. ناظر گزارش‌ها را دریافت و جمع‌بندی می‌کند، ولی فایل سرگروه نمی‌سازد و نفرات را تغییر نمی‌دهد. برای قطع دسترسی، کد ناظر را به پشتیبان سامانه بدهید.</p>
      <div class="row"><input id="sup-name" class="inp grow" style="width:auto" placeholder="نام ناظر"><button class="btn pri" data-act="make-sup">ساخت و ارسال فایل ناظر</button></div>
      ${sups.length ? `<div class="tbl"><table class="num"><thead><tr><th>ناظر</th><th>کد</th><th>تاریخ ساخت</th></tr></thead><tbody>${sups.map(x => `<tr><td>${esc(x.name)}</td><td dir="ltr">${esc(x.id)}</td><td>${fd(fmtTime(x.created))}</td></tr>`).join('')}</tbody></table></div>` : ''}</div>` : '';
-  return header() + `<main class="wrap stack">${mine}${info}${packs}${supAdmin}${drivers}${imp}${backup}${verLine()}</main>`;
+  return header() + `<main class="wrap stack">${mine}${sync}${info}${packs}${supAdmin}${drivers}${imp}${backup}${verLine()}</main>`;
 }
 
 /* what changes when a new file replaces the current roster */
@@ -1146,7 +1246,7 @@ function openPersonEdit(pid) {
     S.roster.warnings = (S.roster.warnings || []).filter(w => !(w.includes(prev.name) && w.includes('نامعتبر')));
     try { await Store.setDoc('roster', 'main', S.roster); }
     catch (err) { Object.assign(p, prev); S.roster.warnings = oldWarn; return toast('ذخیره نشد: ' + (err.message || err.code || ''), true); }
-    scrim.remove(); toast(`مشخصات ${name} ذخیره شد.`); render();
+    scrim.remove(); toast(`مشخصات ${name} ذخیره شد.`); render(); schedulePublish();
   });
 }
 
@@ -1499,8 +1599,8 @@ document.addEventListener('click', async e => {
     case 'remove': return removeSub(+d.i);
     case 'add-sub': return openPicker(+d.reg);
     case 'flip-col': return flipCol();
-    case 'save-tpl': S.settings.template = $('#tpl').value; try { await Store.setDoc('settings', 'main', S.settings); toast('متن ذخیره شد.'); } catch { toast('ذخیره نشد.', true); } return render();
-    case 'reset-tpl': S.settings.template = DEFAULT_TEMPLATE; try { await Store.setDoc('settings', 'main', S.settings); } catch { } return render();
+    case 'save-tpl': S.settings.template = $('#tpl').value; try { await Store.setDoc('settings', 'main', S.settings); toast('متن ذخیره شد.'); schedulePublish(); } catch { toast('ذخیره نشد.', true); } return render();
+    case 'reset-tpl': S.settings.template = DEFAULT_TEMPLATE; try { await Store.setDoc('settings', 'main', S.settings); } catch { } schedulePublish(); return render();
     case 'copy-one': return copy(d.t, 'متن');
     case 'copy-phone': return copy(d.p, 'شماره');
     case 'copy-nums': { const dv = dayView(S.msgDate); return copy(dv.assigns.filter(a => a.status !== 'absent').map(a => person(a.pid)).filter(p => p?.phoneOk).map(p => p.phone).join('\n'), 'شماره‌ها'); }
@@ -1520,10 +1620,14 @@ document.addEventListener('click', async e => {
     case 'rep-period': setPeriod(d.v); return render();
     case 'board-open': S.rep.grp = d.g; S.rep.view = d.v; window.scrollTo(0, 0); return render();
     case 'send-report': return sendGroupReport();
-    case 'make-pack': return makeLeaderPack(+$('#pack-group').value);
-    case 'make-sup': return makeSupervisorPack(fa($('#sup-name').value));
+    case 'make-pack': await makeLeaderPack(+$('#pack-group').value); return schedulePublish();
+    case 'pack-rekey': { const g = +$('#pack-group').value; await saveSettings({ groupKeys: { ...(S.settings.groupKeys || {}), [g]: newKey() } }); toast(`کلید ${GROUP_LABEL(g)} عوض شد؛ حالا فایل سرگروه را بسازید و بفرستید.`); schedulePublish(); return render(); }
+    case 'token-save': { const v = ($('#gh-token').value || '').trim(); if (!v) return toast('توکن را وارد کنید.', true); await saveSettings({ ghToken: v }); render(); return publishBundles(); }
+    case 'token-clear': await saveSettings({ ghToken: '' }); S.pub = { status: '', at: 0, msg: '' }; return render();
+    case 'publish-now': clearTimeout(pubT); return publishBundles();
+    case 'make-sup': await makeSupervisorPack(fa($('#sup-name').value)); return schedulePublish();
     case 'export': return exportXlsx();
-    case 'startcol': S.settings.startCol = { ...S.settings.startCol, [d.g]: +d.c }; recalc(); try { await Store.setDoc('settings', 'main', S.settings); toast(`${GROUP_LABEL(+d.g)} از ${COL_LABEL(+d.c)} شروع می‌شود.`); } catch { toast('ذخیره نشد.', true); } return render();
+    case 'startcol': S.settings.startCol = { ...S.settings.startCol, [d.g]: +d.c }; recalc(); try { await Store.setDoc('settings', 'main', S.settings); toast(`${GROUP_LABEL(+d.g)} از ${COL_LABEL(+d.c)} شروع می‌شود.`); } catch { toast('ذخیره نشد.', true); } schedulePublish(); return render();
     case 'import-cancel': S.importPreview = null; return render();
     case 'import-ok': {
       const pv = S.importPreview;
@@ -1535,10 +1639,10 @@ document.addEventListener('click', async e => {
       const have = S.settings.drivers || []; const fresh = (pv.drivers || []).filter(x => !have.some(h => h.name === x.name || (x.phone && h.phone === x.phone)));
       if (fresh.length) await saveSettings({ drivers: have.concat(fresh.map((x, k) => ({ id: 'drv' + Date.now().toString(36) + k, car: '', plate: '', note: '', ...x }))) });
       myDefaultDates();
-      toast('فهرست ذخیره شد.'); S.tab = 'day'; return render();
+      toast('فهرست ذخیره شد.'); S.tab = 'day'; schedulePublish(); return render();
     }
     case 'backup': {
-      const blob = new Blob([JSON.stringify({ app: 'paiesh', v: 1, roster: S.roster, days: S.days, settings: S.settings, requests: S.requests }, null, 1)], { type: 'application/json' });
+      const blob = new Blob([JSON.stringify({ app: 'paiesh', v: 1, roster: S.roster, days: S.days, settings: (({ ghToken, ...rest }) => rest)(S.settings), requests: S.requests }, null, 1)], { type: 'application/json' });
       await saveFile(`paiesh-backup-${toLatin(todayJalali() || '').replace(/\//g, '-')}.json`, blob);
       await saveSettings({ lastBackup: Date.now() }); return render();
     }
@@ -1576,16 +1680,17 @@ document.addEventListener('change', async e => {
       if (j.app !== 'paiesh' || !j.roster) throw new Error('این فایل پشتیبان پایش نیست.');
       const lg = +S.settings.lockedGroup || 0;
       if (lg && (j.roster.groups.length !== 1 || j.roster.groups[0].no !== lg)) throw new Error(`این گوشی مخصوص ${GROUP_LABEL(lg)} است و پشتیبان گروه‌های دیگر را نمی‌پذیرد.`);
-      await Store.setDoc('roster', 'main', j.roster); await Store.setDoc('settings', 'main', j.settings || S.settings);
+      await Store.setDoc('roster', 'main', j.roster); await Store.setDoc('settings', 'main', { ...(j.settings || S.settings), ghToken: S.settings.ghToken });
       for (const [date, rec] of Object.entries(j.days || {})) await Store.setDoc('days', dayId(date), rec);
       if (j.requests) { await Store.setDoc('settings', 'requests', { list: j.requests }); S.requests = j.requests; }
-      S.roster = j.roster; S.days = j.days || {}; S.settings = { ...S.settings, ...(j.settings || {}) }; recalc();
+      S.roster = j.roster; S.days = j.days || {}; S.settings = { ...S.settings, ...(j.settings || {}), ghToken: S.settings.ghToken }; recalc();
       myDefaultDates();
       toast('پشتیبان بازگردانی شد.');
     } catch (err) { toast('بازگردانی نشد: ' + (err.message || err), true); }
     return render();
   }
 });
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && !S.loading) { checkUpdates(); checkAccess(); if (S.settings.pubPending && S.settings.ghToken) schedulePublish(); } });
 document.addEventListener('toggle', e => { if (e.target.id === 'ex-card') S.exOpen = e.target.open; }, true);
 let qT;
 document.addEventListener('input', e => {
@@ -1618,6 +1723,7 @@ document.addEventListener('input', e => {
   }
   S.rep.view = S.settings.lockedGroup ? 'summary' : 'board';
   render();
-  checkAccess();
+  checkAccess(); checkUpdates();
+  if (S.settings.pubPending && S.settings.ghToken) schedulePublish();
 })();
 </script>
