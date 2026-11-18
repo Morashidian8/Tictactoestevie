@@ -112,6 +112,7 @@ th,td{padding:7px 9px;border-bottom:1px solid var(--line);text-align:right;white
 th{background:var(--sunk);font-weight:700;position:sticky;top:0}
 td.st-went{color:var(--ok);font-weight:700}
 td.st-absent{color:var(--bad);font-weight:700}
+.st-cov,td.st-cov{color:var(--warn);font-weight:700}
 .warnlist{margin:0;padding-inline-start:18px;font-size:13px}
 .empty{text-align:center;padding:28px 16px;color:var(--muted)}
 .empty b{display:block;color:var(--fg);font-size:16px;margin-bottom:6px}
@@ -173,7 +174,7 @@ td.st-absent{color:var(--bad);font-weight:700}
 <script>
 /* ---------- roster preload (stays null in the published page; the roster lives in the store) ---------- */
 const PRELOAD = null;
-const APP_VERSION = '14';
+const APP_VERSION = '15';
 
 /* ---------- small helpers ---------- */
 const $ = (s, r = document) => r.querySelector(s);
@@ -381,6 +382,21 @@ function dayView(date) {
   }
   return { sc, col, assigns, saved: !!(saved && saved.col === col && saved.group === sc.group), note: saved?.note || '' };
 }
+// who covered whom: an absent person counts as "had a substitute" when a substitute in the same region did not also drop out
+function coverMap(assigns) {
+  const m = new Map(), byReg = {};
+  for (const a of assigns || []) (byReg[a.region] ||= []).push(a);
+  for (const list of Object.values(byReg)) {
+    const absents = list.filter(a => a.status === 'absent' && !a.sub);
+    const subs = list.filter(a => a.sub && a.status !== 'absent');
+    const used = new Set();
+    for (const a of absents) { const s = subs.find(x => x.for === a.pid && !used.has(x.pid)); if (s) { m.set(a.pid, s.pid); used.add(s.pid); } }
+    const free = subs.filter(x => !used.has(x.pid));
+    for (const a of absents) if (!m.has(a.pid) && free.length) m.set(a.pid, free.shift().pid);
+  }
+  return m;
+}
+const effStatus = (a, cov) => a.status === 'absent' && cov.has(a.pid) ? 'covered' : a.status;
 const activeCount = (assigns, region) => assigns.filter(a => a.region === region && a.status !== 'absent').length;
 function regionList() { return Object.keys(S.roster.quota).map(Number).sort((a, b) => a - b); }
 
@@ -507,7 +523,8 @@ function viewDay() {
   const holiday = /تعطیل/.test(dv.sc.note);
   const today = todayJalali();
   const went = dv.assigns.filter(a => a.status === 'went').length;
-  const absent = dv.assigns.filter(a => a.status === 'absent').length;
+  const dcov = coverMap(dv.assigns);
+  const absent = dv.assigns.filter(a => effStatus(a, dcov) === 'absent').length;
   const need = regionList().reduce((t, r) => t + S.roster.quota[r], 0);
   const active = dv.assigns.filter(a => a.status !== 'absent').length;
   const open = need - active;
@@ -551,7 +568,7 @@ function personRow(a, i) {
   const info = [p.group ? `${GROUP_LABEL(p.group)}، ${COL_LABEL(p.col)}` : 'نفر جدید', p.home != null ? `سکونت: منطقه ${fd(p.home)} شهرداری` : '', p.gas != null ? `گاز منطقه ${fd(p.gas)}` : ''].filter(Boolean).join(' · ');
   const reasons = a.status === 'absent' ? `<div class="reasons">${REASONS.map(r => `<button class="chip ${a.reason === r ? 'on' : ''}" data-act="reason" data-i="${i}" data-r="${esc(r)}">${r}</button>`).join('')}<input id="reason-${i}" data-i="${i}" class="reason-inp" placeholder="دلیل دیگر…" value="${esc(REASONS.includes(a.reason) ? '' : a.reason)}"></div>` : '';
   return `<div class="person ${a.status}"><div class="pmain">
-      <div class="grow"><a class="pname" ${tel}>${esc(p.name)}${a.sub ? '<span class="subtag">جایگزین</span>' : ''}<span class="tel num">${p.phone ? fd(p.phone) : ''}${p.phoneOk === false ? ' (نامعتبر)' : ''}</span></a><div class="pinfo">${info}</div></div>
+      <div class="grow"><a class="pname" ${tel}>${esc(p.name)}${a.sub ? '<span class="subtag">جایگزین</span>' : ''}${(() => { const c = a.status === 'absent' && coverMap(dayView(S.date).assigns).get(a.pid); return c ? `<span class="subtag" style="background:var(--ok-bg);color:var(--ok)">جایگزین داشت: ${esc(person(c)?.name || '')}</span>` : ''; })()}<span class="tel num">${p.phone ? fd(p.phone) : ''}${p.phoneOk === false ? ' (نامعتبر)' : ''}</span></a><div class="pinfo">${info}</div></div>
       <div class="seg" role="group" aria-label="وضعیت">
         <button class="${a.status === 'went' ? 'on went' : ''}" data-act="status" data-i="${i}" data-s="went">رفت</button>
         <button class="${a.status === 'absent' ? 'on absent' : ''}" data-act="status" data-i="${i}" data-s="absent">نرفت</button>
@@ -599,8 +616,9 @@ function turnsOf(pid) {
     const rec = S.days[sc.date];
     const live = rec && rec.col === S.colMap[sc.date] && rec.group === sc.group && rec.assigns?.length;
     const a = live ? rec.assigns.find(x => x.pid === pid) : null;
+    const cov = a ? coverMap(rec.assigns) : null;
     const rostered = sc.group === p.group && S.colMap[sc.date] === p.col;
-    if (a) out.push({ sc, status: a.status, reason: a.reason, region: a.region, sub: a.sub, driver: a.driver, drvObj: drvOf(a) });
+    if (a) out.push({ sc, status: effStatus(a, cov), coveredBy: cov.get(a.pid), reason: a.reason, region: a.region, sub: a.sub, driver: a.driver, drvObj: drvOf(a) });
     else if (rostered && !live) out.push({ sc, status: 'due', region: p.region });
     else if (rostered && live) out.push({ sc, status: 'replaced', region: p.region });
   }
@@ -619,7 +637,7 @@ function viewFind() {
     const turns = turnsOf(sel.id);
     const up = turns.filter(t => t.sc.date >= t0 && (t.status === 'due' || t.status === 'planned'));
     const past = turns.filter(t => !(t.sc.date >= t0 && (t.status === 'due' || t.status === 'planned')));
-    const LBL = { due: ['نوبت', ''], planned: ['ثبت‌شده', ''], went: ['رفت', 'ok'], absent: ['نرفت', 'bad'], replaced: ['جایگزین شد', 'warn'] };
+    const LBL = { due: ['نوبت', ''], planned: ['ثبت‌شده', ''], went: ['رفت', 'ok'], absent: ['نرفت', 'bad'], covered: ['جایگزین داشت', 'warn'], replaced: ['جایگزین شد', 'warn'] };
     const line = t => `<tr><td>${fd(t.sc.date)}</td><td>${esc(t.sc.wd)}</td><td>${GROUP_LABEL(t.sc.group)}${t.sub ? ' <span class="subtag">جایگزین</span>' : ''}</td><td>${fd(t.region)}</td><td style="white-space:normal"><span class="pill ${LBL[t.status][1]}">${LBL[t.status][0]}</span>${t.reason ? ' <span class="small muted">' + esc(t.reason) + '</span>' : ''}${/تعطیل/.test(t.sc.note) ? ' <span class="pill warn">تعطیل</span>' : ''}${t.drvObj ? '<div class="small muted">راننده: ' + esc(drvLabel(t.drvObj)) + '</div>' : ''}</td></tr>`;
     body = `<div class="card"><div><a class="pname" ${sel.phone ? `href="tel:${sel.phone}"` : ''}>${esc(sel.name)}<span class="tel num">${fd(sel.phone)}</span></a>
         <div class="pinfo">${sel.archived ? 'خارج از فهرست فعلی' : sel.group ? `${GROUP_LABEL(sel.group)}، ${COL_LABEL(sel.col)}` : 'نفر اضافه‌شده'} · پایش منطقه ${fd(sel.region ?? '-')}${sel.home != null ? ' · سکونت منطقه ' + fd(sel.home) : ''}${sel.gas != null ? ' · گاز منطقه ' + fd(sel.gas) : ''}</div></div>
@@ -685,14 +703,15 @@ function allRecords() {
   for (const d of Object.values(S.days)) {
     if (!d || !d.assigns || !d.assigns.length || d.col !== S.colMap[d.date] || d.group !== schedFor(d.date)?.group) continue;
     const sc = schedFor(d.date);
+    const cov = coverMap(d.assigns);
     for (const a of d.assigns) {
       const p = person(a.pid) || { name: '?', phone: '' };
-      out.push({ date: d.date, wd: sc?.wd || '', group: d.group, col: d.col, pid: a.pid, name: p.name, phone: p.phone, region: a.region, home: p.home, gas: p.gas, status: a.status, reason: a.reason || '', sub: a.sub, driver: drvOf(a) });
+      out.push({ date: d.date, wd: sc?.wd || '', group: d.group, col: d.col, pid: a.pid, name: p.name, phone: p.phone, region: a.region, home: p.home, gas: p.gas, status: effStatus(a, cov), coveredBy: cov.get(a.pid) ? person(cov.get(a.pid))?.name || '' : '', reason: a.reason || '', sub: a.sub, driver: drvOf(a) });
     }
   }
   return out.sort((x, y) => x.date.localeCompare(y.date) || (x.region - y.region));
 }
-const ST = { went: 'رفت', absent: 'نرفت', planned: 'ثبت‌نشده' };
+const ST = { went: 'رفت', absent: 'نرفت', covered: 'جایگزین داشت', planned: 'ثبت‌نشده' };
 function filteredRecords() {
   const q = fa(S.rep.q);
   return allRecords().filter(r => (!S.rep.grp || r.group === +S.rep.grp) && (!S.rep.from || r.date >= S.rep.from) && (!S.rep.to || r.date <= S.rep.to) && (!q || fa(r.name).includes(q) || r.phone.includes(toLatin(q))));
@@ -700,7 +719,7 @@ function filteredRecords() {
 function personSummary(recs) {
   const m = {};
   for (const r of recs) {
-    const s = m[r.pid] ||= { name: r.name, phone: r.phone, group: person(r.pid)?.group, went: 0, absent: 0, planned: 0, last: '', reasons: [] };
+    const s = m[r.pid] ||= { name: r.name, phone: r.phone, group: person(r.pid)?.group, went: 0, absent: 0, covered: 0, planned: 0, last: '', reasons: [] };
     s[r.status]++; if (r.status === 'went' && r.date > s.last) s.last = r.date;
     if (r.status === 'absent' && r.reason) s.reasons.push(r.reason);
   }
@@ -715,9 +734,10 @@ function attendanceRows(groupNo, cutoff) {
     const own = ts.filter(t => !t.sub);
     const wentOwn = own.filter(t => t.status === 'went').length;
     const subWent = ts.filter(t => t.sub && t.status === 'went').length;
-    const absent = own.filter(t => t.status === 'absent' || t.status === 'replaced').length;
-    const reasons = own.filter(t => t.status === 'absent' && t.reason).map(t => t.reason);
-    return { p, g, outsider: !p.group || !!p.archived, due: own.length, went: wentOwn + subWent, wentOwn, subWent, absent, unrec: own.length - wentOwn - absent, reasons, turns: ts };
+    const absent = own.filter(t => t.status === 'absent').length;
+    const covered = own.filter(t => t.status === 'covered' || t.status === 'replaced').length;   // had a substitute: not an absence
+    const reasons = own.filter(t => (t.status === 'absent' || t.status === 'covered') && t.reason).map(t => t.reason);
+    return { p, g, outsider: !p.group || !!p.archived, due: own.length, went: wentOwn + subWent, wentOwn, subWent, absent, covered, unrec: own.length - wentOwn - absent - covered, reasons, turns: ts };
   };
   const members = Object.values(S.roster.people).filter(p => !p.archived && p.group && (!groupNo || p.group === groupNo))
     .sort((a, b) => a.group - b.group || a.col - b.col || (a.region ?? 99) - (b.region ?? 99)).map(p => row(p, p.group));
@@ -728,11 +748,11 @@ function attendanceRows(groupNo, cutoff) {
   });
   return members.concat(outsiders);
 }
-const TURN_ST = { went: 'رفت', absent: 'نرفت', replaced: 'نرفت (جایگزین رفت)', due: 'ثبت‌نشده', planned: 'ثبت‌نشده' };
+const TURN_ST = { went: 'رفت', absent: 'نرفت', covered: 'جایگزین داشت', replaced: 'جایگزین داشت', due: 'ثبت‌نشده', planned: 'ثبت‌نشده' };
 function turnLine(t, p) {
   const other = p && p.group && t.sc.group !== p.group ? ` · ${GROUP_LABEL(t.sc.group)}` : '';
-  const cls = t.status === 'went' ? 'st-went' : (t.status === 'absent' || t.status === 'replaced') ? 'st-absent' : 'muted';
-  return `<span class="${cls}">${fd(t.sc.date)} ${esc(t.sc.wd)} · منطقه ${fd(t.region ?? '-')} · ${TURN_ST[t.status]}${t.sub ? ' <span class="subtag">به‌جای دیگری</span>' : ''}${other}${t.reason ? ' · ' + esc(t.reason) : ''}</span>`;
+  const cls = t.status === 'went' ? 'st-went' : t.status === 'absent' ? 'st-absent' : (t.status === 'covered' || t.status === 'replaced') ? 'st-cov' : 'muted';
+  return `<span class="${cls}">${fd(t.sc.date)} ${esc(t.sc.wd)} · منطقه ${fd(t.region ?? '-')} · ${TURN_ST[t.status]}${t.coveredBy && person(t.coveredBy) ? ': ' + esc(person(t.coveredBy).name) : ''}${t.sub ? ' <span class="subtag">به‌جای دیگری</span>' : ''}${other}${t.reason ? ' · ' + esc(t.reason) : ''}</span>`;
 }
 function groupAttendanceHtml() {
   const t0 = todayJalali() || '';
@@ -745,8 +765,8 @@ function groupAttendanceHtml() {
     const tot = rows.reduce((a, r) => ({ due: a.due + r.due, went: a.went + r.went, absent: a.absent + r.absent, unrec: a.unrec + r.unrec }), { due: 0, went: 0, absent: 0, unrec: 0 });
     return `<h2>${g.name}${g.leader ? ` <span class="small muted">· ${esc(g.leader)}</span>` : ''}</h2>
       <div class="daymeta"><span class="pill">${fd(tot.due)} نوبت</span><span class="pill ok">${fd(tot.went)} رفته</span><span class="pill bad">${fd(tot.absent)} نرفته</span><span class="pill">${fd(tot.unrec)} ثبت‌نشده</span></div>
-      <div class="tbl"><table class="num"><thead><tr><th>نام</th><th>ستون</th><th>منطقه</th><th>نوبت</th><th>رفته</th><th>نرفته</th><th>ثبت‌نشده</th><th>حضور</th><th>از رفته‌ها: به‌جای دیگری</th><th>تاریخ‌ها (منطقه، وضعیت)</th></tr></thead><tbody>
-      ${rows.map(r => `<tr><td><button class="chip" data-act="show-turns" data-pid="${esc(r.p.id)}">${esc(r.p.name)}</button>${r.outsider ? ' <span class="subtag">خارج از فهرست</span>' : ''}</td><td>${r.p.col ? (r.p.col === 1 ? 'اول' : 'دوم') : '—'}</td><td>${fd(r.p.region ?? '-')}</td><td>${fd(r.due)}</td><td class="st-went">${fd(r.went)}</td><td class="st-absent">${fd(r.absent)}</td><td>${fd(r.unrec)}</td><td>${fd(pct(r))}</td><td>${fd(r.subWent || '')}</td><td style="white-space:normal;min-width:230px">${r.turns.map(t => turnLine(t, r.p)).join('<br>') || '—'}</td></tr>`).join('')}</tbody></table></div>`;
+      <div class="tbl"><table class="num"><thead><tr><th>نام</th><th>ستون</th><th>منطقه</th><th>نوبت</th><th>رفته</th><th>نرفته</th><th>جایگزین داشت</th><th>ثبت‌نشده</th><th>حضور</th><th>از رفته‌ها: به‌جای دیگری</th><th>تاریخ‌ها (منطقه، وضعیت)</th></tr></thead><tbody>
+      ${rows.map(r => `<tr><td><button class="chip" data-act="show-turns" data-pid="${esc(r.p.id)}">${esc(r.p.name)}</button>${r.outsider ? ' <span class="subtag">خارج از فهرست</span>' : ''}</td><td>${r.p.col ? (r.p.col === 1 ? 'اول' : 'دوم') : '—'}</td><td>${fd(r.p.region ?? '-')}</td><td>${fd(r.due)}</td><td class="st-went">${fd(r.went)}</td><td class="st-absent">${fd(r.absent)}</td><td class="st-cov">${fd(r.covered || '')}</td><td>${fd(r.unrec)}</td><td>${fd(pct(r))}</td><td>${fd(r.subWent || '')}</td><td style="white-space:normal;min-width:230px">${r.turns.map(t => turnLine(t, r.p)).join('<br>') || '—'}</td></tr>`).join('')}</tbody></table></div>`;
   }).join('');
 }
 function viewRep() {
@@ -806,7 +826,8 @@ function periodStats(keyOf) {
     const d = liveDay(sc.date);
     if (!d) { o.missing.push(sc.date); continue; }
     o.reported++;
-    for (const a of d.assigns) { if (a.status === 'went') o.went++; else if (a.status === 'absent') o.absent++; else o.open++; }
+    const cov = coverMap(d.assigns);
+    for (const a of d.assigns) { const st = effStatus(a, cov); if (st === 'went') o.went++; else if (st === 'absent') o.absent++; else if (st === 'covered') o.covered = (o.covered || 0) + 1; else o.open++; }
   }
   return Object.values(out);
 }
@@ -855,9 +876,9 @@ function boardHtml() {
 function periodSummaryHtml() {
   const byGroup = periodStats(sc => sc.group).sort((a, b) => a.key - b.key);
   if (!byGroup.length) return '<div class="card empty"><b>در این بازه روز پایشی تا امروز نیست</b>بازه یا گروه را تغییر دهید.</div>';
-  const tot = byGroup.reduce((t, o) => { for (const k of ['days', 'reported', 'went', 'absent', 'open', 'need']) t[k] += o[k]; t.missing.push(...o.missing); return t; }, { days: 0, reported: 0, went: 0, absent: 0, open: 0, need: 0, missing: [] });
-  const row = (label, o, extra = '') => `<tr><td>${label}</td><td>${fd(o.days)}</td><td>${fd(o.reported)}</td><td class="${o.missing.length ? 'st-absent' : ''}">${fd(o.missing.length)}</td><td class="st-went">${fd(o.went)}</td><td class="st-absent">${fd(o.absent)}</td><td>${fd(o.open)}</td><td>${fd(pctOf(o.went, o.went + o.absent))}</td><td>${fd(pctOf(o.went, o.need))}</td>${extra}</tr>`;
-  const head = `<tr><th>گروه</th><th>روز پایش</th><th>گزارش‌شده</th><th>بی‌گزارش</th><th>رفته</th><th>نرفته</th><th>بی‌وضعیت</th><th>حضور</th><th>پوشش نیاز</th><th>آخرین گزارش رسیده</th></tr>`;
+  const tot = byGroup.reduce((t, o) => { for (const k of ['days', 'reported', 'went', 'absent', 'covered', 'open', 'need']) t[k] += o[k] || 0; t.missing.push(...o.missing); return t; }, { days: 0, reported: 0, went: 0, absent: 0, covered: 0, open: 0, need: 0, missing: [] });
+  const row = (label, o, extra = '') => `<tr><td>${label}</td><td>${fd(o.days)}</td><td>${fd(o.reported)}</td><td class="${o.missing.length ? 'st-absent' : ''}">${fd(o.missing.length)}</td><td class="st-went">${fd(o.went)}</td><td class="st-absent">${fd(o.absent)}</td><td class="st-cov">${fd(o.covered || 0)}</td><td>${fd(o.open)}</td><td>${fd(pctOf(o.went, o.went + o.absent))}</td><td>${fd(pctOf(o.went, o.need))}</td>${extra}</tr>`;
+  const head = `<tr><th>گروه</th><th>روز پایش</th><th>گزارش‌شده</th><th>بی‌گزارش</th><th>رفته</th><th>نرفته</th><th>جایگزین داشت</th><th>بی‌وضعیت</th><th>حضور</th><th>پوشش نیاز</th><th>آخرین گزارش رسیده</th></tr>`;
   const missingList = byGroup.filter(o => o.missing.length).map(o => `<li>${GROUP_LABEL(o.key)}: ${o.missing.map(fd).join('، ')}</li>`).join('');
   const months = periodStats(sc => sc.date.slice(0, 7)).sort((a, b) => a.key.localeCompare(b.key));
   const mname = k => `${MONTHS[+k.slice(5, 7) - 1]} ${fd(k.slice(0, 4))}`;
@@ -866,7 +887,7 @@ function periodSummaryHtml() {
     ${byGroup.map(o => { const lr = lastReceipt(o.key); return row(GROUP_LABEL(o.key), o, `<td>${lr ? fd(fmtTime(lr.sentAt)) : '—'}</td>`); }).join('')}
     ${byGroup.length > 1 ? row('<b>جمع</b>', tot, '<td></td>') : ''}</tbody></table></div>
     ${missingList ? `<div class="card"><h3>روزهای بدون گزارش</h3><ul class="warnlist">${missingList}</ul></div>` : '<p class="small" style="margin:0;color:var(--ok)">برای همه‌ی روزهای این بازه گزارش ثبت شده است.</p>'}
-    ${months.length > 1 ? `<h2>به تفکیک ماه</h2><div class="tbl"><table class="num"><thead><tr><th>ماه</th><th>روز پایش</th><th>گزارش‌شده</th><th>بی‌گزارش</th><th>رفته</th><th>نرفته</th><th>بی‌وضعیت</th><th>حضور</th><th>پوشش نیاز</th></tr></thead><tbody>${months.map(o => row(mname(o.key), o)).join('')}</tbody></table></div>` : ''}`;
+    ${months.length > 1 ? `<h2>به تفکیک ماه</h2><div class="tbl"><table class="num"><thead><tr><th>ماه</th><th>روز پایش</th><th>گزارش‌شده</th><th>بی‌گزارش</th><th>رفته</th><th>نرفته</th><th>جایگزین داشت</th><th>بی‌وضعیت</th><th>حضور</th><th>پوشش نیاز</th></tr></thead><tbody>${months.map(o => row(mname(o.key), o)).join('')}</tbody></table></div>` : ''}`;
 }
 
 /* ---------- leader → admin report exchange ---------- */
@@ -1365,7 +1386,9 @@ async function addSub(reg, pid) {
   const cand = person(pid);
   if (!subAllowed(cand, dv.sc, dv.col, reg)) { toast(`از ${GROUP_LABEL(dv.sc.group)} فقط نفر ${COL_LABEL(3 - dv.col)} که پایش منطقه ${fd(reg)} است جایگزین می‌شود؛ ${cand?.name || 'این نفر'} ${cand?.col === dv.col ? 'در همین ستون است' : 'پایش منطقه‌ی دیگری است'}.`, true); return false; }
   if (activeCount(dv.assigns, reg) >= S.roster.quota[reg]) { toast(quotaMsg(reg), true); return false; }
-  const assigns = [...dv.assigns, { pid, region: reg, status: 'planned', reason: '', sub: true }];
+  const cov0 = coverMap(dv.assigns);
+  const forWhom = dv.assigns.find(a => a.region === reg && a.status === 'absent' && !a.sub && !cov0.has(a.pid))?.pid || null;
+  const assigns = [...dv.assigns, { pid, region: reg, status: 'planned', reason: '', sub: true, for: forWhom }];
   if (await saveDay(S.date, { ...dv, assigns })) { toast(`${person(pid).name} برای منطقه ${fd(reg)} ثبت شد.`); render(); return true; }
   return false;
 }
@@ -1412,9 +1435,10 @@ async function exportXlsx() {
   XLSX.utils.book_append_sheet(wb, a, 'ریز پایش');
   XLSX.utils.book_append_sheet(wb, b, 'خلاصه نفرات');
   const cutoff = S.rep.to || todayJalali() || '';
-  const att = attendanceRows(+S.rep.grp || 0, cutoff).map(r => ({ 'گروه': GROUP_LABEL(r.g), 'ستون': r.p.col ? COL_LABEL(r.p.col) : 'خارج از فهرست', 'نام': r.p.name, 'شماره': r.p.phone, 'منطقه مورد پایش': r.p.region, [`نوبت تا ${cutoff}`]: r.due, 'رفته': r.went, 'نرفته': r.absent, 'ثبت‌نشده': r.unrec, 'از رفته‌ها: به‌جای دیگری': r.subWent,
+  const att = attendanceRows(+S.rep.grp || 0, cutoff).map(r => ({ 'گروه': GROUP_LABEL(r.g), 'ستون': r.p.col ? COL_LABEL(r.p.col) : 'خارج از فهرست', 'نام': r.p.name, 'شماره': r.p.phone, 'منطقه مورد پایش': r.p.region, [`نوبت تا ${cutoff}`]: r.due, 'رفته': r.went, 'نرفته': r.absent, 'جایگزین داشت': r.covered, 'ثبت‌نشده': r.unrec, 'از رفته‌ها: به‌جای دیگری': r.subWent,
     'تاریخ‌های حضور': r.turns.filter(t => t.status === 'went').map(t => `${t.sc.date} (منطقه ${t.region ?? '-'}${t.sub ? '، جایگزین' : ''})`).join('، '),
-    'تاریخ‌های غیبت': r.turns.filter(t => t.status === 'absent' || t.status === 'replaced').map(t => `${t.sc.date} (منطقه ${t.region ?? '-'}${t.reason ? '، ' + t.reason : ''})`).join('، '),
+    'تاریخ‌های جایگزین‌دار': r.turns.filter(t => t.status === 'covered' || t.status === 'replaced').map(t => `${t.sc.date}${t.coveredBy && person(t.coveredBy) ? ' (' + person(t.coveredBy).name + ')' : ''}`).join('، '),
+    'تاریخ‌های غیبت': r.turns.filter(t => t.status === 'absent').map(t => `${t.sc.date} (منطقه ${t.region ?? '-'}${t.reason ? '، ' + t.reason : ''})`).join('، '),
     'نوبت‌های ثبت‌نشده': r.turns.filter(t => t.status === 'due' || t.status === 'planned').map(t => t.sc.date).join('، '),
     'دلایل غیبت': r.reasons.join('، ') }));
   const c = XLSX.utils.json_to_sheet(att.length ? att : [{ 'نام': '' }]); c['!cols'] = [{ wch: 11 }, { wch: 9 }, { wch: 22 }, { wch: 13 }];
@@ -1428,7 +1452,7 @@ async function exportXlsx() {
   const dsh = XLSX.utils.json_to_sheet(det.length ? det : [{ 'نام': '' }]); dsh['!cols'] = [{ wch: 11 }, { wch: 9 }, { wch: 22 }, { wch: 13 }, { wch: 11 }, { wch: 9 }, { wch: 9 }, { wch: 16 }, { wch: 9 }, { wch: 18 }, { wch: 16 }];
   XLSX.utils.book_append_sheet(wb, dsh, 'ریز نوبت‌های نفرات');
   // period × group summary first, so the workbook opens on the overview
-  const sumRow = (o, label) => ({ [label[0]]: label[1], 'روز پایش': o.days, 'گزارش‌شده': o.reported, 'بی‌گزارش': o.missing.length, 'رفته': o.went, 'نرفته': o.absent, 'بی‌وضعیت': o.open, 'حضور (٪)': o.went + o.absent ? Math.round(100 * o.went / (o.went + o.absent)) : '', 'پوشش نیاز (٪)': o.need ? Math.round(100 * o.went / o.need) : '', 'روزهای بی‌گزارش': o.missing.join('، ') });
+  const sumRow = (o, label) => ({ [label[0]]: label[1], 'روز پایش': o.days, 'گزارش‌شده': o.reported, 'بی‌گزارش': o.missing.length, 'رفته': o.went, 'نرفته': o.absent, 'جایگزین داشت': o.covered || 0, 'بی‌وضعیت': o.open, 'حضور (٪)': o.went + o.absent ? Math.round(100 * o.went / (o.went + o.absent)) : '', 'پوشش نیاز (٪)': o.need ? Math.round(100 * o.went / o.need) : '', 'روزهای بی‌گزارش': o.missing.join('، ') });
   const gs = periodStats(sc => sc.group).sort((x, y) => x.key - y.key).map(o => sumRow(o, ['گروه', GROUP_LABEL(o.key)]));
   const ms = periodStats(sc => sc.date.slice(0, 7) + '|' + sc.group).sort((x, y) => x.key.localeCompare(y.key)).map(o => { const [mo, g] = o.key.split('|'); return { 'ماه': `${MONTHS[+mo.slice(5, 7) - 1]} ${mo.slice(0, 4)}`, ...sumRow(o, ['گروه', GROUP_LABEL(+g)]) }; });
   const s1 = XLSX.utils.json_to_sheet(gs.length ? gs : [{ 'گروه': '' }]); s1['!cols'] = [{ wch: 11 }, { wch: 9 }, { wch: 10 }, { wch: 9 }, { wch: 7 }, { wch: 7 }, { wch: 9 }, { wch: 9 }, { wch: 12 }, { wch: 40 }];
