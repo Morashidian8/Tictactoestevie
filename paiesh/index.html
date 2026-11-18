@@ -173,7 +173,7 @@ td.st-absent{color:var(--bad);font-weight:700}
 <script>
 /* ---------- roster preload (stays null in the published page; the roster lives in the store) ---------- */
 const PRELOAD = null;
-const APP_VERSION = '13';
+const APP_VERSION = '14';
 
 /* ---------- small helpers ---------- */
 const $ = (s, r = document) => r.querySelector(s);
@@ -623,7 +623,7 @@ function viewFind() {
     const line = t => `<tr><td>${fd(t.sc.date)}</td><td>${esc(t.sc.wd)}</td><td>${GROUP_LABEL(t.sc.group)}${t.sub ? ' <span class="subtag">جایگزین</span>' : ''}</td><td>${fd(t.region)}</td><td style="white-space:normal"><span class="pill ${LBL[t.status][1]}">${LBL[t.status][0]}</span>${t.reason ? ' <span class="small muted">' + esc(t.reason) + '</span>' : ''}${/تعطیل/.test(t.sc.note) ? ' <span class="pill warn">تعطیل</span>' : ''}${t.drvObj ? '<div class="small muted">راننده: ' + esc(drvLabel(t.drvObj)) + '</div>' : ''}</td></tr>`;
     body = `<div class="card"><div><a class="pname" ${sel.phone ? `href="tel:${sel.phone}"` : ''}>${esc(sel.name)}<span class="tel num">${fd(sel.phone)}</span></a>
         <div class="pinfo">${sel.archived ? 'خارج از فهرست فعلی' : sel.group ? `${GROUP_LABEL(sel.group)}، ${COL_LABEL(sel.col)}` : 'نفر اضافه‌شده'} · پایش منطقه ${fd(sel.region ?? '-')}${sel.home != null ? ' · سکونت منطقه ' + fd(sel.home) : ''}${sel.gas != null ? ' · گاز منطقه ' + fd(sel.gas) : ''}</div></div>
-        <div class="row">${sel.phone ? `<button class="btn" data-act="copy-phone" data-p="${sel.phone}">کپی شماره</button>` : ''}<button class="btn" data-act="req-new" data-pid="${esc(sel.id)}">ثبت درخواست</button><button class="btn ghost" data-act="find-clear">جستجوی دیگر</button></div>
+        <div class="row">${sel.phone ? `<button class="btn" data-act="copy-phone" data-p="${sel.phone}">کپی شماره</button>` : ''}<button class="btn" data-act="req-new" data-pid="${esc(sel.id)}">ثبت درخواست</button>${!S.settings.lockedGroup && S.settings.role !== 'supervisor' ? `<button class="btn" data-act="person-edit" data-pid="${esc(sel.id)}">ویرایش مشخصات</button>` : ''}<button class="btn ghost" data-act="find-clear">جستجوی دیگر</button></div>
         <div class="daymeta"><span class="pill acc">${fd(up.length)} نوبت مانده تا پایان برنامه</span>${up[0] ? `<span class="pill">نوبت بعدی: ${esc(up[0].sc.wd)} ${fd(up[0].sc.date)}</span>` : ''}</div></div>
       <h2>نوبت‌های پیش رو</h2>
       ${up.length ? `<div class="tbl"><table class="num"><thead><tr><th>تاریخ</th><th>روز</th><th>گروه</th><th>منطقه</th><th>وضعیت</th></tr></thead><tbody>${up.map(line).join('')}</tbody></table></div>` : '<div class="card empty">نوبتی تا پایان برنامه نمانده است.</div>'}
@@ -1100,6 +1100,35 @@ function diffHtml(d) {
     ${d.kept.length ? `<p class="small muted" style="margin:0">روزهای ${esc(d.kept.map(fd).join('، '))} از قبل ثبت شده‌اند و با همان نفرات ثبت‌شده می‌مانند؛ بقیه‌ی روزهای آینده از فهرست جدید ساخته می‌شوند.</p>` : ''}`;
 }
 
+/* fix a person's name or phone (admin). The internal id stays, so past records keep pointing at the same person. */
+function openPersonEdit(pid) {
+  const p = person(pid); if (!p) return;
+  const scrim = document.createElement('div'); scrim.className = 'scrim';
+  scrim.innerHTML = `<div class="sheet" role="dialog" aria-label="ویرایش مشخصات"><header><h2 class="grow">ویرایش مشخصات</h2><button class="iconbtn" data-close aria-label="بستن">✕</button></header>
+    <div class="body"><label class="f">نام و نام خانوادگی<input id="pe-name" class="inp" value="${esc(p.name)}"></label>
+    <label class="f">شماره تماس<input id="pe-phone" class="inp" inputmode="tel" dir="ltr" value="${esc(p.phone)}"></label>
+    <div class="row"><label class="f grow">محل سکونت (منطقه‌ی شهرداری)<input id="pe-home" class="inp" inputmode="numeric" value="${esc(p.home ?? '')}"></label><label class="f grow">منطقه‌ی گاز محل سکونت<input id="pe-gas" class="inp" inputmode="numeric" value="${esc(p.gas ?? '')}"></label></div>
+    <p class="small muted" style="margin:0">سوابق قبلی این نفر حفظ می‌شود. برای اینکه سرگروه هم شماره‌ی درست را داشته باشد، بعد از ذخیره فایل سرگروه همان گروه را دوباره بسازید و بفرستید.</p>
+    <button class="btn pri" id="pe-save">ذخیره</button></div></div>`;
+  document.body.appendChild(scrim);
+  scrim.addEventListener('click', async e => {
+    if (e.target === scrim || e.target.closest('[data-close]')) return scrim.remove();
+    if (e.target.id !== 'pe-save') return;
+    const name = fa($('#pe-name', scrim).value); const ph = normPhone($('#pe-phone', scrim).value);
+    if (!name) return toast('نام را وارد کنید.', true);
+    if (!ph.ok) return toast('شماره باید ۱۱ رقم و با ۰۹ شروع شود.', true);
+    const clash = Object.values(S.roster.people).find(x => x.id !== pid && x.phone === ph.phone && !x.archived);
+    if (clash) return toast(`این شماره برای ${clash.name} ثبت شده است.`, true);
+    const prev = { ...p };
+    Object.assign(p, { name, phone: ph.phone, phoneOk: true, home: numOr($('#pe-home', scrim).value), gas: numOr($('#pe-gas', scrim).value) });
+    const oldWarn = S.roster.warnings;
+    S.roster.warnings = (S.roster.warnings || []).filter(w => !(w.includes(prev.name) && w.includes('نامعتبر')));
+    try { await Store.setDoc('roster', 'main', S.roster); }
+    catch (err) { Object.assign(p, prev); S.roster.warnings = oldWarn; return toast('ذخیره نشد: ' + (err.message || err.code || ''), true); }
+    scrim.remove(); toast(`مشخصات ${name} ذخیره شد.`); render();
+  });
+}
+
 /* driver form (new or edit); onSaved receives the driver id */
 function openDriver(existing, onSaved) {
   const d = existing || { id: 'drv' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), name: '', phone: '', car: '', plate: '', note: '' };
@@ -1453,6 +1482,7 @@ document.addEventListener('click', async e => {
     case 'copy-nums': { const dv = dayView(S.msgDate); return copy(dv.assigns.filter(a => a.status !== 'absent').map(a => person(a.pid)).filter(p => p?.phoneOk).map(p => p.phone).join('\n'), 'شماره‌ها'); }
     case 'copy-generic': return copy(genericText(dayView(S.msgDate)), 'متن عمومی');
     case 'find-pick': S.findPid = d.pid; return render();
+    case 'person-edit': return openPersonEdit(d.pid);
     case 'req-new': return openRequest(null, d.pid);
     case 'req-edit': return openRequest(S.requests.find(x => x.id === d.id));
     case 'req-filter': S.reqFilter = d.v; return render();
