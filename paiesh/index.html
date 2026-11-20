@@ -174,7 +174,7 @@ td.st-absent{color:var(--bad);font-weight:700}
 <script>
 /* ---------- roster preload (stays null in the published page; the roster lives in the store) ---------- */
 const PRELOAD = null;
-const APP_VERSION = '16';
+const APP_VERSION = '17';
 
 /* ---------- small helpers ---------- */
 const $ = (s, r = document) => r.querySelector(s);
@@ -326,9 +326,11 @@ const Store = {
 const dayId = date => 'd' + date.replace(/\D/g, '');
 
 /* ---------- state ---------- */
-// fits one Persian SMS (70 characters) for typical names
-const DEFAULT_TEMPLATE = `{نام}، فردا پایش اداره گاز منطقه {منطقه}. لطفا تایید کنید`;
-const TPL_VERSION = 3;
+// reminder sent the day before: greeting, date, group and gas office (about two Persian SMS)
+const DEFAULT_TEMPLATE = `جناب آقای {نام}
+سلام و وقت بخیر
+جهت یادآوری، فردا {روز} {تاریخ} نوبت پایش شما ({گروه}) در {اداره} است.`;
+const TPL_VERSION = 4;
 // Persian SMS: 70 characters in one message, 67 per part when longer
 function smsInfo(text) { const n = [...text].length; const k = n <= 70 ? 1 : Math.ceil(n / 67); return `<span class="pill ${k > 1 ? 'warn' : 'ok'}">${fd(n)} حرف · ${fd(k)} پیامک</span>`; }
 const REASONS = ['بیماری', 'مأموریت / کار', 'مرخصی / سفر', 'مشکل خانوادگی', 'پاسخ نداد', 'انصراف'];
