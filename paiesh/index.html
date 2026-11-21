@@ -85,6 +85,7 @@ h3{font-size:15px;font-weight:700}
 .seg button.on.planned{background:var(--accent);color:var(--accent-ink)}
 .reasons{display:flex;gap:6px;flex-wrap:wrap}
 .chip{border:1px solid var(--line);background:var(--bg);border-radius:99px;padding:3px 10px;font-size:12.5px}
+.chip.ok{background:var(--ok-bg);border-color:var(--ok);color:var(--ok);font-weight:700}
 .chip.on{background:var(--bad-bg);border-color:var(--bad);color:var(--bad);font-weight:700}
 .reasons input{flex:1;min-width:140px;border:1px solid var(--line);border-radius:8px;padding:4px 8px;background:var(--bg);font-size:13px}
 .absent .pname{text-decoration:line-through;text-decoration-color:var(--bad)}
@@ -174,7 +175,7 @@ td.st-absent{color:var(--bad);font-weight:700}
 <script>
 /* ---------- roster preload (stays null in the published page; the roster lives in the store) ---------- */
 const PRELOAD = null;
-const APP_VERSION = '20';
+const APP_VERSION = '21';
 
 /* ---------- small helpers ---------- */
 const $ = (s, r = document) => r.querySelector(s);
@@ -562,7 +563,9 @@ function viewDay() {
   const stray = dv.assigns.map((a, i) => ({ a, i })).filter(x => !(x.a.region in S.roster.quota));
   const strayBlock = stray.length ? `<section class="region"><div class="rhead"><h3>بدون منطقه‌ی معتبر</h3></div>${stray.map(({ a, i }) => personRow(a, i)).join('')}</section>` : '';
   const tx = S.days[S.date]?.taxi;
-  const taxiBar = isSup() ? '' : `<div class="row"><button class="btn pri" data-act="taxi-open">اعلام به تاکسیرانی</button>${tx?.at ? `<span class="small muted">آخرین اعلام: ${fd(fmtTime(tx.at))} · ${fd((tx.pids || []).length)} نفر</span>` : ''}</div>`;
+  const pc = packOn() ? packCounts(dv) : null;
+  const packBtn = pc ? `<button class="btn" data-act="pack-open">پک پذیرایی · ${fd(pc.given)} از ${fd(pc.total)}</button>` : '';
+  const taxiBar = isSup() ? '' : `<div class="row"><button class="btn pri" data-act="taxi-open">اعلام به تاکسیرانی</button>${packBtn}${tx?.at ? `<span class="small muted">آخرین اعلام: ${fd(fmtTime(tx.at))} · ${fd((tx.pids || []).length)} نفر</span>` : ''}</div>`;
   const note = `<label class="f">یادداشت روز<textarea id="day-note" class="inp" style="min-height:64px" placeholder="مثلاً: راننده، ساعت حرکت، هماهنگی‌ها">${esc(dv.note)}</textarea></label>`;
   return head + `<main class="wrap stack">${sum}${taxiBar}${!dv.saved ? '<p class="small muted" style="margin:0">این روز هنوز ثبت نشده؛ با اولین تغییر وضعیت، ثبت می‌شود.</p>' : ''}${blocks}${strayBlock}${note}</main>`;
 }
@@ -579,7 +582,7 @@ function personRow(a, i) {
         ${a.sub ? `<button data-act="remove" data-i="${i}" aria-label="حذف جایگزین">✕</button>` : ''}
       </div></div>
       ${a.note ? `<div class="small" style="color:var(--warn)">یادداشت: ${esc(a.note)}</div>` : ''}
-      <div class="row small">${p.phone ? `<button class="chip" data-act="copy-phone" data-p="${p.phone}">کپی شماره</button>` : ''}<button class="chip" data-act="show-turns" data-pid="${esc(a.pid)}">نوبت‌ها</button><button class="chip" data-act="note-edit" data-pid="${esc(a.pid)}">${a.note ? 'ویرایش یادداشت' : 'یادداشت'}</button>
+      <div class="row small">${p.phone ? `<button class="chip" data-act="copy-phone" data-p="${p.phone}">کپی شماره</button>` : ''}<button class="chip" data-act="show-turns" data-pid="${esc(a.pid)}">نوبت‌ها</button><button class="chip" data-act="note-edit" data-pid="${esc(a.pid)}">${a.note ? 'ویرایش یادداشت' : 'یادداشت'}</button>${packOn() && a.status !== 'absent' ? (packSet(S.date).has(a.pid) ? `<button class="chip ok" data-act="pack-toggle" data-pid="${esc(a.pid)}">پک: تحویل شد</button>` : `<button class="chip" data-act="pack-toggle" data-pid="${esc(a.pid)}">پک: نگرفته</button>`) : ''}
         <label class="row grow" style="gap:4px;min-width:160px">راننده:<select class="inp drv-sel grow" data-i="${i}" style="padding:3px 6px">${driverOptions(a.driver)}</select></label></div>${driverMsgRow(a, p, dayView(S.date), true)}${reasons}</div>`;
 }
 
@@ -915,7 +918,7 @@ function exchangeHtml() {
 }
 /* ---------- supervisor (ناظر): receives reports and summarises; access can be withdrawn by the system admin ---------- */
 const isSup = () => S.settings.role === 'supervisor';
-const SUP_BLOCKED = new Set(['note-edit', 'taxi-open', 'status', 'reason', 'remove', 'add-sub', 'flip-col', 'startcol', 'import-ok', 'make-pack', 'make-sup', 'drv-new', 'drv-edit', 'send-report']);
+const SUP_BLOCKED = new Set(['pack-toggle', 'pack-open', 'note-edit', 'taxi-open', 'status', 'reason', 'remove', 'add-sub', 'flip-col', 'startcol', 'import-ok', 'make-pack', 'make-sup', 'drv-new', 'drv-edit', 'send-report']);
 async function makeSupervisorPack(name) {
   if (!name) return toast('نام ناظر را بنویسید.', true);
   const id = 'sup-' + Math.random().toString(36).slice(2, 8);
@@ -1044,6 +1047,36 @@ function openTaxi() {
       if (!shared) await saveFile(name, blob);
       await mark(); toast(shared ? 'فایل آماده‌ی ارسال شد.' : 'فایل ذخیره شد؛ آن را برای تاکسیرانی بفرستید.');
     }
+  });
+}
+
+/* ---------- hospitality pack (پک پذیرایی): the admin's private tally. Kept only in this phone's settings, never in day records, reports, backups sent to others or exports. ---------- */
+const packOn = () => !S.settings.lockedGroup && !isSup();
+const packSet = date => new Set((S.settings.packs || {})[date] || []);
+async function togglePack(pid, date = S.date) {
+  const packs = { ...(S.settings.packs || {}) }; const cur = new Set(packs[date] || []);
+  cur.has(pid) ? cur.delete(pid) : cur.add(pid);
+  if (cur.size) packs[date] = [...cur]; else delete packs[date];
+  return saveSettings({ packs });
+}
+const packPeople = dv => dv.assigns.filter(a => a.status !== 'absent').map(a => ({ a, p: person(a.pid) })).filter(x => x.p);
+function packCounts(dv) { const set = packSet(dv.sc.date); const list = packPeople(dv); const given = list.filter(x => set.has(x.a.pid)).length; return { total: list.length, given, left: list.length - given }; }
+function openPacks() {
+  const date = S.date; const scrim = document.createElement('div'); scrim.className = 'scrim'; document.body.appendChild(scrim);
+  const draw = () => {
+    const dv = dayView(date); const set = packSet(date); const list = packPeople(dv);
+    const left = list.filter(x => !set.has(x.a.pid)), got = list.filter(x => set.has(x.a.pid));
+    const row = ({ a, p }, done) => `<div class="pick"><div class="grow"><b>${esc(p.name)}</b> <span class="small muted num">${fd(p.phone)}</span><div class="pinfo">پایش منطقه ${fd(a.region ?? '-')}</div></div><button class="btn ${done ? '' : 'pri'}" data-pk="${esc(a.pid)}">${done ? 'برگردان' : 'تحویل شد'}</button></div>`;
+    scrim.innerHTML = `<div class="sheet" role="dialog" aria-label="پک پذیرایی"><header><h2 class="grow">پک پذیرایی</h2><button class="iconbtn" data-close aria-label="بستن">✕</button></header>
+      <div class="body"><div class="daymeta"><span class="pill">${GROUP_LABEL(dv.sc.group)} · ${fd(dv.sc.date)}</span><span class="pill ok">${fd(got.length)} تحویل شد</span><span class="pill ${left.length ? 'warn' : ''}">${fd(left.length)} هنوز نگرفته</span></div>
+      <p class="small muted" style="margin:0">فقط برای اطلاع خودتان است؛ در هیچ گزارش، اکسل یا فایلی که ارسال می‌شود نمی‌آید.</p>
+      ${left.length ? `<h3>هنوز نگرفته‌اند</h3>${left.map(x => row(x, false)).join('')}` : '<p class="small" style="margin:0;color:var(--ok)">پک همه‌ی نفرات تحویل شده است.</p>'}
+      ${got.length ? `<h3>تحویل شده</h3>${got.map(x => row(x, true)).join('')}` : ''}</div></div>`;
+  };
+  draw();
+  scrim.addEventListener('click', async e => {
+    if (e.target === scrim || e.target.closest('[data-close]')) { scrim.remove(); return render(); }
+    const b = e.target.closest('[data-pk]'); if (b && await togglePack(b.dataset.pk, date)) draw();
   });
 }
 
@@ -1703,6 +1736,8 @@ document.addEventListener('click', async e => {
     case 'copy-generic': return copy(genericText(dayView(S.msgDate)), 'متن عمومی');
     case 'find-pick': S.findPid = d.pid; return render();
     case 'note-edit': return openNote(d.pid);
+    case 'pack-toggle': if (await togglePack(d.pid)) render(); return;
+    case 'pack-open': return openPacks();
     case 'taxi-open': return openTaxi();
     case 'rep-notes': S.rep.onlyNotes = !S.rep.onlyNotes; return render();
     case 'person-edit': return openPersonEdit(d.pid);
