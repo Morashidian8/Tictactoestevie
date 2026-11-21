@@ -174,7 +174,7 @@ td.st-absent{color:var(--bad);font-weight:700}
 <script>
 /* ---------- roster preload (stays null in the published page; the roster lives in the store) ---------- */
 const PRELOAD = null;
-const APP_VERSION = '18';
+const APP_VERSION = '19';
 
 /* ---------- small helpers ---------- */
 const $ = (s, r = document) => r.querySelector(s);
@@ -986,17 +986,17 @@ const taxiList = dv => dv.assigns.filter(a => a.status !== 'absent').map(a => ({
 function taxiText(dv, pids) {
   const list = taxiList(dv).filter(x => pids.has(x.a.pid)); const grp = groupOf(dv.sc.group);
   const head = `درخواست تاکسی پایش زمستانی\n${dv.sc.wd} ${fd(dv.sc.date)} · ${GROUP_LABEL(dv.sc.group)} · ${fd(list.length)} نفر`;
-  const body = list.map(({ a, p }, k) => `${fd(k + 1)}) ${p.name} | ${p.phone}\nمقصد: اداره گاز منطقه ${fd(a.region ?? '-')} · سکونت: منطقه ${fd(p.home ?? '-')} (گاز ${fd(p.gas ?? '-')})${a.note ? '\nتوضیح: ' + a.note : ''}`).join('\n\n');
+  const body = list.map(({ a, p }, k) => `${fd(k + 1)}) ${p.name} | ${p.phone}\nمقصد: اداره گاز منطقه ${fd(a.region ?? '-')} · سکونت: منطقه ${fd(p.home ?? '-')}${a.note ? '\nتوضیح: ' + a.note : ''}`).join('\n\n');
   return `${head}\n\n${body}${grp?.leader ? `\n\nهماهنگ‌کننده: ${grp.leader}` : ''}`;
 }
 async function taxiXlsx(dv, pids) {
   const list = taxiList(dv).filter(x => pids.has(x.a.pid)); const grp = groupOf(dv.sc.group);
   const rows = [['درخواست تاکسی پایش زمستانی گاز'], [`تاریخ: ${dv.sc.wd} ${dv.sc.date}`, GROUP_LABEL(dv.sc.group), grp?.leader ? `سرگروه: ${grp.leader}` : '', `تعداد: ${list.length} نفر`], [],
-    ['ردیف', 'نام و نام خانوادگی', 'شماره تماس', 'مقصد: اداره گاز منطقه', 'محل سکونت (منطقه‌ی شهرداری)', 'منطقه‌ی گاز محل سکونت', 'توضیحات', 'راننده (تکمیل توسط تاکسیرانی)']]
-    .concat(list.map(({ a, p }, k) => { const d = drvOf(a); return [k + 1, p.name, p.phone, a.region ?? '', p.home ?? '', p.gas ?? '', a.note || '', d ? [d.name, d.phone].filter(Boolean).join(' - ') : '']; }));
+    ['ردیف', 'نام و نام خانوادگی', 'شماره تماس', 'مقصد: اداره گاز منطقه', 'محل سکونت (منطقه‌ی شهرداری)', 'توضیحات', 'راننده (تکمیل توسط تاکسیرانی)']]
+    .concat(list.map(({ a, p }, k) => { const d = drvOf(a); return [k + 1, p.name, p.phone, a.region ?? '', p.home ?? '', a.note || '', d ? [d.name, d.phone].filter(Boolean).join(' - ') : '']; }));
   const ws = XLSX.utils.aoa_to_sheet(rows);
-  ws['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 7 } }];
-  ws['!cols'] = [{ wch: 5 }, { wch: 24 }, { wch: 14 }, { wch: 12 }, { wch: 14 }, { wch: 13 }, { wch: 42 }, { wch: 28 }];
+  ws['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 6 } }];
+  ws['!cols'] = [{ wch: 5 }, { wch: 24 }, { wch: 14 }, { wch: 12 }, { wch: 14 }, { wch: 42 }, { wch: 28 }];
   const wb = XLSX.utils.book_new(); wb.Workbook = { Views: [{ RTL: true }] };
   XLSX.utils.book_append_sheet(wb, ws, 'تاکسیرانی');
   return new Blob([XLSX.write(wb, { bookType: 'xlsx', type: 'array' })], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
@@ -1016,7 +1016,7 @@ function openTaxi() {
       <div class="row"><button class="chip" data-tx="all">همه</button><button class="chip" data-tx="none">هیچ‌کدام</button></div>
       ${list.map(({ a, p }) => `<div class="pick" style="align-items:flex-start"><input type="checkbox" data-pid="${esc(a.pid)}" ${sel.has(a.pid) ? 'checked' : ''} style="margin-top:6px;width:20px;height:20px" aria-label="${esc(p.name)}">
         <div class="grow"><b>${esc(p.name)}</b> <span class="small muted num">${fd(p.phone)}</span>
-        <div class="pinfo">مقصد: گاز منطقه ${fd(a.region ?? '-')} · سکونت: منطقه ${fd(p.home ?? '-')} · گاز ${fd(p.gas ?? '-')}</div>
+        <div class="pinfo">مقصد: اداره گاز منطقه ${fd(a.region ?? '-')} · سکونت: منطقه ${fd(p.home ?? '-')}</div>
         <input class="inp tx-note" data-pid="${esc(a.pid)}" style="margin-top:4px;padding:5px 8px" placeholder="یادداشت برای راننده…" value="${esc(a.note || '')}"></div></div>`).join('') || '<div class="empty">کسی برای اعلام نیست.</div>'}
       <div class="row"><button class="btn pri" data-tx="xlsx">ساخت فایل اکسل</button><button class="btn" data-tx="copy">کپی متن برای پیام‌رسان</button></div></div></div>`;
   };

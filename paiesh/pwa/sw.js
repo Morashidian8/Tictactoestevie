@@ -1,7 +1,7 @@
 // Service Worker — اپ «پایش زمستانی گاز»
 // شبکه مقدم: با هر بار باز شدن، آخرین نسخهٔ منتشرشده گرفته می‌شود؛ بدون اینترنت از کش اجرا می‌شود.
 // اطلاعات نفرات و سوابق در localStorage گوشی است و ربطی به این کش ندارد.
-const CACHE = "paiesh-v18";
+const CACHE = "paiesh-v19";
 const ASSETS = ["./", "./index.html", "./manifest.json", "./vendor/xlsx.full.min.js",
   "./fonts/Vazirmatn-Regular.woff2", "./fonts/Vazirmatn-Medium.woff2", "./fonts/Vazirmatn-Bold.woff2",
   "./icons/icon-192.png", "./icons/icon-512.png", "./icons/apple-touch-icon.png"];
