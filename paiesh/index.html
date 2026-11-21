@@ -174,7 +174,7 @@ td.st-absent{color:var(--bad);font-weight:700}
 <script>
 /* ---------- roster preload (stays null in the published page; the roster lives in the store) ---------- */
 const PRELOAD = null;
-const APP_VERSION = '19';
+const APP_VERSION = '20';
 
 /* ---------- small helpers ---------- */
 const $ = (s, r = document) => r.querySelector(s);
@@ -587,10 +587,10 @@ function personRow(a, i) {
 function driverMsgs(a, p, dv) {
   const d = (S.settings.drivers || []).find(x => x.id === a.driver);
   if (!d) return null;
-  const toMonitor = [`جناب آقای ${p.name}`, 'با سلام و احترام',
-    `مشخصات راننده‌ی شما برای پایش زمستانی ${dv.sc.wd} ${fd(dv.sc.date)} (اداره گاز منطقه ${fd(a.region)}):`,
-    `نام راننده: ${d.name}`, d.phone ? `شماره تماس: ${d.phone}` : '', d.car ? `خودرو: ${d.car}` : '', d.plate ? `پلاک: ${d.plate}` : '',
-    'لطفاً جهت هماهنگی ساعت و محل حرکت با ایشان تماس بگیرید.', 'با تشکر'].filter(Boolean).join('\n');
+  const toMonitor = [`سلام مهندس ${p.name}.`,
+    `پک پذیرایی رسیده؛ لطفا جهت هماهنگی با راننده آقای ${d.name}${d.phone ? ' و شماره ' + d.phone : ''} تماس بگیرید.`,
+    `${dv.sc.wd} ${fd(dv.sc.date)} · اداره گاز منطقه ${fd(a.region)}`,
+    d.car ? `خودرو: ${d.car}` : '', d.plate ? `پلاک: ${d.plate}` : ''].filter(Boolean).join('\n');
   const toDriver = [`جناب آقای ${d.name}`, 'با سلام و احترام',
     `پایشگر همراه شما در ${dv.sc.wd} ${fd(dv.sc.date)} (اداره گاز منطقه ${fd(a.region)}):`,
     `نام: ${p.name}`, p.phone ? `شماره تماس: ${p.phone}` : '', 'لطفاً جهت هماهنگی با ایشان تماس بگیرید.', 'با تشکر'].filter(Boolean).join('\n');
